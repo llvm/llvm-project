@@ -27,6 +27,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OutOfProcessJITConfig.h"
 #include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
@@ -72,45 +73,6 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
-static std::string getCompilerRTPath() {
-  clang::DiagnosticOptions DiagOpts;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
-      new clang::DiagnosticIDs());
-
-  clang::IgnoringDiagConsumer DiagConsumer;
-  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagConsumer, false);
-  std::vector<const char *> Args = {"clang", "--version"};
-  clang::driver::Driver D("clang", llvm::sys::getProcessTriple(), Diags);
-  D.setCheckInputsExist(false);
-
-  std::unique_ptr<clang::driver::Compilation> C(D.BuildCompilation(Args));
-  if (!C) {
-    return "";
-  }
-
-  const clang::driver::ToolChain &TC = C->getDefaultToolChain();
-  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
-
-  return CompilerRTPath ? *CompilerRTPath : "";
-}
-
-static std::string getOrcRuntimePath(std::string CompilerRTPath) {
-  llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
-      nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
-  removePathComponent(5, BasePath);
-  llvm::sys::path::append(BasePath, CompilerRTPath);
-  std::string OrcRuntimePath;
-  if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt.a")) {
-    OrcRuntimePath = BasePath.str().str() + "/liborc_rt.a";
-  } else if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt_osx.a")) {
-    OrcRuntimePath = BasePath.str().str() + "/liborc_rt_osx.a";
-  } else if (llvm::sys::fs::exists(BasePath.str().str() +
-                                   "/liborc_rt-x86_64.a")) {
-    OrcRuntimePath = BasePath.str().str() + "/liborc_rt-x86_64.a";
-  }
-  return OrcRuntimePath;
-}
-
 static std::unique_ptr<Interpreter>
 createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
                                      DiagnosticConsumer *Client = nullptr) {
@@ -122,43 +84,16 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
   if (Client)
     CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
 
+  OutOfProcessJITConfig OutOfProcessConfig;
+  OutOfProcessConfig.OOPExecutor = getExecutorPath();
+  OutOfProcessConfig.UseSharedMemory = false;
+  OutOfProcessConfig.SlabAllocateSizeString = "";
+  OutOfProcessConfig.IsOutOfProcess = true;
+
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-
-  std::string CompilerRTPath = getCompilerRTPath();
-
-  if ((SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO())) {
-    std::string OOPExecutor = getExecutorPath();
-    std::string OrcRuntimePath = getOrcRuntimePath(CompilerRTPath);
-    bool UseSharedMemory = false;
-    std::string SlabAllocateSizeString = "";
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-    EPC = ExitOnError(launchExecutor(OOPExecutor, UseSharedMemory,
-                                     SlabAllocateSizeString,
-                                     [=] { // Lambda defined inline
-                                       auto redirect = [](int from, int to) {
-                                         if (from != to) {
-                                           dup2(from, to);
-                                           close(from);
-                                         }
-                                       };
-
-                                       redirect(0, STDIN_FILENO);
-                                       redirect(1, STDOUT_FILENO);
-                                       redirect(2, STDERR_FILENO);
-
-                                       setvbuf(stdout, nullptr, _IONBF, 0);
-                                       setvbuf(stderr, nullptr, _IONBF, 0);
-                                     }));
-    if (EPC) {
-      CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-      JB = ExitOnError(clang::Interpreter::createLLJITBuilder(std::move(EPC),
-                                                              OrcRuntimePath));
-    }
-  }
-
-  return cantFail(clang::Interpreter::create(std::move(CI), std::move(JB)));
+  return cantFail(
+      clang::Interpreter::create(std::move(CI), OutOfProcessConfig));
 }
 
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {

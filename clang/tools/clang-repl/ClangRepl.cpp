@@ -19,6 +19,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OutOfProcessJITConfig.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
@@ -91,8 +92,7 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
-static llvm::Error sanitizeOopArguments(const char *ArgV0,
-                                        std::string _OrcRuntimePath) {
+static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
       !!OOPExecutorConnect.getNumOccurrences())
@@ -125,11 +125,8 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0,
           llvm::inconvertibleErrorCode());
   }
 
-  // Out-of-process executors require the ORC runtime.
-  if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
-                                 OOPExecutorConnect.getNumOccurrences())) {
-    OrcRuntimePath = _OrcRuntimePath;
-  }
+  // Out-of-process executors require the ORC runtime. ORC Runtime Path
+  // resolution is done in Interpreter.cpp.
 
   // If -oop-executor was used but no value was specified then use a sensible
   // default.
@@ -280,10 +277,14 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
-  bool IsOutOfProcess = !!OOPExecutor.getNumOccurrences() ||
-                        !!OOPExecutorConnect.getNumOccurrences();
+  ExitOnErr(sanitizeOopArguments(argv[0]));
 
-  std::string _OrcRuntimePath;
+  clang::OutOfProcessJITConfig OutOfProcessConfig;
+  OutOfProcessConfig.IsOutOfProcess = !OOPExecutor.getNumOccurrences() ||
+                                      !OOPExecutorConnect.getNumOccurrences();
+  OutOfProcessConfig.OOPExecutor = OOPExecutor;
+  OutOfProcessConfig.SlabAllocateSizeString = SlabAllocateSizeString;
+  OutOfProcessConfig.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -291,26 +292,7 @@ int main(int argc, const char **argv) {
   if (CudaEnabled) {
     CI = ExitOnErr(CB.CreateCudaHost());
   } else {
-    CI = ExitOnErr(CB.CreateCpp(&_OrcRuntimePath, IsOutOfProcess));
-  }
-
-  ExitOnErr(sanitizeOopArguments(argv[0], _OrcRuntimePath));
-
-  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-  if (OOPExecutor.getNumOccurrences()) {
-    // Launch an out-of-process executor locally in a child process.
-    EPC = ExitOnErr(
-        launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
-  } else if (OOPExecutorConnect.getNumOccurrences()) {
-    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnect, UseSharedMemory,
-                                     SlabAllocateSizeString));
-  }
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-  if (EPC) {
-    CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-    JB = ExitOnErr(
-        clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
+    CI = ExitOnErr(CB.CreateCpp());
   }
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
@@ -335,11 +317,10 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
-  } else if (JB) {
-    Interp =
-        ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(JB)));
-  } else
-    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
+  } else {
+    Interp = ExitOnErr(
+        clang::Interpreter::create(std::move(CI), OutOfProcessConfig));
+  }
 
   bool HasError = false;
 
