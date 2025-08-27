@@ -2538,7 +2538,8 @@ void AArch64DAGToDAGISel::SelectPostStoreLane(SDNode *N, unsigned NumVecs,
 }
 
 // Select f16 -> i16 conversions
-// Since i16 is an illegal type, they need to return an i32 result
+// Since i16 is an illegal type, we return the converted bit pattern in a f32
+// which can then be bitcast to i32 and truncated as needed.
 void AArch64DAGToDAGISel::SelectFCVT_FPTOINT_Half(SDNode *N, unsigned int Opc) {
   SDLoc DL(N);
   SDValue SrcVal = N->getOperand(0);
@@ -2551,9 +2552,7 @@ void AArch64DAGToDAGISel::SelectFCVT_FPTOINT_Half(SDNode *N, unsigned int Opc) {
   SDNode *Extract =
       CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::f32,
                              SDValue(SubregToReg, 0), Ssub);
-  SDNode *Result = CurDAG->getMachineNode(AArch64::FMOVSWr, DL, MVT::i32,
-                                          SDValue(Extract, 0));
-  ReplaceNode(N, Result);
+  ReplaceNode(N, Extract);
 }
 
 static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
