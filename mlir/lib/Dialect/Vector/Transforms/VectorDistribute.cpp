@@ -708,7 +708,6 @@ struct WarpOpConstant : public WarpDistributionPattern {
 /// Sink out step op feeding into a warp op yield.
 /// Vector step op is treated similar to arith.constant, apart from
 /// the result that represents a sequence [0, vec_size).
-/// The sequence is semantically equivalent to warp's threads/lanes indices.
 /// ```
 /// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xindex>) {
 ///   ...
@@ -730,16 +729,24 @@ struct WarpOpStep final : public WarpDistributionPattern {
         getWarpResult(warpOp, llvm::IsaPred<vector::StepOp>);
     if (!yieldOperand)
       return failure();
+    const unsigned operandIdx = yieldOperand->getOperandNumber();
     auto stepOp = yieldOperand->get().getDefiningOp<vector::StepOp>();
     VectorType resTy = stepOp.getResult().getType();
-    rewriter.startOpModification(warpOp);
+    if (resTy.getNumElements() != warpOp.getWarpSize())
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          llvm::formatv("Expected result size ({0}) to be of warp size ({1})",
+                        resTy.getNumElements(), warpOp.getWarpSize()));
+    VectorType newVecTy =
+        cast<VectorType>(warpOp.getResult(operandIdx).getType());
     rewriter.setInsertionPointAfter(warpOp);
-    Value laneIdVec = vector::BroadcastOp::create(
-        rewriter, warpOp.getLoc(), VectorType::get({1}, resTy.getElementType()),
-        warpOp.getLaneid());
-    const unsigned operandIdx = yieldOperand->getOperandNumber();
-    rewriter.replaceAllUsesWith(warpOp.getResult(operandIdx), laneIdVec);
-    rewriter.finalizeOpModification(warpOp);
+    auto loc = warpOp.getLoc();
+    Value stepResult =
+        vector::StepOp::create(rewriter, warpOp.getLoc(), newVecTy);
+    Value laneId = vector::BroadcastOp::create(rewriter, warpOp.getLoc(),
+                                               newVecTy, warpOp.getLaneid());
+    stepResult = rewriter.create<arith::AddIOp>(loc, stepResult, laneId);
+    rewriter.replaceAllUsesWith(warpOp.getResult(operandIdx), stepResult);
     return success();
   }
 };

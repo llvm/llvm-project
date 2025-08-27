@@ -1837,5 +1837,7 @@ func.func @warp_step_distribute(%laneid: index, %buffer: memref<128xindex>)  {
 }
 
 // CHECK-PROP-LABEL: func.func @warp_step_distribute
-//       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %{{.*}} : index to vector<1xindex>
-//       CHECK-PROP:   vector.transfer_write %[[LANE_ID_VEC]], %{{.*}} : vector<1xindex>, memref<128xindex>
+//       CHECK-PROP:   %[[DISTRIBUTED_STEP:.*]] = vector.step : vector<1xindex>
+//       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %arg0 : index to vector<1xindex>
+//       CHECK-PROP:   %[[LANE_STEP:.*]] = arith.addi %[[DISTRIBUTED_STEP]], %[[LANE_ID_VEC]] : vector<1xindex>
+//       CHECK-PROP:   vector.transfer_write %[[LANE_STEP]], %{{.*}} : vector<1xindex>, memref<128xindex>
