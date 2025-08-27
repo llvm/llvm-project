@@ -18,7 +18,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
 
 namespace llvm {
 namespace hlsl {

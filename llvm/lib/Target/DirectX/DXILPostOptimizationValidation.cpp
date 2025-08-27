@@ -307,7 +307,6 @@ public:
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();

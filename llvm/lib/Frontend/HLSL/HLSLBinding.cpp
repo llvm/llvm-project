@@ -8,9 +8,6 @@
 
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include <optional>
-#include <utility>
 
 using namespace llvm;
 using namespace hlsl;
