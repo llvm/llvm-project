@@ -625,21 +625,27 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
     }
 
-    // Add information if the runtime function takes a callback function
-    if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
-      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
-        LLVMContext &Ctx = Fn->getContext();
-        MDBuilder MDB(Ctx);
-        // Annotate the callback behavior of the runtime function:
-        //  - The callback callee is argument number 2 (microtask).
-        //  - The first two arguments of the callback callee are unknown (-1).
-        //  - All variadic arguments to the runtime function are passed to the
-        //    callback callee.
-        Fn->addMetadata(
-            LLVMContext::MD_callback,
-            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                  2, {-1, -1}, /* VarArgsArePassed */ true)}));
-      }
+    // Annotate the callback behavior of the runtime function:
+    //  - First the callback callee argument number
+    //  - Then the arguments passed on to the callback (-1 for unknown),
+    //    variadic
+    //  - Finally, whether variadic args are passed on to the callback.
+    LLVMContext &Ctx = Fn->getContext();
+    MDBuilder MDB(Ctx);
+    switch (FnID) {
+#define OMP_CALLBACK(Enum, VarArgsArePassed, CallbackArgNo, ...)               \
+  case Enum: {                                                                 \
+    if (!Fn->hasMetadata(LLVMContext::MD_callback)) {                          \
+      Fn->addMetadata(LLVMContext::MD_callback,                                \
+                      *MDNode::get(Ctx, {MDB.createCallbackEncoding(           \
+                                            CallbackArgNo, {__VA_ARGS__},      \
+                                            VarArgsArePassed)}));              \
+    }                                                                          \
+    break;                                                                     \
+  }
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+    default:
+      break;
     }
 
     LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()

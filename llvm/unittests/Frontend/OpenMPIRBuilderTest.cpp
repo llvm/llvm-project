@@ -7852,4 +7852,54 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
     EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
 }
 
+TEST_F(OpenMPIRBuilderTest, createCallbackMetadata) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  FunctionCallee ForkCall = OMPBuilder.getOrCreateRuntimeFunction(
+      *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_fork_call);
+  FunctionCallee ForkCallIf = OMPBuilder.getOrCreateRuntimeFunction(
+      *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_fork_call_if);
+  FunctionCallee ForkTeam = OMPBuilder.getOrCreateRuntimeFunction(
+      *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_fork_teams);
+  FunctionCallee TaskAlloc = OMPBuilder.getOrCreateRuntimeFunction(
+      *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_omp_task_alloc);
+
+  for (auto [FC, VarArg, ArgNo] :
+       zip(SmallVector<FunctionCallee>(
+               {ForkCall, ForkCallIf, ForkTeam, TaskAlloc}),
+           SmallVector<bool>({true, false, true, false}),
+           SmallVector<unsigned>({2, 2, 2, 5}))) {
+    MDNode *CallbackMD =
+        cast<Function>(FC.getCallee())->getMetadata(LLVMContext::MD_callback);
+    EXPECT_NE(CallbackMD, nullptr);
+    unsigned Num = 0;
+    for (const MDOperand &Op : CallbackMD->operands()) {
+      Num++;
+      MDNode *OpMD = cast<MDNode>(Op.get());
+      auto *CBCalleeIdxAsCM = cast<ConstantAsMetadata>(OpMD->getOperand(0));
+      uint64_t CBCalleeIdx =
+          cast<ConstantInt>(CBCalleeIdxAsCM->getValue())->getZExtValue();
+      EXPECT_EQ(CBCalleeIdx, ArgNo);
+
+      uint64_t Arg0 =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(OpMD->getOperand(1))->getValue())
+              ->getZExtValue();
+      uint64_t Arg1 =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(OpMD->getOperand(2))->getValue())
+              ->getZExtValue();
+      uint64_t _VarArg =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(OpMD->getOperand(3))->getValue())
+              ->getZExtValue();
+      EXPECT_EQ(Arg0, -1);
+      EXPECT_EQ(Arg1, -1);
+      EXPECT_EQ(_VarArg, VarArg);
+    }
+    EXPECT_EQ(Num, 1);
+  }
+}
+
 } // namespace
