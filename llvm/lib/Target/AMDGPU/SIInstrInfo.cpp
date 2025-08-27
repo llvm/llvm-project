@@ -8063,8 +8063,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       MRI.replaceRegWith(DstReg, NewDstReg);
       MRI.clearKillFlags(NewDstReg);
       Inst.getOperand(0).setReg(DstReg);
-      // Completely remove dead VGPR->SGPR copies and ensure that dead
-      // assignments to IMPLICIT_DEF are not created.
       Inst.eraseFromParent();
       // Legalize t16 operand since replaceReg is called after addUsersToVALU
       for (MachineOperand &MO :
