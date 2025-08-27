@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -1240,10 +1239,13 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-    else if (S->getType() != PN.getType())
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
       continue;
+    }
 
     // Check if we can re-use the existing PN, by adjusting it with an expanded
     // offset, if the offset is simpler.

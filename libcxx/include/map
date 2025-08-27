@@ -593,6 +593,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__node_handle>
+#  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
@@ -1749,17 +1750,13 @@ public:
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_multi(__e.__i_, *__f);
+    __tree_.__insert_range_multi(__f, __l);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_multi(__end.__i_, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_multi(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 

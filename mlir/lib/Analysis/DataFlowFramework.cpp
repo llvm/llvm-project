@@ -45,7 +45,7 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << dependent;
+             << "\nand " << debugName << " on " << *dependent;
     }
   });
 }
@@ -62,11 +62,12 @@ void ProgramPoint::print(raw_ostream &os) const {
     return;
   }
   if (!isBlockStart()) {
-    os << "<after operation>:";
-    return getPrevOp()->print(os, OpPrintingFlags().skipRegions());
+    os << "<after operation>:"
+       << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
+    return;
   }
-  os << "<before operation>:";
-  return getNextOp()->print(os, OpPrintingFlags().skipRegions());
+  os << "<before operation>:"
+     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
 }
 
 //===----------------------------------------------------------------------===//
@@ -128,7 +129,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     worklist.pop();
 
     DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
-                          << "' on: " << point);
+                          << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
   }

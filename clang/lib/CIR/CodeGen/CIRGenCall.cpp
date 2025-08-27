@@ -42,6 +42,11 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
+cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
+  const CIRGenFunctionInfo &fi = arrangeGlobalDeclaration(gd);
+  return getFunctionType(fi);
+}
+
 cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   mlir::Type resultType = convertType(info.getReturnType());
   SmallVector<mlir::Type, 8> argTypes;
@@ -53,6 +58,16 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
                             info.isVariadic());
+}
+
+cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
+
+  if (!isFuncTypeConvertible(fpt))
+    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
+
+  return getFunctionType(gd);
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
@@ -272,10 +287,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   assert(!cir::MissingFeatures::thunks());
   if (type->isRecordType() &&
-      type->castAs<RecordType>()
-          ->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->isParamDestroyedInCallee() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     cgm.errorNYI(param->getSourceRange(),
                  "emitDelegateCallArg: callee-destructed param");
@@ -675,10 +687,8 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (argType->isRecordType() && argType->castAs<RecordType>()
-                                     ->getOriginalDecl()
-                                     ->getDefinitionOrSelf()
-                                     ->isParamDestroyedInCallee()) {
+  if (argType->isRecordType() &&
+      argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
     cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
   }
