@@ -3409,7 +3409,8 @@ TEST(Hover, DocsFromMostSpecial) {
 TEST(Hover, Present) {
   struct {
     const std::function<void(HoverInfo &)> Builder;
-    llvm::StringRef ExpectedRender;
+    llvm::StringRef ExpectedMarkdownRender;
+    llvm::StringRef ExpectedDoxygenRender;
   } Cases[] = {
       {
           [](HoverInfo &HI) {
@@ -3417,6 +3418,7 @@ TEST(Hover, Present) {
             HI.Name = "X";
           },
           R"(X)",
+          R"(### `X`)",
       },
       {
           [](HoverInfo &HI) {
@@ -3424,6 +3426,7 @@ TEST(Hover, Present) {
             HI.Name = "foo";
           },
           R"(namespace-alias foo)",
+          R"(### namespace-alias `foo`)",
       },
       {
           [](HoverInfo &HI) {
@@ -3446,6 +3449,24 @@ Size: 10 bytes
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
+          R"(### class
+
+---
+```cpp
+template <typename T, typename C = bool> class Foo {}
+```
+
+---
+**Template Parameters:**
+
+- `typename T`
+- `typename C = bool`
+
+---
+documentation
+
+---
+Size: 10 bytes)",
       },
       {
           [](HoverInfo &HI) {
@@ -3476,6 +3497,26 @@ template <typename T, typename C = bool> class Foo {})",
           "\n"
           "// In namespace ns\n"
           "ret_type foo(params) {}",
+          R"(### function
+
+---
+```cpp
+// In namespace ns
+ret_type foo(params) {}
+```
+
+---
+**Parameters:**
+
+- 
+- `type (aka can_type)`
+- `type foo (aka can_type)`
+- `type foo = default (aka can_type)`
+
+---
+**Returns:**
+
+`ret_type (aka can_ret_type)`)",
       },
       {
           [](HoverInfo &HI) {
@@ -3502,6 +3543,22 @@ Size: 4 bytes (+4 bytes padding), alignment 4 bytes
 
 // In test::Bar
 def)",
+          R"(### field
+
+---
+```cpp
+// In test::Bar
+def
+```
+
+---
+Type: `type (aka can_type)`
+
+Value = `value`
+
+Offset: 12 bytes
+
+Size: 4 bytes (+4 bytes padding), alignment 4 bytes)",
       },
       {
           [](HoverInfo &HI) {
@@ -3528,6 +3585,22 @@ Size: 25 bits (+4 bits padding), alignment 8 bytes
 
 // In test::Bar
 def)",
+          R"(### field
+
+---
+```cpp
+// In test::Bar
+def
+```
+
+---
+Type: `type (aka can_type)`
+
+Value = `value`
+
+Offset: 4 bytes and 3 bits
+
+Size: 25 bits (+4 bits padding), alignment 8 bytes)",
       },
       {
           [](HoverInfo &HI) {
@@ -3541,6 +3614,13 @@ def)",
 
 // In test::Bar
 public: def)",
+          R"(### field
+
+---
+```cpp
+// In test::Bar
+public: def
+```)",
       },
       {
           [](HoverInfo &HI) {
@@ -3560,6 +3640,18 @@ public: def)",
 
 // In cls<int>
 protected: size_t method())",
+          R"(### instance-method
+
+---
+```cpp
+// In cls<int>
+protected: size_t method()
+```
+
+---
+**Returns:**
+
+`size_t (aka unsigned long)`)",
       },
       {
           [](HoverInfo &HI) {
@@ -3587,6 +3679,19 @@ Parameters:
 
 // In cls
 public: cls(int a, int b = 5))",
+          R"(### constructor
+
+---
+```cpp
+// In cls
+public: cls(int a, int b = 5)
+```
+
+---
+**Parameters:**
+
+- `int a`
+- `int b = 5`)",
       },
       {
           [](HoverInfo &HI) {
@@ -3600,6 +3705,13 @@ public: cls(int a, int b = 5))",
 
 // In namespace ns1
 private: union foo {})",
+          R"(### union
+
+---
+```cpp
+// In namespace ns1
+private: union foo {}
+```)",
       },
       {
           [](HoverInfo &HI) {
@@ -3625,6 +3737,20 @@ Passed as arg_a
 
 // In test::Bar
 int foo = 3)",
+          R"(### variable
+
+---
+```cpp
+// In test::Bar
+int foo = 3
+```
+
+---
+Type: `int`
+
+Value = `3`
+
+Passed as arg_a)",
       },
       {
           [](HoverInfo &HI) {
@@ -3636,6 +3762,10 @@ int foo = 3)",
           },
           R"(variable foo
 
+Passed by value)",
+          R"(### variable `foo`
+
+---
 Passed by value)",
       },
       {
@@ -3662,6 +3792,20 @@ Passed by reference as arg_a
 
 // In test::Bar
 int foo = 3)",
+          R"(### variable
+
+---
+```cpp
+// In test::Bar
+int foo = 3
+```
+
+---
+Type: `int`
+
+Value = `3`
+
+Passed by reference as arg_a)",
       },
       {
           [](HoverInfo &HI) {
@@ -3687,6 +3831,20 @@ Passed as arg_a (converted to alias_int)
 
 // In test::Bar
 int foo = 3)",
+          R"(### variable
+
+---
+```cpp
+// In test::Bar
+int foo = 3
+```
+
+---
+Type: `int`
+
+Value = `3`
+
+Passed as arg_a (converted to alias_int))",
       },
       {
           [](HoverInfo &HI) {
@@ -3702,6 +3860,15 @@ int foo = 3)",
 
 // Expands to
 (1 + 1))",
+          R"(### macro
+
+---
+```cpp
+#define PLUS_ONE(X) (X+1)
+
+// Expands to
+(1 + 1)
+```)",
       },
       {
           [](HoverInfo &HI) {
@@ -3727,45 +3894,86 @@ Passed by const reference as arg_a (converted to int)
 
 // In test::Bar
 int foo = 3)",
+          R"(### variable
+
+---
+```cpp
+// In test::Bar
+int foo = 3
+```
+
+---
+Type: `int`
+
+Value = `3`
+
+Passed by const reference as arg_a (converted to int))",
       },
       {
           [](HoverInfo &HI) {
             HI.Name = "stdio.h";
             HI.Definition = "/usr/include/stdio.h";
+            HI.Kind = index::SymbolKind::IncludeDirective;
           },
           R"(stdio.h
 
 /usr/include/stdio.h)",
+          R"(### `stdio.h`
+
+`/usr/include/stdio.h`)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Name = "foo.h";
+            HI.UsedSymbolNames = {"Foo", "Bar", "Bar"};
+            HI.Kind = index::SymbolKind::IncludeDirective;
+          },
+          R"(foo.h
+
+provides Foo, Bar, Bar)",
+          R"(### `foo.h`
+
+---
+provides `Foo`, `Bar`, `Bar`)",
       },
       {[](HoverInfo &HI) {
          HI.Name = "foo.h";
-         HI.UsedSymbolNames = {"Foo", "Bar", "Bar"};
-       },
-       R"(foo.h
-
-provides Foo, Bar, Bar)"},
-      {[](HoverInfo &HI) {
-         HI.Name = "foo.h";
          HI.UsedSymbolNames = {"Foo", "Bar", "Baz", "Foobar", "Qux", "Quux"};
+         HI.Kind = index::SymbolKind::IncludeDirective;
        },
        R"(foo.h
 
-provides Foo, Bar, Baz, Foobar, Qux and 1 more)"}};
+provides Foo, Bar, Baz, Foobar, Qux and 1 more)",
+       R"(### `foo.h`
+
+---
+provides `Foo`, `Bar`, `Baz`, `Foobar`, `Qux` and 1 more)"}};
 
   for (const auto &C : Cases) {
     HoverInfo HI;
     C.Builder(HI);
     Config Cfg;
     Cfg.Hover.ShowAKA = true;
+    Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Markdown;
     WithContextValue WithCfg(Config::Key, std::move(Cfg));
-    EXPECT_EQ(HI.present(MarkupKind::PlainText), C.ExpectedRender);
+    EXPECT_EQ(HI.present(MarkupKind::PlainText), C.ExpectedMarkdownRender);
+  }
+  for (const auto &C : Cases) {
+    HoverInfo HI;
+    C.Builder(HI);
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
+    Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    EXPECT_EQ(HI.present(MarkupKind::Markdown), C.ExpectedDoxygenRender);
   }
 }
 
 TEST(Hover, PresentDocumentation) {
   struct {
     const std::function<void(HoverInfo &)> Builder;
-    llvm::StringRef ExpectedRender;
+    llvm::StringRef ExpectedMarkdownRender;
+    llvm::StringRef ExpectedDoxygenRender;
   } Cases[] = {
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -3777,14 +3985,26 @@ TEST(Hover, PresentDocumentation) {
        R"(### function `foo`
 
 ---
-**@brief** brief doc
+@brief brief doc
 
 longer doc
 
 ---
 ```cpp
 void foo()
-```)"},
+```)",
+       R"(### function
+
+---
+```cpp
+void foo()
+```
+
+---
+brief doc
+
+---
+longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -3798,14 +4018,31 @@ void foo()
 ---
 → `int`
 
-**@brief** brief doc
+@brief brief doc
 
 longer doc
 
 ---
 ```cpp
 int foo()
-```)"},
+```)",
+       R"(### function
+
+---
+```cpp
+int foo()
+```
+
+---
+brief doc
+
+---
+**Returns:**
+
+`int`
+
+---
+longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -3826,18 +4063,40 @@ int foo()
 
 Parameters:
 
-- `int a` - this is a param
+- `int a`
 
-**@brief** brief doc
+@brief brief doc
 
 longer doc
-
-**@return** it returns something
+@param a this is a param
+@return it returns something
 
 ---
 ```cpp
 int foo(int a)
-```)"},
+```)",
+       R"(### function
+
+---
+```cpp
+int foo(int a)
+```
+
+---
+brief doc
+
+---
+**Parameters:**
+
+- `int a` - this is a param
+
+---
+**Returns:**
+
+`int` - it returns something
+
+---
+longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -3858,18 +4117,41 @@ int foo(int a)
 
 Parameters:
 
-- `int a` - this is a param
+- `int a`
 
-**@brief** brief doc
+@brief brief doc
 
 longer doc
-
-**@return** it returns something
+@param a this is a param
+@param b does not exist
+@return it returns something
 
 ---
 ```cpp
 int foo(int a)
-```)"},
+```)",
+       R"(### function
+
+---
+```cpp
+int foo(int a)
+```
+
+---
+brief doc
+
+---
+**Parameters:**
+
+- `int a` - this is a param
+
+---
+**Returns:**
+
+`int` - it returns something
+
+---
+longer doc)"},
   };
 
   for (const auto &C : Cases) {
@@ -3877,9 +4159,18 @@ int foo(int a)
     C.Builder(HI);
     Config Cfg;
     Cfg.Hover.ShowAKA = true;
+    Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Markdown;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    EXPECT_EQ(HI.present(MarkupKind::Markdown), C.ExpectedMarkdownRender);
+  }
+  for (const auto &C : Cases) {
+    HoverInfo HI;
+    C.Builder(HI);
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
     Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
     WithContextValue WithCfg(Config::Key, std::move(Cfg));
-    EXPECT_EQ(HI.present(MarkupKind::Markdown), C.ExpectedRender);
+    EXPECT_EQ(HI.present(MarkupKind::Markdown), C.ExpectedDoxygenRender);
   }
 }
 
@@ -4056,6 +4347,21 @@ TEST(Hover, PresentRulers) {
       "def\n"
       "```";
   EXPECT_EQ(HI.present(MarkupKind::Markdown), ExpectedMarkdown);
+
+  llvm::StringRef ExpectedDoxygenMarkdown = //
+      "### variable\n"
+      "\n"
+      "---\n"
+      "```cpp\n"
+      "def\n"
+      "```\n\n"
+      "---\n"
+      "Value = `val`";
+  Config Cfg;
+  Cfg.Hover.ShowAKA = true;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_EQ(HI.present(MarkupKind::Markdown), ExpectedDoxygenMarkdown);
 
   llvm::StringRef ExpectedPlaintext = R"pt(variable foo
 
@@ -4479,8 +4785,7 @@ TEST(Hover, FunctionParameters) {
          HI.Definition = "int a";
          HI.Documentation = "";
        },
-       "### param `a`\n\n---\nType: `int`\n\n---\n```cpp\n// In foo\nint "
-       "a\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nint a\n```\n\n---\nType: `int`"},
       {R"cpp(/// Function doc
       /// @param a this is doc for a
       void foo(int [[^a]]);
@@ -4494,8 +4799,8 @@ TEST(Hover, FunctionParameters) {
          HI.Definition = "int a";
          HI.Documentation = "this is doc for a";
        },
-       "### param `a`\n\n---\nType: `int`\n\nthis is doc for "
-       "a\n\n---\n```cpp\n// In foo\nint a\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nint a\n```\n\n---\nthis is doc "
+       "for a\n\n---\nType: `int`"},
       {R"cpp(/// Function doc
       /// @param b this is doc for b
       void foo(int [[^a]], int b);
@@ -4509,8 +4814,7 @@ TEST(Hover, FunctionParameters) {
          HI.Definition = "int a";
          HI.Documentation = "";
        },
-       "### param `a`\n\n---\nType: `int`\n\n---\n```cpp\n// In foo\nint "
-       "a\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nint a\n```\n\n---\nType: `int`"},
       {R"cpp(/// Function doc
       /// @param b this is doc for \p b
       void foo(int a, int [[^b]]);
@@ -4524,8 +4828,8 @@ TEST(Hover, FunctionParameters) {
          HI.Definition = "int b";
          HI.Documentation = "this is doc for \\p b";
        },
-       "### param `b`\n\n---\nType: `int`\n\nthis is doc for "
-       "`b`\n\n---\n```cpp\n// In foo\nint b\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nint b\n```\n\n---\nthis is doc "
+       "for `b`\n\n---\nType: `int`"},
       {R"cpp(/// Function doc
       /// @param b this is doc for \p b
       template <typename T>
@@ -4540,8 +4844,8 @@ TEST(Hover, FunctionParameters) {
          HI.Definition = "T b";
          HI.Documentation = "this is doc for \\p b";
        },
-       "### param `b`\n\n---\nType: `T`\n\nthis is doc for "
-       "`b`\n\n---\n```cpp\n// In foo\nT b\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nT b\n```\n\n---\nthis is doc for "
+       "`b`\n\n---\nType: `T`"},
       {R"cpp(/// Function doc
       /// @param b this is <b>doc</b> <html-tag attribute/> <another-html-tag attribute="value">for</another-html-tag> \p b
       void foo(int a, int [[^b]]);
@@ -4557,10 +4861,9 @@ TEST(Hover, FunctionParameters) {
              "this is <b>doc</b> <html-tag attribute/> <another-html-tag "
              "attribute=\"value\">for</another-html-tag> \\p b";
        },
-       "### param `b`\n\n---\nType: `int`\n\nthis is \\<b>doc\\</b> "
-       "\\<html-tag attribute/> \\<another-html-tag "
-       "attribute=\"value\">for\\</another-html-tag> "
-       "`b`\n\n---\n```cpp\n// In foo\nint b\n```"},
+       "### param\n\n---\n```cpp\n// In foo\nint b\n```\n\n---\nthis is "
+       "\\<b>doc\\</b> \\<html-tag attribute/> \\<another-html-tag "
+       "attribute=\"value\">for\\</another-html-tag> `b`\n\n---\nType: `int`"},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
