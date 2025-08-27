@@ -83,6 +83,8 @@ from ctypes import (
 
 import os
 import sys
+import subprocess
+import platform
 from enum import Enum
 
 from typing import (
@@ -3335,6 +3337,23 @@ class TranslationUnit(ClangObject):
         if index is None:
             index = Index.create()
 
+        # Automatically include builtin headers if enabled
+        if Config.auto_include_builtin_headers:
+            builtin_include_path = Config.get_builtin_include_path()
+            if builtin_include_path:
+                # Check if include path is already specified
+                has_include_path = any(
+                    arg == '-I' and i + 1 < len(args) and builtin_include_path in args[i + 1]
+                    for i, arg in enumerate(args)
+                ) or any(
+                    arg.startswith('-I') and builtin_include_path in arg[2:]
+                    for arg in args
+                )
+                
+                if not has_include_path:
+                    # Add the builtin include path
+                    args = ['-I', builtin_include_path] + list(args)
+
         args_array = None
         if len(args) > 0:
             args_array = (c_char_p * len(args))(*[b(x) for x in args])
@@ -4309,6 +4328,8 @@ class Config:
     library_file: str | None = None
     compatibility_check = True
     loaded = False
+    auto_include_builtin_headers = True
+    _builtin_include_path: str | None = None
 
     @staticmethod
     def set_library_path(path: StrPath) -> None:
@@ -4357,6 +4378,138 @@ class Config:
             )
 
         Config.compatibility_check = check_status
+
+    @staticmethod
+    def set_auto_include_builtin_headers(enable: bool) -> None:
+        """Enable/disable automatic inclusion of builtin clang headers.
+        
+        When enabled (default), the Python bindings will automatically detect
+        and include the builtin clang headers (such as stddef.h, stdint.h, etc.)
+        that contain essential macros like NULL, offsetof, etc. This prevents
+        issues where these macros are not recognized during parsing.
+        
+        Parameters:
+        enable -- True to automatically include builtin headers, False to disable
+        """
+        if Config.loaded:
+            raise Exception(
+                "auto_include_builtin_headers must be set before using "
+                "any other functionalities in libclang."
+            )
+        
+        Config.auto_include_builtin_headers = enable
+
+    @staticmethod
+    def get_builtin_include_path() -> str | None:
+        """Get the path to clang's builtin headers.
+        
+        Returns the path to clang's builtin include directory, or None if not found.
+        This path contains essential headers like stddef.h that define macros such as NULL.
+        """
+        if Config._builtin_include_path is not None:
+            return Config._builtin_include_path
+        
+        # Try multiple strategies to find clang's builtin headers
+        candidates = []
+        
+        # Strategy 1: Query clang directly for its resource directory
+        try:
+            result = subprocess.run(
+                ['clang', '-print-resource-dir'], 
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                resource_dir = result.stdout.strip()
+                include_dir = os.path.join(resource_dir, 'include')
+                candidates.append(include_dir)
+        except (subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
+            pass
+        
+        # Strategy 2: Try clang version-based paths
+        try:
+            result = subprocess.run(
+                ['clang', '--version'], 
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                # Extract version from output like "clang version 19.1.7"
+                for line in result.stdout.splitlines():
+                    if 'clang version' in line.lower():
+                        parts = line.split()
+                        for part in parts:
+                            if part and part[0].isdigit():
+                                major_version = part.split('.')[0]
+                                # Common paths on different systems
+                                candidates.extend([
+                                    f"/usr/lib/clang/{major_version}/include",
+                                    f"/usr/local/lib/clang/{major_version}/include",
+                                    f"/opt/homebrew/lib/clang/{major_version}/include",  # macOS Homebrew
+                                    f"/usr/lib/llvm-{major_version}/lib/clang/{major_version}/include",  # Ubuntu
+                                ])
+                                break
+                        break
+        except (subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
+            pass
+        
+        # Strategy 3: Check LLVM source tree locations (for developers working with source)
+        # Try to detect if we're running from within an LLVM source tree
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Navigate up to find the LLVM project root
+        llvm_project_roots = []
+        check_dir = current_dir
+        for _ in range(10):  # Don't go more than 10 levels up
+            if os.path.basename(check_dir) in ['llvm-project', 'llvm']:
+                llvm_project_roots.append(check_dir)
+            parent = os.path.dirname(check_dir)
+            if parent == check_dir:  # Reached root
+                break
+            check_dir = parent
+        
+        # Also check common relative paths from current location
+        possible_roots = [
+            os.path.join(current_dir, '..', '..', '..', '..'),  # From clang/bindings/python/clang
+            os.path.join(current_dir, '..', '..', '..'),
+            os.path.join(current_dir, '..', '..'),
+        ]
+        
+        for root in llvm_project_roots + possible_roots:
+            if os.path.exists(root):
+                # Check for clang/lib/Headers in the source tree
+                headers_path = os.path.join(root, 'clang', 'lib', 'Headers')
+                if os.path.exists(headers_path):
+                    candidates.append(headers_path)
+        
+        # Strategy 4: Check common installation paths
+        system = platform.system()
+        if system == "Windows":
+            # On Windows, check common LLVM installation paths
+            program_files_paths = [
+                os.environ.get('ProgramFiles', r'C:\Program Files'),
+                os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'),
+            ]
+            for pf in program_files_paths:
+                if pf and os.path.exists(pf):
+                    llvm_base = os.path.join(pf, 'LLVM')
+                    if os.path.exists(llvm_base):
+                        for item in os.listdir(llvm_base):
+                            lib_path = os.path.join(llvm_base, item, 'lib', 'clang')
+                            if os.path.exists(lib_path):
+                                for version in os.listdir(lib_path):
+                                    include_path = os.path.join(lib_path, version, 'include')
+                                    candidates.append(include_path)
+        
+        # Find the first existing candidate
+        for candidate in candidates:
+            if candidate and os.path.isdir(candidate):
+                # Verify it contains stddef.h as a sanity check
+                stddef_path = os.path.join(candidate, 'stddef.h')
+                if os.path.isfile(stddef_path):
+                    Config._builtin_include_path = candidate
+                    return candidate
+        
+        # If nothing found, cache the negative result
+        Config._builtin_include_path = ""
+        return None
 
     @CachedProperty
     def lib(self) -> CDLL:
