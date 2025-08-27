@@ -305,7 +305,6 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
-
           RS.ParametersContainer.addParameter(Type, Visibility, Descriptor);
           break;
         }
