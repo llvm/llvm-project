@@ -1,0 +1,32 @@
+
+[section:inverse_chi_squared_eg Inverse Chi-Squared Distribution Bayes Example]
+
+[import ../../example/inverse_chi_squared_bayes_eg.cpp]
+[inverse_chi_squared_bayes_eg_1]
+[inverse_chi_squared_bayes_eg_output_1]
+[inverse_chi_squared_bayes_eg_2]
+[inverse_chi_squared_bayes_eg_output_2]
+[inverse_chi_squared_bayes_eg_3]
+[inverse_chi_squared_bayes_eg_output_3]
+[inverse_chi_squared_bayes_eg_4]
+[inverse_chi_squared_bayes_eg_output_4]
+
+[inverse_chi_squared_bayes_eg_5]
+
+A full sample output is:
+[inverse_chi_squared_bayes_eg_output]
+
+(See also the reference documentation for the __inverse_chi_squared_distrib.)
+
+See the full source C++ of this example at
+[@../../example/inverse_chi_squared_bayes_eg.cpp]
+
+[endsect] [/section:inverse_chi_squared_eg Inverse Chi-Squared Distribution Bayes Example]
+
+[/ 
+  Copyright 2011 Paul A. Bristow and Thomas Mang.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

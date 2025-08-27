@@ -1,0 +1,396 @@
+<?xml version="1.0"?>
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+ <mrow>
+    <mtable columnalign="right center left">
+    <mtr>
+     <mtd>
+      <mrow>
+       <mi>J</mi>
+       <msub>
+        <mi>'</mi>
+        <mi>v</mi>
+       </msub>
+       <mrow>
+        <mo stretchy="false">(</mo>
+        <mrow>
+         <mi>z</mi>
+        </mrow>
+        <mo stretchy="false">)</mo>
+       </mrow>
+      </mrow>
+     </mtd>
+     <mtd>
+      <mrow>
+       <mrow>
+        <mrow/>
+        <mo stretchy="false">=</mo>
+        <mrow/>
+       </mrow>
+      </mrow>
+     </mtd>
+     <mtd>
+      <mrow>
+       <mfrac>
+        <msup>
+         <mi>z</mi>
+         <mrow>
+          <mrow>
+           <mi>v</mi>
+           <mo stretchy="false">−</mo>
+           <mn>1</mn>
+          </mrow>
+         </mrow>
+        </msup>
+        <mrow>
+         <msup>
+          <mn>2</mn>
+          <mi>v</mi>
+         </msup>
+        </mrow>
+       </mfrac>
+       <mrow>
+        <munderover>
+         <mo stretchy="false">∑</mo>
+         <mrow>
+          <mrow>
+           <mi>k</mi>
+           <mo stretchy="false">=</mo>
+           <mn>0</mn>
+          </mrow>
+         </mrow>
+         <mrow>
+          <mo stretchy="false">∞</mo>
+         </mrow>
+        </munderover>
+        <mrow>
+         <mfrac>
+          <mrow>
+           <msup>
+            <mfenced open="(" close=")">
+             <mrow>
+              <mrow>
+               <mo stretchy="false">−</mo>
+               <mrow>
+                <mfrac>
+                 <msup>
+                  <mi>z</mi>
+                  <mn>2</mn>
+                 </msup>
+                 <mn>4</mn>
+                </mfrac>
+               </mrow>
+              </mrow>
+             </mrow>
+            </mfenced>
+            <mi>k</mi>
+           </msup>
+           <mrow>
+            <mo stretchy="false">(</mo>
+            <mrow>
+             <mrow>
+              <mi>v</mi>
+              <mo stretchy="false">+</mo>
+              <mn>2k</mn>
+             </mrow>
+            </mrow>
+            <mo stretchy="false">)</mo>
+           </mrow>
+          </mrow>
+          <mrow>
+           <mi>k</mi>
+           <mi>!</mi>
+           <mo stretchy="false">Γ</mo>
+           <mrow>
+            <mo stretchy="false">(</mo>
+            <mrow>
+             <mrow>
+              <mrow>
+               <mn>1</mn>
+               <mo stretchy="false">+</mo>
+               <mi>k</mi>
+              </mrow>
+              <mo stretchy="false">+</mo>
+              <mi>v</mi>
+             </mrow>
+            </mrow>
+            <mo stretchy="false">)</mo>
+           </mrow>
+          </mrow>
+         </mfrac>
+        </mrow>
+       </mrow>
+      </mrow>
+     </mtd>
+    </mtr>
+    <mtr>
+     <mtd>
+      <mrow>
+       <mrow>
+        <mi>Y</mi>
+        <msub>
+         <mi>'</mi>
+         <mi>v</mi>
+        </msub>
+        <mrow>
+         <mo stretchy="false">(</mo>
+         <mrow>
+          <mi>x</mi>
+         </mrow>
+         <mo stretchy="false">)</mo>
+        </mrow>
+       </mrow>
+      </mrow>
+     </mtd>
+     <mtd>
+      <mrow>
+       <mrow>
+        <mrow/>
+        <mo stretchy="false">=</mo>
+        <mrow/>
+       </mrow>
+      </mrow>
+     </mtd>
+     <mtd>
+      <mrow>
+       <mrow>
+        <mrow>
+         <mrow>
+          <mrow>
+           <mrow>
+            <mo stretchy="false">−</mo>
+            <mrow>
+             <mfrac>
+              <mrow>
+               <mo stretchy="false">Γ</mo>
+               <mrow>
+                <mo stretchy="false">(</mo>
+                <mrow>
+                 <mrow>
+                  <mo stretchy="false">−</mo>
+                  <mi>v</mi>
+                 </mrow>
+                </mrow>
+                <mo stretchy="false">)</mo>
+               </mrow>
+               <mi>cos</mi>
+               <mrow>
+                <mo stretchy="false">(</mo>
+                <mrow>
+                 <mi>v</mi>
+                 <mo stretchy="false">π</mo>
+                </mrow>
+                <mo stretchy="false">)</mo>
+               </mrow>
+              </mrow>
+              <mo stretchy="false">π</mo>
+             </mfrac>
+            </mrow>
+           </mrow>
+           <mo stretchy="false">×</mo>
+           <mrow>
+            <mfrac>
+             <msup>
+              <mi>z</mi>
+              <mrow>
+               <mrow>
+                <mi>v</mi>
+                <mo stretchy="false">−</mo>
+                <mn>1</mn>
+               </mrow>
+              </mrow>
+             </msup>
+             <msup>
+              <mn>2</mn>
+              <mi>v</mi>
+             </msup>
+            </mfrac>
+           </mrow>
+          </mrow>
+          <mo stretchy="false">×</mo>
+          <mrow>
+           <munderover>
+            <mo stretchy="false">∑</mo>
+            <mrow>
+             <mrow>
+              <mi>k</mi>
+              <mo stretchy="false">=</mo>
+              <mn>0</mn>
+             </mrow>
+            </mrow>
+            <mrow>
+             <mo stretchy="false">∞</mo>
+            </mrow>
+           </munderover>
+           <mrow>
+            <mfrac>
+             <mrow>
+              <msup>
+               <mfenced open="(" close=")">
+                <mrow>
+                 <mrow>
+                  <mo stretchy="false">−</mo>
+                  <mrow>
+                   <mfrac>
+                    <msup>
+                     <mi>z</mi>
+                     <mn>2</mn>
+                    </msup>
+                    <mn>4</mn>
+                   </mfrac>
+                  </mrow>
+                 </mrow>
+                </mrow>
+               </mfenced>
+               <mi>k</mi>
+              </msup>
+              <mrow>
+               <mo stretchy="false">(</mo>
+               <mrow>
+                <mrow>
+                 <mi>v</mi>
+                 <mo stretchy="false">+</mo>
+                 <mn>2k</mn>
+                </mrow>
+               </mrow>
+               <mo stretchy="false">)</mo>
+              </mrow>
+             </mrow>
+             <mrow>
+              <msub>
+               <mrow>
+                <mo stretchy="false">(</mo>
+                <mrow>
+                 <mrow>
+                  <mi>v</mi>
+                  <mo stretchy="false">+</mo>
+                  <mn>1</mn>
+                 </mrow>
+                </mrow>
+                <mo stretchy="false">)</mo>
+               </mrow>
+               <mi>k</mi>
+              </msub>
+              <mi>k</mi>
+              <mi>!</mi>
+             </mrow>
+            </mfrac>
+           </mrow>
+          </mrow>
+         </mrow>
+         <mo stretchy="false">−</mo>
+         <mrow>
+          <mrow>
+           <mfrac>
+            <mrow>
+             <mo stretchy="false">Γ</mo>
+             <mrow>
+              <mo stretchy="false">(</mo>
+              <mrow>
+               <mi>v</mi>
+              </mrow>
+              <mo stretchy="false">)</mo>
+             </mrow>
+            </mrow>
+            <mo stretchy="false">π</mo>
+           </mfrac>
+           <mo stretchy="false">×</mo>
+           <mrow>
+            <mfrac>
+             <msup>
+              <mn>2</mn>
+              <mi>v</mi>
+             </msup>
+             <mrow>
+              <msup>
+               <mi>z</mi>
+               <mrow>
+                <mrow>
+                 <mi>v</mi>
+                 <mo stretchy="false">+</mo>
+                 <mn>1</mn>
+                </mrow>
+               </mrow>
+              </msup>
+             </mrow>
+            </mfrac>
+           </mrow>
+          </mrow>
+          <mo stretchy="false">×</mo>
+          <mrow>
+           <munderover>
+            <mo stretchy="false">∑</mo>
+            <mrow>
+             <mrow>
+              <mi>k</mi>
+              <mo stretchy="false">=</mo>
+              <mn>0</mn>
+             </mrow>
+            </mrow>
+            <mrow>
+             <mo stretchy="false">∞</mo>
+            </mrow>
+           </munderover>
+           <mrow>
+            <mfrac>
+             <mrow>
+              <msup>
+               <mfenced open="(" close=")">
+                <mrow>
+                 <mrow>
+                  <mo stretchy="false">−</mo>
+                  <mrow>
+                   <mfrac>
+                    <msup>
+                     <mi>z</mi>
+                     <mn>2</mn>
+                    </msup>
+                    <mn>4</mn>
+                   </mfrac>
+                  </mrow>
+                 </mrow>
+                </mrow>
+               </mfenced>
+               <mi>k</mi>
+              </msup>
+              <mrow>
+               <mo stretchy="false">(</mo>
+               <mrow>
+                <mrow>
+                 <mn>2k</mn>
+                 <mo stretchy="false">−</mo>
+                 <mi>v</mi>
+                </mrow>
+               </mrow>
+               <mo stretchy="false">)</mo>
+              </mrow>
+             </mrow>
+             <mrow>
+              <msub>
+               <mrow>
+                <mo stretchy="false">(</mo>
+                <mrow>
+                 <mrow>
+                  <mn>1</mn>
+                  <mo stretchy="false">−</mo>
+                  <mi>v</mi>
+                 </mrow>
+                </mrow>
+                <mo stretchy="false">)</mo>
+               </mrow>
+               <mi>k</mi>
+              </msub>
+              <mi>k</mi>
+              <mi>!</mi>
+             </mrow>
+            </mfrac>
+           </mrow>
+          </mrow>
+         </mrow>
+        </mrow>
+       </mrow>
+      </mrow>
+     </mtd>
+    </mtr>
+   </mtable>
+  </mrow>
+</math>

@@ -1,0 +1,205 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Error Handling Example</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../weg.html" title="Worked Examples">
+<link rel="prev" href="nccs_eg/nccs_power_eg.html" title="Tables of the power function of the chi2 test.">
+<link rel="next" href="find_eg.html" title="Find Location and Scale Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nccs_eg/nccs_power_eg.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="find_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.stat_tut.weg.error_eg"></a><a class="link" href="error_eg.html" title="Error Handling Example">Error Handling
+        Example</a>
+</h4></div></div></div>
+<p>
+          See <a class="link" href="../../error_handling.html" title="Error Handling">error handling documentation</a>
+          for a detailed explanation of the mechanism of handling errors, including
+          the common "bad" arguments to distributions and functions, and
+          how to use <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policies</a> to control it.
+        </p>
+<p>
+          But, by default, <span class="bold"><strong>exceptions will be raised</strong></span>,
+          for domain errors, pole errors, numeric overflow, and internal evaluation
+          errors. To avoid the exceptions from getting thrown and instead get an
+          appropriate value returned, usually a NaN (domain errors pole errors or
+          internal errors), or infinity (from overflow), you need to change the policy.
+        </p>
+<p>
+          The following example demonstrates the effect of setting the macro BOOST_MATH_DOMAIN_ERROR_POLICY
+          when an invalid argument is encountered. For the purposes of this example,
+          we'll pass a negative degrees of freedom parameter to the student's t distribution.
+        </p>
+<p>
+          Since we know that this is a single file program we could just add:
+        </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+</pre>
+<p>
+          to the top of the source file to change the default policy to one that
+          simply returns a NaN when a domain error occurs. Alternatively we could
+          use:
+        </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">errno_on_error</span>
+</pre>
+<p>
+          To ensure the <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+          is set when a domain error occurs as well as returning a NaN.
+        </p>
+<p>
+          This is safe provided the program consists of a single translation unit
+          <span class="emphasis"><em>and</em></span> we place the define <span class="emphasis"><em>before</em></span>
+          any #includes. Note that should we add the define after the includes then
+          it will have no effect! A warning such as:
+        </p>
+<pre class="programlisting">warning C4005: 'BOOST_MATH_OVERFLOW_ERROR_POLICY' : macro redefinition</pre>
+<p>
+          is a certain sign that it will <span class="emphasis"><em>not</em></span> have the desired
+          effect.
+        </p>
+<p>
+          We'll begin our sample program with the needed includes:
+        </p>
+<pre class="programlisting">   <span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+
+<span class="comment">// Boost</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">students_t</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+   <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">students_t</span><span class="special">;</span>  <span class="comment">// Probability of students_t(df, t).</span>
+
+<span class="comment">// std</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+   <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span>
+   <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">stdexcept</span><span class="special">&gt;</span>
+
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cstddef</span><span class="special">&gt;</span>
+   <span class="comment">// using ::errno</span>
+</pre>
+<p>
+          Next we'll define the program's main() to call the student's t distribution
+          with an invalid degrees of freedom parameter, the program is set up to
+          handle either an exception or a NaN:
+        </p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Example error handling using Student's t function. "</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"BOOST_MATH_DOMAIN_ERROR_POLICY is set to: "</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">BOOST_MATH_STRINGIZE</span><span class="special">(</span><span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+   <span class="keyword">double</span> <span class="identifier">degrees_of_freedom</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span> <span class="comment">// A bad argument!</span>
+   <span class="keyword">double</span> <span class="identifier">t</span> <span class="special">=</span> <span class="number">10</span><span class="special">;</span>
+
+   <span class="keyword">try</span>
+   <span class="special">{</span>
+      <span class="identifier">errno</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="comment">// Clear/reset.</span>
+      <span class="identifier">students_t</span> <span class="identifier">dist</span><span class="special">(</span><span class="identifier">degrees_of_freedom</span><span class="special">);</span> <span class="comment">// exception is thrown here if enabled.</span>
+      <span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">t</span><span class="special">);</span>
+      <span class="comment">// Test for error reported by other means:</span>
+      <span class="keyword">if</span><span class="special">((</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">p</span><span class="special">))</span>
+      <span class="special">{</span>
+         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cdf returned a NaN!"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+         <span class="keyword">if</span> <span class="special">(</span><span class="identifier">errno</span> <span class="special">!=</span> <span class="number">0</span><span class="special">)</span>
+         <span class="special">{</span> <span class="comment">// So errno has been set.</span>
+           <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"errno is set to: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">errno</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+         <span class="special">}</span>
+      <span class="special">}</span>
+      <span class="keyword">else</span>
+         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of Student's t is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+         <span class="string">"\n"</span><span class="string">"Message from thrown exception was:\n   "</span> <span class="special">&lt;&lt;</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// int main()</span>
+</pre>
+<p>
+          Here's what the program output looks like with a default build (one that
+          <span class="bold"><strong>does throw exceptions</strong></span>):
+        </p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: throw_on_error
+
+Message from thrown exception was:
+   Error in function boost::math::students_t_distribution&lt;double&gt;::students_t_distribution:
+   Degrees of freedom argument is -1, but must be &gt; 0 !
+</pre>
+<p>
+          Alternatively let's build with:
+        </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+</pre>
+<p>
+          Now the program output is:
+        </p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: ignore_error
+cdf returned a NaN!
+</pre>
+<p>
+          And finally let's build with:
+        </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">errno_on_error</span>
+</pre>
+<p>
+          Which gives the output show errno:
+        </p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: errno_on_error
+cdf returned a NaN!
+errno is set to: 33
+</pre>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+            If throwing of exceptions is enabled (the default) but you do <span class="bold"><strong>not</strong></span> have try &amp; catch block, then the program
+            will terminate with an uncaught exception and probably abort.
+          </p>
+<p>
+            Therefore to get the benefit of helpful error messages, enabling <span class="bold"><strong>all exceptions and using try &amp; catch</strong></span> is recommended
+            for most applications.
+          </p>
+<p>
+            However, for simplicity, the is not done for most examples.
+          </p>
+</td></tr>
+</table></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nccs_eg/nccs_power_eg.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="find_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

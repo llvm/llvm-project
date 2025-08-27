@@ -1,0 +1,257 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Using Macros to Change the Policy Defaults</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../pol_ref.html" title="Policy Reference">
+<link rel="prev" href="iteration_pol.html" title="Iteration Limits Policies">
+<link rel="next" href="namespace_pol.html" title="Setting Polices at Namespace Scope">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="iteration_pol.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="namespace_pol.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.pol_ref.policy_defaults"></a><a class="link" href="policy_defaults.html" title="Using Macros to Change the Policy Defaults">Using Macros to
+      Change the Policy Defaults</a>
+</h3></div></div></div>
+<p>
+        You can use the various macros below to change any (or all) of the policies.
+      </p>
+<p>
+        You can make a local change by placing a macro definition <span class="bold"><strong>before</strong></span>
+        a function or distribution #include.
+      </p>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          There is a danger of One-Definition-Rule violations if you add ad-hoc macros
+          to more than one source files: these must be set the same in <span class="bold"><strong>every translation unit</strong></span>.
+        </p></td></tr>
+</table></div>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          If you place it after the #include it will have no effect, (and it will
+          affect only any other following #includes). This is probably not what you
+          intend!
+        </p></td></tr>
+</table></div>
+<p>
+        If you want to alter the defaults for any or all of the policies for <span class="bold"><strong>all</strong></span> functions and distributions, installation-wide,
+        then you can do so by defining various macros in <a href="../../../../../../boost/math/tools/user.hpp" target="_top">boost/math/tools/user.hpp</a>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h0"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_domain_error_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_domain_error_policy">BOOST_MATH_DOMAIN_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when a domain error occurs, if not defined then defaults
+        to <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, but can
+        be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h1"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_pole_error_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_pole_error_policy">BOOST_MATH_POLE_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when a pole error occurs, if not defined then defaults
+        to <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, but can
+        be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h2"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_overflow_error_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_overflow_error_policy">BOOST_MATH_OVERFLOW_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when an overflow error occurs, if not defined then defaults
+        to <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, but can
+        be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h3"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_rounding_error_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_rounding_error_policy">BOOST_MATH_ROUNDING_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when a rounding error occurs, if not defined then defaults
+        to <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, but can
+        be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h4"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_evaluation_error_poli"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_evaluation_error_poli">BOOST_MATH_EVALUATION_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when an internal evaluation error occurs, if not defined
+        then defaults to <code class="computeroutput"><span class="identifier">throw_on_error</span></code>,
+        but can be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h5"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_underflow_error_polic"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_underflow_error_polic">BOOST_MATH_UNDERFLOW_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when an overflow error occurs, if not defined then defaults
+        to <code class="computeroutput"><span class="identifier">ignore_error</span></code>, but can
+        be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h6"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_denorm_error_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_denorm_error_policy">BOOST_MATH_DENORM_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when a denormalisation error occurs, if not defined
+        then defaults to <code class="computeroutput"><span class="identifier">ignore_error</span></code>,
+        but can be set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, <code class="computeroutput"><span class="identifier">errno_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h7"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_indeterminate_result_"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_indeterminate_result_">BOOST_MATH_INDETERMINATE_RESULT_ERROR_POLICY</a>
+      </h6>
+<p>
+        Defines what happens when the result is indeterminate, but where there is
+        none the less a convention for the result. If not defined then defaults to
+        <code class="computeroutput"><span class="identifier">ignore_error</span></code>, but can be
+        set to any of the enumerated actions for error handing: <code class="computeroutput"><span class="identifier">throw_on_error</span></code>,
+        <code class="computeroutput"><span class="identifier">errno_on_error</span></code>, <code class="computeroutput"><span class="identifier">ignore_error</span></code> or <code class="computeroutput"><span class="identifier">user_error</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h8"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_digits10_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_digits10_policy">BOOST_MATH_DIGITS10_POLICY</a>
+      </h6>
+<p>
+        Defines how many decimal digits to use in internal computations: defaults
+        to <code class="computeroutput"><span class="number">0</span></code> - meaning use all available
+        digits - but can be set to some other decimal value. Since setting this is
+        likely to have a substantial impact on accuracy, it's not generally recommended
+        that you change this from the default.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h9"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_promote_float_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_promote_float_policy">BOOST_MATH_PROMOTE_FLOAT_POLICY</a>
+      </h6>
+<p>
+        Determines whether <code class="computeroutput"><span class="keyword">float</span></code> types
+        get promoted to <code class="computeroutput"><span class="keyword">double</span></code> internally
+        to ensure maximum precision in the result, defaults to <code class="computeroutput"><span class="keyword">true</span></code>,
+        but can be set to <code class="computeroutput"><span class="keyword">false</span></code> to turn
+        promotion of <code class="computeroutput"><span class="keyword">float</span></code>'s off.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h10"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_promote_double_policy"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_promote_double_policy">BOOST_MATH_PROMOTE_DOUBLE_POLICY</a>
+      </h6>
+<p>
+        Determines whether <code class="computeroutput"><span class="keyword">double</span></code> types
+        get promoted to <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+        internally to ensure maximum precision in the result, defaults to <code class="computeroutput"><span class="keyword">true</span></code>, but can be set to <code class="computeroutput"><span class="keyword">false</span></code>
+        to turn promotion of <code class="computeroutput"><span class="keyword">double</span></code>'s
+        off.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h11"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_discrete_quantile_pol"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_discrete_quantile_pol">BOOST_MATH_DISCRETE_QUANTILE_POLICY</a>
+      </h6>
+<p>
+        Determines how discrete quantiles return their results: either as an integer,
+        or as a real value, can be set to one of the enumerated values: <code class="computeroutput"><span class="identifier">real</span></code>, <code class="computeroutput"><span class="identifier">integer_round_outwards</span></code>,
+        <code class="computeroutput"><span class="identifier">integer_round_inwards</span></code>, <code class="computeroutput"><span class="identifier">integer_round_down</span></code>, <code class="computeroutput"><span class="identifier">integer_round_up</span></code>,
+        <code class="computeroutput"><span class="identifier">integer_round_nearest</span></code>. Defaults
+        to <code class="computeroutput"><span class="identifier">integer_round_outwards</span></code>.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h12"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_assert_undefined_poli"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_assert_undefined_poli">BOOST_MATH_ASSERT_UNDEFINED_POLICY</a>
+      </h6>
+<p>
+        Determines whether functions that are mathematically undefined for a specific
+        distribution compile or raise a static (i.e. compile-time) assertion. Defaults
+        to <code class="computeroutput"><span class="keyword">true</span></code>: meaning that any mathematically
+        undefined function will not compile. When set to <code class="computeroutput"><span class="keyword">false</span></code>
+        then the function will compile but return the result of a domain error: this
+        can be useful for some generic code, that needs to work with all distributions
+        and determine at runtime whether or not a particular property is well defined.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h13"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_max_series_iteration_"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_max_series_iteration_">BOOST_MATH_MAX_SERIES_ITERATION_POLICY</a>
+      </h6>
+<p>
+        Determines how many series iterations a special function is permitted to
+        perform before it gives up and returns an <a class="link" href="../error_handling.html#math_toolkit.error_handling.evaluation_error">evaluation_error</a>:
+        Defaults to 1000000.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h14"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.boost_math_max_root_iteration_po"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.boost_math_max_root_iteration_po">BOOST_MATH_MAX_ROOT_ITERATION_POLICY</a>
+      </h6>
+<p>
+        Determines how many root-finding iterations a special function is permitted
+        to perform before it gives up and returns an <a class="link" href="../error_handling.html#math_toolkit.error_handling.evaluation_error">evaluation_error</a>:
+        Defaults to 200.
+      </p>
+<h6>
+<a name="math_toolkit.pol_ref.policy_defaults.h15"></a>
+        <span class="phrase"><a name="math_toolkit.pol_ref.policy_defaults.example"></a></span><a class="link" href="policy_defaults.html#math_toolkit.pol_ref.policy_defaults.example">Example</a>
+      </h6>
+<p>
+        Suppose we want overflow errors to set <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code> and return an infinity, discrete
+        quantiles to return a real-valued result (rather than round to integer),
+        and for mathematically undefined functions to compile, but return a domain
+        error. Then we could add the following to boost/math/tools/user.hpp:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_OVERFLOW_ERROR_POLICY</span> <span class="identifier">errno_on_error</span>
+<span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DISCRETE_QUANTILE_POLICY</span> <span class="identifier">real</span>
+<span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_ASSERT_UNDEFINED_POLICY</span> <span class="keyword">false</span>
+</pre>
+<p>
+        or we could place these definitions <span class="bold"><strong>before</strong></span>
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">normal</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">;</span>
+</pre>
+<p>
+        in a source .cpp file.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="iteration_pol.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_ref.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="namespace_pol.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

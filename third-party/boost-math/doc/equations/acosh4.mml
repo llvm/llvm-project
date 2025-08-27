@@ -1,0 +1,65 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>acosh4</title>
+<!-- MathML created with MathCast Equation Editor version 0.89 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>acosh</mtext>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>&#x2248;</mo>
+    <msqrt>
+      <mrow>
+        <mn>2</mn>
+        <mi>y</mi>
+      </mrow>
+    </msqrt>
+    <mfenced>
+      <mrow>
+        <mn>1</mn>
+        <mo>-</mo>
+        <mfrac>
+          <mi>y</mi>
+          <mn>12</mn>
+        </mfrac>
+        <mo>+</mo>
+        <mfrac>
+          <mrow>
+            <mn>3</mn>
+            <msup>
+              <mi>y</mi>
+              <mn>2</mn>
+            </msup>
+          </mrow>
+          <mn>160</mn>
+        </mfrac>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>;</mo>
+    <mspace width="1em"/>
+    <mi>y</mi>
+    <mo>=</mo>
+    <mn>x</mn>
+    <mo>&#x2212;</mo>
+    <mi>1</mi>
+    <mspace width="1em"/>
+    <mo>&#x2227;</mo>
+    <mspace width="1em"/>
+    <mi>y</mi>
+    <mo>&lt;</mo>
+    <msqrt>
+      <mi>&#x03B5;</mi>
+    </msqrt>
+  </mrow>
+</math>
+</body>
+</html>

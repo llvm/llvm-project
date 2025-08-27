@@ -1,0 +1,99 @@
+[section:beta_function Beta]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/beta.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b, const ``__Policy``&);
+   
+   }} // namespaces
+
+[h4 Description]
+
+The beta function is defined by:
+
+[equation beta1]
+
+[graph beta]
+
+[optional_policy]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types.
+
+[h4 Accuracy]
+
+The following table shows peak errors for various domains of input arguments,
+along with comparisons to the __gsl and __cephes libraries.  Note that
+only results for the widest floating point type on the system are given as
+narrower types have __zero_error.
+
+[table_beta]
+
+Note that the worst errors occur when a or b are large, and that 
+when this is the case the result is very close to zero, so absolute
+errors will be very small.
+
+[h4 Testing]
+
+A mixture of spot tests of exact values, and randomly generated test data are
+used: the test data was computed using
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] at 1000-bit precision.
+
+[h4 Implementation]
+
+Traditional methods of evaluating the beta function either involve evaluating
+the gamma functions directly, or taking logarithms and then 
+exponentiating the result.  However, the former is prone to overflows
+for even very modest arguments, while the latter is prone to cancellation
+errors.  As an alternative, if we regard the gamma function as a white-box
+containing the __lanczos, then we can combine the power terms:
+
+[equation beta2]
+
+which is almost the ideal solution, however almost all of the error occurs
+in evaluating the power terms when /a/ or /b/ are large.  If we assume that /a > b/
+then the larger of the two power terms can be reduced by a factor of /b/, which
+immediately cuts the maximum error in half:
+
+[equation beta3]
+
+This may not be the final solution, but it is very competitive compared to
+other implementation methods.
+
+The generic implementation - where no __lanczos approximation is available - is
+implemented in a very similar way to the generic version of the gamma function
+by means of Sterling's approximation.
+Again in order to avoid numerical overflow the power terms that prefix the series
+are collected together
+
+There are a few special cases worth mentioning:
+
+When /a/ or /b/ are less than one, we can use the recurrence relations:
+
+[equation beta4]
+
+[equation beta5]
+
+to move to a more favorable region where they are both greater than 1.
+
+In addition:
+
+[equation beta7]
+
+[endsect] [/section:beta_function The Beta Function]
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
