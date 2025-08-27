@@ -2338,15 +2338,23 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
-  // TODO: Support mul.
-  if (BinOp == Instruction::Mul)
-    return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
   if (!RHSC)
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
+  if (BinOp == Instruction::Mul) {
+    // Multiplying by 0 or 1 never overflows
+    if (C.isZero() || C.isOne())
+      return true;
+    if (Signed)
+      return false;
+    APInt Limit = APInt::getMaxValue(NumBits).udiv(C);
+    // To avoid overflow, we need to make sure that LHS <= MAX / C.
+    return isKnownPredicateAt(ICmpInst::ICMP_ULE, LHS, getConstant(Limit),
+                              CtxI);
+  }
   bool IsSub = (BinOp == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.

@@ -5939,7 +5939,6 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
-                          const MachineRegisterInfo &MRI,
                           const MCInstrDesc &TID, unsigned RCID,
                           bool IsAllocatable) {
   if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
@@ -5999,25 +5998,26 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
                                            TID.Opcode, AMDGPU::OpName::data1);
     }
   }
-  return adjustAllocatableRegClass(ST, RI, MF.getRegInfo(), TID, RegClass,
-                                   IsAllocatable);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
                                                       unsigned OpNo) const {
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const MCInstrDesc &Desc = get(MI.getOpcode());
   if (MI.isVariadic() || OpNo >= Desc.getNumOperands() ||
       Desc.operands()[OpNo].RegClass == -1) {
     Register Reg = MI.getOperand(OpNo).getReg();
 
-    if (Reg.isVirtual())
+    if (Reg.isVirtual()) {
+      const MachineRegisterInfo &MRI =
+          MI.getParent()->getParent()->getRegInfo();
       return MRI.getRegClass(Reg);
+    }
     return RI.getPhysRegBaseClass(Reg);
   }
 
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return adjustAllocatableRegClass(ST, RI, MRI, Desc, RCID, true);
+  return adjustAllocatableRegClass(ST, RI, Desc, RCID, true);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
@@ -8063,12 +8063,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       MRI.replaceRegWith(DstReg, NewDstReg);
       MRI.clearKillFlags(NewDstReg);
       Inst.getOperand(0).setReg(DstReg);
-      // Make sure we don't leave around a dead VGPR->SGPR copy. Normally
-      // these are deleted later, but at -O0 it would leave a suspicious
-      // looking illegal copy of an undef register.
-      for (unsigned I = Inst.getNumOperands() - 1; I != 0; --I)
-        Inst.removeOperand(I);
-      Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
+      Inst.eraseFromParent();
       // Legalize t16 operand since replaceReg is called after addUsersToVALU
       for (MachineOperand &MO :
            make_early_inc_range(MRI.use_operands(NewDstReg))) {

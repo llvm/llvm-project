@@ -12692,8 +12692,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   // type, to give us better diagnostics.
   Source = Context.getCanonicalType(SourceType).getTypePtr();
 
-  if (const EnumType *SourceEnum = Source->getAs<EnumType>())
-    if (const EnumType *TargetEnum = Target->getAs<EnumType>())
+  if (const EnumType *SourceEnum = Source->getAsCanonical<EnumType>())
+    if (const EnumType *TargetEnum = Target->getAsCanonical<EnumType>())
       if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
           TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {

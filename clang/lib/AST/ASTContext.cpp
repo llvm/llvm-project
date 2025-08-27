@@ -1708,7 +1708,7 @@ void ASTContext::setRelocationInfoForCXXRecord(
 }
 
 static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
-    ASTContext &Context, const CXXRecordDecl *Class) {
+    const ASTContext &Context, const CXXRecordDecl *Class) {
   if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
@@ -1723,7 +1723,8 @@ static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
   return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
-ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
+ASTContext::PointerAuthContent
+ASTContext::findPointerAuthContent(QualType T) const {
   assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
@@ -2614,10 +2615,10 @@ unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
     return I->second;
 
   unsigned UnadjustedAlign;
-  if (const auto *RT = T->getAs<RecordType>()) {
+  if (const auto *RT = T->getAsCanonical<RecordType>()) {
     const ASTRecordLayout &Layout = getASTRecordLayout(RT->getOriginalDecl());
     UnadjustedAlign = toBits(Layout.getUnadjustedAlignment());
-  } else if (const auto *ObjCI = T->getAs<ObjCInterfaceType>()) {
+  } else if (const auto *ObjCI = T->getAsCanonical<ObjCInterfaceType>()) {
     const ASTRecordLayout &Layout = getASTObjCInterfaceLayout(ObjCI->getDecl());
     UnadjustedAlign = toBits(Layout.getUnadjustedAlignment());
   } else {
@@ -3029,7 +3030,7 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return true;
   }
 
-  // All other pointers (except __ptrauth pointers) are unique.
+  // All other pointers are unique.
   if (Ty->isPointerType())
     return !Ty.hasAddressDiscriminatedPointerAuth();
 
@@ -3552,8 +3553,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     llvm_unreachable("should never get here");
   }
   case Type::Record: {
-    const RecordDecl *RD =
-        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = T->castAsCanonical<RecordType>()->getOriginalDecl();
     const IdentifierInfo *II = RD->getIdentifier();
 
     // In C++, an immediate typedef of an anonymous struct or union
@@ -9277,8 +9277,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     llvm_unreachable("invalid BuiltinType::Kind value");
 }
 
-static char ObjCEncodingForEnumType(const ASTContext *C, const EnumType *ET) {
-  EnumDecl *Enum = ET->getOriginalDecl()->getDefinitionOrSelf();
+static char ObjCEncodingForEnumDecl(const ASTContext *C, const EnumDecl *ED) {
+  EnumDecl *Enum = ED->getDefinitionOrSelf();
 
   // The encoding of an non-fixed enum type is always 'i', regardless of size.
   if (!Enum->isFixed())
@@ -9321,8 +9321,8 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
 
     S += llvm::utostr(Offset);
 
-    if (const auto *ET = T->getAs<EnumType>())
-      S += ObjCEncodingForEnumType(Ctx, ET);
+    if (const auto *ET = T->getAsCanonical<EnumType>())
+      S += ObjCEncodingForEnumDecl(Ctx, ET->getOriginalDecl());
     else {
       const auto *BT = T->castAs<BuiltinType>();
       S += getObjCEncodingForPrimitiveType(Ctx, BT);
@@ -9379,7 +9379,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     if (const auto *BT = dyn_cast<BuiltinType>(CT))
       S += getObjCEncodingForPrimitiveType(this, BT);
     else
-      S += ObjCEncodingForEnumType(this, cast<EnumType>(CT));
+      S += ObjCEncodingForEnumDecl(this, cast<EnumType>(CT)->getOriginalDecl());
     return;
 
   case Type::Complex:
@@ -9446,7 +9446,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
         S += '*';
         return;
       }
-    } else if (const auto *RTy = PointeeTy->getAs<RecordType>()) {
+    } else if (const auto *RTy = PointeeTy->getAsCanonical<RecordType>()) {
       const IdentifierInfo *II = RTy->getOriginalDecl()->getIdentifier();
       // GCC binary compat: Need to convert "struct objc_class *" to "#".
       if (II == &Idents.get("objc_class")) {
@@ -11818,10 +11818,10 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   if (LHSClass != RHSClass) {
     // Note that we only have special rules for turning block enum
     // returns into block int returns, not vice-versa.
-    if (const auto *ETy = LHS->getAs<EnumType>()) {
+    if (const auto *ETy = LHS->getAsCanonical<EnumType>()) {
       return mergeEnumWithInteger(*this, ETy, RHS, false);
     }
-    if (const EnumType* ETy = RHS->getAs<EnumType>()) {
+    if (const EnumType *ETy = RHS->getAsCanonical<EnumType>()) {
       return mergeEnumWithInteger(*this, ETy, LHS, BlockReturnType);
     }
     // allow block pointer type to match an 'id' type.
@@ -15189,7 +15189,7 @@ StringRef ASTContext::getCUIDHash() const {
 }
 
 const CXXRecordDecl *
-ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) const {
   assert(ThisClass);
   assert(ThisClass->isPolymorphic());
   const CXXRecordDecl *PrimaryBase = ThisClass;

@@ -649,7 +649,7 @@ FailureOr<TilingInterface>
 rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
                   const PadTilingInterfaceOptions &constOptions,
                   SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+                  const PadSizeComputationFunction &computePaddingSizeFun =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {

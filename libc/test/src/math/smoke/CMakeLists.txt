@@ -2425,6 +2425,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  modfbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modfbf16_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modfbf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
   fdimf_test
   SUITE
     libc-math-smoke-tests
@@ -3561,6 +3577,20 @@ add_fp_unittest(
     RemQuoTest.h
   DEPENDS
     libc.src.math.remquof16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  remquobf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    remquobf16_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquobf16
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits
 )
 

@@ -517,19 +517,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9060
+                                                    - wavefrontsize64   flat                          - Radeon RX 9060 XT
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 9070
+                                                    - wavefrontsize64   flat                          - Radeon RX 9070 XT
+                                                                        scratch                       - Radeon RX 9070 GRE
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1250``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat

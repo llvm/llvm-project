@@ -2359,7 +2359,7 @@ void CGDebugInfo::CollectCXXBasesAux(
   for (const auto &BI : Bases) {
     const auto *Base =
         cast<CXXRecordDecl>(
-            BI.getType()->castAs<RecordType>()->getOriginalDecl())
+            BI.getType()->castAsCanonical<RecordType>()->getOriginalDecl())
             ->getDefinition();
     if (!SeenTypes.insert(Base).second)
       continue;

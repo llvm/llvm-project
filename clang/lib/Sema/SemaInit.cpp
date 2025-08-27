@@ -774,7 +774,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
     = InitializedEntity::InitializeMember(Field, &ParentEntity);
 
   if (Init >= NumInits || !ILE->getInit(Init)) {
-    if (const RecordType *RType = ILE->getType()->getAs<RecordType>())
+    if (const RecordType *RType = ILE->getType()->getAsCanonical<RecordType>())
       if (!RType->getOriginalDecl()->isUnion())
         assert((Init < NumInits || VerifyOnly) &&
                "This ILE should have been expanded");
