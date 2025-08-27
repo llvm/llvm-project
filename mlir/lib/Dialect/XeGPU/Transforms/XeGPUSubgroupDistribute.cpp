@@ -915,12 +915,14 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
           transposeOp,
           "the source or result vector of the transpose op lacks layout "
           "attribute");
-    ArrayRef<int64_t> sourceLaneLayout =
+    SmallVector<int64_t> sourceLaneLayout =
         sourceLayout.getLaneLayoutAsInt().value();
-    ArrayRef<int64_t> resultLaneLayout =
+    SmallVector<int64_t> resultLaneLayout =
         resultLayout.getLaneLayoutAsInt().value();
-    ArrayRef<int64_t> sourceLaneData = sourceLayout.getLaneDataAsInt().value();
-    ArrayRef<int64_t> resultLaneData = resultLayout.getLaneDataAsInt().value();
+    SmallVector<int64_t> sourceLaneData =
+        sourceLayout.getLaneDataAsInt().value();
+    SmallVector<int64_t> resultLaneData =
+        resultLayout.getLaneDataAsInt().value();
     if (sourceLaneLayout.size() != 2 || resultLaneLayout.size() != 2)
       return rewriter.notifyMatchFailure(
           transposeOp, "the source or result vector of the transpose op "
