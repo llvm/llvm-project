@@ -24,7 +24,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Type.h"
 
 using namespace mlir;
 using namespace ROCDL;

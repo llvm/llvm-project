@@ -100,6 +100,7 @@ public:
   void SetStopOnSharedLibraryEvents(bool stop);
   bool GetDisableLangRuntimeUnwindPlans() const;
   void SetDisableLangRuntimeUnwindPlans(bool disable);
+  void DisableLanguageRuntimeUnwindPlansCallback();
   bool GetDetachKeepsStopped() const;
   void SetDetachKeepsStopped(bool keep_stopped);
   bool GetWarningsOptimization() const;
@@ -2619,7 +2620,7 @@ void PruneThreadPlans();
 
   void ResetExtendedCrashInfoDict() {
     // StructuredData::Dictionary is add only, so we have to make a new one:
-    m_crash_info_dict_sp.reset(new StructuredData::Dictionary());
+    m_crash_info_dict_sp = std::make_shared<StructuredData::Dictionary>();
   }
 
   size_t AddImageToken(lldb::addr_t image_ptr);

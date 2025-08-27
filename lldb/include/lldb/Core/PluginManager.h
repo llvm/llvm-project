@@ -261,8 +261,7 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
-  static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         lldb_private::SaveCoreOptions &core_options);
+  static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
 
   static std::vector<llvm::StringRef> GetSaveCorePluginNames();
 

@@ -223,7 +223,7 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
           continue;
 
         TagDecl *candidate_tag_decl =
-            const_cast<TagDecl *>(tag_type->getDecl());
+            tag_type->getOriginalDecl()->getDefinitionOrSelf();
 
         if (TypeSystemClang::GetCompleteDecl(
                 &candidate_tag_decl->getASTContext(), candidate_tag_decl))
@@ -250,7 +250,8 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       if (!tag_type)
         continue;
 
-      TagDecl *candidate_tag_decl = const_cast<TagDecl *>(tag_type->getDecl());
+      TagDecl *candidate_tag_decl =
+          tag_type->getOriginalDecl()->getDefinitionOrSelf();
 
       if (TypeSystemClang::GetCompleteDecl(&candidate_tag_decl->getASTContext(),
                                            candidate_tag_decl))

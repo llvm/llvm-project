@@ -27,6 +27,7 @@ def LLVM_Dialect : Dialect {
   );
 
   let extraClassDeclaration = [{
+    static StringRef getTargetAttrName() { return "llvm.target"; }
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
@@ -82,6 +83,9 @@ def LLVM_Dialect : Dialect {
     static StringRef getEmitCWrapperAttrName() {
       return "llvm.emit_c_interface";
     }
+
+    /// Name of the module level assembly attribute.
+    static StringRef getModuleLevelAsmAttrName() { return "llvm.module_asm"; }
 
     /// Name of the dependent libraries attribute.
     static StringRef getDependentLibrariesAttrName() {

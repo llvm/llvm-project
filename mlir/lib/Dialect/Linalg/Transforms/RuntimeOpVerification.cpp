@@ -38,8 +38,8 @@ struct StructuredOpInterface
     SmallVector<Range> loopRanges = linalgOp.createLoopRanges(builder, loc);
     auto [starts, ends, _] = getOffsetsSizesAndStrides(loopRanges);
 
-    auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = builder.create<arith::ConstantIndexOp>(loc, 1);
+    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    auto one = arith::ConstantIndexOp::create(builder, loc, 1);
 
     // Subtract one from the loop ends before composing with the indexing map
     transform(ends, ends.begin(), [&](OpFoldResult end) {

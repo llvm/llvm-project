@@ -1449,7 +1449,7 @@ bool LLParser::parseGlobal(const std::string &Name, unsigned NameID,
         return true;
     } else if (Lex.getKind() == lltok::kw_align) {
       MaybeAlign Alignment;
-      if (parseOptionalAlignment(Alignment))
+      if (parseOptionalAlignment(lltok::kw_align, Alignment))
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
@@ -1548,7 +1548,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
         return true;
       Alignment = Align(Value);
     } else {
-      if (parseOptionalAlignment(Alignment, true))
+      if (parseOptionalAlignment(lltok::kw_align, Alignment, true))
         return true;
     }
     B.addAlignmentAttr(Alignment);
@@ -2272,6 +2272,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     CC = CallingConv::AMDGPU_CS_ChainPreserve;
     break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
+  case lltok::kw_amdgpu_gfx_whole_wave:
+    CC = CallingConv::AMDGPU_Gfx_WholeWave;
+    break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
@@ -2379,10 +2382,11 @@ bool LLParser::parseOptionalFunctionMetadata(Function &F) {
 
 /// parseOptionalAlignment
 ///   ::= /* empty */
-///   ::= 'align' 4
-bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
+///   ::= KW 4
+bool LLParser::parseOptionalAlignment(lltok::Kind KW, MaybeAlign &Alignment,
+                                      bool AllowParens) {
   Alignment = std::nullopt;
-  if (!EatIfPresent(lltok::kw_align))
+  if (!EatIfPresent(KW))
     return false;
   LocTy AlignLoc = Lex.getLoc();
   uint64_t Value = 0;
@@ -2692,7 +2696,7 @@ bool LLParser::parseOptionalCommaAlign(MaybeAlign &Alignment,
     if (Lex.getKind() != lltok::kw_align)
       return error(Lex.getLoc(), "expected metadata or 'align'");
 
-    if (parseOptionalAlignment(Alignment))
+    if (parseOptionalAlignment(lltok::kw_align, Alignment))
       return true;
   }
 
@@ -4270,6 +4274,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
     Type *DestTy = nullptr;
@@ -4783,9 +4788,13 @@ struct MDField : public MDFieldImpl<Metadata *> {
 };
 
 struct MDStringField : public MDFieldImpl<MDString *> {
-  bool AllowEmpty;
-  MDStringField(bool AllowEmpty = true)
-      : ImplTy(nullptr), AllowEmpty(AllowEmpty) {}
+  enum class EmptyIs {
+    Null,  //< Allow empty input string, map to nullptr
+    Empty, //< Allow empty input string, map to an empty MDString
+    Error, //< Disallow empty string, map to an error
+  } EmptyIs;
+  MDStringField(enum EmptyIs EmptyIs = EmptyIs::Null)
+      : ImplTy(nullptr), EmptyIs(EmptyIs) {}
 };
 
 struct MDFieldList : public MDFieldImpl<SmallVector<Metadata *, 4>> {
@@ -5257,10 +5266,19 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDStringField &Result) {
   if (parseStringConstant(S))
     return true;
 
-  if (!Result.AllowEmpty && S.empty())
-    return error(ValueLoc, "'" + Name + "' cannot be empty");
+  if (S.empty()) {
+    switch (Result.EmptyIs) {
+    case MDStringField::EmptyIs::Null:
+      Result.assign(nullptr);
+      return false;
+    case MDStringField::EmptyIs::Empty:
+      break;
+    case MDStringField::EmptyIs::Error:
+      return error(ValueLoc, "'" + Name + "' cannot be empty");
+    }
+  }
 
-  Result.assign(S.empty() ? nullptr : MDString::get(Context, S));
+  Result.assign(MDString::get(Context, S));
   return false;
 }
 
@@ -5778,7 +5796,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   REQUIRED(directory, MDStringField, );                                        \
   OPTIONAL(checksumkind, ChecksumKindField, (DIFile::CSK_MD5));                \
   OPTIONAL(checksum, MDStringField, );                                         \
-  OPTIONAL(source, MDStringField, );
+  OPTIONAL(source, MDStringField, (MDStringField::EmptyIs::Empty));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6062,7 +6080,7 @@ bool LLParser::parseDITemplateValueParameter(MDNode *&Result, bool IsDistinct) {
 ///                         declaration: !4, align: 8)
 bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  OPTIONAL(name, MDStringField, (/* AllowEmpty */ false));                     \
+  OPTIONAL(name, MDStringField, (MDStringField::EmptyIs::Error));              \
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(linkageName, MDStringField, );                                      \
   OPTIONAL(file, MDField, );                                                   \
@@ -6688,7 +6706,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   LocTy BuiltinLoc;
   std::string Section;
   std::string Partition;
-  MaybeAlign Alignment;
+  MaybeAlign Alignment, PrefAlignment;
   std::string GC;
   GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
   unsigned AddrSpace = 0;
@@ -6705,7 +6723,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_section) && parseStringConstant(Section)) ||
       (EatIfPresent(lltok::kw_partition) && parseStringConstant(Partition)) ||
       parseOptionalComdat(FunctionName, C) ||
-      parseOptionalAlignment(Alignment) ||
+      parseOptionalAlignment(lltok::kw_align, Alignment) ||
+      parseOptionalAlignment(lltok::kw_prefalign, PrefAlignment) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -6807,6 +6826,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   Fn->setUnnamedAddr(UnnamedAddr);
   if (Alignment)
     Fn->setAlignment(*Alignment);
+  Fn->setPreferredAlignment(PrefAlignment);
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);
@@ -7294,6 +7314,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:
@@ -8428,7 +8449,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   bool AteExtraComma = false;
   if (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::kw_align) {
-      if (parseOptionalAlignment(Alignment))
+      if (parseOptionalAlignment(lltok::kw_align, Alignment))
         return true;
       if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
         return true;
@@ -8443,7 +8464,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
         return true;
       if (EatIfPresent(lltok::comma)) {
         if (Lex.getKind() == lltok::kw_align) {
-          if (parseOptionalAlignment(Alignment))
+          if (parseOptionalAlignment(lltok::kw_align, Alignment))
             return true;
           if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
             return true;

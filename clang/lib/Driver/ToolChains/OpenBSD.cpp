@@ -161,7 +161,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
 
-  if (Triple.isRISCV64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");

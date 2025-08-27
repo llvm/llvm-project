@@ -28,6 +28,21 @@ hexadecimal format instead of decimal if desired.
   .section .data
   .float 0x1c2.2ap3
 
+``.prefalign`` directive
+------------------------
+
+The ``.prefalign`` directive sets the preferred alignment for a section,
+and enables the section's final alignment to be set in a way that is
+dependent on the section size (currently only supported with ELF).
+
+If the section size is less than the section's minimum alignment as
+determined using ``.align`` family directives, the section's alignment
+will be equal to its minimum alignment. Otherwise, if the section size is
+between the minimum alignment and the preferred alignment, the section's
+alignment will be equal to the power of 2 greater than or equal to the
+section size. Otherwise, the section's alignment will be equal to the
+preferred alignment.
+
 Machine-specific Assembly Syntax
 ================================
 
@@ -410,8 +425,8 @@ two years old). Each function entry starts with a version byte which specifies
 the encoding version to use. This is followed by a feature byte which specifies
 the features specific to this particular entry. The function base address is
 stored as a full address. Other addresses in the entry (block begin and end
-addresses and callsite addresses) are stored in a running-offset fashion, as
-offsets relative to prior addresses.
+addresses and callsite end addresses) are stored in a running-offset fashion,
+as offsets relative to prior addresses.
 
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
@@ -438,8 +453,8 @@ Example:
    .byte     1                            # BB_1 ID
    .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
    .byte     2                            # number of callsites in this block
-   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite relative to the previous offset (.LBB0_1)
-   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
    .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
    .byte     y                            # BB_1 metadata
 

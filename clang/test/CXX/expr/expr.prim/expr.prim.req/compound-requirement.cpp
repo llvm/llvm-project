@@ -160,7 +160,7 @@ namespace std_example {
   template<typename T> concept C2 =
     requires(T x) {
       {*x} -> same_as<typename T::inner>;
-      // expected-note@-1{{because type constraint 'same_as<int, typename T2::inner>' was not satisfied:}}
+      // expected-note@-1{{because type constraint 'same_as<int, typename std_example::T2::inner>' was not satisfied:}}
       // expected-note@-2{{because '*x' would be invalid: indirection requires pointer operand ('int' invalid)}}
     };
 

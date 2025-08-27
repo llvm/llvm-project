@@ -112,7 +112,7 @@ public:
           OpBuilder builder{value.getContext()};
           builder.setInsertionPointAfter(value.getDefiningOp());
           castValue =
-              builder.create<tensor::CastOp>(value.getLoc(), oldType, value);
+              tensor::CastOp::create(builder, value.getLoc(), oldType, value);
         }
 
         use->set(castValue);

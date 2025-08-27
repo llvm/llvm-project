@@ -123,10 +123,13 @@ f2.cfi:
 ret $2
 .zero 16
 
+// Overalignment should trigger emitting enough padding behind the jump table to
+// make these appear at the same address.
 // CHECK: <f3>:
 // CHECK-NEXT: <f3.cfi>:
 // CHECK-NEXT: retq $0x3
 .section .text.f3,"ax",@progbits
+.balign 64
 f3.cfi:
 ret $3
 .zero 16

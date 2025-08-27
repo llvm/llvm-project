@@ -197,7 +197,7 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
@@ -208,6 +208,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
 
@@ -241,6 +242,10 @@ enum OperandType : unsigned {
 
   // Operand for SDWA instructions
   OPERAND_SDWA_VOPC_DST,
+
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants.
+  OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
@@ -392,15 +397,21 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
-  SCOPE = 0x3 << 3, // All Scope bits
-  SCOPE_CU = 0 << 3,
-  SCOPE_SE = 1 << 3,
-  SCOPE_DEV = 2 << 3,
-  SCOPE_SYS = 3 << 3,
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
+
+  NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
 
-  ALL = TH | SCOPE,
+  SCAL = 1 << 11, // Scale offset bit
+
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
@@ -433,6 +444,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
+  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -506,6 +518,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
+  ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,
   ID_SHADER_CYCLES_HI = 30,
   ID_DVGPR_ALLOC_LO = 31,
@@ -529,6 +542,10 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
   ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
   ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
+
+  // GFX1250
+  ID_XNACK_STATE_PRIV = 33,
+  ID_XNACK_MASK_gfx1250 = 34,
 };
 
 enum Offset : unsigned { // Offset, (5) [10:6]
@@ -1002,6 +1019,27 @@ enum Target : unsigned {
 };
 
 } // namespace Exp
+
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
+};
+} // namespace WMMA
 
 namespace VOP3PEncoding {
 

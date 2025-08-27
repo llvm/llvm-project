@@ -32,6 +32,7 @@ class RegBankLegalizeHelper {
   const MachineUniformityInfo &MUI;
   const RegisterBankInfo &RBI;
   const RegBankLegalizeRules &RBLRules;
+  const bool IsWave32;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
   const RegisterBank *VccRB;

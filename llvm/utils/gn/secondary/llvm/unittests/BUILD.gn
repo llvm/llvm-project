@@ -8,6 +8,7 @@ group("unittests") {
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
     "Bitstream:BitstreamTests",
+    "CAS:CASTests",
     "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
 

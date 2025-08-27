@@ -287,6 +287,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .lower();
+
   getActionDefinitionsBuilder(
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
       .legalFor({{s32, s32}, {s64, s32}})
@@ -793,6 +797,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMinNumElements(0, s16, 4)
       .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
+      .legalFor({{v8s8, v8s16}, {v4s16, v4s32}, {v2s32, v2s64}});
+
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
       .legalFor(PackedVectorAllTypeList)
@@ -961,6 +968,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    {s128, s64}});
 
   // Control-flow
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND)
     .legalFor({s32})
     .clampScalar(0, s32, s32);
@@ -1250,6 +1258,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 
@@ -1640,9 +1650,20 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   MachineIRBuilder &MIB = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIB.getMRI();
 
+  auto LowerUnaryOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  };
   auto LowerBinOp = [&MI, &MIB](unsigned Opcode) {
     MIB.buildInstr(Opcode, {MI.getOperand(0)},
                    {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
+  };
+  auto LowerTriOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)},
+                   {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4)});
     MI.eraseFromParent();
     return true;
   };
@@ -1794,6 +1815,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:
     return LowerBinOp(AArch64::G_UMULL);
+  case Intrinsic::aarch64_neon_sabd:
+    return LowerBinOp(TargetOpcode::G_ABDS);
+  case Intrinsic::aarch64_neon_uabd:
+    return LowerBinOp(TargetOpcode::G_ABDU);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
@@ -1820,6 +1845,16 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       return LowerBinOp(TargetOpcode::G_USUBSAT);
     break;
   }
+  case Intrinsic::aarch64_neon_udot:
+    return LowerTriOp(AArch64::G_UDOT);
+  case Intrinsic::aarch64_neon_sdot:
+    return LowerTriOp(AArch64::G_SDOT);
+  case Intrinsic::aarch64_neon_sqxtn:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_S);
+  case Intrinsic::aarch64_neon_sqxtun:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
+  case Intrinsic::aarch64_neon_uqxtn:
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
