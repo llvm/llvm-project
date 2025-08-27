@@ -81,7 +81,10 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   if (!layout)
     return failure();
 
-  auto laneLayout = layout.getLaneLayoutAsInt().value();
+  SmallVector<int64_t> laneLayout = layout.getLaneLayoutAsInt();
+  // We expect non-empty lane layout.
+  if (!laneLayout.size())
+    return failure();
   assert(originalType.getShape().size() >= laneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
@@ -915,14 +918,10 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
           transposeOp,
           "the source or result vector of the transpose op lacks layout "
           "attribute");
-    SmallVector<int64_t> sourceLaneLayout =
-        sourceLayout.getLaneLayoutAsInt().value();
-    SmallVector<int64_t> resultLaneLayout =
-        resultLayout.getLaneLayoutAsInt().value();
-    SmallVector<int64_t> sourceLaneData =
-        sourceLayout.getLaneDataAsInt().value();
-    SmallVector<int64_t> resultLaneData =
-        resultLayout.getLaneDataAsInt().value();
+    SmallVector<int64_t> sourceLaneLayout = sourceLayout.getLaneLayoutAsInt();
+    SmallVector<int64_t> resultLaneLayout = resultLayout.getLaneLayoutAsInt();
+    SmallVector<int64_t> sourceLaneData = sourceLayout.getLaneDataAsInt();
+    SmallVector<int64_t> resultLaneData = resultLayout.getLaneDataAsInt();
     if (sourceLaneLayout.size() != 2 || resultLaneLayout.size() != 2)
       return rewriter.notifyMatchFailure(
           transposeOp, "the source or result vector of the transpose op "

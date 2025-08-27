@@ -56,39 +56,6 @@ using namespace mlir::dataflow;
 namespace {
 
 //===----------------------------------------------------------------------===//
-// Layout
-//===----------------------------------------------------------------------===//
-
-/// Helper class to store the ND layout of lanes within a subgroup and data
-/// owned by each lane.
-// struct Layout {
-//   SmallVector<int64_t, 3> layout;
-//   Layout() = default;
-//   Layout(std::initializer_list<int64_t> list) : layout(list) {}
-//   Layout(SmallVector<int64_t, 3> &list) : layout(list) {}
-//   void print(llvm::raw_ostream &os) const;
-//   size_t size() const { return layout.size(); }
-//   int64_t operator[](size_t idx) const;
-// };
-
-// int64_t Layout::operator[](size_t idx) const {
-//   assert(idx < layout.size() && "Index out of bounds");
-//   return layout[idx];
-// }
-
-// void Layout::print(llvm::raw_ostream &os) const {
-//   os << llvm::interleaved_array(layout);
-// }
-
-// /// LaneLayout represents the logical layout of lanes within a subgroup when
-// it
-// /// accesses some value. LaneData represents the logical layout of data owned
-// by
-// /// each work item.
-// using LaneLayout = Layout;
-// using LaneData = Layout;
-
-//===----------------------------------------------------------------------===//
 // LayoutInfo
 //===----------------------------------------------------------------------===//
 
@@ -135,21 +102,21 @@ public:
   SmallVector<int> getLaneLayout() const {
     if (!isAssigned())
       return {};
-    assert(storage.getLaneLayoutAsInt().has_value() &&
+    assert(storage.getLaneLayoutAsInt().size() &&
            "Expected lane layout to be assigned");
-    return llvm::map_to_vector(
-        storage.getLaneLayoutAsInt().value(),
-        [](int64_t val) { return static_cast<int>(val); });
+    return llvm::map_to_vector(storage.getLaneLayoutAsInt(), [](int64_t val) {
+      return static_cast<int>(val);
+    });
   }
 
   SmallVector<int> getLaneData() const {
     if (!isAssigned())
       return {};
-    assert(storage.getLaneDataAsInt().has_value() &&
+    assert(storage.getLaneDataAsInt().size() &&
            "Expected lane data to be assigned");
-    return llvm::map_to_vector(
-        storage.getLaneDataAsInt().value(),
-        [](int64_t val) { return static_cast<int>(val); });
+    return llvm::map_to_vector(storage.getLaneDataAsInt(), [](int64_t val) {
+      return static_cast<int>(val);
+    });
   }
 
   bool isSliceLayout() const {
