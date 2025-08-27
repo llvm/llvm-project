@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_LIB_TOOLING_REFACTOR_EXTRACTION_UTILS_H
 #define LLVM_CLANG_LIB_TOOLING_REFACTOR_EXTRACTION_UTILS_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 
 namespace clang {
