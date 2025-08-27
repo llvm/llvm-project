@@ -196,8 +196,7 @@ loop.end:
     Loop *L = LI.getLoopFor(Header);
 
     SmallVector<LoadInst *, 4> NonDerefLoads;
-    return isReadOnlyLoopWithSafeOrSpeculativeLoads(L, &SE, &DT, &AC,
-                                                    &NonDerefLoads) &&
+    return isLoopSafeWithLoadOnlyFaults(L, &SE, &DT, &AC, &NonDerefLoads) &&
            NonDerefLoads.empty();
   };
 

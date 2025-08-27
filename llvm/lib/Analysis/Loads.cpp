@@ -856,15 +856,15 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
   return isPointerAlwaysReplaceable(From, To, DL);
 }
 
-bool llvm::isReadOnlyLoopWithSafeOrSpeculativeLoads(
+bool llvm::isLoopSafeWithLoadOnlyFaults(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<LoadInst *> *SpeculativeLoads,
+    SmallVectorImpl<LoadInst *> *NonDereferenceableAndAlignedLoads,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
-          SpeculativeLoads->push_back(LI);
+          NonDereferenceableAndAlignedLoads->push_back(LI);
       } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
                  I.mayThrow()) {
         return false;
