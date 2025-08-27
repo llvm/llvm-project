@@ -573,9 +573,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.pending_breakpoints = True
         return new_id
 
-    def _update_breakpoint_ids_after_request(
-        self, dex_bp_ids: list, response: dict
-    ):
+    def _update_breakpoint_ids_after_request(self, dex_bp_ids: list, response: dict):
         dap_bp_ids = [bp["id"] for bp in response["body"]["breakpoints"]]
         if len(dex_bp_ids) != len(dap_bp_ids):
             self.context.logger.error(
