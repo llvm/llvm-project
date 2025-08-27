@@ -896,6 +896,12 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure, CExpressionInterface]> {
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return false;
+    }
+  }];
 }
 
 def EmitC_LogicalAndOp : EmitC_BinaryOp<"logical_and", []> {

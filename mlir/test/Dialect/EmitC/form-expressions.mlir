@@ -211,20 +211,14 @@ func.func @expression_with_constant(%arg0: i32) -> i32 {
 
 // CHECK-LABEL:   func.func @expression_with_literal(
 // CHECK-SAME:      %[[ARG0:.*]]: i32) -> i1 {
-// CHECK:           %[[VAL_0:.*]] = emitc.expression : i32 {
+// CHECK:           %[[VAL_0:.*]] = emitc.expression : i1 {
 // CHECK:             %[[VAL_1:.*]] = literal "1" : i32
-// CHECK:             yield %[[VAL_1]] : i32
+// CHECK:             %[[VAL_2:.*]] = literal "2" : i32
+// CHECK:             %[[VAL_3:.*]] = add %[[VAL_1]], %[[VAL_2]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_4:.*]] = cmp lt, %[[VAL_3]], %[[ARG0]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_4]] : i1
 // CHECK:           }
-// CHECK:           %[[VAL_2:.*]] = emitc.expression : i32 {
-// CHECK:             %[[VAL_3:.*]] = literal "2" : i32
-// CHECK:             yield %[[VAL_3]] : i32
-// CHECK:           }
-// CHECK:           %[[VAL_4:.*]] = emitc.expression : i1 {
-// CHECK:             %[[VAL_5:.*]] = add %[[VAL_0]], %[[VAL_2]] : (i32, i32) -> i32
-// CHECK:             %[[VAL_6:.*]] = cmp lt, %[[VAL_5]], %[[ARG0]] : (i32, i32) -> i1
-// CHECK:             yield %[[VAL_6]] : i1
-// CHECK:           }
-// CHECK:           return %[[VAL_4]] : i1
+// CHECK:           return %[[VAL_0]] : i1
 // CHECK:         }
 
 func.func @expression_with_literal(%arg0: i32) -> i1 {

@@ -484,3 +484,20 @@ func.func @expression_with_literal(%arg0 : i32) -> i1 {
 
   return %ret : i1
 }
+
+
+// CPP-DEFAULT:      int32_t single_literal_in_expression() {
+// CPP-DEFAULT-NEXT:   return 42;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      int32_t single_literal_in_expression() {
+// CPP-DECLTOP-NEXT:   return 42;
+// CPP-DECLTOP-NEXT: }
+
+func.func @single_literal_in_expression() -> i32 {
+  %result = emitc.expression : i32 {
+    %lit = emitc.literal "42" : i32
+    emitc.yield %lit : i32
+  }
+  return %result : i32
+}
