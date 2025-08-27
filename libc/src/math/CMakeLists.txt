@@ -306,6 +306,7 @@ add_math_entrypoint_object(fmodf)
 add_math_entrypoint_object(fmodl)
 add_math_entrypoint_object(fmodf16)
 add_math_entrypoint_object(fmodf128)
+add_math_entrypoint_object(fmodbf16)
 
 add_math_entrypoint_object(frexp)
 add_math_entrypoint_object(frexpf)
