@@ -228,7 +228,7 @@ define signext i32 @test15(i32 signext %x, i32 signext %y) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slliw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    ret
   %a = ashr i32 %x, 1
   %b = ashr i32 %a, %y
