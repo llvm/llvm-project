@@ -203,8 +203,6 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; DAGISEL-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; DAGISEL-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; DAGISEL-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; DAGISEL-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; DAGISEL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; DAGISEL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
