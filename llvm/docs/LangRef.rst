@@ -951,17 +951,13 @@ rules described below. If an explicit minimum alignment is specified, the
 function is forced to have at least that much alignment. All alignments
 must be a power of 2.
 
-An explicit preferred alignment (``prefalign``) may also be specified
-for a function (definitions only, and must be a power of 2). If a
-function does not have a preferred alignment attribute, the preferred
-alignment is determined in a target-specific way. The final alignment
-of the function is determined in the following way: if the function
-size is less than the minimum alignment, the function's alignment will
-be at least the minimum alignment. Otherwise, if the function size is
-between the minimum alignment and the preferred alignment, the function's
-alignment will be at least the power of 2 greater than or equal to the
-function size. Otherwise, the function's alignment will be at least the
-preferred alignment.
+An explicit preferred alignment (``prefalign``) may also be specified for
+a function (definitions only, and must be a power of 2). If a function
+does not have a preferred alignment attribute, the preferred alignment
+is determined in a target-specific way. The preferred alignment, if
+provided, is treated as a hint; the final alignment of the function will
+generally be set to a value somewhere between the minimum alignment and
+the preferred alignment.
 
 If the ``unnamed_addr`` attribute is given, the address is known to not
 be significant and two identical functions can be merged.
