@@ -145,12 +145,12 @@ define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr add
 ; GFX90A-LABEL: half4:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    global_store_dwordx2 v0, v[2:3], s[2:3]
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX1030-LABEL: half4:

@@ -61,10 +61,10 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX90A-NEXT:   liveins: $sgpr4_sgpr5
   ; REGALLOC-GFX90A-NEXT: {{  $}}
   ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2162697 /* reguse:AGPR_32 */, undef %6:agpr_32
-  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6422538 /* regdef:VReg_128_Align2 */, def %24
-  ; REGALLOC-GFX90A-NEXT:   [[COPY:%[0-9]+]]:av_128_align2 = COPY %24
-  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3866634 /* regdef:VReg_64_Align2 */, def %22
-  ; REGALLOC-GFX90A-NEXT:   [[COPY1:%[0-9]+]]:av_64_align2 = COPY %22
+  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6422538 /* regdef:VReg_128_Align2 */, def %23
+  ; REGALLOC-GFX90A-NEXT:   [[COPY:%[0-9]+]]:av_128_align2 = COPY %23
+  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3866634 /* regdef:VReg_64_Align2 */, def %21
+  ; REGALLOC-GFX90A-NEXT:   [[COPY1:%[0-9]+]]:av_64_align2 = COPY %21
   ; REGALLOC-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef %15:vreg_64_align2, [[COPY]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
   ; REGALLOC-GFX90A-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
   ; REGALLOC-GFX90A-NEXT:   [[COPY2:%[0-9]+]]:areg_128_align2 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3

@@ -1954,6 +1954,70 @@ acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator 
 // CHECK-LABEL: acc.reduction.recipe @reduction_add_memref_i32
 // CHECK:       memref.alloca
 
+// -----
+
+// Test reduction recipe with destroy region using dynamic memory allocation
+acc.reduction.recipe @reduction_add_with_destroy : memref<?xf32> reduction_operator<add> init {
+^bb0(%arg0: memref<?xf32>):
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %size = memref.dim %arg0, %c0 : memref<?xf32>
+  %alloc = memref.alloc(%size) : memref<?xf32>
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %size step %c1 {
+    memref.store %cst, %alloc[%i] : memref<?xf32>
+  }
+  acc.yield %alloc : memref<?xf32>
+} combiner {
+^bb0(%arg0: memref<?xf32>, %arg1: memref<?xf32>):
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %size = memref.dim %arg0, %c0 : memref<?xf32>
+  scf.for %i = %c0 to %size step %c1 {
+    %val0 = memref.load %arg0[%i] : memref<?xf32>
+    %val1 = memref.load %arg1[%i] : memref<?xf32>
+    %sum = arith.addf %val0, %val1 : f32
+    memref.store %sum, %arg0[%i] : memref<?xf32>
+  }
+  acc.yield %arg0 : memref<?xf32>
+} destroy {
+^bb0(%arg0: memref<?xf32>):
+  // destroy region to deallocate dynamically allocated memory
+  memref.dealloc %arg0 : memref<?xf32>
+  acc.yield
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_with_destroy : memref<?xf32> reduction_operator <add> init {
+// CHECK:       ^bb0(%[[ARG:.*]]: memref<?xf32>):
+// CHECK:         %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[SIZE:.*]] = memref.dim %[[ARG]], %[[C0]] : memref<?xf32>
+// CHECK:         %[[ALLOC:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[SIZE]] step %[[C1]] {
+// CHECK:           memref.store %[[CST]], %[[ALLOC]][%[[I]]] : memref<?xf32>
+// CHECK:         }
+// CHECK:         acc.yield %[[ALLOC]] : memref<?xf32>
+// CHECK:       } combiner {
+// CHECK:       ^bb0(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>):
+// CHECK:         %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:         %[[C1_1:.*]] = arith.constant 1 : index
+// CHECK:         %[[SIZE_1:.*]] = memref.dim %[[ARG0]], %[[C0_1]] : memref<?xf32>
+// CHECK:         scf.for %[[I_1:.*]] = %[[C0_1]] to %[[SIZE_1]] step %[[C1_1]] {
+// CHECK:           %{{.*}} = memref.load %[[ARG0]][%[[I_1]]] : memref<?xf32>
+// CHECK:           %{{.*}} = memref.load %[[ARG1]][%[[I_1]]] : memref<?xf32>
+// CHECK:           %[[SUM:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK:           memref.store %[[SUM]], %[[ARG0]][%[[I_1]]] : memref<?xf32>
+// CHECK:         }
+// CHECK:         acc.yield %[[ARG0]] : memref<?xf32>
+// CHECK:       } destroy {
+// CHECK:       ^bb0(%[[ARG_DESTROY:.*]]: memref<?xf32>):
+// CHECK:         memref.dealloc %[[ARG_DESTROY]] : memref<?xf32>
+// CHECK:         acc.yield
+// CHECK:       }
+
+// -----
+
 acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 ^bb0(%arg0: memref<i32>):
   %alloca = memref.alloca() : memref<i32>

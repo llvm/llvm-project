@@ -460,10 +460,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // be passed as its underlying type. However, printf will have forced
     // the signedness based on the format string, so we need to do the
     // same.
-    if (const auto *ET = ArgType->getAs<EnumType>()) {
-      if (const std::optional<std::string> MaybeCastType = castTypeForArgument(
-              ArgKind,
-              ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType()))
+    if (const auto *ED = ArgType->getAsEnumDecl()) {
+      if (const std::optional<std::string> MaybeCastType =
+              castTypeForArgument(ArgKind, ED->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else

@@ -5581,13 +5581,13 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Compute the trip counts of the floor loops.
   Builder.SetCurrentDebugLocation(DL);
   Builder.restoreIP(OutermostLoop->getPreheaderIP());
-  SmallVector<Value *, 4> FloorCount, FloorRems;
+  SmallVector<Value *, 4> FloorCompleteCount, FloorCount, FloorRems;
   for (int i = 0; i < NumLoops; ++i) {
     Value *TileSize = TileSizes[i];
     Value *OrigTripCount = OrigTripCounts[i];
     Type *IVType = OrigTripCount->getType();
 
-    Value *FloorTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
+    Value *FloorCompleteTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
     Value *FloorTripRem = Builder.CreateURem(OrigTripCount, TileSize);
 
     // 0 if tripcount divides the tilesize, 1 otherwise.
@@ -5601,11 +5601,12 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
         Builder.CreateICmpNE(FloorTripRem, ConstantInt::get(IVType, 0));
 
     FloorTripOverflow = Builder.CreateZExt(FloorTripOverflow, IVType);
-    FloorTripCount =
-        Builder.CreateAdd(FloorTripCount, FloorTripOverflow,
+    Value *FloorTripCount =
+        Builder.CreateAdd(FloorCompleteTripCount, FloorTripOverflow,
                           "omp_floor" + Twine(i) + ".tripcount", true);
 
     // Remember some values for later use.
+    FloorCompleteCount.push_back(FloorCompleteTripCount);
     FloorCount.push_back(FloorTripCount);
     FloorRems.push_back(FloorTripRem);
   }
@@ -5660,7 +5661,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     Value *TileSize = TileSizes[i];
 
     Value *FloorIsEpilogue =
-        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCount[i]);
+        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCompleteCount[i]);
     Value *TileTripCount =
         Builder.CreateSelect(FloorIsEpilogue, FloorRems[i], TileSize);
 

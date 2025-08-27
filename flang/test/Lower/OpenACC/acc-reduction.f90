@@ -423,15 +423,15 @@
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
 ! CHECK:       %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<i32>
 ! CHECK:       %[[CMP:.*]] = arith.cmpi sgt, %[[LOAD1]], %[[LOAD2]] : i32
@@ -469,15 +469,15 @@
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xf32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xf32>>):
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:       %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
 ! CHECK:       %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<f32>
 ! CHECK:       %[[CMP:.*]] = arith.cmpf olt, %[[LOAD1]], %[[LOAD2]] {{.*}} : f32
@@ -650,7 +650,7 @@
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10x2xi32>>):
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 1 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
@@ -658,11 +658,11 @@
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
 ! CHECK:       %[[LB2:.*]] = arith.constant 0 : index
-! CHECK:       %[[UB2:.*]] = arith.constant 1 : index
+! CHECK:       %[[UB2:.*]] = arith.constant 99 : index
 ! CHECK:       %[[STEP2:.*]] = arith.constant 1 : index
 ! CHECK:       fir.do_loop %[[IV2:.*]] = %[[LB2]] to %[[UB2]] step %[[STEP2]] {
-! CHECK:         %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
-! CHECK:         %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
+! CHECK:         %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV2]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
+! CHECK:         %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV2]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:         %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
 ! CHECK:         %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<i32>
 ! CHECK:         %[[COMBINED:.*]] = arith.addi %[[LOAD1]], %[[LOAD2]] : i32
@@ -683,15 +683,15 @@
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<100x10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
+! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
 ! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
-! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
+! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
 ! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
-! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV1]], %[[IV0]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[LOAD1]] = fir.load %[[COORD1]] : !fir.ref<i32>
 ! CHECK:       %[[LOAD2]] = fir.load %[[COORD2]] : !fir.ref<i32>
 ! CHECK:       %[[COMBINED:.*]] = arith.addi %[[LOAD1]], %[[LOAD2]] : i32

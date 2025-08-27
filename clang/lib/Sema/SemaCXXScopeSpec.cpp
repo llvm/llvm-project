@@ -133,11 +133,8 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
     return const_cast<NamespaceDecl *>(
         NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
 
-  case NestedNameSpecifier::Kind::Type: {
-    auto *TD = NNS.getAsType()->getAsTagDecl();
-    assert(TD && "Non-tag type in nested-name-specifier");
-    return TD;
-  }
+  case NestedNameSpecifier::Kind::Type:
+    return NNS.getAsType()->castAsTagDecl();
 
   case NestedNameSpecifier::Kind::Global:
     return Context.getTranslationUnitDecl();

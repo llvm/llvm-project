@@ -1916,63 +1916,6 @@ static FailureOr<OpOperand *> getConsumerFromLoopUses(RewriterBase &rewriter,
   return failure();
 }
 
-/// Check that the loop is perfectly nested.
-/// The loops are expected to be ordered from outer most to inner most.
-/// For example:
-/// ```
-///  %0 = scf.for()
-///    %1 = scf.for()
-///      %2 = scf.for()
-///         %3 = ...
-///         yield %3
-///      yield %2
-///    yield %1
-/// ```
-/// Here loops should be [%0, %1].
-static bool
-isPerfectlyNestedForLoops(MutableArrayRef<LoopLikeOpInterface> loops) {
-  assert(!loops.empty() && "unexpected empty loop nest");
-  if (loops.size() == 1) {
-    return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
-  }
-  for (auto [outerLoop, innerLoop] :
-       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
-    auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
-    auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
-    if (!outerFor || !innerFor) {
-      return false;
-    }
-    auto outerBBArgs = outerFor.getRegionIterArgs();
-    auto innerIterArgs = innerFor.getInitArgs();
-    if (outerBBArgs.size() != innerIterArgs.size()) {
-      return false;
-    }
-
-    for (auto [outerBBArg, innerIterArg] :
-         llvm::zip_equal(outerBBArgs, innerIterArgs)) {
-      if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
-          innerIterArg != outerBBArg) {
-        return false;
-      }
-    }
-
-    ValueRange outerYields =
-        cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
-    ValueRange innerResults = innerFor.getResults();
-    if (outerYields.size() != innerResults.size()) {
-      return false;
-    }
-    for (auto [outerYield, innerResult] :
-         llvm::zip_equal(outerYields, innerResults)) {
-      if (!llvm::hasSingleElement(innerResult.getUses()) ||
-          outerYield != innerResult) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 /// Fetch the untiled consumer of the outermost scf.for's result which is
 /// yielded by a tensor.insert_slice from the innermost scf.for. This function
 /// makes the following assumptions :

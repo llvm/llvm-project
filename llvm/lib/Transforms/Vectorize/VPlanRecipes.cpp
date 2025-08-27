@@ -1034,6 +1034,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
 
   switch (getOpcode()) {
+  case Instruction::Select: {
+    // TODO: It may be possible to improve this by analyzing where the
+    // condition operand comes from.
+    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    auto *CondTy = Ctx.Types.inferScalarType(getOperand(0));
+    auto *VecTy = Ctx.Types.inferScalarType(getOperand(1));
+    if (!vputils::onlyFirstLaneUsed(this)) {
+      CondTy = toVectorTy(CondTy, VF);
+      VecTy = toVectorTy(VecTy, VF);
+    }
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CondTy, Pred,
+                                      Ctx.CostKind);
+  }
   case Instruction::ExtractElement:
   case VPInstruction::ExtractLane: {
     if (VF.isScalar()) {
@@ -2128,8 +2141,10 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
-    // More complex computation, let the legacy cost-model handle this for now.
-    return Ctx.getLegacyCost(cast<Instruction>(getUnderlyingValue()), VF);
+    // If the div/rem operation isn't safe to speculate and requires
+    // predication, then the only way we can even create a vplan is to insert
+    // a select on the second input operand to ensure we use the value of 1
+    // for the inactive lanes. The select will be costed separately.
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
@@ -3032,13 +3047,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // instruction cost.
     return 0;
   case Instruction::Call: {
-    if (!isSingleScalar()) {
-      // TODO: Handle remaining call costs here as well.
-      if (VF.isScalable())
-        return InstructionCost::getInvalid();
-      break;
-    }
-
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
     if (CalledFn->isIntrinsic())
@@ -3048,7 +3056,42 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     for (VPValue *ArgOp : drop_end(operands()))
       Tys.push_back(Ctx.Types.inferScalarType(ArgOp));
     Type *ResultTy = Ctx.Types.inferScalarType(this);
-    return Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
+    InstructionCost ScalarCallCost =
+        Ctx.TTI.getCallInstrCost(CalledFn, ResultTy, Tys, Ctx.CostKind);
+    if (isSingleScalar())
+      return ScalarCallCost;
+
+    if (VF.isScalable())
+      return InstructionCost::getInvalid();
+
+    // Compute the cost of scalarizing the result and operands if needed.
+    InstructionCost ScalarizationCost = 0;
+    if (VF.isVector()) {
+      if (!ResultTy->isVoidTy()) {
+        for (Type *VectorTy :
+             to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
+          ScalarizationCost += Ctx.TTI.getScalarizationOverhead(
+              cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
+              /*Insert=*/true,
+              /*Extract=*/false, Ctx.CostKind);
+        }
+      }
+      // Skip operands that do not require extraction/scalarization and do not
+      // incur any overhead.
+      SmallPtrSet<const VPValue *, 4> UniqueOperands;
+      Tys.clear();
+      for (auto *Op : drop_end(operands())) {
+        if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+            !UniqueOperands.insert(Op).second)
+          continue;
+        Tys.push_back(toVectorizedTy(Ctx.Types.inferScalarType(Op), VF));
+      }
+      ScalarizationCost +=
+          Ctx.TTI.getOperandsScalarizationOverhead(Tys, Ctx.CostKind);
+    }
+
+    return ScalarCallCost * (isSingleScalar() ? 1 : VF.getFixedValue()) +
+           ScalarizationCost;
   }
   case Instruction::Add:
   case Instruction::Sub:

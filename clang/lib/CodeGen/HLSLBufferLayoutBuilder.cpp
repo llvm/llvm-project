@@ -85,24 +85,22 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
   Layout.push_back(0);
 
   // iterate over all fields of the record, including fields on base classes
-  llvm::SmallVector<const RecordType *> RecordTypes;
-  RecordTypes.push_back(RT);
-  while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-    CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+  llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+  RecordDecls.push_back(RT->castAsCXXRecordDecl());
+  while (RecordDecls.back()->getNumBases()) {
+    CXXRecordDecl *D = RecordDecls.back();
     assert(D->getNumBases() == 1 &&
            "HLSL doesn't support multiple inheritance");
-    RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+    RecordDecls.push_back(D->bases_begin()->getType()->castAsCXXRecordDecl());
   }
 
   unsigned FieldOffset;
   llvm::Type *FieldType;
 
-  while (!RecordTypes.empty()) {
-    const RecordType *RT = RecordTypes.back();
-    RecordTypes.pop_back();
+  while (!RecordDecls.empty()) {
+    const CXXRecordDecl *RD = RecordDecls.pop_back_val();
 
-    for (const auto *FD :
-         RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
+    for (const auto *FD : RD->fields()) {
       assert((!PackOffsets || Index < PackOffsets->size()) &&
              "number of elements in layout struct does not match number of "
              "packoffset annotations");
@@ -148,7 +146,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
 
   // create the layout struct type; anonymous struct have empty name but
   // non-empty qualified name
-  const CXXRecordDecl *Decl = RT->getAsCXXRecordDecl();
+  const auto *Decl = RT->castAsCXXRecordDecl();
   std::string Name =
       Decl->getName().empty() ? "anon" : Decl->getQualifiedNameAsString();
   llvm::StructType *StructTy =

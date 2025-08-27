@@ -3638,8 +3638,7 @@ bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
     return RewriteObjCFieldDeclType(ElemTy, Result);
   }
   else if (Type->isRecordType()) {
-    RecordDecl *RD =
-        Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    auto *RD = Type->castAsRecordDecl();
     if (RD->isCompleteDefinition()) {
       if (RD->isStruct())
         Result += "\n\tstruct ";
@@ -3660,28 +3659,26 @@ bool RewriteModernObjC::RewriteObjCFieldDeclType(QualType &Type,
       Result += "\t} ";
       return true;
     }
-  }
-  else if (Type->isEnumeralType()) {
-    EnumDecl *ED =
-        Type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
-    if (ED->isCompleteDefinition()) {
-      Result += "\n\tenum ";
-      Result += ED->getName();
-      if (GlobalDefinedTags.count(ED)) {
-        // Enum is globall defined, use it.
-        Result += " ";
-        return true;
-      }
-
-      Result += " {\n";
-      for (const auto *EC : ED->enumerators()) {
-        Result += "\t"; Result += EC->getName(); Result += " = ";
-        Result += toString(EC->getInitVal(), 10);
-        Result += ",\n";
-      }
-      Result += "\t} ";
+  } else if (auto *ED = Type->getAsEnumDecl();
+             ED && ED->isCompleteDefinition()) {
+    Result += "\n\tenum ";
+    Result += ED->getName();
+    if (GlobalDefinedTags.count(ED)) {
+      // Enum is globall defined, use it.
+      Result += " ";
       return true;
     }
+
+    Result += " {\n";
+    for (const auto *EC : ED->enumerators()) {
+      Result += "\t";
+      Result += EC->getName();
+      Result += " = ";
+      Result += toString(EC->getInitVal(), 10);
+      Result += ",\n";
+    }
+    Result += "\t} ";
+    return true;
   }
 
   Result += "\t";
@@ -5715,10 +5712,7 @@ void RewriteModernObjC::HandleDeclInMainFile(Decl *D) {
           }
         }
       } else if (VD->getType()->isRecordType()) {
-        RecordDecl *RD = VD->getType()
-                             ->castAs<RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+        auto *RD = VD->getType()->castAsRecordDecl();
         if (RD->isCompleteDefinition())
           RewriteRecordBody(RD);
       }

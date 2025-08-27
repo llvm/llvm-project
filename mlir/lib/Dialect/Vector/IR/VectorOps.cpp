@@ -2466,8 +2466,12 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (llvm::any_of(elements, [](Attribute attr) { return !attr; }))
     return {};
 
+  // DenseElementsAttr only supports int/index/float/complex types.
   auto destVecType = fromElementsOp.getDest().getType();
   auto destEltType = destVecType.getElementType();
+  if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
+    return {};
+
   // Constant attributes might have a different type than the return type.
   // Convert them before creating the dense elements attribute.
   auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
@@ -2778,8 +2782,8 @@ BroadcastableToResult mlir::vector::isBroadcastableTo(
     Type srcType, VectorType dstVectorType,
     std::pair<VectorDim, VectorDim> *mismatchingDims) {
   // Broadcast scalar to vector of the same element type.
-  if (srcType.isIntOrIndexOrFloat() && dstVectorType &&
-      getElementTypeOrSelf(srcType) == getElementTypeOrSelf(dstVectorType))
+  if (isa<VectorElementTypeInterface>(srcType) && dstVectorType &&
+      srcType == getElementTypeOrSelf(dstVectorType))
     return BroadcastableToResult::Success;
   // From now on, only vectors broadcast.
   VectorType srcVectorType = llvm::dyn_cast<VectorType>(srcType);

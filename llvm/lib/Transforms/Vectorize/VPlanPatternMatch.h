@@ -218,9 +218,12 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
-           "recipe with matched opcode does not have the expected number of "
-           "operands");
+    if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
+      assert(Opcode == Instruction::PHI &&
+             "non-variadic recipe with matched opcode does not have the "
+             "expected number of operands");
+      return false;
+    }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
     if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
@@ -302,10 +305,17 @@ m_Broadcast(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExplicitVectorLength, Op0_t>
+m_EVL(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExplicitVectorLength>(Op0);
+}
+
+template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractLastElement, Op0_t>
 m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
+
 template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
@@ -343,6 +353,12 @@ inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
+}
+
+template <typename Op0_t>
+inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>, Op0_t>
+m_ZExtOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>

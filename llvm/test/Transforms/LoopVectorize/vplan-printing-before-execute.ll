@@ -66,9 +66,10 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:   EMIT branch-on-cond ir<true>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:  EMIT vp<%n.mod.vf> = urem ir<%and>, ir<16>
 ; CHECK-NEXT:  EMIT vp<[[VTC:%.+]]> = sub ir<%and>, vp<%n.mod.vf>
 ; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + vp<[[VTC]]> * ir<-1>

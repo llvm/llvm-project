@@ -263,7 +263,7 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
             BaseRecord = nullptr;
         }
       } else {
-        BaseRecord = cast<CXXRecordDecl>(BaseSpec.getType()->getAsRecordDecl());
+        BaseRecord = BaseSpec.getType()->castAsCXXRecordDecl();
       }
       if (BaseRecord &&
           lookupInBases(Context, BaseRecord, BaseMatches, LookupInDependent)) {
@@ -327,10 +327,7 @@ bool CXXRecordDecl::lookupInBases(BaseMatchesCallback BaseMatches,
       if (!PE.Base->isVirtual())
         continue;
 
-      CXXRecordDecl *VBase = nullptr;
-      if (const RecordType *Record = PE.Base->getType()->getAs<RecordType>())
-        VBase = cast<CXXRecordDecl>(Record->getOriginalDecl())
-                    ->getDefinitionOrSelf();
+      auto *VBase = PE.Base->getType()->getAsCXXRecordDecl();
       if (!VBase)
         break;
 
@@ -396,7 +393,7 @@ bool CXXRecordDecl::hasMemberName(DeclarationName Name) const {
   CXXBasePaths Paths(false, false, false);
   return lookupInBases(
       [Name](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-        return findOrdinaryMember(Specifier->getType()->getAsCXXRecordDecl(),
+        return findOrdinaryMember(Specifier->getType()->castAsCXXRecordDecl(),
                                   Path, Name);
       },
       Paths);

@@ -2750,7 +2750,7 @@ public:
                   fir::unwrapSequenceType(fir::unwrapPassByRefType(argTy))))
             TODO(loc, "passing to an OPTIONAL CONTIGUOUS derived type argument "
                       "with length parameters");
-          if (Fortran::evaluate::IsAssumedRank(*expr))
+          if (Fortran::semantics::IsAssumedRank(*expr))
             TODO(loc, "passing an assumed rank entity to an OPTIONAL "
                       "CONTIGUOUS argument");
           // Assumed shape VALUE are currently TODO in the call interface

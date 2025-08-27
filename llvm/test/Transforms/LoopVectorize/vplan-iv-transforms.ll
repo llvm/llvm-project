@@ -88,7 +88,14 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK:      VPlan 'Final VPlan for VF={8},UF={1}'
-; CHECK:      ir-bb<vector.ph>:
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<8>
+; CHECK-NEXT:     EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
 ; CHECK-NEXT:     EMIT vp<%n.mod.vf> = urem ir<%n>, ir<8>
 ; CHECK-NEXT:     EMIT vp<%n.vec> = sub ir<%n>, vp<%n.mod.vf>
 ; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector
@@ -100,8 +107,8 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, ir-bb<vector.ph> ], [ vp<%vec.ind.next>, vector.body ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
 ; CHECK-NEXT:   WIDEN ir<%x> = load ir<%q>
 ; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>

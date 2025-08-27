@@ -25,6 +25,8 @@
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx942 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
+// RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx1250 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix OK %s
 
 // We don't allow using NVPTX/AMDGCN for host compilation.
 // RUN: not %clang -### --no-offload-new-driver --cuda-host-only --target=nvptx-nvidia-cuda -nogpulib -nogpuinc -c %s 2>&1 \

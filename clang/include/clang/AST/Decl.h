@@ -3915,6 +3915,10 @@ public:
   bool isUnion() const { return getTagKind() == TagTypeKind::Union; }
   bool isEnum() const { return getTagKind() == TagTypeKind::Enum; }
 
+  bool isStructureOrClass() const {
+    return isStruct() || isClass() || isInterface();
+  }
+
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?
   ///

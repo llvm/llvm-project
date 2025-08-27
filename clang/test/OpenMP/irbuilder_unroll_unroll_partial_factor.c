@@ -75,7 +75,7 @@ void unroll_partial_factor_for(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT:    br i1 [[OMP_FLOOR0_CMP]], label [[OMP_FLOOR0_BODY:%.*]], label [[OMP_FLOOR0_EXIT:%.*]]
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[OMP_FLOOR0_IV]], [[TMP8]]
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], [[OMP_FLOOR0_TRIPCOUNT]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], [[TMP3]]
 // CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP4]], i32 2
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:

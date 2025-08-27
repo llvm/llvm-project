@@ -37,7 +37,6 @@ class ThreadSafeContext;
 namespace clang {
 
 class CompilerInstance;
-class CodeGenerator;
 class CXXRecordDecl;
 class Decl;
 class IncrementalExecutor;
@@ -110,10 +109,6 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
-  /// When CodeGen is created the first llvm::Module gets cached in many places
-  /// and we must keep it alive.
-  std::unique_ptr<llvm::Module> CachedInCodeGenModule;
-
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
 
@@ -175,15 +170,9 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
-  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {},
-                                      IncrementalAction *Action = nullptr);
-
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
-  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
@@ -206,11 +195,6 @@ private:
   // This function forces emission of the needed dtor.
   llvm::Expected<llvm::orc::ExecutorAddr>
   CompileDtorCall(CXXRecordDecl *CXXRD) const;
-
-  /// @}
-  /// @name Code generation
-  /// @{
-  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
 };
 } // namespace clang
 

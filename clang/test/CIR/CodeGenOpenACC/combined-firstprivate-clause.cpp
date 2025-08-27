@@ -84,7 +84,7 @@ struct HasDtor {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FORM:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}):
 // CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>), !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>), !cir.ptr<!rec_NonDefaultCtor>
@@ -127,7 +127,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.alloca !cir.array<!rec_CopyConstruct x 5>, !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FORM:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {{.*}}):
 // CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>), !cir.ptr<!rec_CopyConstruct>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>), !cir.ptr<!rec_CopyConstruct>
@@ -170,7 +170,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FORM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}):
 // CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>), !cir.ptr<!rec_NoCopyConstruct>
@@ -213,7 +213,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FORM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}):
 // CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
@@ -260,7 +260,7 @@ struct HasDtor {
 // CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.firstprivate.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
-// CHECK-NEXT: ^bb0(%[[ARG_FORM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}):
+// CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}):
 // CHECK-NEXT: %[[TO_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_TO]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT: %[[FROM_DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG_FROM]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>

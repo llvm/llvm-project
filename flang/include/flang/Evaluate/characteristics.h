@@ -203,6 +203,12 @@ public:
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
       FoldingContext &) const;
 
+  bool IsExplicitShape() const {
+    // If it's array and no special attributes are set, then must be
+    // explicit shape.
+    return Rank() > 0 && attrs_.none();
+  }
+
   // called by Fold() to rewrite in place
   TypeAndShape &Rewrite(FoldingContext &);
 

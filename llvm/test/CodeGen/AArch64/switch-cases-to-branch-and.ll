@@ -899,3 +899,90 @@ other.dst:
 pow2.dst:
   ret void
 }
+
+define void @switch_large_enough_for_clustering(i32 %x, ptr %dst) {
+; CHECK-LABEL: switch_large_enough_for_clustering:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.le LBB12_5
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    cmp w0, #7
+; CHECK-NEXT:    b.eq LBB12_9
+; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    cmp w0, #4
+; CHECK-NEXT:    b.eq LBB12_7
+; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    cmp w0, #2
+; CHECK-NEXT:    b.eq LBB12_8
+; CHECK-NEXT:  LBB12_4: ; %exit
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_5: ; %entry
+; CHECK-NEXT:    cbz w0, LBB12_8
+; CHECK-NEXT:  ; %bb.6: ; %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.ne LBB12_4
+; CHECK-NEXT:  LBB12_7: ; %succ.2
+; CHECK-NEXT:    str wzr, [x1]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_8: ; %succ.1
+; CHECK-NEXT:    strb wzr, [x1]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_9: ; %succ.3
+; CHECK-NEXT:    strh wzr, [x1]
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: switch_large_enough_for_clustering:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    cmp w0, #2
+; GISEL-NEXT:    b.lt LBB12_5
+; GISEL-NEXT:  ; %bb.1: ; %entry
+; GISEL-NEXT:    cmp w0, #7
+; GISEL-NEXT:    b.eq LBB12_9
+; GISEL-NEXT:  ; %bb.2: ; %entry
+; GISEL-NEXT:    cmp w0, #4
+; GISEL-NEXT:    b.eq LBB12_7
+; GISEL-NEXT:  ; %bb.3: ; %entry
+; GISEL-NEXT:    cmp w0, #2
+; GISEL-NEXT:    b.eq LBB12_8
+; GISEL-NEXT:  LBB12_4: ; %exit
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_5: ; %entry
+; GISEL-NEXT:    cbz w0, LBB12_8
+; GISEL-NEXT:  ; %bb.6: ; %entry
+; GISEL-NEXT:    cmp w0, #1
+; GISEL-NEXT:    b.ne LBB12_4
+; GISEL-NEXT:  LBB12_7: ; %succ.2
+; GISEL-NEXT:    str wzr, [x1]
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_8: ; %succ.1
+; GISEL-NEXT:    strb wzr, [x1]
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_9: ; %succ.3
+; GISEL-NEXT:    strh wzr, [x1]
+; GISEL-NEXT:    ret
+entry:
+  switch i32 %x, label %exit [
+    i32 0, label %succ.1
+    i32 2, label %succ.1
+    i32 1, label %succ.2
+    i32 4, label %succ.2
+    i32 7, label %succ.3
+  ]
+
+succ.1:
+  store i8 0, ptr %dst
+  br label %exit
+
+succ.2:
+  call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 4, i1 false)
+  br label %exit
+
+succ.3:
+  call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 2, i1 false)
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)

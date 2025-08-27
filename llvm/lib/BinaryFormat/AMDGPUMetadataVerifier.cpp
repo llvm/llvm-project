@@ -77,9 +77,10 @@ bool MetadataVerifier::verifyScalarEntry(
     msgpack::MapDocNode &MapNode, StringRef Key, bool Required,
     msgpack::Type SKind,
     function_ref<bool(msgpack::DocNode &)> verifyValue) {
-  return verifyEntry(MapNode, Key, Required, [=](msgpack::DocNode &Node) {
-    return verifyScalar(Node, SKind, verifyValue);
-  });
+  return verifyEntry(MapNode, Key, Required,
+                     [this, SKind, verifyValue](msgpack::DocNode &Node) {
+                       return verifyScalar(Node, SKind, verifyValue);
+                     });
 }
 
 bool MetadataVerifier::verifyIntegerEntry(msgpack::MapDocNode &MapNode,

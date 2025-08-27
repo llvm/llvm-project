@@ -27,4 +27,20 @@ def LLVMTargetToDataLayout : Pass<"llvm-target-to-data-layout"> {
   ];
 }
 
+def LLVMTargetToTargetFeatures : Pass<"llvm-target-to-target-features"> {
+  let summary = "Update attached #llvm.target's features per the described target";
+  let description = [{
+    Obtain the TargetMachine specified by the attached #llvm.target's attributes
+    and obtain from it the full list of features of the selected target. Updates
+    the attached #llvm.target so that its features reflect the full list of
+    features.
+  }];
+  let options = [
+    Option<"initializeLLVMTargets", "initialize-llvm-targets", "bool",
+           /*default=*/"true",
+           "Whether to pre-load all available target machines, that LLVM is "
+           "configured to support, into the TargetRegistry.">
+  ];
+}
+
 #endif // MLIR_TARGET_LLVMIR_TRANSFORMS_PASSES
