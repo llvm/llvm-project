@@ -692,6 +692,42 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.  The immediate Value has had any PC
+/// adjustment made by the caller.  If the instruction is a branch instruction
+/// then isBranch is true, else false.  If the getOpInfo() function was set as
+/// part of the setupForSymbolicDisassembly() call then that function is called
+/// to get any symbolic information at the Address for this instruction.  If
+/// that returns non-zero then the symbolic information it returns is used to
+/// create an MCExpr and that is added as an operand to the MCInst.  If
+/// getOpInfo() returns zero and isBranch is true then a symbol look up for
+/// Value is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with Value is created.  This function returns true if it adds an
+/// operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
+                                     bool isBranch, uint64_t InstSize,
+                                     MCInst &MI,
+                                     const MCDisassembler *Decoder) {
+  // FIXME: Does it make sense for value to be negative?
+  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
+                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
+                                           InstSize);
+}
+
+/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
+/// referenced by a load instruction with the base register that is the Pc.
+/// These can often be values in a literal pool near the Address of the
+/// instruction.  The Address of the instruction and its immediate Value are
+/// used as a possible literal pool entry.  The SymbolLookUp call back will
+/// return the name of a symbol referenced by the literal pool's entry if
+/// the referenced address is that of a symbol.  Or it will return a pointer to
+/// a literal 'C' string if the referenced address of the literal pool's entry
+/// is an address into a section with 'C' string literals.
+static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
+                                            const MCDisassembler *Decoder) {
+  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
+}
+
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -830,42 +866,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
 
   Size = 4;
   return MCDisassembler::Fail;
-}
-
-/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
-/// immediate Value in the MCInst.  The immediate Value has had any PC
-/// adjustment made by the caller.  If the instruction is a branch instruction
-/// then isBranch is true, else false.  If the getOpInfo() function was set as
-/// part of the setupForSymbolicDisassembly() call then that function is called
-/// to get any symbolic information at the Address for this instruction.  If
-/// that returns non-zero then the symbolic information it returns is used to
-/// create an MCExpr and that is added as an operand to the MCInst.  If
-/// getOpInfo() returns zero and isBranch is true then a symbol look up for
-/// Value is done and if a symbol is found an MCExpr is created with that, else
-/// an MCExpr with Value is created.  This function returns true if it adds an
-/// operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
-                                     bool isBranch, uint64_t InstSize,
-                                     MCInst &MI,
-                                     const MCDisassembler *Decoder) {
-  // FIXME: Does it make sense for value to be negative?
-  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
-                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
-                                           InstSize);
-}
-
-/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
-/// referenced by a load instruction with the base register that is the Pc.
-/// These can often be values in a literal pool near the Address of the
-/// instruction.  The Address of the instruction and its immediate Value are
-/// used as a possible literal pool entry.  The SymbolLookUp call back will
-/// return the name of a symbol referenced by the literal pool's entry if
-/// the referenced address is that of a symbol.  Or it will return a pointer to
-/// a literal 'C' string if the referenced address of the literal pool's entry
-/// is an address into a section with 'C' string literals.
-static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
-                                            const MCDisassembler *Decoder) {
-  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
 // Thumb1 instructions don't have explicit S bits.  Rather, they

@@ -74,8 +74,7 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (DerivedType->isDependentType())
     return nullptr;
 
-  const RecordType *Ty = DerivedType->castAs<RecordType>();
-  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
+  return DerivedType->castAsCXXRecordDecl();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -90,10 +89,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        const auto *Derived =
-            cast<CXXRecordDecl>(
-                E->getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+        const auto *Derived = E->getType()->castAsCXXRecordDecl();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -2032,9 +2028,7 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD =
-      unionType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
-  return getTargetFieldForToUnionCast(RD, opType);
+  return getTargetFieldForToUnionCast(unionType->castAsRecordDecl(), opType);
 }
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
@@ -3396,10 +3390,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+      auto *RD = ILE->getType()->castAsRecordDecl();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -3542,14 +3533,14 @@ const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
 }
 
 std::optional<llvm::APInt>
-CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
   const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
 
   assert(AllocSize && AllocSize->getElemSizeParam().isValid());
   unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
   unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
   if (getNumArgs() <= SizeArgNo)
-    return {};
+    return std::nullopt;
 
   auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
     Expr::EvalResult ExprResult;
@@ -3565,7 +3556,7 @@ CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
 
   llvm::APSInt SizeOfElem;
   if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
-    return {};
+    return std::nullopt;
 
   if (!AllocSize->getNumElemsParam().isValid())
     return SizeOfElem;
@@ -3573,12 +3564,12 @@ CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
   llvm::APSInt NumberOfElems;
   unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
   if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
-    return {};
+    return std::nullopt;
 
   bool Overflow;
   llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
   if (Overflow)
-    return {};
+    return std::nullopt;
 
   return BytesAvailable;
 }
