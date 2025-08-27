@@ -8193,6 +8193,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
               DL, VT, LHS, DAG.getSignedConstant(Imm + 1, DL, OpVT), CCVal);
           return DAG.getLogicalNOT(DL, SetCC, VT);
         }
+        // Lower (setugt X, 2047) as (setne (srl X, 11), 0).
+        if (CCVal == ISD::SETUGT && Imm == 2047) {
+          SDValue Shift = DAG.getNode(ISD::SRL, DL, OpVT, LHS,
+                                      DAG.getShiftAmountConstant(11, OpVT, DL));
+          return DAG.getSetCC(DL, VT, Shift, DAG.getConstant(0, DL, OpVT),
+                              ISD::SETNE);
+        }
       }
 
       // Not a constant we could handle, swap the operands and condition code to
@@ -21120,9 +21127,14 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
-    // Bail if we might break a sh{1,2,3}add pattern.
-    if ((Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
-        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3 && N->hasOneUse() &&
+    bool IsShXAdd =
+        (Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
+        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3;
+    bool IsQCShlAdd = Subtarget.hasVendorXqciac() && C2 &&
+                      C2->getZExtValue() >= 4 && C2->getZExtValue() <= 31;
+
+    // Bail if we might break a sh{1,2,3}add/qc.shladd pattern.
+    if ((IsShXAdd || IsQCShlAdd) && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
         !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
