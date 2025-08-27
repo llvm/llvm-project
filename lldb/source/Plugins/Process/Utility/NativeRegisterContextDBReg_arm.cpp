@@ -32,25 +32,6 @@ uint32_t NativeRegisterContextDBReg_arm::GetWatchpointSize(uint32_t wp_index) {
   }
 }
 
-std::optional<NativeRegisterContextDBReg::BreakpointDetails>
-NativeRegisterContextDBReg_arm::AdjustBreakpoint(
-    const BreakpointDetails &details) {
-  BreakpointDetails bd = details;
-  // Use size to get a hint of arm vs thumb modes.
-  switch (bd.size) {
-  case 2:
-    bd.addr &= ~1;
-    break;
-  case 4:
-    bd.addr &= ~3;
-    break;
-  default:
-    return {};
-  }
-
-  return bd;
-}
-
 std::optional<NativeRegisterContextDBReg::WatchpointDetails>
 NativeRegisterContextDBReg_arm::AdjustWatchpoint(
     const WatchpointDetails &details) {

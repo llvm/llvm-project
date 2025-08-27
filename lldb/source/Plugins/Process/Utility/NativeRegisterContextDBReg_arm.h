@@ -24,15 +24,13 @@ private:
   std::optional<WatchpointDetails>
   AdjustWatchpoint(const WatchpointDetails &details) override;
 
-  std::optional<BreakpointDetails>
-  AdjustBreakpoint(const BreakpointDetails &details) override;
-
   uint32_t MakeBreakControlValue(size_t size) override;
 
   uint32_t MakeWatchControlValue(lldb::addr_t addr, size_t size,
                                  uint32_t watch_flags) override;
 
-  bool ValidateBreakpoint(size_t size, lldb::addr_t addr) override {
+  bool ValidateBreakpoint(size_t size,
+                          [[maybe_unused]] lldb::addr_t addr) override {
     // Break on 4 or 2 byte instructions.
     return size == 4 || size == 2;
   }
