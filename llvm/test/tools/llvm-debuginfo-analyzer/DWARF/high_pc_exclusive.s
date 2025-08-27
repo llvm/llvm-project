@@ -12,6 +12,8 @@
 # 8 }
 # 9
 
+# REQUIRES: x86-registered-target
+
 # RUN: llvm-mc %s -triple=i686-pc-linux -filetype=obj -o - | \
 # RUN: llvm-debuginfo-analyzer --attribute=all \
 # RUN:                         --print=all \
