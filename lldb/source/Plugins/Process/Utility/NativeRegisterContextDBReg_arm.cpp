@@ -91,12 +91,10 @@ uint32_t NativeRegisterContextDBReg_arm::MakeBreakControlValue(size_t size) {
 
 uint32_t NativeRegisterContextDBReg_arm::MakeWatchControlValue(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  uint32_t addr_word_offset = 0, byte_mask = 0;
-
   // We can only watch up to four bytes that follow a 4 byte aligned address
   // per watchpoint register pair, so make sure we can properly encode this.
-  addr_word_offset = addr % 4;
-  byte_mask = ((1u << size) - 1u) << addr_word_offset;
+  // We assume that the address was 4 byte aligned by AdjustWatchpoint.
+  uint32_t byte_mask = (1u << size) - 1u;
 
   // Check if we need multiple watchpoint register
   if (byte_mask > 0xfu)
