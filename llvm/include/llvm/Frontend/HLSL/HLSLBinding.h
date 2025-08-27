@@ -35,10 +35,11 @@ struct BindingRange {
 };
 
 struct BaseRegisterSpace {
+  protected:
   uint32_t Space;
   SmallVector<BindingRange> Ranges;
   BaseRegisterSpace(uint32_t Space) : Space(Space) {}
-
+  public:
   bool operator==(const BaseRegisterSpace &Other) const {
     return Space == Other.Space;
   }
@@ -91,7 +92,6 @@ template <typename T> struct BindingSpaces {
 ///   }
 /// }
 class BindingInfo {
-public:
 private:
   BindingSpaces<FreeRegisterSpace> SRVSpaces{dxil::ResourceClass::SRV};
   BindingSpaces<FreeRegisterSpace> UAVSpaces{dxil::ResourceClass::UAV};
