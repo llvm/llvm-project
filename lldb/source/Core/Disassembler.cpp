@@ -404,9 +404,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     bool seen_this_inst = false;
   };
 
-  // Track live variables across instructions (keyed by stable LLDB user_id_t. 8
-  // is a good small-buffer guess.
-  llvm::SmallDenseMap<lldb::user_id_t, VarState, 8> live_vars;
+  // Track live variables across instructions.
+  llvm::DenseMap<lldb::user_id_t, VarState> live_vars;
 
   // Stateful annotator: updates live_vars and returns only what should be
   // printed for THIS instruction.
