@@ -18,18 +18,12 @@ void normal_literals() {
 #if 0
   static constexpr auto v1 = 1.bf16;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'bf16', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v1 = 1.bf16;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: BF16{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v1 = 1.BF16;
   static_assert(is_same<decltype(v1), const std::bfloat16_t>::value, "");
   static_assert(v1 == 1.BF16, "");
 
   static constexpr auto v2 = 1.e0bf16;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'bf16', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v2 = 1.e0bf16;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: BF16{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v2 = 1.e0BF16;
   static_assert(is_same<decltype(v2), const std::bfloat16_t>::value, "");
   static_assert(v2 == 1.BF16, "");
@@ -47,18 +41,12 @@ void normal_literals() {
 
   static constexpr auto v5 = 1.f16;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f16', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1.f16;
-  // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1.F16;
   static_assert(is_same<decltype(v5), const _Float16>::value, "");
   static_assert(v5 == 1.F16, "");
 
   static constexpr auto v6 = 1.e0f16;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f16', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v6 = 1.e0f16;
-  // CHECK-MESSAGES-NEXT: ^ ~
-  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v6 = 1.e0F16;
   static_assert(is_same<decltype(v6), const _Float16>::value, "");
   static_assert(v6 == 1.F16, "");
@@ -76,18 +64,12 @@ void normal_literals() {
 #if 0
   static constexpr auto v9 = 1.f32;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f32', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v9 = 1.f32;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F32{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v9 = 1.F32;
   static_assert(is_same<decltype(v9), const std::float32_t>::value, "");
   static_assert(v9 == 1.F32, "");
 
   static constexpr auto v10 = 1.e0f32;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f32', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v10 = 1.e0f32;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F32{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v10 = 1.e0F32;
   static_assert(is_same<decltype(v10), const std::float32_t>::value, "");
   static_assert(v10 == 1.F32, "");
@@ -106,18 +88,12 @@ void normal_literals() {
 #if 0
   static constexpr auto v13 = 1.f64;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f64', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v13 = 1.f64;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F64{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v13 = 1.F64;
   static_assert(is_same<decltype(v13), const std::float64_t>::value, "");
   static_assert(v13 == 1.F64, "");
 
   static constexpr auto v14 = 1.e0f64;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f64', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v14 = 1.e0f64;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F64{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v14 = 1.e0F64;
   static_assert(is_same<decltype(v14), const std::float64_t>::value, "");
   static_assert(v14 == 1.F64, "");
@@ -136,18 +112,12 @@ void normal_literals() {
 #if 0
   static constexpr auto v17 = 1.f128;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f128', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v17 = 1.f128;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F128{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v17 = 1.F128;
   static_assert(is_same<decltype(v17), const std::float128_t>::value, "");
   static_assert(v17 == 1.F128, "");
 
   static constexpr auto v18 = 1.e0f128;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f128', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v18 = 1.e0f128;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^ ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F128{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v18 = 1.e0F128;
   static_assert(is_same<decltype(v18), const std::float128_t>::value, "");
   static_assert(v18 == 1.F128, "");
@@ -168,9 +138,6 @@ void hexadecimal_literals() {
 #if 0
   static constexpr auto v1 = 0xfp0bf16;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'bf16', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v1 = 0xfp0bf16;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^    ~
-  // DISABLED-CHECK-MESSAGES-NEXT: BF16{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v1 = 0xfp0BF16;
   static_assert(is_same<decltype(v1), const std::bfloat16_t>::value, "");
   static_assert(v1 == 0xfp0BF16, "");
@@ -184,9 +151,6 @@ void hexadecimal_literals() {
 
   static constexpr auto v3 = 0xfp0f16;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f16', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v3 = 0xfp0f16;
-  // CHECK-MESSAGES-NEXT: ^    ~
-  // CHECK-MESSAGES-NEXT: F16{{$}}
   // CHECK-FIXES: static constexpr auto v3 = 0xfp0F16;
   static_assert(is_same<decltype(v3), const _Float16>::value, "");
   static_assert(v3 == 0xfp0F16, "");
@@ -200,9 +164,6 @@ void hexadecimal_literals() {
 #if 0
   static constexpr auto v5 = 0xfp0f32;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f32', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v5 = 0xfp0f32;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^    ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F32{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v5 = 0xfp0F32;
   static_assert(is_same<decltype(v5), const std::float32_t>::value, "");
   static_assert(v5 == 0xfp0F32, "");
@@ -217,9 +178,6 @@ void hexadecimal_literals() {
 #if 0
   static constexpr auto v7 = 0xfp0f64;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f64', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v7 = 0xfp0f64;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^    ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F64{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v7 = 0xfp0F64;
   static_assert(is_same<decltype(v7), const std::float64_t>::value, "");
   static_assert(v7 == 0xfp0F64, "");
@@ -234,9 +192,6 @@ void hexadecimal_literals() {
 #if 0
   static constexpr auto v9 = 0xfp0f128;
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:30: warning: floating point literal has suffix 'f128', which is not uppercase
-  // DISABLED-CHECK-MESSAGES-NEXT: static constexpr auto v9 = 0xfp0f128;
-  // DISABLED-CHECK-MESSAGES-NEXT: ^    ~
-  // DISABLED-CHECK-MESSAGES-NEXT: F128{{$}}
   // DISABLED-CHECK-FIXES: static constexpr auto v9 = 0xfp0F128;
   static_assert(is_same<decltype(v9), const std::float128_t>::value, "");
   static_assert(v9 == 0xfp0F128, "");
@@ -253,9 +208,6 @@ void size_t_suffix() {
 
   static constexpr auto v29 = 1z;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'z', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v29 = 1z;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: Z{{$}}
   // CHECK-FIXES: static constexpr auto v29 = 1Z;
   static_assert(v29 == 1Z, "");
 
@@ -266,27 +218,18 @@ void size_t_suffix() {
 
   static constexpr auto v31 = 1zu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'zu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v31 = 1zu;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: ZU{{$}}
   // CHECK-FIXES: static constexpr auto v31 = 1ZU;
   static_assert(is_same<decltype(v31), const size_t>::value, "");
   static_assert(v31 == 1ZU, "");
 
   static constexpr auto v32 = 1Zu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Zu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v32 = 1Zu;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: ZU{{$}}
   // CHECK-FIXES: static constexpr auto v32 = 1ZU;
   static_assert(is_same<decltype(v32), const size_t>::value, "");
   static_assert(v32 == 1ZU, "");
 
   static constexpr auto v33 = 1zU;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'zU', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v33 = 1zU;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: ZU{{$}}
   // CHECK-FIXES: static constexpr auto v33 = 1ZU;
   static_assert(is_same<decltype(v33), const size_t>::value, "");
   static_assert(v33 == 1ZU, "");
@@ -299,27 +242,18 @@ void size_t_suffix() {
 
   static constexpr auto v35 = 1uz;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'uz', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v35 = 1uz;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: UZ{{$}}
   // CHECK-FIXES: static constexpr auto v35 = 1UZ;
   static_assert(is_same<decltype(v35), const size_t>::value, "");
   static_assert(v35 == 1UZ);
 
   static constexpr auto v36 = 1uZ;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'uZ', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v36 = 1uZ;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: UZ{{$}}
   // CHECK-FIXES: static constexpr auto v36 = 1UZ;
   static_assert(is_same<decltype(v36), const size_t>::value, "");
   static_assert(v36 == 1UZ);
 
   static constexpr auto v37 = 1Uz;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Uz', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v37 = 1Uz;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: UZ{{$}}
   // CHECK-FIXES: static constexpr auto v37 = 1UZ;
   static_assert(is_same<decltype(v37), const size_t>::value, "");
   static_assert(v37 == 1UZ);

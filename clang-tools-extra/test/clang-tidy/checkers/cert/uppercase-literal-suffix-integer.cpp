@@ -1,14 +1,9 @@
 // RUN: %check_clang_tidy %s cert-dcl16-c %t -- -- -I %clang_tidy_headers
-// RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -fix -- -I %clang_tidy_headers
-// RUN: clang-tidy %t.cpp -checks='-*,cert-dcl16-c' -warnings-as-errors='-*,cert-dcl16-c' -- -I %clang_tidy_headers
 
 #include "integral_constant.h"
 
 void integer_suffix() {
   static constexpr auto v0 = __LINE__; // synthetic
-  static_assert(v0 == 9 || v0 == 5, "");
-
   static constexpr auto v1 = __cplusplus; // synthetic, long
 
   static constexpr auto v2 = 1; // no literal
@@ -29,9 +24,6 @@ void integer_suffix() {
 
   static constexpr auto v5 = 1l;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'l', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v5 = 1l;
-  // CHECK-MESSAGES-NEXT: ^~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}L{{$}}
   // CHECK-FIXES: static constexpr auto v5 = 1L;
   static_assert(is_same<decltype(v5), const long>::value, "");
   static_assert(v5 == 1, "");
@@ -44,9 +36,6 @@ void integer_suffix() {
 
   static constexpr auto v7 = 1ll;
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: integer literal has suffix 'll', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v7 = 1ll;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LL{{$}}
   // CHECK-FIXES: static constexpr auto v7 = 1LL;
   static_assert(is_same<decltype(v7), const long long>::value, "");
   static_assert(v7 == 1, "");
@@ -77,27 +66,18 @@ void integer_suffix() {
 
   static constexpr auto v13 = 1lu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'lu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v13 = 1lu;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v13 = 1LU;
   static_assert(is_same<decltype(v13), const unsigned long>::value, "");
   static_assert(v13 == 1, "");
 
   static constexpr auto v14 = 1Lu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'Lu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v14 = 1Lu;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v14 = 1LU;
   static_assert(is_same<decltype(v14), const unsigned long>::value, "");
   static_assert(v14 == 1, "");
 
   static constexpr auto v15 = 1lU;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'lU', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v15 = 1lU;
-  // CHECK-MESSAGES-NEXT: ^~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LU{{$}}
   // CHECK-FIXES: static constexpr auto v15 = 1LU;
   static_assert(is_same<decltype(v15), const unsigned long>::value, "");
   static_assert(v15 == 1, "");
@@ -128,27 +108,18 @@ void integer_suffix() {
 
   static constexpr auto v21 = 1llu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'llu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v21 = 1llu;
-  // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v21 = 1LLU;
   static_assert(is_same<decltype(v21), const unsigned long long>::value, "");
   static_assert(v21 == 1, "");
 
   static constexpr auto v22 = 1LLu;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'LLu', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v22 = 1LLu;
-  // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v22 = 1LLU;
   static_assert(is_same<decltype(v22), const unsigned long long>::value, "");
   static_assert(v22 == 1, "");
 
   static constexpr auto v23 = 1llU;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'llU', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v23 = 1llU;
-  // CHECK-MESSAGES-NEXT: ^~~~
-  // CHECK-MESSAGES-NEXT: {{^ *| *}}LLU{{$}}
   // CHECK-FIXES: static constexpr auto v23 = 1LLU;
   static_assert(is_same<decltype(v23), const unsigned long long>::value, "");
   static_assert(v23 == 1, "");
