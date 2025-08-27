@@ -98,6 +98,8 @@ public:
     return llvm::DebuggerKind::DBX;
   }
 
+  SanitizerMask getSupportedSanitizers() const override;
+
   path_list getArchSpecificLibPaths() const override { return path_list(); };
 
 protected:
