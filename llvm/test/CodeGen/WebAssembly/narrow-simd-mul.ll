@@ -5,71 +5,9 @@ define <8 x i8> @mul_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: mul_v8i8:
 ; CHECK:         .functype mul_v8i8 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.extract_lane_u $push4=, $0, 0
-; CHECK-NEXT:    i8x16.extract_lane_u $push3=, $1, 0
-; CHECK-NEXT:    i32.mul $push5=, $pop4, $pop3
-; CHECK-NEXT:    i8x16.splat $push6=, $pop5
-; CHECK-NEXT:    i8x16.extract_lane_u $push1=, $0, 1
-; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 1
-; CHECK-NEXT:    i32.mul $push2=, $pop1, $pop0
-; CHECK-NEXT:    i8x16.replace_lane $push7=, $pop6, 1, $pop2
-; CHECK-NEXT:    i8x16.extract_lane_u $push9=, $0, 2
-; CHECK-NEXT:    i8x16.extract_lane_u $push8=, $1, 2
-; CHECK-NEXT:    i32.mul $push10=, $pop9, $pop8
-; CHECK-NEXT:    i8x16.replace_lane $push11=, $pop7, 2, $pop10
-; CHECK-NEXT:    i8x16.extract_lane_u $push13=, $0, 3
-; CHECK-NEXT:    i8x16.extract_lane_u $push12=, $1, 3
-; CHECK-NEXT:    i32.mul $push14=, $pop13, $pop12
-; CHECK-NEXT:    i8x16.replace_lane $push15=, $pop11, 3, $pop14
-; CHECK-NEXT:    i8x16.extract_lane_u $push17=, $0, 4
-; CHECK-NEXT:    i8x16.extract_lane_u $push16=, $1, 4
-; CHECK-NEXT:    i32.mul $push18=, $pop17, $pop16
-; CHECK-NEXT:    i8x16.replace_lane $push19=, $pop15, 4, $pop18
-; CHECK-NEXT:    i8x16.extract_lane_u $push21=, $0, 5
-; CHECK-NEXT:    i8x16.extract_lane_u $push20=, $1, 5
-; CHECK-NEXT:    i32.mul $push22=, $pop21, $pop20
-; CHECK-NEXT:    i8x16.replace_lane $push23=, $pop19, 5, $pop22
-; CHECK-NEXT:    i8x16.extract_lane_u $push25=, $0, 6
-; CHECK-NEXT:    i8x16.extract_lane_u $push24=, $1, 6
-; CHECK-NEXT:    i32.mul $push26=, $pop25, $pop24
-; CHECK-NEXT:    i8x16.replace_lane $push27=, $pop23, 6, $pop26
-; CHECK-NEXT:    i8x16.extract_lane_u $push29=, $0, 7
-; CHECK-NEXT:    i8x16.extract_lane_u $push28=, $1, 7
-; CHECK-NEXT:    i32.mul $push30=, $pop29, $pop28
-; CHECK-NEXT:    i8x16.replace_lane $push31=, $pop27, 7, $pop30
-; CHECK-NEXT:    i8x16.extract_lane_u $push33=, $0, 8
-; CHECK-NEXT:    i8x16.extract_lane_u $push32=, $1, 8
-; CHECK-NEXT:    i32.mul $push34=, $pop33, $pop32
-; CHECK-NEXT:    i8x16.replace_lane $push35=, $pop31, 8, $pop34
-; CHECK-NEXT:    i8x16.extract_lane_u $push37=, $0, 9
-; CHECK-NEXT:    i8x16.extract_lane_u $push36=, $1, 9
-; CHECK-NEXT:    i32.mul $push38=, $pop37, $pop36
-; CHECK-NEXT:    i8x16.replace_lane $push39=, $pop35, 9, $pop38
-; CHECK-NEXT:    i8x16.extract_lane_u $push41=, $0, 10
-; CHECK-NEXT:    i8x16.extract_lane_u $push40=, $1, 10
-; CHECK-NEXT:    i32.mul $push42=, $pop41, $pop40
-; CHECK-NEXT:    i8x16.replace_lane $push43=, $pop39, 10, $pop42
-; CHECK-NEXT:    i8x16.extract_lane_u $push45=, $0, 11
-; CHECK-NEXT:    i8x16.extract_lane_u $push44=, $1, 11
-; CHECK-NEXT:    i32.mul $push46=, $pop45, $pop44
-; CHECK-NEXT:    i8x16.replace_lane $push47=, $pop43, 11, $pop46
-; CHECK-NEXT:    i8x16.extract_lane_u $push49=, $0, 12
-; CHECK-NEXT:    i8x16.extract_lane_u $push48=, $1, 12
-; CHECK-NEXT:    i32.mul $push50=, $pop49, $pop48
-; CHECK-NEXT:    i8x16.replace_lane $push51=, $pop47, 12, $pop50
-; CHECK-NEXT:    i8x16.extract_lane_u $push53=, $0, 13
-; CHECK-NEXT:    i8x16.extract_lane_u $push52=, $1, 13
-; CHECK-NEXT:    i32.mul $push54=, $pop53, $pop52
-; CHECK-NEXT:    i8x16.replace_lane $push55=, $pop51, 13, $pop54
-; CHECK-NEXT:    i8x16.extract_lane_u $push57=, $0, 14
-; CHECK-NEXT:    i8x16.extract_lane_u $push56=, $1, 14
-; CHECK-NEXT:    i32.mul $push58=, $pop57, $pop56
-; CHECK-NEXT:    i8x16.replace_lane $push59=, $pop55, 14, $pop58
-; CHECK-NEXT:    i8x16.extract_lane_u $push61=, $0, 15
-; CHECK-NEXT:    i8x16.extract_lane_u $push60=, $1, 15
-; CHECK-NEXT:    i32.mul $push62=, $pop61, $pop60
-; CHECK-NEXT:    i8x16.replace_lane $push63=, $pop59, 15, $pop62
-; CHECK-NEXT:    return $pop63
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_u $push0=, $0, $1
+; CHECK-NEXT:    i8x16.shuffle $push1=, $pop0, $1, 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    return $pop1
   %mul = mul <8 x i8> %a, %b
   ret <8 x i8> %mul
 }
