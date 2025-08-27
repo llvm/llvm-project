@@ -92,18 +92,18 @@ public:
   void addRecipeForPart(VPRecipeBase *OrigR, VPRecipeBase *CopyR,
                         unsigned Part) {
     for (const auto &[Idx, VPV] : enumerate(OrigR->definedValues())) {
-      auto Ins = VPV2Parts.insert({VPV, {}});
-      assert(Ins.first->second.size() == Part - 1 && "earlier parts not set");
-      Ins.first->second.push_back(CopyR->getVPValue(Idx));
+      const auto &[V, _] = VPV2Parts.try_emplace(VPV);
+      assert(V->second.size() == Part - 1 && "earlier parts not set");
+      V->second.push_back(CopyR->getVPValue(Idx));
     }
   }
 
   /// Given a uniform recipe \p R, add it for all parts.
   void addUniformForAllParts(VPSingleDefRecipe *R) {
-    auto Ins = VPV2Parts.insert({R, {}});
-    assert(Ins.second && "uniform value already added");
+    const auto &[V, Inserted] = VPV2Parts.try_emplace(R);
+    assert(Inserted && "uniform value already added");
     for (unsigned Part = 0; Part != UF; ++Part)
-      Ins.first->second.push_back(R);
+      V->second.push_back(R);
   }
 
   bool contains(VPValue *VPV) const { return VPV2Parts.contains(VPV); }
