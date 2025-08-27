@@ -3852,8 +3852,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (I->isLifetimeStartOrEnd())
     return false;
 
-  if (auto *TT = dyn_cast<TargetExtType>(Op->getType());
-      TT && TT->hasProperty(TargetExtType::Property::IsTokenLike))
+  if (Op->getType()->isTokenLikeTy())
     return false;
 
   // Early exit.
