@@ -496,12 +496,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FPTOUI)
-      .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
+               typeInSet(1, {s32, s64})(Query);
+      })
       .customIf([=](const LegalityQuery &Query) {
-        return !HasAVX512 &&
-               ((HasSSE1 && typeIs(1, s32)(Query)) ||
-                (HasSSE2 && typeIs(1, s64)(Query))) &&
-               scalarNarrowerThan(0, Is64Bit ? 64 : 32)(Query);
+        if (!HasAVX512 && (((typeIs(1, s32)(Query) && HasSSE1) ||
+                            (typeIs(1, s64)(Query) && HasSSE2)) &&
+                           scalarNarrowerThan(0, Is64Bit ? 64 : 32)(Query)))
+          return true;
+        return typeInSet(0, {s16, s32, s64})(Query) &&
+               typeInSet(1, {s32, s64, s80})(Query);
       })
       // TODO: replace with customized legalization using
       // specifics of cvttsd2si. The selection of this node requires
@@ -513,7 +518,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (HasSSE2 && typeIs(1, s64)(Query))) &&
                (Is64Bit && typeIs(0, s64)(Query));
       })
-      .clampScalar(0, s32, sMaxScalar)
+      .clampScalar(0, s16, sMaxScalar)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
@@ -744,7 +749,68 @@ bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
     return true;
   }
 
-  return false;
+  MachineFunction &MF = *MI.getMF();
+  TypeSize MemSize = DstTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(DstTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
+
+  if (DstTy == s64) {
+    // As x87 cmov is unsupported at the momement, we need to use the following
+    // arithmatic algorithm to do fptoui computation. y_tmp = y - sint_max.
+    // y_res = fptosi(y - !sign(y_tmp)sint_max) + !sign(y_tmp)sint_max
+
+    const LLT s1 = LLT::scalar(1);
+    const LLT s80 = LLT::scalar(80);
+    const llvm::fltSemantics &Sem =
+        (SrcTy != s80 ? getFltSemanticForLLT(SrcTy)
+                      : APFloat::x87DoubleExtended());
+
+    APFloat SintMaxFP = APFloat::getZero(Sem);
+    SintMaxFP.convertFromAPInt(APInt::getOneBitSet(64, 63), false,
+                               APFloat::rmNearestTiesToEven);
+    Register SintMax = MIRBuilder.buildFConstant(SrcTy, SintMaxFP).getReg(0);
+
+    Register YTmp = MIRBuilder.buildFSub(SrcTy, Src, SintMax).getReg(0);
+
+    APFloat ZeroFP = APFloat::getZero(Sem);
+    Register Zero = MIRBuilder.buildFConstant(SrcTy, ZeroFP).getReg(0);
+    Register Sign =
+        MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, s1, YTmp, Zero).getReg(0);
+
+    Register One = MIRBuilder.buildConstant(s1, 1).getReg(0);
+    Register NSign = MIRBuilder.buildXor(s1, Sign, One).getReg(0);
+
+    Register NSign64 = MIRBuilder.buildZExt(s64, NSign).getReg(0);
+
+    Register NSignF = MIRBuilder.buildSITOFP(SrcTy, NSign64).getReg(0);
+    Register Offset = MIRBuilder.buildFMul(SrcTy, NSignF, SintMax).getReg(0);
+
+    Register YAdj = MIRBuilder.buildFSub(SrcTy, Src, Offset).getReg(0);
+
+    Register YAdjI = MIRBuilder.buildFPTOSI(s64, YAdj).getReg(0);
+
+    Register OffsetI = MIRBuilder.buildFPTOSI(s64, Offset).getReg(0);
+
+    Register Result = MIRBuilder.buildAdd(s64, YAdjI, OffsetI).getReg(0);
+
+    MIRBuilder.buildCopy(Dst, Result);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  MIRBuilder.buildInstr(X86::G_FIST)
+      .addUse(Src)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(StoreMMO);
+
+  MIRBuilder.buildLoad(Dst, SlotPointer, PtrInfo, Align(MemSize));
+  MI.eraseFromParent();
+
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
