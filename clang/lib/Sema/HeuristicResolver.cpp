@@ -255,6 +255,21 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+    // Check if the expression refers to an explicit object parameter of
+    // templated type. If so, heuristically treat it as having the type of the
+    // enclosing class.
+    if (!T.Type.isNull() &&
+        (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
+      if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
+        auto *PrDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+          const auto *Parent =
+              dyn_cast<TagDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getCanonicalTagType(Parent)};
+        }
+      }
+    }
+
     return T;
   };
   // As an additional protection against infinite loops, bound the number of
