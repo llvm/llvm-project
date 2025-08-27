@@ -78,6 +78,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -1733,6 +1734,14 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   }
   FuncInfo.CallSiteLabels.clear();
 
+  const auto &DirectCallSiteLabels = FuncInfo.DirectCallSiteLabels;
+  OutStreamer->emitInt64(DirectCallSiteLabels.size());
+  for (const auto &[CallSiteAddrLabel, CalleeSymbol] : DirectCallSiteLabels) {
+    OutStreamer->emitSymbolValue(CallSiteAddrLabel, TM.getProgramPointerSize());
+    OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+  }
+  FuncInfo.DirectCallSiteLabels.clear();
+
   OutStreamer->popSection();
 }
 
@@ -1872,9 +1881,28 @@ void AsmPrinter::emitIndirectCalleeLabels(
     const MachineInstr &MI) {
   // Only indirect calls have type identifiers set.
   const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
-  if (CallSiteInfo == CallSitesInfoMap.end())
-    return;
 
+  // Handle direct callsite info
+  if (CallSiteInfo == CallSitesInfoMap.end()) {
+    const MachineOperand &CalleeOperand = MI.getOperand(0);
+    MCSymbol *CalleeSymbol = nullptr;
+    switch (CalleeOperand.getType()) {
+    case llvm::MachineOperand::MO_GlobalAddress:
+      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
+      break;
+    case llvm::MachineOperand::MO_ExternalSymbol:
+      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
+      break;
+    default:
+      llvm_unreachable("Expect only direct call instructions to be handled.");
+    }
+    MCSymbol *S = MF->getContext().createTempSymbol();
+    OutStreamer->emitLabel(S);
+    FuncInfo.DirectCallSiteLabels.emplace_back(S, CalleeSymbol);
+    return;
+  }
+
+  // Handle indirect callsite info.
   for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
@@ -2065,8 +2093,13 @@ void AsmPrinter::emitFunctionBody() {
       if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
-      if (TM.Options.EmitCallGraphSection && MI.isCall())
+      if (TM.Options.EmitCallGraphSection && MI.isCall()) {
+        llvm::outs() << "Dump MI for calls \n";
+        MI.dump();
+        llvm::outs() << "CallSitesInfoMap.size() " << CallSitesInfoMap.size()
+                     << "\n";
         emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
+      }
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())

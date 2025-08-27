@@ -214,6 +214,7 @@ private:
     /// Map type identifiers to callsite labels. Labels are generated for each
     /// indirect callsite in the function.
     SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+    SmallVector<std::pair<MCSymbol *, MCSymbol *>> DirectCallSiteLabels;
   };
 
   enum CallGraphSectionFormatVersion : uint64_t {
