@@ -12,13 +12,13 @@
 ## - Verify generated binary
 # REQUIRES: system-linux,bolt-runtime,target=aarch64{{.*}}
 
-# RUN: %clang %cflags -pie %s -Wl,-q -o %t.exe
+# RUN: %clang %pie_cflags %s -Wl,-q -o %t.exe
 # RUN: llvm-readelf -d %t.exe | FileCheck --check-prefix=DYN-FINI %s
 # RUN: llvm-readelf -r %t.exe | FileCheck --check-prefix=RELOC-PIE %s
 # RUN: llvm-bolt %t.exe -o %t --instrument
 # RUN: llvm-readelf -drs %t | FileCheck --check-prefix=CHECK-FINI %s
 
-# RUN: %clang %cflags -pie %s -Wl,-q,-fini=0 -o %t-no-fini.exe
+# RUN: %clang %pie_cflags %s -Wl,-q,-fini=0 -o %t-no-fini.exe
 # RUN: llvm-readelf -d %t-no-fini.exe | FileCheck --check-prefix=DYN-NO-FINI %s
 # RUN: llvm-readelf -r %t-no-fini.exe | FileCheck --check-prefix=RELOC-PIE %s
 # RUN: llvm-bolt %t-no-fini.exe -o %t-no-fini --instrument
@@ -26,8 +26,8 @@
 # RUN: llvm-readelf -ds -x .fini_array %t-no-fini | FileCheck --check-prefix=CHECK-NO-FINI-RELOC %s
 
 ## Create a dummy shared library to link against to force creation of the dynamic section.
-# RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stub.so
-# RUN: %clang %cflags %s -no-pie -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
+# RUN: %clang %pie_cflags -fPIC %p/../Inputs/stub.c -shared -o %t-stub.so
+# RUN: %clang %nopie_cflags %s -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
 # RUN: llvm-readelf -r %t-no-pie-no-fini.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
 # RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument
 # RUN: llvm-readelf -ds -x .fini_array %t-no-pie-no-fini | FileCheck --check-prefix=CHECK-NO-PIE-NO-FINI %s
