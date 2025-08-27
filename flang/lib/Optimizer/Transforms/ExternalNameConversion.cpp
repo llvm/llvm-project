@@ -92,14 +92,12 @@ void ExternalNameConversionPass::runOnOperation() {
           bool hasConflictingCommonBlock = false;
 
           // Check if any existing global has the same mangled name.
-          mod.walk([&](fir::GlobalOp globalOp) {
-            auto globalSymName = globalOp.getSymName();
-            if (globalSymName == mangledName) {
+          mlir::SymbolTable symbolTable(mod);
+          if (auto conflictingOp = symbolTable.lookup(mangledName)) {
+            if (mlir::isa<fir::GlobalOp>(conflictingOp)) {
               hasConflictingCommonBlock = true;
-              return mlir::WalkResult::interrupt();
             }
-            return mlir::WalkResult::advance();
-          });
+          }
 
           // Skip externalization if the function has a conflicting common block
           // and is not directly called (i.e. procedure pointers or type
