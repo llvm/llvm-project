@@ -76,8 +76,8 @@ static SmallVector<Value> getTileSizes(Location loc, amx::TileType tType,
   auto mattr = rewriter.getI16IntegerAttr(tType.getDimSize(0));
   auto nattr = rewriter.getI16IntegerAttr(tType.getDimSize(1) * bytes);
   return SmallVector<Value>{
-      rewriter.create<LLVM::ConstantOp>(loc, llvmInt16Type, mattr),
-      rewriter.create<LLVM::ConstantOp>(loc, llvmInt16Type, nattr)};
+      LLVM::ConstantOp::create(rewriter, loc, llvmInt16Type, mattr),
+      LLVM::ConstantOp::create(rewriter, loc, llvmInt16Type, nattr)};
 }
 
 /// Maps the 2-dim memref shape to the 64-bit stride. Note that the buffer
@@ -95,15 +95,14 @@ static Value getStride(Location loc, MemRefType mType, Value base,
     // Dynamic stride needs code to compute the stride at runtime.
     MemRefDescriptor memrefDescriptor(base);
     auto attr = rewriter.getI64IntegerAttr(bytes);
-    Value scale = rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
-    return rewriter
-        .create<LLVM::MulOp>(loc, llvmInt64Type, scale,
-                             memrefDescriptor.stride(rewriter, loc, preLast))
+    Value scale = LLVM::ConstantOp::create(rewriter, loc, llvmInt64Type, attr);
+    return LLVM::MulOp::create(rewriter, loc, llvmInt64Type, scale,
+                               memrefDescriptor.stride(rewriter, loc, preLast))
         .getResult();
   }
   // Use direct constant for static stride.
   auto attr = rewriter.getI64IntegerAttr(strides[preLast] * bytes);
-  return rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr)
+  return LLVM::ConstantOp::create(rewriter, loc, llvmInt64Type, attr)
       .getResult();
 }
 

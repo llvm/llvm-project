@@ -1021,7 +1021,9 @@ let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
 let Predicates = [HasSVE_or_SME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
-  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
+  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext, "EXT_ZZI_CONSTRUCTIVE">;
+
+  def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<ZPR8, imm0_255>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
@@ -2131,21 +2133,37 @@ let Predicates = [HasSVE_or_SME] in {
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
 
   // Splice with lane bigger or equal to 0
-  foreach VT = [nxv16i8] in
+  foreach VT = [nxv16i8] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_255 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
+  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_127 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
+  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_63 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
+  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_31 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
@@ -4390,7 +4408,7 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVEB16B16] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2] in {
 defm BFADD_ZZZ : sve_fp_3op_u_zd_bfloat<0b000, "bfadd", AArch64fadd>;
 defm BFSUB_ZZZ : sve_fp_3op_u_zd_bfloat<0b001, "bfsub", AArch64fsub>;
 defm BFMUL_ZZZ : sve_fp_3op_u_zd_bfloat<0b010, "bfmul", AArch64fmul>;
@@ -4423,9 +4441,9 @@ defm BFMLS_ZZZI : sve_fp_fma_by_indexed_elem_bfloat<"bfmls", 0b11, AArch64fmlsid
 defm BFMUL_ZZZI : sve_fp_fmul_by_indexed_elem_bfloat<"bfmul", AArch64fmulidx>;
 
 defm BFCLAMP_ZZZ : sve_fp_clamp_bfloat<"bfclamp", AArch64fclamp>;
-} // End HasSVEB16B16
+} // End HasSVEB16B16, HasNonStreamingSVE_or_SME2
 
-let Predicates = [HasSVEB16B16, UseExperimentalZeroingPseudos] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos] in {
 defm BFADD_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fadd>;
 defm BFSUB_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fsub>;
 defm BFMUL_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmul>;
@@ -4433,7 +4451,7 @@ defm BFMAXNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmaxnm>;
 defm BFMINNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fminnm>;
 defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
-} // HasSVEB16B16, UseExperimentalZeroingPseudos
+} // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
   def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;

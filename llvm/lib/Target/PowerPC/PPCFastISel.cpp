@@ -1374,7 +1374,10 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value *> &Args,
   unsigned LinkageSize = Subtarget->getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, Align(8));
 
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
+  SmallVector<Type *, 16> ArgTys;
+  for (Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, ArgTys, CC_PPC64_ELF_FIS);
 
   // Bail out if we can't handle any of the arguments.
   for (const CCValAssign &VA : ArgLocs) {
@@ -1487,7 +1490,7 @@ bool PPCFastISel::finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumByte
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, CLI.RetTy, RetCC_PPC64_ELF_FIS);
     CCValAssign &VA = RVLocs[0];
     assert(RVLocs.size() == 1 && "No support for multi-reg return values!");
     assert(VA.isRegLoc() && "Can only return in registers!");
@@ -1573,7 +1576,7 @@ bool PPCFastISel::fastLowerCall(CallLoweringInfo &CLI) {
       RetVT != MVT::f64) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, IsVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, RetCC_PPC64_ELF_FIS);
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, RetCC_PPC64_ELF_FIS);
     if (RVLocs.size() > 1)
       return false;
   }

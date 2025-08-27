@@ -347,6 +347,7 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
   let mnemonic = "copy_count";
   let parameters = (ins TestParamCopyCount:$copy_count);
   let assemblyFormat = "`<` $copy_count `>`";
+  let genVerifyDecl = 1;
 }
 
 def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {

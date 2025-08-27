@@ -39,7 +39,7 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {
   // Only used if targetting Solaris.
   const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  StringRef UseLinker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
   return UseLinker == "bfd" || UseLinker == "gld";
 }
 
@@ -52,7 +52,7 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
                       TC.isPIEDefault(Args));
 }
 
-// FIXME: Need to handle CLANG_DEFAULT_LINKER here?
+// FIXME: Need to handle PreferredLinker here?
 std::string solaris::Linker::getLinkerPath(const ArgList &Args) const {
   const ToolChain &ToolChain = getToolChain();
   if (const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ)) {
@@ -345,7 +345,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
 
 const char *Solaris::getDefaultLinker() const {
   // FIXME: Only handle Solaris ld and GNU ld here.
-  return llvm::StringSwitch<const char *>(CLANG_DEFAULT_LINKER)
+  return llvm::StringSwitch<const char *>(getDriver().getPreferredLinker())
       .Cases("bfd", "gld", "/usr/gnu/bin/ld")
       .Default("/usr/bin/ld");
 }

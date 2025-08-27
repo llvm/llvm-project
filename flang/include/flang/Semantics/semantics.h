@@ -162,7 +162,6 @@ public:
     warningsAreErrors_ = x;
     return *this;
   }
-
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
     return *this;

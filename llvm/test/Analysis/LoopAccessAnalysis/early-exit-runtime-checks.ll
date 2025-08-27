@@ -505,7 +505,7 @@ e.1:
   ret i32 1
 }
 
-define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption(ptr %A, ptr %B) {
+define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption(ptr %A, ptr %B) nosync nofree {
 ; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_500_iterations_known_deref_via_assumption'
 ; CHECK-NEXT:    loop.header:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
@@ -518,10 +518,10 @@ define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_kno
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %B High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:          (Low: %B High: (2000 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
+; CHECK-NEXT:          (Low: %A High: (2000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -565,7 +565,7 @@ e.2:
   ret void
 }
 
-define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_deref_via_assumption_too_small(ptr %A, ptr %B) {
+define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_deref_via_assumption_too_small(ptr %A, ptr %B) nosync nofree {
 ; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_500_iterations_deref_via_assumption_too_small'
 ; CHECK-NEXT:    loop.header:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks

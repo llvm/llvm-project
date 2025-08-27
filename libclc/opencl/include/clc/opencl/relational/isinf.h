@@ -12,7 +12,7 @@
 #include <clc/opencl/opencl-base.h>
 
 #define _CLC_ISINF_DECL(RET_TYPE, ARG_TYPE)                                    \
-  _CLC_OVERLOAD _CLC_DECL RET_TYPE isinf(ARG_TYPE);
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL RET_TYPE isinf(ARG_TYPE);
 
 #define _CLC_VECTOR_ISINF_DECL(RET_TYPE, ARG_TYPE)                             \
   _CLC_ISINF_DECL(RET_TYPE##2, ARG_TYPE##2)                                    \

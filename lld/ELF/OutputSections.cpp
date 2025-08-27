@@ -91,8 +91,7 @@ static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64) ||
-         type == SHT_LLVM_CFI_JUMP_TABLE;
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become
@@ -890,9 +889,19 @@ void OutputSection::sortInitFini() {
 std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
-  if (flags & SHF_EXECINSTR)
-    return ctx.target->trapInstr;
-  return {0, 0, 0, 0};
+  if (!(flags & SHF_EXECINSTR))
+    return {0, 0, 0, 0};
+  if (ctx.arg.relocatable && ctx.arg.emachine == EM_RISCV) {
+    // See RISCV::maybeSynthesizeAlign: Synthesized NOP bytes and ALIGN
+    // relocations might be needed between two input sections. Use a NOP for the
+    // filler.
+    if (ctx.arg.eflags & EF_RISCV_RVC)
+      return {1, 0, 1, 0};
+    return {0x13, 0, 0, 0};
+  }
+  if (ctx.arg.relocatable && ctx.arg.emachine == EM_LOONGARCH)
+    return {0, 0, 0x40, 0x03};
+  return ctx.target->trapInstr;
 }
 
 void OutputSection::checkDynRelAddends(Ctx &ctx) {

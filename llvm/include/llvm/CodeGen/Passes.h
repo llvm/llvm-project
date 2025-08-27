@@ -438,10 +438,6 @@ LLVM_ABI extern char &UnpackMachineBundlesID;
 LLVM_ABI FunctionPass *
 createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
 
-/// FinalizeMachineBundles - This pass finalize machine instruction
-/// bundles (created earlier, e.g. during pre-RA scheduling).
-LLVM_ABI extern char &FinalizeMachineBundlesID;
-
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
 /// the intrinsic for later emission to the StackMap.

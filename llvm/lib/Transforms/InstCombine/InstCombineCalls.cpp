@@ -133,7 +133,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // wouldn't be constant), and this must be a noop.
   if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -141,7 +141,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   // (unless the transfer is volatile).
   if (hasUndefSource(MI) && !MI->isVolatile()) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -211,7 +211,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   }
 
   // Set the size of the copy to 0, it will be deleted on the next iteration.
-  MI->setLength(Constant::getNullValue(MemOpLength->getType()));
+  MI->setLength((uint64_t)0);
   return MI;
 }
 
@@ -229,7 +229,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // wouldn't be constant), and this must be a noop.
   if (!isModSet(AA->getModRefInfoMask(MI->getDest()))) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -238,7 +238,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(MI->getValue())) {
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -267,19 +267,17 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
         MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
-    auto replaceOpForAssignmentMarkers = [FillC, FillVal](auto *DbgAssign) {
+    for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
       if (llvm::is_contained(DbgAssign->location_ops(), FillC))
         DbgAssign->replaceVariableLocationOp(FillC, FillVal);
-    };
-    for_each(at::getAssignmentMarkers(S), replaceOpForAssignmentMarkers);
-    for_each(at::getDVRAssignmentMarkers(S), replaceOpForAssignmentMarkers);
+    }
 
     S->setAlignment(Alignment);
     if (MI->isAtomic())
       S->setOrdering(AtomicOrdering::Unordered);
 
     // Set the size of the copy to 0, it will be deleted on the next iteration.
-    MI->setLength(Constant::getNullValue(LenC->getType()));
+    MI->setLength((uint64_t)0);
     return MI;
   }
 
@@ -1532,6 +1530,51 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+/// Helper to match idempotent binary intrinsics, namely, intrinsics where
+/// `f(f(x, y), y) == f(x, y)` holds.
+static bool isIdempotentBinaryIntrinsic(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Attempt to simplify value-accumulating recurrences of kind:
+///   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
+///   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+/// And let the idempotent binary intrinsic be hoisted, when the operands are
+/// known to be loop-invariant.
+static Value *foldIdempotentBinaryIntrinsicRecurrence(InstCombinerImpl &IC,
+                                                      IntrinsicInst *II) {
+  PHINode *PN;
+  Value *Init, *OtherOp;
+
+  // A binary intrinsic recurrence with loop-invariant operands is equivalent to
+  // `call @llvm.binary.intrinsic(Init, OtherOp)`.
+  auto IID = II->getIntrinsicID();
+  if (!isIdempotentBinaryIntrinsic(IID) ||
+      !matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp) ||
+      !IC.getDominatorTree().dominates(OtherOp, PN))
+    return nullptr;
+
+  auto *InvariantBinaryInst =
+      IC.Builder.CreateBinaryIntrinsic(IID, Init, OtherOp);
+  if (isa<FPMathOperator>(InvariantBinaryInst))
+    cast<Instruction>(InvariantBinaryInst)->copyFastMathFlags(II);
+  return InvariantBinaryInst;
+}
+
 static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
   if (!CanReorderLanes)
     return nullptr;
@@ -1708,9 +1751,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
-    if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(MI->getLength())) {
+    if (auto NumBytes = MI->getLengthInBytes()) {
       // memmove/cpy/set of zero bytes is a noop.
-      if (NumBytes->isNullValue())
+      if (NumBytes->isZero())
         return eraseInstFromFunction(CI);
 
       // For atomic unordered mem intrinsics if len is not a positive or
@@ -1830,10 +1873,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     bool IntMinIsPoison = cast<Constant>(II->getArgOperand(1))->isOneValue();
 
     // abs(-x) -> abs(x)
-    // TODO: Copy nsw if it was present on the neg?
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X))))
+    if (match(IIOperand, m_Neg(m_Value(X)))) {
+      if (cast<Instruction>(IIOperand)->hasNoSignedWrap() || IntMinIsPoison)
+        replaceOperand(*II, 1, Builder.getTrue());
       return replaceOperand(*II, 0, X);
+    }
     if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
@@ -3889,22 +3934,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   }
 
-  // Try to fold intrinsic into select operands. This is legal if:
+  // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
   if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
       isNotCrossLaneOperation(II))
-    for (Value *Op : II->args())
+    for (Value *Op : II->args()) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
+      if (auto *Phi = dyn_cast<PHINode>(Op))
+        if (Instruction *R = foldOpIntoPhi(*II, Phi))
+          return R;
+    }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
 
   if (Value *Reverse = foldReversedIntrinsicOperands(II))
     return replaceInstUsesWith(*II, Reverse);
+
+  if (Value *Res = foldIdempotentBinaryIntrinsicRecurrence(*this, II))
+    return replaceInstUsesWith(*II, Res);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
@@ -4351,6 +4403,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         return replaceInstUsesWith(
             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
     }
+
+  // Drop unnecessary callee_type metadata from calls that were converted
+  // into direct calls.
+  if (Call.getMetadata(LLVMContext::MD_callee_type) && !Call.isIndirectCall()) {
+    Call.setMetadata(LLVMContext::MD_callee_type, nullptr);
+    Changed = true;
+  }
 
   // Drop unnecessary kcfi operand bundles from calls that were converted
   // into direct calls.

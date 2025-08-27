@@ -142,34 +142,19 @@ void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
-class NSErrorDerefBug : public BugType {
-public:
-  NSErrorDerefBug(const CheckerNameRef Checker)
-      : BugType(Checker, "NSError** null dereference",
-                "Coding conventions (Apple)") {}
-};
-
-class CFErrorDerefBug : public BugType {
-public:
-  CFErrorDerefBug(const CheckerNameRef Checker)
-      : BugType(Checker, "CFErrorRef* null dereference",
-                "Coding conventions (Apple)") {}
-};
-
-}
-
-namespace {
 class NSOrCFErrorDerefChecker
-    : public Checker< check::Location,
-                        check::Event<ImplicitNullDerefEvent> > {
-  mutable IdentifierInfo *NSErrorII, *CFErrorII;
-  mutable std::unique_ptr<NSErrorDerefBug> NSBT;
-  mutable std::unique_ptr<CFErrorDerefBug> CFBT;
+    : public CheckerFamily<check::Location,
+                           check::Event<ImplicitNullDerefEvent>> {
+  mutable IdentifierInfo *NSErrorII = nullptr;
+  mutable IdentifierInfo *CFErrorII = nullptr;
+
 public:
-  bool ShouldCheckNSError = false, ShouldCheckCFError = false;
-  CheckerNameRef NSErrorName, CFErrorName;
-  NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
+  CheckerFrontendWithBugType NSError{"NSError** null dereference",
+                                     "Coding conventions (Apple)"};
+  CheckerFrontendWithBugType CFError{"CFErrorRef* null dereference",
+                                     "Coding conventions (Apple)"};
+
+  StringRef getDebugTag() const override { return "NSOrCFErrorDerefChecker"; }
 
   void checkLocation(SVal loc, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
@@ -236,12 +221,12 @@ void NSOrCFErrorDerefChecker::checkLocation(SVal loc, bool isLoad,
   if (!CFErrorII)
     CFErrorII = &Ctx.Idents.get("CFErrorRef");
 
-  if (ShouldCheckNSError && IsNSError(parmT, NSErrorII)) {
+  if (NSError.isEnabled() && IsNSError(parmT, NSErrorII)) {
     setFlag<NSErrorOut>(state, state->getSVal(loc.castAs<Loc>()), C);
     return;
   }
 
-  if (ShouldCheckCFError && IsCFError(parmT, CFErrorII)) {
+  if (CFError.isEnabled() && IsCFError(parmT, CFErrorII)) {
     setFlag<CFErrorOut>(state, state->getSVal(loc.castAs<Loc>()), C);
     return;
   }
@@ -274,19 +259,9 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
 
   os  << " may be null";
 
-  BugType *bug = nullptr;
-  if (isNSError) {
-    if (!NSBT)
-      NSBT.reset(new NSErrorDerefBug(NSErrorName));
-    bug = NSBT.get();
-  }
-  else {
-    if (!CFBT)
-      CFBT.reset(new CFErrorDerefBug(CFErrorName));
-    bug = CFBT.get();
-  }
+  const BugType &BT = isNSError ? NSError : CFError;
   BR.emitReport(
-      std::make_unique<PathSensitiveBugReport>(*bug, os.str(), event.SinkNode));
+      std::make_unique<PathSensitiveBugReport>(BT, os.str(), event.SinkNode));
 }
 
 static bool IsNSError(QualType T, IdentifierInfo *II) {
@@ -320,32 +295,21 @@ static bool IsCFError(QualType T, IdentifierInfo *II) {
   return TT->getDecl()->getIdentifier() == II;
 }
 
-void ento::registerNSOrCFErrorDerefChecker(CheckerManager &mgr) {
-  mgr.registerChecker<NSOrCFErrorDerefChecker>();
-}
+// This source file implements two user-facing checkers ("osx.cocoa.NSError"
+// and "osx.coreFoundation.CFError") which are both implemented as the
+// combination of two `CheckerFrontend`s that are registered under the same
+// name (but otherwise act independently). Among these 2+2 `CheckerFrontend`s
+// two are coming from the checker family `NSOrCFErrorDerefChecker` while the
+// other two (the `ADDITIONAL_PART`s) are small standalone checkers.
+#define REGISTER_CHECKER(NAME, ADDITIONAL_PART)                                \
+  void ento::register##NAME##Checker(CheckerManager &Mgr) {                    \
+    Mgr.getChecker<NSOrCFErrorDerefChecker>()->NAME.enable(Mgr);               \
+    Mgr.registerChecker<ADDITIONAL_PART>();                                    \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##NAME##Checker(const CheckerManager &) {           \
+    return true;                                                               \
+  }
 
-bool ento::shouldRegisterNSOrCFErrorDerefChecker(const CheckerManager &mgr) {
-  return true;
-}
-
-void ento::registerNSErrorChecker(CheckerManager &mgr) {
-  mgr.registerChecker<NSErrorMethodChecker>();
-  NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
-  checker->ShouldCheckNSError = true;
-  checker->NSErrorName = mgr.getCurrentCheckerName();
-}
-
-bool ento::shouldRegisterNSErrorChecker(const CheckerManager &mgr) {
-  return true;
-}
-
-void ento::registerCFErrorChecker(CheckerManager &mgr) {
-  mgr.registerChecker<CFErrorFunctionChecker>();
-  NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
-  checker->ShouldCheckCFError = true;
-  checker->CFErrorName = mgr.getCurrentCheckerName();
-}
-
-bool ento::shouldRegisterCFErrorChecker(const CheckerManager &mgr) {
-  return true;
-}
+REGISTER_CHECKER(NSError, NSErrorMethodChecker)
+REGISTER_CHECKER(CFError, CFErrorFunctionChecker)

@@ -207,13 +207,9 @@ FormatStringConverter::FormatStringConverter(
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
-      Args[FormatArgOffset]->IgnoreImplicitAsWritten());
+      Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
-  if (!FormatExpr || !FormatExpr->isOrdinary()) {
-    // Function must have a narrow string literal as its first argument.
-    conversionNotPossible("first argument is not a narrow string literal");
-    return;
-  }
+  assert(FormatExpr && FormatExpr->isOrdinary());
 
   if (const std::optional<StringRef> MaybeMacroName =
           formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
@@ -465,8 +461,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // the signedness based on the format string, so we need to do the
     // same.
     if (const auto *ET = ArgType->getAs<EnumType>()) {
-      if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+      if (const std::optional<std::string> MaybeCastType = castTypeForArgument(
+              ArgKind,
+              ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else

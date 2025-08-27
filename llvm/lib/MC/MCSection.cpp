@@ -18,12 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     bool IsVirtual, MCSymbol *Begin)
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsVirtual(IsVirtual), LinkerRelaxable(false), Name(Name), Variant(V) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+      IsBss(IsBss), Name(Name) {
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -32,9 +30,17 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   return End;
 }
 
-bool MCSection::hasEnded() const { return End && End->isInSection(); }
+Align MCSection::getAlignmentForObjectFile(uint64_t Size) const {
+  if (Size < getAlign().value())
+    return getAlign();
 
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
+  if (Size < getPreferredAlignment().value())
+    return Align(NextPowerOf2(Size - 1));
+
+  return getPreferredAlignment();
+}
+
+bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
@@ -43,6 +49,8 @@ LLVM_DUMP_METHOD void MCSection::dump(
   raw_ostream &OS = errs();
 
   OS << "MCSection Name:" << getName();
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
     OS << '\n';
     F.dump();
@@ -59,16 +67,6 @@ LLVM_DUMP_METHOD void MCSection::dump(
   }
 }
 #endif
-
-void MCFragment::setContents(ArrayRef<char> Contents) {
-  auto &S = getParent()->ContentStorage;
-  if (ContentStart + Contents.size() > ContentEnd) {
-    ContentStart = S.size();
-    S.resize_for_overwrite(S.size() + Contents.size());
-  }
-  ContentEnd = ContentStart + Contents.size();
-  llvm::copy(Contents, S.begin() + ContentStart);
-}
 
 void MCFragment::setVarContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;
@@ -96,23 +94,15 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   FixupEnd = S.size();
 }
 
-void MCFragment::setFixups(ArrayRef<MCFixup> Fixups) {
-  auto &S = getParent()->FixupStorage;
-  if (FixupStart + Fixups.size() > FixupEnd) {
-    FixupStart = S.size();
-    S.resize_for_overwrite(S.size() + Fixups.size());
-  }
-  FixupEnd = FixupStart + Fixups.size();
-  llvm::copy(Fixups, S.begin() + FixupStart);
-}
-
 void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  assert(Fixups.size() < 256 &&
+         "variable-size tail cannot have more than 256 fixups");
   auto &S = getParent()->FixupStorage;
-  if (VarFixupStart + Fixups.size() > VarFixupEnd) {
+  if (Fixups.size() > VarFixupSize) {
     VarFixupStart = S.size();
     S.resize_for_overwrite(S.size() + Fixups.size());
   }
-  VarFixupEnd = VarFixupStart + Fixups.size();
+  VarFixupSize = Fixups.size();
   // Source fixup offsets are relative to the variable part's start. Add the
   // fixed part size to make them relative to the fixed part's start.
   std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,
