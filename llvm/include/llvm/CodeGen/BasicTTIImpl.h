@@ -3265,7 +3265,9 @@ public:
                          TTI::TargetCostKind CostKind) const override {
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(mul(ext(Ty A), ext(Ty B))) or
-    // vecreduce.add(mul(A, B)). IsNegated determines if the mul is negated.
+    // vecreduce.add(mul(A, B)).
+    assert((RedOpcode == Instruction::Add || RedOpcode == Instruction::Sub) &&
+           "The reduction opcode is expected to be Add or Sub.");
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
     InstructionCost RedCost = thisT()->getArithmeticReductionCost(
         RedOpcode, ExtTy, std::nullopt, CostKind);

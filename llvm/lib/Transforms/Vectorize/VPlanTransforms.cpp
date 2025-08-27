@@ -3186,15 +3186,14 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
-  VPValue *Mul = VecOp;
   VPValue *A, *B;
   // Try to match reduce.add(mul(...)).
-  if (match(Mul, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *MulR = cast<VPWidenRecipe>(Mul->getDefiningRecipe());
+    auto *MulR = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
