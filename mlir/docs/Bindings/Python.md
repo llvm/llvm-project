@@ -228,7 +228,7 @@ For example if `py_op1` and `py_op2` wrap the same operation under a root `py_op
 transformed such that the operation referenced (by `py_op1`, `py_op2`) is erased. Then `py_op1`, `py_op2` 
 become "undefined" in a sense; manipulating them in any way is "formally forbidden". Note, this also applies to 
 `SymbolTable` mutation, which is considered a transformation of the root `SymbolTable`-supporting operation for the 
-purposes of the discussion here. The "best practices" recommendation is to structure your code such that 
+purposes of the discussion here. Methodically one can think of this similarly to how STL container iterators are invalidated once the container itself is changed. The "best practices" recommendation is to structure your code such that 
 
 1. First, query/manipulate various Python wrapper objects `py_op1`, `py_op2`, `py_op3`, etc.;
 2. Second, Transform the AST/erase operations/etc. via a single root object;
