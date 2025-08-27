@@ -126,7 +126,37 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(Instruction *I) {
+    if (auto *Intr = dyn_cast<IntrinsicInst>(I))
+      return true; // FIXME: narrow to known native intrinsics (DOT/MFMA/tbuffer) or use TTI cost.
+
+    // Any store is a profitable sink (prevents flip-flopping)
+    if (isa<StoreInst>(I))
+      return true;
+
+    // Treat small-int vector binops as profitable when SDWA is available
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      if (auto *VTy = dyn_cast<VectorType>(BO->getType())) {
+        Type *Elt = VTy->getElementType();
+        // Treat small-int vector binops as profitable when SDWA is available.
+        // We explicitly gate to 8/16-bit to avoid i1 vectors and keep behavior tight.
+        if ((Elt->isIntegerTy(8) || (Elt->isIntegerTy(16)) && ST.hasSDWA())) {
+          switch (BO->getOpcode()) {
+          case Instruction::Add:
+          case Instruction::Sub:
+          case Instruction::And:
+          case Instruction::Or:
+          case Instruction::Xor:
+            return true;
+          default:
+            break;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -150,7 +180,12 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Allow same-BB non-lookthrough users when the def is a PHI:
+      // loop headers frequently consume the carried value in the header block
+      // (e.g. byte-wise vector binops). We *do* want to coerce across the backedge
+      // in that common case to enable packed i32 + SDWA lowering.
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
