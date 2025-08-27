@@ -845,10 +845,10 @@ public:
     /// This type may be allocated on the stack, either as the allocated type
     /// of an alloca instruction or as a byval function parameter.
     CanBeLocal = 1U << 2,
-    // This type may be used as an element in a vector.
+    /// This type may be used as an element in a vector.
     CanBeVectorElement = 1U << 3,
-    // This type can not be replaced in an optimization pass.
-    NoReplacement = 1U << 4,
+    /// All uses of this type must not attempt to introspect or obscure it.
+    IsTokenLike = 1U << 4,
   };
 
   /// Returns true if the target extension type contains the given property.
