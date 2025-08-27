@@ -975,10 +975,10 @@ public:
     Not,
     SLPLoad,
     SLPStore,
-    // Creates an active lane mask used by predicated vector operations in
-    // the loop. Elements in the mask are active if the corrosponding element
-    // in the source (first op) are less than the counter, starting at index
-    // (second op). The size of the mask is VF * Multiplier (UF, third op).
+    // Creates a mask where each lane is active (true) whilst the current
+    // counter (first operand + index) is less than the second operand. i.e.
+    //    mask[i] = icmpt ult (op0 + i), op1
+    // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
     CalculateTripCountMinusVF,
