@@ -37,33 +37,33 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_sat_ret_u32__offset__amdgpu_no_fine
   ret i32 %result
 }
 
-;define void @buffer_fat_ptr_agent_atomic_usub_sat_noret_u32__offset__amdgpu_no_fine_grained_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
-;  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
-;  %unused = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
-;  ret void
-;}
+define void @buffer_fat_ptr_agent_atomic_usub_sat_noret_u32__offset__amdgpu_no_fine_grained_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
+  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
+  %unused = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret void
+}
 
-;define i32 @buffer_fat_ptr_agent_atomic_usub_sat_ret_u32__offset__amdgpu_no_remote_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
-;  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
-;  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
-;  ret i32 %result
-;}
+define i32 @buffer_fat_ptr_agent_atomic_usub_sat_ret_u32__offset__amdgpu_no_remote_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
+  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
+  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
+  ret i32 %result
+}
 
-;define i32 @buffer_fat_ptr_agent_atomic_usub_sat_ret_u32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
-;  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
-;  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
-;  ret i32 %result
-;}
+define i32 @buffer_fat_ptr_agent_atomic_usub_sat_ret_u32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
+  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
+  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i32 %result
+}
 
 ; --------------------------------------------------------------------
 ; misc
 ; --------------------------------------------------------------------
 
-;define i32 @buffer_fat_ptr_system_atomic_usub_sat_ret_u32__offset__amdgpu_no_fine_grained_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
-;  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
-;  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val seq_cst, !amdgpu.no.fine.grained.memory !0
-;  ret i32 %result
-;}
+define i32 @buffer_fat_ptr_system_atomic_usub_sat_ret_u32__offset__amdgpu_no_fine_grained_memory(ptr addrspace(7) inreg %ptr, i32 %val) #0 {
+  %gep = getelementptr i32, ptr addrspace(7) %ptr, i32 256
+  %result = atomicrmw usub_sat ptr addrspace(7) %gep, i32 %val seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i32 %result
+}
 
 attributes #0 = { nounwind }
 
