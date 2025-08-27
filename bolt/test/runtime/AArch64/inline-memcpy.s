@@ -7,8 +7,8 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (8 successful inlines out of 11 total calls)
-# CHECK-INLINE: BOLT-INFO: inlined 8 memcpy() calls
+# Verify BOLT reports that it inlined memcpy calls (9 successful inlines out of 12 total calls)
+# CHECK-INLINE: BOLT-INFO: inlined 9 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
 
@@ -78,6 +78,13 @@
 # Live-in parameter should NOT be inlined (size unknown at compile time)
 # CHECK-ASM-LABEL: <test_live_in_negative>:
 # CHECK-ASM: bl{{.*}}<memcpy
+
+# _memcpy8 should be inlined with end-pointer return (dest+size)
+# CHECK-ASM-LABEL: <test_memcpy8_4_byte>:
+# CHECK-ASM: ldr{{.*}}w{{[0-9]+}}, [x1]
+# CHECK-ASM: str{{.*}}w{{[0-9]+}}, [x0]
+# CHECK-ASM: add{{.*}}x0, x0, #0x4
+# CHECK-ASM-NOT: bl{{.*}}<_memcpy8
 
 	.text
 	.globl	test_1_byte_direct                
@@ -226,7 +233,31 @@ test_live_in_negative:
 	ret
 	.size	test_live_in_negative, .-test_live_in_negative
 
+	.globl	test_memcpy8_4_byte
+	.type	test_memcpy8_4_byte,@function
+test_memcpy8_4_byte:
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	mov	x2, #4
+	bl	_memcpy8
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_memcpy8_4_byte, .-test_memcpy8_4_byte
 
+	# Simple _memcpy8 implementation that calls memcpy and returns dest+size
+	.globl	_memcpy8
+	.type	_memcpy8,@function
+_memcpy8:
+	stp	x29, x30, [sp, #-16]!
+	mov	x29, sp
+	mov	x3, x0
+	bl	memcpy
+	add	x0, x3, x2
+	ldp	x29, x30, [sp], #16
+	ret
+	.size	_memcpy8, .-_memcpy8
 
 	.globl	main
 	.type	main,@function
@@ -245,6 +276,8 @@ main:
 	bl	test_4_byte_add_immediate
 	bl	test_register_move_negative
 	bl	test_live_in_negative
+	bl	test_memcpy8_4_byte
+	bl	test_memcpy8_large_size
 	
 	mov	w0, #0
 	ldp	x29, x30, [sp], #16

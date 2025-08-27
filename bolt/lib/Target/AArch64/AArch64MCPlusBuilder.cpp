@@ -2620,24 +2620,19 @@ public:
   createInlineMemcpy(bool ReturnEnd,
                      std::optional<uint64_t> KnownSize) const override {
     InstructionListType Code;
-    if (ReturnEnd) {
-      // Use immediate if size fits in 12-bit immediate (0-4095)
-      // Otherwise, fall back to register add for large sizes
-      if ((*KnownSize >> 12) == 0)
-        Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
-                              .addReg(AArch64::X0)
-                              .addReg(AArch64::X0)
-                              .addImm(*KnownSize)
-                              .addImm(0));
-      else
-        Code.emplace_back(MCInstBuilder(AArch64::ADDXrr)
-                              .addReg(AArch64::X0)
-                              .addReg(AArch64::X0)
-                              .addReg(AArch64::X2));
-    }
-
     uint64_t Size = *KnownSize;
-    return generateSizeSpecificMemcpy(Code, Size);
+
+    // Generate the optimized memcpy sequence
+    generateSizeSpecificMemcpy(Code, Size);
+
+    // If _memcpy8, adjust X0 to return dest+size instead of dest
+    if (ReturnEnd)
+      Code.emplace_back(MCInstBuilder(AArch64::ADDXri)
+                            .addReg(AArch64::X0)
+                            .addReg(AArch64::X0)
+                            .addImm(Size)
+                            .addImm(0));
+    return Code;
   }
 
   InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
