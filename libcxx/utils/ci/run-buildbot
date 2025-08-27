@@ -148,6 +148,7 @@ function generate-cmake() {
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_CXX_ABI=libcxxabi \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -DCMAKE_EXE_LINKER_FLAGS="-no-pie" \
           "${@}"
 }
 
