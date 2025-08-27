@@ -140,7 +140,7 @@ TYPED_TEST(ThreadPoolTest, AsyncBarrier) {
 
   std::atomic_int checked_in{0};
 
-  DefaultThreadPool Pool;
+  TypeParam Pool;
   for (size_t i = 0; i < 5; ++i) {
     Pool.async([this, &checked_in] {
       this->waitForMainThread();
@@ -453,15 +453,19 @@ TYPED_TEST(ThreadPoolTest, AffinityMask) {
                         [](auto &T) { return T.getData().front() < 16UL; }) &&
            "Threads ran on more CPUs than expected! The affinity mask does not "
            "seem to work.");
-    GTEST_SKIP();
+    return;
   }
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ThreadPoolTestStringArg1);
-  StringRef argv[] = {Executable, "--gtest_filter=ThreadPoolTest.AffinityMask"};
+  const auto *TestInfo = testing::UnitTest::GetInstance()->current_test_info();
+  std::string Arg = (Twine("--gtest_filter=") + TestInfo->test_suite_name() +
+                     "." + TestInfo->name())
+                        .str();
+  StringRef argv[] = {Executable, Arg};
 
   // Add environment variable to the environment of the child process.
   int Res = setenv("LLVM_THREADPOOL_AFFINITYMASK", "1", false);
-  ASSERT_EQ(Res, 0);
+  ASSERT_EQ(0, Res);
 
   std::string Error;
   bool ExecutionFailed;
@@ -470,6 +474,8 @@ TYPED_TEST(ThreadPoolTest, AffinityMask) {
   Affinity.set(0, 4); // Use CPUs 0,1,2,3.
   int Ret = sys::ExecuteAndWait(Executable, argv, {}, {}, 0, 0, &Error,
                                 &ExecutionFailed, nullptr, &Affinity);
+  Res = setenv("LLVM_THREADPOOL_AFFINITYMASK", "", false);
+  ASSERT_EQ(0, Res);
   ASSERT_EQ(0, Ret);
 }
 

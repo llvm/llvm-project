@@ -589,14 +589,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OmpAssumeDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assume);
-    return false;
-  }
-  bool Pre(const parser::OmpEndAssumeDirective &x) {
-    checker_(x.v.source, Directive::OMPD_assume);
-    return false;
-  }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
@@ -3177,7 +3169,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
     // r = 0; r = r + r2
     // But it might be valid to use these with DECLARE REDUCTION.
     // Assumed size is already caught elsewhere.
-    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
+    bool cannotBeBuiltinReduction{IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
       if (!IsReductionAllowedForType(
