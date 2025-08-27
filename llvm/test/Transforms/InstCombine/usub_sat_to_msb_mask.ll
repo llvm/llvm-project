@@ -197,3 +197,58 @@ define <4 x i32> @vector_ne_test(<4 x i32> %a, <4 x i32> %b) {
   <4 x i32> splat (i32 -2147483648)
   ret <4 x i32> %res
 }
+
+declare i1 @id_i1(i1)
+
+
+define i1 @multi_use_icmp(i32 %a, i32 %b) {
+; CHECK-LABEL: define i1 @multi_use_icmp(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 5)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[B]], i32 7)
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[OR]], 0
+; CHECK-NEXT:    [[CMP_OPAQUE:%.*]] = call i1 @id_i1(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 -2147483648
+; CHECK-NEXT:    [[EXTRA:%.*]] = xor i1 [[CMP_OPAQUE]], true
+; CHECK-NEXT:    [[SEL_OPAQUE:%.*]] = call i32 @id_i32(i32 [[SEL]])
+; CHECK-NEXT:    [[SEL_NZ:%.*]] = icmp ne i32 [[SEL_OPAQUE]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[SEL_NZ]], [[EXTRA]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a_sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 5)
+  %b_sub = call i32 @llvm.usub.sat.i32(i32 %b, i32 7)
+  %or    = or i32 %a_sub, %b_sub
+  %cmp   = icmp eq i32 %or, 0
+  %cmp_opaque = call i1 @id_i1(i1 %cmp)
+  %sel   = select i1 %cmp, i32 0, i32 -2147483648
+  %extra = xor i1 %cmp_opaque, true
+  %sel_opaque = call i32 @id_i32(i32 %sel)
+  %sel_is_nonzero = icmp ne i32 %sel_opaque, 0
+  %r = and i1 %extra, %sel_is_nonzero
+  ret i1 %r
+}
+
+
+declare i32 @id_i32(i32)
+
+define i32 @multi_use_select(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @multi_use_select(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 224)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[B]], i32 240)
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = and i32 [[OR]], -2147483648
+; CHECK-NEXT:    [[SEL_OPAQUE:%.*]] = call i32 @id_i32(i32 [[SEL]])
+; CHECK-NEXT:    ret i32 [[SEL_OPAQUE]]
+;
+  %a_sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 -2147483425)
+  %b_sub = call i32 @llvm.usub.sat.i32(i32 %b, i32 -2147483409)
+  %or    = or i32 %a_sub, %b_sub
+  %cmp   = icmp eq i32 %or, 0
+  %sel   = select i1 %cmp, i32 0, i32 -2147483648
+  %sel_opaque = call i32 @id_i32(i32 %sel)
+  ret i32 %sel_opaque
+}
+
+

@@ -42,6 +42,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
+#include <cstddef>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -2007,6 +2008,8 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 /// Likewise, for vector arguments as well.
 static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
     SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
+  if (!SI.hasOneUse() || !ICI->hasOneUse())
+    return nullptr;
   CmpPredicate Pred;
   Value *A, *B;
   const APInt *Constant1, *Constant2;
@@ -2320,7 +2323,7 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
     // X + Y overflows ? (X <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
     // X + Y overflows ? (X <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
     // X + Y overflows ? (X >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
-    // X + Y overflows ? (X >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Yf
     // X + Y overflows ? (Y <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
     // X + Y overflows ? (Y <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
     // X + Y overflows ? (Y >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
