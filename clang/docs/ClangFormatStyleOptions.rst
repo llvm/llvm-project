@@ -5082,22 +5082,34 @@ the configuration (without a prefix: ``Auto``).
 .. _NumericLiteralCase:
 
 **NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
-  Capitalization style for numeric literal constants.
+  Capitalization style for numeric literals.
 
   Nested configuration flags:
 
   Separate control for each numeric literal component.
+
+  For example, the config below will leave exponent letters alone, reformat
+  hexadecimal digits in lower case, reformat numeric literal prefixes in
+  upper case, and reformat suffixes in lower case.
+
+  .. code-block:: c++
+
+    NumericLiteralCase:
+      ExponentLetter: Leave
+      HexDigit: Lower
+      Prefix: Upper
+      Suffix: Lower
 
   * ``NumericLiteralComponentStyle ExponentLetter``
     Format floating point exponent separator letter case.
 
     .. code-block:: c++
 
-      /* ExponentLetter = Leave */
+      // ExponentLetter = Leave
       float a = 6.02e23 + 1.0E10;
-      /* ExponentLetter = Upper */
+      // ExponentLetter = Upper
       float a = 6.02E23 + 1.0E10;
-      /* ExponentLetter = Lower */
+      // ExponentLetter = Lower
       float a = 6.02e23 + 1.0e10;
 
     Possible values:
@@ -5117,11 +5129,11 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      /* HexDigit = Leave */
+      // HexDigit = Leave
       a = 0xaBcDeF;
-      /* HexDigit = Upper */
+      // HexDigit = Upper
       a = 0xABCDEF;
-      /* HexDigit = Lower */
+      // HexDigit = Lower
       a = 0xabcdef;
 
     Possible values:
@@ -5141,11 +5153,11 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       /* Prefix = Leave */
+       // Prefix = Leave
        a = 0XF0 | 0b1;
-       /* Prefix = Upper */
+       // Prefix = Upper
        a = 0XF0 | 0B1;
-       /* Prefix = Lower */
+       // Prefix = Lower
        a = 0xF0 | 0b1;
 
     Possible values:
@@ -5166,11 +5178,11 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      /* Suffix = Leave */
+      // Suffix = Leave
       a = 1uLL;
-      /* Suffix = Upper */
+      // Suffix = Upper
       a = 1ULL;
-      /* Suffix = Lower */
+      // Suffix = Lower
       a = 1ull;
 
     Possible values:

@@ -484,11 +484,11 @@ struct ScalarEnumerationTraits<FormatStyle::NumericLiteralComponentStyle> {
 };
 
 template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
-  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
-    IO.mapOptional("ExponentLetter", Base.ExponentLetter);
-    IO.mapOptional("HexDigit", Base.HexDigit);
-    IO.mapOptional("Prefix", Base.Prefix);
-    IO.mapOptional("Suffix", Base.Suffix);
+  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Value) {
+    IO.mapOptional("ExponentLetter", Value.ExponentLetter);
+    IO.mapOptional("HexDigit", Value.HexDigit);
+    IO.mapOptional("Prefix", Value.Prefix);
+    IO.mapOptional("Suffix", Value.Suffix);
   }
 };
 
@@ -4030,8 +4030,8 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
     // Don't make replacements that replace nothing. QualifierAlignment can
-    // produce them if one of its early passes changes e.g. `const volatile`
-    // to `volatile const` and then a later pass changes it back again.
+    // produce them if one of its early passes changes e.g. `const volatile` to
+    // `volatile const` and then a later pass changes it back again.
     tooling::Replacements NonNoOpFixes;
     for (const tooling::Replacement &Fix : Fixes) {
       StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());

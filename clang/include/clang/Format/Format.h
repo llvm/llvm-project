@@ -3569,45 +3569,56 @@ struct FormatStyle {
   };
 
   /// Separate control for each numeric literal component.
+  ///
+  /// For example, the config below will leave exponent letters alone, reformat
+  /// hexadecimal digits in lower case, reformat numeric literal prefixes in
+  /// upper case, and reformat suffixes in lower case.
+  /// \code
+  ///   NumericLiteralCase:
+  ///     ExponentLetter: Leave
+  ///     HexDigit: Lower
+  ///     Prefix: Upper
+  ///     Suffix: Lower
+  /// \endcode
   struct NumericLiteralCaseStyle {
     /// Format floating point exponent separator letter case.
     /// \code
-    ///   /* ExponentLetter = Leave */
+    ///   // ExponentLetter = Leave
     ///   float a = 6.02e23 + 1.0E10;
-    ///   /* ExponentLetter = Upper */
+    ///   // ExponentLetter = Upper
     ///   float a = 6.02E23 + 1.0E10;
-    ///   /* ExponentLetter = Lower */
+    ///   // ExponentLetter = Lower
     ///   float a = 6.02e23 + 1.0e10;
     /// \endcode
     NumericLiteralComponentStyle ExponentLetter;
     /// Format hexadecimal digit case.
     /// \code
-    ///   /* HexDigit = Leave */
+    ///   // HexDigit = Leave
     ///   a = 0xaBcDeF;
-    ///   /* HexDigit = Upper */
+    ///   // HexDigit = Upper
     ///   a = 0xABCDEF;
-    ///   /* HexDigit = Lower */
+    ///   // HexDigit = Lower
     ///   a = 0xabcdef;
     /// \endcode
     NumericLiteralComponentStyle HexDigit;
     /// Format integer prefix case.
     /// \code
-    ///    /* Prefix = Leave */
+    ///    // Prefix = Leave
     ///    a = 0XF0 | 0b1;
-    ///    /* Prefix = Upper */
+    ///    // Prefix = Upper
     ///    a = 0XF0 | 0B1;
-    ///    /* Prefix = Lower */
+    ///    // Prefix = Lower
     ///    a = 0xF0 | 0b1;
     /// \endcode
     NumericLiteralComponentStyle Prefix;
     /// Format suffix case. This option excludes case-sensitive reserved
     /// suffixes, such as ``min`` in C++.
     /// \code
-    ///   /* Suffix = Leave */
+    ///   // Suffix = Leave
     ///   a = 1uLL;
-    ///   /* Suffix = Upper */
+    ///   // Suffix = Upper
     ///   a = 1ULL;
-    ///   /* Suffix = Lower */
+    ///   // Suffix = Lower
     ///   a = 1ull;
     /// \endcode
     NumericLiteralComponentStyle Suffix;
@@ -3622,7 +3633,7 @@ struct FormatStyle {
     }
   };
 
-  /// Capitalization style for numeric literal constants.
+  /// Capitalization style for numeric literals.
   /// \version 22
   NumericLiteralCaseStyle NumericLiteralCase;
 

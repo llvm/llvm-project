@@ -37,8 +37,10 @@ static bool isNumericLiteralCaseFixerNeeded(const FormatStyle &Style) {
   }
 
   // Check if style options are set.
-  const FormatStyle::NumericLiteralCaseStyle LeaveAllCasesUntouched{};
-  return Style.NumericLiteralCase != LeaveAllCasesUntouched;
+  const auto &Option = Style.NumericLiteralCase;
+  const auto Leave = FormatStyle::NLCS_Leave;
+  return Option.Prefix != Leave || Option.HexDigit != Leave ||
+         Option.ExponentLetter != Leave || Option.Suffix != Leave;
 }
 
 static std::string
@@ -55,8 +57,8 @@ transformComponent(StringRef Component,
   }
 }
 
-/// @brief Test if Suffix matches a C++ literal reserved by the library.
-/// Matches against all suffixes reserved in the C++23 standard
+/// Test if Suffix matches a C++ literal reserved by the library.
+/// Matches against all suffixes reserved in the C++23 standard.
 static bool matchesReservedSuffix(StringRef Suffix) {
   static constexpr std::array<StringRef, 11> SortedReservedSuffixes = {
       "d", "h", "i", "if", "il", "min", "ms", "ns", "s", "us", "y"};
