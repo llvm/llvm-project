@@ -6,6 +6,5 @@ type, abstract :: t1
 end type t1
 
 !ERROR: ABSTRACT derived type may not be used here
-!ERROR: Reference to object with abstract derived type 't1' must be polymorphic
 !$omp declare mapper(mm : t1::x) map(x, x%y)
 end
