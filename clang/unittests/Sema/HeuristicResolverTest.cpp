@@ -41,7 +41,7 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++23"});
+  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
   auto &Ctx = TU->getASTContext();
   auto InputMatches = match(IM, Ctx);
   ASSERT_EQ(1u, InputMatches.size());

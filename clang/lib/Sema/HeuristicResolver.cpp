@@ -14,7 +14,6 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/identity.h"
-#include <optional>
 
 namespace clang {
 
@@ -256,17 +255,17 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
-    // check if member expr is in the context of an explicit object method
+    // Check if the expression refers to an explicit object parameter of
+    // templated type. If so, heuristically treat it as having the type of the
+    // enclosing class.
     if (!T.Type.isNull() &&
         (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
       if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
-        auto *PrDecl = dyn_cast_if_present<ParmVarDecl>(DRE->getDecl());
-        // Then the type of 'this' should be type of the record the method is
-        // defined in
+        auto *PrDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
         if (PrDecl && PrDecl->isExplicitObjectParameter()) {
           const auto *Parent =
-              dyn_cast<TypeDecl>(PrDecl->getDeclContext()->getParent());
-          return {Ctx.getTypeDeclType(Parent)};
+              dyn_cast<TagDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getCanonicalTagType(Parent)};
         }
       }
     }
@@ -321,14 +320,6 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
   BaseType = simplifyType(BaseType, Base, ME->isArrow());
-
-  // fflush(stdout);
-  // fflush(stderr);
-  // std::flush(std::cout);
-  // std::flush(std::cerr);
-  // using namespace std::chrono_literals;
-  // std::this_thread::sleep_for(10ms);
-
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);
 }
 

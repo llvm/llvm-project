@@ -2488,6 +2488,7 @@ TEST(CrossFileRenameTests, adjustmentCost) {
               T.ExpectedCost);
   }
 }
+
 } // namespace
 } // namespace clangd
 } // namespace clang
