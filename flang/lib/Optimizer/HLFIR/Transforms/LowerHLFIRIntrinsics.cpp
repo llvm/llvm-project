@@ -570,13 +570,12 @@ class CmpCharOpConversion : public HlfirIntrinsicConversion<hlfir::CmpCharOp> {
     auto resultVal = fir::runtime::genCharCompare(
         builder, loc, cmp.getPredicate(), lhsExv, rhsExv);
     if (lhsCleanUp || rhsCleanUp) {
-      auto oldInsertionPoint = builder.saveInsertionPoint();
+      mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointAfter(cmp);
       if (lhsCleanUp)
         (*lhsCleanUp)();
       if (rhsCleanUp)
         (*rhsCleanUp)();
-      builder.restoreInsertionPoint(oldInsertionPoint);
     }
     auto resultEntity = hlfir::EntityWithAttributes{resultVal};
 
