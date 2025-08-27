@@ -3246,13 +3246,17 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
+  mangleType(cast<TagType>(T)->getOriginalDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
+  mangleType(cast<TagType>(T)->getOriginalDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
+  // MSVC chooses the tag kind of the definition if it exists, otherwise it
+  // always picks the first declaration.
+  const auto *Def = TD->getDefinition();
+  TD = Def ? Def : TD->getFirstDecl();
   mangleTagTypeKind(TD->getTagKind());
   mangleName(TD);
 }
