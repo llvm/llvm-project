@@ -52,8 +52,8 @@ class BreakpointRange:
         hit_count: int,
         finish_on_remove: bool,
         is_continue: bool = False,
-        function: str | None = None,
-        addr: str | None = None,
+        function: str = None,
+        addr: str = None,
     ):
         self.expression = expression
         self.path = path
