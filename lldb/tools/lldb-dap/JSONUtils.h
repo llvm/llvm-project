@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
+#include "DAP.h"
 #include "DAPForward.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBCompileUnit.h"

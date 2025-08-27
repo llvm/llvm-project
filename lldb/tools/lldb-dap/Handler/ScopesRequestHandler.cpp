@@ -29,8 +29,8 @@ namespace lldb_dap {
 ///
 /// \return
 ///     A `protocol::Scope`
-static Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
-                         int64_t namedVariables, bool expensive) {
+Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
+                  int64_t namedVariables, bool expensive) {
   Scope scope;
   scope.name = name;
 
@@ -75,22 +75,31 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
     frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
-  dap.variables.locals = frame.GetVariables(/*arguments=*/true,
-                                            /*locals=*/true,
-                                            /*statics=*/false,
-                                            /*in_scope_only=*/true);
-  dap.variables.globals = frame.GetVariables(/*arguments=*/false,
-                                             /*locals=*/false,
-                                             /*statics=*/true,
-                                             /*in_scope_only=*/true);
-  dap.variables.registers = frame.GetRegisters();
 
-  std::vector scopes = {CreateScope("Locals", VARREF_LOCALS,
-                                    dap.variables.locals.GetSize(), false),
-                        CreateScope("Globals", VARREF_GLOBALS,
-                                    dap.variables.globals.GetSize(), false),
-                        CreateScope("Registers", VARREF_REGS,
-                                    dap.variables.registers.GetSize(), false)};
+  uint32_t frame_id = frame.GetFrameID();
+
+  dap.variables.ReadyFrame(frame_id, frame);
+  dap.variables.SwitchFrame(frame_id);
+
+  std::vector<Scope> scopes = {};
+
+  int64_t variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Locals", variable_reference,
+                               dap.variables.locals.GetSize(), false));
+
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Locals, frame_id);
+
+  variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Globals", variable_reference,
+                               dap.variables.globals.GetSize(), false));
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Globals, frame_id);
+
+  variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Registers", variable_reference,
+                               dap.variables.registers.GetSize(), false));
+
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Registers,
+                             frame_id);
 
   return ScopesResponseBody{std::move(scopes)};
 }

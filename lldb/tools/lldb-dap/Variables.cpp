@@ -8,20 +8,33 @@
 
 #include "Variables.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBFrame.h"
 
 using namespace lldb_dap;
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
-  switch (variablesReference) {
-  case VARREF_LOCALS:
-    return &locals;
-  case VARREF_GLOBALS:
-    return &globals;
-  case VARREF_REGS:
-    return &registers;
-  default:
+  auto iter = m_scope_kinds.find(variablesReference);
+  if (iter == m_scope_kinds.end()) {
     return nullptr;
   }
+
+  ScopeKind scope_kind = iter->second.first;
+  uint32_t frame_id = iter->second.second;
+
+  if (!SwitchFrame(frame_id)) {
+    return nullptr;
+  }
+
+  switch (scope_kind) {
+  case lldb_dap::ScopeKind::Locals:
+    return &locals;
+  case lldb_dap::ScopeKind::Globals:
+    return &globals;
+  case lldb_dap::ScopeKind::Registers:
+    return &registers;
+  }
+
+  return nullptr;
 }
 
 void Variables::Clear() {
@@ -29,6 +42,8 @@ void Variables::Clear() {
   globals.Clear();
   registers.Clear();
   m_referencedvariables.clear();
+  m_frames.clear();
+  m_next_temporary_var_ref = VARREF_FIRST_VAR_IDX;
 }
 
 int64_t Variables::GetNewVariableReference(bool is_permanent) {
@@ -102,4 +117,57 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
     }
   }
   return variable;
+}
+
+std::optional<ScopeKind>
+Variables::GetScopeKind(const int64_t variablesReference) {
+  auto iter = m_scope_kinds.find(variablesReference);
+  if (iter != m_scope_kinds.end()) {
+    return iter->second.first;
+  }
+
+  return std::nullopt;
+}
+
+bool Variables::SwitchFrame(const uint32_t frame_id) {
+  auto iter = m_frames.find(frame_id);
+
+  if (iter == m_frames.end()) {
+    return false;
+  }
+
+  auto [frame_locals, frame_globals, frame_registers] = iter->second;
+
+  locals = frame_locals;
+  globals = frame_globals;
+  registers = frame_registers;
+
+  return true;
+}
+
+void Variables::ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame) {
+  if (m_frames.find(frame_id) == m_frames.end()) {
+
+    auto locals = frame.GetVariables(/*arguments=*/true,
+                                     /*locals=*/true,
+                                     /*statics=*/false,
+                                     /*in_scope_only=*/true);
+
+    auto globals = frame.GetVariables(/*arguments=*/false,
+                                      /*locals=*/false,
+                                      /*statics=*/true,
+                                      /*in_scope_only=*/true);
+
+    auto registers = frame.GetRegisters();
+
+    m_frames.insert(
+        std::make_pair(frame_id, std::make_tuple(locals, globals, registers)));
+  }
+}
+
+void Variables::AddScopeKind(int64_t variable_reference, ScopeKind kind,
+                             uint32_t frame_id) {
+
+  m_scope_kinds[variable_reference] =
+      std::make_pair(ScopeKind::Globals, frame_id);
 }
