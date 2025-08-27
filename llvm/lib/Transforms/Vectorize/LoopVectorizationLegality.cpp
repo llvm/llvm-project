@@ -1766,8 +1766,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                                     &NonDerefLoads, &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+        "Cannot vectorize early exit loop with non-load faults",
+        "EarlyExitLoopWithNonLoadFaults", ORE, TheLoop);
     return false;
   }
   // Check non-dereferenceable loads if any.
@@ -1777,21 +1777,21 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     if (Stride != 1) {
       reportVectorizationFailure("Loop contains strided unbound access",
                                  "Cannot vectorize early exit loop with "
-                                 "speculative strided load",
-                                 "SpeculativeNonUnitStrideLoadEarlyExitLoop",
+                                 "fault-only-first strided load",
+                                 "EarlyExitLoopWithStridedFaultOnlyFirstLoad",
                                  ORE, TheLoop);
       return false;
     }
     if (!TTI->isLegalFaultOnlyFirstLoad(LI->getType(), LI->getAlign())) {
       reportVectorizationFailure("Loop may fault",
                                  "Cannot vectorize early exit loop with "
-                                 "illegal speculative load",
-                                 "IllegalSpeculativeLoadEarlyExitLoop", ORE,
-                                 TheLoop);
+                                 "illegal fault-only-first load",
+                                 "EarlyExitLoopWithIllegalFaultOnlyFirstLoad",
+                                 ORE, TheLoop);
       return false;
     }
     FaultOnlyFirstLoads.insert(LI);
-    LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
+    LLVM_DEBUG(dbgs() << "LV: Found fault-only-first load: " << *LI << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
