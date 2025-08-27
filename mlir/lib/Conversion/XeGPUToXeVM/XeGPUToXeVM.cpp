@@ -1,4 +1,4 @@
-//===-- XeVMToLLVM.cpp - XeVM to LLVM dialect conversion --------*- C++ -*-===//
+//===-- XeGPUToXeVM.cpp - XeVM to LLVM dialect conversion -------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -182,8 +182,7 @@ class CreateNdDescToXeVMPattern
     // Pointer type is passed as i32 or i64 by type converter.
     if (sourceMemrefTy) {
       if (!sourceMemrefTy.hasStaticShape()) {
-        op.emitError() << "Expected static memref shape.";
-        return failure();
+        return rewriter.notifyMatchFailure(op, "Expected static memref shape.");
       }
       baseAddr =
           memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
@@ -211,13 +210,13 @@ class CreateNdDescToXeVMPattern
     // Get shape values from op fold results.
     baseShapeW = createOffset(mixedSizes, 1);
     baseShapeH = createOffset(mixedSizes, 0);
-    if (sourceMemrefTy)
+    if (sourceMemrefTy) {
       // Cast index to i64.
       baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    else if (baseAddr.getType() != i64Ty)
+    } else if (baseAddr.getType() != i64Ty) {
       // Pointer type may be i32. Cast to i64 if needed.
       baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
-
+    }
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -520,17 +519,18 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     Value offsets = adaptor.getOffsets();
     Value mask = adaptor.getMask();
     if (offsets) {
-      if (dyn_cast<VectorType>(offsets.getType()))
+      if (dyn_cast<VectorType>(offsets.getType())) {
         // Offset needs be scalar. Single element vector is converted to scalar
         // by type converter.
         return rewriter.notifyMatchFailure(op,
                                            "Expected offsets to be a scalar.");
-      else
+      } else {
         // If offsets are provided, we add them to the base pointer.
         // Offsets are in number of elements, we need to multiply by
         // element byte size.
         basePtrI64 =
             addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
+      }
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
@@ -538,11 +538,11 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
 
     Value maskForLane;
     VectorType maskVecTy = dyn_cast<VectorType>(mask.getType());
-    if (maskVecTy)
+    if (maskVecTy) {
       // Mask needs be scalar. Single element vector is converted to scalar by
       // type converter.
       return rewriter.notifyMatchFailure(op, "Expected mask to be a scalar.");
-    else
+    } else
       maskForLane = mask;
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, {valOrResTy},
