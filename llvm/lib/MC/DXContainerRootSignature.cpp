@@ -20,12 +20,13 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
   return Offset;
 }
 
-static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
-                                       uint32_t Offset) {
+static uint32_t rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
+                                           uint32_t Offset) {
   uint32_t Value =
       support::endian::byte_swap<uint32_t, llvm::endianness::little>(
           Stream.tell());
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
+  return Value;
 }
 
 size_t RootSignatureDesc::getSize() const {
@@ -151,7 +152,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     }
     }
   }
-  rewriteOffsetToCurrentByte(BOS, SSO);
+  [[maybe_unused]] uint32_t Offset = rewriteOffsetToCurrentByte(BOS, SSO);
+  assert(Offset == computeStaticSamplersOffset() &&
+         "Computed offset does not match written offset");
   for (const auto &S : StaticSamplers) {
     support::endian::write(BOS, S.Filter, llvm::endianness::little);
     support::endian::write(BOS, S.AddressU, llvm::endianness::little);
