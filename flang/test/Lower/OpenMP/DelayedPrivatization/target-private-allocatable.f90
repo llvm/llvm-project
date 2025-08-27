@@ -59,7 +59,7 @@ end subroutine target_allocatable
 ! CHECK-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CHECK:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 ! CHECK:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> [[MEMBER_TYPE:.*]]
-! CHECK:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], i32) map_clauses(descriptor_base_addr, to) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]]) -> {{.*}}
+! CHECK:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], i32) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]]) -> {{.*}}
 ! CHECK:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(always, descriptor, to) capture(ByRef) members(%[[MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
 ! CHECK:  omp.target map_entries(%[[MAP_VAR]] -> %arg0, %[[MEMBER]] -> %arg1 : [[TYPE]], [[MEMBER_TYPE]]) private(
