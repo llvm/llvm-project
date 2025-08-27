@@ -10096,44 +10096,42 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold (xor (smax(x, C), C)) -> select (x > C), xor(x, C), 0
   // fold (xor (umin(x, C), C)) -> select (x < C), xor(x, C), 0
   // fold (xor (umax(x, C), C)) -> select (x > C), xor(x, C), 0
-  SDValue Op0, Op1;
-  if ((sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Value(Op1)),
-                                     m_SMax(m_Value(Op0), m_Value(Op1)),
-                                     m_UMin(m_Value(Op0), m_Value(Op1)),
-                                     m_UMax(m_Value(Op0), m_Value(Op1))))))) {
+  SDValue Op0;
+  if ((sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Specific(N1)),
+                                     m_SMax(m_Value(Op0), m_Specific(N1)),
+                                     m_UMin(m_Value(Op0), m_Specific(N1)),
+                                     m_UMax(m_Value(Op0), m_Specific(N1))))))) {
 
-    if (Op1 == N1) {
-      if (isa<ConstantSDNode>(N1) ||
-          ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
-        // For vectors, only optimize when the constant is zero or all-ones to
-        // avoid generating more instructions
-        if (VT.isVector()) {
-          ConstantSDNode *N1C = isConstOrConstSplat(N1);
-          if (!N1C || (!N1C->isZero() && !N1C->isAllOnes()))
-            return SDValue();
-        }
-
-        EVT CCVT = getSetCCResultType(VT);
-        ISD::CondCode CC;
-        switch (N0.getOpcode()) {
-        case ISD::SMIN:
-          CC = ISD::SETLT;
-          break;
-        case ISD::SMAX:
-          CC = ISD::SETGT;
-          break;
-        case ISD::UMIN:
-          CC = ISD::SETULT;
-          break;
-        case ISD::UMAX:
-          CC = ISD::SETUGT;
-          break;
-        }
-        SDValue Cmp = DAG.getSetCC(SDLoc(N), CCVT, Op0, N1, CC);
-        SDValue XorXC = DAG.getNode(ISD::XOR, SDLoc(N), VT, Op0, N1);
-        SDValue Zero = DAG.getConstant(0, SDLoc(N), VT);
-        return DAG.getSelect(SDLoc(N), VT, Cmp, XorXC, Zero);
+    if (isa<ConstantSDNode>(N1) ||
+        ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+      // For vectors, only optimize when the constant is zero or all-ones to
+      // avoid generating more instructions
+      if (VT.isVector()) {
+        ConstantSDNode *N1C = isConstOrConstSplat(N1);
+        if (!N1C || (!N1C->isZero() && !N1C->isAllOnes()))
+          return SDValue();
       }
+
+      EVT CCVT = getSetCCResultType(VT);
+      ISD::CondCode CC;
+      switch (N0.getOpcode()) {
+      case ISD::SMIN:
+        CC = ISD::SETLT;
+        break;
+      case ISD::SMAX:
+        CC = ISD::SETGT;
+        break;
+      case ISD::UMIN:
+        CC = ISD::SETULT;
+        break;
+      case ISD::UMAX:
+        CC = ISD::SETUGT;
+        break;
+      }
+      SDValue Cmp = DAG.getSetCC(DL, CCVT, Op0, N1, CC);
+      SDValue XorXC = DAG.getNode(ISD::XOR, DL, VT, Op0, N1);
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      return DAG.getSelect(DL, VT, Cmp, XorXC, Zero);
     }
   }
 
