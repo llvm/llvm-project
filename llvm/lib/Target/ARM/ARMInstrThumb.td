@@ -1571,6 +1571,14 @@ def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 
+// -(n & 1) -> (n << 31) >> 31 to avoid materializing constants on Thumb1
+def : T1Pat<(ineg (and tGPR:$Rn, (i32 1))),
+            (tASRri (tLSLri tGPR:$Rn, 31), 31)>,
+      Requires<[IsThumb, IsThumb1Only]>;
+def : T1Pat<(sub (i32 0), (and tGPR:$Rn, (i32 1))),
+            (tASRri (tLSLri tGPR:$Rn, 31), 31)>,
+      Requires<[IsThumb, IsThumb1Only]>;
+
 // Bswap 16 with load/store
 def : T1Pat<(srl (bswap (extloadi16 t_addrmode_is2:$addr)), (i32 16)),
             (tREV16 (tLDRHi t_addrmode_is2:$addr))>;
