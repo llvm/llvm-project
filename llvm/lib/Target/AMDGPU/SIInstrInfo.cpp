@@ -8063,12 +8063,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       MRI.replaceRegWith(DstReg, NewDstReg);
       MRI.clearKillFlags(NewDstReg);
       Inst.getOperand(0).setReg(DstReg);
-      // Make sure we don't leave around a dead VGPR->SGPR copy. Normally
-      // these are deleted later, but at -O0 it would leave a suspicious
-      // looking illegal copy of an undef register.
-      for (unsigned I = Inst.getNumOperands() - 1; I != 0; --I)
-        Inst.removeOperand(I);
-      Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
+      Inst.eraseFromParent();
       // Legalize t16 operand since replaceReg is called after addUsersToVALU
       for (MachineOperand &MO :
            make_early_inc_range(MRI.use_operands(NewDstReg))) {
