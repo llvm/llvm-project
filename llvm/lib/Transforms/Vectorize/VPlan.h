@@ -1060,6 +1060,7 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
+    Unpack,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.

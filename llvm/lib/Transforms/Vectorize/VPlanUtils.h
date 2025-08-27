@@ -86,7 +86,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
+  return isa<VPExpandSCEVRecipe, VPPhi>(VPV);
 }
 
 /// Return true if \p V is a header mask in \p Plan.

@@ -29,16 +29,16 @@ define void @step_direction_unknown(i32 %arg, ptr %dst) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i32> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP9]], i32 3
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP16]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP11]], align 8
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP9]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP15]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)

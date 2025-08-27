@@ -26,6 +26,7 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
@@ -33,7 +34,6 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD4]], splat (i64 128)
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD5]], splat (i64 128)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD6]], splat (i64 128)
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i64, ptr [[TMP28]], i32 4

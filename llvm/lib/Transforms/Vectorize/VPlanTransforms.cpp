@@ -1225,6 +1225,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  VPValue *Idx;
+  if (match(&R, m_VPInstruction<Instruction::ExtractElement>(m_BuildVector(),
+                                                             m_VPValue(Idx)))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(BuildVector->getOperand(
+        dyn_cast<ConstantInt>(Idx->getLiveInIRValue())->getZExtValue()));
+    return;
+  }
+
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
@@ -3732,6 +3741,47 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
                            VPUser &U, unsigned) {
             return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
           });
+    }
+  }
+
+  // Create explicit VPInstructions to convert vectors to scalars.
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (isa<VPReplicateRecipe, VPInstruction, VPScalarIVStepsRecipe>(&R))
+        continue;
+      for (VPValue *Def : R.definedValues()) {
+        if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
+          continue;
+
+        if (VPBB->getParent() != Plan.getVectorLoopRegion())
+          continue;
+
+        auto UsesVectorOrInsideReplicateRegion = [LoopRegion](VPUser *U) {
+          VPRegionBlock *ParentRegion =
+              cast<VPRecipeBase>(U)->getParent()->getParent();
+          return ParentRegion && ParentRegion != LoopRegion;
+        };
+
+        if (none_of(Def->users(),
+                    [Def, &UsesVectorOrInsideReplicateRegion](VPUser *U) {
+                      return !UsesVectorOrInsideReplicateRegion(U) &&
+                             U->usesScalars(Def);
+                    }))
+          continue;
+
+        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
+        if (R.isPhi())
+          Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
+        else
+          Unpack->insertAfter(&R);
+        Def->replaceUsesWithIf(
+            Unpack,
+            [Def, &UsesVectorOrInsideReplicateRegion](VPUser &U, unsigned) {
+              return !UsesVectorOrInsideReplicateRegion(&U) &&
+                     U.usesScalars(Def);
+            });
+      }
     }
   }
 }
