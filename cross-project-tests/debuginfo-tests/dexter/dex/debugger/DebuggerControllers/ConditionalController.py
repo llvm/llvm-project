@@ -215,9 +215,6 @@ class ConditionalController(DebuggerControllerBase):
                     self._leading_bp_handles[id] = bpr
             elif bpr.function is not None:
                 id = self.debugger.add_function_breakpoint(bpr.function)
-                self.context.logger.warning(
-                    f"Set leading breakpoint {id} at {bpr.function}"
-                )
                 self._leading_bp_handles[id] = bpr
             else:
                 # Add an unconditional breakpoint.
@@ -272,23 +269,23 @@ class ConditionalController(DebuggerControllerBase):
             backtrace = None
             if step_info.current_frame:
                 self._step_index += 1
-                backtrace = list([f.function for f in step_info.frames])
+                backtrace = [f.function for f in step_info.frames]
 
-            log_step = False
+            record_step = False
             debugger_continue = False
             bp_to_delete = []
             for bp_id in self.debugger.get_triggered_breakpoint_ids():
                 try:
                     # See if this is one of our leading breakpoints.
                     bpr = self._leading_bp_handles[bp_id]
-                    log_step = True
+                    record_step = True
                 except KeyError:
                     # This is a trailing bp. Mark it for removal.
                     bp_to_delete.append(bp_id)
                     if bp_id in self.instr_bp_ids:
                         self.instr_bp_ids.remove(bp_id)
                     else:
-                        log_step = True
+                        record_step = True
                     continue
 
                 bpr.add_hit()
@@ -303,7 +300,7 @@ class ConditionalController(DebuggerControllerBase):
                         # Add this backtrace to the stack. While the current
                         # backtrace matches the top of the stack we'll step,
                         # and while there's a backtrace in the stack that
-                        # is a subset of the current backtrack we'll step-out.
+                        # is a subset of the current backtrace we'll step-out.
                         if (
                             len(step_function_backtraces) == 0
                             or backtrace != step_function_backtraces[-1]
@@ -320,7 +317,8 @@ class ConditionalController(DebuggerControllerBase):
 
                 elif bpr.is_continue:
                     debugger_continue = True
-                    self.debugger.add_breakpoint(bpr.path, bpr.range_to)
+                    if bpr.range_to != None:
+                        self.debugger.add_breakpoint(bpr.path, bpr.range_to)
 
                 else:
                     # Add a range of trailing breakpoints covering the lines
@@ -342,22 +340,25 @@ class ConditionalController(DebuggerControllerBase):
                 while len(step_function_backtraces) > 0:
                     match_subtrace = False  # Backtrace contains a target trace.
                     match_trace = False  # Backtrace matches top of target stack.
-                    if len(backtrace) >= len(step_function_backtraces[-1]):
-                        match_subtrace = True
-                        match_trace = len(backtrace) == len(
-                            step_function_backtraces[-1]
+
+                    # The top of the step_function_backtraces stack contains a
+                    # backtrace that we want to step through. Check if the
+                    # current backtrace ("backtrace") either matches that trace
+                    # or otherwise contains it.
+                    target_backtrace = step_function_backtraces[-1]
+                    if len(backtrace) >= len(target_backtrace):
+                        match_trace = len(backtrace) == len(target_backtrace)
+                        # Check if backtrace contains target_backtrace, matching
+                        # from the end (bottom of call stack) backwards.
+                        match_subtrace = (
+                            backtrace[-len(target_backtrace) :] == target_backtrace
                         )
-                        for i, f in enumerate(reversed(step_function_backtraces[-1])):
-                            if backtrace[-1 - i] != f:
-                                match_subtrace = False
-                                match_trace = False
-                                break
 
                     if match_trace:
                         # We want to step through this function; do so and
                         # log the steps in the step trace.
                         debugger_next = True
-                        log_step = True
+                        record_step = True
                         break
                     elif match_subtrace:
                         # There's a function we care about buried in the
@@ -370,7 +371,7 @@ class ConditionalController(DebuggerControllerBase):
                         # there are no longer reachable.
                         step_function_backtraces.pop()
 
-            if log_step and step_info.current_frame:
+            if record_step and step_info.current_frame:
                 # Record the step.
                 update_step_watches(
                     step_info, self._watches, self.step_collection.commands
