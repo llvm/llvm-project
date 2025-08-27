@@ -550,6 +550,39 @@ explicit ``overflow_behavior`` attribute.
                       // [-Wimplicit-overflow-behavior-conversion-pedantic]
   }
 
+Format String Functions
+=======================
+
+When overflow behavior types are used with format string functions (printf-family
+functions like ``printf``, ``fprintf``, ``sprintf``, etc., and scanf-family
+functions like ``scanf``, ``fscanf``, ``sscanf``, etc.), they are treated based
+on their underlying integer types for format specifier compatibility checking.
+
+.. code-block:: c++
+
+  #include <cstdio>
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrap_int;
+  typedef unsigned int __attribute__((overflow_behavior(no_wrap))) nowrap_uint;
+
+  void example() {
+    wrap_int wi = 42;
+    nowrap_uint su = 100;
+
+    scanf("%d\n", &wi);   // OK: &wi treated as int* for %d
+    printf("%d\n", wi);  // OK: wi treated as int for %d
+    printf("%u\n", su);  // OK: su treated as unsigned int for %u
+    printf("%s\n", wi);  // Error: int incompatible with %s (same as regular int)
+  }
+
+This behavior ensures that overflow behavior types work seamlessly with existing
+format string functions without requiring special format specifiers, while
+still maintaining their overflow behavior semantics in arithmetic operations.
+
+The format string checker uses the underlying type to determine compatibility,
+so ``int __attribute__((overflow_behavior(wrap)))`` is fully compatible with
+``%d``, ``%i``, ``%x``, etc., just like a regular ``int`` would be.
+
 -Woverflow-behavior-attribute-ignored
 -------------------------------------
 
