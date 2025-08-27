@@ -71,20 +71,19 @@ _mm512_maskz_conflict_epi32 (__mmask16 __U, __m512i __A)
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_lzcnt_epi32(__m512i __A) {
-  return (__m512i)__builtin_elementwise_ctlz((__v16si)__A);
+  return (__m512i)__builtin_elementwise_ctlz((__v16si)__A,
+                                             (__v16si)_mm512_set1_epi32(32));
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_mask_lzcnt_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_mask_lzcnt_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
                                              (__v16si)_mm512_lzcnt_epi32(__A),
                                              (__v16si)__W);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_maskz_lzcnt_epi32 (__mmask16 __U, __m512i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_maskz_lzcnt_epi32(__mmask16 __U, __m512i __A) {
   return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
                                              (__v16si)_mm512_lzcnt_epi32(__A),
                                              (__v16si)_mm512_setzero_si512());
@@ -92,20 +91,19 @@ _mm512_maskz_lzcnt_epi32 (__mmask16 __U, __m512i __A)
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_lzcnt_epi64(__m512i __A) {
-  return (__m512i)__builtin_elementwise_ctlz((__v8di)__A);
+  return (__m512i)__builtin_elementwise_ctlz(
+      (__v8di)__A, (__v8di)_mm512_set1_epi64((long long)64));
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_mask_lzcnt_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_mask_lzcnt_epi64(__m512i __W, __mmask8 __U, __m512i __A) {
   return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
                                              (__v8di)_mm512_lzcnt_epi64(__A),
                                              (__v8di)__W);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
-_mm512_maskz_lzcnt_epi64 (__mmask8 __U, __m512i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_maskz_lzcnt_epi64(__mmask8 __U, __m512i __A) {
   return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
                                              (__v8di)_mm512_lzcnt_epi64(__A),
                                              (__v8di)_mm512_setzero_si512());
