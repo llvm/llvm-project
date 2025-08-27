@@ -2406,6 +2406,34 @@ TargetLoweringBase::getAtomicMemOperandFlags(const Instruction &AI,
   return Flags;
 }
 
+MachineMemOperand::Flags TargetLoweringBase::getVPIntrinsicMemOperandFlags(
+    const VPIntrinsic &VPIntrin) const {
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  Intrinsic::ID IntrinID = VPIntrin.getIntrinsicID();
+
+  switch (IntrinID) {
+  default:
+    llvm_unreachable("unexpected intrinsic. Existing code may be appropriate "
+                     "for it, but support must be explicitly enabled");
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_gather:
+  case Intrinsic::experimental_vp_strided_load:
+    Flags = MachineMemOperand::MOLoad;
+    break;
+  case Intrinsic::vp_store:
+  case Intrinsic::vp_scatter:
+  case Intrinsic::experimental_vp_strided_store:
+    Flags = MachineMemOperand::MOStore;
+    break;
+  }
+
+  if (VPIntrin.hasMetadata(LLVMContext::MD_nontemporal))
+    Flags |= MachineMemOperand::MONonTemporal;
+
+  Flags |= getTargetMMOFlags(VPIntrin);
+  return Flags;
+}
+
 Instruction *TargetLoweringBase::emitLeadingFence(IRBuilderBase &Builder,
                                                   Instruction *Inst,
                                                   AtomicOrdering Ord) const {
