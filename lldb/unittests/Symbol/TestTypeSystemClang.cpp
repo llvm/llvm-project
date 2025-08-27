@@ -1185,7 +1185,7 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   EXPECT_STREQ(llvm::GlobalValue::dropLLVMManglingEscape(
                    m_ast->DeclGetMangledName(dtor).GetStringRef())
                    .data(),
-               "$__lldb_func:D0:0x0:0x0:~S");
+               "$__lldb_func:D1:0x0:0x0:~S");
 }
 
 struct AsmLabelTestCase {
