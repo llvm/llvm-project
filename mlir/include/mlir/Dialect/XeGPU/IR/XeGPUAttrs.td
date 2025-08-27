@@ -421,42 +421,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
-    std::optional<SmallVector<int64_t>> getInstDataAsInt() const {
-      if (DenseI32ArrayAttr inst = getInstData())
-        return llvm::to_vector_of<int64_t>(inst.asArrayRef());
-      return std::nullopt;
-    }
-
-    std::optional<SmallVector<int64_t>> getLaneLayoutAsInt() const {
-      if (DenseI32ArrayAttr layout = getLaneLayout())
-        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      return {};
-    }
-
-    SmallVector<int64_t> getSgDataAsInt() const {
-      if (DenseI32ArrayAttr data = getSgData())
-        return llvm::to_vector_of<int64_t>(data.asArrayRef());
-      return {};
-    }
-
-    SmallVector<int64_t> getInstDataAsInt() const {
-      if (DenseI32ArrayAttr inst = getInstData())
-        return llvm::to_vector_of<int64_t>(inst.asArrayRef());
-      return {};
-    }
-
-    SmallVector<int64_t> getLaneLayoutAsInt() const {
-      if (DenseI32ArrayAttr layout = getLaneLayout())
-        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      return {};
-    }
-
-    SmallVector<int64_t> getLaneDataAsInt() const {
-      if (DenseI32ArrayAttr data = getLaneData())
-        return llvm::to_vector_of<int64_t>(data.asArrayRef());
-      return {};
-    }
-
     /// Delinearizes a linear subgroup ID into its multidimensional indices
     /// based on the effective subgroup layout.
     FailureOr<SmallVector<Value>>
@@ -546,7 +510,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
       return {};
     }
 
-    /// Returns the LaneData of the attribute, computed by applying
+    /// Returns the SgData of the attribute, computed by applying
     /// the slice dimensions to the underlying LayoutAttr.
     SmallVector<int64_t> getSgDataAsInt() const {
       SliceAttr attr = flatten();
