@@ -1,40 +1,51 @@
+; REQUIRES: asserts
+; asserts are required for -debug-only=<pass-name>
+
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ;; Read a text profile and merge it into indexed profile.
 ; RUN: llvm-profdata merge --memprof-version=4 memprof.yaml -o memprof.profdata
 
+;; Run optimizer pass on an IR module without IR functions, and test that global
+;; variables in the module could be annotated (i.e., no early return),
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
+; RUN: -debug-only=memprof -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX
+
 ;; Run optimizer pass on the IR, and check the section prefix.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -annotate-static-data-prefix \
-; RUN: -S input.ll -o - 2>&1 | FileCheck %s
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
+; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX
 
-;; Repeat the command line above and enable -print-static-data-prefix. Test both IR and log.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -annotate-static-data-prefix \
-; RUN: -print-static-data-prefix -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,CHECK
 
-; LOG: Global variable .str has no section prefix
-; LOG: Global variable var1 has section prefix: hot
-; LOG: Global variable var2.llvm.125 has section prefix: hot
-; LOG: Global variable foo has section prefix: unlikely
-; LOG: Global variable bar has no section prefix
+; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix=false \
+; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --implicit-check-not="section_prefix"
+
+; LOG: Skip annotating string literal .str
+; LOG: Global variable var1 is annotated as hot
+; LOG: Global variable var2.llvm.125 is annotated as hot
+; LOG: Global variable bar is not annotated
+; LOG: Global variable foo is annotated as unlikely
 
 ;; String literals are not annotated.
-; CHECK: @.str = unnamed_addr constant [5 x i8] c"abcde"
-; CHECK-NOT: section_prefix
-; CHECK: @var1 = global i32 123, !section_prefix !0
+; PREFIX: @.str = unnamed_addr constant [5 x i8] c"abcde"
+; PREFIX-NOT: section_prefix
+; PREFIX: @var1 = global i32 123, !section_prefix !0
 
 ;; @var.llvm.125 will be canonicalized to @var2 for profile look-up.
-; CHECK-NEXT: @var2.llvm.125 = global i64 0, !section_prefix !0
-; CHECK-NEXT: @foo = global i8 2, !section_prefix !1
+; PREFIX-NEXT: @var2.llvm.125 = global i64 0, !section_prefix !0
 
-;; @bar is not seen in hot symbol or known symbol set, so it doesn't get
-;; a section prefix. It's up to the linker to decide how to map input sections
-;; to output, and one conservative practice is to map unlikely-prefixed ones to
-;; unlikely output section, and map the rest (hot-prefixed or prefix-less) to
-;; the canonical output section.
-; CHECK-NEXT: @bar = global i16 3
+;; @bar is not seen in hot symbol or known symbol set, so it won't get a section
+;; prefix. Test this by testing that there is no section_prefix between @bar and
+;; @foo.
+; PREFIX-NEXT: @bar = global i16 3
+; PREFIX-NOT: !section_prefix
 
-; CHECK: !0 = !{!"section_prefix", !"hot"}
-; CHECK-NEXT: !1 = !{!"section_prefix", !"unlikely"}
+;; @foo is unlikely.
+; PREFIX-NEXT: @foo = global i8 2, !section_prefix !1
+
+
+
+; PREFIX: !0 = !{!"section_prefix", !"hot"}
+; PREFIX-NEXT: !1 = !{!"section_prefix", !"unlikely"}
 
 ;--- memprof.yaml
 ---
@@ -74,8 +85,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str = unnamed_addr constant [5 x i8] c"abcde"
 @var1 = global i32 123
 @var2.llvm.125 = global i64 0 
-@foo = global i8 2
 @bar = global i16 3
+@foo = global i8 2
 
 define i32 @func() {
   %a = load i32, ptr @var1
@@ -85,3 +96,14 @@ define i32 @func() {
 }
 
 declare i32 @func_taking_arbitrary_param(...)
+;--- funcless-module.ll
+
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str = unnamed_addr constant [5 x i8] c"abcde"
+@var1 = global i32 123
+@var2.llvm.125 = global i64 0
+@bar = global i16 3
+@foo = global i8 2
+

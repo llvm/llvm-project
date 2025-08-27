@@ -37,7 +37,8 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
-  // Annotate global variables' section prefix based on data access profile.
+  // Annotate global variables' section prefix based on data access profile,
+  // return true if any global variable is annotated and false otherwise.
   bool
   annotateGlobalVariables(Module &M,
                           const memprof::DataAccessProfData *DataAccessProf);
