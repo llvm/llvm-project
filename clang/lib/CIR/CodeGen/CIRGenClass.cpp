@@ -14,6 +14,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
@@ -124,6 +125,32 @@ static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
   return baseClassDecl->isDynamicClass();
 }
 
+namespace {
+/// A visitor which checks whether an initializer uses 'this' in a
+/// way which requires the vtable to be properly set.
+struct DynamicThisUseChecker
+    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
+  using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
+
+  bool usesThis = false;
+
+  DynamicThisUseChecker(const ASTContext &c) : super(c) {}
+
+  // Black-list all explicit and implicit references to 'this'.
+  //
+  // Do we need to worry about external references to 'this' derived
+  // from arbitrary code? If so, then anything which runs arbitrary
+  // external code might potentially access the vtable.
+  void VisitCXXThisExpr(const CXXThisExpr *e) { usesThis = true; }
+};
+} // end anonymous namespace
+
+static bool baseInitializerUsesThis(ASTContext &c, const Expr *init) {
+  DynamicThisUseChecker checker(c);
+  checker.Visit(init);
+  return checker.usesThis;
+}
+
 /// Gets the address of a direct base class within a complete object.
 /// This should only be used for (1) non-virtual bases or (2) virtual bases
 /// when the type is known to be complete (e.g. in complete destructors).
@@ -166,10 +193,8 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (classDecl->isDynamicClass()) {
-    cgm.errorNYI(loc, "emitBaseInitializer: dynamic class");
-    return;
-  }
+  if (baseInitializerUsesThis(getContext(), baseInit->getInit()))
+    initializeVTablePointers(loc, classDecl);
 
   // We can pretend to be a complete class because it only matters for
   // virtual bases, and we only do virtual bases for complete ctors.
@@ -260,6 +285,34 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   }
 }
 
+static Address applyNonVirtualAndVirtualOffset(
+    mlir::Location loc, CIRGenFunction &cgf, Address addr,
+    CharUnits nonVirtualOffset, mlir::Value virtualOffset,
+    const CXXRecordDecl *derivedClass, const CXXRecordDecl *nearestVBase,
+    mlir::Type baseValueTy = {}, bool assumeNotNull = true) {
+  // Assert that we have something to do.
+  assert(!nonVirtualOffset.isZero() || virtualOffset != nullptr);
+
+  // Compute the offset from the static and dynamic components.
+  if (!nonVirtualOffset.isZero()) {
+    if (virtualOffset) {
+      cgf.cgm.errorNYI(
+          loc,
+          "applyNonVirtualAndVirtualOffset: virtual and non-virtual offset");
+      return Address::invalid();
+    } else {
+      assert(baseValueTy && "expected base type");
+      // If no virtualOffset is present this is the final stop.
+      return cgf.getBuilder().createBaseClassAddr(
+          loc, addr, baseValueTy, nonVirtualOffset.getQuantity(),
+          assumeNotNull);
+    }
+  }
+
+  cgf.cgm.errorNYI(loc, "applyNonVirtualAndVirtualOffset: virtual offset");
+  return Address::invalid();
+}
+
 void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
                                              const VPtr &vptr) {
   // Compute the address point.
@@ -287,8 +340,9 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   // Apply the offsets.
   Address classAddr = loadCXXThisAddress();
   if (!nonVirtualOffset.isZero() || virtualOffset) {
-    cgm.errorNYI(loc,
-                 "initializeVTablePointer: non-virtual and virtual offset");
+    classAddr = applyNonVirtualAndVirtualOffset(
+        loc, *this, classAddr, nonVirtualOffset, virtualOffset,
+        vptr.vtableClass, vptr.nearestVBase, baseValueTy);
   }
 
   // Finally, store the address point. Use the same CIR types as the field.
@@ -322,10 +376,11 @@ void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
 CIRGenFunction::VPtrsVector
 CIRGenFunction::getVTablePointers(const CXXRecordDecl *vtableClass) {
   CIRGenFunction::VPtrsVector vptrsResult;
+  VisitedVirtualBasesSetTy vbases;
   getVTablePointers(BaseSubobject(vtableClass, CharUnits::Zero()),
                     /*NearestVBase=*/nullptr,
                     /*OffsetFromNearestVBase=*/CharUnits::Zero(),
-                    /*BaseIsNonVirtualPrimaryBase=*/false, vtableClass,
+                    /*BaseIsNonVirtualPrimaryBase=*/false, vtableClass, vbases,
                     vptrsResult);
   return vptrsResult;
 }
@@ -335,6 +390,7 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
                                        CharUnits offsetFromNearestVBase,
                                        bool baseIsNonVirtualPrimaryBase,
                                        const CXXRecordDecl *vtableClass,
+                                       VisitedVirtualBasesSetTy &vbases,
                                        VPtrsVector &vptrs) {
   // If this base is a non-virtual primary base the address point has already
   // been set.
@@ -346,8 +402,39 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
 
   const CXXRecordDecl *rd = base.getBase();
 
-  if (rd->getNumBases())
-    cgm.errorNYI(rd->getSourceRange(), "getVTablePointers: traverse bases");
+  for (const auto &nextBase : rd->bases()) {
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(
+            nextBase.getType()->castAs<RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
+
+    // Ignore classes without a vtable.
+    if (!baseDecl->isDynamicClass())
+      continue;
+
+    CharUnits baseOffset;
+    CharUnits baseOffsetFromNearestVBase;
+    bool baseDeclIsNonVirtualPrimaryBase;
+    const CXXRecordDecl *nextBaseDecl;
+
+    if (nextBase.isVirtual()) {
+      cgm.errorNYI(rd->getSourceRange(), "getVTablePointers: virtual base");
+      return;
+    } else {
+      const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
+
+      nextBaseDecl = baseDecl;
+      baseOffset = base.getBaseOffset() + layout.getBaseClassOffset(baseDecl);
+      baseOffsetFromNearestVBase =
+          offsetFromNearestVBase + layout.getBaseClassOffset(baseDecl);
+      baseDeclIsNonVirtualPrimaryBase = layout.getPrimaryBase() == baseDecl;
+    }
+
+    getVTablePointers(BaseSubobject(baseDecl, baseOffset), nextBaseDecl,
+                      baseOffsetFromNearestVBase,
+                      baseDeclIsNonVirtualPrimaryBase, vtableClass, vbases,
+                      vptrs);
+  }
 }
 
 Address CIRGenFunction::loadCXXThisAddress() {
