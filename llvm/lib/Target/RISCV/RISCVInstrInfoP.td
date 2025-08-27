@@ -889,3 +889,20 @@ let Predicates = [HasStdExtP, IsRV32] in {
     let Inst{23-15} = imm10{9-1};
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtP] in {
+def : PatGprImm<int_riscv_pslli_b, PSLLI_B, uimm3>;
+def : PatGprImm<int_riscv_pslli_h, PSLLI_H, uimm4>;
+} // Predicates = [HasStdExtP]
+
+let Predicates = [HasStdExtP, IsRV32] in {
+def : PatGprGpr<int_riscv_sadd, SADD>;
+} // Predicates = [HasStdExtP, IsRV32]
+
+let Predicates = [HasStdExtP, IsRV64] in {
+def : PatGprImm<int_riscv_pslli_w, PSLLI_W, uimm5>;
+} // Predicates = [HasStdExtP, IsRV64]

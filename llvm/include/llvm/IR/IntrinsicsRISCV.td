@@ -1898,6 +1898,35 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+//===----------------------------------------------------------------------===//
+// Packed SIMD
+
+let TargetPrefix = "riscv" in {
+  class RVPBinaryIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, LLVMMatchType<0>],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryIntrinsics;
+  }
+
+  defm sadd : RVPBinaryIntrinsics;
+
+  class RVPBinaryAABIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryAABIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
+  }
+
+  defm pslli_b : RVPBinaryAABIntrinsics;
+  defm pslli_h : RVPBinaryAABIntrinsics;
+  defm pslli_w : RVPBinaryAABIntrinsics;
+} // TargetPrefix = "riscv"
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"
