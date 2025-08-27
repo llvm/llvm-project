@@ -382,7 +382,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
-  // Add rich variable location annotations to the disassembly output.
+  // Add variable location annotations to the disassembly output.
   //
   // For each instruction, this block attempts to resolve in-scope variables
   // and determine if the current PC falls within their
