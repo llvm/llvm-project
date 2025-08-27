@@ -498,7 +498,7 @@ entry:
 define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -558,7 +558,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IV_0:%.*]] = add nuw nsw i64 [[IV]], 0
 ; CHECK-NEXT:    [[IV_1:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IN0:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[IV_0]]
@@ -571,13 +571,13 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    store i8 [[REDUCE_ADD_0_NARROW]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV_0]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
 ; MAX-BW-LABEL: @test(
 ; MAX-BW-NEXT:  entry:
-; MAX-BW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; MAX-BW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; MAX-BW:       vector.ph:
 ; MAX-BW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; MAX-BW:       vector.body:
@@ -677,7 +677,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW:       scalar.ph:
 ; MAX-BW-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-BW:       for.body:
-; MAX-BW-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MAX-BW-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; MAX-BW-NEXT:    [[IV_0:%.*]] = add nuw nsw i64 [[IV]], 0
 ; MAX-BW-NEXT:    [[IV_1:%.*]] = add nuw nsw i64 [[IV]], 1
 ; MAX-BW-NEXT:    [[IN0:%.*]] = getelementptr inbounds [1024 x i32], ptr [[A]], i64 0, i64 [[IV_0]]
@@ -690,7 +690,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    store i8 [[REDUCE_ADD_0_NARROW]], ptr [[OUT]], align 1
 ; MAX-BW-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV_0]], 2
 ; MAX-BW-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 1024
-; MAX-BW-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]], !llvm.loop [[LOOP11:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
 ; MAX-BW:       for.cond.cleanup:
 ; MAX-BW-NEXT:    ret void
 ;

@@ -23,14 +23,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoint ptr [[TRIGGER:%.*]] to i64
 ; AVX1-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX1:       vector.memcheck:
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -49,10 +49,9 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    br label [[FOR_END:%.*]]
 ; AVX1:       scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.body:
-; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX1-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP12]], 100
@@ -304,14 +303,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoint ptr addrspace(1) [[B:%.*]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoint ptr addrspace(1) [[TRIGGER:%.*]] to i64
 ; AVX1-NEXT:    [[A1:%.*]] = ptrtoint ptr addrspace(1) [[A:%.*]] to i64
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX1:       vector.memcheck:
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -330,10 +329,9 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    br label [[FOR_END:%.*]]
 ; AVX1:       scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.body:
-; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX1-NEXT:    [[TMP12:%.*]] = load i32, ptr addrspace(1) [[ARRAYIDX]], align 4
 ; AVX1-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP12]], 100
@@ -594,14 +592,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoint ptr [[TRIGGER:%.*]] to i64
 ; AVX1-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX1:       vector.memcheck:
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -621,10 +619,9 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    br label [[FOR_END:%.*]]
 ; AVX1:       scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.body:
-; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX1-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP13]], 100
@@ -896,7 +893,7 @@ for.end:                                          ; preds = %for.inc
 define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
 ; AVX1-LABEL: @foo3(
 ; AVX1-NEXT:  entry:
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX1:       vector.memcheck:
 ; AVX1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 80000
 ; AVX1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 40000
@@ -908,7 +905,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX1-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -955,10 +952,9 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       middle.block:
 ; AVX1-NEXT:    br label [[FOR_END:%.*]]
 ; AVX1:       scalar.ph:
-; AVX1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.body:
-; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX1-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP29]], 100
@@ -980,7 +976,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ;
 ; AVX2-LABEL: @foo3(
 ; AVX2-NEXT:  entry:
-; AVX2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX2-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX2:       vector.memcheck:
 ; AVX2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 80000
 ; AVX2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 40000
@@ -992,7 +988,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -1039,10 +1035,9 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       middle.block:
 ; AVX2-NEXT:    br label [[FOR_END:%.*]]
 ; AVX2:       scalar.ph:
-; AVX2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX2-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX2:       for.body:
-; AVX2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX2-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX2-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP29]], 100
@@ -1236,7 +1231,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ;
 ; AVX512-LABEL: @foo4(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX512-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX512:       vector.memcheck:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
@@ -1248,7 +1243,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
@@ -1271,7 +1266,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[SCALAR_PH]]
 ; AVX512:       scalar.ph:
-; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9984, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9984, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX512:       for.body:
 ; AVX512-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
@@ -1363,7 +1358,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ;
 ; AVX2-LABEL: @foo6(
 ; AVX2-NEXT:  entry:
-; AVX2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX2-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX2:       vector.memcheck:
 ; AVX2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 32768
 ; AVX2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 16384
@@ -1375,7 +1370,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -1450,10 +1445,9 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2:       middle.block:
 ; AVX2-NEXT:    br label [[FOR_END:%.*]]
 ; AVX2:       scalar.ph:
-; AVX2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4095, [[ENTRY:%.*]] ], [ 4095, [[VECTOR_MEMCHECK]] ]
 ; AVX2-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX2:       for.body:
-; AVX2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 4095, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX2-NEXT:    [[TMP37:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX2-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP37]], 0
@@ -1474,7 +1468,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ;
 ; AVX512-LABEL: @foo6(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; AVX512-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; AVX512:       vector.memcheck:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 32768
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 16384
@@ -1486,7 +1480,7 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX512:       vector.ph:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
@@ -1561,10 +1555,9 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
 ; AVX512:       scalar.ph:
-; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4095, [[ENTRY:%.*]] ], [ 4095, [[VECTOR_MEMCHECK]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX512:       for.body:
-; AVX512-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; AVX512-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 4095, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; AVX512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
 ; AVX512-NEXT:    [[TMP37:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; AVX512-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP37]], 0
