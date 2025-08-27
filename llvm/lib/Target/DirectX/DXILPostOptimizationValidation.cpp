@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -118,10 +119,8 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void
-reportOverlappingRegisters(Module &M,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R1,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
+static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
+                                       const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
 
   raw_svector_ostream OS(Message);
@@ -227,19 +226,18 @@ static void validateRootSignature(Module &M,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
-  hlsl::BusyBindingInfo Info = Builder.calculateBusyBindingInfo(
+  hlsl::BoundRegs Info = Builder.calculateBoundRegs(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
-           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-        const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+           const llvm::hlsl::Binding &ReportedBinding) {
+        const llvm::hlsl::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
-    if (!Info.isBound(
-            RC, Binding.Space,
-            {Binding.LowerBound, Binding.LowerBound + Binding.Size - 1}))
+    if (!Info.isBound(RC, Binding.Space, Binding.LowerBound,
+                      Binding.LowerBound + Binding.Size - 1))
       reportRegNotBound(M, RC, Binding);
   }
 }
