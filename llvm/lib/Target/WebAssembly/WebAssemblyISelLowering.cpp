@@ -292,6 +292,16 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::CTLZ, MVT::v16i8, Expand);
     setOperationAction(ISD::CTTZ, MVT::v16i8, Expand);
 
+    setOperationAction(ISD::VECREDUCE_AND, MVT::v16i8, Legal);
+    setOperationAction(ISD::VECREDUCE_AND, MVT::v8i16, Legal);
+    setOperationAction(ISD::VECREDUCE_AND, MVT::v4i32, Legal);
+    setOperationAction(ISD::VECREDUCE_AND, MVT::v2i64, Legal);
+
+    setOperationAction(ISD::VECREDUCE_OR, MVT::v16i8, Legal);
+    setOperationAction(ISD::VECREDUCE_OR, MVT::v8i16, Legal);
+    setOperationAction(ISD::VECREDUCE_OR, MVT::v4i32, Legal);
+    setOperationAction(ISD::VECREDUCE_OR, MVT::v2i64, Legal);
+
     // Custom lower bit counting operations for other types to scalarize them.
     for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP})
       for (auto T : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
