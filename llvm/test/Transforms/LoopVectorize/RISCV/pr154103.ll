@@ -7,7 +7,7 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-LABEL: define void @pr154103(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
@@ -50,29 +50,6 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X]] to i64
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 0, [[CONV]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[DIV]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[LATCH]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[B]], align 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[Y]] to i64
-; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[ZEXT]], 0
-; CHECK-NEXT:    br label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[NOT]], %[[THEN]] ], [ 0, %[[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i16
-; CHECK-NEXT:    store i16 [[TRUNC]], ptr [[C]], align 2
-; CHECK-NEXT:    store i32 0, ptr [[D]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 7
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

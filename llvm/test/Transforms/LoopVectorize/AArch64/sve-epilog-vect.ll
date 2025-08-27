@@ -145,7 +145,7 @@ exit:
 define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-LABEL: @main_vf_vscale_x_2_no_epi_iteration(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
@@ -165,9 +165,8 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ;
@@ -587,7 +586,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-VF8-NEXT:  entry:
 ; CHECK-VF8-NEXT:    [[V:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[N:%.*]] = mul nuw nsw i64 [[V]], 1033
-; CHECK-VF8-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF8-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
@@ -620,9 +619,8 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-VF8:       scalar.ph:
-; CHECK-VF8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-VF8-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF8:       for.body:
 ;
@@ -731,7 +729,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-VF8-NEXT:  entry:
 ; CHECK-VF8-NEXT:    [[V:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[N:%.*]] = mul nuw nsw i64 [[V]], 1024
-; CHECK-VF8-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF8-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
@@ -764,9 +762,8 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-VF8:       scalar.ph:
-; CHECK-VF8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-VF8-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF8:       for.body:
 ;

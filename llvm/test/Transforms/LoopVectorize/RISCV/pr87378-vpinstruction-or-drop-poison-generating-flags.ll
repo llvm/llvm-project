@@ -9,7 +9,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-LABEL: define void @pr87378_vpinstruction_or_drop_poison_generating_flags(
 ; CHECK-SAME: ptr [[ARG:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -56,30 +56,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
-; CHECK:       then.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i64 [[IV]], [[B]]
-; CHECK-NEXT:    br i1 [[C_2]], label [[ELSE_1]], label [[MERGE:%.*]]
-; CHECK:       else.1:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i64 [[IV]], [[C]]
-; CHECK-NEXT:    br i1 [[C_3]], label [[THEN_2:%.*]], label [[LOOP_LATCH]]
-; CHECK:       then.2:
-; CHECK-NEXT:    br label [[MERGE]]
-; CHECK:       merge:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ poison, [[THEN_1]] ], [ [[IV]], [[THEN_2]] ]
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i16, ptr [[ARG]], i64 [[IDX]]
-; CHECK-NEXT:    store i16 0, ptr [[GETELEMENTPTR]], align 2
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[ICMP]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -121,5 +98,4 @@ exit:
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
 ;.
