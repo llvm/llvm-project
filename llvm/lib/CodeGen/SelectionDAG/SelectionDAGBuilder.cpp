@@ -6449,9 +6449,10 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   setValue(&I, Result);
 }
 
-/// Fallback implementation is an alternative approach for managing architectures that don't have 
-/// native support for Constant-Time Select.
-SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
+/// Fallback implementation is an alternative approach for managing
+/// architectures that don't have native support for Constant-Time Select. This
+/// function uses DAG Chaining
+SDValue SelectionDAGBuilder::createProtectedCtSelectFallbackChain(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
     EVT VT) {
 
@@ -6533,6 +6534,78 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
 
 
   SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM);
+
+  // Convert back if needed
+  if (WorkingVT != VT) {
+    Result = DAG.getBitcast(VT, Result);
+  }
+
+  return Result;
+}
+
+/// Fallback implementation is an alternative approach for managing
+/// architectures that don't have native support for Constant-Time Select. This
+/// function uses the NoMerge flag
+SDValue SelectionDAGBuilder::createProtectedCtSelectFallbackNoMerge(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
+    EVT VT) {
+  SDNodeFlags ProtectedFlag;
+  ProtectedFlag.setNoMerge(true);
+
+  SDValue WorkingT = T;
+  SDValue WorkingF = F;
+  EVT WorkingVT = VT;
+
+  if (VT.isVector() && !Cond.getValueType().isVector()) {
+    ElementCount NumElems = VT.getVectorElementCount();
+    EVT CondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElems);
+
+    if (VT.isScalableVector()) {
+      Cond = DAG.getSplatVector(CondVT, DL, Cond);
+    } else {
+      Cond = DAG.getSplatBuildVector(CondVT, DL, Cond);
+    }
+  }
+
+  if (VT.isFloatingPoint()) {
+    if (VT.isVector()) {
+      // float vector -> int vector
+      EVT ElemVT = VT.getVectorElementType();
+      unsigned int ElemBitWidth = ElemVT.getScalarSizeInBits();
+      EVT IntElemVT = EVT::getIntegerVT(*DAG.getContext(), ElemBitWidth);
+
+      WorkingVT = EVT::getVectorVT(*DAG.getContext(), IntElemVT,
+                                   VT.getVectorElementCount());
+    } else {
+      WorkingVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+    }
+
+    WorkingT = DAG.getBitcast(WorkingVT, T);
+    WorkingF = DAG.getBitcast(WorkingVT, F);
+  }
+
+  SDValue Mask = DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
+
+  SDValue AllOnes;
+  if (WorkingVT.isScalableVector()) {
+    unsigned BitWidth = WorkingVT.getScalarSizeInBits();
+    APInt AllOnesVal = APInt::getAllOnes(BitWidth);
+    SDValue ScalarAllOnes =
+        DAG.getConstant(AllOnesVal, DL, WorkingVT.getScalarType());
+    AllOnes = DAG.getSplatVector(WorkingVT, DL, ScalarAllOnes);
+  } else {
+    AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
+  }
+
+  SDValue Invert =
+      DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes, ProtectedFlag);
+
+  // (or (and WorkingT, Mask), (and F, ~Mask))
+  SDValue TM =
+      DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT, ProtectedFlag);
+  SDValue FM =
+      DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF, ProtectedFlag);
+  SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM, ProtectedFlag);
 
   // Convert back if needed
   if (WorkingVT != VT) {
@@ -6792,7 +6865,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       }
     }
 
-    setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
+    setValue(&I, createProtectedCtSelectFallbackChain(DAG, DL, Cond, A, B, VT));
     return;
   }
   case Intrinsic::call_preallocated_setup: {
