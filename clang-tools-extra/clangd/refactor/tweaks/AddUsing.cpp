@@ -15,7 +15,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"

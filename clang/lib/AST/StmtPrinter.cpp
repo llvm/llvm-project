@@ -34,7 +34,7 @@
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"

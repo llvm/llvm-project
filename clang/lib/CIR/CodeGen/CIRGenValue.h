@@ -17,7 +17,7 @@
 #include "Address.h"
 
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 #include "CIRGenRecordLayout.h"
 #include "mlir/IR/Value.h"

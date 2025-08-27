@@ -13,7 +13,7 @@
 #include "Headers.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/ExternalSemaSource.h"

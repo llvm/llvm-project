@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_AST_LOCINFOTYPE_H
 #define LLVM_CLANG_AST_LOCINFOTYPE_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang {
 

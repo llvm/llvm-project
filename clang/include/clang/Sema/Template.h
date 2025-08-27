@@ -15,7 +15,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/ArrayRef.h"

@@ -10,7 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang {
 

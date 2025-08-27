@@ -28,7 +28,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/CodeGenOptions.h"

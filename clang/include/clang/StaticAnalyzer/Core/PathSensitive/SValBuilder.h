@@ -18,7 +18,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"

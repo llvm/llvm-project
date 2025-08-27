@@ -22,7 +22,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/Redeclarable.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"

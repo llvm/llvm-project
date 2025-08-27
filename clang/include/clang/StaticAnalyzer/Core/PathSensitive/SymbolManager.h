@@ -15,7 +15,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMBOLMANAGER_H
 
 #include "clang/AST/Expr.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"

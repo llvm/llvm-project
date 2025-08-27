@@ -17,7 +17,7 @@
 #include "CGBuilder.h"
 #include "CGValue.h"
 #include "CodeGenModule.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"

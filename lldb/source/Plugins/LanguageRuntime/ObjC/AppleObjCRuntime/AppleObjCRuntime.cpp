@@ -37,7 +37,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 

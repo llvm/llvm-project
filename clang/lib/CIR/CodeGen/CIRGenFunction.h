@@ -27,7 +27,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"

@@ -23,7 +23,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "llvm/Support/JSON.h"
 
 namespace clang {

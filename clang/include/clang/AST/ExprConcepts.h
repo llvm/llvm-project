@@ -22,7 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/ErrorHandling.h"

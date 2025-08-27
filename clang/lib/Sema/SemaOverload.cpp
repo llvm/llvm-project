@@ -19,7 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/OperatorKinds.h"

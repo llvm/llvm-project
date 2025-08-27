@@ -15,7 +15,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
 

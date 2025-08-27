@@ -26,7 +26,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/Builtins.h"

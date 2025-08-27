@@ -12,7 +12,7 @@
 
 #include "clang/Sema/SemaBPF.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/ParsedAttr.h"

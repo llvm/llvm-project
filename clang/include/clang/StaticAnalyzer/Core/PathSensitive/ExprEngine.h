@@ -16,7 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_EXPRENGINE_H
 
 #include "clang/AST/Expr.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/Analysis/ProgramPoint.h"

@@ -27,7 +27,7 @@
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/PartialDiagnostic.h"

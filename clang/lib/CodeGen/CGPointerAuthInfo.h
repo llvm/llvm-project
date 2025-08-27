@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGPOINTERAUTHINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_CGPOINTERAUTHINFO_H
 
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
