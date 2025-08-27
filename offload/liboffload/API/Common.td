@@ -90,6 +90,7 @@ def ol_errc_t : Enum {
     Etor<"COMPILE_FAILURE", "jit compile failure while processing binary image">,
     Etor<"LINK_FAILURE", "linker failure while processing binary image">,
     Etor<"BACKEND_FAILURE", "the plugin backend is in an invalid or unsupported state">,
+    Etor<"QUEUE_ERROR", "the queue entered an error state">,
     Etor<"UNINITIALIZED", "not initialized">,
 
     // Handle related errors - only makes sense for liboffload

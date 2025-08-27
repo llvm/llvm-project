@@ -644,6 +644,13 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
   return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
 }
 
+Error olGetQueueError_impl(ol_queue_handle_t Queue, ol_result_t *Error,
+                           ol_queue_handle_t *ErrQueue) {
+  // TODO
+  *Error = nullptr;
+  return Error::success();
+}
+
 Error olSyncEvent_impl(ol_event_handle_t Event) {
   // No event info means that this event was complete on creation
   if (!Event->EventInfo)
