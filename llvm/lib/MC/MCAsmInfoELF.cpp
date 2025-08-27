@@ -41,6 +41,7 @@ bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
 
 MCAsmInfoELF::MCAsmInfoELF() {
   HasIdentDirective = true;
+  HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";

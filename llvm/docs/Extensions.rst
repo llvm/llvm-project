@@ -28,6 +28,21 @@ hexadecimal format instead of decimal if desired.
   .section .data
   .float 0x1c2.2ap3
 
+``.prefalign`` directive
+------------------------
+
+The ``.prefalign`` directive sets the preferred alignment for a section,
+and enables the section's final alignment to be set in a way that is
+dependent on the section size (currently only supported with ELF).
+
+If the section size is less than the section's minimum alignment as
+determined using ``.align`` family directives, the section's alignment
+will be equal to its minimum alignment. Otherwise, if the section size is
+between the minimum alignment and the preferred alignment, the section's
+alignment will be equal to the power of 2 greater than or equal to the
+section size. Otherwise, the section's alignment will be equal to the
+preferred alignment.
+
 Machine-specific Assembly Syntax
 ================================
 
