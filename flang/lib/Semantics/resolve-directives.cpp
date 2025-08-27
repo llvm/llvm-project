@@ -531,6 +531,9 @@ public:
   bool Pre(const parser::OpenMPDeclarativeAllocate &);
   void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPAssumeConstruct &);
+  void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPAtomicConstruct &);
   void Post(const parser::OpenMPAtomicConstruct &) { PopContext(); }
 
@@ -1740,10 +1743,13 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_task:
   case llvm::omp::Directive::OMPD_taskgroup:
   case llvm::omp::Directive::OMPD_teams:
+  case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
+  case llvm::omp::Directive::OMPD_target_teams_workdistribute:
   case llvm::omp::Directive::OMPD_target_parallel:
+  case llvm::omp::Directive::OMPD_teams_workdistribute:
     PushContext(dirSpec.source, dirId);
     break;
   default:
@@ -1773,9 +1779,12 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_task:
   case llvm::omp::Directive::OMPD_teams:
+  case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
-  case llvm::omp::Directive::OMPD_target_parallel: {
+  case llvm::omp::Directive::OMPD_target_parallel:
+  case llvm::omp::Directive::OMPD_target_teams_workdistribute:
+  case llvm::omp::Directive::OMPD_teams_workdistribute: {
     bool hasPrivate;
     for (const auto *allocName : allocateNames_) {
       hasPrivate = false;
@@ -2214,6 +2223,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   return false;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::OpenMPAssumeConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_assume);
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPAtomicConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_atomic);
   return true;
@@ -2455,7 +2469,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     // investigate the flags we can intermix with.
     if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
             .none() ||
-        !checkSym.flags().none() || semantics::IsAssumedShape(checkSym) ||
+        !checkSym.flags().none() || IsAssumedShape(checkSym) ||
         semantics::IsAllocatableOrPointer(checkSym)) {
       return false;
     }

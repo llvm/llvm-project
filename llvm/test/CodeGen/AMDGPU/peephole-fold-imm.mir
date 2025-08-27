@@ -188,8 +188,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_sreg_64_to_sreg_64
     ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1311768467750121200
-    ; GCN-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467750121200
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[S_MOV_B]]
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[S_MOV_B64_]]
     %0:sreg_64 = S_MOV_B64 1311768467750121200
     %1:sreg_64 = COPY killed %0
     SI_RETURN_TO_EPILOG %1
@@ -761,8 +760,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: fold_av_mov_b32_imm_pseudo_inlineimm_to_av
     ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_32 = COPY killed [[AV_MOV_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B32_e32_]]
     %0:av_32 = AV_MOV_B32_IMM_PSEUDO 64, implicit $exec
     %1:av_32 = COPY killed %0
     SI_RETURN_TO_EPILOG implicit %1
@@ -800,9 +799,67 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: fold_av_mov_b64_imm_pseudo_inlineimm_to_av
     ; GCN: [[AV_MOV_:%[0-9]+]]:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY killed [[AV_MOV_]]
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY]]
+    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 64, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B]]
     %0:av_64_align2 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
     %1:av_64_align2 = COPY killed %0
     SI_RETURN_TO_EPILOG implicit %1
+...
+
+---
+name:            fold_simm_16_sub_to_lo_from_mov_64_virt_sgpr16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_16_sub_to_lo_from_mov_64_virt_sgpr16
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_lo16 = COPY killed [[S_MOV_B64_]].lo16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    %0:sreg_64 = S_MOV_B64 64
+    %1:sgpr_lo16 = COPY killed %0.lo16
+    SI_RETURN_TO_EPILOG %1
+
+...
+---
+name:            fold_simm_16_sub_to_hi_from_mov_64_inline_imm_virt_sgpr16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_16_sub_to_hi_from_mov_64_inline_imm_virt_sgpr16
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_lo16 = COPY killed [[S_MOV_B64_]].hi16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    %0:sreg_64 = S_MOV_B64 64
+    %1:sgpr_lo16 = COPY killed %0.hi16
+    SI_RETURN_TO_EPILOG %1
+
+...
+
+---
+name:            fold_simm_16_sub_to_lo_from_mov_64_phys_sgpr16_lo
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_16_sub_to_lo_from_mov_64_phys_sgpr16_lo
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 64
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    %0:sreg_64 = S_MOV_B64 64
+    $sgpr0_lo16 = COPY killed %0.lo16
+    SI_RETURN_TO_EPILOG $sgpr0_lo16
+
+...
+---
+name:            fold_simm_16_sub_to_hi_from_mov_64_inline_imm_phys_sgpr16_lo
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_16_sub_to_hi_from_mov_64_inline_imm_phys_sgpr16_lo
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    %0:sreg_64 = S_MOV_B64 64
+    $sgpr0_lo16 = COPY killed %0.hi16
+    SI_RETURN_TO_EPILOG $sgpr0_lo16
+
 ...

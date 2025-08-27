@@ -129,8 +129,6 @@ static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
     return (tensorDims == 5)
                ? checkTMALoadParams(mode, false, 0)
                : emitError(loc, "Gather4 mode expects 5 coordinates");
-  default:
-    return emitError(loc, "Invalid LoadMode in CpAsyncBulkTensorPrefetchOp.");
   }
   return success();
 }
