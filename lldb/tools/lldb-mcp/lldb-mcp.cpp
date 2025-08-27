@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
 
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
-      fileno(stdout), File::eOpenOptionReadOnly, NativeFile::Unowned);
+      fileno(stdout), File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
   constexpr llvm::StringLiteral client_name = "stdio";
   static MainLoop loop;
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
   if (llvm::Error error = instance_up->Run()) {
     llvm::logAllUnhandledErrors(std::move(error), llvm::WithColor::error(),
-                                "DAP session error: ");
+                                "MCP error: ");
     return EXIT_FAILURE;
   }
 

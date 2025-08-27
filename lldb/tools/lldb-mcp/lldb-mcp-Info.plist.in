@@ -5,11 +5,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.apple.lldb-dap</string>
+	<string>com.apple.lldb-mcp</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>lldb-dap</string>
+	<string>lldb-mcp</string>
 	<key>CFBundleVersion</key>
 	<string>${LLDB_VERSION}</string>
 	<key>SecTaskAccess</key>
