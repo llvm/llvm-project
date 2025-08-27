@@ -281,7 +281,7 @@ static void phiNodeReplacement(IntrinsicInst *II) {
     SmallVector<Instruction *> UsesInBlock;
     collectBlockUseDef(Phi, UsesInBlock);
 
-    for (uint I = 0; I < Phi->getNumIncomingValues(); I++) {
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I < E; I++) {
       auto *CurrIncomingBB = Phi->getIncomingBlock(I);
       phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
     }
