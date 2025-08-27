@@ -18,7 +18,7 @@ Parts:
     NumRootParameters: 1
     RootParametersOffset: 24
     NumStaticSamplers: 0
-    StaticSamplersOffset: 60
+    StaticSamplersOffset: 68
     Parameters:         
     - ParameterType: 0 # SRV
       ShaderVisibility: 3 # Domain
@@ -41,7 +41,7 @@ Parts:
 # CHECK-NEXT:       NumRootParameters: 1
 # CHECK-NEXT:       RootParametersOffset: 24
 # CHECK-NEXT:       NumStaticSamplers: 0
-# CHECK-NEXT:       StaticSamplersOffset: 60
+# CHECK-NEXT:       StaticSamplersOffset: 68
 # CHECK-NEXT:       Parameters:
 # CHECK-NEXT:         - ParameterType:   0
 # CHECK-NEXT:           ShaderVisibility: 3
