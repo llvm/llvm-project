@@ -276,7 +276,6 @@ bool llvm::applyDebugifyMetadata(
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
-    DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
 
