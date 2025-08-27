@@ -15,7 +15,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALS_H
 
 #include "clang/AST/Expr.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"

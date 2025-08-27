@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TYPETRAITS_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include <optional>
 
 namespace clang::tidy::utils::type_traits {

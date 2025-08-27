@@ -14,7 +14,7 @@
 #define LLVM_CLANG_SEMA_SEMARISCV_H
 
 #include "clang/AST/ASTFwd.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringMap.h"
