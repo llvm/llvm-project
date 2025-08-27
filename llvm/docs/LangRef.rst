@@ -8381,7 +8381,7 @@ Example:
 
     @global = global i32 1, !elf_section_properties !{i32 1879002126, i32 8}
 
-This defines as global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
+This defines a global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
 size 8.
 
 
