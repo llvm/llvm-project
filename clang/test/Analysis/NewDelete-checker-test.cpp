@@ -1,31 +1,37 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
 // RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete
 //
 // RUN: %clang_analyze_cc1 -DLEAKS -std=c++17 -fblocks %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,newdelete,leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
 //
 // RUN: %clang_analyze_cc1 -std=c++17 -fblocks -verify %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -verify=expected,leak,inspection \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \

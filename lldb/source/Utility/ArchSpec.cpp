@@ -1439,6 +1439,10 @@ bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
   return lhs.GetCore() == rhs.GetCore();
 }
 
+bool lldb_private::operator!=(const ArchSpec &lhs, const ArchSpec &rhs) {
+  return !(lhs == rhs);
+}
+
 bool ArchSpec::IsFullySpecifiedTriple() const {
   if (!TripleOSWasSpecified())
     return false;
