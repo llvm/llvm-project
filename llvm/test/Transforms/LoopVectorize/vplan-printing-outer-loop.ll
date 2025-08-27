@@ -13,14 +13,14 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT: Successor(s): outer.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT: outer.header:
-; CHECK-NEXT:   WIDEN-PHI ir<%outer.iv> = phi [ ir<%outer.iv.next>, outer.latch ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR ir<%outer.iv> = phi [ ir<%outer.iv.next>, outer.latch ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:   EMIT ir<%gep.1> = getelementptr ir<@arr2>, ir<0>, ir<%outer.iv>
 ; CHECK-NEXT:   EMIT store ir<%outer.iv>, ir<%gep.1>
 ; CHECK-NEXT:   EMIT ir<%add> = add ir<%outer.iv>, ir<%n>
 ; CHECK-NEXT: Successor(s): inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT: inner:
-; CHECK-NEXT:   WIDEN-PHI ir<%inner.iv> = phi [ ir<%inner.iv.next>, inner ], [ ir<0>, outer.header ]
+; CHECK-NEXT:   EMIT-SCALAR ir<%inner.iv> = phi [ ir<%inner.iv.next>, inner ], [ ir<0>, outer.header ]
 ; CHECK-NEXT:   EMIT ir<%gep.2> = getelementptr ir<@arr>, ir<0>, ir<%inner.iv>, ir<%outer.iv>
 ; CHECK-NEXT:   EMIT store ir<%add>, ir<%gep.2>
 ; CHECK-NEXT:   EMIT ir<%inner.iv.next> = add ir<%inner.iv>, ir<1>

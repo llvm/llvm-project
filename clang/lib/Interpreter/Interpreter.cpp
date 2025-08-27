@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeviceOffload.h"
+#include "IncrementalAction.h"
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 #include "InterpreterUtils.h"
@@ -28,7 +29,6 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"
-#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -86,7 +86,6 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
 CreateCI(const llvm::opt::ArgStringList &Argv) {
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
   // FIXME: Clang should register these container operations automatically.
@@ -98,7 +97,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // a well formed diagnostic object.
   DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -174,11 +173,10 @@ IncrementalCompilerBuilder::create(std::string TT,
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
@@ -250,120 +248,6 @@ IncrementalCompilerBuilder::CreateCudaHost() {
   return IncrementalCompilerBuilder::createCuda(false);
 }
 
-class InProcessPrintingASTConsumer final : public MultiplexConsumer {
-  Interpreter &Interp;
-
-public:
-  InProcessPrintingASTConsumer(std::unique_ptr<ASTConsumer> C, Interpreter &I)
-      : MultiplexConsumer(std::move(C)), Interp(I) {}
-  bool HandleTopLevelDecl(DeclGroupRef DGR) override final {
-    if (DGR.isNull())
-      return true;
-
-    for (Decl *D : DGR)
-      if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
-        if (TLSD && TLSD->isSemiMissing()) {
-          auto ExprOrErr =
-              Interp.ExtractValueFromExpr(cast<Expr>(TLSD->getStmt()));
-          if (llvm::Error E = ExprOrErr.takeError()) {
-            llvm::logAllUnhandledErrors(std::move(E), llvm::errs(),
-                                        "Value printing failed: ");
-            return false; // abort parsing
-          }
-          TLSD->setStmt(*ExprOrErr);
-        }
-
-    return MultiplexConsumer::HandleTopLevelDecl(DGR);
-  }
-};
-
-/// A custom action enabling the incremental processing functionality.
-///
-/// The usual \p FrontendAction expects one call to ExecuteAction and once it
-/// sees a call to \p EndSourceFile it deletes some of the important objects
-/// such as \p Preprocessor and \p Sema assuming no further input will come.
-///
-/// \p IncrementalAction ensures it keep its underlying action's objects alive
-/// as long as the \p IncrementalParser needs them.
-///
-class IncrementalAction : public WrapperFrontendAction {
-private:
-  bool IsTerminating = false;
-  Interpreter &Interp;
-  std::unique_ptr<ASTConsumer> Consumer;
-
-public:
-  IncrementalAction(CompilerInstance &CI, llvm::LLVMContext &LLVMCtx,
-                    llvm::Error &Err, Interpreter &I,
-                    std::unique_ptr<ASTConsumer> Consumer = nullptr)
-      : WrapperFrontendAction([&]() {
-          llvm::ErrorAsOutParameter EAO(&Err);
-          std::unique_ptr<FrontendAction> Act;
-          switch (CI.getFrontendOpts().ProgramAction) {
-          default:
-            Err = llvm::createStringError(
-                std::errc::state_not_recoverable,
-                "Driver initialization failed. "
-                "Incremental mode for action %d is not supported",
-                CI.getFrontendOpts().ProgramAction);
-            return Act;
-          case frontend::ASTDump:
-          case frontend::ASTPrint:
-          case frontend::ParseSyntaxOnly:
-            Act = CreateFrontendAction(CI);
-            break;
-          case frontend::PluginAction:
-          case frontend::EmitAssembly:
-          case frontend::EmitBC:
-          case frontend::EmitObj:
-          case frontend::PrintPreprocessedInput:
-          case frontend::EmitLLVMOnly:
-            Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
-            break;
-          }
-          return Act;
-        }()),
-        Interp(I), Consumer(std::move(Consumer)) {}
-  FrontendAction *getWrapped() const { return WrappedAction.get(); }
-  TranslationUnitKind getTranslationUnitKind() override {
-    return TU_Incremental;
-  }
-
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override {
-    std::unique_ptr<ASTConsumer> C =
-        WrapperFrontendAction::CreateASTConsumer(CI, InFile);
-
-    if (Consumer) {
-      std::vector<std::unique_ptr<ASTConsumer>> Cs;
-      Cs.push_back(std::move(Consumer));
-      Cs.push_back(std::move(C));
-      return std::make_unique<MultiplexConsumer>(std::move(Cs));
-    }
-
-    return std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp);
-  }
-
-  void ExecuteAction() override {
-    WrapperFrontendAction::ExecuteAction();
-    getCompilerInstance().getSema().CurContext = nullptr;
-  }
-
-  // Do not terminate after processing the input. This allows us to keep various
-  // clang objects alive and to incrementally grow the current TU.
-  void EndSourceFile() override {
-    // The WrappedAction can be nullptr if we issued an error in the ctor.
-    if (IsTerminating && getWrapped())
-      WrapperFrontendAction::EndSourceFile();
-  }
-
-  void FinalizeAction() {
-    assert(!IsTerminating && "Already finalized!");
-    IsTerminating = true;
-    EndSourceFile();
-  }
-};
-
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
@@ -383,22 +267,23 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
     return;
   CI->ExecuteAction(*Act);
 
-  IncrParser = std::make_unique<IncrementalParser>(*CI, ErrOut);
+  IncrParser =
+      std::make_unique<IncrementalParser>(*CI, Act.get(), ErrOut, PTUs);
 
   if (ErrOut)
     return;
 
-  if (getCodeGen()) {
-    CachedInCodeGenModule = GenModule();
+  if (Act->getCodeGen()) {
+    Act->CacheCodeGenModule();
     // The initial PTU is filled by `-include` or by CUDA includes
     // automatically.
     if (!CI->getPreprocessorOpts().Includes.empty()) {
       // We can't really directly pass the CachedInCodeGenModule to the Jit
       // because it will steal it, causing dangling references as explained in
       // Interpreter::Execute
-      auto M = llvm::CloneModule(*CachedInCodeGenModule);
+      auto M = llvm::CloneModule(*Act->getCachedCodeGenModule());
       ASTContext &C = CI->getASTContext();
-      RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
+      IncrParser->RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
     }
     if (llvm::Error Err = CreateExecutor()) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
@@ -407,7 +292,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   }
 
   // Not all frontends support code-generation, e.g. ast-dump actions don't
-  if (getCodeGen()) {
+  if (Act->getCodeGen()) {
     // Process the PTUs that came from initialization. For example -include will
     // give us a header that's processed at initialization of the preprocessor.
     for (PartialTranslationUnit &PTU : PTUs)
@@ -440,11 +325,10 @@ const char *const Runtimes = R"(
     #define __CLANG_REPL__ 1
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
-    void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
     struct __clang_Interpreter_NewTag{} __ci_newtag;
     void* operator new(__SIZE_TYPE__, void* __p, __clang_Interpreter_NewTag) noexcept;
     template <class T, class = T (*)() /*disable for arrays*/>
-    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
+    void __clang_Interpreter_SetValueCopyArr(const T* Src, void* Placement, unsigned long Size) {
       for (auto Idx = 0; Idx < Size; ++Idx)
         new ((void*)(((T*)Placement) + Idx), __ci_newtag) T(Src[Idx]);
     }
@@ -454,8 +338,12 @@ const char *const Runtimes = R"(
     }
 #else
     #define EXTERN_C extern
+    EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
+    EXTERN_C inline void __clang_Interpreter_SetValueCopyArr(const void* Src, void* Placement, unsigned long Size) {
+      memcpy(Placement, Src, Size);
+    }
 #endif // __cplusplus
-
+  EXTERN_C void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
@@ -470,12 +358,12 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
 
   // Add runtime code and set a marker to hide it from user code. Undo will not
   // go through that.
-  auto PTU = Interp->Parse(Runtimes);
-  if (!PTU)
-    return PTU.takeError();
+  Err = Interp->ParseAndExecute(Runtimes);
+  if (Err)
+    return std::move(Err);
+
   Interp->markUserCodeStart();
 
-  Interp->ValuePrintingInfo.resize(4);
   return std::move(Interp);
 }
 
@@ -514,8 +402,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   Interp->DeviceCI = std::move(DCI);
 
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(), IMVFS, Err,
-      Interp->PTUs);
+      *Interp->DeviceCI, *Interp->getCompilerInstance(),
+      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);
@@ -524,11 +412,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   return std::move(Interp);
 }
 
-const CompilerInstance *Interpreter::getCompilerInstance() const {
-  return CI.get();
-}
-
 CompilerInstance *Interpreter::getCompilerInstance() { return CI.get(); }
+const CompilerInstance *Interpreter::getCompilerInstance() const {
+  return const_cast<Interpreter *>(this)->getCompilerInstance();
+}
 
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
@@ -557,30 +444,6 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
-PartialTranslationUnit &
-Interpreter::RegisterPTU(TranslationUnitDecl *TU,
-                         std::unique_ptr<llvm::Module> M /*={}*/,
-                         IncrementalAction *Action) {
-  PTUs.emplace_back(PartialTranslationUnit());
-  PartialTranslationUnit &LastPTU = PTUs.back();
-  LastPTU.TUPart = TU;
-
-  if (!M)
-    M = GenModule(Action);
-
-  assert((!getCodeGen(Action) || M) &&
-         "Must have a llvm::Module at this point");
-
-  LastPTU.TheModule = std::move(M);
-  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
-                          << ": [TU=" << LastPTU.TUPart);
-  if (LastPTU.TheModule)
-    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
-                            << LastPTU.TheModule->getName() << ")");
-  LLVM_DEBUG(llvm::dbgs() << "]\n");
-  return LastPTU;
-}
-
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
@@ -590,7 +453,7 @@ Interpreter::Parse(llvm::StringRef Code) {
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    RegisterPTU(*DeviceTU, nullptr, DeviceAct.get());
+    DeviceParser->RegisterPTU(*DeviceTU);
 
     llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
     if (!PTX)
@@ -610,7 +473,14 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  return RegisterPTU(*TuOrErr);
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = *TuOrErr;
+
+  if (std::unique_ptr<llvm::Module> M = Act->GenModule())
+    LastPTU.TheModule = std::move(M);
+
+  return LastPTU;
 }
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
@@ -647,7 +517,7 @@ llvm::Error Interpreter::CreateExecutor() {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
                                                std::error_code());
-  if (!getCodeGen())
+  if (!Act->getCodeGen())
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
@@ -726,7 +596,7 @@ Interpreter::getSymbolAddress(GlobalDecl GD) const {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No execution engine",
                                                std::error_code());
-  llvm::StringRef MangledName = getCodeGen()->GetMangledName(GD);
+  llvm::StringRef MangledName = Act->getCodeGen()->GetMangledName(GD);
   return getSymbolAddress(MangledName);
 }
 
@@ -752,10 +622,18 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
 
 llvm::Error Interpreter::Undo(unsigned N) {
 
-  if (N > getEffectivePTUSize())
+  if (getEffectivePTUSize() == 0) {
     return llvm::make_error<llvm::StringError>("Operation failed. "
-                                               "Too many undos",
+                                               "No input left to undo",
                                                std::error_code());
+  } else if (N > getEffectivePTUSize()) {
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv(
+            "Operation failed. Wanted to undo {0} inputs, only have {1}.", N,
+            getEffectivePTUSize()),
+        std::error_code());
+  }
+
   for (unsigned I = 0; I < N; I++) {
     if (IncrExecutor) {
       if (llvm::Error Err = IncrExecutor->removeModule(PTUs.back()))
@@ -794,38 +672,4 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
 
   return llvm::Error::success();
 }
-
-std::unique_ptr<llvm::Module>
-Interpreter::GenModule(IncrementalAction *Action) {
-  static unsigned ID = 0;
-  if (CodeGenerator *CG = getCodeGen(Action)) {
-    // Clang's CodeGen is designed to work with a single llvm::Module. In many
-    // cases for convenience various CodeGen parts have a reference to the
-    // llvm::Module (TheModule or Module) which does not change when a new
-    // module is pushed. However, the execution engine wants to take ownership
-    // of the module which does not map well to CodeGen's design. To work this
-    // around we created an empty module to make CodeGen happy. We should make
-    // sure it always stays empty.
-    assert(((!CachedInCodeGenModule ||
-             !getCompilerInstance()->getPreprocessorOpts().Includes.empty()) ||
-            (CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty())) &&
-           "CodeGen wrote to a readonly module");
-    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
-    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
-    return M;
-  }
-  return nullptr;
-}
-
-CodeGenerator *Interpreter::getCodeGen(IncrementalAction *Action) const {
-  if (!Action)
-    Action = Act.get();
-  FrontendAction *WrappedAct = Action->getWrapped();
-  if (!WrappedAct->hasIRSupport())
-    return nullptr;
-  return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();
-}
-} // namespace clang
+} // end namespace clang

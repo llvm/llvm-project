@@ -35,6 +35,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCValue;
+class Triple;
 class raw_ostream;
 
 namespace WinEH {
@@ -300,6 +301,9 @@ protected:
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
 
+  // True if the target respects .prefalign directives.
+  bool HasPreferredAlignment = false;
+
   /// True if the target has .type and .size directives, this is true for most
   /// ELF targets.  Defaults to true.
   bool HasDotTypeDotSizeDirective = true;
@@ -485,6 +489,9 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
+                                    const Triple &, raw_ostream &) const {}
+
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:
   ///
@@ -493,6 +500,10 @@ public:
   /// returns false => .section .text,#alloc,#execinstr
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
+
+  // Return true if a .align directive should use "optimized nops" to fill
+  // instead of 0s.
+  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
@@ -595,6 +606,7 @@ public:
   }
 
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
+  bool hasPreferredAlignment() const { return HasPreferredAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }

@@ -10,8 +10,7 @@ define void @array_at_plus_one(i32 %n) {
 ; CHECK: [[VEC_IV_TRUNC:%.+]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ [[VEC_IV_TRUNC_NEXT:%.+]], %vector.body ]
 ; CHECK: [[T2:%.+]] = add nsw i64 %index, 12
 ; CHECK-NEXT: [[GEP:%.+]] = getelementptr inbounds [1024 x i32], ptr @array, i64 0, i64 [[T2]]
-; CHECK-NEXT: [[GEP0:%.+]] = getelementptr inbounds i32, ptr [[GEP]], i32 0
-; CHECK-NEXT: store <4 x i32> [[VEC_IV_TRUNC]], ptr [[GEP0]]
+; CHECK-NEXT: store <4 x i32> [[VEC_IV_TRUNC]], ptr [[GEP]]
 ; CHECK: [[VEC_IV_TRUNC_NEXT]] = add <4 x i32> [[VEC_IV_TRUNC]], splat (i32 4)
 ; CHECK: ret void
 ;

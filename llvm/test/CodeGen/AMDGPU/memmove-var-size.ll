@@ -460,10 +460,10 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_3
-; CHECK-NEXT:  ; %bb.1: ; %Flow34
+; CHECK-NEXT:  ; %bb.1: ; %Flow36
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_10
-; CHECK-NEXT:  .LBB3_2: ; %Flow35
+; CHECK-NEXT:  .LBB3_2: ; %Flow37
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -494,7 +494,7 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, s6
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s9
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_5
-; CHECK-NEXT:  .LBB3_6: ; %Flow29
+; CHECK-NEXT:  .LBB3_6: ; %Flow31
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_and_saveexec_b32 s8, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB3_9
@@ -520,7 +520,7 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, s6
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s9
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_8
-; CHECK-NEXT:  .LBB3_9: ; %Flow27
+; CHECK-NEXT:  .LBB3_9: ; %Flow29
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -556,7 +556,7 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, s5
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_12
-; CHECK-NEXT:  .LBB3_13: ; %Flow33
+; CHECK-NEXT:  .LBB3_13: ; %Flow35
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB3_16
@@ -584,7 +584,7 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_15
-; CHECK-NEXT:  .LBB3_16: ; %Flow31
+; CHECK-NEXT:  .LBB3_16: ; %Flow33
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -907,10 +907,10 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_3
-; CHECK-NEXT:  ; %bb.1: ; %Flow41
+; CHECK-NEXT:  ; %bb.1: ; %Flow39
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_10
-; CHECK-NEXT:  .LBB6_2: ; %Flow42
+; CHECK-NEXT:  .LBB6_2: ; %Flow40
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .LBB6_3: ; %memmove_copy_forward
@@ -940,7 +940,7 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v11, s6
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s9
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_5
-; CHECK-NEXT:  .LBB6_6: ; %Flow36
+; CHECK-NEXT:  .LBB6_6: ; %Flow34
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_and_saveexec_b32 s8, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_9
@@ -966,11 +966,11 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, s6
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s9
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_8
-; CHECK-NEXT:  .LBB6_9: ; %Flow34
+; CHECK-NEXT:  .LBB6_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -1002,15 +1002,15 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, s5
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_12
-; CHECK-NEXT:  .LBB6_13: ; %Flow40
+; CHECK-NEXT:  .LBB6_13: ; %Flow38
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_16
 ; CHECK-NEXT:  ; %bb.14: ; %memmove_bwd_main_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, -16
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, -16
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, -16
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB6_15: ; %memmove_bwd_main_loop
@@ -1030,7 +1030,7 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    global_store_dwordx4 v[12:13], v[8:11], off
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_15
-; CHECK-NEXT:  .LBB6_16: ; %Flow38
+; CHECK-NEXT:  .LBB6_16: ; %Flow36
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1181,8 +1181,8 @@ define void @memmove_p1_p4(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:  .LBB8_9: ; %Flow31
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -1219,10 +1219,10 @@ define void @memmove_p1_p4(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB8_16
 ; CHECK-NEXT:  ; %bb.14: ; %memmove_bwd_main_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, -16
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, -16
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, -16
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB8_15: ; %memmove_bwd_main_loop

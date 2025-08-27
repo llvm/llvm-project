@@ -51,7 +51,9 @@ function(add_fp_unittest name)
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
-    DEPENDS "${deps}"
+    DEPENDS
+      libc.hdr.stdint_proxy
+      "${deps}"
   )
 endfunction(add_fp_unittest)
 

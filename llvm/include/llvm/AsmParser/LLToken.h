@@ -130,6 +130,7 @@ enum Kind {
   kw_prefix,
   kw_prologue,
   kw_c,
+  kw_prefalign,
 
   kw_cc,
   kw_ccc,
@@ -181,6 +182,7 @@ enum Kind {
   kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
+  kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
@@ -318,6 +320,7 @@ enum Kind {
   kw_fptoui,
   kw_fptosi,
   kw_inttoptr,
+  kw_ptrtoaddr,
   kw_ptrtoint,
   kw_bitcast,
   kw_addrspacecast,

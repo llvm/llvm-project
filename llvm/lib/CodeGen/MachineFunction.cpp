@@ -154,17 +154,17 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function &F) {
+static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
+                                        const Function &F) {
   if (auto MA = F.getFnStackAlign())
     return *MA;
-  return STI->getFrameLowering()->getStackAlign();
+  return STI.getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
-    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
+    : F(F), Target(Target), STI(STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -195,7 +195,7 @@ void MachineFunction::init() {
 
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
-  bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
+  bool CanRealignSP = STI.getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
   bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
                         F.hasFnAttribute("stackrealign");
@@ -209,13 +209,7 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
-
-  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
-  // FIXME: Use Function::hasOptSize().
-  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
-    Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+  Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
@@ -329,6 +323,18 @@ DenormalMode MachineFunction::getDenormalMode(const fltSemantics &FPType) const 
 /// Should we be emitting segmented stack stuff for the function
 bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
+}
+
+Align MachineFunction::getPreferredAlignment() const {
+  Align PrefAlignment = Align(1);
+
+  if (!F.hasOptSize())
+    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
+
+  if (MaybeAlign A = F.getPreferredAlignment())
+    PrefAlignment = *A;
+  
+  return std::max(PrefAlignment, getAlignment());
 }
 
 [[nodiscard]] unsigned
@@ -700,6 +706,26 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
+MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
+  // Numeric callee_type ids are only for indirect calls.
+  if (!CB.isIndirectCall())
+    return;
+
+  MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
+  if (!CalleeTypeList)
+    return;
+
+  for (const MDOperand &Op : CalleeTypeList->operands()) {
+    MDNode *TypeMD = cast<MDNode>(Op);
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+    // Compute numeric type id from generalized type id string
+    uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+    IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+    CalleeTypeIds.push_back(
+        ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
+  }
+}
+
 namespace llvm {
 
   template<>
@@ -921,7 +947,7 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
-  if (!Target.Options.EmitCallSiteInfo)
+  if (!Target.Options.EmitCallSiteInfo && !Target.Options.EmitCallGraphSection)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }

@@ -20,8 +20,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
-
-#include "explogxf.h"
+#include "src/__support/math/exp10f_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {

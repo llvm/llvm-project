@@ -98,7 +98,7 @@ define double @olt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, lt
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, mi
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -115,7 +115,7 @@ define double @olt(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, lt
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, mi
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -412,7 +412,7 @@ define double @uge(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, ge
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, pl
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -429,7 +429,7 @@ define double @uge(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, ge
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, pl
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -452,7 +452,7 @@ define double @ult(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-SD-NEXT:    fcsel d0, d9, d8, lt
+; CHECK-SD-NEXT:    fcsel d0, d9, d8, mi
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -469,7 +469,7 @@ define double @ult(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-GI-NEXT:    bl __getf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    fcsel d0, d8, d9, lt
+; CHECK-GI-NEXT:    fcsel d0, d8, d9, mi
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp], #32 // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
 entry:
