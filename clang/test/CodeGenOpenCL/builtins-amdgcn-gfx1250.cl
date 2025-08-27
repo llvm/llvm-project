@@ -58,6 +58,58 @@ void test_s_wait_tensorcnt() {
   __builtin_amdgcn_s_wait_tensorcnt(0);
 }
 
+// CHECK-LABEL: @test_bitop3_b32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[C:%.*]], ptr [[C_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[C_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.bitop3.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 1)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_bitop3_b32(global uint* out, uint a, uint b, uint c) {
+  *out = __builtin_amdgcn_bitop3_b32(a, b, c, 1);
+}
+
+// CHECK-LABEL: @test_bitop3_b16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i16 [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    store i16 [[C:%.*]], ptr [[C_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[C_ADDR_ASCAST]], align 2
+// CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.amdgcn.bitop3.i16(i16 [[TMP0]], i16 [[TMP1]], i16 [[TMP2]], i32 1)
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i16 [[TMP3]], ptr addrspace(1) [[TMP4]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_bitop3_b16(global ushort* out, ushort a, ushort b, ushort c) {
+  *out = __builtin_amdgcn_bitop3_b16(a, b, c, 1);
+}
+
 // CHECK-LABEL: @test_prng_b32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -1256,6 +1308,145 @@ void test_perm_pk(uint a32, uint a64, uint b32, uint b64, uint2 c, uint2 *out2, 
 void test_prefetch(generic void *fptr, global void *gptr) {
   __builtin_amdgcn_flat_prefetch(fptr, 0);
   __builtin_amdgcn_global_prefetch(gptr, 8);
+}
+
+// CHECK-LABEL: @test_global_add_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store float [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], float [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
+// CHECK-NEXT:    ret float [[TMP2]]
+//
+float test_global_add_f32(global float *addr, float x) {
+  return __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
+}
+
+// CHECK-LABEL: @test_global_add_half2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    ret <2 x half> [[TMP2]]
+//
+half2 test_global_add_half2(global half2 *addr, half2 x) {
+  return __builtin_amdgcn_global_atomic_fadd_v2f16(addr, x);
+}
+
+// CHECK-LABEL: @test_flat_add_2f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    ret <2 x half> [[TMP2]]
+//
+half2 test_flat_add_2f16(generic half2 *addr, half2 x) {
+  return __builtin_amdgcn_flat_atomic_fadd_v2f16(addr, x);
+}
+
+// CHECK-LABEL: @test_flat_add_2bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i16> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to <2 x bfloat>
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[TMP3]] to <2 x i16>
+// CHECK-NEXT:    ret <2 x i16> [[TMP4]]
+//
+short2 test_flat_add_2bf16(generic short2 *addr, short2 x) {
+  return __builtin_amdgcn_flat_atomic_fadd_v2bf16(addr, x);
+}
+
+// CHECK-LABEL: @test_global_add_2bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i16> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to <2 x bfloat>
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[TMP3]] to <2 x i16>
+// CHECK-NEXT:    ret <2 x i16> [[TMP4]]
+//
+short2 test_global_add_2bf16(global short2 *addr, short2 x) {
+  return __builtin_amdgcn_global_atomic_fadd_v2bf16(addr, x);
+}
+
+// CHECK-LABEL: @test_local_add_2f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i16>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(3) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <2 x i16> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[ADDR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to <2 x bfloat>
+// CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP0]], <2 x bfloat> [[TMP2]] syncscope("agent") monotonic, align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[TMP3]] to <2 x i16>
+// CHECK-NEXT:    ret <2 x i16> [[TMP4]]
+//
+short2 test_local_add_2f16(local short2 *addr, short2 x) {
+  return __builtin_amdgcn_ds_atomic_fadd_v2bf16(addr, x);
+}
+
+// CHECK-LABEL: @test_local_add_2bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(3) [[ADDR:%.*]], ptr [[ADDR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <2 x half> [[X:%.*]], ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[ADDR_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[X_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4
+// CHECK-NEXT:    ret <2 x half> [[TMP2]]
+//
+half2 test_local_add_2bf16(local half2 *addr, half2 x) {
+  return __builtin_amdgcn_ds_atomic_fadd_v2f16(addr, x);
 }
 
 // CHECK-LABEL: @test_cvt_pk_fp8_f32_e5m3(
