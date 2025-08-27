@@ -30,7 +30,8 @@ llvm::Align CIRDataLayout::getAlignment(mlir::Type ty, bool useABIAlign) const {
       return llvm::Align(1);
 
     // Get the layout annotation... which is lazily created on demand.
-    llvm_unreachable("getAlignment()) for record type is not implemented");
+    assert(!cir::MissingFeatures::alignCXXRecordDecl());
+    return llvm::Align(1);
   }
 
   // FIXME(cir): This does not account for differnt address spaces, and relies
