@@ -1909,11 +1909,12 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
   B.SetInsertPoint(&I);
   SmallVector<Type *, 1> Types = {I.getInsertedValueOperand()->getType()};
   SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    if (isa<UndefValue>(Op))
-      Args.push_back(UndefValue::get(B.getInt32Ty()));
-    else
-      Args.push_back(Op);
+  Value *AggregateOp = I.getAggregateOperand();
+  if (isa<UndefValue>(AggregateOp))
+    Args.push_back(UndefValue::get(B.getInt32Ty()));
+  else
+    Args.push_back(AggregateOp);
+  Args.push_back(I.getInsertedValueOperand());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
   Instruction *NewI =
