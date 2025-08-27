@@ -1790,7 +1790,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                                  TheLoop);
       return false;
     }
-    SpeculativeLoads.insert(LI);
+    FaultOnlyFirstLoads.insert(LI);
     LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
   }
 

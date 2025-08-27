@@ -10041,7 +10041,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.getSpeculativeLoads().empty()) {
+  if (!LVL.getFaultOnlyFirstLoads().empty()) {
     reportVectorizationFailure("Auto-vectorization of loops with speculative "
                                "load is not supported",
                                "SpeculativeLoadsNotSupported", ORE, L);
