@@ -11,8 +11,21 @@
 
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/entry-names.h"
 
 struct EnvironmentDefaultList;
+
+// ExecutionEnvironment::Configure() allows for optional callback functions
+// to be run pre and post the core logic.
+// Most likely scenario is when a user supplied constructor function is
+// run prior to _QQmain calling RTNAME(ProgramStart)().
+
+extern "C" {
+void RTNAME(RegisterConfigureEnv)(void (*)(int, const char *[], const char *[],
+                                      const EnvironmentDefaultList *),
+    void (*)(
+        int, const char *[], const char *[], const EnvironmentDefaultList *));
+}
 
 namespace Fortran::runtime {
 
@@ -42,6 +55,14 @@ struct ExecutionEnvironment {
       ExecutionEnvironment(){};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
+
+  // Optional callback routines to be invoked pre and post
+  // execution environment setup.
+  void (*PreConfigureEnv)(int, const char *[], const char *[],
+      const EnvironmentDefaultList *){nullptr};
+  void (*PostConfigureEnv)(int, const char *[], const char *[],
+      const EnvironmentDefaultList *){nullptr};
+
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 

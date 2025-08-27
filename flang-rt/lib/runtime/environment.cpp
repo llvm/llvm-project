@@ -78,6 +78,13 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   argc = ac;
   argv = av;
   SetEnvironmentDefaults(envDefaults);
+
+  if (PreConfigureEnv) {
+    // Run an optional callback function prior to the core of the
+    // ExecutionEnvironment() logic.
+    PreConfigureEnv(ac, av, env, envDefaults);
+  }
+
 #ifdef _WIN32
   envp = _environ;
 #else
@@ -173,6 +180,12 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   }
 
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+
+  if (PostConfigureEnv) {
+    // Run an optional callback function after the core of the
+    // ExecutionEnvironment() logic.
+    PostConfigureEnv(ac, av, env, envDefaults);
+  }
 }
 
 const char *ExecutionEnvironment::GetEnv(
@@ -248,5 +261,23 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+
+extern "C" {
+
+// User supplied callback functions to further customize the configuration
+// of the runtime environment.
+// The pre and post callback functions are called upon entry and exit
+// of ExecutionEnvironment::Configure() respectively.
+
+void RTNAME(RegisterConfigureEnv)(
+    void (*pre)(int argc, const char *argv[], const char *envp[],
+        const EnvironmentDefaultList *),
+    void (*post)(int argc, const char *argv[], const char *envp[],
+        const EnvironmentDefaultList *)) {
+
+  executionEnvironment.PreConfigureEnv = pre;
+  executionEnvironment.PostConfigureEnv = post;
+}
+} // extern "C"
 
 } // namespace Fortran::runtime
