@@ -558,8 +558,7 @@ Expected<unsigned> InstrBuilder::getVariantSchedClassID(const MCInst &MCI,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<Instrument *> &IVec,
-                                  function_ref<void(InstrDesc &)> Customizer) {
+                                  const SmallVector<Instrument *> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -634,8 +633,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
   // Now add the new descriptor.
 
-  if (Customizer) {
-    Customizer(*ID);
+  if (IM.canCustomize(IVec)) {
+    IM.customize(IVec, *ID);
     return *CustomDescriptors.emplace_back(std::move(ID));
   }
 
@@ -682,10 +681,9 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<Instrument *> &IVec,
-                                function_ref<void(InstrDesc &)> Customizer) {
+                                const SmallVector<Instrument *> &IVec) {
   Expected<const InstrDesc &> DescOrErr =
-      Customizer ? createInstrDescImpl(MCI, IVec, Customizer)
+      IM.canCustomize(IVec) ? createInstrDescImpl(MCI, IVec)
                  : getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();

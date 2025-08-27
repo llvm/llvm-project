@@ -92,8 +92,7 @@ class InstrBuilder {
 
   Expected<unsigned> getVariantSchedClassID(const MCInst &MCI, unsigned SchedClassID);
   Expected<const InstrDesc &>
-  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
-                      function_ref<void(InstrDesc &)> Customizer = {});
+  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>
   getOrCreateInstrDesc(const MCInst &MCI,
                        const SmallVector<Instrument *> &IVec);
@@ -122,8 +121,7 @@ public:
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
   LLVM_ABI Expected<std::unique_ptr<Instruction>>
-  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
-                    function_ref<void(InstrDesc &)> Customizer = {});
+  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 };
 } // namespace mca
 } // namespace llvm

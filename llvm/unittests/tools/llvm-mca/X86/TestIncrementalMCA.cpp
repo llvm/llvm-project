@@ -243,19 +243,13 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
                                 .addReg(X86::RAX)
                                 .addReg(X86::RAX);
   MCIs.push_back(InstructionToAdd);
+  SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
+  InstrDescs.push_back(std::make_pair(StringRef("CUSTOMIZE"),
+      StringRef("Latency:100")));
 
   // Run the baseline.
   json::Object BaselineResult;
-  auto E = runBaselineMCA(BaselineResult, MCIs, {}, nullptr,
-                          [=](InstrBuilder &IB, const MCInst &MCI,
-                              const SmallVector<Instrument *> &Instruments) {
-                            return IB.createInstruction(
-                                MCI, Instruments, [=](InstrDesc &ID) {
-                                  for (auto &W : ID.Writes)
-                                    W.Latency = ExplicitLatency;
-                                  ID.MaxLatency = ExplicitLatency;
-                                });
-                          });
+  auto E = runBaselineMCA(BaselineResult, MCIs, {}, nullptr, InstrDescs);
   ASSERT_FALSE(bool(E)) << "Failed to run baseline";
   auto *BaselineObj = BaselineResult.getObject("SummaryView");
   auto V = BaselineObj->getInteger("TotalCycles");
