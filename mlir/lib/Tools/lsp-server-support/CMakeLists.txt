@@ -7,4 +7,5 @@ add_mlir_library(MLIRLspServerSupportLib
 
   LINK_LIBS PUBLIC
   MLIRSupport
+  LLVMSupportLSP
   )
