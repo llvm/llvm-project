@@ -734,6 +734,13 @@ func.func @index_castui4(%arg0: index) {
   return
 }
 
+// CHECK-LABEL: index_casti1_1
+func.func @index_casti1_1(%arg0 : i1) -> index {
+  // CHECK: spirv.Select %{{.+}}, %{{.+}}, %{{.+}} : i1, i32
+  %0 = arith.index_cast %arg0 : i1 to index
+  return %0 : index
+}
+
 // CHECK-LABEL: @bit_cast
 func.func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
   // CHECK: spirv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
