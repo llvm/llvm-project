@@ -15,17 +15,20 @@
 // To achieve this, we need to encode the index of the module file into the
 // encoding of the source location. The encoding of the source location may be:
 //
-//      |-----------------------|-----------------------|
-//      |          A            |         B         | C |
+//      |---------------|---------------------------|
+//      |        A      |           B           | C |
 //
-//  * A: 32 bit. The index of the module file in the module manager + 1. The +1
+//  * A: 24 bit. The index of the module file in the module manager + 1. The +1
 //  here is necessary since we wish 0 stands for the current module file.
-//  * B: 31 bit. The offset of the source location to the module file containing
+//  * B: 39 bit. The offset of the source location to the module file containing
 //  it.
 //  * C: The macro bit. We rotate it to the lowest bit so that we can save some
 //  space in case the index of the module file is 0.
 //
+// Together, B and C form SourceLocation::Bits (40 bits total).
 //
+// Currently, only the lower 16 bits of A are used to store the module file
+// index, leaving the upper 8 bits of A unused (reserved for future use).
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
@@ -43,17 +46,24 @@ namespace clang {
 // Macro locations have the top bit set, we rotate by one so it is the low bit.
 class SourceLocationEncoding {
   using UIntTy = SourceLocation::UIntTy;
-  constexpr static unsigned UIntBits = CHAR_BIT * sizeof(UIntTy);
 
   static UIntTy encodeRaw(UIntTy Raw) {
-    return (Raw << 1) | (Raw >> (UIntBits - 1));
+    return ((Raw & llvm::maskTrailingOnes<uint64_t>(SourceLocation::Bits - 1))
+            << 1) |
+           (Raw >> (SourceLocation::Bits - 1));
   }
   static UIntTy decodeRaw(UIntTy Raw) {
-    return (Raw >> 1) | (Raw << (UIntBits - 1));
+    return (Raw >> 1) | ((Raw & 1) << (SourceLocation::Bits - 1));
   }
 
 public:
   using RawLocEncoding = uint64_t;
+  // 16 bits should be sufficient to store the module file index.
+  constexpr static unsigned ModuleFileIndexBits = 16;
+  constexpr static unsigned SourceLocationEncodingBits = SourceLocation::Bits;
+  static_assert(ModuleFileIndexBits + SourceLocationEncodingBits <
+                    sizeof(RawLocEncoding) * CHAR_BIT,
+                "Insufficient encoding bits");
 
   static RawLocEncoding encode(SourceLocation Loc, UIntTy BaseOffset,
                                unsigned BaseModuleFileIndex);
@@ -77,20 +87,19 @@ SourceLocationEncoding::encode(SourceLocation Loc, UIntTy BaseOffset,
   Loc = Loc.getLocWithOffset(-BaseOffset);
   RawLocEncoding Encoded = encodeRaw(Loc.getRawEncoding());
 
-  // 16 bits should be sufficient to store the module file index.
-  assert(BaseModuleFileIndex < (1 << 16));
-  Encoded |= (RawLocEncoding)BaseModuleFileIndex << 32;
+  assert(BaseModuleFileIndex < (1 << ModuleFileIndexBits));
+  Encoded |= (RawLocEncoding)BaseModuleFileIndex << SourceLocation::Bits;
   return Encoded;
 }
 inline std::pair<SourceLocation, unsigned>
 SourceLocationEncoding::decode(RawLocEncoding Encoded) {
-  unsigned ModuleFileIndex = Encoded >> 32;
+  unsigned ModuleFileIndex = Encoded >> SourceLocation::Bits;
 
   if (!ModuleFileIndex)
     return {SourceLocation::getFromRawEncoding(decodeRaw(Encoded)),
             ModuleFileIndex};
 
-  Encoded &= llvm::maskTrailingOnes<RawLocEncoding>(32);
+  Encoded &= llvm::maskTrailingOnes<RawLocEncoding>(SourceLocation::Bits);
   SourceLocation Loc = SourceLocation::getFromRawEncoding(decodeRaw(Encoded));
 
   return {Loc, ModuleFileIndex};

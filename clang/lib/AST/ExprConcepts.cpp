@@ -122,7 +122,7 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
       NumRequirements(Requirements.size()), Body(Body), LParenLoc(LParenLoc),
       RParenLoc(RParenLoc), RBraceLoc(RBraceLoc) {
   RequiresExprBits.IsSatisfied = false;
-  RequiresExprBits.RequiresKWLoc = RequiresKWLoc;
+  RequiresExprBits.RequiresKWLoc = RequiresKWLoc.getRawEncoding();
   bool Dependent = false;
   bool ContainsUnexpandedParameterPack = false;
   for (ParmVarDecl *P : LocalParameters) {

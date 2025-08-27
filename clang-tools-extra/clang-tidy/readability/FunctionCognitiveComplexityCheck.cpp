@@ -127,12 +127,12 @@ struct CognitiveComplexity final {
   // https://sonarcloud.io/projects?languages=c%2Ccpp&size=5   we can estimate:
   // value ~20 would result in no allocs for 98% of functions, ~12 for 96%, ~10
   // for 91%, ~8 for 88%, ~6 for 84%, ~4 for 77%, ~2 for 64%, and ~1 for 37%.
-  static_assert(sizeof(Detail) <= 8,
+  static_assert(sizeof(Detail) <= 16,
                 "Since we use SmallVector to minimize the amount of "
                 "allocations, we also need to consider the price we pay for "
                 "that in terms of stack usage. "
                 "Thus, it is good to minimize the size of the Detail struct.");
-  SmallVector<Detail, DefaultLimit> Details; // 25 elements is 200 bytes.
+  SmallVector<Detail, DefaultLimit> Details; // 25 elements is 400 bytes.
   // Yes, 25 is a magic number. This is the seemingly-sane default for the
   // upper limit for function cognitive complexity. Thus it would make sense
   // to avoid allocations for any function that does not violate the limit.

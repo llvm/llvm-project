@@ -829,7 +829,9 @@ TEST(SourceCodeTests, isSpelledInSource) {
   // FIXME: Should it return false on SourceLocation()? Does it matter?
   EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
   EXPECT_FALSE(isSpelledInSource(
-      SourceLocation::getFromRawEncoding(SourceLocation::UIntTy(1 << 31)), SM));
+      SourceLocation::getFromRawEncoding(
+          SourceLocation::UIntTy(1ULL << (SourceLocation::Bits - 1))),
+      SM));
 }
 
 struct IncrementalTestStep {
