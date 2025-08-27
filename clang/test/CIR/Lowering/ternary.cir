@@ -25,6 +25,4 @@ module  {
 // LLVM:   br label %[[M]]
 // LLVM: [[M]]:
 // LLVM:   [[R:%[[:alnum:]]+]] = phi i32 [ 1, %[[B2]] ], [ 0, %[[B1]] ]
-// LLVM:   br label %[[B3:[[:alnum:]]+]]
-// LLVM: [[B3]]:
 // LLVM:   ret i32 [[R]]
