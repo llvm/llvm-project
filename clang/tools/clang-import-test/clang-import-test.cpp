@@ -236,7 +236,7 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
+      CI.getDiagnostics(), ModuleName, CI.getVirtualFileSystemPtr(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
       LLVMCtx));
 }

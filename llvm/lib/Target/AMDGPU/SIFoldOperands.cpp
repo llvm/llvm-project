@@ -468,6 +468,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -1062,9 +1063,13 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:
@@ -1164,11 +1169,18 @@ void SIFoldOperandsImpl::foldOperand(
     // Grab the use operands first
     SmallVector<MachineOperand *, 4> UsesToProcess(
         llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
-    for (auto *RSUse : UsesToProcess) {
+    for (unsigned I = 0; I != UsesToProcess.size(); ++I) {
+      MachineOperand *RSUse = UsesToProcess[I];
       MachineInstr *RSUseMI = RSUse->getParent();
       unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
       if (SplatRC) {
+        if (RSUseMI->isCopy()) {
+          Register DstReg = RSUseMI->getOperand(0).getReg();
+          append_range(UsesToProcess,
+                       make_pointer_range(MRI->use_nodbg_operands(DstReg)));
+          continue;
+        }
         if (tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
           FoldableDef SplatDef(SplatVal, SplatRC);
           appendFoldCandidate(FoldList, RSUseMI, OpNo, SplatDef);
@@ -1209,17 +1221,23 @@ void SIFoldOperandsImpl::foldOperand(
         return;
     }
 
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
-
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
       UseMI->setDesc(TII->get(NewOpc));
     }
+
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
 
     return;
   }
@@ -1230,6 +1248,7 @@ void SIFoldOperandsImpl::foldOperand(
   if (FoldingImmLike && UseMI->isCopy()) {
     Register DestReg = UseMI->getOperand(0).getReg();
     Register SrcReg = UseMI->getOperand(1).getReg();
+    unsigned UseSubReg = UseMI->getOperand(1).getSubReg();
     assert(SrcReg.isVirtual());
 
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
@@ -1260,44 +1279,60 @@ void SIFoldOperandsImpl::foldOperand(
       DestRC = &AMDGPU::SGPR_32RegClass;
     }
 
-    // In order to fold immediates into copies, we need to change the
-    // copy to a MOV.
+    // In order to fold immediates into copies, we need to change the copy to a
+    // MOV. Find a compatible mov instruction with the value.
+    for (unsigned MovOp :
+         {AMDGPU::S_MOV_B32, AMDGPU::V_MOV_B32_e32, AMDGPU::S_MOV_B64,
+          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64}) {
+      const MCInstrDesc &MovDesc = TII->get(MovOp);
+      assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
 
-    unsigned MovOp = TII->getMovOpcode(DestRC);
-    if (MovOp == AMDGPU::COPY)
+      const TargetRegisterClass *MovDstRC =
+          TRI->getRegClass(MovDesc.operands()[0].RegClass);
+
+      // Fold if the destination register class of the MOV instruction (ResRC)
+      // is a superclass of (or equal to) the destination register class of the
+      // COPY (DestRC). If this condition fails, folding would be illegal.
+      if (!DestRC->hasSuperClassEq(MovDstRC))
+        continue;
+
+      const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
+      const TargetRegisterClass *MovSrcRC =
+          TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+
+      if (UseSubReg)
+        MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+      if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
+        break;
+
+      MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
+      MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
+      while (ImpOpI != ImpOpE) {
+        MachineInstr::mop_iterator Tmp = ImpOpI;
+        ImpOpI++;
+        UseMI->removeOperand(UseMI->getOperandNo(Tmp));
+      }
+      UseMI->setDesc(MovDesc);
+
+      if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
+        const auto &SrcOp = UseMI->getOperand(UseOpIdx);
+        MachineOperand NewSrcOp(SrcOp);
+        MachineFunction *MF = UseMI->getParent()->getParent();
+        UseMI->removeOperand(1);
+        UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
+        UseMI->addOperand(NewSrcOp);                          // src0
+        UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // op_sel
+        UseOpIdx = SrcIdx;
+        UseOp = &UseMI->getOperand(UseOpIdx);
+      }
+      CopiesToReplace.push_back(UseMI);
+      break;
+    }
+
+    // We failed to replace the copy, so give up.
+    if (UseMI->getOpcode() == AMDGPU::COPY)
       return;
 
-    // Fold if the destination register class of the MOV instruction (ResRC)
-    // is a superclass of (or equal to) the destination register class of the
-    // COPY (DestRC). If this condition fails, folding would be illegal.
-    const MCInstrDesc &MovDesc = TII->get(MovOp);
-    assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
-    const TargetRegisterClass *ResRC =
-        TRI->getRegClass(MovDesc.operands()[0].RegClass);
-    if (!DestRC->hasSuperClassEq(ResRC))
-      return;
-
-    MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
-    MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
-    while (ImpOpI != ImpOpE) {
-      MachineInstr::mop_iterator Tmp = ImpOpI;
-      ImpOpI++;
-      UseMI->removeOperand(UseMI->getOperandNo(Tmp));
-    }
-    UseMI->setDesc(TII->get(MovOp));
-
-    if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
-      const auto &SrcOp = UseMI->getOperand(UseOpIdx);
-      MachineOperand NewSrcOp(SrcOp);
-      MachineFunction *MF = UseMI->getParent()->getParent();
-      UseMI->removeOperand(1);
-      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
-      UseMI->addOperand(NewSrcOp);                          // src0
-      UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // op_sel
-      UseOpIdx = 2;
-      UseOp = &UseMI->getOperand(UseOpIdx);
-    }
-    CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
@@ -2063,7 +2098,9 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
-  case AMDGPU::V_PK_MAX_F16: {
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_PK_MAX_NUM_BF16: {
     if (MI.mayRaiseFPException())
       return nullptr;
 
@@ -2090,8 +2127,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
-    unsigned UnsetMods = (Op == AMDGPU::V_PK_MAX_F16) ? SISrcMods::OP_SEL_1
-                                                      : 0u;
+    unsigned UnsetMods =
+        (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
+            ? SISrcMods::OP_SEL_1
+            : 0u;
     if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
       return nullptr;
     return Src0;

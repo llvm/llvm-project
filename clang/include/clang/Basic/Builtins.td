@@ -1232,6 +1232,18 @@ def ConvertVector : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedLoad : Builtin {
+  let Spellings = ["__builtin_masked_load"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedStore : Builtin {
+  let Spellings = ["__builtin_masked_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1264,7 +1276,7 @@ def NondetermenisticValue : Builtin {
 
 def ElementwiseAbs : Builtin {
   let Spellings = ["__builtin_elementwise_abs"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1300,13 +1312,13 @@ def ElementwiseBitreverse : Builtin {
 
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1330,6 +1342,18 @@ def ElementwiseMaximum : Builtin {
 
 def ElementwiseMinimum : Builtin {
   let Spellings = ["__builtin_elementwise_minimum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaximumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maximumnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinimumNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minimumnum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1486,7 +1510,7 @@ def ElementwiseCopysign : Builtin {
 
 def ElementwiseFma : Builtin {
   let Spellings = ["__builtin_elementwise_fma"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1498,6 +1522,30 @@ def ElementwiseAddSat : Builtin {
 
 def ElementwiseSubSat : Builtin {
   let Spellings = ["__builtin_elementwise_sub_sat"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFshl : Builtin {
+  let Spellings = ["__builtin_elementwise_fshl"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFshr : Builtin {
+  let Spellings = ["__builtin_elementwise_fshr"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCtlz : Builtin {
+  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCttz : Builtin {
+  let Spellings = ["__builtin_elementwise_cttz"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

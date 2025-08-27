@@ -55,7 +55,8 @@ protected:
     if (!CInvok)
       return nullptr;
 
-    FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+    auto FileMgr =
+        llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), VFS);
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
@@ -119,8 +120,7 @@ TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
 }
 
 TEST_F(ASTUnitTest, ModuleTextualHeader) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs =
-      new llvm::vfs::InMemoryFileSystem();
+  auto InMemoryFs = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFs->addFile("test.cpp", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
       #include "Textual.h"
       void foo() {}
@@ -144,7 +144,8 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   CInvok = createInvocation(Args, std::move(CIOpts));
   ASSERT_TRUE(CInvok);
 
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), InMemoryFs);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), InMemoryFs);
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
   auto AU = ASTUnit::LoadFromCompilerInvocation(

@@ -65,6 +65,7 @@ class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
   let Inst{6-0} = opcode.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
@@ -94,6 +95,7 @@ class SFInstTileMoveOp<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -113,6 +115,7 @@ class SFInstMatmulF<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -135,6 +138,7 @@ class SFInstMatmulF8<bit a, bit b, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 
@@ -167,6 +171,7 @@ class SFInstMatmulI8<bit funct6_1, bit a, bit b, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_VE.Value;
 
   let Uses = [VTYPE, VL];
+  let ReadsPastVL = 1;
 }
 
 class I8Encode<bit encoding, string name> {

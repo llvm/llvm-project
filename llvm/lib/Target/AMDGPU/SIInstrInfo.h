@@ -197,8 +197,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -679,6 +678,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -978,19 +983,18 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
-  // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
-  // S_BARRIER, but after support for S_BARRIER_SIGNAL* / S_BARRIER_WAIT we want
-  // to check for the barrier start (S_BARRIER_SIGNAL*)
-  bool isBarrierStart(unsigned Opcode) const {
+  bool isBarrier(unsigned Opcode) const {
     return Opcode == AMDGPU::S_BARRIER ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
-           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
-  }
-
-  bool isBarrier(unsigned Opcode) const {
-    return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
+           Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
+           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
+           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -1046,7 +1050,7 @@ public:
     }
   }
 
-  bool isWaitcnt(unsigned Opcode) const {
+  static bool isWaitcnt(unsigned Opcode) {
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:
@@ -1173,6 +1177,9 @@ public:
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const;
 
+  /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
+  bool isLegalAV64PseudoImm(uint64_t Imm) const;
+
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
@@ -1214,6 +1221,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
@@ -1280,6 +1289,19 @@ public:
                          const MachineOperand &MO) const;
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
+
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
+  /// instructions. Packed math FP32 instructions typically accept SGPRs or
+  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
+  /// HW can only read the first SGPR and use it for both the low and high
+  /// operations.
+  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
+  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
+  /// be used.
+  bool isLegalGFX12PlusPackedMathFP32Operand(
+      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+      const MachineOperand *MO = nullptr) const;
+
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1382,8 +1404,8 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

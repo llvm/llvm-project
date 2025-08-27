@@ -1508,9 +1508,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_package_metadata))
     parsePackageMetadata(ctx, *arg);
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
-  if (args.hasArg(OPT_preferred_function_alignment))
-    ctx.arg.preferredFunctionAlignment =
-        args::getInteger(args, OPT_preferred_function_alignment, 0);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
   ctx.arg.printGcSections =
@@ -1628,6 +1625,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   ctx.arg.zInitfirst = hasZOption(args, "initfirst");
   ctx.arg.zInterpose = hasZOption(args, "interpose");
+  ctx.arg.zKeepDataSectionPrefix = getZFlag(
+      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
@@ -3141,6 +3140,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->insert(arg->getValue())->traced = true;
 
   ctx.internalFile = createInternalFile(ctx, "<internal>");
+  ctx.dummySym = make<Undefined>(ctx.internalFile, "", STB_LOCAL, 0, 0);
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.

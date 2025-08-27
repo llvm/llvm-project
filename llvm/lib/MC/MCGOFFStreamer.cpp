@@ -26,19 +26,15 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-// Make sure that all section are registered in the correct order.
-static void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
-  if (Section->isRegistered())
-    return;
-  if (Section->getParent())
-    registerSectionHierarchy(Asm, Section->getParent());
-  Asm.registerSection(*Section);
-}
-
 void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  registerSectionHierarchy(getAssembler(),
-                           static_cast<MCSectionGOFF *>(Section));
-  MCObjectStreamer::changeSection(Section, Subsection);
+  // Make sure that all section are registered in the correct order.
+  SmallVector<MCSectionGOFF *> Sections;
+  for (auto *S = static_cast<MCSectionGOFF *>(Section); S; S = S->getParent())
+    Sections.push_back(S);
+  while (!Sections.empty()) {
+    auto *S = Sections.pop_back_val();
+    MCObjectStreamer::changeSection(S, Sections.empty() ? Subsection : 0);
+  }
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

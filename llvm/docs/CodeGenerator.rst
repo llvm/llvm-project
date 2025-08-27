@@ -323,7 +323,7 @@ provide one of these objects through the ``getJITInfo`` method.
 Machine code description classes
 ================================
 
-At the high-level, LLVM code is translated to a machine specific representation
+At the high-level, LLVM code is translated to a machine-specific representation
 formed out of :raw-html:`<tt>` `MachineFunction`_ :raw-html:`</tt>`,
 :raw-html:`<tt>` `MachineBasicBlock`_ :raw-html:`</tt>`, and :raw-html:`<tt>`
 `MachineInstr`_ :raw-html:`</tt>` instances (defined in
@@ -462,7 +462,7 @@ code:
   ret
 
 This approach is extremely general (if it can handle the X86 architecture, it
-can handle anything!) and allows all of the target specific knowledge about the
+can handle anything!) and allows all of the target-specific knowledge about the
 instruction stream to be isolated in the instruction selector.  Note that
 physical registers should have a short lifetime for good code generation, and
 all physical registers are assumed dead on entry to and exit from basic blocks
@@ -634,7 +634,7 @@ file (MCObjectStreamer).  MCAsmStreamer is a straightforward implementation
 that prints out a directive for each method (e.g. ``EmitValue -> .byte``), but
 MCObjectStreamer implements a full assembler.
 
-For target specific directives, the MCStreamer has a MCTargetStreamer instance.
+For target-specific directives, the MCStreamer has a MCTargetStreamer instance.
 Each target that needs it defines a class that inherits from it and is a lot
 like MCStreamer itself: It has one method per directive and two classes that
 inherit from it, a target object streamer and a target asm streamer. The target

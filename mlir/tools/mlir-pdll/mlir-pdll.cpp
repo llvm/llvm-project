@@ -201,6 +201,12 @@ int main(int argc, char **argv) {
   llvm::raw_string_ostream outputStrOS(outputStr);
   auto processFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
                        raw_ostream &os) {
+    // Split does not guarantee null-termination. Make a copy of the buffer to
+    // ensure null-termination.
+    if (!chunkBuffer->getBuffer().ends_with('\0')) {
+      chunkBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+          chunkBuffer->getBuffer(), chunkBuffer->getBufferIdentifier());
+    }
     return processBuffer(os, std::move(chunkBuffer), outputType, includeDirs,
                          dumpODS, includedFiles);
   };

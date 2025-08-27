@@ -196,8 +196,8 @@ namespace typename_specifier {
     new typename T::A{0};
     typename T::A a = 0;
     const typename T::A b = 0;
-    if (typename T::A a = 0) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
-    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
+    if (typename T::A a = 0) {} // expected-error {{value of type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
+    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error {{value of type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
 
     {(void)(typename T::A)(0);} // expected-error{{refers to class template member}}
     {(void)(typename T::A){0};} // expected-error{{refers to class template member}}
@@ -208,7 +208,7 @@ namespace typename_specifier {
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
     {typename T::A F::*pm = 0;} // expected-error {{refers to class template member}}
     {typename T::A (*fp)() = 0;} // expected-error {{refers to class template member}}
-    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
+    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
   }
   template void f<X>(); // expected-note {{instantiation of}}
 

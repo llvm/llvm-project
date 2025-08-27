@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -392,6 +394,8 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
 
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
+
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
 
@@ -576,6 +580,13 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_found_cxx20_module_usage : Remark<
+  "found C++20 module usage in file '%0'">,
+  InGroup<ModulesDriver>;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -874,4 +885,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_gcc_install_dir_libstdcxx : Warning<
+    "future releases of the clang compiler will prefer GCC installations "
+    "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
+    InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
 }

@@ -719,12 +719,14 @@ for.end:                                          ; preds = %for.body
 ;;    for(int j = 0; j < M; j+=1)
 ;;      A[M*N + M*i + j] = 2;
 
+; FIXME: Currently failing to infer %M being positive.
+
 define void @couple_weakzerosiv(ptr noalias nocapture %A, i64 %N, i64 %M) {
 ; CHECK-LABEL: 'couple_weakzerosiv'
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx.us, align 4 --> Dst: store i32 1, ptr %arrayidx.us, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx.us, align 4 --> Dst: store i32 2, ptr %arrayidx9.us, align 4
-; CHECK-NEXT:    da analyze - output [p>]!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx9.us, align 4 --> Dst: store i32 2, ptr %arrayidx9.us, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

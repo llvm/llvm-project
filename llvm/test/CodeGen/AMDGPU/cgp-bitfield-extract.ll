@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -codegenprepare < %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -codegenprepare < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; This particular case will actually be worse in terms of code size
 ; from sinking into both.

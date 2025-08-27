@@ -194,8 +194,8 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
   else if (const NestedNameSpecifier *NNS = get<NestedNameSpecifier>())
     NNS->print(OS, PP);
   else if (const NestedNameSpecifierLoc *NNSL = get<NestedNameSpecifierLoc>()) {
-    if (const NestedNameSpecifier *NNS = NNSL->getNestedNameSpecifier())
-      NNS->print(OS, PP);
+    if (NestedNameSpecifier NNS = NNSL->getNestedNameSpecifier())
+      NNS.print(OS, PP);
     else
       OS << "(empty NestedNameSpecifierLoc)";
   } else if (const QualType *QT = get<QualType>())
@@ -234,13 +234,39 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
     OS << "Unable to dump values of type " << NodeKind.asStringRef() << "\n";
 }
 
-SourceRange DynTypedNode::getSourceRange() const {
+SourceRange DynTypedNode::getSourceRange(bool IncludeQualifier) const {
   if (const CXXCtorInitializer *CCI = get<CXXCtorInitializer>())
     return CCI->getSourceRange();
   if (const NestedNameSpecifierLoc *NNSL = get<NestedNameSpecifierLoc>())
     return NNSL->getSourceRange();
-  if (const TypeLoc *TL = get<TypeLoc>())
-    return TL->getSourceRange();
+  if (const TypeLoc *TL = get<TypeLoc>()) {
+    if (IncludeQualifier)
+      return TL->getSourceRange();
+    switch (TL->getTypeLocClass()) {
+    case TypeLoc::DependentName:
+      return TL->castAs<DependentNameTypeLoc>().getNameLoc();
+    case TypeLoc::TemplateSpecialization: {
+      auto T = TL->castAs<TemplateSpecializationTypeLoc>();
+      return SourceRange(T.getTemplateNameLoc(), T.getEndLoc());
+    }
+    case TypeLoc::DependentTemplateSpecialization: {
+      auto T = TL->castAs<DependentTemplateSpecializationTypeLoc>();
+      return SourceRange(T.getTemplateNameLoc(), T.getEndLoc());
+    }
+    case TypeLoc::Enum:
+    case TypeLoc::Record:
+    case TypeLoc::InjectedClassName:
+      return TL->castAs<TagTypeLoc>().getNameLoc();
+    case TypeLoc::Typedef:
+      return TL->castAs<TypedefTypeLoc>().getNameLoc();
+    case TypeLoc::UnresolvedUsing:
+      return TL->castAs<UnresolvedUsingTypeLoc>().getNameLoc();
+    case TypeLoc::Using:
+      return TL->castAs<UsingTypeLoc>().getNameLoc();
+    default:
+      return TL->getSourceRange();
+    }
+  }
   if (const Decl *D = get<Decl>())
     return D->getSourceRange();
   if (const Stmt *S = get<Stmt>())

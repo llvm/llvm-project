@@ -14,6 +14,8 @@
 // template <class ST, class SA>
 //    basic_regex(const basic_string<charT, ST, SA>& s);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <regex>
 #include <cassert>
 #include "test_macros.h"
@@ -33,6 +35,7 @@ int main(int, char**)
 {
     assert(error_range_thrown("([\\w-a])"));
     assert(error_range_thrown("([a-\\w])"));
+    assert(error_range_thrown("([w-a])"));
 
-  return 0;
+    return 0;
 }

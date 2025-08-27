@@ -859,7 +859,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
                                 Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -1373,6 +1373,51 @@ void acc::ParallelOp::addWaitOperands(
       std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
       mlir::BoolAttr::get(context, hasDevnum));
   setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
+void acc::ParallelOp::addPrivatization(MLIRContext *context,
+                                       mlir::acc::PrivateOp op,
+                                       mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::ParallelOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  getFirstprivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getFirstprivatizationRecipesAttr())
+    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::ParallelOp::addReduction(MLIRContext *context,
+                                   mlir::acc::ReductionOp op,
+                                   mlir::acc::ReductionRecipeOp recipe) {
+  getReductionOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getReductionRecipesAttr())
+    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 static ParseResult parseNumGangs(
@@ -2009,6 +2054,51 @@ void acc::SerialOp::addWaitOperands(
       std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
       mlir::BoolAttr::get(context, hasDevnum));
   setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
+void acc::SerialOp::addPrivatization(MLIRContext *context,
+                                     mlir::acc::PrivateOp op,
+                                     mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::SerialOp::addFirstPrivatization(
+    MLIRContext *context, mlir::acc::FirstprivateOp op,
+    mlir::acc::FirstprivateRecipeOp recipe) {
+  getFirstprivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getFirstprivatizationRecipesAttr())
+    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::SerialOp::addReduction(MLIRContext *context,
+                                 mlir::acc::ReductionOp op,
+                                 mlir::acc::ReductionRecipeOp recipe) {
+  getReductionOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getReductionRecipesAttr())
+    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2957,6 +3047,23 @@ bool acc::LoopOp::hasDefaultGangWorkerVector() {
          getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
 }
 
+acc::LoopParMode
+acc::LoopOp::getDefaultOrDeviceTypeParallelism(DeviceType deviceType) {
+  if (hasSeq(deviceType))
+    return LoopParMode::loop_seq;
+  if (hasAuto(deviceType))
+    return LoopParMode::loop_auto;
+  if (hasIndependent(deviceType))
+    return LoopParMode::loop_independent;
+  if (hasSeq())
+    return LoopParMode::loop_seq;
+  if (hasAuto())
+    return LoopParMode::loop_auto;
+  assert(hasIndependent() &&
+         "loop must have default auto, seq, or independent");
+  return LoopParMode::loop_independent;
+}
+
 void acc::LoopOp::addGangOperands(
     MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
     llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
@@ -2995,6 +3102,35 @@ void acc::LoopOp::addGangOperands(
 
     setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
   }
+}
+
+void acc::LoopOp::addPrivatization(MLIRContext *context,
+                                   mlir::acc::PrivateOp op,
+                                   mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
+void acc::LoopOp::addReduction(MLIRContext *context, mlir::acc::ReductionOp op,
+                               mlir::acc::ReductionRecipeOp recipe) {
+  getReductionOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getReductionRecipesAttr())
+    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//

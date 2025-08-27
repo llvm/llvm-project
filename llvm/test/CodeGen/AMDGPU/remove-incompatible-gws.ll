@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=COMPATIBLE,IR %s
 ; RUN: FileCheck -allow-empty --check-prefix=WARN-COMPATIBLE %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=INCOMPATIBLE,IR %s
 ; RUN: FileCheck --check-prefixes=WARN-INCOMPATIBLE %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s
 
 ; Note: This test checks the IR, but also has a run line to codegen the file just to check we
 ; do not crash when trying to select those functions.
