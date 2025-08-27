@@ -1122,7 +1122,19 @@ SPIRVType *SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVType *SpirvType = createSPIRVType(Ty, MIRBuilder, AccessQual,
                                          ExplicitLayoutRequired, EmitIR);
   TypesInProcessing.erase(Ty);
-  VRegToTypeMap[&MIRBuilder.getMF()][getSPIRVTypeID(SpirvType)] = SpirvType;
+
+  // Record the FPVariant of the floating-point registers in the
+  // VRegFPVariantMap.
+  MachineFunction *MF = &MIRBuilder.getMF();
+  Register TypeReg = getSPIRVTypeID(SpirvType);
+  if (Ty->isFloatingPointTy()) {
+    if (Ty->isBFloatTy()) {
+      VRegFPVariantMap[MF][TypeReg] = FPVariant::BRAIN_FLOAT;
+    } else {
+      VRegFPVariantMap[MF][TypeReg] = FPVariant::IEEE_FLOAT;
+    }
+  }
+  VRegToTypeMap[MF][TypeReg] = SpirvType;
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
@@ -1679,11 +1691,15 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
   MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
   const MachineInstr *NewMI =
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
-            .addDef(createTypeVReg(CurMF->getRegInfo()))
-            .addImm(BitWidth)
-            .addImm(0);
+        auto MIB = BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                           MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+                       .addDef(createTypeVReg(CurMF->getRegInfo()))
+                       .addImm(BitWidth);
+
+        if (SPIRVOPcode != SPIRV::OpTypeFloat)
+          MIB.addImm(0);
+
+        return MIB;
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
@@ -2087,4 +2103,16 @@ bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
       return true;
   }
   return false;
+}
+
+SPIRVGlobalRegistry::FPVariant
+SPIRVGlobalRegistry::getFPVariantForVReg(Register VReg,
+                                         const MachineFunction *MF) {
+  auto t = VRegFPVariantMap.find(MF ? MF : CurMF);
+  if (t != VRegFPVariantMap.end()) {
+    auto tt = t->second.find(VReg);
+    if (tt != t->second.end())
+      return tt->second;
+  }
+  return FPVariant::NONE;
 }
