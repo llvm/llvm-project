@@ -2693,9 +2693,6 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
 /// elements from V1
 static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
                               Type *NewAIEltTy, IRBuilder<> &Builder) {
-  assert(V0->getType()->isVectorTy() && V1->getType()->isVectorTy() &&
-         "Can not merge two non-vector values");
-
   // V0 and V1 are vectors
   // Create a new vector type with combined elements
   // Use ShuffleVector to concatenate the vectors
@@ -2737,18 +2734,15 @@ static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
     unsigned SmallSize = std::min(NumElts0, NumElts1);
     unsigned LargeSize = std::max(NumElts0, NumElts1);
     bool IsV0Smaller = NumElts0 < NumElts1;
-    Value *SmallVec = IsV0Smaller ? V0 : V1;
-
+    Value *&ExtendedVec = IsV0Smaller ? V0 : V1;
     SmallVector<int, 16> ExtendMask;
     for (unsigned i = 0; i < SmallSize; ++i)
       ExtendMask.push_back(i);
     for (unsigned i = SmallSize; i < LargeSize; ++i)
       ExtendMask.push_back(PoisonMaskElem);
-    Value *ExtendedVec = Builder.CreateShuffleVector(
-        SmallVec, PoisonValue::get(SmallVec->getType()), ExtendMask);
+    ExtendedVec = Builder.CreateShuffleVector(
+        ExtendedVec, PoisonValue::get(ExtendedVec->getType()), ExtendMask);
     LLVM_DEBUG(dbgs() << "    shufflevector: " << *ExtendedVec << "\n");
-    V0 = IsV0Smaller ? ExtendedVec : V0;
-    V1 = IsV0Smaller ? V1 : ExtendedVec;
     for (unsigned i = 0; i < NumElts0; ++i)
       ShuffleMask.push_back(i);
     for (unsigned i = 0; i < NumElts1; ++i)
@@ -2961,53 +2955,45 @@ public:
 
     SmallVector<StoreInfo, 4> StoreInfos;
 
-    // The alloca must be a fixed vector type
-    Type *AllocatedEltTy = nullptr;
-    if (auto *FixedVecTy = dyn_cast<FixedVectorType>(NewAI.getAllocatedType()))
-      AllocatedEltTy = FixedVecTy->getElementType();
-    else
-      return std::nullopt;
-    // If the allocated element type is a pointer, we do not handle it
-    // TODO: handle this case by using inttoptr/ptrtoint
-    if (AllocatedEltTy->isPtrOrPtrVectorTy())
-      return std::nullopt;
+    // If the new alloca is a fixed vector type, we use its element type as the
+    // allocated element type, otherwise we use i8 as the allocated element
+    Type *AllocatedEltTy =
+        isa<FixedVectorType>(NewAI.getAllocatedType())
+            ? cast<FixedVectorType>(NewAI.getAllocatedType())->getElementType()
+            : Type::getInt8Ty(NewAI.getContext());
+
+    // Helper to check if a type is
+    //  1. A fixed vector type
+    //  2. The element type is not a pointer
+    //  3. The element type size is byte-aligned
+    // We only handle the cases that the ld/st meet these conditions
+    auto IsTypeValidForTreeStructuredMerge = [&](Type *Ty) -> bool {
+      auto *FixedVecTy = dyn_cast<FixedVectorType>(Ty);
+      return FixedVecTy &&
+             DL.getTypeSizeInBits(FixedVecTy->getElementType()) % 8 == 0 &&
+             !FixedVecTy->getElementType()->isPointerTy();
+    };
 
     for (Slice &S : P) {
       auto *User = cast<Instruction>(S.getUse()->getUser());
       if (auto *LI = dyn_cast<LoadInst>(User)) {
-        // Do not handle the case where there is more than one load
-        // TODO: maybe we can handle this case
-        if (TheLoad)
-          return std::nullopt;
-        // If load is not a fixed vector type, we do not handle it
-        // If the number of loaded bits is not the same as the new alloca type
-        // size, we do not handle it
-        auto *FixedVecTy = dyn_cast<FixedVectorType>(LI->getType());
-        if (!FixedVecTy)
-          return std::nullopt;
-        if (DL.getTypeSizeInBits(FixedVecTy) !=
-            DL.getTypeSizeInBits(NewAI.getAllocatedType()))
-          return std::nullopt;
-        // If the loaded value is a pointer, we do not handle it
-        // TODO: handle this case by using inttoptr/ptrtoint
-        if (FixedVecTy->getElementType()->isPtrOrPtrVectorTy())
+        // Do not handle the case if 
+        //   1. There is more than one load
+        //   2. The load is volatile
+        //   3. The load does not read the entire alloca structure
+        //   4. The load does not meet the conditions in the helper function
+        if (TheLoad || !IsTypeValidForTreeStructuredMerge(LI->getType()) ||
+            S.beginOffset() != NewAllocaBeginOffset ||
+            S.endOffset() != NewAllocaEndOffset ||
+            LI->isVolatile())
           return std::nullopt;
         TheLoad = LI;
       } else if (auto *SI = dyn_cast<StoreInst>(User)) {
-        // The stored value should be a fixed vector type
-        Type *StoredValueType = SI->getValueOperand()->getType();
-        if (!isa<FixedVectorType>(StoredValueType))
-          return std::nullopt;
-
-        // The total number of stored bits should be the multiple of the new
-        // alloca element type size
-        if (DL.getTypeSizeInBits(StoredValueType) %
-                DL.getTypeSizeInBits(AllocatedEltTy) !=
-            0)
-          return std::nullopt;
-        // If the stored value is a pointer, we do not handle it
-        // TODO: handle this case by using inttoptr/ptrtoint
-        if (StoredValueType->isPtrOrPtrVectorTy())
+        // Do not handle the case if 
+        //   1. The store does not meet the conditions in the helper function
+        //   2. The store is volatile
+        if (!IsTypeValidForTreeStructuredMerge(SI->getValueOperand()->getType()) ||
+            SI->isVolatile())
           return std::nullopt;
         StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                 SI->getValueOperand());
@@ -3033,7 +3019,6 @@ public:
 
     // Check for overlaps and coverage
     uint64_t ExpectedStart = NewAllocaBeginOffset;
-    TypeSize TotalStoreBits = TypeSize::getZero();
     for (auto &StoreInfo : StoreInfos) {
       uint64_t BeginOff = StoreInfo.BeginOffset;
       uint64_t EndOff = StoreInfo.EndOffset;
@@ -3043,13 +3028,9 @@ public:
         return std::nullopt;
 
       ExpectedStart = EndOff;
-      TotalStoreBits +=
-          DL.getTypeSizeInBits(StoreInfo.Store->getValueOperand()->getType());
     }
     // Check that stores cover the entire alloca
-    // We need check both the end offset and the total store bits
-    if (ExpectedStart != NewAllocaEndOffset ||
-        TotalStoreBits != DL.getTypeSizeInBits(NewAI.getAllocatedType()))
+    if (ExpectedStart != NewAllocaEndOffset)
       return std::nullopt;
 
     // Stores should be in the same basic block
