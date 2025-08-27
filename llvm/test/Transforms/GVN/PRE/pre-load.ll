@@ -1303,10 +1303,13 @@ define void @test20(i1 %cond, i1 %cond2, ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_END]], label [[IF_END]]
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; CHECK:       if.else.if.end_crit_edge:
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i16, ptr [[P1]], align 2
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
-; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; CHECK-NEXT:    [[V3:%.*]] = phi i16 [ [[V2_PRE]], [[IF_ELSE_IF_END_CRIT_EDGE]] ], [ [[DEC]], [[IF_THEN]] ]
+; CHECK-NEXT:    store i16 [[V3]], ptr [[P2:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1338,14 +1341,17 @@ define void @test21(i1 %cond, i32 %code, ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    store i16 [[DEC]], ptr [[P1]], align 2
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    switch i32 [[CODE:%.*]], label [[IF_END]] [
-; CHECK-NEXT:      i32 1, label [[IF_END]]
-; CHECK-NEXT:      i32 2, label [[IF_END]]
-; CHECK-NEXT:      i32 3, label [[IF_END]]
+; CHECK-NEXT:    switch i32 [[CODE:%.*]], label [[IF_ELSE_IF_END_CRIT_EDGE:%.*]] [
+; CHECK-NEXT:      i32 1, label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; CHECK-NEXT:      i32 2, label [[IF_ELSE_IF_END_CRIT_EDGE]]
+; CHECK-NEXT:      i32 3, label [[IF_ELSE_IF_END_CRIT_EDGE]]
 ; CHECK-NEXT:    ]
+; CHECK:       if.else.if.end_crit_edge:
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i16, ptr [[P1]], align 2
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[V2:%.*]] = load i16, ptr [[P1]], align 2
-; CHECK-NEXT:    store i16 [[V2]], ptr [[P2:%.*]], align 2
+; CHECK-NEXT:    [[V3:%.*]] = phi i16 [ [[V2_PRE]], [[IF_ELSE_IF_END_CRIT_EDGE]] ], [ [[DEC]], [[IF_THEN]] ]
+; CHECK-NEXT:    store i16 [[V3]], ptr [[P2:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
