@@ -349,8 +349,6 @@ def AArch64PostLegalizerLowering
 }
 
 // Post-legalization combines which are primarily optimizations.
-
-
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, cast_of_cast_combines, 
