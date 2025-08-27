@@ -15,7 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 

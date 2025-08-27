@@ -11,7 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include <optional>
 
 namespace clang::tidy::utils::fixit {

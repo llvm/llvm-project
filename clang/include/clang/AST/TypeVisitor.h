@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_AST_TYPEVISITOR_H
 #define LLVM_CLANG_AST_TYPEVISITOR_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 

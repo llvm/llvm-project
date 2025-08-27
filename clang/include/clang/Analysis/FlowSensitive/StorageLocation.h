@@ -15,7 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_STORAGELOCATION_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"

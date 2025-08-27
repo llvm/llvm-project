@@ -12,7 +12,7 @@
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGUTIL_H
 
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 
 #include "lldb/Symbol/CompilerType.h"
 

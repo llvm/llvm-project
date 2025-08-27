@@ -18,7 +18,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTEDTYPES_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_EXPECTEDTYPES_H
 
-#include "clang/AST/TypeBase.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
