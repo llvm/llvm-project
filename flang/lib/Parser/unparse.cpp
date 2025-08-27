@@ -2580,20 +2580,11 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+  void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpAssumeDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP ASSUME");
-    Walk(" ", std::get<OmpClauseList>(x.t).v);
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpEndAssumeDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END ASSUME\n");
-    EndOpenMP();
+  void Unparse(const OpenMPAssumeConstruct &x) {
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));

@@ -1857,16 +1857,8 @@ TYPE_PARSER(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
-// Assume Construct
-TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
-    verbatim("ASSUME"_tok), Parser<OmpClauseList>{})))
-
-TYPE_PARSER(sourced(construct<OmpEndAssumeDirective>(
-    startOmpLine >> verbatim("END ASSUME"_tok))))
-
-TYPE_PARSER(sourced(
-    construct<OpenMPAssumeConstruct>(Parser<OmpAssumeDirective>{} / endOmpLine,
-        block, maybe(Parser<OmpEndAssumeDirective>{} / endOmpLine))))
+TYPE_PARSER(construct<OpenMPAssumeConstruct>(
+    sourced(OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
 
 // Block Construct
 #define MakeBlockConstruct(dir) \
