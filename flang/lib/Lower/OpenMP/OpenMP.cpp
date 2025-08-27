@@ -407,7 +407,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       return;
 
     const parser::OmpClauseList *beginClauseList = nullptr;
-    const parser::OmpClauseList *middleClauseList = nullptr;
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
         common::visitors{
@@ -422,28 +421,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
               beginClauseList =
                   &std::get<parser::OmpClauseList>(beginDirective.t);
 
-              // For now we check if there is an inner OpenMPLoopConstruct, and
-              // extract the size clause from there
-              const auto &nestedOptional =
-                  std::get<std::optional<parser::NestedConstruct>>(
-                      ompConstruct.t);
-              assert(nestedOptional.has_value() &&
-                     "Expected a DoConstruct or OpenMPLoopConstruct");
-              const auto *innerConstruct =
-                  std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                      &(nestedOptional.value()));
-              if (innerConstruct) {
-                const auto &innerLoopConstruct = innerConstruct->value();
-                const auto &innerBegin =
-                    std::get<parser::OmpBeginLoopDirective>(
-                        innerLoopConstruct.t);
-                const auto &innerDirective =
-                    std::get<parser::OmpLoopDirective>(innerBegin.t);
-                if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
-                  middleClauseList =
-                      &std::get<parser::OmpClauseList>(innerBegin.t);
-                }
-              }
               if (auto &endDirective =
                       std::get<std::optional<parser::OmpEndLoopDirective>>(
                           ompConstruct.t)) {
@@ -456,9 +433,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
     assert(beginClauseList && "expected begin directive");
     clauses.append(makeClauses(*beginClauseList, semaCtx));
-
-    if (middleClauseList)
-      clauses.append(makeClauses(*middleClauseList, semaCtx));
 
     if (endClauseList)
       clauses.append(makeClauses(*endClauseList, semaCtx));
