@@ -20,6 +20,7 @@ from . import configuration
 from . import test_categories
 from . import lldbtest_config
 from lldbsuite.support import funcutils
+from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 
@@ -94,22 +95,23 @@ def _match_decorator_property(expected, actual):
 
 
 def _compiler_supports(
-    compiler, flag, source="int main() {}", output_file=tempfile.NamedTemporaryFile()
+    compiler, flag, source="int main() {}", output_file=temp_file.OnDiskTempFile()
 ):
     """Test whether the compiler supports the given flag."""
-    if platform.system() == "Darwin":
-        compiler = "xcrun " + compiler
-    try:
-        cmd = "echo '%s' | %s %s -x c -o %s -" % (
-            source,
-            compiler,
-            flag,
-            output_file.name,
-        )
-        subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError:
-        return False
-    return True
+    with output_file:
+        if platform.system() == "Darwin":
+            compiler = "xcrun " + compiler
+        try:
+            cmd = "echo '%s' | %s %s -x c -o %s -" % (
+                source,
+                compiler,
+                flag,
+                output_file.path,
+            )
+            subprocess.check_call(cmd, shell=True)
+        except subprocess.CalledProcessError:
+            return False
+        return True
 
 
 def expectedFailureIf(condition, bugnumber=None):
@@ -876,19 +878,19 @@ def skipUnlessSupportedTypeAttribute(attr):
 
     def compiler_doesnt_support_struct_attribute():
         compiler_path = lldbplatformutil.getCompiler()
-        f = tempfile.NamedTemporaryFile()
-        cmd = [lldbplatformutil.getCompiler(), "-x", "c++", "-c", "-o", f.name, "-"]
-        p = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-        stdout, stderr = p.communicate("struct __attribute__((%s)) Test {};" % attr)
-        if attr in stderr:
-            return "Compiler does not support attribute %s" % (attr)
-        return None
+        with temp_file.OnDiskTempFile() as f:
+            cmd = [lldbplatformutil.getCompiler(), "-x", "c++", "-c", "-o", f.path, "-"]
+            p = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            stdout, stderr = p.communicate("struct __attribute__((%s)) Test {};" % attr)
+            if attr in stderr:
+                return "Compiler does not support attribute %s" % (attr)
+            return None
 
     return skipTestIfFn(compiler_doesnt_support_struct_attribute)
 
@@ -902,21 +904,21 @@ def skipUnlessHasCallSiteInfo(func):
         if not compiler.startswith("clang"):
             return "Test requires clang as compiler"
 
-        f = tempfile.NamedTemporaryFile()
-        cmd = (
-            "echo 'int main() {}' | "
-            "%s -g -glldb -O1 -S -emit-llvm -x c -o %s -" % (compiler_path, f.name)
-        )
-        if os.popen(cmd).close() is not None:
-            return "Compiler can't compile with call site info enabled"
+        with temp_file.OnDiskTempFile() as f:
+            cmd = (
+                "echo 'int main() {}' | "
+                "%s -g -glldb -O1 -S -emit-llvm -x c -o %s -" % (compiler_path, f.path)
+            )
+            if os.popen(cmd).close() is not None:
+                return "Compiler can't compile with call site info enabled"
 
-        with open(f.name, "r") as ir_output_file:
-            buf = ir_output_file.read()
+            with open(f.path, "r") as ir_output_file:
+                buf = ir_output_file.read()
 
-        if "DIFlagAllCallsDescribed" not in buf:
-            return "Compiler did not introduce DIFlagAllCallsDescribed IR flag"
+            if "DIFlagAllCallsDescribed" not in buf:
+                return "Compiler did not introduce DIFlagAllCallsDescribed IR flag"
 
-        return None
+            return None
 
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
@@ -957,7 +959,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             )
 
         # We need to write out the object into a named temp file for inspection.
-        outputf = tempfile.NamedTemporaryFile()
+        outputf = temp_file.OnDiskTempFile()
 
         # Try to compile with ubsan turned on.
         if not _compiler_supports(
@@ -969,7 +971,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             return "Compiler cannot compile with -fsanitize=undefined"
 
         # Check that we actually see ubsan instrumentation in the binary.
-        cmd = "nm %s" % outputf.name
+        cmd = "nm %s" % outputf.path
         with os.popen(cmd) as nm_output:
             if "___ubsan_handle_divrem_overflow" not in nm_output.read():
                 return "Division by zero instrumentation is missing"
@@ -1037,39 +1039,36 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        f = tempfile.NamedTemporaryFile(delete=False)
-        if lldbplatformutil.getPlatform() == "windows":
-            return "MTE tests are not compatible with 'windows'"
+        with temp_file.OnDiskTempFile() as f:
+            if lldbplatformutil.getPlatform() == "windows":
+                return "MTE tests are not compatible with 'windows'"
 
-        # Note hostos may be Windows.
-        f.close()
+            cmd = f"{compiler_path} -x c -o {f.path} -"
+            if (
+                subprocess.run(
+                    cmd, shell=True, input="int main() {}".encode()
+                ).returncode
+                != 0
+            ):
+                # Cannot compile at all, don't skip the test
+                # so that we report the broken compiler normally.
+                return None
 
-        cmd = f"{compiler_path} -x c -o {f.name} -"
-        if (
-            subprocess.run(cmd, shell=True, input="int main() {}".encode()).returncode
-            != 0
-        ):
-            os.remove(f.name)
-            # Cannot compile at all, don't skip the test
-            # so that we report the broken compiler normally.
+            # We need the Linux headers and ACLE MTE intrinsics
+            test_src = """
+                #include <asm/hwcap.h>
+                #include <arm_acle.h>
+                #ifndef HWCAP2_MTE
+                #error
+                #endif
+                int main() {
+                    void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
+                }"""
+            cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.path} -"
+            res = subprocess.run(cmd, shell=True, input=test_src.encode())
+            if res.returncode != 0:
+                return "Toolchain does not support MTE"
             return None
-
-        # We need the Linux headers and ACLE MTE intrinsics
-        test_src = """
-            #include <asm/hwcap.h>
-            #include <arm_acle.h>
-            #ifndef HWCAP2_MTE
-            #error
-            #endif
-            int main() {
-                void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
-            }"""
-        cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
-        res = subprocess.run(cmd, shell=True, input=test_src.encode())
-        os.remove(f.name)
-        if res.returncode != 0:
-            return "Toolchain does not support MTE"
-        return None
 
     return skipTestIfFn(is_toolchain_with_mte)(func)
 

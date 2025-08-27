@@ -14,7 +14,11 @@
 #ifndef LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LLVMContext;
@@ -23,6 +27,80 @@ class Metadata;
 
 namespace hlsl {
 namespace rootsig {
+
+template <typename T>
+class RootSignatureValidationError
+    : public ErrorInfo<RootSignatureValidationError<T>> {
+public:
+  static char ID;
+  StringRef ParamName;
+  T Value;
+
+  RootSignatureValidationError(StringRef ParamName, T Value)
+      : ParamName(ParamName), Value(Value) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Invalid value for " << ParamName << ": " << Value;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
+public:
+  LLVM_ABI static char ID;
+  StringRef Message;
+  MDNode *MD;
+
+  GenericRSMetadataError(StringRef Message, MDNode *MD)
+      : Message(Message), MD(MD) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << Message;
+    if (MD) {
+      OS << "\n";
+      MD->printTree(OS);
+    }
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
+public:
+  LLVM_ABI static char ID;
+  StringRef ElementName;
+
+  InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Invalid format for  " << ElementName;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
+public:
+  LLVM_ABI static char ID;
+  StringRef ParamName;
+
+  InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Invalid value for " << ParamName;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 class MetadataBuilder {
 public:
@@ -47,6 +125,46 @@ private:
   llvm::LLVMContext &Ctx;
   ArrayRef<RootElement> Elements;
   SmallVector<Metadata *> GeneratedMetadata;
+};
+
+enum class RootSignatureElementKind {
+  Error = 0,
+  RootFlags = 1,
+  RootConstants = 2,
+  SRV = 3,
+  UAV = 4,
+  CBV = 5,
+  DescriptorTable = 6,
+  StaticSamplers = 7
+};
+
+class MetadataParser {
+public:
+  MetadataParser(MDNode *Root) : Root(Root) {}
+
+  LLVM_ABI llvm::Expected<llvm::mcdxbc::RootSignatureDesc>
+  ParseRootSignature(uint32_t Version);
+
+private:
+  llvm::Error parseRootFlags(mcdxbc::RootSignatureDesc &RSD,
+                             MDNode *RootFlagNode);
+  llvm::Error parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
+                                 MDNode *RootConstantNode);
+  llvm::Error parseRootDescriptors(mcdxbc::RootSignatureDesc &RSD,
+                                   MDNode *RootDescriptorNode,
+                                   RootSignatureElementKind ElementKind);
+  llvm::Error parseDescriptorRange(mcdxbc::DescriptorTable &Table,
+                                   MDNode *RangeDescriptorNode);
+  llvm::Error parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
+                                   MDNode *DescriptorTableNode);
+  llvm::Error parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
+                                        MDNode *Element);
+  llvm::Error parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
+                                 MDNode *StaticSamplerNode);
+
+  llvm::Error validateRootSignature(const llvm::mcdxbc::RootSignatureDesc &RSD);
+
+  MDNode *Root;
 };
 
 } // namespace rootsig

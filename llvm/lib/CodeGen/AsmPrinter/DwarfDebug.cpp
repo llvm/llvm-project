@@ -936,27 +936,38 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (MI.hasDelaySlot() && !delaySlotSupported(*&MI))
         return;
 
+      DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
+
       // If this is a direct call, find the callee's subprogram.
       // In the case of an indirect call find the register that holds
       // the callee.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
-      if (!CalleeOp.isGlobal() &&
-          (!CalleeOp.isReg() || !CalleeOp.getReg().isPhysical()))
-        continue;
+      bool PhysRegCalleeOperand =
+          CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
+      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
+      // describe the call target operand.
+      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
+        const MCOperandInfo &MCOI =
+            MI.getDesc().operands()[CalleeOp.getOperandNo()];
+        PhysRegCalleeOperand =
+            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
+      }
 
       unsigned CallReg = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
-      if (CalleeOp.isReg()) {
-        CallReg = CalleeOp.getReg();
-        if (!CallReg)
-          continue;
-      } else {
+      if (PhysRegCalleeOperand) {
+        CallReg = CalleeOp.getReg(); // might be zero
+      } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
-        if (!CalleeDecl || !CalleeDecl->getSubprogram())
-          continue;
-        CalleeSP = CalleeDecl->getSubprogram();
+        if (CalleeDecl)
+          CalleeSP = CalleeDecl->getSubprogram(); // might be nullptr
       }
+
+      // Omit DIE if we can't tell where the call goes *and* we don't want to
+      // add metadata to it.
+      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+        continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
 
@@ -972,10 +983,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the call graph which could lead to some target function. For tail
       // calls, no return PC information is needed, unless tuning for GDB in
       // DWARF4 mode in which case we fake a return PC for compatibility.
-      const MCSymbol *PCAddr =
-          (!IsTail || CU.useGNUAnalogForDwarf5Feature())
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
+      const MCSymbol *PCAddr = (!IsTail || CU.useGNUAnalogForDwarf5Feature())
+                                   ? getLabelAfterInsn(TopLevelCallMI)
+                                   : nullptr;
 
       // For tail calls, it's necessary to record the address of the branch
       // instruction so that the debugger can show where the tail call occurred.
@@ -992,7 +1002,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
-          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg);
+          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {

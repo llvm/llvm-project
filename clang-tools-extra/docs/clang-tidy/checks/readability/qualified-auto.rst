@@ -96,3 +96,46 @@ Note in the LLVM alias, the default value is `false`.
   matched against only the type name (i.e. ``Type``). E.g. to suppress reports
   for ``std::array`` iterators use `std::array<.*>::(const_)?iterator` string.
   The default is an empty string.
+
+.. option:: IgnoreAliasing
+
+  If set to `true` the check will use the underlying type to determine the type
+  that ``auto`` is deduced to. If set to `false` the check will not look beyond
+  the first type alias.
+  Default value is `true`.
+
+  .. code-block:: c++
+
+    using IntPtr = int*;
+    IntPtr foo();
+
+    auto bar = foo();
+
+  If :option:`IgnoreAliasing` is set to `true`, it will be transformed into:
+
+  .. code-block:: c++
+
+    auto *bar = foo();
+
+  Otherwise no changes will occur.
+
+
+Limitations
+-----------
+
+When :option:`IgnoreAliasing` is set to `false`, there are cases where
+Clang has not preserved the type alias and the underlying type will be used so
+false positives may occur.
+
+For example:
+
+.. code-block:: c++
+
+  using IntPtr = int *;
+
+  void loopPtr(const std::vector<IntPtr> &VectorIntPtr) {
+
+    // May fail for IgnoreAliasing==false as AST does not have the 'IntPtr'
+    for (auto Data : VectorIntPtr) {
+    }
+  }

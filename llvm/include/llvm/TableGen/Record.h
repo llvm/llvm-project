@@ -841,6 +841,7 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
+    GETDAGOPNAME,
     LOG2,
     REPR,
     LISTFLATTEN,
@@ -910,6 +911,7 @@ public:
     GETDAGARG,
     GETDAGNAME,
     SETDAGOP,
+    SETDAGOPNAME
   };
 
 private:

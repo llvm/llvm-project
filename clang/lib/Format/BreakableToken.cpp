@@ -25,7 +25,7 @@
 namespace clang {
 namespace format {
 
-static constexpr StringRef Blanks = " \t\v\f\r";
+static constexpr StringRef Blanks(" \t\v\f\r");
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -513,7 +513,7 @@ BreakableBlockComment::BreakableBlockComment(
     Decoration = "";
   }
   for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
-    const StringRef &Text = Content[i];
+    const StringRef Text(Content[i]);
     if (i + 1 == e) {
       // If the last line is empty, the closing "*/" will have a star.
       if (Text.empty())

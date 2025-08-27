@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -359,6 +358,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
     return UseCaptureInfo::passthrough();
+  case Instruction::PtrToAddr:
+    // We treat ptrtoaddr as a location-independent capture of the address even
+    // if it is ultimately not used. Continuing recursive analysis after
+    // ptrtoaddr would be possible, but we'd need logic to do that correctly,
+    // which is not the same as the current pointer following logic.
+    return CaptureComponents::Address;
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
@@ -399,7 +404,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
-  SmallSet<const Use *, 20> Visited;
+  SmallPtrSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     for (const Use &U : V->uses()) {

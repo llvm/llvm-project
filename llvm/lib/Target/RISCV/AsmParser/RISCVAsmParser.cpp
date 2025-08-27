@@ -903,6 +903,7 @@ public:
            VK == RISCV::S_QC_ABS20;
   }
 
+  bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
   bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isUImm20LUI() const {
@@ -1197,6 +1198,14 @@ public:
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm(), isRV64Imm());
+  }
+
+  void addSImm8UnsignedOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm;
+    [[maybe_unused]] bool IsConstant = evaluateConstantImm(getImm(), Imm);
+    assert(IsConstant);
+    Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
   }
 
   void addSImm10UnsignedOperands(MCInst &Inst, unsigned N) const {
@@ -1547,6 +1556,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidSImm8Unsigned:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
+                                      (1 << 8) - 1);
   case Match_InvalidSImm10:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
@@ -3849,9 +3861,14 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
-  case RISCV::PseudoC_ADDI_NOP:
-    emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));
+  case RISCV::PseudoC_ADDI_NOP: {
+    if (Inst.getOperand(2).getImm() == 0)
+      emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));
+    else
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::C_NOP_HINT).addOperand(Inst.getOperand(2)));
     return false;
+  }
   case RISCV::PseudoLLAImm:
   case RISCV::PseudoLAImm:
   case RISCV::PseudoLI: {
@@ -4048,4 +4065,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVAsmParser() {
   RegisterMCAsmParser<RISCVAsmParser> X(getTheRISCV32Target());
   RegisterMCAsmParser<RISCVAsmParser> Y(getTheRISCV64Target());
+  RegisterMCAsmParser<RISCVAsmParser> A(getTheRISCV32beTarget());
+  RegisterMCAsmParser<RISCVAsmParser> B(getTheRISCV64beTarget());
 }

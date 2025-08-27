@@ -221,6 +221,23 @@ inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
   return decodeULEB128AndInc(p, nullptr);
 }
 
+enum class LEB128Sign { Unsigned, Signed };
+
+template <LEB128Sign Sign, typename T, typename U = char,
+          unsigned MaxLEB128SizeBytes = 16>
+inline void appendLEB128(SmallVectorImpl<U> &Buffer, T Value) {
+  static_assert(sizeof(U) == 1, "Expected buffer of bytes");
+  unsigned LEB128ValueSize;
+  U TmpBuffer[MaxLEB128SizeBytes];
+  if constexpr (Sign == LEB128Sign::Signed)
+    LEB128ValueSize =
+        encodeSLEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  else
+    LEB128ValueSize =
+        encodeULEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  Buffer.append(TmpBuffer, TmpBuffer + LEB128ValueSize);
+}
+
 /// Utility function to get the size of the ULEB128-encoded value.
 LLVM_ABI extern unsigned getULEB128Size(uint64_t Value);
 

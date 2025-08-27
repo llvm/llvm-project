@@ -62,11 +62,13 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
 class DeclContext;
 class HLSLPackOffsetAttr;
+class ArraySubscriptExpr;
 
 class FunctionDecl;
 
@@ -74,6 +76,7 @@ namespace CodeGen {
 
 class CodeGenModule;
 class CodeGenFunction;
+class LValue;
 
 class CGHLSLRuntime {
 public:
@@ -163,9 +166,16 @@ public:
                                llvm::TargetExtType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
+  std::optional<LValue>
+  emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                 CodeGenFunction &CGF);
+
 private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLVkBindingAttr *VkBinding);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);

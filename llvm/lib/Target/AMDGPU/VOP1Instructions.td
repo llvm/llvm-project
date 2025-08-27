@@ -107,18 +107,6 @@ class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   VOP_DPP_Pseudo <OpName, P, pattern> {
 }
 
-class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
-  list<dag> ret =
-    !if(P.HasModifiers,
-        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers))))],
-        !if(P.HasOMod,
-            [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
-                                                  i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
-        )
-    );
-}
-
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag, int VOPDOp = -1> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
@@ -718,7 +706,6 @@ def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
   let SubtargetPredicate = isGFX125xOnly in
@@ -743,7 +730,6 @@ class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSe
 >;
 
 let OtherPredicates = [HasFP8ConversionInsts] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_OP_SEL_e64>;
   let SubtargetPredicate = isGFX125xOnly in {
@@ -752,7 +738,6 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
     def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
                  (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
   }
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12Plus in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
 }
@@ -1069,11 +1054,6 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
-
-multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
-                                             string opName, string asmName> :
-  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
-  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
 multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250<
     bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {

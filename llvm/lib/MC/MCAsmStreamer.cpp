@@ -28,7 +28,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -275,6 +274,7 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitPrefAlign(Align Alignment) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -345,7 +345,7 @@ public:
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
-  void emitCFISections(bool EH, bool Debug) override;
+  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) override;
@@ -532,8 +532,8 @@ void MCAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
     if (MCTargetStreamer *TS = getTargetStreamer()) {
       TS->changeSection(Cur.first, Section, Subsection, OS);
     } else {
-      Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                    Subsection);
+      MAI->printSwitchToSection(*Section, Subsection,
+                                getContext().getTargetTriple(), OS);
     }
   }
   MCStreamer::switchSection(Section, Subsection);
@@ -543,7 +543,7 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  Sec->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS, Subsec);
+  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 
@@ -897,14 +897,14 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(CsectSym);
+  auto *XSym = static_cast<MCSymbolXCOFF *>(CsectSym);
   if (XSym->hasRename())
     emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
-
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   switch (Linkage) {
   case MCSA_Global:
     OS << MAI->getGlobalDirective();
@@ -944,9 +944,8 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  if (cast<MCSymbolXCOFF>(Symbol)->hasRename())
-    emitXCOFFRenameDirective(Symbol,
-                             cast<MCSymbolXCOFF>(Symbol)->getSymbolTableName());
+  if (Sym.hasRename())
+    emitXCOFFRenameDirective(&Sym, Sym.getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
@@ -1070,9 +1069,11 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
-  if (XSym && XSym->hasRename())
-    emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  if (getContext().isXCOFF()) {
+    auto *XSym = static_cast<MCSymbolXCOFF *>(Symbol);
+    if (XSym && XSym->hasRename())
+      emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  }
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -1105,7 +1106,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // Note: a .zerofill directive does not switch sections.
   OS << ".zerofill ";
 
-  assert(Section->getVariant() == MCSection::SV_MachO &&
+  assert(getContext().getObjectFileType() == MCContext::IsMachO &&
          ".zerofill is a Mach-O specific directive");
   // This is a mach-o specific directive.
 
@@ -1130,7 +1131,7 @@ void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 
   // Instead of using the Section we'll just use the shortcut.
 
-  assert(Section->getVariant() == MCSection::SV_MachO &&
+  assert(getContext().getObjectFileType() == MCContext::IsMachO &&
          ".zerofill is a Mach-O specific directive");
   // This is a mach-o specific directive and section.
 
@@ -1540,6 +1541,11 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
+void MCAsmStreamer::emitPrefAlign(Align Alignment) {
+  OS << "\t.prefalign\t" << Alignment.value();
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
                                       unsigned char Value,
                                       SMLoc Loc) {
@@ -1906,15 +1912,24 @@ void MCAsmStreamer::emitIdent(StringRef IdentString) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFISections(bool EH, bool Debug) {
-  MCStreamer::emitCFISections(EH, Debug);
+void MCAsmStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
+  MCStreamer::emitCFISections(EH, Debug, SFrame);
   OS << "\t.cfi_sections ";
+  bool C = false;
   if (EH) {
     OS << ".eh_frame";
-    if (Debug)
-      OS << ", .debug_frame";
-  } else if (Debug) {
+    C = true;
+  }
+  if (Debug) {
+    if (C)
+      OS << ", ";
     OS << ".debug_frame";
+    C = true;
+  }
+  if (SFrame) {
+    if (C)
+      OS << ", ";
+    OS << ".sframe";
   }
 
   EmitEOL();
@@ -2331,6 +2346,9 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
+
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
   // then trying to display it as nicely as possible.
@@ -2385,7 +2403,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
         unsigned Bit = (Code[i] >> j) & 1;
 
         unsigned FixupBit;
-        if (MAI->isLittleEndian())
+        // RISC-V instructions are always little-endian.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
+        if (MAI->isLittleEndian() || ForceLE)
           FixupBit = i * 8 + j;
         else
           FixupBit = i * 8 + (7-j);
@@ -2422,6 +2443,11 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
+  if (CurFrag) {
+    MCSection *Sec = getCurrentSectionOnly();
+    Sec->setHasInstructions(true);
+  }
+
   if (MAI->isAIX() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.

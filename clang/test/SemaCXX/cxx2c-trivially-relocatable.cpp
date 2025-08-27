@@ -372,7 +372,7 @@ void test__builtin_trivially_relocate() {
     __builtin_trivially_relocate((S*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be relocatable}}
     __builtin_trivially_relocate((int*)0, 0, 0); //expected-error {{first and second arguments to '__builtin_trivially_relocate' must be of the same type}}
 
-    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '{{.*}}' with an rvalue of type 'int *'}}
+    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '__size_t' (aka '{{.*}}') with an rvalue of type 'int *'}}
     __builtin_trivially_relocate((int*)0, (int*)0, 0);
     __builtin_trivially_relocate((R*)0, (R*)0, 0);
 }

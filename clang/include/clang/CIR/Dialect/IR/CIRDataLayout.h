@@ -34,6 +34,41 @@ public:
   void reset(mlir::DataLayoutSpecInterface spec);
 
   bool isBigEndian() const { return bigEndian; }
+
+  /// Internal helper method that returns requested alignment for type.
+  llvm::Align getAlignment(mlir::Type ty, bool abiOrPref) const;
+
+  llvm::Align getABITypeAlign(mlir::Type ty) const {
+    return getAlignment(ty, true);
+  }
+
+  /// Returns the maximum number of bytes that may be overwritten by
+  /// storing the specified type.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// For example, returns 5 for i36 and 10 for x86_fp80.
+  llvm::TypeSize getTypeStoreSize(mlir::Type ty) const {
+    llvm::TypeSize baseSize = getTypeSizeInBits(ty);
+    return {llvm::divideCeil(baseSize.getKnownMinValue(), 8),
+            baseSize.isScalable()};
+  }
+
+  /// Returns the offset in bytes between successive objects of the
+  /// specified type, including alignment padding.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// This is the amount that alloca reserves for this type. For example,
+  /// returns 12 or 16 for x86_fp80, depending on alignment.
+  llvm::TypeSize getTypeAllocSize(mlir::Type ty) const {
+    // Round up to the next alignment boundary.
+    return llvm::alignTo(getTypeStoreSize(ty), getABITypeAlign(ty).value());
+  }
+
+  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
 };
 
 } // namespace cir

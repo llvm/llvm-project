@@ -152,6 +152,10 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
+#  ifdef _LIBCPP_ASSERTION_SEMANTIC
+#    error "Assertion semantics are not available in the C++03 mode."
+#  endif
+
 // } HARDENING
 
 #  define _LIBCPP_TOSTRING2(x) #x

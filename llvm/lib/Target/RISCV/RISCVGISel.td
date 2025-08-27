@@ -147,7 +147,7 @@ def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
-let Predicates = [IsRV64, NotHasStdExtZba] in
+let Predicates = [IsRV64, NoStdExtZba] in
 def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 
 let Predicates = [IsRV32, NoStdExtZbb, NoStdExtZbkb] in 

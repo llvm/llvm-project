@@ -58,10 +58,6 @@ using namespace clang;
 #define ABSTRACT_DECL(DECL)
 #include "clang/AST/DeclNodes.inc"
 
-void Decl::updateOutOfDate(IdentifierInfo &II) const {
-  getASTContext().getExternalSource()->updateOutOfDateIdentifier(II);
-}
-
 #define DECL(DERIVED, BASE)                                                    \
   static_assert(alignof(Decl) >= alignof(DERIVED##Decl),                       \
                 "Alignment sufficient after objects prepended to " #DERIVED);
@@ -489,8 +485,7 @@ bool Decl::isFlexibleArrayMemberLike(
 
       // Look through typedefs.
       if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
-        const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
-        TInfo = TDL->getTypeSourceInfo();
+        TInfo = TTL.getDecl()->getTypeSourceInfo();
         continue;
       }
 
@@ -1512,30 +1507,19 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ObjCCategoryImpl:
     return this;
 
+  // If this is a tag type that has a definition or is currently
+  // being defined, that definition is our primary context.
+  case Decl::ClassTemplatePartialSpecialization:
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    return cast<CXXRecordDecl>(this)->getDefinitionOrSelf();
+  case Decl::Record:
+  case Decl::Enum:
+    return cast<TagDecl>(this)->getDefinitionOrSelf();
+
   default:
-    if (getDeclKind() >= Decl::firstTag && getDeclKind() <= Decl::lastTag) {
-      // If this is a tag type that has a definition or is currently
-      // being defined, that definition is our primary context.
-      auto *Tag = cast<TagDecl>(this);
-
-      if (TagDecl *Def = Tag->getDefinition())
-        return Def;
-
-      if (const auto *TagTy = dyn_cast<TagType>(Tag->getTypeForDecl())) {
-        // Note, TagType::getDecl returns the (partial) definition one exists.
-        TagDecl *PossiblePartialDef = TagTy->getDecl();
-        if (PossiblePartialDef->isBeingDefined())
-          return PossiblePartialDef;
-      } else {
-        assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()));
-      }
-
-      return Tag;
-    }
-
     assert(getDeclKind() >= Decl::firstFunction &&
-           getDeclKind() <= Decl::lastFunction &&
-          "Unknown DeclContext kind");
+           getDeclKind() <= Decl::lastFunction && "Unknown DeclContext kind");
     return this;
   }
 }

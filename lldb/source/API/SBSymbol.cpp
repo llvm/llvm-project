@@ -193,6 +193,14 @@ SymbolType SBSymbol::GetType() {
   return eSymbolTypeInvalid;
 }
 
+uint32_t SBSymbol::GetID() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_ptr)
+    return m_opaque_ptr->GetID();
+  return 0;
+}
+
 bool SBSymbol::IsExternal() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -207,4 +215,24 @@ bool SBSymbol::IsSynthetic() {
   if (m_opaque_ptr)
     return m_opaque_ptr->IsSynthetic();
   return false;
+}
+
+bool SBSymbol::IsDebug() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_ptr)
+    return m_opaque_ptr->IsDebug();
+  return false;
+}
+
+const char *SBSymbol::GetTypeAsString(lldb::SymbolType symbol_type) {
+  LLDB_INSTRUMENT_VA(symbol_type);
+
+  return Symbol::GetTypeAsString(symbol_type);
+}
+
+lldb::SymbolType SBSymbol::GetTypeFromString(const char *str) {
+  LLDB_INSTRUMENT_VA(str);
+
+  return Symbol::GetTypeFromString(str);
 }
