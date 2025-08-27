@@ -1383,7 +1383,7 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   assert(E->getRHS()->getType()->isVectorType());
 
   // Prepare storage for result.
-  if (!Initializing && !E->isCompoundAssignmentOp()) {
+  if (!Initializing && !E->isCompoundAssignmentOp() && !E->isAssignmentOp()) {
     UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
@@ -1401,6 +1401,21 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
   PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
+
+  if (E->getOpcode() == BO_Assign) {
+    assert(Ctx.getASTContext().hasSameUnqualifiedType(
+        LHS->getType()->castAs<VectorType>()->getElementType(),
+        RHS->getType()->castAs<VectorType>()->getElementType()));
+    if (!this->visit(LHS))
+      return false;
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitCopyArray(ElemT, 0, 0, VecTy->getNumElements(), E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  }
 
   // Evaluate LHS and save value to LHSOffset.
   unsigned LHSOffset =
@@ -3880,6 +3895,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Bool);
+  if (E->isValueDependent())
+    return false;
   if (DiscardResult)
     return true;
   return this->emitConstBool(E->isSatisfied(), E);
@@ -4609,8 +4626,8 @@ UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
 template <class Emitter>
 const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
   if (const PointerType *PT = dyn_cast<PointerType>(Ty))
-    return PT->getPointeeType()->getAs<RecordType>();
-  return Ty->getAs<RecordType>();
+    return PT->getPointeeType()->getAsCanonical<RecordType>();
+  return Ty->getAsCanonical<RecordType>();
 }
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
