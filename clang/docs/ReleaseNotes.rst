@@ -246,6 +246,8 @@ Improvements to Clang's diagnostics
   decorated with the ``alloc_size`` attribute don't allocate enough space for
   the target pointer type.
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
