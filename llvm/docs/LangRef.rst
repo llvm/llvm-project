@@ -14417,8 +14417,6 @@ register are the same. However, on other architectures (e.g. SPARCv9), the logic
 stack pointer register may differ from the physical value. '``llvm.stackaddress``' handles this
 discrepancy and returns the correct boundary address.
 
-**Note**: This intrinsic is currently only implemented for x86 and x86-64.
-
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
