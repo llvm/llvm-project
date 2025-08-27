@@ -53,7 +53,7 @@ define i32 @caller2() {
 ; CHECK:       [[COMMON_RET]]:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[UNREACHABLE_CALL:%.*]] = call i32 @callee2.specialized.5(i32 2)
+; CHECK-NEXT:    [[UNREACHABLE_CALL:%.*]] = call i32 @callee2.specialized.7(i32 2)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -92,4 +92,44 @@ loop:                                               ; preds = %ai, %entry
 
 exit:                                               ; preds = %ai
   ret i32 0
+}
+
+define i32 @caller3(i32 %arg) {
+; CHECK-LABEL: define range(i32 2, 1) i32 @caller3(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee3.specialized.5(i32 0)
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee3.specialized.6(i32 1)
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 undef, 0
+; CHECK-NEXT:    br i1 [[COND]], label %[[COMMON_RET:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    ret i32 poison
+;
+entry:
+  %call1 = call i32 @callee3(i32 0)
+  %call2 = call i32 @callee3(i32 1)
+  %cond = icmp eq i32 %call2, 0
+  br i1 %cond, label %common.ret, label %if.then
+
+common.ret:                                       ; preds = %entry
+  ret i32 0
+
+if.then:                                         ; preds = %entry
+  %unreachable_call = call i32 @callee3(i32 %arg)
+  ret i32 %unreachable_call
+}
+
+define internal i32 @callee3(i32 %arg) {
+entry:
+  br label %loop
+
+loop:                                               ; preds = %ai, %entry
+  %add = or i32 0, 0
+  %cond = icmp ne i32 %arg, 1
+  br i1 %cond, label %exit, label %loop
+
+exit:                                               ; preds = %ai
+  ret i32 %arg
 }
