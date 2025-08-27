@@ -1806,8 +1806,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     return TypeSwitch<const VPSingleDefRecipe *,
                       std::optional<std::pair<bool, unsigned>>>(R)
         .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-              VPWidenSelectRecipe, VPHistogramRecipe, VPPartialReductionRecipe,
-              VPReplicateRecipe>(
+              VPWidenSelectRecipe, VPReplicateRecipe>(
             [](auto *I) { return std::make_pair(false, I->getOpcode()); })
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
@@ -1822,17 +1821,15 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   /// account for the data embedded in them while checking for equality or
   /// hashing.
   static bool canHandle(const VPSingleDefRecipe *Def) {
+    auto C = getOpcodeOrIntrinsicID(Def);
+
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
     // VPlan.
-    if (auto C = getOpcodeOrIntrinsicID(Def))
-      if (!C->first && (C->second == Instruction::InsertValue ||
-                        C->second == Instruction::ExtractValue))
-        return false;
-    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenSelectRecipe, VPReplicateRecipe, VPWidenIntrinsicRecipe>(
-               Def) &&
-           !Def->mayReadFromMemory();
+    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
+                             C->second == Instruction::ExtractValue)))
+      return false;
+    return !Def->mayReadFromMemory();
   }
 
   /// Hash the underlying data of \p Def.
@@ -1873,20 +1870,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 /// Perform a common-subexpression-elimination of VPSingleDefRecipes on the \p
 /// Plan.
 void VPlanTransforms::cse(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  if (!LoopRegion)
-    return;
-
-  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
-      vp_depth_first_shallow(Plan.getEntry()));
-  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
-      vp_depth_first_shallow(LoopRegion->getEntry()));
   VPDominatorTree VPDT(Plan);
-
-  // Don't CSE in replicate regions.
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
-  for (VPBasicBlock *VPBB :
-       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
