@@ -63,12 +63,19 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-machine-sme-abi"
+
+static cl::opt<int>
+    LoopEdgeWeight("aarch64-sme-abi-loop-edge-weight", cl::ReallyHidden,
+                   cl::init(10),
+                   cl::desc("Edge weight for basic blocks witin loops (used "
+                            "for placing ZA saves/restores)"));
 
 namespace {
 
@@ -176,7 +183,8 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI() : MachineFunctionPass(ID) {}
+  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
+      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -185,6 +193,9 @@ struct MachineSMEABI : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<EdgeBundlesWrapperLegacy>();
+    // Only analyse loops at -01 and above.
+    if (OptLevel != CodeGenOptLevel::None)
+      AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -280,6 +291,8 @@ private:
     LiveRegs PhysLiveRegsAtExit = LiveRegs::None;
   };
 
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
+
   // All pass state that must be cleared between functions.
   struct PassState {
     SmallVector<BlockInfo> Blocks;
@@ -297,6 +310,7 @@ private:
   const AArch64RegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  MachineLoopInfo *MLI = nullptr;
 };
 
 void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
@@ -387,18 +401,23 @@ void MachineSMEABI::assignBundleZAStates() {
         LLVM_DEBUG(dbgs() << " (no state preference)\n");
         continue;
       }
+      bool IsLoop = MLI && MLI->getLoopFor(MF->getBlockNumbered(BlockID));
       bool InEdge = Bundles->getBundle(BlockID, /*Out=*/false) == I;
       bool OutEdge = Bundles->getBundle(BlockID, /*Out=*/true) == I;
+      int EdgeWeight = IsLoop ? LoopEdgeWeight : 1;
+      if (IsLoop)
+        LLVM_DEBUG(dbgs() << " IsLoop");
 
+      LLVM_DEBUG(dbgs() << " (EdgeWeight: " << EdgeWeight << ')');
       ZAState DesiredIncomingState = Block.Insts.front().NeededState;
       if (InEdge && isLegalEdgeBundleZAState(DesiredIncomingState)) {
-        EdgeStateCounts[DesiredIncomingState]++;
+        EdgeStateCounts[DesiredIncomingState] += EdgeWeight;
         LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
                           << getZAStateString(DesiredIncomingState));
       }
       ZAState DesiredOutgoingState = Block.Insts.back().NeededState;
       if (OutEdge && isLegalEdgeBundleZAState(DesiredOutgoingState)) {
-        EdgeStateCounts[DesiredOutgoingState]++;
+        EdgeStateCounts[DesiredOutgoingState] += EdgeWeight;
         LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
                           << getZAStateString(DesiredOutgoingState));
       }
@@ -823,6 +842,8 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();
+  if (OptLevel != CodeGenOptLevel::None)
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   bool IsAgnosticZA = SMEFnAttrs.hasAgnosticZAInterface();
 
@@ -851,4 +872,6 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }
+FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
+  return new MachineSMEABI(OptLevel);
+}
