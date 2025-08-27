@@ -66,7 +66,7 @@ private:
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
   int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
 
-  std::map<int, std::pair<ScopeKind, uint32_t>> m_scope_kinds;
+  std::map<int64_t, std::pair<ScopeKind, uint32_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
