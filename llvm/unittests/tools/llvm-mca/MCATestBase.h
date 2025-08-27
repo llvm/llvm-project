@@ -71,7 +71,7 @@ protected:
 
   void SetUp() override;
 
-  using Builder = std::function<Expected<std::unique_ptr<mca::Instruction>>(
+  using Builder = function_ref<Expected<std::unique_ptr<mca::Instruction>>(
       mca::InstrBuilder &, const MCInst &,
       const SmallVector<mca::Instrument *> &)>;
 

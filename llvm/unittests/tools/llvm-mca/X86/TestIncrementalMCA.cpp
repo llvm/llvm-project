@@ -256,6 +256,7 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
                                   ID.MaxLatency = ExplicitLatency;
                                 });
                           });
+  ASSERT_FALSE(bool(E)) << "Failed to run baseline";
   auto *BaselineObj = BaselineResult.getObject("SummaryView");
   auto V = BaselineObj->getInteger("TotalCycles");
   ASSERT_TRUE(V);
