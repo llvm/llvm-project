@@ -834,15 +834,10 @@ llvm::LogicalResult hlfir::CmpCharOp::verify() {
 
   switch (getPredicate()) {
   case mlir::arith::CmpIPredicate::slt:
-    [[fallthrough]];
   case mlir::arith::CmpIPredicate::sle:
-    [[fallthrough]];
   case mlir::arith::CmpIPredicate::eq:
-    [[fallthrough]];
   case mlir::arith::CmpIPredicate::ne:
-    [[fallthrough]];
   case mlir::arith::CmpIPredicate::sgt:
-    [[fallthrough]];
   case mlir::arith::CmpIPredicate::sge:
     break;
   default:
