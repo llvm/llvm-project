@@ -9287,11 +9287,18 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      const int TrueValCost = RISCVMatInt::getIntMatCost(
-          TrueVal, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-      const int FalseValCost = RISCVMatInt::getIntMatCost(
-          FalseVal, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
-      bool IsCZERO_NEZ = TrueValCost <= FalseValCost;
+      auto getCost = [&](const APInt &Delta, const APInt &Addend) {
+        const int DeltaCost = RISCVMatInt::getIntMatCost(
+            Delta, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
+        // Does the addend fold into an ADDI
+        if (Addend.isSignedIntN(12))
+          return DeltaCost;
+        const int AddendCost = RISCVMatInt::getIntMatCost(
+            Addend, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
+        return AddendCost + DeltaCost;
+      };
+      bool IsCZERO_NEZ = getCost(FalseVal - TrueVal, TrueVal) <=
+                         getCost(TrueVal - FalseVal, FalseVal);
       SDValue LHSVal = DAG.getConstant(
           IsCZERO_NEZ ? FalseVal - TrueVal : TrueVal - FalseVal, DL, VT);
       SDValue RHSVal =
