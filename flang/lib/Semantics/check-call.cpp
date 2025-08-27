@@ -770,24 +770,36 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Cases when temporaries might be needed but must not be permitted.
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
-  if ((actualIsAsynchronous || actualIsVolatile) &&
-      (dummyIsAsynchronous || dummyIsVolatile) && !dummyIsValue) {
-    if (actualCoarrayRef) { // C1538
-      messages.Say(
-          "Coindexed ASYNCHRONOUS or VOLATILE actual argument may not be associated with %s with ASYNCHRONOUS or VOLATILE attributes unless VALUE"_err_en_US,
-          dummyName);
-    }
-    if ((actualRank > 0 || actualIsAssumedRank) && !actualIsContiguous) {
-      if (dummyIsContiguous ||
-          !(dummyIsAssumedShape || dummyIsAssumedRank ||
-              (actualIsPointer && dummyIsPointer))) { // C1539 & C1540
+  if (!dummyIsValue && (dummyIsAsynchronous || dummyIsVolatile)) {
+    if (actualIsAsynchronous || actualIsVolatile) {
+      if (actualCoarrayRef) { // F'2023 C1547
         messages.Say(
-            "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE %s"_err_en_US,
+            "Coindexed ASYNCHRONOUS or VOLATILE actual argument may not be associated with %s with ASYNCHRONOUS or VOLATILE attributes unless VALUE"_err_en_US,
             dummyName);
       }
+      if ((actualRank > 0 || actualIsAssumedRank) && !actualIsContiguous) {
+        if (dummyIsContiguous ||
+            !(dummyIsAssumedShape || dummyIsAssumedRank ||
+                (actualIsPointer && dummyIsPointer))) { // F'2023 C1548 & C1549
+          messages.Say(
+              "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE %s"_err_en_US,
+              dummyName);
+        }
+      }
+      // The vector subscript case is handled by the definability check above.
+      // The copy-in/copy-out cases are handled by the previous checks.
+      // Nag, GFortran, and NVFortran all error on this case, even though it is
+      // ok, prossibly as an over-restriction of C1548.
+    } else if (!(dummyIsAssumedShape || dummyIsAssumedRank ||
+                   (actualIsPointer && dummyIsPointer)) &&
+        evaluate::IsArraySection(actual) &&
+        !evaluate::HasVectorSubscript(actual)) {
+      context.Warn(common::UsageWarning::Portability, messages.at(),
+          "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_port_en_US,
+          actual.AsFortran(), dummyName,
+          dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
     }
   }
-
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool dummyIsOptional{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
