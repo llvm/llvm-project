@@ -938,7 +938,7 @@ LogicalResult ConvertLayoutOp::verify() {
 
   // both input and target layouts should be WgLayout or SgLayout at the same
   // time.
-  if ((!srcLayout.isForWorkgroup() || !resLayout.isForWorkgroup()) &&
+  if ((!srcLayout.hasSgLayout() || !resLayout.hasSgLayout()) &&
       (!srcLayout.isForSubgroup() || !resLayout.isForSubgroup()))
     return emitOpError("expected input layout and target layout be WgLayout or "
                        "SgLayout at the same time.");
