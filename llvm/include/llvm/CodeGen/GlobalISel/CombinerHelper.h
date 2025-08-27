@@ -81,6 +81,13 @@ struct ShiftOfShiftedLogic {
   uint64_t ValSum;
 };
 
+struct ShiftOfTruncOfShift {
+  Register Src;
+  uint64_t ShiftAmt;
+  LLT ShiftAmtTy;
+  LLT InnerShiftTy;
+};
+
 using BuildFnTy = std::function<void(MachineIRBuilder &)>;
 
 using OperandBuildSteps =
@@ -337,6 +344,12 @@ public:
                                 ShiftOfShiftedLogic &MatchInfo) const;
 
   bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  /// Fold (shift (trunc (shift x, C1)), C2) -> trunc (shift x, (C1 + C2))
+  bool matchShiftOfTruncOfShift(MachineInstr &MI,
+                                ShiftOfTruncOfShift &MatchInfo) const;
+  void applyShiftOfTruncOfShift(MachineInstr &MI,
+                                ShiftOfTruncOfShift &MatchInfo) const;
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal) const;

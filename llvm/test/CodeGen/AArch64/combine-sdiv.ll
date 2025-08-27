@@ -1684,24 +1684,14 @@ define i32 @combine_i32_sdiv_const7(i32 %x) {
 }
 
 define i32 @combine_i32_sdiv_const100(i32 %x) {
-; CHECK-SD-LABEL: combine_i32_sdiv_const100:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
-; CHECK-SD-NEXT:    smull x8, w0, w8
-; CHECK-SD-NEXT:    asr x8, x8, #37
-; CHECK-SD-NEXT:    add w0, w8, w8, lsr #31
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_i32_sdiv_const100:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-GI-NEXT:    movk w8, #20971, lsl #16
-; CHECK-GI-NEXT:    smull x8, w0, w8
-; CHECK-GI-NEXT:    asr x8, x8, #32
-; CHECK-GI-NEXT:    asr w8, w8, #5
-; CHECK-GI-NEXT:    add w0, w8, w8, lsr #31
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_i32_sdiv_const100:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #34079 // =0x851f
+; CHECK-NEXT:    movk w8, #20971, lsl #16
+; CHECK-NEXT:    smull x8, w0, w8
+; CHECK-NEXT:    asr x8, x8, #37
+; CHECK-NEXT:    add w0, w8, w8, lsr #31
+; CHECK-NEXT:    ret
   %1 = sdiv i32 %x, 100
   ret i32 %1
 }

@@ -2094,6 +2094,60 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchShiftOfTruncOfShift(
+    MachineInstr &MI, ShiftOfTruncOfShift &MatchInfo) const {
+  unsigned ShiftOpcode = MI.getOpcode();
+  assert(ShiftOpcode == TargetOpcode::G_LSHR ||
+         ShiftOpcode == TargetOpcode::G_ASHR);
+
+  Register N0 = MI.getOperand(1).getReg();
+  Register N1 = MI.getOperand(2).getReg();
+  unsigned OpSizeInBits = MRI.getType(N0).getScalarSizeInBits();
+
+  APInt N1C;
+  Register InnerShift;
+  if (!mi_match(N1, MRI, m_ICstOrSplat(N1C)) ||
+      !mi_match(N0, MRI, m_GTrunc(m_Reg(InnerShift))))
+    return false;
+
+  auto *InnerMI = MRI.getVRegDef(InnerShift);
+  if (InnerMI->getOpcode() != ShiftOpcode)
+    return false;
+
+  APInt N001C;
+  auto N001 = InnerMI->getOperand(2).getReg();
+  if (!mi_match(N001, MRI, m_ICstOrSplat(N001C)))
+    return false;
+
+  uint64_t c1 = N001C.getZExtValue();
+  uint64_t c2 = N1C.getZExtValue();
+  LLT InnerShiftTy = MRI.getType(InnerShift);
+  uint64_t InnerShiftSize = InnerShiftTy.getScalarSizeInBits();
+  if (!(c1 + OpSizeInBits == InnerShiftSize) || !(c1 + c2 < InnerShiftSize))
+    return false;
+
+  MatchInfo.Src = InnerMI->getOperand(1).getReg();
+  MatchInfo.ShiftAmt = c1 + c2;
+  MatchInfo.ShiftAmtTy = MRI.getType(N001);
+  MatchInfo.InnerShiftTy = InnerShiftTy;
+  return true;
+}
+
+void CombinerHelper::applyShiftOfTruncOfShift(
+    MachineInstr &MI, ShiftOfTruncOfShift &MatchInfo) const {
+  unsigned ShiftOpcode = MI.getOpcode();
+  assert(ShiftOpcode == TargetOpcode::G_LSHR ||
+         ShiftOpcode == TargetOpcode::G_ASHR);
+
+  Register Dst = MI.getOperand(0).getReg();
+  auto ShiftAmt =
+      Builder.buildConstant(MatchInfo.ShiftAmtTy, MatchInfo.ShiftAmt);
+  auto Shift = Builder.buildInstr(ShiftOpcode, {MatchInfo.InnerShiftTy},
+                                  {MatchInfo.Src, ShiftAmt});
+  Builder.buildTrunc(Dst, Shift);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) const {
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
