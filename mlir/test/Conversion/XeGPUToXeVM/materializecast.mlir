@@ -1,5 +1,8 @@
 // RUN: mlir-opt -convert-xegpu-to-xevm --split-input-file %s | FileCheck %s
 
+// This file contains tests for materalization patterns added to handle custom type conversions
+// added on top of LLVM type converter.
+
 gpu.module @materializecast {
   // CHECK-LABEL: gpu.func @materialize_memref
   // CHECK-SAME: %[[ARG0:.*]]: memref<128xf32>
