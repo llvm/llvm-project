@@ -946,7 +946,9 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
 Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
-argument is always boolean mask vector.
+argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
+takes an optional third vector argument that will be used for the result of the
+masked-off lanes. These builtins assume the memory is always aligned.
 
 Example:
 

@@ -4281,6 +4281,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
+    if (E->getNumArgs() > 2)
+      PassThru = EmitScalarExpr(E->getArg(2));
 
     Function *F =
         CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});

@@ -2282,7 +2282,7 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
 }
 
 static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
-  if (S.checkArgCount(TheCall, 2))
+  if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
@@ -2295,6 +2295,15 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
   const VectorType *DataVecTy = PointeeTy->getAs<VectorType>();
+
+  if (TheCall->getNumArgs() == 3) {
+    Expr *PassThruArg = TheCall->getArg(2);
+    QualType PassThruTy = PassThruArg->getType();
+    if (!S.Context.hasSameType(PassThruTy, PointeeTy))
+      return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
+             << /* third argument */ 3 << PointeeTy;
+  }
+
   if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
