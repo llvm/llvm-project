@@ -124,7 +124,7 @@ struct DenseMapInfo<
     if constexpr (std::is_unsigned_v<T> && sizeof(T) > sizeof(unsigned))
       return densemap::detail::mix(Val);
     else
-      return (unsigned)(Val * 37U);
+      return static_cast<unsigned>(Val * 37U);
   }
 
   static bool isEqual(const T &LHS, const T &RHS) { return LHS == RHS; }
