@@ -15,8 +15,7 @@ postfix_expression = primary_expression
                    | postfix_expression "." id_expression
                    | postfix_expression "->" id_expression ;
 
-primary_expression = numeric_literal
-                   | id_expression
+primary_expression = id_expression
                    | "(" expression ")" ;
 
 id_expression = unqualified_id
@@ -31,9 +30,6 @@ qualified_id = ["::"] [nested_name_specifier] unqualified_id
 identifier = ? C99 Identifier ? ;
 
 integer_literal = ? Integer constant: hexademical, decimal, octal, binary ? ;
-
-numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
-                | ? Floating constant ? ;
 
 register = "$" ? Register name ? ;
 
