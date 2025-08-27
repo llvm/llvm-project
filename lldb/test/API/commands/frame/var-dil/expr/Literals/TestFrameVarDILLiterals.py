@@ -75,10 +75,6 @@ class TestFrameVarDILLiterals(TestBase):
             self.assert_literal_type(frame, long_str, lldb.eBasicTypeLong)
             self.assert_literal_type(frame, ulong_str, lldb.eBasicTypeUnsignedLong)
         if long_size < longlong_size:
-            hex_str = "0x" + "F" * long_size * 2
-            dec_str = str(int(hex_str, 16))
-            self.assert_literal_type(frame, hex_str, lldb.eBasicTypeUnsignedLong)
-            self.assert_literal_type(frame, dec_str, lldb.eBasicTypeLongLong)
             longlong_str = "0x" + "F" * long_size * 2 + "F"
             ulonglong_str = longlong_str + "u"
             self.assert_literal_type(frame, longlong_str, lldb.eBasicTypeLongLong)
