@@ -133,7 +133,6 @@ private:
   BindingSpaces<BusyRegisterSpace> SamplerSpaces{dxil::ResourceClass::Sampler};
 
 public:
-public:
   BindingSpaces<BusyRegisterSpace> &getBindingSpaces(dxil::ResourceClass RC) {
     switch (RC) {
     case dxil::ResourceClass::SRV:
