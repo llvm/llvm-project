@@ -9787,7 +9787,7 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
   if (!CE->getCalleeAllocSizeAttr())
     return;
   std::optional<llvm::APInt> AllocSize =
-      CE->getBytesReturnedByAllocSizeCall(S.Context);
+      CE->evaluateBytesReturnedByAllocSizeCall(S.Context);
   if (!AllocSize)
     return;
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
