@@ -48,19 +48,9 @@ uint32_t NativeRegisterContextDBReg::SetHardwareBreakpoint(lldb::addr_t addr,
     return LLDB_INVALID_INDEX32;
 
   uint32_t control_value = MakeBreakControlValue(size);
-
-  // LLDB does this before making the request, but other clients may not.
-  switch (size) {
-  case 2:
-    addr &= ~1;
-    break;
-  case 4:
-    addr &= ~3;
-    break;
-  default:
-    // ValidateBreakpoint should have rejected this.
-    llvm_unreachable("Invalid breakpoint size.");
-  }
+  auto details = AdjustBreakpoint({size, addr});
+  size = details.size;
+  addr = details.addr;
 
   // Iterate over stored breakpoints and find a free bp_index
   uint32_t bp_index = LLDB_INVALID_INDEX32;

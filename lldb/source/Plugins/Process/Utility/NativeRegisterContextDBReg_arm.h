@@ -24,6 +24,8 @@ private:
   std::optional<WatchpointDetails>
   AdjustWatchpoint(const WatchpointDetails &details) override;
 
+  BreakpointDetails AdjustBreakpoint(const BreakpointDetails &details) override;
+
   uint32_t MakeBreakControlValue(size_t size) override;
 
   uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) override;

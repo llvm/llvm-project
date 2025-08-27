@@ -58,6 +58,27 @@ NativeRegisterContextDBReg_arm::AdjustWatchpoint(
   return WatchpointDetails{size, addr};
 }
 
+NativeRegisterContextDBReg::BreakpointDetails
+NativeRegisterContextDBReg_arm::AdjustBreakpoint(
+    const BreakpointDetails &details) {
+  BreakpointDetails bd = details;
+  // Use size to get a hint of arm vs thumb modes.
+  // LLDB usually aligns this client side, but other clients may not.
+  switch (bd.size) {
+  case 2:
+    bd.addr &= ~1;
+    break;
+  case 4:
+    bd.addr &= ~3;
+    break;
+  default:
+    // We assume that ValidateBreakpoint would have caught this earlier.
+    llvm_unreachable("Invalid breakpoint size!");
+  }
+
+  return bd;
+}
+
 uint32_t NativeRegisterContextDBReg_arm::MakeBreakControlValue(size_t size) {
   switch (size) {
   case 2:

@@ -87,6 +87,12 @@ protected:
   };
   virtual std::optional<WatchpointDetails>
   AdjustWatchpoint(const WatchpointDetails &details) = 0;
+
+  using BreakpointDetails = WatchpointDetails;
+  virtual BreakpointDetails AdjustBreakpoint(const BreakpointDetails &details) {
+    return details;
+  }
+
   virtual uint32_t MakeBreakControlValue(size_t size) = 0;
   virtual uint32_t MakeWatchControlValue(size_t size, uint32_t watch_flags) = 0;
   virtual uint32_t GetWatchpointSize(uint32_t wp_index) = 0;
