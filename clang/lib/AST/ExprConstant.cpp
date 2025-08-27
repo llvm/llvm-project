@@ -9465,7 +9465,8 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
          "Can't get the size of a non alloc_size function");
   const auto *Base = LVal.getLValueBase().get<const Expr *>();
   const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
-  std::optional<llvm::APInt> Size = CE->getBytesReturnedByAllocSizeCall(Ctx);
+  std::optional<llvm::APInt> Size =
+      CE->evaluateBytesReturnedByAllocSizeCall(Ctx);
   if (!Size)
     return false;
 
