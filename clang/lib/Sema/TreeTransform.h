@@ -17631,12 +17631,13 @@ TreeTransform<Derived>::RebuildCXXPseudoDestructorExpr(Expr *Base,
                                                        SourceLocation CCLoc,
                                                        SourceLocation TildeLoc,
                                         PseudoDestructorTypeStorage Destroyed) {
-  QualType BaseType = Base->getType();
+  QualType CanonicalBaseType = Base->getType().getCanonicalType();
   if (Base->isTypeDependent() || Destroyed.getIdentifier() ||
-      (!isArrow && !BaseType->getAs<RecordType>()) ||
-      (isArrow && BaseType->getAs<PointerType>() &&
-       !BaseType->castAs<PointerType>()->getPointeeType()
-                                              ->template getAs<RecordType>())){
+      (!isArrow && !isa<RecordType>(CanonicalBaseType)) ||
+      (isArrow && isa<PointerType>(CanonicalBaseType) &&
+       !cast<PointerType>(CanonicalBaseType)
+            ->getPointeeType()
+            ->getAsCanonical<RecordType>())) {
     // This pseudo-destructor expression is still a pseudo-destructor.
     return SemaRef.BuildPseudoDestructorExpr(
         Base, OperatorLoc, isArrow ? tok::arrow : tok::period, SS, ScopeType,

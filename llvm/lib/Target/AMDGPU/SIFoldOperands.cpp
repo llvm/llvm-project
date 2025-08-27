@@ -1264,30 +1264,12 @@ void SIFoldOperandsImpl::foldOperand(
       return;
 
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
-    if (!DestReg.isPhysical() && DestRC == &AMDGPU::AGPR_32RegClass) {
-      std::optional<int64_t> UseImmVal = OpToFold.getEffectiveImmVal();
-      if (UseImmVal && TII->isInlineConstant(
-                           *UseImmVal, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
-        UseMI->getOperand(1).ChangeToImmediate(*UseImmVal);
-        CopiesToReplace.push_back(UseMI);
-        return;
-      }
-    }
-
-    // Allow immediates COPYd into sgpr_lo16 to be further folded while
-    // still being legal if not further folded
-    if (DestRC == &AMDGPU::SGPR_LO16RegClass) {
-      assert(ST->useRealTrue16Insts());
-      MRI->setRegClass(DestReg, &AMDGPU::SGPR_32RegClass);
-      DestRC = &AMDGPU::SGPR_32RegClass;
-    }
-
     // In order to fold immediates into copies, we need to change the copy to a
     // MOV. Find a compatible mov instruction with the value.
     for (unsigned MovOp :
          {AMDGPU::S_MOV_B32, AMDGPU::V_MOV_B32_e32, AMDGPU::S_MOV_B64,
-          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64}) {
+          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64,
+          AMDGPU::V_ACCVGPR_WRITE_B32_e64, AMDGPU::AV_MOV_B32_IMM_PSEUDO}) {
       const MCInstrDesc &MovDesc = TII->get(MovOp);
       assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
 
