@@ -185,6 +185,10 @@ public:
   ArrayRef<uint64_t> getKnownColdHashes() const {
     return KnownColdHashes.getArrayRef();
   }
+  [[nodiscard]] bool empty() const {
+    return Records.empty() && KnownColdSymbols.empty() &&
+           KnownColdHashes.empty();
+  }
 
 private:
   /// Serialize the symbol strings into the output stream.
