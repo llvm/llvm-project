@@ -141,6 +141,22 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
+static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
+  assert(Val.getFieldDesc()->isPrimitiveArray() &&
+         Val.getFieldDesc()->getElemQualType()->isBooleanType() &&
+         "Not a boolean vector");
+  unsigned NumElems = Val.getNumElems();
+
+  // Each element is one bit, so create an integer with NumElts bits.
+  llvm::APSInt Result(NumElems, 0);
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (Val.elem<bool>(I))
+      Result.setBit(I);
+  }
+
+  return Result;
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -205,6 +221,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   if (A.isDummy() || B.isDummy())
     return false;
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
                 ID == Builtin::BI__builtin_wcscmp ||
@@ -212,7 +230,10 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
-  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  // Different element types shouldn't happen, but with casts they can.
+  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(A), getElemType(B)))
+    return false;
+
   PrimType ElemT = *S.getContext().classify(getElemType(A));
 
   auto returnResult = [&](int V) -> bool {
@@ -638,8 +659,14 @@ static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const CallExpr *Call) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  APSInt Val = popToAPSInt(S.Stk, ArgT);
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+    Val = popToAPSInt(S.Stk, ArgT);
+  }
   pushInteger(S, Val.popcount(), Call->getType());
   return true;
 }
@@ -935,8 +962,14 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
     PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
     Fallback = popToAPSInt(S.Stk, FallbackT);
   }
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = popToAPSInt(S.Stk, ValT);
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    PrimType ValT = *S.getContext().classify(Call->getArg(0));
+    Val = popToAPSInt(S.Stk, ValT);
+  }
 
   // When the argument is 0, the result of GCC builtins is undefined, whereas
   // for Microsoft intrinsics, the result is the bit-width of the argument.
@@ -966,8 +999,14 @@ static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
     PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
     Fallback = popToAPSInt(S.Stk, FallbackT);
   }
-  PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = popToAPSInt(S.Stk, ValT);
+  APSInt Val;
+  if (Call->getArg(0)->getType()->isExtVectorBoolType()) {
+    const Pointer &Arg = S.Stk.pop<Pointer>();
+    Val = convertBoolVectorToInt(Arg);
+  } else {
+    PrimType ValT = *S.getContext().classify(Call->getArg(0));
+    Val = popToAPSInt(S.Stk, ValT);
+  }
 
   if (Val == 0) {
     if (Fallback) {
@@ -2500,12 +2539,8 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   }
 
   // Check if we're currently running an initializer.
-  for (InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
-    if (const Function *F = Frame->getFunction();
-        F && F->isConstructor() && Frame->getThis().block() == Ptr.block()) {
-      return Error(2);
-    }
-  }
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+    return Error(2);
   if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
     return Error(2);
 
@@ -2513,9 +2548,9 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
-                                            const CallExpr *Call,
-                                            unsigned BuiltinID) {
+static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *Call,
+                                                  unsigned BuiltinID) {
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
@@ -2552,6 +2587,8 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  bool DestUnsigned =
+      VT->getElementType()->isUnsignedIntegerOrEnumerationType();
   unsigned NumElems = VT->getNumElements();
   for (unsigned I = 0; I != NumElems; ++I) {
     APSInt Elem1;
@@ -2584,6 +2621,34 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     case clang::X86::BI__builtin_ia32_pmulhw512:
       Result = APSInt(llvm::APIntOps::mulhs(Elem1, Elem2),
                       /*isUnsigned=*/false);
+      break;
+    case clang::X86::BI__builtin_ia32_psllv2di:
+    case clang::X86::BI__builtin_ia32_psllv4di:
+    case clang::X86::BI__builtin_ia32_psllv4si:
+    case clang::X86::BI__builtin_ia32_psllv8si:
+      if (Elem2.uge(Elem2.getBitWidth())) {
+        Result = APSInt(APInt::getZero(Elem2.getBitWidth()), DestUnsigned);
+        break;
+      }
+      Result = APSInt(Elem1.shl(Elem2.getZExtValue()), DestUnsigned);
+      break;
+    case clang::X86::BI__builtin_ia32_psrav4si:
+    case clang::X86::BI__builtin_ia32_psrav8si:
+      if (Elem2.uge(Elem2.getBitWidth())) {
+        Result = APSInt(Elem1.ashr(Elem2.getBitWidth() - 1), DestUnsigned);
+        break;
+      }
+      Result = APSInt(Elem1.ashr(Elem2.getZExtValue()), DestUnsigned);
+      break;
+    case clang::X86::BI__builtin_ia32_psrlv2di:
+    case clang::X86::BI__builtin_ia32_psrlv4di:
+    case clang::X86::BI__builtin_ia32_psrlv4si:
+    case clang::X86::BI__builtin_ia32_psrlv8si:
+      if (Elem2.uge(Elem2.getBitWidth())) {
+        Result = APSInt(APInt::getZero(Elem2.getBitWidth()), DestUnsigned);
+        break;
+      }
+      Result = APSInt(Elem1.lshr(Elem2.getZExtValue()), DestUnsigned);
       break;
     default:
       llvm_unreachable("Wrong builtin ID");
@@ -3231,7 +3296,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmulhw128:
   case clang::X86::BI__builtin_ia32_pmulhw256:
   case clang::X86::BI__builtin_ia32_pmulhw512:
-    return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+  case clang::X86::BI__builtin_ia32_psllv2di:
+  case clang::X86::BI__builtin_ia32_psllv4di:
+  case clang::X86::BI__builtin_ia32_psllv4si:
+  case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psrav4si:
+  case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrlv2di:
+  case clang::X86::BI__builtin_ia32_psrlv4di:
+  case clang::X86::BI__builtin_ia32_psrlv4si:
+  case clang::X86::BI__builtin_ia32_psrlv8si:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
@@ -3298,11 +3373,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
     switch (Node.getKind()) {
     case OffsetOfNode::Field: {
       const FieldDecl *MemberDecl = Node.getField();
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
       unsigned FieldIndex = MemberDecl->getFieldIndex();
@@ -3331,23 +3403,19 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
 
       // Find the layout of the class whose base we are looking into.
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
-        return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isInvalidDecl())
+      const auto *RD = CurrentType->getAsCXXRecordDecl();
+      if (!RD || RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      if (!BaseRT)
+      const auto *BaseRD = CurrentType->getAsCXXRecordDecl();
+      if (!BaseRD)
         return false;
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(BaseRD);
       break;
     }
     case OffsetOfNode::Identifier:

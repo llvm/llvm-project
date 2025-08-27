@@ -1663,7 +1663,7 @@ public:
   /// First pushes a snapshot for the current simplex state to the stack so
   /// that this can be rolled back later.
   void addEqualityForDirection(ArrayRef<DynamicAPInt> dir) {
-    assert(llvm::any_of(dir, [](const DynamicAPInt &x) { return x != 0; }) &&
+    assert(llvm::any_of(dir, [](const DynamicAPInt &X) { return X != 0; }) &&
            "Direction passed is the zero vector!");
     snapshotStack.emplace_back(simplex.getSnapshot());
     simplex.addEquality(getCoeffsForDirection(dir));
@@ -2156,10 +2156,10 @@ void SimplexBase::print(raw_ostream &os) const {
   for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row)
     for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col)
       updatePrintMetrics<DynamicAPInt>(tableau(row, col), ptm);
-  unsigned MIN_SPACING = 1;
+  unsigned minSpacing = 1;
   for (unsigned row = 0, numRows = getNumRows(); row < numRows; ++row) {
     for (unsigned col = 0, numCols = getNumColumns(); col < numCols; ++col) {
-      printWithPrintMetrics<DynamicAPInt>(os, tableau(row, col), MIN_SPACING,
+      printWithPrintMetrics<DynamicAPInt>(os, tableau(row, col), minSpacing,
                                           ptm);
     }
     os << '\n';

@@ -3747,18 +3747,19 @@ TEST(APIntTest, TryExt) {
 TEST(APIntTest, Fshl) {
   EXPECT_EQ(
       APIntOps::fshl(APInt(8, 0), APInt(8, 255), APInt(8, 8)).getZExtValue(),
-      0);
+      0U);
   EXPECT_EQ(
       APIntOps::fshl(APInt(8, 255), APInt(8, 0), APInt(8, 8)).getZExtValue(),
-      255);
+      255U);
   EXPECT_EQ(
       APIntOps::fshl(APInt(8, 255), APInt(8, 0), APInt(8, 15)).getZExtValue(),
-      128);
+      128U);
   EXPECT_EQ(
       APIntOps::fshl(APInt(8, 15), APInt(8, 15), APInt(8, 11)).getZExtValue(),
-      120);
+      120U);
   EXPECT_EQ(
-      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 3)).getZExtValue(), 16);
+      APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 3)).getZExtValue(),
+      16U);
   EXPECT_EQ(
       APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 1)).getZExtValue(),
       APIntOps::fshl(APInt(8, 2), APInt(8, 1), APInt(8, 9)).getZExtValue());
@@ -3785,18 +3786,19 @@ TEST(APIntTest, Fshl) {
 TEST(APIntTest, Fshr) {
   EXPECT_EQ(
       APIntOps::fshr(APInt(8, 0), APInt(8, 255), APInt(8, 8)).getZExtValue(),
-      255);
+      255U);
   EXPECT_EQ(
       APIntOps::fshr(APInt(8, 255), APInt(8, 0), APInt(8, 8)).getZExtValue(),
-      0);
+      0U);
   EXPECT_EQ(
       APIntOps::fshr(APInt(8, 255), APInt(8, 0), APInt(8, 15)).getZExtValue(),
-      254);
+      254U);
   EXPECT_EQ(
       APIntOps::fshr(APInt(8, 15), APInt(8, 15), APInt(8, 11)).getZExtValue(),
-      225);
+      225U);
   EXPECT_EQ(
-      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 3)).getZExtValue(), 32);
+      APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 3)).getZExtValue(),
+      32U);
   EXPECT_EQ(
       APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 1)).getZExtValue(),
       APIntOps::fshr(APInt(8, 1), APInt(8, 2), APInt(8, 9)).getZExtValue());
