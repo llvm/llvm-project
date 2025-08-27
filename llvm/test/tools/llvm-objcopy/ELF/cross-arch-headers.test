@@ -2,7 +2,8 @@
 # and DWO output.
 # Note that we don't actually need any DWARF to produce the DWO file.
 
-# RUN: yaml2obj %s -o %t.o
+# RUN: yaml2obj -DMACHINE=EM_NONE %s -o %t.o
+# RUN: yaml2obj -DMACHINE=EM_AMDGPU -DFLAGS=[EF_AMDGPU_MACH_AMDGCN_GFX900] %s -o %t-amdgpu.o
 
 # Without --output-format, the format should match the input.
 # RUN: llvm-objcopy %t.o %t.default.o --split-dwo=%t.default.dwo
@@ -121,13 +122,19 @@
 # RUN: llvm-readobj --file-headers %t.elf64_s390.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_s390.dwo | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 
+
+# RUN: llvm-objcopy %t-amdgpu.o -O elf64-amdgpu %t-amdgpu.elf64_amdgpu.o --split-dwo=%t-amdgpu.elf64_amdgpu.dwo
+# RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.o | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+# RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.dwo | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+
 !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   # Arbitrary values that do not match any value we convert to via --output-format.
-  Machine:         EM_NONE
+  Machine:         [[MACHINE]]
+  Flags:           [[FLAGS=<none>]]
   OSABI:           ELFOSABI_STANDALONE
 Sections:
   - Name:            .text
@@ -154,6 +161,7 @@ Symbols:
 # I386-SAME:    i386
 # IAMCU-SAME:   iamcu
 # AARCH-SAME:   aarch64
+# AMDGPU-SAME:  amdgpu
 # ARM-SAME:     littlearm
 # HEXAGON-SAME: hexagon
 # LA32-SAME:    loongarch{{$}}
@@ -171,6 +179,7 @@ Symbols:
 # I386-NEXT:     Arch: i386
 # IAMCU-NEXT:    Arch: i386
 # AARCH-NEXT:    Arch: aarch64
+# AMDGPU-NEXT:   Arch: amdgcn
 # ARM-NEXT:      Arch: arm
 # HEXAGON-NEXT:  Arch: hexagon
 # LA32-NEXT:     Arch: loongarch32
@@ -204,6 +213,7 @@ Symbols:
 # DEFAULT: OS/ABI: Standalone (0xFF)
 
 # AARCH:   Machine: EM_AARCH64 (0xB7)
+# AMDGPU:  Machine: EM_AMDGPU (0xE0)
 # ARM:     Machine: EM_ARM (0x28)
 # HEXAGON: Machine: EM_HEXAGON (0xA4)
 # I386:    Machine: EM_386 (0x3)
