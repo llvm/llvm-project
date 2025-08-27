@@ -242,6 +242,39 @@ members, and static locals.
   }];
 }
 
+def zOSExportDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use the ``_Export`` keyword on a function or external variable to declare
+that it is to be exported (made available to other modules).  A symbol needs to be
+declared exported on or before the definition of the symbol.  The ``_Export``
+keyword must immediately precede the declaration name in the declarator.
+For example:
+
+.. code-block:: c
+
+  int _Export func(float);
+  int (*_Export funcPtr)(float);
+
+The first statement exports the function ``func``, if ``func`` is defined in the
+translation unit after this declaration.
+
+All of the static data members and member functions of a class or struct and its vague
+linkage objects (vtable, typeinfo, typeinfo name) can be exported
+by including ``_Export`` in tag of the class during the class definition or forward
+declaration of the class.
+
+.. code-block:: c++
+
+  class _Export C {
+    int func();
+  };
+
+Select members of a class can be exported by using the ``_Export`` keyword on
+declaration within the class or definition of the member.
+  }];
+}
+
 def NoEscapeDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
