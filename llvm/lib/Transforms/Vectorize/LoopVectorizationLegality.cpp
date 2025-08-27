@@ -1777,7 +1777,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     if (Stride != 1) {
       reportVectorizationFailure("Loop contains strided unbound access",
                                  "Cannot vectorize early exit loop with "
-                                 "fault-only-first strided load",
+                                 "strided fault-only-first load",
                                  "EarlyExitLoopWithStridedFaultOnlyFirstLoad",
                                  ORE, TheLoop);
       return false;
