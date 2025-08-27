@@ -732,13 +732,13 @@ public:
   }
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
-    return __tree_.__emplace_hint_unique(__p, std::forward<_Args>(__args)...).first;
+    return __tree_.__emplace_hint_unique(__p, std::forward<_Args>(__args)...);
   }
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__emplace_unique(__v); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__emplace_hint_unique(__p, __v).first;
+    return __tree_.__emplace_hint_unique(__p, __v);
   }
 
   template <class _InputIterator>
@@ -763,7 +763,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__emplace_hint_unique(__p, std::move(__v)).first;
+    return __tree_.__emplace_hint_unique(__p, std::move(__v));
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
