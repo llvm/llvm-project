@@ -414,9 +414,10 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
 
   // Run a pass to prepare for translation of delayed privatization in the
   // context of deferred target tasks.
-  addNestedPassConditionally<mlir::LLVM::LLVMFuncOp>(pm, disableFirToLlvmIr,[&]() {
-    return mlir::LLVM::createPrepareForOMPOffloadPrivatizationPass();
-  });
+  addNestedPassConditionally<mlir::LLVM::LLVMFuncOp>(
+      pm, disableFirToLlvmIr, [&]() {
+        return mlir::LLVM::createPrepareForOMPOffloadPrivatizationPass();
+      });
 }
 
 } // namespace fir

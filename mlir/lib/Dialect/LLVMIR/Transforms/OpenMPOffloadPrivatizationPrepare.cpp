@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/LLVMIR/Transforms/OpenMPOffloadPrivatizationPrepare.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -244,9 +244,8 @@ public:
       for (auto repl : replRecord) {
         Operation *origOp = repl.first;
         Operation *clonedOp = repl.second;
-        rewriter.modifyOpInPlace(clonedOp, [&]() {
-          clonedOp->replaceUsesOfWith(varPtr, heapMem);
-        });
+        rewriter.modifyOpInPlace(
+            clonedOp, [&]() { clonedOp->replaceUsesOfWith(varPtr, heapMem); });
         rewriter.eraseOp(origOp);
       }
     }
@@ -312,7 +311,7 @@ private:
   // Get the (compile-time constant) size of varType as per the
   // given DataLayout dl.
   std::int64_t getSizeInBytes(const mlir::DataLayout &dl,
-                           mlir::Type varType) const {
+                              mlir::Type varType) const {
     llvm::TypeSize size = dl.getTypeSize(varType);
     unsigned short alignment = dl.getTypeABIAlignment(varType);
     return llvm::alignTo(size, alignment);
@@ -350,7 +349,8 @@ private:
   LLVM::LLVMFuncOp getMalloc(ModuleOp mod, PatternRewriter &rewriter) const {
     llvm::FailureOr<mlir::LLVM::LLVMFuncOp> mallocCall =
         LLVM::lookupOrCreateMallocFn(rewriter, mod, rewriter.getI64Type());
-    assert(llvm::succeeded(mallocCall) && "Could not find malloc in the module");
+    assert(llvm::succeeded(mallocCall) &&
+           "Could not find malloc in the module");
     return mallocCall.value();
   }
 
@@ -372,8 +372,8 @@ private:
     mlir::Value sizeBytes = rewriter.create<LLVM::ConstantOp>(
         loc, mallocFn.getFunctionType().getParamType(0), distance);
 
-    auto mallocCallOp = rewriter.create<LLVM::CallOp>(loc, mallocFn,
-                                                      ValueRange{sizeBytes});
+    auto mallocCallOp =
+        rewriter.create<LLVM::CallOp>(loc, mallocFn, ValueRange{sizeBytes});
     return mallocCallOp.getResult();
   }
 
@@ -409,7 +409,7 @@ struct PrepareForOMPOffloadPrivatizationPass
 
     RewritePatternSet patterns(&context);
     patterns.add<OMPTargetPrepareDelayedPrivatizationPattern>(&context);
-    LLVM_DEBUG(llvm::dbgs() << " Module before : " << mod << "\n");
+
     if (mlir::failed(
             applyPatternsGreedily(func, std::move(patterns),
                                   GreedyRewriteConfig().setStrictness(
@@ -418,8 +418,6 @@ struct PrepareForOMPOffloadPrivatizationPass
                 "error in preparing targetOps for delayed privatization.");
       signalPassFailure();
     }
-    LLVM_DEBUG(llvm::dbgs() << " Module after : " << mod << "\n");
-
   }
 };
 } // namespace
