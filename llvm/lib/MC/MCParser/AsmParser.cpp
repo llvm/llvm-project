@@ -418,6 +418,7 @@ private:
     DK_P2ALIGN,
     DK_P2ALIGNW,
     DK_P2ALIGNL,
+    DK_PREFALIGN,
     DK_ORG,
     DK_FILL,
     DK_ENDR,
@@ -565,6 +566,7 @@ private:
   bool parseDirectiveOrg(); // ".org"
   // ".align{,32}", ".p2align{,w,l}"
   bool parseDirectiveAlign(bool IsPow2, uint8_t ValueSize);
+  bool parseDirectivePrefAlign();
 
   // ".file", ".line", ".loc", ".loc_label", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -2002,6 +2004,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/2);
     case DK_P2ALIGNL:
       return parseDirectiveAlign(/*IsPow2=*/true, /*ExprSize=*/4);
+    case DK_PREFALIGN:
+      return parseDirectivePrefAlign();
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_FILL:
@@ -3425,6 +3429,21 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   }
 
   return ReturnVal;
+}
+
+bool AsmParser::parseDirectivePrefAlign() {
+  SMLoc AlignmentLoc = getLexer().getLoc();
+  int64_t Alignment;
+  if (checkForValidSection() || parseAbsoluteExpression(Alignment))
+    return true;
+  if (parseEOL())
+    return true;
+
+  if (!isPowerOf2_64(Alignment))
+    return Error(AlignmentLoc, "alignment must be a power of 2");
+  getStreamer().emitPrefAlign(Align(Alignment));
+
+  return false;
 }
 
 /// parseDirectiveFile
@@ -5381,6 +5400,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".p2align"] = DK_P2ALIGN;
   DirectiveKindMap[".p2alignw"] = DK_P2ALIGNW;
   DirectiveKindMap[".p2alignl"] = DK_P2ALIGNL;
+  DirectiveKindMap[".prefalign"] = DK_PREFALIGN;
   DirectiveKindMap[".org"] = DK_ORG;
   DirectiveKindMap[".fill"] = DK_FILL;
   DirectiveKindMap[".zero"] = DK_ZERO;
