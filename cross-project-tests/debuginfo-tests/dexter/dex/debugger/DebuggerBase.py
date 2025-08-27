@@ -238,9 +238,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         frame_idx 0 is the current function.
         """
         r = self.evaluate_expression("$pc", frame_idx)
-        assert r.could_evaluate
-        assert not r.is_optimized_away
-        assert not r.is_irretrievable
+        if not r.could_evaluate or r.is_optimized_away or r.is_irretrievable:
+            raise DebuggerException(
+                "evaluating '$pc' failed - possibly unsupported by the debugger"
+            )
         return r.value
 
     def _external_to_debug_path(self, path):
