@@ -85,7 +85,7 @@ struct MoveOnly2 {
   bool used_move1 = false;
   bool used_move2 = false;
 
-  constexpr explicit MoveOnly2(int j) : j(j) {}
+  constexpr explicit MoveOnly2(int jj) : j(jj) {}
   constexpr MoveOnly2(const MoveOnly2&) = delete;
   constexpr MoveOnly2(MoveOnly2&& m) : j(m.j), used_move1(true) {}
   constexpr MoveOnly2(const MoveOnly2&& m) : j(m.j), used_move2(true) {}

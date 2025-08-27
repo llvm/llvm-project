@@ -134,12 +134,12 @@ void test_explicit() {
         }
         T::reset();
         {
-            optional<T> t{43};
-            assert(T::alive == 1);
-            assert(T::value_constructed == 1);
-            assert(T::move_constructed == 0);
-            assert(T::copy_constructed == 0);
-            assert(t.value().value == 43);
+          optional<T> t{43};
+          assert(T::alive == 1);
+          assert(T::value_constructed == 1);
+          assert(T::move_constructed == 0);
+          assert(T::copy_constructed == 0);
+          assert(t.value().value == 43);
         }
         assert(T::alive == 0);
     }
