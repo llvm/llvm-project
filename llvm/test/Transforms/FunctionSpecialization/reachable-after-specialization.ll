@@ -39,3 +39,57 @@ loop:                                               ; preds = %ai, %entry
 exit:                                               ; preds = %ai
   ret i32 0
 }
+
+declare void @other_user(ptr)
+
+define i32 @caller2() {
+; CHECK-LABEL: define i32 @caller2() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @other_user(ptr @callee2)
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee2.specialized.3(i32 1)
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee2.specialized.4(i32 0)
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 undef, 0
+; CHECK-NEXT:    br i1 [[COND]], label %[[COMMON_RET:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[UNREACHABLE_CALL:%.*]] = call i32 @callee2.specialized.5(i32 2)
+; CHECK-NEXT:    ret i32 undef
+;
+entry:
+  call void @other_user(ptr @callee2)
+  %call1 = call i32 @callee2(i32 1)
+  %call2 = call i32 @callee2(i32 0)
+  %cond = icmp eq i32 %call2, 0
+  br i1 %cond, label %common.ret, label %if.then
+
+common.ret:                                       ; preds = %entry
+  ret i32 0
+
+if.then:                                         ; preds = %entry
+  %unreachable_call = call i32 @callee2(i32 2)
+  ret i32 %unreachable_call
+}
+
+define internal i32 @callee2(i32 %arg) {
+; CHECK-LABEL: define internal i32 @callee2(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[ARG]], 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:                                               ; preds = %ai, %entry
+  %add = or i32 0, 0
+  %cond = icmp eq i32 %arg, 1
+  br i1 %cond, label %exit, label %loop
+
+exit:                                               ; preds = %ai
+  ret i32 0
+}
