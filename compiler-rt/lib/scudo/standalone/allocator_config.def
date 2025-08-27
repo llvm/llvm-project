@@ -114,6 +114,11 @@ PRIMARY_OPTIONAL_TYPE(ConditionVariableT, ConditionVariableDummy)
 // to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
 PRIMARY_OPTIONAL_TYPE(CompactPtrT, uptr)
 
+// Clears the memory slot when an allocation is returned to the allocator.
+// Operating systems that detects pages filled with zeroes will decommit
+// memory.
+PRIMARY_OPTIONAL(const bool, ZeroOnDealloc, false)
+
 // SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)
 //
 // Defines the type of Secondary Cache to use.
