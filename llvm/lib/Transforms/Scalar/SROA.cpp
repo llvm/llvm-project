@@ -3035,6 +3035,12 @@ public:
 
     // Stores should be in the same basic block
     // The load should not be in the middle of the stores
+    // Note:
+    // If the load is in a different basic block with the stores, we can still
+    // do the tree structured merge. This is because we do not have the
+    // store->load forwarding here. The merged vector will be stored back to
+    // NewAI and the new load will load from NewAI. The forwarding will be
+    // handled later when we try to promote NewAI.
     BasicBlock *LoadBB = TheLoad->getParent();
     BasicBlock *StoreBB = StoreInfos[0].Store->getParent();
 
@@ -3067,8 +3073,8 @@ public:
 
     LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
     while (VecElements.size() > 1) {
-      uint64_t NumElts = VecElements.size();
-      for (uint64_t i = 0; i < NumElts / 2; i++) {
+      const auto NumElts = VecElements.size();
+      for ([[maybe_unused]] const auto _ : llvm::seq(NumElts / 2)) {
         Value *V0 = VecElements.front();
         VecElements.pop();
         Value *V1 = VecElements.front();
@@ -5268,9 +5274,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                PHIUsers, SelectUsers);
   bool Promotable = true;
   // Check whether we can have tree-structured merge.
-  std::optional<SmallVector<Value *, 4>> DeletedValues =
-      Rewriter.rewriteTreeStructuredMerge(P);
-  if (DeletedValues) {
+  if (auto DeletedValues = Rewriter.rewriteTreeStructuredMerge(P)) {
     NumUses += DeletedValues->size() + 1;
     for (Value *V : *DeletedValues)
       DeadInsts.push_back(V);
