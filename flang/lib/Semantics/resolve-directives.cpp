@@ -2461,7 +2461,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     // investigate the flags we can intermix with.
     if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
             .none() ||
-        !checkSym.flags().none() || semantics::IsAssumedShape(checkSym) ||
+        !checkSym.flags().none() || IsAssumedShape(checkSym) ||
         semantics::IsAllocatableOrPointer(checkSym)) {
       return false;
     }

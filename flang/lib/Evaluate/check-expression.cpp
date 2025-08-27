@@ -1001,8 +1001,8 @@ public:
       } else {
         return Base::operator()(ultimate); // use expr
       }
-    } else if (semantics::IsPointer(ultimate) ||
-        semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
+    } else if (semantics::IsPointer(ultimate) || IsAssumedShape(ultimate) ||
+        IsAssumedRank(ultimate)) {
       return std::nullopt;
     } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
       return true;
@@ -1282,7 +1282,19 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
   }
 }
 
+std::optional<bool> IsContiguous(const ActualArgument &actual,
+    FoldingContext &fc, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1) {
+  auto *expr{actual.UnwrapExpr()};
+  return expr &&
+      IsContiguous(
+          *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+}
+
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
@@ -1432,6 +1444,179 @@ private:
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &sf, const Expr<SomeType> &expr, FoldingContext &context) {
   return StmtFunctionChecker{sf, context}(expr);
+}
+
+// Helper class for checking differences between actual and dummy arguments
+class CopyInOutExplicitInterface {
+public:
+  explicit CopyInOutExplicitInterface(FoldingContext &fc,
+      const ActualArgument &actual,
+      const characteristics::DummyDataObject &dummyObj)
+      : fc_{fc}, actual_{actual}, dummyObj_{dummyObj} {}
+
+  // Returns true, if actual and dummy have different contiguity requirements
+  bool HaveContiguityDifferences() const {
+    // Check actual contiguity, unless dummy doesn't care
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    bool actualTreatAsContiguous{
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
+        IsSimplyContiguous(actual_, fc_)};
+    bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
+    bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedSize)};
+    bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+    // type(*) with IGNORE_TKR(tkr) is often used to interface with C "void*".
+    // Since the other languages don't know about Fortran's discontiguity
+    // handling, such cases should require contiguity.
+    bool dummyIsVoidStar{dummyObj_.type.type().IsAssumedType() &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Kind)};
+    // Explicit shape and assumed size arrays must be contiguous
+    bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+        (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
+        dummyObj_.attrs.test(
+            characteristics::DummyDataObject::Attr::Contiguous)};
+    return !actualTreatAsContiguous && dummyNeedsContiguity;
+  }
+
+  // Returns true, if actual and dummy have polymorphic differences
+  bool HavePolymorphicDifferences() const {
+    bool dummyIsAssumedRank{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedRank)};
+    bool actualIsAssumedRank{semantics::IsAssumedRank(actual_)};
+    bool dummyIsAssumedShape{dummyObj_.type.attrs().test(
+        characteristics::TypeAndShape::Attr::AssumedShape)};
+    bool actualIsAssumedShape{semantics::IsAssumedShape(actual_)};
+    if ((actualIsAssumedRank && dummyIsAssumedRank) ||
+        (actualIsAssumedShape && dummyIsAssumedShape)) {
+      // Assumed-rank and assumed-shape arrays are represented by descriptors,
+      // so don't need to do polymorphic check.
+    } else if (!dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      // flang supports limited cases of passing polymorphic to non-polimorphic.
+      // These cases require temporary of non-polymorphic type. (For example,
+      // the actual argument could be polymorphic array of child type,
+      // while the dummy argument could be non-polymorphic array of parent
+      // type.)
+      bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
+      auto actualType{
+          characteristics::TypeAndShape::Characterize(actual_, fc_)};
+      bool actualIsPolymorphic{
+          actualType && actualType->type().IsPolymorphic()};
+      if (actualIsPolymorphic && !dummyIsPolymorphic) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool HaveArrayOrAssumedRankArgs() const {
+    bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
+    return IsArrayOrAssumedRank(actual_) &&
+        (IsArrayOrAssumedRank(dummyObj_) || dummyTreatAsArray);
+  }
+
+  bool PassByValue() const {
+    return dummyObj_.attrs.test(characteristics::DummyDataObject::Attr::Value);
+  }
+
+  bool HaveCoarrayDifferences() const {
+    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+  }
+
+  bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
+
+  bool HasIntentIn() const { return dummyObj_.intent == common::Intent::In; }
+
+  static bool IsArrayOrAssumedRank(const ActualArgument &actual) {
+    return semantics::IsAssumedRank(actual) || actual.Rank() > 0;
+  }
+
+  static bool IsArrayOrAssumedRank(
+      const characteristics::DummyDataObject &dummy) {
+    return dummy.type.attrs().test(
+               characteristics::TypeAndShape::Attr::AssumedRank) ||
+        dummy.type.Rank() > 0;
+  }
+
+private:
+  FoldingContext &fc_;
+  const ActualArgument &actual_;
+  const characteristics::DummyDataObject &dummyObj_;
+};
+
+// If forCopyOut is false, returns if a particular actual/dummy argument
+// combination may need a temporary creation with copy-in operation. If
+// forCopyOut is true, returns the same for copy-out operation. For
+// procedures with explicit interface, it's expected that "dummy" is not null.
+// For procedures with implicit interface dummy may be null.
+//
+// Note that these copy-in and copy-out checks are done from the caller's
+// perspective, meaning that for copy-in the caller need to do the copy
+// before calling the callee. Similarly, for copy-out the caller is expected
+// to do the copy after the callee returns.
+bool MayNeedCopy(const ActualArgument *actual,
+    const characteristics::DummyArgument *dummy, FoldingContext &fc,
+    bool forCopyOut) {
+  if (!actual) {
+    return false;
+  }
+  if (actual->isAlternateReturn()) {
+    return false;
+  }
+  const auto *dummyObj{dummy
+          ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
+          : nullptr};
+  const bool forCopyIn = !forCopyOut;
+  if (!evaluate::IsVariable(*actual)) {
+    // Actual argument expressions that aren’t variables are copy-in, but
+    // not copy-out.
+    return forCopyIn;
+  }
+  if (dummyObj) { // Explict interface
+    CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
+    if (forCopyOut && check.HasIntentIn()) {
+      // INTENT(IN) dummy args never need copy-out
+      return false;
+    }
+    if (forCopyIn && check.HasIntentOut()) {
+      // INTENT(OUT) dummy args never need copy-in
+      return false;
+    }
+    if (check.PassByValue()) {
+      // Pass by value, always copy-in, never copy-out
+      return forCopyIn;
+    }
+    if (check.HaveCoarrayDifferences()) {
+      return true;
+    }
+    // Note: contiguity and polymorphic checks deal with array or assumed rank
+    // arguments
+    if (!check.HaveArrayOrAssumedRankArgs()) {
+      return false;
+    }
+    if (check.HaveContiguityDifferences()) {
+      return true;
+    }
+    if (check.HavePolymorphicDifferences()) {
+      return true;
+    }
+  } else { // Implicit interface
+    if (ExtractCoarrayRef(*actual)) {
+      // Coindexed actual args may need copy-in and copy-out with implicit
+      // interface
+      return true;
+    }
+    if (!IsSimplyContiguous(*actual, fc)) {
+      // Copy-in:  actual arguments that are variables are copy-in when
+      //           non-contiguous.
+      // Copy-out: vector subscripts could refer to duplicate elements, can't
+      //           copy out.
+      return !(forCopyOut && HasVectorSubscript(*actual));
+    }
+  }
+  // For everything else, no copy-in or copy-out
+  return false;
 }
 
 } // namespace Fortran::evaluate

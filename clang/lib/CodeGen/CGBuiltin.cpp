@@ -1692,6 +1692,23 @@ getBitTestAtomicOrdering(BitTest::InterlockingKind I) {
   llvm_unreachable("invalid interlocking");
 }
 
+static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
+  llvm::Value *ArgValue = CGF.EmitScalarExpr(E);
+  llvm::Type *ArgType = ArgValue->getType();
+
+  // Boolean vectors can be casted directly to its bitfield representation. We
+  // intentionally do not round up to the next power of two size and let LLVM
+  // handle the trailing bits.
+  if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
+      VT && VT->getElementType()->isIntegerTy(1)) {
+    llvm::Type *StorageType =
+        llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
+    ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+  }
+
+  return ArgValue;
+}
+
 /// Emit a _bittest* intrinsic. These intrinsics take a pointer to an array of
 /// bits and a bit position and read and optionally modify the bit at that
 /// position. The position index can be arbitrarily large, i.e. it can be larger
@@ -2019,7 +2036,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero) &&
          "Unsupported builtin check kind");
 
-  Value *ArgValue = EmitScalarExpr(E);
+  Value *ArgValue = EmitBitCountExpr(*this, E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
@@ -3333,7 +3350,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3370,7 +3387,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3455,7 +3472,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
   case Builtin::BI__builtin_popcountg: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitBitCountExpr(*this, E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);

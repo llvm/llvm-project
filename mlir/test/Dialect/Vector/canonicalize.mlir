@@ -3726,3 +3726,17 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
   %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
   return %v_1 : vector<4xf32>
 }
+
+// -----
+
+llvm.mlir.global constant @my_symbol() : i32
+
+// CHECK-LABEL: func @from_address_of_regression
+//       CHECK:   %[[a:.*]] = llvm.mlir.addressof @my_symbol
+//       CHECK:   %[[b:.*]] = vector.broadcast %[[a]] : !llvm.ptr to vector<1x!llvm.ptr>
+//       CHECK:   return %[[b]]
+func.func @from_address_of_regression() -> vector<1x!llvm.ptr> {
+  %a = llvm.mlir.addressof @my_symbol : !llvm.ptr
+  %b = vector.from_elements %a : vector<1x!llvm.ptr>
+  return %b : vector<1x!llvm.ptr>
+}

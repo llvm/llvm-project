@@ -2862,7 +2862,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInst TmpInst;
       TmpInst.setOpcode(AArch64::MOVIv16b_ns);
       TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-      TmpInst.addOperand(MCOperand::createImm(MI->getOperand(1).getImm()));
+      TmpInst.addOperand(MCOperand::createImm(0));
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }

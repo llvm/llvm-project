@@ -45167,6 +45167,11 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // SSE signbit extraction.
   case X86ISD::MOVMSK:
     return false;
+  // GFNI instructions.
+  case X86ISD::GF2P8AFFINEINVQB:
+  case X86ISD::GF2P8AFFINEQB:
+  case X86ISD::GF2P8MULB:
+    return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
     case Intrinsic::x86_sse2_pmadd_wd:

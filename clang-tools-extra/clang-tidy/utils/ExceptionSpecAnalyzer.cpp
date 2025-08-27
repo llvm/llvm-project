@@ -66,10 +66,7 @@ ExceptionSpecAnalyzer::analyzeBase(const CXXBaseSpecifier &Base,
   if (!RecType)
     return State::Unknown;
 
-  const auto *BaseClass =
-      cast<CXXRecordDecl>(RecType->getOriginalDecl())->getDefinitionOrSelf();
-
-  return analyzeRecord(BaseClass, Kind);
+  return analyzeRecord(RecType->getAsCXXRecordDecl(), Kind);
 }
 
 ExceptionSpecAnalyzer::State

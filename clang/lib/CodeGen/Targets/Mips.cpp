@@ -241,8 +241,8 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -332,8 +332,8 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = RetTy->getAsEnumDecl())
+    RetTy = ED->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = RetTy->getAs<BitIntType>())

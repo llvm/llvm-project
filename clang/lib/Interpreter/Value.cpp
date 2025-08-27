@@ -101,8 +101,8 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (Ctx.hasSameType(QT, Ctx.VoidTy))
     return Value::K_Void;
 
-  if (const auto *ET = QT->getAs<EnumType>())
-    QT = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = QT->getAsEnumDecl())
+    QT = ED->getIntegerType();
 
   const auto *BT = QT->getAs<BuiltinType>();
   if (!BT || BT->isNullPtrType())

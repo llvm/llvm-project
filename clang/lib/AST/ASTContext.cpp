@@ -1708,7 +1708,7 @@ void ASTContext::setRelocationInfoForCXXRecord(
 }
 
 static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
-    ASTContext &Context, const CXXRecordDecl *Class) {
+    const ASTContext &Context, const CXXRecordDecl *Class) {
   if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
@@ -1723,7 +1723,8 @@ static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
   return AddressDiscrimination == AuthAttr::AddressDiscrimination;
 }
 
-ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
+ASTContext::PointerAuthContent
+ASTContext::findPointerAuthContent(QualType T) const {
   assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
@@ -2001,8 +2002,7 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
 
   // Enumerated types are promotable to their compatible integer types
   // (C99 6.3.1.1) a.k.a. its underlying type (C++ [conv.prom]p2).
-  if (const auto *ET = T->getAs<EnumType>()) {
-    const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *ED = T->getAsEnumDecl()) {
     if (T->isDependentType() || ED->getPromotionType().isNull() ||
         ED->isScoped())
       return false;
@@ -2712,11 +2712,8 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   // possible.
   if (const auto *CT = T->getAs<ComplexType>())
     T = CT->getElementType().getTypePtr();
-  if (const auto *ET = T->getAs<EnumType>())
-    T = ET->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->getIntegerType()
-            .getTypePtr();
+  if (const auto *ED = T->getAsEnumDecl())
+    T = ED->getIntegerType().getTypePtr();
   if (T->isSpecificBuiltinType(BuiltinType::Double) ||
       T->isSpecificBuiltinType(BuiltinType::LongLong) ||
       T->isSpecificBuiltinType(BuiltinType::ULongLong) ||
@@ -3033,7 +3030,7 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return true;
   }
 
-  // All other pointers (except __ptrauth pointers) are unique.
+  // All other pointers are unique.
   if (Ty->isPointerType())
     return !Ty.hasAddressDiscriminatedPointerAuth();
 
@@ -3412,10 +3409,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
-    QualType UnderlyingType = cast<EnumType>(T)
-                                  ->getOriginalDecl()
-                                  ->getDefinitionOrSelf()
-                                  ->getIntegerType();
+    QualType UnderlyingType = T->castAsEnumDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
         Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
   }
@@ -5474,18 +5468,15 @@ TagType *ASTContext::getTagTypeInternal(ElaboratedTypeKeyword Keyword,
   return T;
 }
 
-static bool getNonInjectedClassName(const TagDecl *&TD) {
+static const TagDecl *getNonInjectedClassName(const TagDecl *TD) {
   if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
-      RD && RD->isInjectedClassName()) {
-    TD = cast<TagDecl>(RD->getDeclContext());
-    return true;
-  }
-  return false;
+      RD && RD->isInjectedClassName())
+    return cast<TagDecl>(RD->getDeclContext());
+  return TD;
 }
 
 CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
-  ::getNonInjectedClassName(TD);
-  TD = TD->getCanonicalDecl();
+  TD = ::getNonInjectedClassName(TD)->getCanonicalDecl();
   if (TD->TypeForDecl)
     return TD->TypeForDecl->getCanonicalTypeUnqualified();
 
@@ -5501,40 +5492,42 @@ CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
 QualType ASTContext::getTagType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier Qualifier,
                                 const TagDecl *TD, bool OwnsTag) const {
+
+  const TagDecl *NonInjectedTD = ::getNonInjectedClassName(TD);
+  bool IsInjected = TD != NonInjectedTD;
+
   ElaboratedTypeKeyword PreferredKeyword =
-      getLangOpts().CPlusPlus
-          ? ElaboratedTypeKeyword::None
-          : KeywordHelpers::getKeywordForTagTypeKind(TD->getTagKind());
+      getLangOpts().CPlusPlus ? ElaboratedTypeKeyword::None
+                              : KeywordHelpers::getKeywordForTagTypeKind(
+                                    NonInjectedTD->getTagKind());
 
   if (Keyword == PreferredKeyword && !Qualifier && !OwnsTag) {
     if (const Type *T = TD->TypeForDecl; T && !T->isCanonicalUnqualified())
       return QualType(T, 0);
 
-    bool IsInjected = ::getNonInjectedClassName(TD);
-    const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
+    const Type *CanonicalType = getCanonicalTagType(NonInjectedTD).getTypePtr();
     const Type *T =
         getTagTypeInternal(Keyword,
-                           /*Qualifier=*/std::nullopt, TD,
+                           /*Qualifier=*/std::nullopt, NonInjectedTD,
                            /*OwnsTag=*/false, IsInjected, CanonicalType,
                            /*WithFoldingSetNode=*/false);
     TD->TypeForDecl = T;
     return QualType(T, 0);
   }
 
-  bool IsInjected = ::getNonInjectedClassName(TD);
-
   llvm::FoldingSetNodeID ID;
-  TagTypeFoldingSetPlaceholder::Profile(ID, Keyword, Qualifier, TD, OwnsTag,
-                                        IsInjected);
+  TagTypeFoldingSetPlaceholder::Profile(ID, Keyword, Qualifier, NonInjectedTD,
+                                        OwnsTag, IsInjected);
 
   void *InsertPos = nullptr;
   if (TagTypeFoldingSetPlaceholder *T =
           TagTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T->getTagType(), 0);
 
-  const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
-  TagType *T = getTagTypeInternal(Keyword, Qualifier, TD, OwnsTag, IsInjected,
-                                  CanonicalType, /*WithFoldingSetNode=*/true);
+  const Type *CanonicalType = getCanonicalTagType(NonInjectedTD).getTypePtr();
+  TagType *T =
+      getTagTypeInternal(Keyword, Qualifier, NonInjectedTD, OwnsTag, IsInjected,
+                         CanonicalType, /*WithFoldingSetNode=*/true);
   TagTypes.InsertNode(TagTypeFoldingSetPlaceholder::fromTagType(T), InsertPos);
   return QualType(T, 0);
 }
@@ -8352,8 +8345,8 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
 QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   assert(!Promotable.isNull());
   assert(isPromotableIntegerType(Promotable));
-  if (const auto *ET = Promotable->getAs<EnumType>())
-    return ET->getOriginalDecl()->getDefinitionOrSelf()->getPromotionType();
+  if (const auto *ED = Promotable->getAsEnumDecl())
+    return ED->getPromotionType();
 
   if (const auto *BT = Promotable->getAs<BuiltinType>()) {
     // C++ [conv.prom]: A prvalue of type char16_t, char32_t, or wchar_t
@@ -8572,10 +8565,9 @@ QualType ASTContext::getObjCSuperType() const {
 }
 
 void ASTContext::setCFConstantStringType(QualType T) {
-  const auto *TD = T->castAs<TypedefType>();
-  CFConstantStringTypeDecl = cast<TypedefDecl>(TD->getDecl());
-  const auto *TagType = TD->castAs<RecordType>();
-  CFConstantStringTagDecl = TagType->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *TT = T->castAs<TypedefType>();
+  CFConstantStringTypeDecl = cast<TypedefDecl>(TT->getDecl());
+  CFConstantStringTagDecl = TT->castAsRecordDecl();
 }
 
 QualType ASTContext::getBlockDescriptorType() const {
@@ -10447,6 +10439,12 @@ TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier Qualifier,
   assert(Template.getKind() == TemplateName::Template ||
          Template.getKind() == TemplateName::UsingTemplate);
 
+  if (Template.getAsTemplateDecl()->getKind() == Decl::TemplateTemplateParm) {
+    assert(!Qualifier && "unexpected qualified template template parameter");
+    assert(TemplateKeyword == false);
+    return Template;
+  }
+
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;
   QualifiedTemplateName::Profile(ID, Qualifier, TemplateKeyword, Template);
@@ -11662,9 +11660,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
       // Look at the converted type of enum types, since that is the type used
       // to pass enum values.
-      if (const auto *Enum = paramTy->getAs<EnumType>()) {
-        paramTy =
-            Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = paramTy->getAsEnumDecl()) {
+        paramTy = ED->getIntegerType();
         if (paramTy.isNull())
           return {};
       }
@@ -12255,8 +12252,8 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
 //===----------------------------------------------------------------------===//
 
 unsigned ASTContext::getIntWidth(QualType T) const {
-  if (const auto *ET = T->getAs<EnumType>())
-    T = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = T->getAsEnumDecl())
+    T = ED->getIntegerType();
   if (T->isBooleanType())
     return 1;
   if (const auto *EIT = T->getAs<BitIntType>())
@@ -12281,8 +12278,8 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
 
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
-  if (const auto *ETy = T->getAs<EnumType>())
-    T = ETy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = T->getAsEnumDecl())
+    T = ED->getIntegerType();
 
   switch (T->castAs<BuiltinType>()->getKind()) {
   case BuiltinType::Char_U:
@@ -12355,8 +12352,8 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
 
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
-  if (const auto *ETy = T->getAs<EnumType>())
-    T = ETy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = T->getAsEnumDecl())
+    T = ED->getIntegerType();
 
   switch (T->castAs<BuiltinType>()->getKind()) {
   case BuiltinType::Char_S:
@@ -15193,7 +15190,7 @@ StringRef ASTContext::getCUIDHash() const {
 }
 
 const CXXRecordDecl *
-ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) const {
   assert(ThisClass);
   assert(ThisClass->isPolymorphic());
   const CXXRecordDecl *PrimaryBase = ThisClass;

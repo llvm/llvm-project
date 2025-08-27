@@ -331,7 +331,7 @@ namespace TTP {
 // CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'TTP::B<T>' dependent{{$}}
 // CHECK-NEXT:  | `-CXXRecord {{.+}} 'B'{{$}}
 // CHECK-NEXT:  `-TemplateSpecializationType {{.+}} 'TT<T>' dependent{{$}}
-// CHECK-NEXT:    |-name: 'TT':'template-parameter-0-1' qualified
+// CHECK-NEXT:    |-name: 'TT':'template-parameter-0-1'
 // CHECK-NEXT:    | `-TemplateTemplateParmDecl {{.+}} depth 0 index 1
 // CHECK-NEXT:    `-TemplateArgument type 'T':'type-parameter-0-0'{{$}}
 // CHECK-NEXT:      `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
@@ -673,8 +673,8 @@ Test test(42);
 // CHECK-NEXT: | |-DeducedTemplateSpecializationType {{.*}} 'GH122134::Test' dependent
 // CHECK-NEXT: | | `-name: 'GH122134::Test'
 // CHECK-NEXT: | |   `-TypeAliasTemplateDecl {{.*}} Test
-// CHECK-NEXT: | `-TemplateSpecializationType {{.*}} 'Struct<int, N>' dependent
-// CHECK-NEXT: |   |-name: 'Struct':'GH122134::Struct' qualified
+// CHECK-NEXT: | `-TemplateSpecializationType {{.*}} 'GH122134::Struct<int, N>' dependent
+// CHECK-NEXT: |   |-name: 'GH122134::Struct'
 // CHECK-NEXT: |   | `-ClassTemplateDecl {{.*}} Struct
 // CHECK-NEXT: |   |-TemplateArgument type 'int'
 // CHECK-NEXT: |   | `-SubstTemplateTypeParmType {{.*}} 'int' sugar class depth 0 index 0 T
@@ -684,7 +684,7 @@ Test test(42);
 // CHECK-NEXT: |     `-SubstNonTypeTemplateParmExpr {{.*}} 'int'
 // CHECK-NEXT: |       |-NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 1
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'N' 'int'
-// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Test> 'auto (auto:1) -> Struct<int, N>'
+// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Test> 'auto (auto:1) -> GH122134::Struct<int, N>'
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} 'auto:1'
 
 } // namespace GH122134
@@ -792,16 +792,16 @@ AA a{};
 // CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::AA' dependent
 // CHECK-NEXT:  | | `-name: 'GH133132::AA'
 // CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} AA
-// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'A<U>' dependent
-// CHECK-NEXT:  |   |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'GH133132::A<U>' dependent
+// CHECK-NEXT:  |   |-name: 'GH133132::A'
 // CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
 // CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
 // CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
 // CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
 // CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
-// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for AA> 'auto () -> A<U>'
-// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for AA> 'auto () -> A<int>' implicit_instantiation
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for AA> 'auto () -> GH133132::A<U>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for AA> 'auto () -> GH133132::A<int>' implicit_instantiation
 // CHECK-NEXT:    |-TemplateArgument type 'int'
 // CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:    `-TemplateArgument type 'int'
@@ -823,22 +823,22 @@ BB b{};
 // CHECK-NEXT:  |   `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT:  |-TemplateTemplateParmDecl {{.+}} depth 0 index 1 _Y
 // CHECK-NEXT:  | |-TemplateTypeParmDecl {{.+}} class depth 0 index 0
-// CHECK-NEXT:  | `-TemplateArgument {{.+}} template '_X':'template-parameter-0-0' qualified
+// CHECK-NEXT:  | `-TemplateArgument {{.+}} template '_X':'template-parameter-0-0'
 // CHECK-NEXT:  |   `-TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
 // CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
 // CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::BB' dependent
 // CHECK-NEXT:  | | `-name: 'GH133132::BB'
 // CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} BB
-// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'B<_Y>' dependent
-// CHECK-NEXT:  |   |-name: 'B':'GH133132::B' qualified
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'GH133132::B<_Y>' dependent
+// CHECK-NEXT:  |   |-name: 'GH133132::B'
 // CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} B
 // CHECK-NEXT:  |   `-TemplateArgument template '_Y':'template-parameter-0-1' subst index 0
 // CHECK-NEXT:  |     |-parameter: TemplateTemplateParmDecl {{.+}} depth 0 index 0 _X
 // CHECK-NEXT:  |     |-associated FunctionTemplate {{.+}} '<deduction guide for B>'
-// CHECK-NEXT:  |     `-replacement: '_Y':'template-parameter-0-1' qualified
+// CHECK-NEXT:  |     `-replacement: '_Y':'template-parameter-0-1'
 // CHECK-NEXT:  |       `-TemplateTemplateParmDecl {{.+}} depth 0 index 1 _Y
-// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for BB> 'auto () -> B<_Y>'
-// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for BB> 'auto () -> B<GH133132::A>' implicit_instantiation
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for BB> 'auto () -> GH133132::B<_Y>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for BB> 'auto () -> GH133132::B<GH133132::A>' implicit_instantiation
 // CHECK-NEXT:    |-TemplateArgument template 'GH133132::A'
 // CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT:    `-TemplateArgument template 'GH133132::A'
@@ -866,16 +866,16 @@ CC c{};
 // CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::CC' dependent
 // CHECK-NEXT:  | | `-name: 'GH133132::CC'
 // CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} CC
-// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'A<U>' dependent
-// CHECK-NEXT:  |   |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'GH133132::A<U>' dependent
+// CHECK-NEXT:  |   |-name: 'GH133132::A'
 // CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
 // CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
 // CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
 // CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
 // CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
-// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for CC> 'auto () -> A<U>'
-// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for CC> 'auto () -> A<GH133132::A<int>>' implicit_instantiation
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for CC> 'auto () -> GH133132::A<U>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for CC> 'auto () -> GH133132::A<GH133132::A<int>>' implicit_instantiation
 // CHECK-NEXT:    |-TemplateArgument integral '42'
 // CHECK-NEXT:    `-TemplateArgument type 'GH133132::A<int>'
 // CHECK-NEXT:      `-RecordType {{.+}} 'GH133132::A<int>'
@@ -949,8 +949,8 @@ Expand<Type, Invocable<>> _{};
 // CHECK-NEXT:   | |-DeducedTemplateSpecializationType {{.+}} 'GH141425::Alias' dependent
 // CHECK-NEXT:   | | `-name: 'GH141425::Alias'
 // CHECK-NEXT:   | |   `-TypeAliasTemplateDecl {{.+}} Alias
-// CHECK-NEXT:   | `-TemplateSpecializationType {{.+}} 'Container<T...>' dependent
-// CHECK-NEXT:   |   |-name: 'Container':'GH141425::Container' qualified
+// CHECK-NEXT:   | `-TemplateSpecializationType {{.+}} 'GH141425::Container<T...>' dependent
+// CHECK-NEXT:   |   |-name: 'GH141425::Container'
 // CHECK-NEXT:   |   | `-ClassTemplateDecl {{.+}} Container
 // CHECK-NEXT:   |   `-TemplateArgument type 'T...':'type-parameter-0-0...'
 // CHECK-NEXT:   |     `-PackExpansionType {{.+}} 'T...' dependent
@@ -958,7 +958,7 @@ Expand<Type, Invocable<>> _{};
 // CHECK-NEXT:   |         |-FunctionTemplate {{.+}} '<deduction guide for Container>'
 // CHECK-NEXT:   |         `-TemplateTypeParmType {{.+}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
 // CHECK-NEXT:   |           `-TemplateTypeParm {{.+}} 'T'
-// CHECK-NEXT:   |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Alias> 'auto (T...) -> Container<T...>'
+// CHECK-NEXT:   |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Alias> 'auto (T...) -> GH141425::Container<T...>'
 // CHECK-NEXT:   | `-ParmVarDecl {{.+}} 'T...' pack
 
 }

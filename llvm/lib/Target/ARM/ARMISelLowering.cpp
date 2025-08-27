@@ -21706,13 +21706,15 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
                                               Value *LaneMask,
                                               ShuffleVectorInst *SVI,
-                                              unsigned Factor) const {
+                                              unsigned Factor,
+                                              const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");

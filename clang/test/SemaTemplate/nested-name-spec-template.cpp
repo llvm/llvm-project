@@ -186,3 +186,27 @@ namespace DependentSizedArray {
   template <class, class> struct A;
   template <class T> struct A<T, typename Z<T(0)>::X>;
 } // namespace DependentUnaryTransform
+
+namespace GH155281 {
+  template <bool> struct enable_if;
+  template <class _Tp, _Tp> struct integral_constant;
+  template <typename> struct conjunction;
+  template <typename T> using value_type_t = T;
+  template <class Check> using require_t = typename enable_if<Check::value>::type;
+  template <template <class> class, template <class> class,
+            template <class> class, class... Check>
+  using container_type_check_base =
+      integral_constant<bool, conjunction<Check...>::value>;
+  template <typename> struct is_std_vector;
+  template <template <class> class TypeCheck, class... Check>
+  using require_std_vector_vt =
+      require_t<container_type_check_base<is_std_vector, value_type_t, TypeCheck,
+                                          Check...> >;
+  template <typename, typename> class vector_seq_view;
+  namespace internal {
+  template <typename> using is_matrix_or_std_vector = int;
+  }
+  template <typename T>
+  class vector_seq_view<
+      T, require_std_vector_vt<internal::is_matrix_or_std_vector, T> >;
+} // namespace GH155281

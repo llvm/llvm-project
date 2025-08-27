@@ -4710,7 +4710,10 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     if (SDValue LogBase2 = BuildLogBase2(N1, DL)) {
       EVT ShiftVT = getShiftAmountTy(N0.getValueType());
       SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
-      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap());
+      // TODO: Preserve setNoSignedWrap if LogBase2 isn't BitWidth - 1.
+      return Matcher.getNode(ISD::SHL, DL, VT, N0, Trunc, Flags);
     }
   }
 
@@ -11089,38 +11092,43 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     }
   }
 
-  // fold (srl (shl x, c1), c2) -> (and (shl x, (sub c1, c2), MASK) or
-  //                               (and (srl x, (sub c2, c1), MASK)
-  if (N0.getOpcode() == ISD::SHL &&
-      (N0.getOperand(1) == N1 || N0->hasOneUse()) &&
-      TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
-    auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
-                                           ConstantSDNode *RHS) {
-      const APInt &LHSC = LHS->getAPIntValue();
-      const APInt &RHSC = RHS->getAPIntValue();
-      return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
-             LHSC.getZExtValue() <= RHSC.getZExtValue();
-    };
-    if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
-      SDValue Mask = DAG.getAllOnesConstant(DL, VT);
-      Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N01);
-      Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, Diff);
-      SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
-      return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
-    }
-    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
-                                  /*AllowUndefs*/ false,
-                                  /*AllowTypeMismatch*/ true)) {
-      SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
-      SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
-      SDValue Mask = DAG.getAllOnesConstant(DL, VT);
-      Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N1);
-      SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Diff);
-      return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+  if (N0.getOpcode() == ISD::SHL) {
+    // fold (srl (shl nuw x, c), c) -> x
+    if (N0.getOperand(1) == N1 && N0->getFlags().hasNoUnsignedWrap())
+      return N0.getOperand(0);
+
+    // fold (srl (shl x, c1), c2) -> (and (shl x, (sub c1, c2), MASK) or
+    //                               (and (srl x, (sub c2, c1), MASK)
+    if ((N0.getOperand(1) == N1 || N0->hasOneUse()) &&
+        TLI.shouldFoldConstantShiftPairToMask(N, Level)) {
+      auto MatchShiftAmount = [OpSizeInBits](ConstantSDNode *LHS,
+                                             ConstantSDNode *RHS) {
+        const APInt &LHSC = LHS->getAPIntValue();
+        const APInt &RHSC = RHS->getAPIntValue();
+        return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
+               LHSC.getZExtValue() <= RHSC.getZExtValue();
+      };
+      if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N01, N1);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N01);
+        Mask = DAG.getNode(ISD::SHL, DL, VT, Mask, Diff);
+        SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+      }
+      if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchShiftAmount,
+                                    /*AllowUndefs*/ false,
+                                    /*AllowTypeMismatch*/ true)) {
+        SDValue N01 = DAG.getZExtOrTrunc(N0.getOperand(1), DL, ShiftVT);
+        SDValue Diff = DAG.getNode(ISD::SUB, DL, ShiftVT, N1, N01);
+        SDValue Mask = DAG.getAllOnesConstant(DL, VT);
+        Mask = DAG.getNode(ISD::SRL, DL, VT, Mask, N1);
+        SDValue Shift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Diff);
+        return DAG.getNode(ISD::AND, DL, VT, Shift, Mask);
+      }
     }
   }
 

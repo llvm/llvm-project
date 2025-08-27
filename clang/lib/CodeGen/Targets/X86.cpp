@@ -552,8 +552,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = RetTy->getAsEnumDecl())
+    RetTy = ED->getIntegerType();
 
   if (const auto *EIT = RetTy->getAs<BitIntType>())
     if (EIT->getNumBits() > 64)
@@ -881,9 +881,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     return ABIArgInfo::getDirect();
   }
 
-
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
@@ -1846,10 +1845,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     return;
   }
 
-  if (const EnumType *ET = Ty->getAs<EnumType>()) {
+  if (const auto *ED = Ty->getAsEnumDecl()) {
     // Classify the underlying integer type.
-    classify(ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType(),
-             OffsetBase, Lo, Hi, isNamedArg);
+    classify(ED->getIntegerType(), OffsetBase, Lo, Hi, isNamedArg);
     return;
   }
 
@@ -2071,11 +2069,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       for (const auto &I : CXXRD->bases()) {
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
-        const auto *Base =
-            cast<CXXRecordDecl>(
-                I.getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
-
+        const auto *Base = I.getType()->castAsCXXRecordDecl();
         // Classify this field.
         //
         // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds a
@@ -2187,8 +2181,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
   // place naturally.
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     if (Ty->isBitIntType())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2229,8 +2223,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   if (!isAggregateTypeForABI(Ty) && !IsIllegalVectorType(Ty) &&
       !Ty->isBitIntType()) {
     // Treat an enum type as its underlying type.
-    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = Ty->getAsEnumDecl())
+      Ty = ED->getIntegerType();
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());
@@ -2358,10 +2352,7 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
       for (const auto &I : CXXRD->bases()) {
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
-        const auto *Base =
-            cast<CXXRecordDecl>(
-                I.getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+        const auto *Base = I.getType()->castAsCXXRecordDecl();
 
         // If the base is after the span we care about, ignore it.
         unsigned BaseOffset = Context.toBits(Layout.getBaseClassOffset(Base));
@@ -2641,9 +2632,8 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && isa<llvm::IntegerType>(ResType)) {
       // Treat an enum type as its underlying type.
-      if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-        RetTy =
-            EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = RetTy->getAsEnumDecl())
+        RetTy = ED->getIntegerType();
 
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy))
@@ -2792,8 +2782,8 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && isa<llvm::IntegerType>(ResType)) {
       // Treat an enum type as its underlying type.
-      if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-        Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = Ty->getAsEnumDecl())
+        Ty = ED->getIntegerType();
 
       if (Ty->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))

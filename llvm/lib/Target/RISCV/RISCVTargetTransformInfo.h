@@ -177,6 +177,10 @@ public:
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost
+  getAddressComputationCost(Type *PTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
