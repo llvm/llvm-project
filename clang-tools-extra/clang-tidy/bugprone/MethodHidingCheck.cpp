@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-bool sameBasicType(ParmVarDecl const *Lhs, ParmVarDecl const *Rhs) {
+bool sameBasicType(const ParmVarDecl *Lhs, const ParmVarDecl *Rhs) {
   if (Lhs && Rhs) {
     return Lhs->getType()
                .getCanonicalType()
@@ -29,7 +29,7 @@ bool sameBasicType(ParmVarDecl const *Lhs, ParmVarDecl const *Rhs) {
   return false;
 }
 
-bool namesCollide(CXXMethodDecl const &Lhs, CXXMethodDecl const &Rhs) {
+bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
   if (Lhs.getNameAsString() != Rhs.getNameAsString())
     return false;
   if (Lhs.isConst() != Rhs.isConst())
@@ -51,12 +51,12 @@ bool namesCollide(CXXMethodDecl const &Lhs, CXXMethodDecl const &Rhs) {
 }
 
 AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
-  CXXRecordDecl const *DerivedClass = Node.getParent();
-  for (auto const &Base : DerivedClass->bases()) {
-    std::stack<CXXBaseSpecifier const *> Stack;
+  const CXXRecordDecl *DerivedClass = Node.getParent();
+  for (const auto &Base : DerivedClass->bases()) {
+    std::stack<const CXXBaseSpecifier *> Stack;
     Stack.push(&Base);
     while (!Stack.empty()) {
-      CXXBaseSpecifier const *CurrentBaseSpec = Stack.top();
+      const CXXBaseSpecifier *CurrentBaseSpec = Stack.top();
       Stack.pop();
 
       if (CurrentBaseSpec->getAccessSpecifier() ==
@@ -68,7 +68,7 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
       if (!CurrentRecord)
         continue;
 
-      for (auto const &BaseMethod : CurrentRecord->methods()) {
+      for (const auto &BaseMethod : CurrentRecord->methods()) {
         if (namesCollide(*BaseMethod, Node)) {
           ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
           Builder->setBinding("base_method",
@@ -77,9 +77,8 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
         }
       }
 
-      for (auto const &SubBase : CurrentRecord->bases())
+      for (const auto &SubBase : CurrentRecord->bases())
         Stack.push(&SubBase);
-      
     }
   }
   return false;
@@ -110,11 +109,11 @@ void MethodHidingCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
-  auto const *ShadowingMethod =
+  const auto *ShadowingMethod =
       Result.Nodes.getNodeAs<CXXMethodDecl>("shadowing_method");
-  auto const *DerivedClass =
+  const auto *DerivedClass =
       Result.Nodes.getNodeAs<CXXRecordDecl>("derived_class");
-  auto const *BaseMethod = Result.Nodes.getNodeAs<CXXMethodDecl>("base_method");
+  const auto *BaseMethod = Result.Nodes.getNodeAs<CXXMethodDecl>("base_method");
 
   if (!ShadowingMethod || !DerivedClass || !BaseMethod)
     llvm_unreachable("Required binding not found");
