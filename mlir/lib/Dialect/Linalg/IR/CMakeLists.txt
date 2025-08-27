@@ -37,3 +37,4 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
   )
+set_target_properties(obj.MLIRLinalgDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
