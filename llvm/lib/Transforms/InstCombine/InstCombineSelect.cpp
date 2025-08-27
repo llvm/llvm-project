@@ -42,7 +42,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
-#include <cstddef>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
