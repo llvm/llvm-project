@@ -30,31 +30,23 @@ bool sameBasicType(ParmVarDecl const *Lhs, ParmVarDecl const *Rhs) {
 }
 
 bool namesCollide(CXXMethodDecl const &Lhs, CXXMethodDecl const &Rhs) {
-  if (Lhs.getNameAsString() != Rhs.getNameAsString()) {
+  if (Lhs.getNameAsString() != Rhs.getNameAsString())
     return false;
-  }
-  if (Lhs.isConst() != Rhs.isConst()) {
+  if (Lhs.isConst() != Rhs.isConst())
     return false;
-  }
-  if (Lhs.getNumParams() != Rhs.getNumParams()) {
+  if (Lhs.getNumParams() != Rhs.getNumParams())
     return false;
-  }
-  for (unsigned int It = 0; It < Lhs.getNumParams(); ++It) {
-    if (!sameBasicType(Lhs.getParamDecl(It), Rhs.getParamDecl(It))) {
+  for (unsigned int It = 0; It < Lhs.getNumParams(); ++It)
+    if (!sameBasicType(Lhs.getParamDecl(It), Rhs.getParamDecl(It)))
       return false;
-    }
-  }
   // Templates are not handled yet
-  if (Lhs.isTemplated() || Rhs.isTemplated()) {
+  if (Lhs.isTemplated() || Rhs.isTemplated())
     return false;
-  }
-  if (Lhs.isTemplateInstantiation() || Rhs.isTemplateInstantiation()) {
+  if (Lhs.isTemplateInstantiation() || Rhs.isTemplateInstantiation())
     return false;
-  }
   if (Lhs.isFunctionTemplateSpecialization() ||
-      Rhs.isFunctionTemplateSpecialization()) {
+      Rhs.isFunctionTemplateSpecialization())
     return false;
-  }
   return true;
 }
 
@@ -68,15 +60,13 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
       Stack.pop();
 
       if (CurrentBaseSpec->getAccessSpecifier() ==
-          clang::AccessSpecifier::AS_private) {
+          clang::AccessSpecifier::AS_private)
         continue;
-      }
 
       const auto *CurrentRecord =
           CurrentBaseSpec->getType()->getAsCXXRecordDecl();
-      if (!CurrentRecord) {
+      if (!CurrentRecord)
         continue;
-      }
 
       for (auto const &BaseMethod : CurrentRecord->methods()) {
         if (namesCollide(*BaseMethod, Node)) {
@@ -87,9 +77,9 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
         }
       }
 
-      for (auto const &SubBase : CurrentRecord->bases()) {
+      for (auto const &SubBase : CurrentRecord->bases())
         Stack.push(&SubBase);
-      }
+      
     }
   }
   return false;
@@ -126,9 +116,8 @@ void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXRecordDecl>("derived_class");
   auto const *BaseMethod = Result.Nodes.getNodeAs<CXXMethodDecl>("base_method");
 
-  if (!ShadowingMethod || !DerivedClass || !BaseMethod) {
+  if (!ShadowingMethod || !DerivedClass || !BaseMethod)
     llvm_unreachable("Required binding not found");
-  }
 
   diag(ShadowingMethod->getBeginLoc(),
        "'" + ShadowingMethod->getQualifiedNameAsString() +
