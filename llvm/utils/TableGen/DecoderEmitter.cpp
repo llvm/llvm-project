@@ -340,18 +340,8 @@ private:
 
 struct DecoderTableInfo {
   DecoderTable Table;
-  SmallVector<unsigned, 8> FixupStack;
   PredicateSet Predicates;
   DecoderSet Decoders;
-
-  void pushScope() {
-    Table.insertOpcode(MCD::OPC_Scope);
-    FixupStack.push_back(Table.insertNumToSkip());
-  }
-
-  void popScope() {
-    Table.patchNumToSkip(FixupStack.pop_back_val(), Table.size());
-  }
 };
 
 using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
@@ -628,7 +618,6 @@ public:
     if (SpecializeDecodersPerBitwidth)
       TableInfo.Table.insertULEB128(BitWidth);
     emitTableEntries(FC);
-    assert(TableInfo.FixupStack.empty() && "Fixup stack phasing error!");
   }
 
 private:
@@ -1638,8 +1627,11 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
-  if (FC.VariableFC)
-    TableInfo.pushScope();
+  size_t FixupLoc = 0;
+  if (FC.VariableFC) {
+    Table.insertOpcode(MCD::OPC_Scope);
+    FixupLoc = Table.insertNumToSkip();
+  }
 
   if (FC.SingletonEncodingID) {
     assert(FC.FilterChooserMap.empty());
@@ -1688,7 +1680,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
   }
 
   if (FC.VariableFC) {
-    TableInfo.popScope();
+    Table.patchNumToSkip(FixupLoc, Table.size());
     emitTableEntries(*FC.VariableFC);
   }
 }
