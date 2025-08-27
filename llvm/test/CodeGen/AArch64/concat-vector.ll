@@ -273,9 +273,9 @@ define <4 x i16> @concat_undef_first_use_first(ptr %p1, ptr %p2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %l1 = load <2 x i16>, ptr %p1
@@ -296,9 +296,9 @@ define <4 x i16> @concat_undef_first_use_second(ptr %p1, ptr %p2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldrh w8, [x0]
 ; CHECK-GI-NEXT:    ldrh w9, [x0, #2]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %l1 = load <2 x i16>, ptr %p1
