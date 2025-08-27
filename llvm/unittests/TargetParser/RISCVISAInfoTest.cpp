@@ -928,12 +928,6 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IFZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IFZce.count("zcmt"), 1U);
 
-  EXPECT_EQ(ExtsRV64IFZce.count("zca"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcb"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zce"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcmp"), 1U);
-  EXPECT_EQ(ExtsRV64IFZce.count("zcmt"), 1U);
-
   auto MaybeRV64IDZce = RISCVISAInfo::parseArchString("rv64idzce", true);
   ASSERT_THAT_EXPECTED(MaybeRV64IDZce, Succeeded());
   const auto &ExtsRV64IDZce = (*MaybeRV64IDZce)->getExtensions();
@@ -947,6 +941,70 @@ TEST(ParseArchString, ZceImplication) {
   EXPECT_EQ(ExtsRV64IDZce.count("zce"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("zcmp"), 1U);
   EXPECT_EQ(ExtsRV64IDZce.count("zcmt"), 1U);
+}
+
+TEST(ParseArchString, CImplication) {
+  auto MaybeRV32IC = RISCVISAInfo::parseArchString("rv32ic", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IC, Succeeded());
+  const auto &ExtsRV32IC = (*MaybeRV32IC)->getExtensions();
+  EXPECT_EQ(ExtsRV32IC.size(), 3UL);
+  EXPECT_EQ(ExtsRV32IC.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IC.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IC.count("zca"), 1U);
+
+  auto MaybeRV32ICF = RISCVISAInfo::parseArchString("rv32icf", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32ICF, Succeeded());
+  const auto &ExtsRV32ICF = (*MaybeRV32ICF)->getExtensions();
+  EXPECT_EQ(ExtsRV32ICF.size(), 6UL);
+  EXPECT_EQ(ExtsRV32ICF.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32ICF.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV32ICF.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32ICF.count("f"), 1U);
+  EXPECT_EQ(ExtsRV32ICF.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32ICF.count("zcf"), 1U);
+
+  auto MaybeRV32ICD = RISCVISAInfo::parseArchString("rv32icd", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32ICD, Succeeded());
+  const auto &ExtsRV32ICD = (*MaybeRV32ICD)->getExtensions();
+  EXPECT_EQ(ExtsRV32ICD.size(), 8UL);
+  EXPECT_EQ(ExtsRV32ICD.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("d"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("f"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("zcd"), 1U);
+  EXPECT_EQ(ExtsRV32ICD.count("zcf"), 1U);
+
+  auto MaybeRV64IC = RISCVISAInfo::parseArchString("rv64ic", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IC, Succeeded());
+  const auto &ExtsRV64IC = (*MaybeRV64IC)->getExtensions();
+  EXPECT_EQ(ExtsRV64IC.size(), 3UL);
+  EXPECT_EQ(ExtsRV64IC.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IC.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64IC.count("zca"), 1U);
+
+  auto MaybeRV64ICF = RISCVISAInfo::parseArchString("rv64icf", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64ICF, Succeeded());
+  const auto &ExtsRV64ICF = (*MaybeRV64ICF)->getExtensions();
+  EXPECT_EQ(ExtsRV64ICF.size(), 5UL);
+  EXPECT_EQ(ExtsRV64ICF.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64ICF.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV64ICF.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64ICF.count("f"), 1U);
+  EXPECT_EQ(ExtsRV64ICF.count("zca"), 1U);
+
+  auto MaybeRV64ICD = RISCVISAInfo::parseArchString("rv64icd", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64ICD, Succeeded());
+  const auto &ExtsRV64ICD = (*MaybeRV64ICD)->getExtensions();
+  EXPECT_EQ(ExtsRV64ICD.size(), 7UL);
+  EXPECT_EQ(ExtsRV64ICD.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("d"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("f"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV64ICD.count("zcd"), 1U);
 }
 
 TEST(isSupportedExtensionWithVersion, AcceptsSingleExtensionWithVersion) {

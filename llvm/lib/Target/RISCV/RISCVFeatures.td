@@ -404,11 +404,9 @@ def FeatureStdExtZcd
                      "Compressed Double-Precision Floating-Point Instructions",
                      [FeatureStdExtD, FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 4>;
-
-def HasStdExtCOrZcd
-    : Predicate<"Subtarget->hasStdExtCOrZcd()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
-                         "'C' (Compressed Instructions) or "
+def HasStdExtZcd
+    : Predicate<"Subtarget->hasStdExtZcd()">,
+      AssemblerPredicate<(any_of FeatureStdExtZcd),
                          "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcf
@@ -416,6 +414,10 @@ def FeatureStdExtZcf
                      "Compressed Single-Precision Floating-Point Instructions",
                      [FeatureStdExtF, FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 5>;
+def HasStdExtZcf
+    : Predicate<"Subtarget->hasStdExtZcf()">,
+      AssemblerPredicate<(any_of FeatureStdExtZcf),
+                         "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
@@ -431,7 +433,7 @@ def FeatureStdExtZcmp
                      "sequenced instructions for code-size reduction",
                      [FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 10>;
-def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
+def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp()">,
                     AssemblerPredicate<(all_of FeatureStdExtZcmp),
                         "'Zcmp' (sequenced instructions for code-size reduction)">;
 
@@ -448,14 +450,6 @@ def FeatureStdExtZce
                      "Compressed extensions for microcontrollers",
                      [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
                       FeatureStdExtZcmt]>;
-
-def HasStdExtCOrZcfOrZce
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
-                "Subtarget->hasStdExtZce()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
-                                 FeatureStdExtZce),
-                         "'C' (Compressed Instructions) or "
-                         "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcmop
     : RISCVExtension<1, 0, "Compressed May-Be-Operations",

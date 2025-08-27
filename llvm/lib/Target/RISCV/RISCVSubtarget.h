@@ -171,10 +171,15 @@ public:
 
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
   bool hasStdExtCOrZca() const { return HasStdExtZca; }
+
+  LLVM_DEPRECATED("Equivalent to hasStdExtZcd", "hasStdExtZcd")
   bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
+
+  LLVM_DEPRECATED("Equivalent to hasStdExtZcf", "hasStdExtZcf")
   bool hasStdExtCOrZcfOrZce() const {
     return HasStdExtC || HasStdExtZcf || HasStdExtZce;
   }
+
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }

@@ -211,9 +211,9 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FLW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FLD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
   }
 }
 
@@ -235,9 +235,9 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FSW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FSD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
   }
 }
 

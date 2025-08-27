@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+f -M no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcf -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c,+f < %s \
-# RUN:     | llvm-objdump --mattr=+c,+f --no-print-imm-hex -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zcf < %s \
+# RUN:     | llvm-objdump --mattr=+zcf --no-print-imm-hex -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 
 # CHECK-EXPAND: c.flw fs0, 0(s1)
