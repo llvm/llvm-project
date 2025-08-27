@@ -79,10 +79,12 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   argv = av;
   SetEnvironmentDefaults(envDefaults);
 
-  if (PreConfigureEnv) {
-    // Run an optional callback function prior to the core of the
+  if (0 != nPreConfigEnvCallback) {
+    // Run an optional callback function after the core of the
     // ExecutionEnvironment() logic.
-    PreConfigureEnv(ac, av, env, envDefaults);
+    for (auto i = 0; i != nPreConfigEnvCallback; ++i) {
+      PreConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
   }
 
 #ifdef _WIN32
@@ -181,10 +183,12 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
 
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 
-  if (PostConfigureEnv) {
-    // Run an optional callback function after the core of the
-    // ExecutionEnvironment() logic.
-    PostConfigureEnv(ac, av, env, envDefaults);
+  if (0 != nPostConfigEnvCallback) {
+    // Run an optional callback function in reverse order of registration
+    // after the core of the ExecutionEnvironment() logic.
+    for (auto i = nPostConfigEnvCallback - 1; i >= 0; --i) {
+      PostConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
   }
 }
 
@@ -269,14 +273,33 @@ extern "C" {
 // The pre and post callback functions are called upon entry and exit
 // of ExecutionEnvironment::Configure() respectively.
 
-void RTNAME(RegisterConfigureEnv)(
-    void (*pre)(int argc, const char *argv[], const char *envp[],
-        const EnvironmentDefaultList *),
-    void (*post)(int argc, const char *argv[], const char *envp[],
-        const EnvironmentDefaultList *)) {
+bool RTNAME(RegisterConfigureEnv)(
+    ExecutionEnvironment::ConfigEnvCallbackPtr pre,
+    ExecutionEnvironment::ConfigEnvCallbackPtr post) {
+  bool ret{true};
 
-  executionEnvironment.PreConfigureEnv = pre;
-  executionEnvironment.PostConfigureEnv = post;
+  if (nullptr != pre) {
+    if (executionEnvironment.nPreConfigEnvCallback <
+        executionEnvironment.nConfigEnvCallback) {
+      executionEnvironment
+          .PreConfigEnvCallback[executionEnvironment.nPreConfigEnvCallback++] =
+          pre;
+    } else {
+      ret = false;
+    }
+  }
+
+  if (ret && nullptr != post) {
+    if (executionEnvironment.nPostConfigEnvCallback <
+        executionEnvironment.nConfigEnvCallback) {
+      executionEnvironment.PostConfigEnvCallback[executionEnvironment
+              .nPostConfigEnvCallback++] = post;
+    } else {
+      ret = false;
+    }
+  }
+
+  return ret;
 }
 } // extern "C"
 

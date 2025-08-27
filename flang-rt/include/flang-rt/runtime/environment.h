@@ -15,17 +15,19 @@
 
 struct EnvironmentDefaultList;
 
+#if 0
 // ExecutionEnvironment::Configure() allows for optional callback functions
 // to be run pre and post the core logic.
 // Most likely scenario is when a user supplied constructor function is
 // run prior to _QQmain calling RTNAME(ProgramStart)().
 
 extern "C" {
-void RTNAME(RegisterConfigureEnv)(void (*)(int, const char *[], const char *[],
+bool RTNAME(RegisterConfigureEnv)(void (*)(int, const char *[], const char *[],
                                       const EnvironmentDefaultList *),
     void (*)(
         int, const char *[], const char *[], const EnvironmentDefaultList *));
 }
+#endif
 
 namespace Fortran::runtime {
 
@@ -48,6 +50,10 @@ RT_API_ATTRS Fortran::common::optional<Convert> GetConvertFromString(
     const char *, std::size_t);
 
 struct ExecutionEnvironment {
+
+  typedef void (*ConfigEnvCallbackPtr)(
+      int, const char *[], const char *[], const EnvironmentDefaultList *);
+
 #if !defined(_OPENMP)
   // FIXME: https://github.com/llvm/llvm-project/issues/84942
   constexpr
@@ -58,10 +64,18 @@ struct ExecutionEnvironment {
 
   // Optional callback routines to be invoked pre and post
   // execution environment setup.
-  void (*PreConfigureEnv)(int, const char *[], const char *[],
-      const EnvironmentDefaultList *){nullptr};
-  void (*PostConfigureEnv)(int, const char *[], const char *[],
-      const EnvironmentDefaultList *){nullptr};
+  // RTNAME(RegisterConfigureEnv) will return true if callback
+  // function(s) is(are) successfully added to small array of
+  // pointers.  False if more than nConfigEnvCallback registrations
+  // for either pre or post functions.
+
+  static constexpr int nConfigEnvCallback{8};
+  int nPreConfigEnvCallback{0};
+  void (*PreConfigEnvCallback[nConfigEnvCallback])(int, const char *[],
+      const char *[], const EnvironmentDefaultList *){nullptr};
+  int nPostConfigEnvCallback{0};
+  void (*PostConfigEnvCallback[nConfigEnvCallback])(int, const char *[],
+      const char *[], const EnvironmentDefaultList *){nullptr};
 
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
@@ -97,6 +111,15 @@ RT_OFFLOAD_VAR_GROUP_BEGIN
 extern RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
 
-} // namespace Fortran::runtime
+// ExecutionEnvironment::Configure() allows for optional callback functions
+// to be run pre and post the core logic.
+// Most likely scenario is when a user supplied constructor function is
+// run prior to _QQmain calling RTNAME(ProgramStart)().
 
+extern "C" {
+bool RTNAME(RegisterConfigureEnv)(ExecutionEnvironment::ConfigEnvCallbackPtr,
+    ExecutionEnvironment::ConfigEnvCallbackPtr);
+}
+
+} // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_ENVIRONMENT_H_
