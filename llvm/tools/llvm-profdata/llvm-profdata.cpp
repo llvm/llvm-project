@@ -3225,16 +3225,19 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
   return 0;
 }
 
-static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Expected<int> showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
-    exitWithError("YAML output is not supported for sample profiles");
+    return createStringError(
+        errc::invalid_argument,
+        "YAML output is not supported for sample profiles");
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context, *FS,
                                                  FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithErrorCode(EC, Filename);
+    return createStringError(EC, "%s: %s", Filename.c_str(),
+                             EC.message().c_str());
 
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
@@ -3243,7 +3246,8 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   }
 
   if (std::error_code EC = Reader->read())
-    exitWithErrorCode(EC, Filename);
+    return createStringError(EC, "%s: %s", Filename.c_str(),
+                             EC.message().c_str());
 
   if (ShowAllFunctions || FuncNameFilter.empty()) {
     if (SFormat == ShowFormat::Json)
@@ -3252,9 +3256,9 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       Reader->dump(OS);
   } else {
     if (SFormat == ShowFormat::Json)
-      exitWithError(
-          "the JSON format is supported only when all functions are to "
-          "be printed");
+      return createStringError(errc::invalid_argument,
+                               "the JSON format is supported only when all "
+                               "functions are to be printed");
 
     // TODO: parse context string to support filtering by contexts.
     FunctionSamples *FS = Reader->getSamplesFor(StringRef(FuncNameFilter));
@@ -3366,6 +3370,7 @@ static int showDebugInfoCorrelation(const std::string &Filename,
 }
 
 static int show_main(StringRef ProgName) {
+  ExitOnError ExitOnErr;
   if (Filename.empty() && DebugInfoFilename.empty())
     exitWithError(
         "the positional argument '<profdata-file>' is required unless '--" +
@@ -3394,7 +3399,7 @@ static int show_main(StringRef ProgName) {
   if (ShowProfileKind == instr)
     return showInstrProfile(SFormat, OS);
   if (ShowProfileKind == sample)
-    return showSampleProfile(SFormat, OS);
+    return ExitOnErr(showSampleProfile(SFormat, OS));
   return showMemProfProfile(SFormat, OS);
 }
 
