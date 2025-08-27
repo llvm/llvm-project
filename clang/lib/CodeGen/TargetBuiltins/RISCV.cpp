@@ -208,7 +208,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_brev8_32:
   case RISCV::BI__builtin_riscv_brev8_64:
   case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32: {
+  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_sadd: {
     switch (BuiltinID) {
     default: llvm_unreachable("unexpected builtin ID");
     // Zbb
@@ -252,9 +253,39 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_unzip_32:
       ID = Intrinsic::riscv_unzip;
       break;
+    case RISCV::BI__builtin_riscv_sadd:
+      ID = Intrinsic::riscv_sadd;
+      break;
     }
 
     IntrinsicTypes = {ResultType};
+    break;
+  }
+
+  case RISCV::BI__builtin_riscv_pslli_b_32:
+  case RISCV::BI__builtin_riscv_pslli_b_64:
+  case RISCV::BI__builtin_riscv_pslli_h_32:
+  case RISCV::BI__builtin_riscv_pslli_h_64:
+  case RISCV::BI__builtin_riscv_pslli_w:
+  case RISCV::BI__builtin_riscv_psslai_h_32:
+  case RISCV::BI__builtin_riscv_psslai_h_64:
+  case RISCV::BI__builtin_riscv_psslai_w:
+  case RISCV::BI__builtin_riscv_sslai: {
+    switch (BuiltinID) {
+    default: llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pslli_b_32:
+    case RISCV::BI__builtin_riscv_pslli_b_64:
+      ID = Intrinsic::riscv_pslli_b;
+      break;
+    case RISCV::BI__builtin_riscv_pslli_h_32:
+    case RISCV::BI__builtin_riscv_pslli_h_64:
+      ID = Intrinsic::riscv_pslli_h;
+      break;
+    case RISCV::BI__builtin_riscv_pslli_w:
+      ID = Intrinsic::riscv_pslli_w;
+      break;
+    }
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;
   }
 

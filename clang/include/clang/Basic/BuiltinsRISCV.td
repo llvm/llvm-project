@@ -137,6 +137,20 @@ def sm3p0 : RISCVBuiltin<"unsigned int(unsigned int)">;
 def sm3p1 : RISCVBuiltin<"unsigned int(unsigned int)">;
 } // Features = "zksh"
 
+//===----------------------------------------------------------------------===//
+// Packed SIMD extension.
+//===----------------------------------------------------------------------===//
+let Features = "experimental-p,32bit" in {
+def pslli_b_32 : RISCVBuiltin<"unsigned int(unsigned int, int32_t)">;
+def pslli_h_32 : RISCVBuiltin<"unsigned int(unsigned int, int32_t)">;
+def sadd : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+} // Features = "experimental-p,32bit"
+
+let Features = "experimental-p,64bit" in {
+def pslli_b_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def pslli_h_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def pslli_w : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+} // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 
 //===----------------------------------------------------------------------===//
