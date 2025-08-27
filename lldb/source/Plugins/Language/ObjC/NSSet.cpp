@@ -395,7 +395,13 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
                                    name.AsCString());
   }
   uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
+  auto num_children_or_err = CalculateNumChildren();
+  if (!num_children_or_err) {
+    llvm::consumeError(num_children_or_err.takeError());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  if (idx >= *num_children_or_err)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
@@ -533,7 +539,13 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
                                    name.AsCString());
   }
   uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
+  auto num_children_or_err = CalculateNumChildren();
+  if (!num_children_or_err) {
+    llvm::consumeError(num_children_or_err.takeError());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  if (idx >= *num_children_or_err)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
@@ -672,7 +684,13 @@ llvm::Expected<size_t> lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<
                                    name.AsCString());
   }
   uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
+  auto num_children_or_err = CalculateNumChildren();
+  if (!num_children_or_err) {
+    llvm::consumeError(num_children_or_err.takeError());
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  if (idx >= *num_children_or_err)
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
