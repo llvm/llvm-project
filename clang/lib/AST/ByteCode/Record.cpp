@@ -12,20 +12,23 @@
 using namespace clang;
 using namespace clang::interp;
 
-Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
-               FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
-               unsigned VirtualSize, unsigned BaseSize)
-    : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
+Record::Record(const RecordDecl *Decl, const Base *SrcBases, unsigned NumBases,
+               const Field *Fields, unsigned NumFields, Base *VBases,
+               unsigned NumVBases, unsigned VirtualSize, unsigned BaseSize)
+    : Decl(Decl), Bases(SrcBases), NumBases(NumBases), Fields(Fields),
+      NumFields(NumFields), VBases(VBases), NumVBases(NumVBases),
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
       IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {
-  for (Base &V : SrcVirtualBases)
-    VirtualBases.push_back({V.Decl, V.Offset + BaseSize, V.Desc, V.R});
 
-  for (Base &B : Bases)
+  for (unsigned I = 0; I != NumVBases; ++I) {
+    VBases[I].Offset += BaseSize;
+  }
+
+  for (const Base &B : bases())
     BaseMap[B.Decl] = &B;
-  for (Field &F : Fields)
+  for (const Field &F : fields())
     FieldMap[F.Decl] = &F;
-  for (Base &V : VirtualBases)
+  for (const Base &V : virtual_bases())
     VirtualBaseMap[V.Decl] = &V;
 }
 

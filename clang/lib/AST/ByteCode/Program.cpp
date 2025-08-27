@@ -324,9 +324,17 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   };
 
   // Reserve space for base classes.
-  Record::BaseList Bases;
-  Record::VirtualBaseList VirtBases;
+  Record::Base *Bases = nullptr;
+  Record::Base *VBases = nullptr;
+  unsigned NumRecordBases = 0;
+  unsigned NumRecordVBases = 0;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+    unsigned NumBases = CD->getNumBases();
+    unsigned NumVBases = CD->getNumVBases();
+
+    Bases = new (*this) Record::Base[NumBases];
+    VBases = new (*this) Record::Base[NumVBases];
+
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
@@ -342,9 +350,11 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       BaseSize += align(sizeof(InlineDescriptor));
-      Bases.push_back({BD, BaseSize, Desc, BR});
+      new (&Bases[NumRecordBases]) Record::Base{BD, BaseSize, Desc, BR};
       BaseSize += align(BR->getSize());
+      ++NumRecordBases;
     }
+    assert(NumRecordBases <= NumBases);
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
       const auto *BD = Spec.getType()->castAsCXXRecordDecl();
@@ -355,13 +365,17 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       VirtSize += align(sizeof(InlineDescriptor));
-      VirtBases.push_back({BD, VirtSize, Desc, BR});
+      new (&VBases[NumRecordVBases]) Record::Base{BD, VirtSize, Desc, BR};
       VirtSize += align(BR->getSize());
+      ++NumRecordVBases;
     }
+    assert(NumRecordVBases <= NumVBases);
   }
 
   // Reserve space for fields.
-  Record::FieldList Fields;
+  unsigned NumFields = std::distance(RD->field_begin(), RD->field_end());
+  unsigned NumRecordFields = 0;
+  Record::Field *Fields = new (*this) Record::Field[NumFields];
   for (const FieldDecl *FD : RD->fields()) {
     FD = FD->getFirstDecl();
     // Note that we DO create fields and descriptors
@@ -386,12 +400,15 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
     if (!Desc)
       return nullptr;
-    Fields.push_back({FD, BaseSize, Desc});
+
+    new (&Fields[NumRecordFields]) Record::Field{FD, BaseSize, Desc};
     BaseSize += align(Desc->getAllocSize());
+    ++NumRecordFields;
   }
 
-  Record *R = new (Allocator) Record(RD, std::move(Bases), std::move(Fields),
-                                     std::move(VirtBases), VirtSize, BaseSize);
+  Record *R =
+      new (Allocator) Record(RD, Bases, NumRecordBases, Fields, NumRecordFields,
+                             VBases, NumRecordVBases, VirtSize, BaseSize);
   Records[RD] = R;
   return R;
 }
