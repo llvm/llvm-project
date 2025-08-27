@@ -72,13 +72,14 @@ static std::pair<mlir::Value, mlir::Value> getStatAndErrmsg(
   }
 
   if (!statExpr) {
-    statExpr = builder.create<fir::AbsentOp>(
-        loc, builder.getRefType(builder.getI32Type()));
+    statExpr = fir::AbsentOp::create(builder, loc,
+                                     builder.getRefType(builder.getI32Type()));
   }
   if (!errMsgExpr) {
-    errMsgExpr = builder.create<fir::AbsentOp>(
-        loc, fir::BoxType::get(fir::CharacterType::get(
-                 builder.getContext(), 1, fir::CharacterType::unknownLen())));
+    errMsgExpr = fir::AbsentOp::create(
+        builder, loc,
+        fir::BoxType::get(fir::CharacterType::get(
+            builder.getContext(), 1, fir::CharacterType::unknownLen())));
   }
   return {statExpr, errMsgExpr};
 }
@@ -243,10 +244,11 @@ void Fortran::lower::genSyncImagesStatement(
                        fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
                  },
                  [&](const Fortran::parser::Star &) {
-                   imageSet = builder.create<fir::AbsentOp>(
-                       loc, fir::BoxType::get(fir::SequenceType::get(
-                                {fir::SequenceType::getUnknownExtent()},
-                                builder.getI32Type())));
+                   imageSet = fir::AbsentOp::create(
+                       builder, loc,
+                       fir::BoxType::get(fir::SequenceType::get(
+                           {fir::SequenceType::getUnknownExtent()},
+                           builder.getI32Type())));
                  }},
              imgSet.u);
 
