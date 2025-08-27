@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the AArch64TargetLowering class.
+// This file implements the AArch64ISelLowering class.
 //
 //===----------------------------------------------------------------------===//
 
