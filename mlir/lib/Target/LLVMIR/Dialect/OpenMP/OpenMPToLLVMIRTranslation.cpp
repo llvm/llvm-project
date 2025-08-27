@@ -3044,9 +3044,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy afterIP =
       loopInfos.front()->getAfterIP();
 
-  llvm::CanonicalLoopInfo *NewTopLoopInfo = nullptr;
-
-  // Do tiling
+  // Do tiling.
   if (const auto &tiles = loopOp.getTileSizes()) {
     llvm::Type *IVType = loopInfos.front()->getIndVarType();
     SmallVector<llvm::Value *> TileSizes;
@@ -3056,41 +3054,35 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
       TileSizes.push_back(TileVal);
     }
 
-    std::vector<llvm::CanonicalLoopInfo *> NewLoops =
+    std::vector<llvm::CanonicalLoopInfo *> newLoops =
         ompBuilder->tileLoops(ompLoc.DL, loopInfos, TileSizes);
 
     // Update afterIP to get the correct insertion point after
     // tiling.
-    llvm::BasicBlock *AfterBB = NewLoops.front()->getAfter();
-    llvm::BasicBlock *AfterAfterBB = AfterBB->getSingleSuccessor();
-    afterIP = {AfterAfterBB, AfterAfterBB->begin()};
-    NewTopLoopInfo = NewLoops[0];
+    llvm::BasicBlock *afterBB = newLoops.front()->getAfter();
+    llvm::BasicBlock *afterAfterBB = afterBB->getSingleSuccessor();
+    afterIP = {afterAfterBB, afterAfterBB->begin()};
 
-    // Update the loop infos
+    // Update the loop infos.
     loopInfos.clear();
-    for (const auto &newLoop : NewLoops)
+    for (const auto &newLoop : newLoops)
       loopInfos.push_back(newLoop);
-  } // Tiling done
+  } // Tiling done.
 
-  // Do collapse
-  if (const auto &numCollapse = loopOp.getNumCollapse()) {
-    SmallVector<llvm::CanonicalLoopInfo *> collapseLoopInfos(
-        loopInfos.begin(), loopInfos.begin() + (numCollapse));
+  // Do collapse.
+  const auto &numCollapse = loopOp.getCollapseNumLoops();
+  SmallVector<llvm::CanonicalLoopInfo *> collapseLoopInfos(
+      loopInfos.begin(), loopInfos.begin() + (numCollapse));
 
-    auto newLoopInfo =
-        ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
-    NewTopLoopInfo = newLoopInfo;
-  } // Collapse done
+  auto newTopLoopInfo =
+      ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
 
-  // Update the stack frame created for this loop to point to the resulting
-  // loop after applying transformations.
-  if (NewTopLoopInfo) {
-    moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
-        [&](OpenMPLoopInfoStackFrame &frame) {
-          frame.loopInfo = NewTopLoopInfo;
-          return WalkResult::interrupt();
-        });
-  }
+  assert(newTopLoopInfo && "New top loop information is missing");
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](OpenMPLoopInfoStackFrame &frame) {
+        frame.loopInfo = newTopLoopInfo;
+        return WalkResult::interrupt();
+      });
 
   // Continue building IR after the loop. Note that the LoopInfo returned by
   // `collapseLoops` points inside the outermost loop and is intended for

@@ -210,6 +210,23 @@ class OpenMP_BindClauseSkip<
 def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [4.4.3] `collapse` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_CollapseClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      ConfinedAttr<DefaultValuedOptionalAttr<I64Attr, "1">, [IntMinValue<1>]>
+      :$collapse_num_loops
+  );
+}
+
+def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
 //===----------------------------------------------------------------------===//
 
@@ -316,38 +333,6 @@ class OpenMP_DeviceClauseSkip<
 }
 
 def OpenMP_DeviceClause : OpenMP_DeviceClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// V5.2: [XX.X] `collapse` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_CollapseClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-      DefaultValuedOptionalAttr<I64Attr, "1">:$num_collapse
-  );
-}
-
-def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// V5.2: [xx.x] `sizes` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_TileSizesClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
-  );
-}
-
-def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [11.6.1] `dist_schedule` clause
@@ -1354,6 +1339,22 @@ class OpenMP_SimdlenClauseSkip<
 }
 
 def OpenMP_SimdlenClause : OpenMP_SimdlenClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.1.1] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_TileSizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
+  );
+}
+
+def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.5.9] `task_reduction` clause

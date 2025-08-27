@@ -638,12 +638,12 @@ void collectTileSizesFromOpenMPConstruct(
   }
 }
 
-bool collectLoopRelatedInfo(
+int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
-  bool found = false;
+  int64_t numCollapse = 1;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
@@ -656,7 +656,7 @@ bool collectLoopRelatedInfo(
   if (auto *clause =
           ClauseFinder::findUniqueClause<omp::clause::Collapse>(clauses)) {
     collapseValue = evaluate::ToInt64(clause->v).value();
-    found = true;
+    numCollapse = collapseValue;
   }
 
   // Collect sizes from tile directive if present
@@ -685,7 +685,6 @@ bool collectLoopRelatedInfo(
             if (const auto tclause{
                     std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
               sizesLengthValue = tclause->v.size();
-              found = true;
             }
         }
       }
@@ -728,7 +727,7 @@ bool collectLoopRelatedInfo(
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
 
-  return found;
+  return numCollapse;
 }
 
 } // namespace omp
