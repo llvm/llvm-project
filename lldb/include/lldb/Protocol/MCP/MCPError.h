@@ -19,7 +19,7 @@ class MCPError : public llvm::ErrorInfo<MCPError> {
 public:
   static char ID;
 
-  MCPError(std::string message, int64_t error_code = kInternalError);
+  MCPError(std::string message, int64_t error_code = eErrorCodeInternalError);
 
   void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
@@ -27,9 +27,6 @@ public:
   const std::string &getMessage() const { return m_message; }
 
   lldb_protocol::mcp::Error toProtocolError() const;
-
-  static constexpr int64_t kResourceNotFound = -32002;
-  static constexpr int64_t kInternalError = -32603;
 
 private:
   std::string m_message;
