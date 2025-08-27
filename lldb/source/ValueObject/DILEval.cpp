@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -495,6 +497,109 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
+  if (type_system)
+    return type_system.get()->GetBasicTypeFromAST(basic_type);
+
+  return CompilerType();
+}
+
+llvm::Expected<CompilerType>
+Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
+                             std::shared_ptr<ExecutionContextScope> ctx,
+                             const IntegerLiteralNode *literal) {
+  // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
+  // an unsigned integer.
+  bool unsigned_is_allowed = literal->IsUnsigned() || literal->GetRadix() != 10;
+  llvm::APInt apint = literal->GetValue();
+
+  llvm::SmallVector<std::pair<lldb::BasicType, lldb::BasicType>, 3> candidates;
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::None)
+    candidates.emplace_back(lldb::eBasicTypeInt,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedInt
+                                                : lldb::eBasicTypeInvalid);
+  if (literal->GetTypeSuffix() <= IntegerTypeSuffix::Long)
+    candidates.emplace_back(lldb::eBasicTypeLong,
+                            unsigned_is_allowed ? lldb::eBasicTypeUnsignedLong
+                                                : lldb::eBasicTypeInvalid);
+  candidates.emplace_back(lldb::eBasicTypeLongLong,
+                          lldb::eBasicTypeUnsignedLongLong);
+  for (auto [signed_, unsigned_] : candidates) {
+    CompilerType signed_type = type_system->GetBasicTypeFromAST(signed_);
+    if (!signed_type)
+      continue;
+    llvm::Expected<uint64_t> size = signed_type.GetBitSize(ctx.get());
+    if (!size)
+      return size.takeError();
+    if (!literal->IsUnsigned() && apint.isIntN(*size - 1))
+      return signed_type;
+    if (unsigned_ != lldb::eBasicTypeInvalid && apint.isIntN(*size))
+      return type_system->GetBasicTypeFromAST(unsigned_);
+  }
+
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr,
+      "integer literal is too large to be represented in any integer type",
+      literal->GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const IntegerLiteralNode *node) {
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+
+  llvm::Expected<CompilerType> type =
+      PickIntegerType(*type_system, m_exe_ctx_scope, node);
+  if (!type)
+    return type.takeError();
+
+  Scalar scalar = node->GetValue();
+  // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+  // hold the value. This adjusts APInt bitwidth to match the compiler type.
+  llvm::Expected<uint64_t> type_bitsize =
+      type->GetBitSize(m_exe_ctx_scope.get());
+  if (!type_bitsize)
+    return type_bitsize.takeError();
+  scalar.TruncOrExtendTo(*type_bitsize, false);
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
+                                                  "result");
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const FloatLiteralNode *node) {
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+
+  bool isFloat =
+      &node->GetValue().getSemantics() == &llvm::APFloat::IEEEsingle();
+  lldb::BasicType basic_type =
+      isFloat ? lldb::eBasicTypeFloat : lldb::eBasicTypeDouble;
+  CompilerType type = GetBasicType(*type_system, basic_type);
+
+  if (!type)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to create a const literal", node->GetLocation());
+
+  Scalar scalar = node->GetValue();
+  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, type,
+                                                  "result");
 }
 
 } // namespace lldb_private::dil
