@@ -2,7 +2,7 @@
 
 
 
-// Test for omitting OperandType::OPERAND_MSL_SHIFT_4S
+// Test for omitting OperandType::OPERAND_SHIFT_MSL
 
 // MOVIv2s_msl: MOVI vd, #imm{, shift}
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency  --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv4s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv4s_msl_latency
@@ -19,10 +19,6 @@
 # MOVIv4s_msl_throughput-NEXT:   instructions:
 # MOVIv4s_msl_throughput-NEXT:     MOVIv4s_msl [[REG1:Q[0-9]+|LR]] i_0x1 i_0x108
 # MOVIv4s_msl_throughput: ...
-
-
-
-// Test for omitting OperandType::OPERAND_MSL_SHIFT_2S
 
 // MOVIv2s_msl: MOVI vd, #imm{, shift}
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency  --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv2s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv2s_msl_latency
@@ -54,12 +50,12 @@
 # LDRDl_throughput-NEXT: mode: inverse_throughput
 # LDRDl_throughput-NEXT: key:
 # LDRDl_throughput-NEXT:   instructions:
-# LDRDl_throughput-NEXT:     LDRDl [[REG1:D[0-9]+|LR]] i_0x0
+# LDRDl_throughput-NEXT:     LDRDl [[REG1:D[0-9]+|LR]] i_0x8
 # LDRDl_throughput: ...
 
 
 
-// Test for omitting OperandType::OPERAND_FIRST_TARGET
+// Test for omitting OperandType::OPERAND_IMPLICIT_IMM_0
 
 // UMOVvi16_idx0: UMOV wd, vn.h[index]
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency --benchmark-phase=prepare-and-assemble-snippet --opcode-name=UMOVvi16_idx0 2>&1 | FileCheck %s --check-prefix=UMOVvi16_idx0_latency

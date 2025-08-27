@@ -161,17 +161,23 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   const auto OperandType = Op.getExplicitOperandInfo().OperandType;
-  //  FIXME: Implement opcode-specific immediate value handling for system
-  //  instructions:
+  // NOTE: To resolve "Not all operands were initialized by snippet generator"
+  // Requires OperandType to be defined for such opcode's operands in AArch64
+  // tablegen files. And omit introduced OperandType(s).
+
+  // Hacky temporary fix works by defaulting all OPERAND_UNKNOWN to
+  // immediate value 0, but this introduce illegal instruction error for below
+  // system instructions will need to be omitted with OperandType or opcode
+  // specific values to avoid generating invalid encodings or unreliable
+  // benchmark results for these system-level instructions.
+  //  Implement opcode-specific immediate value handling for system instrs:
   //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
   //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
   //   DAIFSet)
   //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
   //   CRn/CRm/op values
   //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
-  //   Currently defaulting to immediate value 0, which may cause invalid
-  //   encodings or unreliable benchmark results for these system-level
-  //   instructions.
+
   switch (OperandType) {
   // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
   // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
@@ -186,8 +192,10 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     return Error::success();
   }
   case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
-  case MCOI::OperandType::OPERAND_PCREL:
     AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(8);
     return Error::success();
   default:
     break;
