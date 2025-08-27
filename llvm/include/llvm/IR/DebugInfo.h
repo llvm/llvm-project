@@ -44,6 +44,15 @@ class Module;
 LLVM_ABI TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
 /// As above, for DVRDeclares.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
+/// Finds dbg.coroframe_entry intrinsics declaring local variables as living in
+/// the memory that 'V' points to.
+// FIXME: Combine the findDbgCoroFrameEntrys and findDbgDeclares APIs into one
+// that can take a 'kind' parameter, do the same for findDVRCoroFrameEntrys and
+// findDVRCoroFrameEntrys
+LLVM_ABI TinyPtrVector<DbgCoroFrameEntryInst *>
+findDbgCoroFrameEntrys(Value *V);
+/// As above, for DVRCoroFrameEntrys.
+LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRCoroFrameEntrys(Value *V);
 /// As above, for DVRValues.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 

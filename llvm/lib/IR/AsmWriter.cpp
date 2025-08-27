@@ -4876,6 +4876,9 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
   case DbgVariableRecord::LocationType::Declare:
     Out << "declare";
     break;
+  case DbgVariableRecord::LocationType::CoroFrameEntry:
+    Out << "coroframe_entry";
+    break;
   case DbgVariableRecord::LocationType::Assign:
     Out << "assign";
     break;

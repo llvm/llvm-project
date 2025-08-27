@@ -41,6 +41,9 @@ DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
   case Intrinsic::dbg_declare:
     Type = LocationType::Declare;
     break;
+  case Intrinsic::dbg_coroframe_entry:
+    Type = LocationType::CoroFrameEntry;
+    break;
   case Intrinsic::dbg_assign: {
     Type = LocationType::Assign;
     const DbgAssignIntrinsic *Assign =
@@ -207,6 +210,22 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
   auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
   NewDVRDeclare->insertBefore(&InsertBefore);
   return NewDVRDeclare;
+}
+
+DbgVariableRecord *
+DbgVariableRecord::createDVRCoroFrameEntry(Value *Address, DILocalVariable *DV,
+                                           DIExpression *Expr,
+                                           const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::CoroFrameEntry);
+}
+
+DbgVariableRecord *DbgVariableRecord::createDVRCoroFrameEntry(
+    Value *Address, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDVRCoro = createDVRCoroFrameEntry(Address, DV, Expr, DI);
+  NewDVRCoro->insertBefore(&InsertBefore);
+  return NewDVRCoro;
 }
 
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
@@ -415,6 +434,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   switch (getType()) {
   case DbgVariableRecord::LocationType::Declare:
     IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
+    break;
+  case DbgVariableRecord::LocationType::CoroFrameEntry:
+    IntrinsicFn =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_coroframe_entry);
     break;
   case DbgVariableRecord::LocationType::Value:
     IntrinsicFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_value);
