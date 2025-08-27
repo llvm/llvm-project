@@ -791,19 +791,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
   }
 
-  if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::FLAT) {
-    if (isGFX9() && !isGFX90A()) {
-      // Pre-GFX90A GFX9's use bit 55 as NV.
-      assert(Bytes_.size() >= 8);
-      if (Bytes_[6] & 0x80) { // check bit 55
-        int CPolIdx =
-            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::cpol);
-        MI.getOperand(CPolIdx).setImm(MI.getOperand(CPolIdx).getImm() |
-                                      AMDGPU::CPol::NV);
-      }
-    }
-  }
-
   if ((MCII->get(MI.getOpcode()).TSFlags &
        (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF)) &&
       (STI.hasFeature(AMDGPU::FeatureGFX90AInsts))) {

@@ -403,16 +403,6 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
-  // For GFX90A+ targets, bit 55 of the FLAT instructions is the ACC bit
-  // indicating the use of AGPRs. However, pre-GFX90A, the same bit is for NV.
-  if ((Desc.TSFlags & SIInstrFlags::FLAT) && AMDGPU::isGFX9(STI) &&
-      !AMDGPU::isGFX90A(STI)) {
-    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::cpol);
-    unsigned Cpol = MI.getOperand(Idx).getImm();
-    if (Cpol & AMDGPU::CPol::NV)
-      Encoding |= (UINT64_C(1) << 55);
-  }
-
   // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
   // Documentation requires dst to be encoded as EXEC (0x7E),
   // but it looks like the actual value encoded for dst operand

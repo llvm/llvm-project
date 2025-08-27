@@ -2344,6 +2344,16 @@ def isGFX8GFX9NotGFX90A :
             " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, (not FeatureGFX90AInsts))>;
 
+def isGFX9NotGFX90A :
+  Predicate<"!Subtarget->hasGFX90AInsts() &&"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9)">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX90AInsts), (not FeatureGFX10Insts))>;
+
+def isGFX8orGFX9After908 :
+  Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS) ||"
+            " ((Subtarget->getGeneration() == AMDGPUSubtarget::GFX9) && Subtarget->hasGFX90AInsts())">,
+  AssemblerPredicate <(any_of FeatureVolcanicIslands, FeatureGFX90AInsts)>;
+
 def isGFX90AOnly :
   Predicate<"Subtarget->hasGFX90AInsts() && !Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts, (not FeatureGFX940Insts))>;
