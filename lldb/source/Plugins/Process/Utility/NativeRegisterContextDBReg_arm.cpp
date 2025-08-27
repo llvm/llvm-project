@@ -84,7 +84,7 @@ uint32_t NativeRegisterContextDBReg_arm::MakeBreakControlValue(size_t size) {
   case 4:
     return (0xfu << 5) | 7;
   default:
-    // We assume that AdjustBreakpoint would have caught this earlier.
+    // ValidateBreakpoint would have rejected this earlier.
     llvm_unreachable("Invalid breakpoint size.");
   }
 }
