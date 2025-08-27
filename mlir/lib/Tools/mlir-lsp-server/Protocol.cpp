@@ -13,9 +13,6 @@
 #include "Protocol.h"
 #include "llvm/Support/JSON.h"
 
-using namespace llvm;
-using namespace llvm::lsp;
-
 //===----------------------------------------------------------------------===//
 // MLIRConvertBytecodeParams
 //===----------------------------------------------------------------------===//

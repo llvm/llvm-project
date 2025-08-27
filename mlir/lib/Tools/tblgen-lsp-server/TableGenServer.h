@@ -19,7 +19,13 @@
 
 namespace mlir {
 namespace lsp {
-using namespace llvm::lsp;
+using llvm::lsp::Diagnostic;
+using llvm::lsp::DocumentLink;
+using llvm::lsp::Hover;
+using llvm::lsp::Location;
+using llvm::lsp::Position;
+using llvm::lsp::TextDocumentContentChangeEvent;
+using llvm::lsp::URIForFile;
 
 /// This class implements all of the TableGen related functionality necessary
 /// for a language server. This class allows for keeping the TableGen specific

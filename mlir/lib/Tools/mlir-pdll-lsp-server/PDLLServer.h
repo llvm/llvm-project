@@ -19,7 +19,19 @@
 
 namespace mlir {
 namespace lsp {
-using namespace llvm::lsp;
+using llvm::lsp::CompletionList;
+using llvm::lsp::Diagnostic;
+using llvm::lsp::DocumentLink;
+using llvm::lsp::DocumentSymbol;
+using llvm::lsp::Hover;
+using llvm::lsp::InlayHint;
+using llvm::lsp::Location;
+using llvm::lsp::Position;
+using llvm::lsp::Range;
+using llvm::lsp::SignatureHelp;
+using llvm::lsp::TextDocumentContentChangeEvent;
+using llvm::lsp::URIForFile;
+
 class CompilationDatabase;
 struct PDLLViewOutputResult;
 enum class PDLLViewOutputKind;

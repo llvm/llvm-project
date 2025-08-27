@@ -24,7 +24,8 @@
 
 namespace mlir {
 namespace lsp {
-using namespace llvm::lsp;
+using llvm::lsp::URIForFile;
+
 //===----------------------------------------------------------------------===//
 // PDLLViewOutputParams
 //===----------------------------------------------------------------------===//

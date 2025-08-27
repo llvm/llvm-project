@@ -20,7 +20,17 @@ namespace mlir {
 class DialectRegistry;
 
 namespace lsp {
-using namespace llvm::lsp;
+using llvm::lsp::CodeAction;
+using llvm::lsp::CodeActionContext;
+using llvm::lsp::CompletionList;
+using llvm::lsp::Diagnostic;
+using llvm::lsp::DocumentSymbol;
+using llvm::lsp::Hover;
+using llvm::lsp::Location;
+using llvm::lsp::MLIRConvertBytecodeResult;
+using llvm::lsp::Position;
+using llvm::lsp::Range;
+using llvm::lsp::URIForFile;
 
 /// This class implements all of the MLIR related functionality necessary for a
 /// language server. This class allows for keeping the MLIR specific logic
