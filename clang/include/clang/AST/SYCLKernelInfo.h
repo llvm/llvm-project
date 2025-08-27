@@ -15,7 +15,7 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 
 namespace clang {
 

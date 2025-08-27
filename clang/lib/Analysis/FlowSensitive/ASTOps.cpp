@@ -19,7 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
