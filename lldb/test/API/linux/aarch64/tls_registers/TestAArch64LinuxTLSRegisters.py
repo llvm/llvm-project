@@ -53,6 +53,8 @@ class AArch64LinuxTLSRegisters(TestBase):
                 tls_reg.IsValid(), "{} register not found.".format(register)
             )
             self.assertEqual(tls_reg.GetValueAsUnsigned(), values[register])
+            if register == "tpidr":
+                self.expect("reg read tp", substrs=[hex(values[register])])
 
     def check_tls_reg(self, registers):
         self.setup(registers)
@@ -92,8 +94,6 @@ class AArch64LinuxTLSRegisters(TestBase):
 
         for register in registers:
             self.expect("p {}_was_set".format(register), substrs=["true"])
-
-        self.expect("reg read tp", substrs=[hex(set_values["tpidr"])])
 
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
