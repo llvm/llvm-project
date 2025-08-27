@@ -31,7 +31,9 @@ Visibility Macros
   Mark a symbol as being part of our ABI. This includes functions that are part
   of the libc++ library, type information and other symbols. On Windows,
   this macro applies `dllimport`/`dllexport` to the symbol, and on other
-  platforms it gives the symbol default visibility.
+  platforms it gives the symbol default visibility. This macro should never be
+  used on class templates. On classes it should only be used if the vtable
+  lives in the built library.
 
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be

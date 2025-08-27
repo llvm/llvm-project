@@ -173,6 +173,10 @@ _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
 
+void nonComplexToComplexCast(void) {
+  _Complex double z = *(_Complex double *)&(struct { double r, i; }){0.0, 1.0};
+}
+
 int t1 = sizeof(int);
 void test4(void) {
   t1 = sizeof(int);
@@ -347,3 +351,14 @@ const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializ
 
 const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
                                             // all-error {{initializer element is not a compile-time constant}}
+
+int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
+int x;
+{
+  return x;
+}
+
+void bar() { // pedantic-warning {{a function declaration without a prototype}}
+  int x;
+  x = foo(); // all-warning {{too few arguments}}
+}

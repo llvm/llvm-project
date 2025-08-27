@@ -700,7 +700,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return true;
     }
 
-    if (const auto *RT = Ty->getAs<RecordType>()) {
+    if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
       const auto *Record = Ptr.getRecord();
       assert(Record && "Missing record descriptor");
 
@@ -785,8 +785,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElemTy = CT->getElementType();
+      // Can happen via C casts.
+      if (!Ptr.getFieldDesc()->isPrimitiveArray())
+        return false;
 
+      QualType ElemTy = CT->getElementType();
       if (ElemTy->isIntegerType()) {
         OptPrimType ElemT = Ctx.classify(ElemTy);
         assert(ElemT);

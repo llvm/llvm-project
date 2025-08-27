@@ -2614,8 +2614,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         Value.getUnionValue(), Kind, Value.getUnionField(), CheckedTemps);
   }
   if (Value.isStruct()) {
-    RecordDecl *RD =
-        Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    auto *RD = Type->castAsRecordDecl();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
@@ -4101,7 +4100,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       }
 
       // Next subobject is a class, struct or union field.
-      RecordDecl *RD = ObjType->castAs<RecordType>()->getOriginalDecl();
+      RecordDecl *RD =
+          ObjType->castAsCanonical<RecordType>()->getOriginalDecl();
       if (RD->isUnion()) {
         const FieldDecl *UnionField = O->getUnionField();
         if (!UnionField ||
@@ -7975,8 +7975,9 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
       // so its layout is unspecified. For now, we'll simply treat these cases
       // as unsupported (this should only be possible with OpenCL bool vectors
       // whose element count isn't a multiple of the byte size).
-      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_invalid_vector)
-          << QualType(VTy, 0) << EltSize << NElts << Ctx.getCharWidth();
+      if (Info)
+        Info->FFDiag(Loc, diag::note_constexpr_bit_cast_invalid_vector)
+            << QualType(VTy, 0) << EltSize << NElts << Ctx.getCharWidth();
       return false;
     }
 
@@ -7985,8 +7986,9 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
       // The layout for x86_fp80 vectors seems to be handled very inconsistently
       // by both clang and LLVM, so for now we won't allow bit_casts involving
       // it in a constexpr context.
-      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_unsupported_type)
-          << EltTy;
+      if (Info)
+        Info->FFDiag(Loc, diag::note_constexpr_bit_cast_unsupported_type)
+            << EltTy;
       return false;
     }
   }
@@ -8582,10 +8584,9 @@ public:
     const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     if (!FD) return Error(E);
     assert(!FD->getType()->isReferenceType() && "prvalue reference?");
-    assert(
-        BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
-            FD->getParent()->getCanonicalDecl() &&
-        "record / field mismatch");
+    assert(BaseTy->castAsCanonical<RecordType>()->getOriginalDecl() ==
+               FD->getParent()->getCanonicalDecl() &&
+           "record / field mismatch");
 
     // Note: there is no lvalue base here. But this case should only ever
     // happen in C or in C++98, where we cannot be evaluating a constexpr
@@ -8812,10 +8813,9 @@ public:
 
     const ValueDecl *MD = E->getMemberDecl();
     if (const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl())) {
-      assert(
-          BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
-              FD->getParent()->getCanonicalDecl() &&
-          "record / field mismatch");
+      assert(BaseTy->castAsCanonical<RecordType>()->getOriginalDecl() ==
+                 FD->getParent()->getCanonicalDecl() &&
+             "record / field mismatch");
       (void)BaseTy;
       if (!HandleLValueMember(this->Info, E, Result, FD))
         return false;
@@ -9466,7 +9466,8 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
          "Can't get the size of a non alloc_size function");
   const auto *Base = LVal.getLValueBase().get<const Expr *>();
   const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
-  std::optional<llvm::APInt> Size = CE->getBytesReturnedByAllocSizeCall(Ctx);
+  std::optional<llvm::APInt> Size =
+      CE->evaluateBytesReturnedByAllocSizeCall(Ctx);
   if (!Size)
     return false;
 
@@ -10769,8 +10770,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 }
 
 bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
-  const RecordDecl *RD =
-      T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *RD = T->castAsRecordDecl();
   if (RD->isInvalidDecl()) return false;
   if (RD->isUnion()) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
@@ -10839,10 +10839,7 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
 bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     const Expr *ExprToVisit, ArrayRef<Expr *> Args) {
-  const RecordDecl *RD = ExprToVisit->getType()
-                             ->castAs<RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+  const auto *RD = ExprToVisit->getType()->castAsRecordDecl();
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
   auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
@@ -11066,10 +11063,7 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
-  RecordDecl *Record = E->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+  auto *Record = E->getType()->castAsRecordDecl();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -11253,6 +11247,24 @@ static bool EvaluateVector(const Expr* E, APValue& Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isVectorType() &&
          "not a vector prvalue");
   return VectorExprEvaluator(Info, Result).Visit(E);
+}
+
+static llvm::APInt ConvertBoolVectorToInt(const APValue &Val) {
+  assert(Val.isVector() && "expected vector APValue");
+  unsigned NumElts = Val.getVectorLength();
+
+  // Each element is one bit, so create an integer with NumElts bits.
+  llvm::APInt Result(NumElts, 0);
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    const APValue &Elt = Val.getVectorElt(I);
+    assert(Elt.isInt() && "expected integer element in bool vector");
+
+    if (Elt.getInt().getBoolValue())
+      Result.setBit(I);
+  }
+
+  return Result;
 }
 
 bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
@@ -13113,10 +13125,7 @@ static bool convertUnsignedAPIntToCharUnits(const llvm::APInt &Int,
 static void addFlexibleArrayMemberInitSize(EvalInfo &Info, const QualType &T,
                                            const LValue &LV, CharUnits &Size) {
   if (!T.isNull() && T->isStructureType() &&
-      T->getAsStructureType()
-          ->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->hasFlexibleArrayMember())
+      T->castAsRecordDecl()->hasFlexibleArrayMember())
     if (const auto *V = LV.getLValueBase().dyn_cast<const ValueDecl *>())
       if (const auto *VD = dyn_cast<VarDecl>(V))
         if (VD->hasInit())
@@ -13442,8 +13451,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
     APSInt Val;
-    if (!EvaluateInteger(E->getArg(0), Val, Info))
+    if (E->getArg(0)->getType()->isExtVectorBoolType()) {
+      APValue Vec;
+      if (!EvaluateVector(E->getArg(0), Vec, Info))
+        return false;
+      Val = ConvertBoolVectorToInt(Vec);
+    } else if (!EvaluateInteger(E->getArg(0), Val, Info)) {
       return false;
+    }
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_clzg ||
@@ -13528,8 +13543,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzg:
   case Builtin::BI__builtin_elementwise_cttz: {
     APSInt Val;
-    if (!EvaluateInteger(E->getArg(0), Val, Info))
+    if (E->getArg(0)->getType()->isExtVectorBoolType()) {
+      APValue Vec;
+      if (!EvaluateVector(E->getArg(0), Vec, Info))
+        return false;
+      Val = ConvertBoolVectorToInt(Vec);
+    } else if (!EvaluateInteger(E->getArg(0), Val, Info)) {
       return false;
+    }
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
@@ -13744,8 +13765,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64: {
     APSInt Val;
-    if (!EvaluateInteger(E->getArg(0), Val, Info))
+    if (E->getArg(0)->getType()->isExtVectorBoolType()) {
+      APValue Vec;
+      if (!EvaluateVector(E->getArg(0), Vec, Info))
+        return false;
+      Val = ConvertBoolVectorToInt(Vec);
+    } else if (!EvaluateInteger(E->getArg(0), Val, Info)) {
       return false;
+    }
 
     return Success(Val.popcount(), E);
   }
@@ -15353,6 +15380,13 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     const auto *VAT = Info.Ctx.getAsVariableArrayType(Ty);
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
+      // Variable array size expression could be missing (e.g. int a[*][10]) In
+      // that case, it can't be a constant expression.
+      if (!VAT->getSizeExpr()) {
+        Info.FFDiag(E->getBeginLoc());
+        return false;
+      }
+
       std::optional<APSInt> Res =
           VAT->getSizeExpr()->getIntegerConstantExpr(Info.Ctx);
       if (Res) {
@@ -15400,10 +15434,9 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
 
     case OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = CurrentType->getAsRecordDecl();
+      if (!RD)
         return Error(OOE);
-      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
       unsigned i = MemberDecl->getFieldIndex();
@@ -15422,22 +15455,20 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
 
       // Find the layout of the class whose base we are looking into.
-      const RecordType *RT = CurrentType->getAs<RecordType>();
-      if (!RT)
+      const auto *RD = CurrentType->getAsCXXRecordDecl();
+      if (!RD)
         return Error(OOE);
-      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
 
       // Find the base class itself.
       CurrentType = BaseSpec->getType();
-      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
-      if (!BaseRT)
+      const auto *BaseRD = CurrentType->getAsCXXRecordDecl();
+      if (!BaseRD)
         return Error(OOE);
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(BaseRD);
       break;
     }
     }
@@ -15615,8 +15646,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     }
 
     if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
-      const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
-      const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      const auto *ED = DestType->getAsEnumDecl();
       // Check that the value is within the range of the enumeration values.
       //
       // This corressponds to [expr.static.cast]p10 which says:
@@ -17890,7 +17920,10 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
         // it is an ICE or not.
         const auto *VAT = Ctx.getAsVariableArrayType(ArgTy);
         if (VAT->getElementType()->isArrayType())
-          return CheckICE(VAT->getSizeExpr(), Ctx);
+          // Variable array size expression could be missing (e.g. int a[*][10])
+          // In that case, it can't be a constant expression.
+          return VAT->getSizeExpr() ? CheckICE(VAT->getSizeExpr(), Ctx)
+                                    : ICEDiag(IK_NotICE, E->getBeginLoc());
 
         // Otherwise, this is a regular VLA, which is definitely not an ICE.
         return ICEDiag(IK_NotICE, E->getBeginLoc());

@@ -924,6 +924,7 @@ private:
     void *Dst;
     const void *Src;
     size_t Size;
+    size_t NumTimes;
   };
 
   /// Utility struct holding arguments for freeing buffers to memory managers.
@@ -974,9 +975,14 @@ private:
     StreamSlotTy() : Signal(nullptr), Callbacks({}), ActionArgs({}) {}
 
     /// Schedule a host memory copy action on the slot.
-    Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
+    ///
+    /// Num times will repeat the copy that many times, sequentually in the dest
+    /// buffer.
+    Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size,
+                              size_t NumTimes = 1) {
       Callbacks.emplace_back(memcpyAction);
-      ActionArgs.emplace_back().MemcpyArgs = MemcpyArgsTy{Dst, Src, Size};
+      ActionArgs.emplace_back().MemcpyArgs =
+          MemcpyArgsTy{Dst, Src, Size, NumTimes};
       return Plugin::success();
     }
 
@@ -1216,7 +1222,11 @@ private:
     assert(Args->Dst && "Invalid destination buffer");
     assert(Args->Src && "Invalid source buffer");
 
-    std::memcpy(Args->Dst, Args->Src, Args->Size);
+    auto BasePtr = Args->Dst;
+    for (size_t I = 0; I < Args->NumTimes; I++) {
+      std::memcpy(BasePtr, Args->Src, Args->Size);
+      BasePtr = reinterpret_cast<uint8_t *>(BasePtr) + Args->Size;
+    }
 
     return Plugin::success();
   }
@@ -1421,7 +1431,8 @@ public:
   /// manager once the operation completes.
   Error pushMemoryCopyH2DAsync(void *Dst, const void *Src, void *Inter,
                                uint64_t CopySize,
-                               AMDGPUMemoryManagerTy &MemoryManager) {
+                               AMDGPUMemoryManagerTy &MemoryManager,
+                               size_t NumTimes = 1) {
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
@@ -1443,7 +1454,8 @@ public:
       // The std::memcpy is done asynchronously using an async handler. We store
       // the function's information in the action but it is not actually a
       // post action.
-      if (auto Err = Slots[Curr].schedHostMemoryCopy(Inter, Src, CopySize))
+      if (auto Err =
+              Slots[Curr].schedHostMemoryCopy(Inter, Src, CopySize, NumTimes))
         return Err;
 
       // Make changes on this slot visible to the async handler's thread.
@@ -1464,7 +1476,11 @@ public:
       std::tie(Curr, InputSignal) = consume(OutputSignal);
     } else {
       // All preceding operations completed, copy the memory synchronously.
-      std::memcpy(Inter, Src, CopySize);
+      auto *InterPtr = Inter;
+      for (size_t I = 0; I < NumTimes; I++) {
+        std::memcpy(InterPtr, Src, CopySize);
+        InterPtr = reinterpret_cast<uint8_t *>(InterPtr) + CopySize;
+      }
 
       // Return the second signal because it will not be used.
       OutputSignals[1]->decreaseUseCount();
@@ -1481,11 +1497,11 @@ public:
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
       return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                     Agent, CopySize, 1, &InputSignalRaw,
-                                     OutputSignal->get());
+                                     Agent, CopySize * NumTimes, 1,
+                                     &InputSignalRaw, OutputSignal->get());
     }
     return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                   Agent, CopySize, 0, nullptr,
+                                   Agent, CopySize * NumTimes, 0, nullptr,
                                    OutputSignal->get());
   }
 
@@ -2611,26 +2627,73 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    hsa_status_t Status;
+    // Fast case, where we can use the 4 byte hsa_amd_memory_fill
+    if (Size % 4 == 0 &&
+        (PatternSize == 4 || PatternSize == 2 || PatternSize == 1)) {
+      uint32_t Pattern;
+      if (PatternSize == 1) {
+        auto *Byte = reinterpret_cast<const uint8_t *>(PatternPtr);
+        Pattern = *Byte | *Byte << 8 | *Byte << 16 | *Byte << 24;
+      } else if (PatternSize == 2) {
+        auto *Word = reinterpret_cast<const uint16_t *>(PatternPtr);
+        Pattern = *Word | (*Word << 16);
+      } else if (PatternSize == 4) {
+        Pattern = *reinterpret_cast<const uint32_t *>(PatternPtr);
+      } else {
+        // Shouldn't be here if the pattern size is outwith those values
+        llvm_unreachable("Invalid pattern size");
+      }
 
-    // We can use hsa_amd_memory_fill for this size, but it's not async so the
-    // queue needs to be synchronized first
-    if (PatternSize == 4) {
-      if (AsyncInfoWrapper.hasQueue())
-        if (auto Err = synchronize(AsyncInfoWrapper))
+      if (hasPendingWorkImpl(AsyncInfoWrapper)) {
+        AMDGPUStreamTy *Stream = nullptr;
+        if (auto Err = getStream(AsyncInfoWrapper, Stream))
           return Err;
-      Status = hsa_amd_memory_fill(TgtPtr,
-                                   *static_cast<const uint32_t *>(PatternPtr),
-                                   Size / PatternSize);
 
-      if (auto Err =
-              Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n"))
-        return Err;
-    } else {
-      // TODO: Implement for AMDGPU. Most likely by doing the fill in pinned
-      // memory and copying to the device in one go.
-      return Plugin::error(ErrorCode::UNSUPPORTED, "Unsupported fill size");
+        struct MemFillArgsTy {
+          void *Dst;
+          uint32_t Pattern;
+          int64_t Size;
+        };
+        auto *Args = new MemFillArgsTy{TgtPtr, Pattern, Size / 4};
+        auto Fill = [](void *Data) {
+          MemFillArgsTy *Args = reinterpret_cast<MemFillArgsTy *>(Data);
+          assert(Args && "Invalid arguments");
+
+          auto Status =
+              hsa_amd_memory_fill(Args->Dst, Args->Pattern, Args->Size);
+          delete Args;
+          auto Err =
+              Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
+          if (Err) {
+            FATAL_MESSAGE(1, "error performing async fill: %s",
+                          toString(std::move(Err)).data());
+          }
+        };
+
+        // hsa_amd_memory_fill doesn't signal completion using a signal, so use
+        // the existing host callback logic to handle that instead
+        return Stream->pushHostCallback(Fill, Args);
+      } else {
+        // If there is no pending work, do the fill synchronously
+        auto Status = hsa_amd_memory_fill(TgtPtr, Pattern, Size / 4);
+        return Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
+      }
     }
+
+    // Slow case; allocate an appropriate memory size and enqueue copies
+    void *PinnedPtr = nullptr;
+    AMDGPUMemoryManagerTy &PinnedMemoryManager =
+        HostDevice.getPinnedMemoryManager();
+    if (auto Err = PinnedMemoryManager.allocate(Size, &PinnedPtr))
+      return Err;
+
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
+                                          PatternSize, PinnedMemoryManager,
+                                          Size / PatternSize);
   }
 
   /// Initialize the async info for interoperability purposes.
