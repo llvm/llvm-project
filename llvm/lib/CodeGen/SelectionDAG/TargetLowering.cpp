@@ -8067,8 +8067,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
   // then add in the carry.
-  // TODO: If we can't split it in half, we might be able to split into 3 or
-  // more pieces using a smaller bit width.
   if (HalfMaxPlus1.urem(Divisor).isOne()) {
     assert(!LL == !LH && "Expected both input halves or no input halves!");
     if (!LL)
@@ -8115,6 +8113,80 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         Carry = DAG.getSelect(dl, HiLoVT, Carry, DAG.getConstant(1, dl, HiLoVT),
                               DAG.getConstant(0, dl, HiLoVT));
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
+    }
+
+  } else {
+    // If we cannot split in two halves. Let's look for a smaller chunk
+    // width where (1 << ChunkWidth) mod Divisor == 1.
+    // This ensures that the sum of all such chunks modulo Divisor
+    // is equivalent to the original value modulo Divisor.
+    const APInt &Divisor = CN->getAPIntValue();
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    unsigned BestChunkWidth = 0;
+
+    // We restrict to small chunk sizes (e.g., ≤ 32 bits) to ensure that all
+    // operations remain legal on most targets.
+    unsigned MaxChunk = 32;
+    for (int i = MaxChunk; i >= 1; --i) {
+      APInt ChunkMaxPlus1 = APInt::getOneBitSet(BitWidth, i);
+      if (ChunkMaxPlus1.urem(Divisor).isOne()) {
+        BestChunkWidth = i;
+        break;
+      }
+    }
+
+    // If we found a good chunk width, slice the number and sum the pieces.
+    if (BestChunkWidth > 0) {
+      EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
+
+      if (!LL)
+        std::tie(LL, LH) =
+            DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
+      SDValue In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
+
+      SmallVector<SDValue, 8> Parts;
+      // Split into fixed-size chunks
+      for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
+        SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
+        SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
+        Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
+        Parts.push_back(Chunk);
+      }
+      if (Parts.empty())
+        return false;
+      Sum = Parts[0];
+
+      // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
+      // same logic as used in above if condition.
+      SDValue Carry = DAG.getConstant(0, dl, ChunkVT);
+      EVT SetCCType =
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ChunkVT);
+      for (unsigned i = 1; i < Parts.size(); ++i) {
+        if (isOperationLegalOrCustom(ISD::UADDO_CARRY, ChunkVT)) {
+          SDVTList VTList = DAG.getVTList(ChunkVT, SetCCType);
+          SDValue UAdd = DAG.getNode(ISD::UADDO, dl, VTList, Sum, Parts[i]);
+          Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, UAdd, Carry,
+                            UAdd.getValue(1));
+        } else {
+          SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
+          SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
+
+          if (getBooleanContents(ChunkVT) ==
+              TargetLoweringBase::ZeroOrOneBooleanContent)
+            NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
+          else
+            NewCarry = DAG.getSelect(dl, ChunkVT, NewCarry,
+                                     DAG.getConstant(1, dl, ChunkVT),
+                                     DAG.getConstant(0, dl, ChunkVT));
+
+          Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
+          Carry = NewCarry;
+        }
+      }
+
+      Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
+    } else {
+      return false;
     }
   }
 

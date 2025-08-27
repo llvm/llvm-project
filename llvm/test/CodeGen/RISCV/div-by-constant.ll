@@ -115,16 +115,76 @@ define i64 @udiv64_constant_no_add(i64 %a) nounwind {
 }
 
 define i64 @udiv64_constant_add(i64 %a) nounwind {
-; RV32-LABEL: udiv64_constant_add:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    li a2, 7
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __udivdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
+; RV32IM-LABEL: udiv64_constant_add:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    lui a2, 262144
+; RV32IM-NEXT:    slli a3, a1, 2
+; RV32IM-NEXT:    srli a4, a0, 30
+; RV32IM-NEXT:    srli a5, a1, 28
+; RV32IM-NEXT:    lui a6, 149797
+; RV32IM-NEXT:    addi a2, a2, -1
+; RV32IM-NEXT:    or a3, a4, a3
+; RV32IM-NEXT:    and a4, a0, a2
+; RV32IM-NEXT:    add a3, a0, a3
+; RV32IM-NEXT:    add a5, a3, a5
+; RV32IM-NEXT:    and a3, a3, a2
+; RV32IM-NEXT:    sltu a3, a3, a4
+; RV32IM-NEXT:    lui a4, 449390
+; RV32IM-NEXT:    add a3, a5, a3
+; RV32IM-NEXT:    lui a5, 748983
+; RV32IM-NEXT:    addi a6, a6, -1755
+; RV32IM-NEXT:    addi a4, a4, -1171
+; RV32IM-NEXT:    addi a5, a5, -585
+; RV32IM-NEXT:    and a2, a3, a2
+; RV32IM-NEXT:    mulhu a3, a2, a6
+; RV32IM-NEXT:    slli a6, a3, 3
+; RV32IM-NEXT:    add a2, a2, a3
+; RV32IM-NEXT:    sub a2, a2, a6
+; RV32IM-NEXT:    sub a3, a0, a2
+; RV32IM-NEXT:    sltu a0, a0, a2
+; RV32IM-NEXT:    mul a2, a3, a4
+; RV32IM-NEXT:    mulhu a4, a3, a5
+; RV32IM-NEXT:    sub a1, a1, a0
+; RV32IM-NEXT:    add a2, a4, a2
+; RV32IM-NEXT:    mul a1, a1, a5
+; RV32IM-NEXT:    add a1, a2, a1
+; RV32IM-NEXT:    mul a0, a3, a5
+; RV32IM-NEXT:    ret
+;
+; RV32IMZB-LABEL: udiv64_constant_add:
+; RV32IMZB:       # %bb.0:
+; RV32IMZB-NEXT:    srli a2, a0, 30
+; RV32IMZB-NEXT:    srli a3, a1, 28
+; RV32IMZB-NEXT:    lui a4, 786432
+; RV32IMZB-NEXT:    slli a5, a0, 2
+; RV32IMZB-NEXT:    lui a6, 149797
+; RV32IMZB-NEXT:    sh2add a2, a1, a2
+; RV32IMZB-NEXT:    srli a5, a5, 2
+; RV32IMZB-NEXT:    add a2, a0, a2
+; RV32IMZB-NEXT:    add a3, a2, a3
+; RV32IMZB-NEXT:    andn a2, a2, a4
+; RV32IMZB-NEXT:    sltu a2, a2, a5
+; RV32IMZB-NEXT:    lui a5, 449390
+; RV32IMZB-NEXT:    add a2, a3, a2
+; RV32IMZB-NEXT:    lui a3, 748983
+; RV32IMZB-NEXT:    addi a6, a6, -1755
+; RV32IMZB-NEXT:    addi a5, a5, -1171
+; RV32IMZB-NEXT:    addi a3, a3, -585
+; RV32IMZB-NEXT:    andn a2, a2, a4
+; RV32IMZB-NEXT:    mulhu a4, a2, a6
+; RV32IMZB-NEXT:    slli a6, a4, 3
+; RV32IMZB-NEXT:    add a2, a2, a4
+; RV32IMZB-NEXT:    sub a2, a2, a6
+; RV32IMZB-NEXT:    sub a4, a0, a2
+; RV32IMZB-NEXT:    sltu a0, a0, a2
+; RV32IMZB-NEXT:    mul a2, a4, a5
+; RV32IMZB-NEXT:    mulhu a5, a4, a3
+; RV32IMZB-NEXT:    sub a1, a1, a0
+; RV32IMZB-NEXT:    add a2, a5, a2
+; RV32IMZB-NEXT:    mul a1, a1, a3
+; RV32IMZB-NEXT:    add a1, a2, a1
+; RV32IMZB-NEXT:    mul a0, a4, a3
+; RV32IMZB-NEXT:    ret
 ;
 ; RV64-LABEL: udiv64_constant_add:
 ; RV64:       # %bb.0:

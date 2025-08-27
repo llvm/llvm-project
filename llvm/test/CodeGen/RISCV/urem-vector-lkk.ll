@@ -862,51 +862,61 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    lw s1, 16(a1)
-; RV32IM-NEXT:    lw s2, 20(a1)
-; RV32IM-NEXT:    lw s3, 24(a1)
-; RV32IM-NEXT:    lw s4, 28(a1)
-; RV32IM-NEXT:    lw a3, 0(a1)
-; RV32IM-NEXT:    lw a4, 4(a1)
-; RV32IM-NEXT:    lw s5, 8(a1)
-; RV32IM-NEXT:    lw s6, 12(a1)
 ; RV32IM-NEXT:    mv s0, a0
+; RV32IM-NEXT:    lw a2, 16(a1)
+; RV32IM-NEXT:    lw a4, 20(a1)
+; RV32IM-NEXT:    lw s1, 24(a1)
+; RV32IM-NEXT:    lw s2, 28(a1)
+; RV32IM-NEXT:    lw a0, 0(a1)
+; RV32IM-NEXT:    lw a3, 4(a1)
+; RV32IM-NEXT:    lw s3, 8(a1)
+; RV32IM-NEXT:    lw s4, 12(a1)
+; RV32IM-NEXT:    lui a1, 1024
+; RV32IM-NEXT:    lui a5, 45590
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    addi a5, a5, 1069
+; RV32IM-NEXT:    slli a6, a4, 10
+; RV32IM-NEXT:    srli a7, a2, 22
+; RV32IM-NEXT:    or a6, a7, a6
+; RV32IM-NEXT:    and a7, a2, a1
+; RV32IM-NEXT:    srli a4, a4, 12
+; RV32IM-NEXT:    add a2, a2, a6
+; RV32IM-NEXT:    and a6, a2, a1
+; RV32IM-NEXT:    add a2, a2, a4
+; RV32IM-NEXT:    sltu a4, a6, a7
+; RV32IM-NEXT:    add a2, a2, a4
+; RV32IM-NEXT:    and a1, a2, a1
+; RV32IM-NEXT:    mulhu a2, a1, a5
+; RV32IM-NEXT:    li a4, 23
+; RV32IM-NEXT:    mul a2, a2, a4
+; RV32IM-NEXT:    sub s7, a1, a2
 ; RV32IM-NEXT:    li a2, 1
-; RV32IM-NEXT:    mv a0, a3
-; RV32IM-NEXT:    mv a1, a4
-; RV32IM-NEXT:    li a3, 0
-; RV32IM-NEXT:    call __umoddi3
-; RV32IM-NEXT:    mv s7, a0
-; RV32IM-NEXT:    mv s8, a1
-; RV32IM-NEXT:    li a2, 654
-; RV32IM-NEXT:    mv a0, s5
-; RV32IM-NEXT:    mv a1, s6
+; RV32IM-NEXT:    mv a1, a3
 ; RV32IM-NEXT:    li a3, 0
 ; RV32IM-NEXT:    call __umoddi3
 ; RV32IM-NEXT:    mv s5, a0
 ; RV32IM-NEXT:    mv s6, a1
-; RV32IM-NEXT:    li a2, 23
-; RV32IM-NEXT:    mv a0, s1
-; RV32IM-NEXT:    mv a1, s2
-; RV32IM-NEXT:    li a3, 0
-; RV32IM-NEXT:    call __umoddi3
-; RV32IM-NEXT:    mv s1, a0
-; RV32IM-NEXT:    mv s2, a1
-; RV32IM-NEXT:    lui a0, 1
-; RV32IM-NEXT:    addi a2, a0, 1327
+; RV32IM-NEXT:    li a2, 654
 ; RV32IM-NEXT:    mv a0, s3
 ; RV32IM-NEXT:    mv a1, s4
 ; RV32IM-NEXT:    li a3, 0
 ; RV32IM-NEXT:    call __umoddi3
-; RV32IM-NEXT:    sw s1, 16(s0)
-; RV32IM-NEXT:    sw s2, 20(s0)
+; RV32IM-NEXT:    mv s3, a0
+; RV32IM-NEXT:    mv s4, a1
+; RV32IM-NEXT:    lui a0, 1
+; RV32IM-NEXT:    addi a2, a0, 1327
+; RV32IM-NEXT:    mv a0, s1
+; RV32IM-NEXT:    mv a1, s2
+; RV32IM-NEXT:    li a3, 0
+; RV32IM-NEXT:    call __umoddi3
+; RV32IM-NEXT:    sw s7, 16(s0)
+; RV32IM-NEXT:    sw zero, 20(s0)
 ; RV32IM-NEXT:    sw a0, 24(s0)
 ; RV32IM-NEXT:    sw a1, 28(s0)
-; RV32IM-NEXT:    sw s7, 0(s0)
-; RV32IM-NEXT:    sw s8, 4(s0)
-; RV32IM-NEXT:    sw s5, 8(s0)
-; RV32IM-NEXT:    sw s6, 12(s0)
+; RV32IM-NEXT:    sw s5, 0(s0)
+; RV32IM-NEXT:    sw s6, 4(s0)
+; RV32IM-NEXT:    sw s3, 8(s0)
+; RV32IM-NEXT:    sw s4, 12(s0)
 ; RV32IM-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -916,7 +926,6 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    addi sp, sp, 48
 ; RV32IM-NEXT:    ret
 ;
