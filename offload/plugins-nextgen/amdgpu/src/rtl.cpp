@@ -2811,7 +2811,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::PRODUCT_NAME);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_VENDOR_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
