@@ -1116,6 +1116,18 @@ parser::Message *SayWithDeclaration(
     MESSAGES &messages, const Symbol &symbol, A &&...x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
 }
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext context,
+    const Symbol &symbol, common::LanguageFeature feature, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(feature, std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext &context,
+    const Symbol &symbol, common::UsageWarning warning, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(warning, std::forward<A>(x)...), symbol);
+}
 
 // Check for references to impure procedures; returns the name
 // of one to complain about, if any exist.
