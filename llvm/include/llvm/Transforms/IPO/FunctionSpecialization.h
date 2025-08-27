@@ -246,7 +246,7 @@ class FunctionSpecializer {
   std::function<AssumptionCache &(Function &)> GetAC;
 
   SmallPtrSet<Function *, 32> Specializations;
-  SmallPtrSet<Function *, 32> FullySpecialized;
+  SmallPtrSet<Function *, 32> DeadFunctions;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;
@@ -269,6 +269,8 @@ public:
     auto &TTI = GetTTI(*F);
     return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
+
+  bool isDeadFunction(Function *F) { return DeadFunctions.contains(F); }
 
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);

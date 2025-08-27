@@ -145,6 +145,16 @@ inline int_pred_ty<is_all_ones> m_AllOnes() {
   return int_pred_ty<is_all_ones>();
 }
 
+struct is_zero_int {
+  bool isValue(const APInt &C) const { return C.isZero(); }
+};
+
+/// Match an integer 0 or a vector with all elements equal to 0.
+/// For vectors, this includes constants with undefined elements.
+inline int_pred_ty<is_zero_int> m_ZeroInt() {
+  return int_pred_ty<is_zero_int>();
+}
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;
@@ -395,6 +405,13 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::Mul, Op0_t, Op1_t>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
+}
+
+/// Match a binary AND operation.
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_commutative_match<Instruction::And, Op0_t, Op1_t>
+m_c_BinaryAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Binary<Instruction::And, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary OR operation. Note that while conceptually the operands can
