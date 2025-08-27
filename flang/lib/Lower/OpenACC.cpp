@@ -1575,7 +1575,7 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     if (bounds.empty()) {
       llvm::SmallVector<mlir::Value> extents;
       mlir::Type idxTy = builder.getIndexType();
-      for (auto extent : seqTy.getShape()) {
+      for (auto extent : llvm::reverse(seqTy.getShape())) {
         mlir::Value lb = mlir::arith::ConstantOp::create(
             builder, loc, idxTy, builder.getIntegerAttr(idxTy, 0));
         mlir::Value ub = mlir::arith::ConstantOp::create(
@@ -1607,12 +1607,11 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       }
     } else {
       // Lowerbound, upperbound and step are passed as block arguments.
-      [[maybe_unused]] unsigned nbRangeArgs =
+      unsigned nbRangeArgs =
           recipe.getCombinerRegion().getArguments().size() - 2;
       assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
              "Expect 3 block arguments per dimension");
-      for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
-           i += 3) {
+      for (int i = nbRangeArgs - 1; i >= 2; i -= 3) {
         mlir::Value lb = recipe.getCombinerRegion().getArgument(i);
         mlir::Value ub = recipe.getCombinerRegion().getArgument(i + 1);
         mlir::Value step = recipe.getCombinerRegion().getArgument(i + 2);
@@ -1623,8 +1622,11 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
         ivs.push_back(loop.getInductionVar());
       }
     }
-    auto addr1 = fir::CoordinateOp::create(builder, loc, refTy, value1, ivs);
-    auto addr2 = fir::CoordinateOp::create(builder, loc, refTy, value2, ivs);
+    llvm::SmallVector<mlir::Value> reversedIvs(ivs.rbegin(), ivs.rend());
+    auto addr1 =
+        fir::CoordinateOp::create(builder, loc, refTy, value1, reversedIvs);
+    auto addr2 =
+        fir::CoordinateOp::create(builder, loc, refTy, value2, reversedIvs);
     auto load1 = fir::LoadOp::create(builder, loc, addr1);
     auto load2 = fir::LoadOp::create(builder, loc, addr2);
     mlir::Value res =
