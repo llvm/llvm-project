@@ -2882,22 +2882,22 @@ public:
   /// Retrieves the CXXRecordDecl that this type refers to, either
   /// because the type is a RecordType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
-  CXXRecordDecl *getAsCXXRecordDecl() const;
-  CXXRecordDecl *castAsCXXRecordDecl() const;
+  inline CXXRecordDecl *getAsCXXRecordDecl() const;
+  inline CXXRecordDecl *castAsCXXRecordDecl() const;
 
   /// Retrieves the RecordDecl this type refers to.
-  RecordDecl *getAsRecordDecl() const;
-  RecordDecl *castAsRecordDecl() const;
+  inline RecordDecl *getAsRecordDecl() const;
+  inline RecordDecl *castAsRecordDecl() const;
 
   /// Retrieves the EnumDecl this type refers to.
-  EnumDecl *getAsEnumDecl() const;
-  EnumDecl *castAsEnumDecl() const;
+  inline EnumDecl *getAsEnumDecl() const;
+  inline EnumDecl *castAsEnumDecl() const;
 
   /// Retrieves the TagDecl that this type refers to, either
   /// because the type is a TagType or because it is the injected-class-name
   /// type of a class template or class template partial specialization.
-  TagDecl *getAsTagDecl() const;
-  TagDecl *castAsTagDecl() const;
+  inline TagDecl *getAsTagDecl() const;
+  inline TagDecl *castAsTagDecl() const;
 
   /// If this is a pointer or reference to a RecordType, return the
   /// CXXRecordDecl that the type refers to.
