@@ -4214,7 +4214,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
                 }
               }
             }
-            [[fallthrough]];
+            break;
           }
           case VPInstruction::ActiveLaneMask: {
             unsigned Multiplier =
