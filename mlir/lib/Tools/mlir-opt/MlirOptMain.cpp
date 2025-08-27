@@ -182,6 +182,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> emitPassErrorOnFailure(
+        "emit-pass-error-on-failure",
+        cl::desc("Emit an error with the pass name when a pass fails"),
+        cl::location(emitErrorOnPassFailureFlag), cl::init(false));
+
     static cl::opt<bool, /*ExternalStorage=*/true> disableVerifyOnParsing(
         "mlir-very-unsafe-disable-verifier-on-parsing",
         cl::desc("Disable the verifier on parsing (very unsafe)"),
@@ -465,6 +470,7 @@ performActions(raw_ostream &os,
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
   pm.enableVerifier(config.shouldVerifyPasses());
+  pm.enableErrorOnFailure(config.shouldEmitErrorOnPassFailure());
   if (failed(applyPassManagerCLOptions(pm)))
     return failure();
   pm.enableTiming(timing);

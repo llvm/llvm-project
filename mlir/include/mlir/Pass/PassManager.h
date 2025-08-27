@@ -275,6 +275,10 @@ public:
   /// Runs the verifier after each individual pass.
   void enableVerifier(bool enabled = true);
 
+  /// Sets whether an error containing the failing pass name should be emitted
+  /// upon failure.
+  void enableErrorOnFailure(bool enabled = true);
+
   //===--------------------------------------------------------------------===//
   // Instrumentations
   //===--------------------------------------------------------------------===//
@@ -497,6 +501,10 @@ private:
 
   /// A flag that indicates if the IR should be verified in between passes.
   bool verifyPasses : 1;
+
+  /// A flag that indicates if an error containing the pass name should be
+  /// emitted upon failure.
+  bool emitErrorOnFailure : 1;
 };
 
 /// Register a set of useful command-line options that can be used to configure
