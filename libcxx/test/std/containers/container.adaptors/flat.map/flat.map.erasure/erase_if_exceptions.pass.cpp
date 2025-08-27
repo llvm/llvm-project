@@ -66,7 +66,9 @@ struct ErasurePredicate {
 };
 
 int main(int, char**) {
+#if defined(_LIBCPP_VERSION)
   const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
+#endif
   {
     using M = std::flat_map<ThrowingAssignment, int, ThrowingComparator>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {

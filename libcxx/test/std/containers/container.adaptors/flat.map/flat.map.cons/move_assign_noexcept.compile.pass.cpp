@@ -50,10 +50,12 @@ struct MoveThrowsComp {
 };
 
 void test() {
+#if defined(_LIBCPP_VERSION)
   {
     using C = std::flat_map<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
+#endif
   {
     using C =
         std::flat_map<MoveOnly,
@@ -72,6 +74,7 @@ void test() {
                       std::vector<MoveOnly, test_allocator<MoveOnly>>>;
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
+#if defined(_LIBCPP_VERSION)
   {
     using C =
         std::flat_map<MoveOnly,
@@ -95,6 +98,7 @@ void test() {
     using C = std::flat_map<int, int, MoveThrowsComp>;
     LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
   }
+#endif
   {
     // Test with a container that throws on move-assignment.
     using C = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::vector<int>>;
