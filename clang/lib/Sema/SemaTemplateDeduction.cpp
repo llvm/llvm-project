@@ -698,9 +698,8 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
     TNP = TP->getTemplateName();
     // FIXME: To preserve sugar, the TST needs to carry sugared resolved
     // arguments.
-    PResolved = TP->getCanonicalTypeInternal()
-                    ->castAs<TemplateSpecializationType>()
-                    ->template_arguments();
+    PResolved =
+        TP->castAsCanonical<TemplateSpecializationType>()->template_arguments();
   } else {
     const auto *TT = P->castAs<InjectedClassNameType>();
     TNP = TT->getTemplateName(S.Context);
@@ -1437,7 +1436,8 @@ static bool isForwardingReference(QualType Param, unsigned FirstInnerIndex) {
   if (auto *ParamRef = Param->getAs<RValueReferenceType>()) {
     if (ParamRef->getPointeeType().getQualifiers())
       return false;
-    auto *TypeParm = ParamRef->getPointeeType()->getAs<TemplateTypeParmType>();
+    auto *TypeParm =
+        ParamRef->getPointeeType()->getAsCanonical<TemplateTypeParmType>();
     return TypeParm && TypeParm->getIndex() >= FirstInnerIndex;
   }
   return false;
@@ -1702,7 +1702,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
   //
   //     T
   //     cv-list T
-  if (const auto *TTP = P->getAs<TemplateTypeParmType>()) {
+  if (const auto *TTP = P->getAsCanonical<TemplateTypeParmType>()) {
     // Just skip any attempts to deduce from a placeholder type or a parameter
     // at a different depth.
     if (A->isPlaceholderType() || Info.getDeducedDepth() != TTP->getDepth())
@@ -5596,7 +5596,7 @@ static TemplateDeductionResult CheckDeductionConsistency(
   // so let it transform their specializations instead.
   bool IsDeductionGuide = isa<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
   if (IsDeductionGuide) {
-    if (auto *Injected = P->getAs<InjectedClassNameType>())
+    if (auto *Injected = P->getAsCanonical<InjectedClassNameType>())
       P = Injected->getOriginalDecl()->getCanonicalTemplateSpecializationType(
           S.Context);
   }
@@ -5617,10 +5617,10 @@ static TemplateDeductionResult CheckDeductionConsistency(
   auto T1 = S.Context.getUnqualifiedArrayType(InstP.getNonReferenceType());
   auto T2 = S.Context.getUnqualifiedArrayType(A.getNonReferenceType());
   if (IsDeductionGuide) {
-    if (auto *Injected = T1->getAs<InjectedClassNameType>())
+    if (auto *Injected = T1->getAsCanonical<InjectedClassNameType>())
       T1 = Injected->getOriginalDecl()->getCanonicalTemplateSpecializationType(
           S.Context);
-    if (auto *Injected = T2->getAs<InjectedClassNameType>())
+    if (auto *Injected = T2->getAsCanonical<InjectedClassNameType>())
       T2 = Injected->getOriginalDecl()->getCanonicalTemplateSpecializationType(
           S.Context);
   }

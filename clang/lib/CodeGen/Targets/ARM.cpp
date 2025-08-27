@@ -512,7 +512,7 @@ static bool isIntegerLikeType(QualType Ty, ASTContext &Context,
   // above, but they are not.
 
   // Otherwise, it must be a record type.
-  const RecordType *RT = Ty->getAs<RecordType>();
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (!RT) return false;
 
   // Ignore records with flexible arrays.

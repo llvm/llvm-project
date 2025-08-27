@@ -4609,8 +4609,8 @@ UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
 template <class Emitter>
 const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
   if (const PointerType *PT = dyn_cast<PointerType>(Ty))
-    return PT->getPointeeType()->getAs<RecordType>();
-  return Ty->getAs<RecordType>();
+    return PT->getPointeeType()->getAsCanonical<RecordType>();
+  return Ty->getAsCanonical<RecordType>();
 }
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {

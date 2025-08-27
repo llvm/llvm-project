@@ -114,12 +114,12 @@ static void printCXXConstructorDestructorName(QualType ClassType,
   // We know we're printing C++ here. Ensure we print types properly.
   Policy.adjustForCPlusPlus();
 
-  if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
+  if (const RecordType *ClassRec = ClassType->getAsCanonical<RecordType>()) {
     ClassRec->getOriginalDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
-    if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
+    if (auto *InjTy = ClassType->getAsCanonical<InjectedClassNameType>()) {
       InjTy->getOriginalDecl()->printName(OS, Policy);
       return;
     }

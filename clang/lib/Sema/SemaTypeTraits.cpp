@@ -1583,8 +1583,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
   // Base and Derived are not unions and name the same class type without
   // regard to cv-qualifiers.
 
-  const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-  const RecordType *rhsRecord = RhsT->getAs<RecordType>();
+  const RecordType *lhsRecord = LhsT->getAsCanonical<RecordType>();
+  const RecordType *rhsRecord = RhsT->getAsCanonical<RecordType>();
   if (!rhsRecord || !lhsRecord) {
     const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
     const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
@@ -1643,8 +1643,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
     return Self.BuiltinIsBaseOf(Rhs->getTypeLoc().getBeginLoc(), LhsT, RhsT);
 
   case BTT_IsVirtualBaseOf: {
-    const RecordType *BaseRecord = LhsT->getAs<RecordType>();
-    const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
+    const RecordType *BaseRecord = LhsT->getAsCanonical<RecordType>();
+    const RecordType *DerivedRecord = RhsT->getAsCanonical<RecordType>();
 
     if (!BaseRecord || !DerivedRecord) {
       DiagnoseVLAInCXXTypeTrait(Self, Lhs,
