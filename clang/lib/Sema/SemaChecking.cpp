@@ -15894,10 +15894,10 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
 /// So we compare unqualified types of their elements and number of elements.
 /// See GitHub issue #155405.
 static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
-                                           Expr *Args[]) {
+                                           ArrayRef<Expr *> Args) {
   assert(NumArgs > 0 && "Should have at least one argument.");
 
-  auto EmitError = [&](int I) {
+  auto EmitError = [&](unsigned I) {
     SemaRef.Diag(Args[0]->getBeginLoc(),
                  diag::err_typecheck_call_different_arg_types)
         << Args[0]->getType() << Args[I]->getType();
@@ -15907,7 +15907,7 @@ static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
 
   // Compare scalar types.
   if (!Ty0->isVectorType()) {
-    for (unsigned I = 1; I < NumArgs; ++I)
+    for (unsigned I = 1; I != NumArgs; ++I)
       if (!SemaRef.Context.hasSameUnqualifiedType(Ty0, Args[I]->getType())) {
         EmitError(I);
         return true;
@@ -15918,7 +15918,7 @@ static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
 
   // Compare vector types.
   const auto *Vec0 = Ty0->castAs<VectorType>();
-  for (unsigned I = 1; I < NumArgs; ++I) {
+  for (unsigned I = 1; I != NumArgs; ++I) {
     QualType TyI = Args[I]->getType();
     if (!TyI->isVectorType()) {
       EmitError(I);
