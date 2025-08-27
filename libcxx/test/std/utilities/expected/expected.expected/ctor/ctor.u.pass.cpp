@@ -80,7 +80,7 @@ struct CopyOnly {
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
 };
 
-struct MoveOnly2{
+struct MoveOnly2 {
   int j;
   bool used_move1 = false;
   bool used_move2 = false;
@@ -89,7 +89,6 @@ struct MoveOnly2{
   constexpr MoveOnly2(const MoveOnly2&) = delete;
   constexpr MoveOnly2(MoveOnly2&& m) : j(m.j), used_move1(true) {}
   constexpr MoveOnly2(const MoveOnly2&& m) : j(m.j), used_move2(true) {}
-
 };
 
 struct BaseError {};
