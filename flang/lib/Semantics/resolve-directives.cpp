@@ -61,9 +61,8 @@ protected:
         defaultMap;
 
     std::optional<Symbol::Flag> FindSymbolWithDSA(const Symbol &symbol) {
-      auto it{objectWithDSA.find(&symbol)};
-      if (it != objectWithDSA.end()) {
-        return std::make_optional(it->second);
+      if (auto it{objectWithDSA.find(&symbol)}; it != objectWithDSA.end()) {
+        return it->second;
       }
       return std::nullopt;
     }
@@ -83,10 +82,9 @@ protected:
   }
   void PushContext(const parser::CharBlock &source, T dir, Scope &scope) {
     if constexpr (std::is_same_v<T, llvm::acc::Directive>) {
-      bool wasEmpty{dirContext_.empty()};
       dirContext_.emplace_back(source, dir, scope);
-      if (!wasEmpty) {
-        std::size_t lastIndex{dirContext_.size() - 1};
+      if (std::size_t size{dirContext_.size()}; size > 1) {
+        std::size_t lastIndex{size - 1};
         dirContext_[lastIndex].defaultDSA =
             dirContext_[lastIndex - 1].defaultDSA;
       }
@@ -128,7 +126,7 @@ protected:
     return false;
   }
 
-  bool WithinContstruct() {
+  bool WithinConstruct() {
     return !dirContext_.empty() && GetContext().withinConstruct;
   }
 
@@ -1602,7 +1600,7 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 // and adjust the symbol for each Name if necessary
 void AccAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
-  if (symbol && WithinContstruct()) {
+  if (symbol && WithinConstruct()) {
     symbol = &symbol->GetUltimate();
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
         !symbol->has<SubprogramDetails>() && !IsObjectWithVisibleDSA(*symbol)) {
@@ -1988,7 +1986,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
 // till OpenMP-5.0 standard.
 // In above both cases we skip the privatization of iteration variables.
 bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
-  if (WithinContstruct()) {
+  if (WithinConstruct()) {
     llvm::SmallVector<const parser::Name *> ivs;
     if (x.IsDoNormal()) {
       const parser::Name *iv{GetLoopIndex(x)};
@@ -2714,7 +2712,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
-  if (symbol && WithinContstruct()) {
+  if (symbol && WithinConstruct()) {
     if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
