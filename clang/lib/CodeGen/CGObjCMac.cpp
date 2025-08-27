@@ -2318,7 +2318,7 @@ void IvarLayoutBuilder::visitBlock(const CGBlockInfo &blockInfo) {
     }
 
     assert(!type->isArrayType() && "array variable should not be caught");
-    if (const RecordType *record = type->getAs<RecordType>()) {
+    if (const RecordType *record = type->getAsCanonical<RecordType>()) {
       visitRecord(record, fieldOffset);
       continue;
     }
@@ -2412,7 +2412,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       if (FQT->isUnionType())
         HasUnion = true;
 
-      BuildRCBlockVarRecordLayout(FQT->castAs<RecordType>(),
+      BuildRCBlockVarRecordLayout(FQT->castAsCanonical<RecordType>(),
                                   BytePos + FieldOffset, HasUnion);
       continue;
     }
@@ -2429,7 +2429,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       }
       if (FQT->isRecordType() && ElCount) {
         int OldIndex = RunSkipBlockVars.size() - 1;
-        auto *RT = FQT->castAs<RecordType>();
+        auto *RT = FQT->castAsCanonical<RecordType>();
         BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset, HasUnion);
 
         // Replicate layout information for each array element. Note that
@@ -2834,7 +2834,7 @@ void CGObjCCommonMac::fillRunSkipBlockVars(CodeGenModule &CGM,
 
     assert(!type->isArrayType() && "array variable should not be caught");
     if (!CI.isByRef())
-      if (const RecordType *record = type->getAs<RecordType>()) {
+      if (const auto *record = type->getAsCanonical<RecordType>()) {
         BuildRCBlockVarRecordLayout(record, fieldOffset, hasUnion);
         continue;
       }
@@ -2868,7 +2868,7 @@ llvm::Constant *CGObjCCommonMac::BuildByrefLayout(CodeGen::CodeGenModule &CGM,
   CharUnits fieldOffset;
   RunSkipBlockVars.clear();
   bool hasUnion = false;
-  if (const RecordType *record = T->getAs<RecordType>()) {
+  if (const auto *record = T->getAsCanonical<RecordType>()) {
     BuildRCBlockVarRecordLayout(record, fieldOffset, hasUnion,
                                 true /*ByrefLayout */);
     llvm::Constant *Result = getBitmapBlockLayout(true);
@@ -5264,7 +5264,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
     return;
 
   // Recurse if the base element type is a record type.
-  if (auto recType = fieldType->getAs<RecordType>()) {
+  if (const auto *recType = fieldType->getAsCanonical<RecordType>()) {
     size_t oldEnd = IvarsInfo.size();
 
     visitRecord(recType, fieldOffset);

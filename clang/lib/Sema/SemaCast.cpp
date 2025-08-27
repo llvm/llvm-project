@@ -1132,7 +1132,7 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
-  const RecordType *DestRecord = DestPointee->getAs<RecordType>();
+  const auto *DestRecord = DestPointee->getAsCanonical<RecordType>();
   if (DestPointee->isVoidType()) {
     assert(DestPointer && "Reference to void is not possible");
   } else if (DestRecord) {
@@ -1179,7 +1179,7 @@ void CastOperation::CheckDynamicCast() {
     SrcPointee = SrcType;
   }
 
-  const RecordType *SrcRecord = SrcPointee->getAs<RecordType>();
+  const auto *SrcRecord = SrcPointee->getAsCanonical<RecordType>();
   if (SrcRecord) {
     if (Self.RequireCompleteType(OpRange.getBegin(), SrcPointee,
                                  diag::err_bad_cast_incomplete,
@@ -3363,7 +3363,8 @@ void CastOperation::CheckCStyleCast() {
 
   if (!DestType->isScalarType() && !DestType->isVectorType() &&
       !DestType->isMatrixType()) {
-    if (const RecordType *DestRecordTy = DestType->getAs<RecordType>()) {
+    if (const RecordType *DestRecordTy =
+            DestType->getAsCanonical<RecordType>()) {
       if (Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
         // GCC struct/union extension: allow cast to self.
         Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)

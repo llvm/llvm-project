@@ -710,19 +710,19 @@ const Type *Type::getUnqualifiedDesugaredType() const {
 }
 
 bool Type::isClassType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()->isClass();
   return false;
 }
 
 bool Type::isStructureType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()->isStruct();
   return false;
 }
 
 bool Type::isStructureTypeWithFlexibleArrayMember() const {
-  const auto *RT = getAs<RecordType>();
+  const auto *RT = getAsCanonical<RecordType>();
   if (!RT)
     return false;
   const auto *Decl = RT->getOriginalDecl();
@@ -738,33 +738,31 @@ bool Type::isObjCBoxableRecordType() const {
 }
 
 bool Type::isInterfaceType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()->isInterface();
   return false;
 }
 
 bool Type::isStructureOrClassType() const {
-  if (const auto *RT = getAs<RecordType>()) {
-    RecordDecl *RD = RT->getOriginalDecl();
-    return RD->isStruct() || RD->isClass() || RD->isInterface();
-  }
+  if (const auto *RT = getAsCanonical<RecordType>())
+    return RT->getOriginalDecl()->isStructureOrClass();
   return false;
 }
 
 bool Type::isVoidPointerType() const {
-  if (const auto *PT = getAs<PointerType>())
+  if (const auto *PT = getAsCanonical<PointerType>())
     return PT->getPointeeType()->isVoidType();
   return false;
 }
 
 bool Type::isUnionType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()->isUnion();
   return false;
 }
 
 bool Type::isComplexType() const {
-  if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
+  if (const auto *CT = getAsCanonical<ComplexType>())
     return CT->getElementType()->isFloatingType();
   return false;
 }
@@ -775,7 +773,7 @@ bool Type::isComplexIntegerType() const {
 }
 
 bool Type::isScopedEnumeralType() const {
-  if (const auto *ET = getAs<EnumType>())
+  if (const auto *ET = getAsCanonical<EnumType>())
     return ET->getOriginalDecl()->isScoped();
   return false;
 }
@@ -2008,9 +2006,9 @@ const ObjCObjectPointerType *Type::getAsObjCInterfacePointerType() const {
 
 const CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
   QualType PointeeType;
-  if (const auto *PT = getAs<PointerType>())
+  if (const auto *PT = getAsCanonical<PointerType>())
     PointeeType = PT->getPointeeType();
-  else if (const auto *RT = getAs<ReferenceType>())
+  else if (const auto *RT = getAsCanonical<ReferenceType>())
     PointeeType = RT->getPointeeType();
   else
     return nullptr;
@@ -3335,7 +3333,7 @@ bool Type::isNothrowT() const {
 }
 
 bool Type::isAlignValT() const {
-  if (const auto *ET = getAs<EnumType>()) {
+  if (const auto *ET = getAsCanonical<EnumType>()) {
     const auto *ED = ET->getOriginalDecl();
     IdentifierInfo *II = ED->getIdentifier();
     if (II && II->isStr("align_val_t") && ED->isInStdNamespace())
@@ -3345,7 +3343,7 @@ bool Type::isAlignValT() const {
 }
 
 bool Type::isStdByteType() const {
-  if (const auto *ET = getAs<EnumType>()) {
+  if (const auto *ET = getAsCanonical<EnumType>()) {
     const auto *ED = ET->getOriginalDecl();
     IdentifierInfo *II = ED->getIdentifier();
     if (II && II->isStr("byte") && ED->isInStdNamespace())
@@ -4546,7 +4544,7 @@ bool RecordType::hasConstFields() const {
       if (FieldTy.isConstQualified())
         return true;
       FieldTy = FieldTy.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+      if (const auto *FieldRecTy = FieldTy->getAsCanonical<RecordType>()) {
         if (!llvm::is_contained(RecordTypeList, FieldRecTy))
           RecordTypeList.push_back(FieldRecTy);
       }
@@ -5552,7 +5550,7 @@ bool Type::isObjCARCBridgableType() const {
 
 /// Determine whether the given type T is a "bridgeable" C type.
 bool Type::isCARCBridgableType() const {
-  const auto *Pointer = getAs<PointerType>();
+  const auto *Pointer = getAsCanonical<PointerType>();
   if (!Pointer)
     return false;
 
@@ -5562,7 +5560,7 @@ bool Type::isCARCBridgableType() const {
 
 /// Check if the specified type is the CUDA device builtin surface type.
 bool Type::isCUDADeviceBuiltinSurfaceType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()
         ->getMostRecentDecl()
         ->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
@@ -5571,7 +5569,7 @@ bool Type::isCUDADeviceBuiltinSurfaceType() const {
 
 /// Check if the specified type is the CUDA device builtin texture type.
 bool Type::isCUDADeviceBuiltinTextureType() const {
-  if (const auto *RT = getAs<RecordType>())
+  if (const auto *RT = getAsCanonical<RecordType>())
     return RT->getOriginalDecl()
         ->getMostRecentDecl()
         ->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();

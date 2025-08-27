@@ -190,7 +190,7 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
       if (isDetectingVirtual() && DetectedVirtual == nullptr) {
         // If this is the first virtual we find, remember it. If it turns out
         // there is no base path here, we'll reset it later.
-        DetectedVirtual = BaseType->getAs<RecordType>();
+        DetectedVirtual = BaseType->getAsCanonical<RecordType>();
         SetVirtual = true;
       }
     } else {

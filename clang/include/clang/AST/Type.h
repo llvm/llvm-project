@@ -2979,7 +2979,30 @@ public:
   ///
   /// There are some specializations of this member template listed
   /// immediately following this class.
+  ///
+  /// If you are interested only in the canonical properties of this type,
+  /// consider using getAsCanonical instead, as that is much faster.
   template <typename T> const T *getAs() const;
+
+  /// If this type is canonically the specified type, return its canonical type
+  /// cast to that specified type, otherwise returns null.
+  template <typename T> const T *getAsCanonical() const {
+    return dyn_cast<T>(CanonicalType);
+  }
+
+  /// Return this type's canonical type cast to the specified type.
+  /// If the type is not canonically that specified type, the behaviour is
+  /// undefined.
+  template <typename T> const T *castAsCanonical() const {
+    return cast<T>(CanonicalType);
+  }
+
+// It is not helpful to use these on types which are never canonical
+#define TYPE(Class, Base)
+#define NEVER_CANONICAL_TYPE(Class)                                            \
+  template <> inline const Class##Type *Type::getAsCanonical() const = delete; \
+  template <> inline const Class##Type *Type::castAsCanonical() const = delete;
+#include "clang/AST/TypeNodes.inc"
 
   /// Look through sugar for an instance of TemplateSpecializationType which
   /// is not a type alias, or null if there is no such type.
@@ -3202,16 +3225,16 @@ template <> const DynamicRangePointerType *Type::getAs() const;
 template <> const ValueTerminatedType *Type::getAs() const;
 /* TO_UPSTREAM(BoundsSafety) OFF */
 
-// We can do canonical leaf types faster, because we don't have to
-// worry about preserving child type decoration.
+// We can do always canonical types faster, because we don't have to
+// worry about preserving decoration.
 #define TYPE(Class, Base)
-#define LEAF_TYPE(Class) \
-template <> inline const Class##Type *Type::getAs() const { \
-  return dyn_cast<Class##Type>(CanonicalType); \
-} \
-template <> inline const Class##Type *Type::castAs() const { \
-  return cast<Class##Type>(CanonicalType); \
-}
+#define ALWAYS_CANONICAL_TYPE(Class)                                           \
+  template <> inline const Class##Type *Type::getAs() const {                  \
+    return dyn_cast<Class##Type>(CanonicalType);                               \
+  }                                                                            \
+  template <> inline const Class##Type *Type::castAs() const {                 \
+    return cast<Class##Type>(CanonicalType);                                   \
+  }
 #include "clang/AST/TypeNodes.inc"
 
 /// This class is used for builtin types like 'int'.  Builtin
