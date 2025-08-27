@@ -2260,7 +2260,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const ActualArgument *arg{actualForDummy[j]}) {
-      bool isAssumedRank{IsAssumedRank(*arg)};
+      bool isAssumedRank{semantics::IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank &&
           d.rank != Rank::arrayOrAssumedRank) {
         messages.Say(arg->sourceLocation(),
@@ -3006,7 +3006,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       mold = nullptr;
     }
     if (mold) {
-      if (IsAssumedRank(*arguments[0])) {
+      if (semantics::IsAssumedRank(*arguments[0])) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
       }

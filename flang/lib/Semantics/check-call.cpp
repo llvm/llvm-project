@@ -67,7 +67,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
           "Null pointer argument requires an explicit interface"_err_en_US);
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
       const Symbol &symbol{named->GetLastSymbol()};
-      if (evaluate::IsAssumedRank(symbol)) {
+      if (IsAssumedRank(symbol)) {
         messages.Say(
             "Assumed rank argument requires an explicit interface"_err_en_US);
       }
@@ -131,7 +131,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
       dummy.type.type().kind() == actualType.type().kind() &&
       !dummy.attrs.test(
           characteristics::DummyDataObject::Attr::DeducedFromActual)) {
-    bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+    bool actualIsAssumedRank{IsAssumedRank(actual)};
     if (actualIsAssumedRank &&
         !dummy.type.attrs().test(
             characteristics::TypeAndShape::Attr::AssumedRank)) {
@@ -387,7 +387,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       characteristics::TypeAndShape::Attr::AssumedRank)};
   bool actualIsAssumedSize{actualType.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
-  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+  bool actualIsAssumedRank{IsAssumedRank(actual)};
   bool actualIsPointer{evaluate::IsObjectPointer(actual)};
   bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
   bool actualMayBeAssumedSize{actualIsAssumedSize ||
@@ -1390,8 +1390,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       assumed.name(), dummyName);
                 } else if (object.type.attrs().test(characteristics::
                                    TypeAndShape::Attr::AssumedRank) &&
-                    !IsAssumedShape(assumed) &&
-                    !evaluate::IsAssumedRank(assumed)) {
+                    !IsAssumedShape(assumed) && !IsAssumedRank(assumed)) {
                   messages.Say( // C711
                       "Assumed-type '%s' must be either assumed shape or assumed rank to be associated with assumed rank %s"_err_en_US,
                       assumed.name(), dummyName);

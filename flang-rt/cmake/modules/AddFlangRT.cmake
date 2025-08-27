@@ -281,6 +281,7 @@ function (add_flangrt_library name)
 
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+    target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
       target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
       target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)

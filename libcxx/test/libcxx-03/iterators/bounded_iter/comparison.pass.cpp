@@ -11,10 +11,8 @@
 //
 // Comparison operators
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <concepts>
-#include <__iterator/bounded_iter.h>
+#include <__cxx03/__iterator/bounded_iter.h>
 
 #include "test_iterators.h"
 #include "test_macros.h"

@@ -425,15 +425,6 @@ struct Filter {
   Filter(ArrayRef<InstructionEncoding> Encodings,
          ArrayRef<unsigned> EncodingIDs, unsigned StartBit, unsigned NumBits);
 
-  bool hasSingleFilteredID() const {
-    return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
-  }
-
-  unsigned getSingletonEncodingID() const {
-    assert(hasSingleFilteredID());
-    return FilteredIDs.begin()->second.front();
-  }
-
   // Returns the number of fanout produced by the filter.  More fanout implies
   // the filter distinguishes more categories of instructions.
   unsigned usefulness() const;
@@ -483,12 +474,6 @@ class FilterChooser {
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
 
-  /// Some targets (ARM) specify more encoding bits in Inst that Size allows.
-  /// This field allows us to ignore the extra bits.
-  unsigned MaxFilterWidth;
-
-  const CodeGenTarget &Target;
-
   /// If the selected filter matches multiple encodings, then this is the
   /// starting position and the width of the filtered range.
   unsigned StartBit;
@@ -522,16 +507,12 @@ class FilterChooser {
 public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
-                const CodeGenTarget &Target)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
-        MaxFilterWidth(MaxFilterWidth), Target(Target) {
+                ArrayRef<unsigned> EncodingIDs)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
     // Sort encoding IDs once.
     stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     FilterBits = KnownBits(FilterWidth);
     doFilter();
   }
@@ -540,15 +521,12 @@ public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
                 const FilterChooser &Parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
-        MaxFilterWidth(Parent.MaxFilterWidth), Target(Parent.Target) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
     assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     this->FilterBits = FilterBits.anyext(FilterWidth);
     doFilter();
   }
@@ -690,14 +668,6 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
-  }
-
-  // No need to recurse for a singleton filtered instruction.
-  // See also Filter::emit*().
-  if (F.hasSingleFilteredID()) {
-    SingletonEncodingID = F.getSingletonEncodingID();
-    assert(VariableFC && "Shouldn't have created a filter for one encoding!");
-    return;
   }
 
   // Otherwise, create sub choosers.
@@ -1659,6 +1629,8 @@ void FilterChooser::dump() const {
 }
 
 void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
+  DecoderTable &Table = TableInfo.Table;
+
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
   if (FC.VariableFC)
@@ -1670,9 +1642,23 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     // fully defined, but we still need to check if the remaining (unfiltered)
     // bits are valid for this encoding. We also need to check predicates etc.
     emitSingletonTableEntry(FC);
+  } else if (FC.FilterChooserMap.size() == 1) {
+    // If there is only one possible field value, emit a combined OPC_CheckField
+    // instead of OPC_ExtractField + OPC_FilterValue.
+    const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.begin();
+    Table.insertOpcode(!TableInfo.isOutermostScope()
+                           ? MCD::OPC_CheckField
+                           : MCD::OPC_CheckFieldOrFail);
+    Table.insertULEB128(FC.StartBit);
+    Table.insertUInt8(FC.NumBits);
+    Table.insertULEB128(FilterVal);
+    if (!TableInfo.isOutermostScope())
+      TableInfo.FixupStack.back().push_back(TableInfo.Table.insertNumToSkip());
+
+    // Emit table entries for the only case.
+    emitTableEntries(*Delegate);
   } else {
     // The general case: emit a switch over the field value.
-    DecoderTable &Table = TableInfo.Table;
     Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(FC.StartBit);
     Table.insertUInt8(FC.NumBits);
@@ -2562,7 +2548,7 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, BitWidth, Target);
+    FilterChooser FC(Encodings, EncodingIDs);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all

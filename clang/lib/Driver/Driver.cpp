@@ -4642,16 +4642,28 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // Call validator for dxil when -Vd not in Args.
   if (C.getDefaultToolChain().getTriple().isDXIL()) {
-    // Only add action when needValidation.
     const auto &TC =
         static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+
+    // Call objcopy for manipulation of the unvalidated DXContainer when an
+    // option in Args requires it.
+    if (TC.requiresObjcopy(Args)) {
+      Action *LastAction = Actions.back();
+      // llvm-objcopy expects an unvalidated DXIL container (TY_OBJECT).
+      if (LastAction->getType() == types::TY_Object)
+        Actions.push_back(
+            C.MakeAction<ObjcopyJobAction>(LastAction, types::TY_Object));
+    }
+
+    // Call validator for dxil when -Vd not in Args.
     if (TC.requiresValidation(Args)) {
       Action *LastAction = Actions.back();
       Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
           LastAction, types::TY_DX_CONTAINER));
     }
+
+    // Call metal-shaderconverter when targeting metal.
     if (TC.requiresBinaryTranslation(Args)) {
       Action *LastAction = Actions.back();
       // Metal shader converter runs on DXIL containers, which can either be
@@ -6253,8 +6265,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        C.getArgs().hasArg(options::OPT_dxc_Fo)) ||
       JA.getType() == types::TY_DX_CONTAINER) {
     StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
-    // If we are targeting DXIL and not validating or translating, we should set
-    // the final result file. Otherwise we should emit to a temporary.
+    // If we are targeting DXIL and not validating/translating/objcopying, we
+    // should set the final result file. Otherwise we should emit to a
+    // temporary.
     if (C.getDefaultToolChain().getTriple().isDXIL()) {
       const auto &TC = static_cast<const toolchains::HLSLToolChain &>(
           C.getDefaultToolChain());

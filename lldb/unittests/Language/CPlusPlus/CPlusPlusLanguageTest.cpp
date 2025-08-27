@@ -510,6 +510,14 @@ ManglingSubstitutorTestCase g_mangled_substitutor_structor_test_cases[] = {
      /*expected*/ "_ZN2D12C1D2I2C12D1EE2C12D1", /*expect_error*/ false},
     {/*.mangled*/ "_ZN3FooC6Ev", /*from*/ "D1", /*to*/ "D2", /*expected*/ "",
      /*expect_error*/ true},
+    {/*.mangled*/ "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
 };
 
 TEST_P(ManglingSubstitutorStructorTestFixture, Structors) {
@@ -577,11 +585,20 @@ TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
   }
 
   {
-    // Check that variants in other parts of the name don't get replaced.
+    // Check that ctor variants in other parts of the name don't get replaced.
     auto subst_or_err =
         CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
-            "_ZN2D12C1C1I2C12D1EE2C12D1");
+            "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
     EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
-    EXPECT_EQ(*subst_or_err, "_ZN2D12C1C2I2C12D1EE2C12D1");
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+  }
+
+  {
+    // Check that dtor variants in other parts of the name don't get replaced.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
   }
 }

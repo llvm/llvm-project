@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
 #include <array>
 #include <deque>
 #include <exception>

@@ -3229,9 +3229,11 @@ public:
   /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                                     ShuffleVectorInst *SVI,
-                                     unsigned Factor) const {
+                                     ShuffleVectorInst *SVI, unsigned Factor,
+                                     const APInt &GapMask) const {
     return false;
   }
 

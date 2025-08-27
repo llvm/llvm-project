@@ -418,3 +418,24 @@ func.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
   }
   return %result : i1
 }
+
+
+// CPP-DEFAULT: void expression_with_call_opaque_with_args_array(int32_t [[v1:v.+]], int32_t [[v2:v.+]]) {
+// CPP-DEFAULT-NEXT:   bool [[v3:v.+]] = f(([[v1]] < [[v2]]));
+// CPP-DEFAULT-NEXT:   return;
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP: void expression_with_call_opaque_with_args_array(int32_t [[v1:v.+]], int32_t [[v2:v.+]]) {
+// CPP-DECLTOP-NEXT:   bool [[v3:v.+]];
+// CPP-DECLTOP-NEXT:   [[v3]] = f(([[v1]] < [[v2]]));
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }
+
+emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
+  %2 = expression : i1 {
+    %3 = cmp lt, %0, %1 : (i32, i32) -> i1
+    %4 = emitc.call_opaque "f"(%3) {"args" = [0: index]} : (i1) -> i1
+    yield %4 : i1
+  }
+  return
+}
