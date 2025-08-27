@@ -4572,9 +4572,8 @@ static bool compareMachineOp(const MachineOperand &Op0,
   }
 }
 
-bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
+bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                                     const MachineOperand &MO) const {
-  const MCInstrDesc &InstDesc = MI.getDesc();
   const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
 
   assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
@@ -4586,9 +4585,9 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
     return false;
 
   if (MO.isImm() && isInlineConstant(MO, OpInfo)) {
-    if (isMAI(MI) && ST.hasMFMAInlineLiteralBug() &&
-        OpNo ==(unsigned)AMDGPU::getNamedOperandIdx(MI.getOpcode(),
-                                                    AMDGPU::OpName::src2))
+    if (isMAI(InstDesc) && ST.hasMFMAInlineLiteralBug() &&
+        OpNo == (unsigned)AMDGPU::getNamedOperandIdx(InstDesc.getOpcode(),
+                                                     AMDGPU::OpName::src2))
       return false;
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
   }
@@ -4596,7 +4595,7 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
 
-  if (!isVOP3(MI) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
+  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
     return true;
 
   return ST.hasVOP3Literal();
