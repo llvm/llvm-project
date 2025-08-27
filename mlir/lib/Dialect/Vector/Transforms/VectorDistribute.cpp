@@ -732,7 +732,7 @@ struct WarpOpStep final : public WarpDistributionPattern {
     const unsigned operandIdx = yieldOperand->getOperandNumber();
     auto stepOp = yieldOperand->get().getDefiningOp<vector::StepOp>();
     VectorType resTy = stepOp.getResult().getType();
-    if (resTy.getNumElements() != warpOp.getWarpSize())
+    if (resTy.getNumElements() != static_cast<int64_t>(warpOp.getWarpSize()))
       return rewriter.notifyMatchFailure(
           warpOp,
           llvm::formatv("Expected result size ({0}) to be of warp size ({1})",

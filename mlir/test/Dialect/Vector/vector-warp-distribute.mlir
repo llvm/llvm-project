@@ -1841,3 +1841,17 @@ func.func @warp_step_distribute(%laneid: index, %buffer: memref<128xindex>)  {
 //       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %arg0 : index to vector<1xindex>
 //       CHECK-PROP:   %[[LANE_STEP:.*]] = arith.addi %[[DISTRIBUTED_STEP]], %[[LANE_ID_VEC]] : vector<1xindex>
 //       CHECK-PROP:   vector.transfer_write %[[LANE_STEP]], %{{.*}} : vector<1xindex>, memref<128xindex>
+
+// -----
+
+func.func @negative_warp_step_distribute(%laneid: index, %buffer: memref<128xindex>)  {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xindex>) {
+    %seq = vector.step : vector<64xindex>
+    gpu.yield %seq : vector<64xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<2xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: @negative_warp_step_distribute
+// CHECK-PROP-NOT: vector.broadcast
