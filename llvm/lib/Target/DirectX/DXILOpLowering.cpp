@@ -252,7 +252,7 @@ public:
 
       // FIXME: The last argument is a NonUniform flag which needs to be set
       // based on resource analysis.
-      // TODO: add issue # for tracking
+      // https://github.com/llvm/llvm-project/issues/155701
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
@@ -302,7 +302,7 @@ public:
                                                Binding.Space, RC);
       // FIXME: The last argument is a NonUniform flag which needs to be set
       // based on resource analysis.
-      // TODO: add issue # for tracking
+      // https://github.com/llvm/llvm-project/issues/155701
       Constant *NonUniform = ConstantInt::get(Int1Ty, false);
       std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniform};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
