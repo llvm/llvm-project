@@ -939,7 +939,8 @@ struct PreservedCastFlags {
 // Try to cast C to InvC losslessly, satisfying CastOp(InvC) == C.
 // Will try best to preserve the flags.
 static Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
-                                    unsigned CastOp, const DataLayout &DL,
+                                    Instruction::CastOps CastOp,
+                                    const DataLayout &DL,
                                     PreservedCastFlags &Flags) {
   switch (CastOp) {
   case Instruction::BitCast:
