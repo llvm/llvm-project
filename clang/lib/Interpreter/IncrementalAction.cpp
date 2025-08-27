@@ -22,25 +22,25 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
-IncrementalAction::IncrementalAction(CompilerInstance &CI,
+IncrementalAction::IncrementalAction(CompilerInstance &Instance,
                                      llvm::LLVMContext &LLVMCtx,
                                      llvm::Error &Err, Interpreter &I,
                                      std::unique_ptr<ASTConsumer> Consumer)
     : WrapperFrontendAction([&]() {
         llvm::ErrorAsOutParameter EAO(&Err);
         std::unique_ptr<FrontendAction> Act;
-        switch (CI.getFrontendOpts().ProgramAction) {
+        switch (Instance.getFrontendOpts().ProgramAction) {
         default:
           Err = llvm::createStringError(
               std::errc::state_not_recoverable,
               "Driver initialization failed. "
               "Incremental mode for action %d is not supported",
-              CI.getFrontendOpts().ProgramAction);
+              Instance.getFrontendOpts().ProgramAction);
           return Act;
         case frontend::ASTDump:
         case frontend::ASTPrint:
         case frontend::ParseSyntaxOnly:
-          Act = CreateFrontendAction(CI);
+          Act = CreateFrontendAction(Instance);
           break;
         case frontend::PluginAction:
         case frontend::EmitAssembly:
@@ -53,12 +53,13 @@ IncrementalAction::IncrementalAction(CompilerInstance &CI,
         }
         return Act;
       }()),
-      Interp(I), CI(CI), Consumer(std::move(Consumer)) {}
+      Interp(I), CI(Instance), Consumer(std::move(Consumer)) {}
 
 std::unique_ptr<ASTConsumer>
-IncrementalAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
+                                     StringRef InFile) {
   std::unique_ptr<ASTConsumer> C =
-      WrapperFrontendAction::CreateASTConsumer(CI, InFile);
+      WrapperFrontendAction::CreateASTConsumer(this->CI, InFile);
 
   if (Consumer) {
     std::vector<std::unique_ptr<ASTConsumer>> Cs;

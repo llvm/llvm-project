@@ -142,7 +142,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
       for (VPValue *Op : Recipe.operands())
         if (auto *Def =
                 dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
-          WorkList.insert(std::make_pair(VPBB, Def));
+          WorkList.insert({VPBB, Def});
     }
   }
 
@@ -206,7 +206,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
     for (VPValue *Op : SinkCandidate->operands())
       if (auto *Def =
               dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
-        WorkList.insert(std::make_pair(SinkTo, Def));
+        WorkList.insert({SinkTo, Def});
     Changed = true;
   }
   return Changed;
@@ -910,10 +910,10 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
     if (!ExpR)
       continue;
 
-    auto I = SCEV2VPV.insert({ExpR->getSCEV(), ExpR});
-    if (I.second)
+    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR->getSCEV(), ExpR);
+    if (Inserted)
       continue;
-    ExpR->replaceAllUsesWith(I.first->second);
+    ExpR->replaceAllUsesWith(V->second);
     ExpR->eraseFromParent();
   }
 }
@@ -3525,6 +3525,21 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
       Plan.resetTripCount(Exp);
     ExpSCEV->eraseFromParent();
   }
+  assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
+         "VPExpandSCEVRecipes must be at the beginning of the entry block, "
+         "after any VPIRInstructions");
+  // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
+  // to the VPIRBasicBlock.
+  auto EI = Entry->begin();
+  for (Instruction &I : drop_end(*EntryBB)) {
+    if (EI != Entry->end() && isa<VPIRInstruction>(*EI) &&
+        &cast<VPIRInstruction>(&*EI)->getInstruction() == &I) {
+      EI++;
+      continue;
+    }
+    VPIRInstruction::create(I)->insertBefore(*Entry, EI);
+  }
+
   return ExpandedSCEVs;
 }
 

@@ -8193,6 +8193,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
               DL, VT, LHS, DAG.getSignedConstant(Imm + 1, DL, OpVT), CCVal);
           return DAG.getLogicalNOT(DL, SetCC, VT);
         }
+        // Lower (setugt X, 2047) as (setne (srl X, 11), 0).
+        if (CCVal == ISD::SETUGT && Imm == 2047) {
+          SDValue Shift = DAG.getNode(ISD::SRL, DL, OpVT, LHS,
+                                      DAG.getShiftAmountConstant(11, OpVT, DL));
+          return DAG.getSetCC(DL, VT, Shift, DAG.getConstant(0, DL, OpVT),
+                              ISD::SETNE);
+        }
       }
 
       // Not a constant we could handle, swap the operands and condition code to

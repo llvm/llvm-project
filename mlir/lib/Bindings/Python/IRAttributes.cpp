@@ -505,7 +505,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](nb::list attributes, DefaultingPyMlirContext context) {
+        [](const nb::list &attributes, DefaultingPyMlirContext context) {
           SmallVector<MlirAttribute> mlirAttributes;
           mlirAttributes.reserve(nb::len(attributes));
           for (auto attribute : attributes) {
@@ -530,7 +530,7 @@ public:
         .def("__iter__", [](const PyArrayAttribute &arr) {
           return PyArrayAttributeIterator(arr);
         });
-    c.def("__add__", [](PyArrayAttribute arr, nb::list extras) {
+    c.def("__add__", [](PyArrayAttribute arr, const nb::list &extras) {
       std::vector<MlirAttribute> attributes;
       intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
       attributes.reserve(numOldElements + nb::len(extras));
@@ -708,7 +708,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::string value, DefaultingPyMlirContext context) {
+        [](const std::string &value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
               mlirFlatSymbolRefAttrGet(context->get(), toMlirStringRef(value));
           return PyFlatSymbolRefAttribute(context->getRef(), attr);
@@ -736,8 +736,8 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::string dialectNamespace, nb_buffer buffer, PyType &type,
-           DefaultingPyMlirContext context) {
+        [](const std::string &dialectNamespace, const nb_buffer &buffer,
+           PyType &type, DefaultingPyMlirContext context) {
           const nb_buffer_info bufferInfo = buffer.request();
           intptr_t bufferSize = bufferInfo.size;
           MlirAttribute attr = mlirOpaqueAttrGet(
@@ -775,7 +775,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::string value, DefaultingPyMlirContext context) {
+        [](const std::string &value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
               mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
@@ -784,7 +784,7 @@ public:
         "Gets a uniqued string attribute");
     c.def_static(
         "get",
-        [](nb::bytes value, DefaultingPyMlirContext context) {
+        [](const nb::bytes &value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
               mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
@@ -793,7 +793,7 @@ public:
         "Gets a uniqued string attribute");
     c.def_static(
         "get_typed",
-        [](PyType &type, std::string value) {
+        [](PyType &type, const std::string &value) {
           MlirAttribute attr =
               mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
@@ -826,7 +826,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
-  getFromList(nb::list attributes, std::optional<PyType> explicitType,
+  getFromList(const nb::list &attributes, std::optional<PyType> explicitType,
               DefaultingPyMlirContext contextWrapper) {
     const size_t numAttributes = nb::len(attributes);
     if (numAttributes == 0)
@@ -878,8 +878,8 @@ public:
   }
 
   static PyDenseElementsAttribute
-  getFromBuffer(nb_buffer array, bool signless,
-                std::optional<PyType> explicitType,
+  getFromBuffer(const nb_buffer &array, bool signless,
+                const std::optional<PyType> &explicitType,
                 std::optional<std::vector<int64_t>> explicitShape,
                 DefaultingPyMlirContext contextWrapper) {
     // Request a contiguous view. In exotic cases, this will cause a copy.
@@ -894,8 +894,8 @@ public:
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
 
     MlirContext context = contextWrapper->get();
-    MlirAttribute attr = getAttributeFromBuffer(view, signless, explicitType,
-                                                explicitShape, context);
+    MlirAttribute attr = getAttributeFromBuffer(
+        view, signless, explicitType, std::move(explicitShape), context);
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseElementsAttr could not be constructed from the given buffer. "
@@ -1100,7 +1100,8 @@ private:
 
   static MlirAttribute getAttributeFromBuffer(
       Py_buffer &view, bool signless, std::optional<PyType> explicitType,
-      std::optional<std::vector<int64_t>> explicitShape, MlirContext &context) {
+      const std::optional<std::vector<int64_t>> &explicitShape,
+      MlirContext &context) {
     // Detect format codes that are suitable for bulk loading. This includes
     // all byte aligned integer and floating point types up to 8 bytes.
     // Notably, this excludes exotics types which do not have a direct
@@ -1204,8 +1205,8 @@ private:
         packbitsFunc(nb::cast(unpackedArray), "bitorder"_a = "little");
     nb_buffer_info pythonBuffer = nb::cast<nb_buffer>(packedBooleans).request();
 
-    MlirType bitpackedType =
-        getShapedType(mlirIntegerTypeGet(context, 1), explicitShape, view);
+    MlirType bitpackedType = getShapedType(mlirIntegerTypeGet(context, 1),
+                                           std::move(explicitShape), view);
     assert(pythonBuffer.itemsize == 1 && "Packbits must return uint8");
     // Notice that `mlirDenseElementsAttrRawBufferGet` copies the memory of
     // packedBooleans, hence the MlirAttribute will remain valid even when
@@ -1442,9 +1443,9 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseResourceElementsAttribute
-  getFromBuffer(nb_buffer buffer, const std::string &name, const PyType &type,
-                std::optional<size_t> alignment, bool isMutable,
-                DefaultingPyMlirContext contextWrapper) {
+  getFromBuffer(const nb_buffer &buffer, const std::string &name,
+                const PyType &type, std::optional<size_t> alignment,
+                bool isMutable, DefaultingPyMlirContext contextWrapper) {
     if (!mlirTypeIsAShaped(type)) {
       throw std::invalid_argument(
           "Constructing a DenseResourceElementsAttr requires a ShapedType.");
@@ -1533,7 +1534,7 @@ public:
     c.def("__len__", &PyDictAttribute::dunderLen);
     c.def_static(
         "get",
-        [](nb::dict attributes, DefaultingPyMlirContext context) {
+        [](const nb::dict &attributes, DefaultingPyMlirContext context) {
           SmallVector<MlirNamedAttribute> mlirNamedAttributes;
           mlirNamedAttributes.reserve(attributes.size());
           for (std::pair<nb::handle, nb::handle> it : attributes) {
@@ -1617,7 +1618,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyType value, DefaultingPyMlirContext context) {
+        [](const PyType &value, DefaultingPyMlirContext context) {
           MlirAttribute attr = mlirTypeAttrGet(value.get());
           return PyTypeAttribute(context->getRef(), attr);
         },
@@ -1662,7 +1663,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](int64_t offset, const std::vector<int64_t> strides,
+        [](int64_t offset, const std::vector<int64_t> &strides,
            DefaultingPyMlirContext ctx) {
           MlirAttribute attr = mlirStridedLayoutAttrGet(
               ctx->get(), offset, strides.size(), strides.data());
