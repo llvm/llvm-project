@@ -93,6 +93,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
@@ -848,6 +849,12 @@ void llvm::updateVCallVisibilityInModule(
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
+
+  // Manually assign GUIDs -- updateVCallVisibilityInModule accesses GUIDs, and
+  // there's no way to specify it in the pass pipeline since this runs before
+  // any pass given on the command line.
+  AssignGUIDPass::runOnModule(M);
+
   for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility

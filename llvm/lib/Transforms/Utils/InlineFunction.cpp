@@ -2375,7 +2375,7 @@ llvm::InlineResult llvm::InlineFunction(
   // Get some preliminary data about the callsite before it might get inlined.
   // Inlining shouldn't delete the callee, but it's cleaner (and low-cost) to
   // get this data upfront and rely less on InlineFunction's behavior.
-  const auto CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const auto CalleeGUID = Callee.getGUID();
   auto *CallsiteIDIns = CtxProfAnalysis::getCallsiteInstrumentation(CB);
   const auto CallsiteID =
       static_cast<uint32_t>(CallsiteIDIns->getIndex()->getZExtValue());
@@ -2400,7 +2400,7 @@ llvm::InlineResult llvm::InlineFunction(
   const uint32_t NewCountersSize = CtxProf.getNumCounters(Caller);
 
   auto Updater = [&](PGOCtxProfContext &Ctx) {
-    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(Ctx.guid() == Caller.getGUID());
     const auto &[CalleeCounterMap, CalleeCallsiteMap] = IndicesMaps;
     assert(
         (Ctx.counters().size() +
