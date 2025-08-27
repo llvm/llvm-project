@@ -239,7 +239,7 @@ struct TestXeGPULayoutInterface
 
     ConversionTarget target(*ctx);
     auto isLegal = [&](xegpu::SliceAttr layout) -> bool {
-      return !layout || !layout.hasSgLayout();
+      return !layout || !layout.isForWorkgroup();
     };
 
     target.addDynamicallyLegalOp<vector::StepOp>(

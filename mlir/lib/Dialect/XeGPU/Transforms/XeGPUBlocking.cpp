@@ -208,13 +208,13 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(opr);
-        return layout && layout.hasSgLayout();
+        return layout && layout.isForWorkgroup();
       });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(result);
-        return layout && layout.hasSgLayout();
+        return layout && layout.isForWorkgroup();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
     LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
@@ -277,7 +277,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
         auto layout =
             llvm::dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
-        if (layout && layout.hasSgLayout())
+        if (layout && layout.isForWorkgroup())
           return failure();
 
         int count;
@@ -294,7 +294,7 @@ void XeGPUBlockingPass::runOnOperation() {
         ArrayRef<int64_t> shape = type.getShape();
 
         xegpu::LayoutAttr layout = type.getLayoutAttr();
-        if (layout && layout.hasSgLayout())
+        if (layout && layout.isForWorkgroup())
           return failure();
 
         int count;
