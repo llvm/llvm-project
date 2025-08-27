@@ -16,6 +16,7 @@ class SILowerWWMCopiesPass : public PassInfoMixin<SILowerWWMCopiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
