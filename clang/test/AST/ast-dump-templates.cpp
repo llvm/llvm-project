@@ -8170,7 +8170,7 @@ namespace GH153540 {
 // JSON-NEXT:              "tokLen": 1
 // JSON-NEXT:             }
 // JSON-NEXT:            },
-// JSON-NEXT:            "name": "GH153540::N::S<T>",
+// JSON-NEXT:            "name": "S<T>",
 // JSON-NEXT:            "type": {
 // JSON-NEXT:             "qualType": "void (T)"
 // JSON-NEXT:            },
