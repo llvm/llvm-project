@@ -321,9 +321,7 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
     if supported_isa_versions:
         return supported_isa_versions
     if major_version >= 13:
-        raise RuntimeError(
-            f"ptxas {ptxas} does not support ISA version listing"
-        )
+        raise RuntimeError(f"ptxas {ptxas} does not support ISA version listing")
 
     cuda_version_to_isa_version = {
         (12, 9): [(8, 8)],
@@ -421,7 +419,9 @@ def enable_ptxas(ptxas_executable):
     major_version, minor_version = ptxas_version(ptxas_executable)
     config.available_features.add(f"ptxas-{major_version}.{minor_version}")
 
-    for major, minor in ptxas_supported_isa_versions(ptxas_executable, major_version, minor_version):
+    for major, minor in ptxas_supported_isa_versions(
+        ptxas_executable, major_version, minor_version
+    ):
         config.available_features.add(f"ptxas-isa-{major}.{minor}")
 
     for sm in ptxas_supported_sms(ptxas_executable):
