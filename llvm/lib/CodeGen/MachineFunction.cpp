@@ -326,13 +326,14 @@ bool MachineFunction::shouldSplitStack() const {
 }
 
 Align MachineFunction::getPreferredAlignment() const {
-  Align PrefAlignment = Align(1);
-
-  if (!F.hasOptSize())
-    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
+  Align PrefAlignment;
 
   if (MaybeAlign A = F.getPreferredAlignment())
     PrefAlignment = *A;
+  else if (!F.hasOptSize())
+    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
+  else
+    PrefAlignment = Align(1);
   
   return std::max(PrefAlignment, getAlignment());
 }
