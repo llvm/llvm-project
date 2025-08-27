@@ -471,6 +471,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["setprio-inc-wg-inst"] = true;
       Features["atomic-fmin-fmax-global-f32"] = true;
       Features["atomic-fmin-fmax-global-f64"] = true;
+      Features["wavefrontsize32"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:
@@ -638,6 +639,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gws"] = true;
       Features["vmem-to-lds-load-insts"] = true;
       Features["atomic-fmin-fmax-global-f64"] = true;
+      Features["wavefrontsize64"] = true;
       break;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
@@ -681,6 +683,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["wavefrontsize64"] = true;
       break;
     case GK_GFX705:
     case GK_GFX704:
@@ -698,6 +701,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gws"] = true;
       Features["atomic-fmin-fmax-global-f32"] = true;
       Features["atomic-fmin-fmax-global-f64"] = true;
+      Features["wavefrontsize64"] = true;
       break;
     case GK_NONE:
       break;
@@ -734,68 +738,37 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   }
 }
 
-static bool isWave32Capable(StringRef GPU, const Triple &T) {
-  bool IsWave32Capable = false;
-  // XXX - What does the member GPU mean if device name string passed here?
-  if (T.isAMDGCN()) {
-    switch (parseArchAMDGCN(GPU)) {
-    case GK_GFX1250:
-    case GK_GFX1201:
-    case GK_GFX1200:
-    case GK_GFX1153:
-    case GK_GFX1152:
-    case GK_GFX1151:
-    case GK_GFX1150:
-    case GK_GFX1103:
-    case GK_GFX1102:
-    case GK_GFX1101:
-    case GK_GFX1100:
-    case GK_GFX1036:
-    case GK_GFX1035:
-    case GK_GFX1034:
-    case GK_GFX1033:
-    case GK_GFX1032:
-    case GK_GFX1031:
-    case GK_GFX1030:
-    case GK_GFX1012:
-    case GK_GFX1011:
-    case GK_GFX1013:
-    case GK_GFX1010:
-    case GK_GFX12_GENERIC:
-    case GK_GFX11_GENERIC:
-    case GK_GFX10_3_GENERIC:
-    case GK_GFX10_1_GENERIC:
-      IsWave32Capable = true;
-      break;
-    default:
-      break;
-    }
-  }
-  return IsWave32Capable;
-}
-
 std::pair<FeatureError, StringRef>
 AMDGPU::insertWaveSizeFeature(StringRef GPU, const Triple &T,
                               StringMap<bool> &Features) {
-  bool IsWave32Capable = isWave32Capable(GPU, T);
+  StringMap<bool> DefaultFeatures;
+  fillAMDGPUFeatureMap(GPU, T, DefaultFeatures);
+
   const bool IsNullGPU = GPU.empty();
+  const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
+  const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
   const bool HaveWave32 = Features.count("wavefrontsize32");
   const bool HaveWave64 = Features.count("wavefrontsize64");
   if (HaveWave32 && HaveWave64) {
     return {AMDGPU::INVALID_FEATURE_COMBINATION,
             "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive"};
   }
-  if (HaveWave32 && !IsNullGPU && !IsWave32Capable) {
+  if (HaveWave32 && !IsNullGPU && TargetHasWave64) {
     return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize32"};
   }
-  // Don't assume any wavesize with an unknown subtarget.
-  if (!IsNullGPU) {
-    // Default to wave32 if available, or wave64 if not
-    if (!HaveWave32 && !HaveWave64) {
-      StringRef DefaultWaveSizeFeature =
-          IsWave32Capable ? "wavefrontsize32" : "wavefrontsize64";
-      Features.insert(std::make_pair(DefaultWaveSizeFeature, true));
-    }
+  if (HaveWave64 && !IsNullGPU && TargetHasWave32) {
+    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize64"};
   }
+  // Don't assume any wavesize with an unknown subtarget.
+  // Default to wave32 if target supports both.
+  if (!IsNullGPU && !HaveWave32 && !HaveWave64 && !TargetHasWave32 &&
+      !TargetHasWave64)
+    Features.insert(std::make_pair("wavefrontsize32", true));
+
+  for (const auto &Entry : DefaultFeatures) {
+    if (!Features.count(Entry.getKey()))
+      Features[Entry.getKey()] = Entry.getValue();
+  }
+
   return {NO_ERROR, StringRef()};
 }
