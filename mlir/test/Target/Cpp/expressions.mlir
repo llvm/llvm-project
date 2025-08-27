@@ -458,3 +458,29 @@ emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
   }
   return
 }
+
+
+// CPP-DEFAULT:      bool expression_with_literal(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   bool [[VAL_2:v[0-9]+]] = (1 + [[VAL_1]]) / 2 < 3;
+// CPP-DEFAULT-NEXT:   return [[VAL_2]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      bool expression_with_literal(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   bool [[VAL_2:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]] = (1 + [[VAL_1]]) / 2 < 3;
+// CPP-DECLTOP-NEXT:   return [[VAL_2]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @expression_with_literal(%arg0 : i32) -> i1 {
+  %ret = emitc.expression noinline : i1 {
+    %literal1 = emitc.literal "1" : i32
+    %literal2 = emitc.literal "2" : i32
+    %add = add %literal1, %arg0 : (i32, i32) -> i32
+    %div = div %add, %literal2 : (i32, i32) -> i32
+    %literal3 = emitc.literal "3" : i32
+    %f = emitc.cmp lt, %div, %literal3 :(i32, i32) -> i1
+    emitc.yield %f : i1
+  }
+
+  return %ret : i1
+}
