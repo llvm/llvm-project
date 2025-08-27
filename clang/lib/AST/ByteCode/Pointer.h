@@ -341,6 +341,8 @@ public:
   QualType getType() const {
     if (isTypeidPointer())
       return QualType(Typeid.TypeInfoType, 0);
+    if (isFunctionPointer())
+      return asFunctionPointer().getFunction()->getDecl()->getType();
 
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
       // Unfortunately, complex and vector types are not array types in clang,
@@ -647,7 +649,7 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isPastEnd() || (getSize() == getOffset() && !isZeroSizeArray());
+    return isPastEnd() || (getSize() == getOffset());
   }
 
   /// Checks if the pointer points past the end of the object.

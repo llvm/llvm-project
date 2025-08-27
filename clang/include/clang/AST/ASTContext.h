@@ -230,6 +230,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
+  mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
+      SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
   mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
@@ -1895,6 +1897,7 @@ public:
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
+  QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
   getTemplateTypeParmType(unsigned Depth, unsigned Index,

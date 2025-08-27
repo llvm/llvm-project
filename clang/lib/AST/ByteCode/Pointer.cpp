@@ -231,7 +231,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     UsePath = false;
 
   // Build the path into the object.
-  bool OnePastEnd = isOnePastEnd();
+  bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -278,10 +278,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Ptr = Ptr.getArray();
     } else {
       const Descriptor *Desc = Ptr.getFieldDesc();
-      bool IsVirtual = false;
 
       // Create a path entry for the field.
       if (const auto *BaseOrMember = Desc->asDecl()) {
+        bool IsVirtual = false;
         if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
           Ptr = Ptr.getBase();
           Offset += getFieldOffset(FD);

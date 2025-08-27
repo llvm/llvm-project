@@ -300,6 +300,20 @@ def CIR_ConstantOp : CIR_Op<"const", [
 }
 
 //===----------------------------------------------------------------------===//
+// C/C++ memory order definitions
+//===----------------------------------------------------------------------===//
+
+def CIR_MemOrder : CIR_I32EnumAttr<
+  "MemOrder", "Memory order according to C++11 memory model", [
+    I32EnumAttrCase<"Relaxed", 0, "relaxed">,
+    I32EnumAttrCase<"Consume", 1, "consume">,
+    I32EnumAttrCase<"Acquire", 2, "acquire">,
+    I32EnumAttrCase<"Release", 3, "release">,
+    I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">,
+    I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">
+]>;
+
+//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -408,13 +422,14 @@ def CIR_LoadOp : CIR_Op<"load", [
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
-                       OptionalAttr<I64Attr>:$alignment
-                       );
+                       OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`align` `(` $alignment^ `)`)?
+    (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -451,10 +466,12 @@ def CIR_StoreOp : CIR_Op<"store", [
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
-                           OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<I64Attr>:$alignment,
+                       OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
+    (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -1702,12 +1719,14 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
+                       UnitAttr:$constant,
                        UnitAttr:$dso_local,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
     (`` $global_visibility^)?
+    (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
     (`dso_local` $dso_local^)?
@@ -1726,6 +1745,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
   let builders = [OpBuilder<(ins
     "llvm::StringRef":$sym_name,
     "mlir::Type":$sym_type,
+    CArg<"bool", "false">:$isConstant,
     // CIR defaults to external linkage.
     CArg<"cir::GlobalLinkageKind",
     "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
@@ -3165,7 +3185,7 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp
+// ComplexMulOp & ComplexDivOp
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32EnumAttr<
@@ -3184,18 +3204,61 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    Range is used to select the implementation used when the operation
-    is lowered to the LLVM dialect. For multiplication, 'improved',
-    'promoted', and 'basic' are all handled equivalently, producing the
-    algebraic formula with no special handling for NaN value. If 'full' is
-    used, a runtime-library function is called if one of the intermediate
-    calculations produced a NaN value.
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
+    are all handled equivalently, producing the algebraic formula with no
+    special handling for NaN value. If 'full' is used, a runtime-library
+    function is called if one of the intermediate calculations produced
+    a NaN value.
 
     Example:
 
     ```mlir
     %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexDivOp : CIR_Op<"complex.div", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex division";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
+    Complex division with no additional handling for NaN values. If 'promoted'
+    is used, the values are promoted to a higher precision type, if possible,
+    and the calculation is performed using the algebraic formula, with
+    no additional handling for NaN values. We fall back on Smith's algorithm
+    when the target doesn't support a higher precision type. If 'full' is used,
+    a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value. and for 'basic' algebraic formula with
+    no additional handling for the NaN value will be used. For integers types
+    `range` attribute will be ignored.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 
@@ -3693,6 +3756,47 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VAArgOp : CIR_Op<"va_arg"> {
+  let summary = "Fetches next variadic element as a given type";
+  let description = [{
+    The `cir.va_arg` operation models the C/C++ `va_arg` macro by reading the
+    next argument from an active variable argument list and producing it as a
+    value of a specified result type.
+
+    The operand must be a pointer to the target's `va_list` representation.
+    The operation advances the `va_list` state as a side effect and returns
+    the fetched value as the result, whose type is chosen by the user of the
+    operation.
+
+    A `cir.va_arg` must only be used on a `va_list` that has been initialized
+    with `cir.va.start` and not yet finalized by `cir.va.end`. The semantics
+    (including alignment and promotion rules) follow the platform ABI; the
+    frontend is responsible for providing a `va_list` pointer that matches the
+    target representation.
+
+    Example:
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast(array_to_ptrdecay, %args
+            : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>),
+          !cir.ptr<!rec___va_list_tag>
+    cir.va.start %p : !cir.ptr<!rec___va_list_tag>
+
+    // Fetch an `int` from the vararg list.
+    %v = cir.va_arg %p : (!cir.ptr<!rec___va_list_tag>) -> !s32i
+
+    cir.va.end %p : !cir.ptr<!rec___va_list_tag>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$arg_list);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $arg_list attr-dict `:` functional-type(operands, $result)
   }];
 }
 

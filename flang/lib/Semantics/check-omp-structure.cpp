@@ -20,6 +20,7 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -57,6 +58,7 @@
 namespace Fortran::semantics {
 
 using namespace Fortran::semantics::omp;
+using namespace Fortran::parser::omp;
 
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
@@ -1182,6 +1184,53 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 void OmpStructureChecker::Enter(const parser::OpenMPGroupprivate &x) {
   PushContextAndClauseSets(
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
+    const Symbol *sym{GetArgumentSymbol(arg)};
+
+    if (!locator || !sym ||
+        (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
+      context_.Say(arg.source,
+          "GROUPPRIVATE argument should be a variable or a named common block"_err_en_US);
+      continue;
+    }
+
+    if (sym->has<AssocEntityDetails>()) {
+      context_.SayWithDecl(*sym, arg.source,
+          "GROUPPRIVATE argument cannot be an ASSOCIATE name"_err_en_US);
+      continue;
+    }
+    if (auto *obj{sym->detailsIf<ObjectEntityDetails>()}) {
+      if (obj->IsCoarray()) {
+        context_.Say(
+            arg.source, "GROUPPRIVATE argument cannot be a coarray"_err_en_US);
+        continue;
+      }
+      if (obj->init()) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument cannot be declared with an initializer"_err_en_US);
+        continue;
+      }
+    }
+    if (sym->test(Symbol::Flag::InCommonBlock)) {
+      context_.Say(arg.source,
+          "GROUPPRIVATE argument cannot be a member of a common block"_err_en_US);
+      continue;
+    }
+    if (!IsCommonBlock(*sym)) {
+      const Scope &thisScope{context_.FindScope(x.v.source)};
+      if (thisScope != sym->owner()) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument variable must be declared in the same scope as the construct on which it appears"_err_en_US);
+        continue;
+      } else if (!thisScope.IsModule() && !sym->attrs().test(Attr::SAVE)) {
+        context_.SayWithDecl(*sym, arg.source,
+            "GROUPPRIVATE argument variable must be declared in the module scope or have SAVE attribute"_err_en_US);
+        continue;
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
@@ -4538,42 +4587,6 @@ struct NameHelper {
 const parser::Name *OmpStructureChecker::GetObjectName(
     const parser::OmpObject &object) {
   return NameHelper::Visit(object);
-}
-
-const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
-    const parser::OmpClause &clause) {
-
-  // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses =
-      std::tuple<parser::OmpClause::Copyprivate, parser::OmpClause::Copyin,
-          parser::OmpClause::Firstprivate, parser::OmpClause::Link,
-          parser::OmpClause::Private, parser::OmpClause::Shared,
-          parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
-
-  // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses =
-      std::tuple<parser::OmpClause::Aligned, parser::OmpClause::Allocate,
-          parser::OmpClause::From, parser::OmpClause::Lastprivate,
-          parser::OmpClause::Map, parser::OmpClause::Reduction,
-          parser::OmpClause::To, parser::OmpClause::Enter>;
-
-  // TODO:: Generate the tuples using TableGen.
-  // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.
-  return common::visit(
-      common::visitors{
-          [&](const auto &x) -> const parser::OmpObjectList * {
-            using Ty = std::decay_t<decltype(x)>;
-            if constexpr (common::HasMember<Ty, MemberObjectListClauses>) {
-              return &x.v;
-            } else if constexpr (common::HasMember<Ty,
-                                     TupleObjectListClauses>) {
-              return &(std::get<parser::OmpObjectList>(x.v.t));
-            } else {
-              return nullptr;
-            }
-          },
-      },
-      clause.u);
 }
 
 void OmpStructureChecker::Enter(

@@ -21341,20 +21341,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
-Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
-    // MSVC CRT has a global variable holding security cookie.
-    //
-    // FIXME: We have a libcall entry for the correlated check function, but not
-    // the global name.
-    return M.getGlobalVariable("__security_cookie");
-  }
-
-  return TargetLowering::getSDagStackGuard(M);
-}
-
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
   RTLIB::LibcallImpl SecurityCheckCookie =

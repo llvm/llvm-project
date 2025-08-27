@@ -544,9 +544,9 @@ ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
     if (!thread_extended_info->ForEach(extract_frame_pc))
       return {};
 
-    originating_thread_sp =
-        std::make_shared<HistoryThread>(*m_process, real_thread->GetIndexID(),
-                                        app_specific_backtrace_pcs, true);
+    originating_thread_sp = std::make_shared<HistoryThread>(
+        *m_process, real_thread->GetIndexID(), app_specific_backtrace_pcs,
+        HistoryPCType::Calls);
     originating_thread_sp->SetQueueName(type.AsCString());
   }
   return originating_thread_sp;

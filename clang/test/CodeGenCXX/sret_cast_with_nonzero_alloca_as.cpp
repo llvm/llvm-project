@@ -10,16 +10,15 @@ struct X { int z[17]; };
 // CHECK-NEXT:    [[Y_ADDR:%.*]] = alloca i8, align 1, addrspace(5)
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    [[Y_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[Y_ADDR]] to ptr
+// CHECK-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
 // CHECK-NEXT:    store i8 [[X]], ptr [[X_ADDR_ASCAST]], align 1
 // CHECK-NEXT:    store i8 [[Y]], ptr [[Y_ADDR_ASCAST]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[AGG_RESULT_ASCAST]], i64 1
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[ADD_PTR]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[Y_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    [[AGG_RESULT_ASCAST1:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
-// CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, ptr [[AGG_RESULT_ASCAST1]], i64 2
-// CHECK-NEXT:    store i8 [[TMP1]], ptr [[ADD_PTR2]], align 1
+// CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i8, ptr [[AGG_RESULT_ASCAST]], i64 2
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[ADD_PTR1]], align 1
 // CHECK-NEXT:    ret void
 //
 X foo(char x, char y) {

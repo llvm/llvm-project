@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -345,6 +346,21 @@ private:
           thisT()->getDataLayout().getABITypeAlign(VectorTy), 0, CostKind);
     }
     return Cost;
+  }
+
+  /// Filter out constant and duplicated entries in \p Ops and return a vector
+  /// containing the types from \p Tys corresponding to the remaining operands.
+  static SmallVector<Type *, 4>
+  filterConstantAndDuplicatedOperands(ArrayRef<const Value *> Ops,
+                                      ArrayRef<Type *> Tys) {
+    SmallPtrSet<const Value *, 4> UniqueOperands;
+    SmallVector<Type *, 4> FilteredTys;
+    for (const auto &[Op, Ty] : zip_equal(Ops, Tys)) {
+      if (isa<Constant>(Op) || !UniqueOperands.insert(Op).second)
+        continue;
+      FilteredTys.push_back(Ty);
+    }
+    return FilteredTys;
   }
 
 protected:
@@ -935,29 +951,21 @@ public:
                                              CostKind);
   }
 
-  /// Estimate the overhead of scalarizing an instructions unique
-  /// non-constant operands. The (potentially vector) types to use for each of
+  /// Estimate the overhead of scalarizing an instruction's
+  /// operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
   InstructionCost getOperandsScalarizationOverhead(
-      ArrayRef<const Value *> Args, ArrayRef<Type *> Tys,
-      TTI::TargetCostKind CostKind) const override {
-    assert(Args.size() == Tys.size() && "Expected matching Args and Tys");
-
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const override {
     InstructionCost Cost = 0;
-    SmallPtrSet<const Value*, 4> UniqueOperands;
-    for (int I = 0, E = Args.size(); I != E; I++) {
+    for (Type *Ty : Tys) {
       // Disregard things like metadata arguments.
-      const Value *A = Args[I];
-      Type *Ty = Tys[I];
       if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy() &&
           !Ty->isPtrOrPtrVectorTy())
         continue;
 
-      if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
-        if (auto *VecTy = dyn_cast<VectorType>(Ty))
-          Cost += getScalarizationOverhead(VecTy, /*Insert*/ false,
-                                           /*Extract*/ true, CostKind);
-      }
+      if (auto *VecTy = dyn_cast<VectorType>(Ty))
+        Cost += getScalarizationOverhead(VecTy, /*Insert*/ false,
+                                         /*Extract*/ true, CostKind);
     }
 
     return Cost;
@@ -974,7 +982,8 @@ public:
     InstructionCost Cost = getScalarizationOverhead(
         RetTy, /*Insert*/ true, /*Extract*/ false, CostKind);
     if (!Args.empty())
-      Cost += getOperandsScalarizationOverhead(Args, Tys, CostKind);
+      Cost += getOperandsScalarizationOverhead(
+          filterConstantAndDuplicatedOperands(Args, Tys), CostKind);
     else
       // When no information on arguments is provided, we add the cost
       // associated with one argument as a heuristic.
@@ -2170,8 +2179,9 @@ public:
               /*Insert=*/true, /*Extract=*/false, CostKind);
         }
       }
-      ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, ICA.getArgTypes(), CostKind);
+      ScalarizationCost += getOperandsScalarizationOverhead(
+          filterConstantAndDuplicatedOperands(Args, ICA.getArgTypes()),
+          CostKind);
     }
 
     IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,

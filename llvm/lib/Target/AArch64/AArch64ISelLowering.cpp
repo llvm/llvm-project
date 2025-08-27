@@ -1121,7 +1121,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
 
-  // We combine OR nodes for bitfield operations.
+  // We combine OR nodes for ccmp operations.
   setTargetDAGCombine(ISD::OR);
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
@@ -1770,7 +1770,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
-      if (Subtarget->hasSVEB16B16()) {
+      if (Subtarget->hasSVEB16B16() &&
+          Subtarget->isNonStreamingSVEorSME2Available()) {
         setOperationAction(ISD::FADD, VT, Legal);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -1792,7 +1793,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
     }
 
-    if (!Subtarget->hasSVEB16B16()) {
+    if (!Subtarget->hasSVEB16B16() ||
+        !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
                           ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
         setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
@@ -9515,17 +9517,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
-                          DAG.getVTList(MVT::Other, MVT::Glue), Chain);
-      InGlue = Chain.getValue(1);
-    }
-
-    SDValue NewChain =
+    Chain =
         changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
                             Chain, InGlue, getSMToggleCondition(CallAttrs));
-    Chain = NewChain.getValue(0);
-    InGlue = NewChain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
@@ -9710,13 +9705,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
         getSMToggleCondition(CallAttrs));
-
-    if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
-      InGlue = Result.getValue(1);
-      Result =
-          DAG.getNode(AArch64ISD::VG_RESTORE, DL,
-                      DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
-    }
   }
 
   if (RequiresLazySave || CallAttrs.requiresEnablingZAAfterCall())
@@ -14811,21 +14799,13 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
-static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
+static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
+  assert(VT.isVector() && "Expected vector type in tryLowerToBSL\n");
   SDLoc DL(N);
   const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
-  if (!VT.isVector())
-    return SDValue();
-
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
-    return SDValue();
-
-  if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14877,14 +14857,13 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // We only have to look for constant vectors here since the general, variable
   // case can be handled in TableGen.
   unsigned Bits = VT.getScalarSizeInBits();
-  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
   for (int i = 1; i >= 0; --i)
     for (int j = 1; j >= 0; --j) {
       APInt Val1, Val2;
 
       if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
           ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
-          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+          ~Val1.trunc(Bits) == Val2.trunc(Bits)) {
         return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
       }
@@ -14898,7 +14877,8 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
         ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
         if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+            CN0->getAPIntValue().trunc(Bits) !=
+                ~CN1->getAsAPIntVal().trunc(Bits)) {
           FoundMatch = false;
           break;
         }
@@ -14916,6 +14896,9 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
+
+  if (SDValue Res = tryLowerToBSL(Op, DAG))
+    return Res;
 
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
   if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
@@ -18161,7 +18144,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return true;
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16() &&
+           Subtarget->isNonStreamingSVEorSME2Available();
   default:
     break;
   }
@@ -18325,7 +18309,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, BitSize))
     return true;
 
-  if ((int64_t)Val < 0)
+  if (Val < 0)
     Val = ~Val;
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
@@ -19669,16 +19653,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
-
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
-    return Res;
 
   return SDValue();
 }
@@ -28709,9 +28686,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
@@ -28726,13 +28707,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
     return;
   }
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *AArch64TargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getGlobalVariable("__security_cookie");
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {

@@ -983,19 +983,13 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
-  // Check to see if opcode is for a barrier start. Pre gfx12 this is just the
-  // S_BARRIER, but after support for S_BARRIER_SIGNAL* / S_BARRIER_WAIT we want
-  // to check for the barrier start (S_BARRIER_SIGNAL*)
-  bool isBarrierStart(unsigned Opcode) const {
+  bool isBarrier(unsigned Opcode) const {
     return Opcode == AMDGPU::S_BARRIER ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
-           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
-  }
-
-  bool isBarrier(unsigned Opcode) const {
-    return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
+           Opcode == AMDGPU::S_BARRIER_WAIT ||
            Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
@@ -1182,6 +1176,9 @@ public:
 
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const;
+
+  /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
+  bool isLegalAV64PseudoImm(uint64_t Imm) const;
 
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.

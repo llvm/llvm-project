@@ -342,7 +342,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr>(attrType))
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::VTableAttr>(
+          attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1358,11 +1359,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           llvm::StringRef sym_name, mlir::Type sym_type,
-                          cir::GlobalLinkageKind linkage) {
+                          bool isConstant, cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+  if (isConstant)
+    odsState.addAttribute(getConstantAttrName(odsState.name),
+                          odsBuilder.getUnitAttr());
 
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
@@ -1455,15 +1459,18 @@ cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef name = getName();
 
   // Verify that the result type underlying pointer type matches the type of
-  // the referenced cir.global or cir.func op.
-  auto op = symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  // the referenced cir.global.
+  auto op =
+      symbolTable.lookupNearestSymbolFrom<cir::GlobalOp>(*this, getNameAttr());
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
-  assert(!cir::MissingFeatures::vtableInitializer());
+  if (!isa<cir::VTableAttr>(*init))
+    return emitOpError("Expected #cir.vtable in initializer for global '")
+           << name << "'";
   return success();
 }
 

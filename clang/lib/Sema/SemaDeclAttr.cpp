@@ -1989,6 +1989,11 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
       isKnownToAlwaysThrow(FD)) {
     NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
 
+    // [[noreturn]] can only be added to lambdas since C++23
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && !S.getLangOpts().CPlusPlus23 && isLambdaCallOperator(MD))
+      return;
+
     // Emit a diagnostic suggesting the function being marked [[noreturn]].
     S.Diag(FD->getLocation(), diag::warn_suggest_noreturn_function)
         << /*isFunction=*/0 << FD;
@@ -7060,6 +7065,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_EnumExtensibility:
     handleEnumExtensibilityAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_SYCLExternal:
+    handleSimpleAttribute<SYCLExternalAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);

@@ -692,7 +692,16 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 
 // CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
 // CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.maxntid"="1,23,32" "nvvm.minctasm"="16" }
+// -----
 
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
+                                     nvvm.reqntid = array<i32: 1, 23, 32>,
+                                     nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.blocksareclusters" "nvvm.cluster_dim"="3,5,7" "nvvm.reqntid"="1,23,32" }
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
@@ -957,5 +966,14 @@ llvm.func @nvvm_pmevent() {
   nvvm.pmevent mask = 15000
   // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
   nvvm.pmevent mask = 4
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @nanosleep
+llvm.func @nanosleep() {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 4000)
+  nvvm.nanosleep 4000
   llvm.return
 }

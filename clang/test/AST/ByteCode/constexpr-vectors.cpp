@@ -15,7 +15,6 @@ using FourFloatsExtVec __attribute__((ext_vector_type(4))) = float;
 using FourDoublesExtVec __attribute__((ext_vector_type(4))) = double;
 using FourI128ExtVec __attribute__((ext_vector_type(4))) = __int128;
 
-
 // Next a series of tests to make sure these operations are usable in
 // constexpr functions. Template instantiations don't emit Winvalid-constexpr,
 // so we have to do these as macros.
@@ -874,4 +873,10 @@ void BoolVecUsage() {
 
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
   static_assert(k[0] == false && k[1] == true && k[2] == false && k[3] == true, "");
+}
+
+using EightBoolsExtVec __attribute__((ext_vector_type(8))) = bool;
+void BoolVecShuffle() {
+  constexpr EightBoolsExtVec a = __builtin_shufflevector(
+      FourBoolsExtVec{}, FourBoolsExtVec{}, 0, 1, 2, 3, 4, 5, 6, 7);
 }

@@ -745,6 +745,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVAArgOpLowering
+    : public mlir::OpConversionPattern<cir::VAArgOp> {
+public:
+  using mlir::OpConversionPattern<cir::VAArgOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VAArgOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
