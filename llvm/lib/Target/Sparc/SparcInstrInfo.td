@@ -1967,7 +1967,6 @@ let Predicates = [HasNoV9] in {
   // Release / AcqRel -> stbar
   def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
   // AcqRel and stronger -> stbar; ldstub [%sp-1], %g0
-  // FIXME how to actually emit the ldstub?
   def : Pat<(atomic_fence timm, timm), (V8BAR)>;
 }
 
