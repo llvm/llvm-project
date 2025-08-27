@@ -797,33 +797,24 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   void onInlineAsm(const InlineAsm &Arg) override {
     if (!InlineAsmInstrCost)
       return;
-    SmallVector<StringRef, 4> AsmStrs;
-    Arg.collectAsmStrs(AsmStrs);
     int SectionLevel = 0;
     int InlineAsmInstrCount = 0;
-    for (StringRef AsmStr : AsmStrs) {
-      // Trim whitespaces and comments.
-      StringRef Trimmed = AsmStr.trim();
-      size_t hashPos = Trimmed.find('#');
-      if (hashPos != StringRef::npos)
-        Trimmed = Trimmed.substr(0, hashPos);
-      // Ignore comments.
-      if (Trimmed.empty())
-        continue;
+    for (StringRef AsmInstr : Arg.collectAsmInstrs()) {
       // Filter out the outlined assembly instructions from the cost by keeping
       // track of the section level and only accounting for instrutions at
       // section level of zero. Note there will be duplication in outlined
       // sections too, but is not accounted in the inlining cost model.
-      if (Trimmed.starts_with(".pushsection")) {
+      if (AsmInstr.starts_with(".pushsection")) {
         ++SectionLevel;
         continue;
       }
-      if (Trimmed.starts_with(".popsection")) {
+      if (AsmInstr.starts_with(".popsection")) {
         --SectionLevel;
         continue;
       }
-      // Ignore directives and labels.
-      if (Trimmed.starts_with(".") || Trimmed.contains(":"))
+      // Labels are free. Note we only exclude labels that are not followed by
+      // any other instruction.
+      if (AsmInstr.ends_with(":"))
         continue;
       if (SectionLevel == 0)
         ++InlineAsmInstrCount;
