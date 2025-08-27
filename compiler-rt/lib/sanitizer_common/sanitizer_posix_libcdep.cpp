@@ -36,7 +36,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
 #undef MAP_NORESERVE
@@ -416,8 +416,20 @@ bool MmapFixedSuperNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
+#  if !SANITIZER_AIX
   base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size, name)
                      : MmapNoAccess(size);
+#  else
+  // AIX can not mmap on a mmaped memory, so init it as read/write so we won't
+  // mmap on this memory again.
+  if (fixed_addr) {
+    MmapFixed(fixed_addr, size, MAP_PRIVATE | MAP_FIXED | MAP_ANON, name);
+    base_ = (void *)fixed_addr;
+  } else {
+    base_ = (void *)internal_mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                                  MAP_PRIVATE | MAP_ANON, -1, 0);
+  }
+#  endif
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported
@@ -427,13 +439,21 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
 uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size, const char *name) {
+#  if SANITIZER_AIX
+  return fixed_addr;
+#  else
   return reinterpret_cast<uptr>(
       MmapFixedOrDieOnFatalError(fixed_addr, size, name));
+#  endif
 }
 
 uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size,
                                     const char *name) {
+#  if SANITIZER_AIX
+  return fixed_addr;
+#  else
   return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size, name));
+#  endif
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
@@ -465,11 +485,15 @@ real_pthread_attr_getstack(void *attr, void **addr, size_t *size);
 } // extern "C"
 
 int internal_pthread_attr_getstack(void *attr, void **addr, uptr *size) {
-#if !SANITIZER_GO && !SANITIZER_APPLE
+// AIX requires definition for weak symbols. real_pthread_attr_getstack defined
+// in asan library which is not linked while compile with -fsanitize=undefined.
+// So don't use use real_pthread_attr_getstack on AIX either in this sanitizer
+// common file.
+#  if !SANITIZER_GO && !SANITIZER_APPLE && !SANITIZER_AIX
   if (&real_pthread_attr_getstack)
     return real_pthread_attr_getstack((pthread_attr_t *)attr, addr,
                                       (size_t *)size);
-#endif
+#  endif
   return pthread_attr_getstack((pthread_attr_t *)attr, addr, (size_t *)size);
 }
 
