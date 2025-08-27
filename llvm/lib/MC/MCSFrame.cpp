@@ -24,17 +24,17 @@ namespace {
 // High-level structure to track info needed to emit a
 // sframe_frame_row_entry_addrX. On disk these have both a fixed portion of type
 // sframe_frame_row_entry_addrX and trailing data of X * S bytes, where X is the
-// datum size, and S is 1, 2, or 3 depending on which of Cfa, SP, and FP are
+// datum size, and S is 1, 2, or 3 depending on which of CFA, SP, and FP are
 // being tracked.
 struct SFrameFRE {
   // An FRE describes how to find the registers when the PC is at this
   // Label from function start.
   const MCSymbol *Label = nullptr;
-  size_t CfaOffset = 0;
+  size_t CFAOffset = 0;
   size_t FPOffset = 0;
   size_t RAOffset = 0;
   bool FromFP = false;
-  bool CfaRegSet = false;
+  bool CFARegSet = false;
 
   SFrameFRE(const MCSymbol *Start) : Label(Start) {}
 };
@@ -46,13 +46,11 @@ struct SFrameFDE {
   const MCDwarfFrameInfo &DFrame;
   // Label where this FDE's FREs start.
   MCSymbol *FREStart;
-  // True when unwind info can't be described with an Sframe FDE.
-  bool Invalid;
   // Unwinding fres
   SmallVector<SFrameFRE> FREs;
 
   SFrameFDE(const MCDwarfFrameInfo &DF, MCSymbol *FRES)
-      : DFrame(DF), FREStart(FRES), Invalid(false) {}
+      : DFrame(DF), FREStart(FRES) {}
 
   void emit(MCObjectStreamer &S, const MCSymbol *FRESubSectionStart) {
     MCContext &C = S.getContext();
@@ -109,90 +107,80 @@ class SFrameEmitterImpl {
   MCSymbol *FRESubSectionStart;
   MCSymbol *FRESubSectionEnd;
 
-
-  bool setCfaRegister(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &I) {
+  bool setCFARegister(SFrameFRE &FRE, const MCCFIInstruction &I) {
     if (I.getRegister() == SPReg) {
-      FRE.CfaRegSet = true;
+      FRE.CFARegSet = true;
       FRE.FromFP = false;
       return true;
-    } else if (I.getRegister() == FPReg) {
-      FRE.CfaRegSet = true;
+    }
+    if (I.getRegister() == FPReg) {
+      FRE.CFARegSet = true;
       FRE.FromFP = true;
       return true;
     }
     Streamer.getContext().reportWarning(
         I.getLoc(), "Canonical Frame Address not in stack- or frame-pointer. "
                     "Omitting SFrame unwind info for this function.");
-    FDE.Invalid = true;
     return false;
   }
 
-  bool isCfaRegisterSet(SFrameFDE &FDE, SFrameFRE &FRE,
-                        const MCCFIInstruction &I) {
-    if (FRE.CfaRegSet)
-      return true;
-
-    Streamer.getContext().reportWarning(
-        I.getLoc(), "Adjusting CFA offset without a base register. "
-                    "Omitting SFrame unwind info for this function.");
-    FDE.Invalid = true;
-    return false;
+  bool setCFAOffset(SFrameFRE &FRE, const SMLoc &Loc, size_t Offset) {
+    if (!FRE.CFARegSet) {
+      Streamer.getContext().reportWarning(
+          Loc, "Adjusting CFA offset without a base register. "
+               "Omitting SFrame unwind info for this function.");
+      return false;
+    }
+    FRE.CFAOffset = Offset;
+    return true;
   }
 
   // Add the effects of CFI to the current FDE, creating a new FRE when
   // necessary.
-  void handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
+  bool handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
     switch (CFI.getOperation()) {
     case MCCFIInstruction::OpDefCfaRegister:
-      setCfaRegister(FDE, FRE, CFI);
-      return;
+      return setCFARegister(FRE, CFI);
     case MCCFIInstruction::OpDefCfa:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
-      if (!setCfaRegister(FDE, FRE, CFI))
-        return;
-      FRE.CfaOffset = CFI.getOffset();
-      return;
+      if (!setCFARegister(FRE, CFI))
+        return false;
+      setCFAOffset(FRE, CFI.getLoc(), CFI.getOffset());
+      return true;
     case MCCFIInstruction::OpOffset:
       if (CFI.getRegister() == FPReg)
         FRE.FPOffset = CFI.getOffset();
       else if (CFI.getRegister() == RAReg)
         FRE.RAOffset = CFI.getOffset();
-      return;
+      return true;
     case MCCFIInstruction::OpRelOffset:
       if (CFI.getRegister() == FPReg)
         FRE.FPOffset += CFI.getOffset();
       else if (CFI.getRegister() == RAReg)
         FRE.RAOffset += CFI.getOffset();
-      return;
+      return true;
     case MCCFIInstruction::OpDefCfaOffset:
-      if (!isCfaRegisterSet(FDE, FRE, CFI))
-        return;
-      FRE.CfaOffset = CFI.getOffset();
-      return;
+      return setCFAOffset(FRE, CFI.getLoc(), CFI.getOffset());
     case MCCFIInstruction::OpAdjustCfaOffset:
-      if (!isCfaRegisterSet(FDE, FRE, CFI))
-        return;
-      FRE.CfaOffset += CFI.getOffset();
-      return;
+      return setCFAOffset(FRE, CFI.getLoc(), FRE.CFAOffset + CFI.getOffset());
     case MCCFIInstruction::OpRememberState:
-      // TODO: Implement
-      return;
+      // TODO: Implement. Will use FDE.
+      return true;
     case MCCFIInstruction::OpRestore:
-      // TODO: Implement
-      return;
+      // TODO: Implement. Will use FDE.
+      return true;
     case MCCFIInstruction::OpRestoreState:
-      // TODO: Implement
-      return;
+      // TODO: Implement. Will use FDE.
+      return true;
     case MCCFIInstruction::OpEscape:
-      // TODO: Implement
-      return;
+      // TODO: Implement. Will use FDE.
+      return true;
     default:
-      // Instructions that don't affect the Cfa, RA, and SP can be safely
+      // Instructions that don't affect the CFA, RA, and SP can be safely
       // ignored.
-      return;
+      return true;
     }
   }
-
 
 public:
   SFrameEmitterImpl(MCObjectStreamer &Streamer) : Streamer(Streamer) {
@@ -230,13 +218,14 @@ public:
   }
 
   bool equalIgnoringLocation(const SFrameFRE &Left, const SFrameFRE &Right) {
-    return Left.CfaOffset == Right.CfaOffset &&
+    return Left.CFAOffset == Right.CFAOffset &&
            Left.FPOffset == Right.FPOffset && Left.RAOffset == Right.RAOffset &&
-           Left.FromFP == Right.FromFP && Left.CfaRegSet == Right.CfaRegSet;
+           Left.FromFP == Right.FromFP && Left.CFARegSet == Right.CFARegSet;
   }
 
   void buildSFDE(const MCDwarfFrameInfo &DF) {
-    auto &FDE = FDEs.emplace_back(DF, Streamer.getContext().createTempSymbol());
+    bool Valid = true;
+    SFrameFDE FDE(DF, Streamer.getContext().createTempSymbol());
     // This would have been set via ".cfi_return_column", but
     // MCObjectStreamer doesn't emit an MCCFIInstruction for that. It just
     // sets the DF.RAReg.
@@ -245,18 +234,18 @@ public:
     // hand-written assembly.
     if (DF.RAReg != RAReg) {
       Streamer.getContext().reportWarning(
-          SMLoc(), "Non-default RA register " + Twine(DF.RAReg) +
+          SMLoc(), "Non-default RA register in .cfi_return_column " +
+                       Twine(DF.RAReg) +
                        ". Omitting SFrame unwind info for this function.");
-      // Continue with the FDE to find any addtional errors. Discard it at
-      // the end.
-      FDE.Invalid = true;
+      Valid = false;
     }
-    MCSymbol *BaseLabel = DF.Begin;
-    SFrameFRE BaseFRE(BaseLabel);
+    MCSymbol *LastLabel = DF.Begin;
+    SFrameFRE BaseFRE(LastLabel);
     if (!DF.IsSimple) {
       for (const auto &CFI :
            Streamer.getContext().getAsmInfo()->getInitialFrameState())
-        handleCFI(FDE, BaseFRE, CFI);
+        if (!handleCFI(FDE, BaseFRE, CFI))
+          Valid = false;
     }
     FDE.FREs.push_back(BaseFRE);
 
@@ -269,7 +258,8 @@ public:
         continue;
 
       SFrameFRE FRE = FDE.FREs.back();
-      handleCFI(FDE, FRE, CFI);
+      if (!handleCFI(FDE, FRE, CFI))
+        Valid = false;
 
       // If nothing relevant but the location changed, don't add the FRE.
       if (equalIgnoringLocation(FRE, FDE.FREs.back()))
@@ -277,16 +267,16 @@ public:
 
       // If the location stayed the same, then update the current
       // row. Otherwise, add a new one.
-      if (atSameLocation(BaseLabel, L))
+      if (atSameLocation(LastLabel, L))
         FDE.FREs.back() = FRE;
       else {
         FDE.FREs.push_back(FRE);
         FDE.FREs.back().Label = L;
-        BaseLabel = L;
+        LastLabel = L;
       }
     }
-    if (FDE.Invalid)
-      FDEs.pop_back();
+    if (Valid)
+      FDEs.push_back(FDE);
   }
 
   void emitPreamble() {
@@ -309,8 +299,6 @@ public:
     Streamer.emitInt32(FDEs.size());
     // shf_num_fres
     uint32_t TotalFREs = 0;
-    //    for (auto &FDE : FDEs)
-    // TotalFREs += FDE.FREs.size();
     Streamer.emitInt32(TotalFREs);
 
     // shf_fre_len

@@ -16,7 +16,7 @@ f1:
 	nop
 	.cfi_register 0, 1      // Uninteresting register. No new FRE.
 	nop
-	
+
         .cfi_endproc
 
 f2:
