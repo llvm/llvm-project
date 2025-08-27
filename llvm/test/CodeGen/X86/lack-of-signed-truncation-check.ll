@@ -506,17 +506,15 @@ define i1 @add_ugecmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 define i1 @add_ugecmp_bad_i8_i16(i16 %x) nounwind {
 ; X86-LABEL: add_ugecmp_bad_i8_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    subl $-128, %eax
-; X86-NEXT:    cmpw $127, %ax
-; X86-NEXT:    seta %al
+; X86-NEXT:    movw $128, %ax
+; X86-NEXT:    addw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ugecmp_bad_i8_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    subl $-128, %edi
-; X64-NEXT:    cmpw $127, %di
-; X64-NEXT:    seta %al
+; X64-NEXT:    addw $128, %di
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp uge i16 %tmp0, 128 ; 1U << (8-1)

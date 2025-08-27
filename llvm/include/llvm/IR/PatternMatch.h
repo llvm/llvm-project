@@ -2675,6 +2675,70 @@ struct UAddWithOverflow_match {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// Matchers for overflow check patterns: e.g. (a + b) u< a, (a ^ -1) <u b
+// Note that S might be matched to other instructions than AddInst.
+//
+
+template <typename LHS_t, typename RHS_t, typename Sum_t>
+struct UAddWithOverflowInv_match {
+  LHS_t L;
+  RHS_t R;
+  Sum_t S;
+
+  UAddWithOverflowInv_match(const LHS_t &L, const RHS_t &R, const Sum_t &S)
+      : L(L), R(R), S(S) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    Value *ICmpLHS, *ICmpRHS;
+    CmpPredicate Pred;
+    if (!m_ICmp(Pred, m_Value(ICmpLHS), m_Value(ICmpRHS)).match(V))
+      return false;
+
+    Value *AddLHS, *AddRHS;
+    auto AddExpr = m_Add(m_Value(AddLHS), m_Value(AddRHS));
+
+    // (a + b) u>= a, (a + b) u>= b
+    if (Pred == ICmpInst::ICMP_UGE)
+      if (AddExpr.match(ICmpLHS) && (ICmpRHS == AddLHS || ICmpRHS == AddRHS))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpLHS);
+
+    // a <=u (a + b), b <=u (a + b)
+    if (Pred == ICmpInst::ICMP_ULE)
+      if (AddExpr.match(ICmpRHS) && (ICmpLHS == AddLHS || ICmpLHS == AddRHS))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
+
+    Value *Op1;
+    auto XorExpr = m_OneUse(m_Not(m_Value(Op1)));
+    // (~a) >= u b
+    if (Pred == ICmpInst::ICMP_UGE) {
+      if (XorExpr.match(ICmpLHS))
+        return L.match(Op1) && R.match(ICmpRHS) && S.match(ICmpLHS);
+    }
+    //  b <= u (~a)
+    if (Pred == ICmpInst::ICMP_ULE) {
+      if (XorExpr.match(ICmpRHS))
+        return L.match(Op1) && R.match(ICmpLHS) && S.match(ICmpRHS);
+    }
+
+    // Match special-case for increment-by-1.
+    if (Pred == ICmpInst::ICMP_NE) {
+      // (a + 1) != 0
+      // (1 + a) != 0
+      if (AddExpr.match(ICmpLHS) && m_ZeroInt().match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpLHS);
+      // 0 != (a + 1)
+      // 0 != (1 + a)
+      if (m_ZeroInt().match(ICmpLHS) && AddExpr.match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
+    }
+
+    return false;
+  }
+};
+
 /// Match an icmp instruction checking for unsigned overflow on addition.
 ///
 /// S is matched to the addition whose result is being checked for overflow, and
@@ -2683,6 +2747,17 @@ template <typename LHS_t, typename RHS_t, typename Sum_t>
 UAddWithOverflow_match<LHS_t, RHS_t, Sum_t>
 m_UAddWithOverflow(const LHS_t &L, const RHS_t &R, const Sum_t &S) {
   return UAddWithOverflow_match<LHS_t, RHS_t, Sum_t>(L, R, S);
+}
+
+/// Match an icmp instruction checking for unsigned overflow on addition, but
+/// with the opposite check.
+///
+/// S is matched to the addition whose result is being checked for overflow, and
+/// L and R are matched to the LHS and RHS of S.
+template <typename LHS_t, typename RHS_t, typename Sum_t>
+UAddWithOverflowInv_match<LHS_t, RHS_t, Sum_t>
+m_UAddWithOverflowInv(const LHS_t &L, const RHS_t &R, const Sum_t &S) {
+  return UAddWithOverflowInv_match<LHS_t, RHS_t, Sum_t>(L, R, S);
 }
 
 template <typename Opnd_t> struct Argument_match {

@@ -7862,11 +7862,30 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
         isa<IntegerType>(X->getType())) {
       Value *Result;
       Constant *Overflow;
-      // m_UAddWithOverflow can match patterns that do not include  an explicit
+      // m_UAddWithOverflow can match patterns that do not include an explicit
       // "add" instruction, so check the opcode of the matched op.
       if (AddI->getOpcode() == Instruction::Add &&
           OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, X, Y, *AddI,
                                 Result, Overflow)) {
+        replaceInstUsesWith(*AddI, Result);
+        eraseInstFromFunction(*AddI);
+        return replaceInstUsesWith(I, Overflow);
+      }
+    }
+
+    if (match(&I, m_UAddWithOverflowInv(m_Value(X), m_Value(Y),
+                                        m_Instruction(AddI))) &&
+        isa<IntegerType>(X->getType())) {
+      Value *Result;
+      Constant *Overflow;
+      // m_UAddWithOverflowInv can match patterns that do not include an
+      // explicit "add" instruction, so check the opcode of the matched op.
+      if (AddI->getOpcode() == Instruction::Add &&
+          OptimizeOverflowCheck(Instruction::Add, /*Signed*/ false, X, Y, *AddI,
+                                Result, Overflow)) {
+        Overflow = Overflow->isNullValue()
+                       ? ConstantInt::getTrue(Overflow->getType())
+                       : ConstantInt::getFalse(Overflow->getType());
         replaceInstUsesWith(*AddI, Result);
         eraseInstFromFunction(*AddI);
         return replaceInstUsesWith(I, Overflow);
