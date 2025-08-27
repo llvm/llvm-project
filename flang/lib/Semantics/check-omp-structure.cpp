@@ -589,14 +589,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OmpAssumeDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assume);
-    return false;
-  }
-  bool Pre(const parser::OmpEndAssumeDirective &x) {
-    checker_(x.v.source, Directive::OMPD_assume);
-    return false;
-  }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
