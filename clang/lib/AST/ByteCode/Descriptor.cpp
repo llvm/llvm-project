@@ -50,14 +50,6 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 }
 
 template <typename T>
-static void moveTy(Block *, std::byte *Src, std::byte *Dst,
-                   const Descriptor *) {
-  auto *SrcPtr = reinterpret_cast<T *>(Src);
-  auto *DstPtr = reinterpret_cast<T *>(Dst);
-  new (DstPtr) T(std::move(*SrcPtr));
-}
-
-template <typename T>
 static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                         const Descriptor *D) {
   new (Ptr) InitMapPtr(std::nullopt);
@@ -81,28 +73,6 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
     Ptr += sizeof(InitMapPtr);
     for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
       reinterpret_cast<T *>(Ptr)[I].~T();
-    }
-  }
-}
-
-template <typename T>
-static void moveArrayTy(Block *, std::byte *Src, std::byte *Dst,
-                        const Descriptor *D) {
-  InitMapPtr &SrcIMP = *reinterpret_cast<InitMapPtr *>(Src);
-  if (SrcIMP) {
-    // We only ever invoke the moveFunc when moving block contents to a
-    // DeadBlock. DeadBlocks don't need InitMaps, so we destroy them here.
-    SrcIMP = std::nullopt;
-  }
-  Src += sizeof(InitMapPtr);
-  Dst += sizeof(InitMapPtr);
-  if constexpr (!needsCtor<T>()) {
-    std::memcpy(Dst, Src, D->getNumElems() * D->getElemSize());
-  } else {
-    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-      auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
-      auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
-      new (DstPtr) T(std::move(*SrcPtr));
     }
   }
 }
@@ -144,12 +114,14 @@ static void dtorArrayDesc(Block *B, std::byte *Ptr, const Descriptor *D) {
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
   unsigned ElemOffset = 0;
-  for (unsigned I = 0; I < NumElems; ++I, ElemOffset += ElemSize) {
+  auto Dtor = D->ElemDesc->DtorFn;
+  assert(Dtor &&
+         "a composite array without an elem dtor shouldn't have a dtor itself");
+  for (unsigned I = 0; I != NumElems; ++I, ElemOffset += ElemSize) {
     auto *ElemPtr = Ptr + ElemOffset;
     auto *Desc = reinterpret_cast<InlineDescriptor *>(ElemPtr);
     auto *ElemLoc = reinterpret_cast<std::byte *>(Desc + 1);
-    if (auto Fn = D->ElemDesc->DtorFn)
-      Fn(B, ElemLoc, D->ElemDesc);
+    Dtor(B, ElemLoc, D->ElemDesc);
   }
 }
 
@@ -265,34 +237,40 @@ static bool needsRecordDtor(const Record *R) {
   return false;
 }
 
-static BlockCtorFn getCtorPrim(PrimType Type) {
-  // Floating types are special. They are primitives, but need their
-  // constructor called.
-  if (Type == PT_Float)
+static BlockCtorFn getCtorPrim(PrimType T) {
+  switch (T) {
+  case PT_Float:
     return ctorTy<PrimConv<PT_Float>::T>;
-  if (Type == PT_IntAP)
+  case PT_IntAP:
     return ctorTy<PrimConv<PT_IntAP>::T>;
-  if (Type == PT_IntAPS)
+  case PT_IntAPS:
     return ctorTy<PrimConv<PT_IntAPS>::T>;
-  if (Type == PT_MemberPtr)
+  case PT_Ptr:
+    return ctorTy<PrimConv<PT_Ptr>::T>;
+  case PT_MemberPtr:
     return ctorTy<PrimConv<PT_MemberPtr>::T>;
-
-  COMPOSITE_TYPE_SWITCH(Type, return ctorTy<T>, return nullptr);
+  default:
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled PrimType");
 }
 
-static BlockDtorFn getDtorPrim(PrimType Type) {
-  // Floating types are special. They are primitives, but need their
-  // destructor called, since they might allocate memory.
-  if (Type == PT_Float)
+static BlockDtorFn getDtorPrim(PrimType T) {
+  switch (T) {
+  case PT_Float:
     return dtorTy<PrimConv<PT_Float>::T>;
-  if (Type == PT_IntAP)
+  case PT_IntAP:
     return dtorTy<PrimConv<PT_IntAP>::T>;
-  if (Type == PT_IntAPS)
+  case PT_IntAPS:
     return dtorTy<PrimConv<PT_IntAPS>::T>;
-  if (Type == PT_MemberPtr)
+  case PT_Ptr:
+    return dtorTy<PrimConv<PT_Ptr>::T>;
+  case PT_MemberPtr:
     return dtorTy<PrimConv<PT_MemberPtr>::T>;
-
-  COMPOSITE_TYPE_SWITCH(Type, return dtorTy<T>, return nullptr);
+  default:
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled PrimType");
 }
 
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {

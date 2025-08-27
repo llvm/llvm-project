@@ -76,18 +76,18 @@ define i64 @narow_canonical_iv_wide_multiplied_iv(i32 %x, i64 %y, ptr %0) {
 ; CHECK-LABEL: @narow_canonical_iv_wide_multiplied_iv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 1)
-; CHECK-NEXT:    [[MUL_Y:%.*]] = shl i64 [[Y:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_MUL:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ [[IV_MUL_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_MUL_NEXT]] = add i64 [[IV_MUL]], [[MUL_Y]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i64 [ [[IV_MUL_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
 entry:

@@ -73,8 +73,8 @@ RUN apt-get update && \
 # caching), so we manually install it here.
 # TODO(boomanaiden154): We should return to installing this from the apt
 # repository once a version containing the necessary bug fixes is available.
-RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-unknown-linux-musl.tar.gz' > /tmp/sccache.tar.gz && \
-    echo "1fbb35e135660d04a2d5e42b59c7874d39b3deb17de56330b25b713ec59f849b /tmp/sccache.tar.gz" | sha256sum -c && \
+RUN curl -L "https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-$(arch)-unknown-linux-musl.tar.gz" > /tmp/sccache.tar.gz && \
+    echo $( [ $(arch) = 'x86_64' ] && echo "1fbb35e135660d04a2d5e42b59c7874d39b3deb17de56330b25b713ec59f849b" || echo "d6a1ce4acd02b937cd61bc675a8be029a60f7bc167594c33d75732bbc0a07400")  /tmp/sccache.tar.gz | sha256sum -c && \
     tar xzf /tmp/sccache.tar.gz -O --wildcards '*/sccache' > '/usr/local/bin/sccache' && \
     rm /tmp/sccache.tar.gz && \
     chmod +x /usr/local/bin/sccache

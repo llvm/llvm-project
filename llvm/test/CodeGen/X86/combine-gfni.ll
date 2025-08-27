@@ -24,8 +24,7 @@ define <16 x i8> @gf2p8affineqb_freeze(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %
 ; AVX512-LABEL: gf2p8affineqb_freeze:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %xmm2, %k1
-; AVX512-NEXT:    vgf2p8affineqb $11, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    vgf2p8affineqb $11, %xmm1, %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %i = icmp slt <16 x i8> %a2, zeroinitializer
   %g = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %a1, <16 x i8> %a1, i8 11)
@@ -55,8 +54,7 @@ define <16 x i8> @gf2p8affineinvqb_freeze(<16 x i8> %a0, <16 x i8> %a1, <16 x i8
 ; AVX512-LABEL: gf2p8affineinvqb_freeze:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %xmm2, %k1
-; AVX512-NEXT:    vgf2p8affineinvqb $11, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    vgf2p8affineinvqb $11, %xmm1, %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %i = icmp slt <16 x i8> %a2, zeroinitializer
   %g = call <16 x i8> @llvm.x86.vgf2p8affineinvqb.128(<16 x i8> %a1, <16 x i8> %a1, i8 11)
@@ -86,8 +84,7 @@ define <16 x i8> @gf2p8mulb_freeze(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) 
 ; AVX512-LABEL: gf2p8mulb_freeze:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %xmm2, %k1
-; AVX512-NEXT:    vgf2p8mulb %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    vgf2p8mulb %xmm1, %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %i = icmp slt <16 x i8> %a2, zeroinitializer
   %g = call <16 x i8> @llvm.x86.vgf2p8mulb.128(<16 x i8> %a1, <16 x i8> %a1)
