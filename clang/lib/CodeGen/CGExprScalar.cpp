@@ -21,6 +21,7 @@
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
@@ -29,6 +30,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/IR/Argument.h"
@@ -1813,6 +1815,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
   SanitizerHandler Check;
   SmallVector<llvm::Constant *, 4> StaticData;
   SmallVector<llvm::Value *, 2> DynamicData;
+  TrapReason TR;
 
   BinaryOperatorKind Opcode = Info.Opcode;
   if (BinaryOperator::isCompoundAssignmentOp(Opcode))
@@ -1839,19 +1842,43 @@ void ScalarExprEmitter::EmitBinOpCheck(
       StaticData.push_back(CGF.EmitCheckTypeDescriptor(Info.Ty));
     } else {
       // Arithmetic overflow (+, -, *).
+      int ArithOverflowKind = 0;
       switch (Opcode) {
-      case BO_Add: Check = SanitizerHandler::AddOverflow; break;
-      case BO_Sub: Check = SanitizerHandler::SubOverflow; break;
-      case BO_Mul: Check = SanitizerHandler::MulOverflow; break;
-      default: llvm_unreachable("unexpected opcode for bin op check");
+      case BO_Add: {
+        Check = SanitizerHandler::AddOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Add;
+        break;
+      }
+      case BO_Sub: {
+        Check = SanitizerHandler::SubOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Sub;
+        break;
+      }
+      case BO_Mul: {
+        Check = SanitizerHandler::MulOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Mul;
+        break;
+      }
+      default:
+        llvm_unreachable("unexpected opcode for bin op check");
       }
       StaticData.push_back(CGF.EmitCheckTypeDescriptor(Info.Ty));
+      if (CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
+              SanitizerKind::UnsignedIntegerOverflow) ||
+          CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
+              SanitizerKind::SignedIntegerOverflow)) {
+        // Only pay the cost for constructing the trap diagnostic if they are
+        // going to be used.
+        CGF.CGM.BuildTrapReason(diag::trap_ubsan_arith_overflow, TR)
+            << Info.Ty->isSignedIntegerOrEnumerationType() << ArithOverflowKind
+            << Info.E;
+      }
     }
     DynamicData.push_back(Info.LHS);
     DynamicData.push_back(Info.RHS);
   }
 
-  CGF.EmitCheck(Checks, Check, StaticData, DynamicData);
+  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, &TR);
 }
 
 //===----------------------------------------------------------------------===//
