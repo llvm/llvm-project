@@ -13722,9 +13722,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   if (!VDecl->getType()->isOverflowBehaviorType() &&
       !Init->getType().isNull() && Init->getType()->isOverflowBehaviorType()) {
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Init)) {
-      DRE->setOverflowBehaviorDiscarded(true);
-    }
+    Init->setOverflowBehaviorDiscarded(true);
   }
 
   // C++11 [decl.spec.auto]p6. Deduce the type which 'auto' stands in for.

@@ -4050,7 +4050,7 @@ def warn_conflicting_overflow_behavior_attributes
 def warn_impcast_overflow_behavior_assignment
     : Warning<"implicit conversion from %0 to %1 during assignment discards "
               "overflow behavior">,
-      InGroup<ImplicitOverflowBehaviorConversion>,
+      InGroup<ImplicitOverflowBehaviorConversionAssignment>,
       DefaultIgnore;
 def warn_impcast_overflow_behavior_pedantic
     : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,

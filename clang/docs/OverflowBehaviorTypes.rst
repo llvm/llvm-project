@@ -443,7 +443,8 @@ integer type.
   }
 
 This warning group includes
-``-Wimplicit-overflow-behavior-conversion`` and
+``-Wimplicit-overflow-behavior-conversion``, which includes
+``-Wimplicit-overflow-behavior-conversion-assignment`` and
 ``-Wimplicit-overflow-behavior-conversion-pedantic``.
 
 .. note::
@@ -504,6 +505,29 @@ integer type.
     bar(static_cast<int>(s)); // OK
   }
 
+
+-Wimplicit-overflow-behavior-conversion-assignment
+-------------------------------------------------
+
+This warning is issued specifically when an overflow behavior type is implicitly
+converted to a standard integer type during assignment operations. This is a
+subset of the more general ``-Wimplicit-overflow-behavior-conversion`` warning,
+allowing developers to control assignment-specific warnings separately.
+
+.. code-block:: c++
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+
+  void some_function() {
+    wrapping_int w = 1;
+    int i = w; // warning: implicit conversion from 'wrapping_int' to 'int'
+               // during assignment discards overflow behavior
+               // [-Wimplicit-overflow-behavior-conversion-assignment]
+  }
+
+This diagnostic can be controlled independently, allowing projects to suppress
+assignment-related warnings while still receiving warnings for other types of
+implicit conversions (such as function parameter passing).
 
 -Wimplicit-overflow-behavior-conversion-pedantic
 ------------------------------------------------

@@ -12515,7 +12515,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (LikelySourceRange->Width > TargetRange.Width) {
     // Check if target is a wrapping OBT - if so, don't warn about constant
-    // conversion because wrapping behavior is defined for truncation
+    // conversion as this type may be used intentionally with implicit
+    // truncation, especially during assignments.
     if (const auto *TargetOBT = Target->getAs<OverflowBehaviorType>()) {
       if (TargetOBT->isWrapKind()) {
         return;
@@ -13200,19 +13201,13 @@ bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
   QualType Target = T;
 
   if (const auto *OBT = Source->getAs<OverflowBehaviorType>()) {
-
-    bool DiscardedDuringAssignment = false;
-
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-      DiscardedDuringAssignment = DRE->isOverflowBehaviorDiscarded();
-
     if (Target->isIntegerType() && !Target->isOverflowBehaviorType()) {
       // Overflow behavior type is being stripped - issue warning
       if (OBT->isUnsignedIntegerType() && OBT->isWrapKind() &&
           Target->isUnsignedIntegerType()) {
         DiagnoseImpCast(*this, E, T, CC,
                         diag::warn_impcast_overflow_behavior_pedantic);
-      } else if (DiscardedDuringAssignment) {
+      } else if (E->isOverflowBehaviorDiscarded()) {
         DiagnoseImpCast(*this, E, T, CC,
                         diag::warn_impcast_overflow_behavior_assignment);
       } else {

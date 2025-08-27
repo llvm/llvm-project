@@ -124,6 +124,7 @@ protected:
     ExprBits.Dependent = 0;
     ExprBits.ValueKind = VK;
     ExprBits.ObjectKind = OK;
+    ExprBits.IsOverflowBehaviorDiscarded = false;
     assert(ExprBits.ObjectKind == OK && "truncated kind");
     setType(T);
   }
@@ -254,6 +255,17 @@ public:
   /// applied to this expression if it appears as a discarded-value expression
   /// in C++11 onwards. This applies to certain forms of volatile glvalues.
   bool isReadIfDiscardedInCPlusPlus11() const;
+
+  /// Does this Expr refer to an expression whose type is an
+  /// OverflowBehaviorType but is assigned to a variable with a type that isn't
+  /// an OverflowBehaviorType?
+  bool isOverflowBehaviorDiscarded() const {
+    return ExprBits.IsOverflowBehaviorDiscarded;
+  }
+
+  void setOverflowBehaviorDiscarded(bool Set) {
+    ExprBits.IsOverflowBehaviorDiscarded = Set;
+  }
 
   /// isUnusedResultAWarning - Return true if this immediate expression should
   /// be warned about if the result is unused.  If so, fill in expr, location,
@@ -1478,14 +1490,6 @@ public:
 
   bool isImmediateEscalating() const {
     return DeclRefExprBits.IsImmediateEscalating;
-  }
-
-  bool isOverflowBehaviorDiscarded() const {
-    return DeclRefExprBits.IsOverflwBehaviorDiscarded;
-  }
-
-  void setOverflowBehaviorDiscarded(bool Set) {
-    DeclRefExprBits.IsOverflwBehaviorDiscarded = Set;
   }
 
   void setIsImmediateEscalating(bool Set) {

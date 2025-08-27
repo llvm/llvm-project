@@ -131,14 +131,17 @@ def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion",
   [ImplicitIntFloatConversion,
    ObjCSignedCharBoolImplicitFloatConversion]>;
 def ImplicitFixedPointConversion : DiagGroup<"implicit-fixed-point-conversion">;
-def ImplicitOverflowBehaviorConversion
-    : DiagGroup<"implicit-overflow-behavior-conversion">;
+def ImplicitOverflowBehaviorConversionAssignment
+    : DiagGroup<"implicit-overflow-behavior-conversion-assignment">;
 def ImplicitOverflowBehaviorConversionPedantic
     : DiagGroup<"implicit-overflow-behavior-conversion-pedantic">;
-def OverflowBehaviorConversion
-    : DiagGroup<"overflow-behavior-conversion",
-                [ImplicitOverflowBehaviorConversion,
+def ImplicitOverflowBehaviorConversion
+    : DiagGroup<"implicit-overflow-behavior-conversion",
+                [ImplicitOverflowBehaviorConversionAssignment,
                  ImplicitOverflowBehaviorConversionPedantic]>;
+def OverflowBehaviorConversion
+    : DiagGroup<
+          "overflow-behavior-conversion", [ImplicitOverflowBehaviorConversion]>;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
 def FloatZeroConversion : DiagGroup<"float-zero-conversion">;

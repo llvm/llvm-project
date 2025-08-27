@@ -3230,18 +3230,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     } else if (type->isSignedIntegerOrEnumerationType() ||
                type->isUnsignedIntegerType()) {
       value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
-    }
-    // else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
-    //   value = EmitIncDecConsiderOverflowBehavior(E, value, isInc);
-    // } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
-    //            CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
-    //            !excludeOverflowPattern &&
-    //            !CGF.getContext().isTypeIgnoredBySanitizer(
-    //                SanitizerKind::UnsignedIntegerOverflow, E->getType())) {
-    //   value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
-    //       E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
-    // }
-    else {
+    } else {
       llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     }

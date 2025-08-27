@@ -362,8 +362,11 @@ protected:
     unsigned ObjectKind : 3;
     LLVM_PREFERRED_TYPE(ExprDependence)
     unsigned Dependent : llvm::BitWidth<ExprDependence>;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsOverflowBehaviorDiscarded : 1;
   };
-  enum { NumExprBits = NumStmtBits + 5 + llvm::BitWidth<ExprDependence> };
+  enum { NumExprBits = NumStmtBits + 6 + llvm::BitWidth<ExprDependence> };
 
   class ConstantExprBitfields {
     friend class ASTStmtReader;
@@ -449,9 +452,6 @@ protected:
     unsigned NonOdrUseReason : 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImmediateEscalating : 1;
-
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsOverflwBehaviorDiscarded : 1;
 
     /// The location of the declaration name itself.
     SourceLocation Loc;

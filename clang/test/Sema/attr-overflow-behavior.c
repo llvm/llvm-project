@@ -43,13 +43,13 @@ void assignment_disc(unsigned __attribute__((overflow_behavior(wrap))) a) {
 
 void constant_conversion() {
   // expected-warning@+2 {{implicit conversion from '__wrap int' to 'short' changes value from 100000 to -31072}}
-  // expected-warning@+1 {{implicit conversion from '__wrap int' to 'short' discards overflow behavior}}
+  // expected-warning@+1 {{implicit conversion from '__wrap int' to 'short' during assignment discards overflow behavior}}
   short x1 = (int __wrap)100000;
   short __wrap x2 = (int)100000; // No warning expected
   // expected-warning@+1 {{implicit conversion from 'int' to '__no_wrap short' changes value from 100000 to -31072}}
   short __no_wrap x3 = (int)100000;
   // expected-warning@+2 {{implicit conversion from '__no_wrap int' to 'short' changes value from 100000 to -31072}}
-  // expected-warning@+1 {{implicit conversion from '__no_wrap int' to 'short' discards overflow behavior}}
+  // expected-warning@+1 {{implicit conversion from '__no_wrap int' to 'short' during assignment discards overflow behavior}}
   short x4 = (int __no_wrap)100000;
 
   unsigned short __wrap ux1 = (unsigned int)100000; // No warning - wrapping expected
