@@ -1823,8 +1823,6 @@
 {'is_defined': True, 'name': '__ZNSt3__17collateIwED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__17collateIwED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__17collateIwED2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17getlineIcNS_11char_traitsIcEENS_12__stacktrace9str_allocIcEEEERNS_13basic_istreamIT_T0_EESA_RNS_12basic_stringIS7_S8_T1_EE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17getlineIcNS_11char_traitsIcEENS_12__stacktrace9str_allocIcEEEERNS_13basic_istreamIT_T0_EESA_RNS_12basic_stringIS7_S8_T1_EES7_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__17num_putIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE', 'size': 0, 'type': 'OBJECT'}
