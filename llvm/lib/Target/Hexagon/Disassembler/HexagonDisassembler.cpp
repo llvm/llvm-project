@@ -13,6 +13,7 @@
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -525,6 +526,9 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
   case Hexagon::J4_cmpgtn1_tp1_jump_t:
     MI.insert(MI.begin() + 1,
               MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
+    break;
+  case Hexagon::Y4_crswap10:
+    MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
     break;
   default:
     break;

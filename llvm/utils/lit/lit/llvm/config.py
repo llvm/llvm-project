@@ -64,12 +64,17 @@ class LLVMConfig(object):
             self.with_environment("_TAG_REDIR_ERR", "TXT")
             self.with_environment("_CEE_RUNOPTS", "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)")
 
+        if lit_config.update_tests:
+            self.use_lit_shell = True
+
         # Choose between lit's internal shell pipeline runner and a real shell.
         # If LIT_USE_INTERNAL_SHELL is in the environment, we use that as an
         # override.
         lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
         if lit_shell_env:
             self.use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+            if not self.use_lit_shell and lit_config.update_tests:
+                print("note: --update-tests is not supported when using external shell")
 
         if not self.use_lit_shell:
             features.add("shell")
@@ -107,6 +112,8 @@ class LLVMConfig(object):
             features.add("system-solaris")
         elif platform.system() == "OS/390":
             features.add("system-zos")
+        elif sys.platform == "cygwin":
+            features.add("system-cygwin")
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as

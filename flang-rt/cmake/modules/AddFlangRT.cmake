@@ -286,27 +286,6 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
     endif ()
 
-    # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-    # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
-    # functions in some cases like 128-bit integer math (__udivti3, __modti3,
-    # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
-    # dependency to Compiler-RT's builtin library where these are implemented.
-    if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      endif ()
-    endif ()
-    if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      else ()
-        message(WARNING "Did not find libclang_rt.builtins.lib.
-          LLVM may emit builtins that are not implemented in msvcrt/ucrt and
-          instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
-          may result in a linker error.")
-      endif ()
-    endif ()
-
     # Non-GTest unittests depend on LLVMSupport
     if (ARG_LINK_TO_LLVM)
       if (LLVM_LINK_LLVM_DYLIB)

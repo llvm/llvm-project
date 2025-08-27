@@ -21,10 +21,10 @@ TEST_F(RuntimeCallTest, genGetCommandArgument) {
   mlir::Location loc = firBuilder->getUnknownLoc();
   mlir::Type intTy = firBuilder->getDefaultIntegerType();
   mlir::Type boxTy = fir::BoxType::get(firBuilder->getNoneType());
-  mlir::Value number = firBuilder->create<fir::UndefOp>(loc, intTy);
-  mlir::Value value = firBuilder->create<fir::UndefOp>(loc, boxTy);
-  mlir::Value length = firBuilder->create<fir::UndefOp>(loc, boxTy);
-  mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value number = fir::UndefOp::create(*firBuilder, loc, intTy);
+  mlir::Value value = fir::UndefOp::create(*firBuilder, loc, boxTy);
+  mlir::Value length = fir::UndefOp::create(*firBuilder, loc, boxTy);
+  mlir::Value errmsg = fir::UndefOp::create(*firBuilder, loc, boxTy);
   mlir::Value result = fir::runtime::genGetCommandArgument(
       *firBuilder, loc, number, value, length, errmsg);
   checkCallOp(result.getDefiningOp(), "_FortranAGetCommandArgument",
@@ -34,11 +34,11 @@ TEST_F(RuntimeCallTest, genGetCommandArgument) {
 
 TEST_F(RuntimeCallTest, genGetEnvVariable) {
   mlir::Location loc = firBuilder->getUnknownLoc();
-  mlir::Value name = firBuilder->create<fir::UndefOp>(loc, boxTy);
-  mlir::Value value = firBuilder->create<fir::UndefOp>(loc, boxTy);
-  mlir::Value length = firBuilder->create<fir::UndefOp>(loc, boxTy);
-  mlir::Value trimName = firBuilder->create<fir::UndefOp>(loc, i1Ty);
-  mlir::Value errmsg = firBuilder->create<fir::UndefOp>(loc, boxTy);
+  mlir::Value name = fir::UndefOp::create(*firBuilder, loc, boxTy);
+  mlir::Value value = fir::UndefOp::create(*firBuilder, loc, boxTy);
+  mlir::Value length = fir::UndefOp::create(*firBuilder, loc, boxTy);
+  mlir::Value trimName = fir::UndefOp::create(*firBuilder, loc, i1Ty);
+  mlir::Value errmsg = fir::UndefOp::create(*firBuilder, loc, boxTy);
   mlir::Value result = fir::runtime::genGetEnvVariable(
       *firBuilder, loc, name, value, length, trimName, errmsg);
   checkCallOp(result.getDefiningOp(), "_FortranAGetEnvVariable", /*nbArgs=*/5,

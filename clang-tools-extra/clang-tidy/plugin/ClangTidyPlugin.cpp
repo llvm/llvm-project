@@ -41,7 +41,7 @@ public:
         new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
     auto DiagOpts = std::make_unique<DiagnosticOptions>();
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
-        new DiagnosticIDs, *DiagOpts, DiagConsumer);
+        DiagnosticIDs::create(), *DiagOpts, DiagConsumer);
     Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
 
     // Create the AST consumer.

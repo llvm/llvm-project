@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
@@ -37,13 +38,16 @@ expand_template(
         # All disabled, but required to substituted because they are not in quotes.
         "@LLVM_BUILD_EXAMPLES@": "0",
         "@LLVM_HAS_NVPTX_TARGET@": "0",
+        "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
         "@MLIR_ENABLE_SYCL_RUNNER@": "0",
+        "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
+        "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
         "@MLIR_RUN_AMX_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
@@ -379,6 +383,7 @@ cc_library(
         "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
+        "//mlir:CommonFolders",
         "//mlir:ControlFlowInterfaces",
         "//mlir:CopyOpInterface",
         "//mlir:DLTIDialect",
@@ -903,8 +908,8 @@ cc_library(
 )
 
 cc_library(
-    name = "TestMesh",
-    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    name = "TestShard",
+    srcs = glob(["lib/Dialect/Shard/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -912,10 +917,10 @@ cc_library(
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
-        "//mlir:MeshDialect",
-        "//mlir:MeshTransforms",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
+        "//mlir:ShardDialect",
+        "//mlir:ShardTransforms",
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
@@ -1200,11 +1205,13 @@ cc_library(
     deps = [
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:TransformUtils",
         "//mlir:VectorTransforms",
         "//mlir:XeGPUDialect",
         "//mlir:XeGPUTransforms",
+        "//mlir:XeGPUUtils",
     ],
 )

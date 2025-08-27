@@ -58,7 +58,7 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                                    Kind sectionKind)
     : SectionBase(sectionKind, file, name, type, flags, link, info, addralign,
                   entsize),
-      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0), retainAlignment(0),
+      bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
@@ -861,6 +861,11 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getPageEntryOffset(file, *r.sym, a) -
            ctx.in.mipsGot->getGp(file);
+  case RE_MIPS_OSEC_LOCAL_PAGE:
+    // This is used by the MIPS multi-GOT implementation. It relocates
+    // addresses of 64kb pages that lie inside the output section that sym is
+    // a representative for.
+    return getMipsPageAddr(r.sym->getOutputSection()->addr) + a;
   case RE_MIPS_GOT_OFF:
   case RE_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend

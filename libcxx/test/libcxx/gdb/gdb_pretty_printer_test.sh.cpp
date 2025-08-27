@@ -324,6 +324,11 @@ void deque_test() {
 
 void map_test() {
   std::map<int, int> i_am_empty{};
+
+  // Make __tree_itertor available in the debug info
+  // FIXME: Is there any way to avoid this requirement?
+  (void)i_am_empty.begin();
+
   ComparePrettyPrintToChars(i_am_empty, "std::map is empty");
 
   std::map<int, std::string> one_two_three;

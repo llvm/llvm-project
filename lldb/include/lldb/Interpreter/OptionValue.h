@@ -17,6 +17,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
@@ -61,6 +62,7 @@ public:
     eDumpOptionDescription = (1u << 3),
     eDumpOptionRaw = (1u << 4),
     eDumpOptionCommand = (1u << 5),
+    eDumpOptionDefaultValue = (1u << 6),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
@@ -337,6 +339,20 @@ protected:
   // Must be overriden by a derived class for correct downcasting the result of
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
+
+  class DefaultValueFormat {
+  public:
+    DefaultValueFormat(Stream &stream) : stream(stream) {
+      stream.PutCString(" (default: ");
+    }
+    ~DefaultValueFormat() { stream.PutChar(')'); }
+
+    DefaultValueFormat(const DefaultValueFormat &) = delete;
+    DefaultValueFormat &operator=(const DefaultValueFormat &) = delete;
+
+  private:
+    Stream &stream;
+  };
 
   lldb::OptionValueWP m_parent_wp;
   std::function<void()> m_callback;
