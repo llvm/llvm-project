@@ -69,6 +69,7 @@ enum DiagnosticClass {
   CLASS_WARNING = DiagnosticIDs::CLASS_WARNING,
   CLASS_EXTENSION = DiagnosticIDs::CLASS_EXTENSION,
   CLASS_ERROR = DiagnosticIDs::CLASS_ERROR,
+  CLASS_TRAP = DiagnosticIDs::CLASS_TRAP,
 };
 
 struct StaticDiagInfoRec {
@@ -139,6 +140,7 @@ VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
 VALIDATE_DIAG_SIZE(INSTALLAPI)
+VALIDATE_DIAG_SIZE(TRAP)
 VALIDATE_DIAG_SIZE(CAS)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
@@ -172,6 +174,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+#include "clang/Basic/DiagnosticTrapKinds.inc"
 #include "clang/Basic/DiagnosticCASKinds.inc"
 // clang-format on
 #undef DIAG
@@ -216,6 +219,7 @@ CATEGORY(SEMA, CROSSTU)
 CATEGORY(ANALYSIS, SEMA)
 CATEGORY(REFACTORING, ANALYSIS)
 CATEGORY(INSTALLAPI, REFACTORING)
+CATEGORY(TRAP, INSTALLAPI)
 CATEGORY(CAS, INSTALLAPI)
 #undef CATEGORY
 
