@@ -376,14 +376,14 @@ public:
     Token::Range Range;
     Token::Index Last;
     auto First = true;
-    for (const auto &B : C.Branches) {
+    for (const auto &[Directive, _] : C.Branches) {
       if (First) {
         First = false;
       } else {
-        Range = {Last, B.first.Tokens.Begin};
+        Range = {Last, Directive.Tokens.Begin};
         Ranges.push_back(Range);
       }
-      Last = B.first.Tokens.Begin;
+      Last = Directive.Tokens.Begin;
     }
 
     if (C.End.Kind != tok::pp_not_keyword) {
@@ -391,8 +391,8 @@ public:
       Ranges.push_back(Range);
     }
 
-    for (const auto &B : C.Branches)
-      walk(B.second);
+    for (const auto &[_, SubTree] : C.Branches)
+      walk(SubTree);
   }
 };
 } // namespace

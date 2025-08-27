@@ -231,6 +231,7 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
     AddFoldingRange(Start, End, FoldingRange::REGION_KIND);
   }
 
+  // FIXME: Provide ranges in the disabled-PP regions as well.
   auto Preprocessed = DirectiveStructure.stripDirectives(OrigStream);
 
   auto ParseableStream = cook(Preprocessed, genericLangOpts());
