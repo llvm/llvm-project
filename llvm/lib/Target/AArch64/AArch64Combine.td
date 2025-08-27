@@ -349,6 +349,8 @@ def AArch64PostLegalizerLowering
 }
 
 // Post-legalization combines which are primarily optimizations.
+
+
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, cast_of_cast_combines, 
@@ -369,5 +371,5 @@ def AArch64PostLegalizerCombiner
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate, 
-                        extmultomull, truncsat_combines]> {
+                        extmultomull, truncsat_combines, shift_of_trunc_of_shift]> {
 }
