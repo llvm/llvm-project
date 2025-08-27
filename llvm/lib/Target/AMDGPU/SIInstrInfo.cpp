@@ -5975,12 +5975,10 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
-                          const MCInstrDesc &TID, unsigned RCID,
-                          bool IsAllocatable) {
-  if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
-      (((TID.mayLoad() || TID.mayStore()) &&
-        !(TID.TSFlags & SIInstrFlags::Spill)) ||
-       (TID.TSFlags & SIInstrFlags::MIMG))) {
+                          const MCInstrDesc &TID, unsigned RCID) {
+  if (!ST.hasGFX90AInsts() && (((TID.mayLoad() || TID.mayStore()) &&
+                                !(TID.TSFlags & SIInstrFlags::Spill)) ||
+                               (TID.TSFlags & SIInstrFlags::MIMG))) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -6020,7 +6018,7 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
     return RI.getRegClass(RegClass);
   }
 
-  return adjustAllocatableRegClass(ST, RI, TID, RegClass, false);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
@@ -6039,7 +6037,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
   }
 
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return adjustAllocatableRegClass(ST, RI, Desc, RCID, true);
+  return adjustAllocatableRegClass(ST, RI, Desc, RCID);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
