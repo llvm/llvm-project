@@ -193,9 +193,8 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 /// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
-                                     ScalarEvolution &SE,
-                                     const Instruction *CtxI) {
-  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B, CtxI))
+                                     ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getAddExpr(A, B);
 }
@@ -203,20 +202,19 @@ static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
 /// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE,
-                                   const Instruction *CtxI) {
-  if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B, CtxI))
+                                   ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
 }
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object.
-static bool
-evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
-                                     const SCEV *MaxBTC, const SCEV *EltSize,
-                                     ScalarEvolution &SE, const DataLayout &DL,
-                                     DominatorTree *DT, AssumptionCache *AC) {
+static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
+    const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
+    ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
+    AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -234,12 +232,11 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
   const SCEV *DerefBytesSCEV = SE.getConstant(WiderTy, DerefBytes);
 
-  // Context which dominates the entire loop.
-  auto *CtxI = L->getLoopPredecessor()->getTerminator();
   // Check if we have a suitable dereferencable assumption we can use.
   if (!StartPtrV->canBeFreed()) {
     RetainedKnowledge DerefRK = getKnowledgeValidInContext(
-        StartPtrV, {Attribute::Dereferenceable}, *AC, CtxI, DT);
+        StartPtrV, {Attribute::Dereferenceable}, *AC,
+        L->getLoopPredecessor()->getTerminator(), DT);
     if (DerefRK) {
       DerefBytesSCEV = SE.getUMaxExpr(
           DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
@@ -263,12 +260,20 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   const SCEV *OffsetAtLastIter =
-      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE, CtxI);
-  if (!OffsetAtLastIter)
-    return false;
+      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+  if (!OffsetAtLastIter) {
+    // Re-try with constant max backedge-taken count if using the symbolic one
+    // failed.
+    MaxBTC = SE.getNoopOrZeroExtend(
+        SE.getConstantMaxBackedgeTakenCount(AR->getLoop()), WiderTy);
+    OffsetAtLastIter =
+        mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+    if (!OffsetAtLastIter)
+      return false;
+  }
 
   const SCEV *OffsetEndBytes = addSCEVNoOverflow(
-      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE, CtxI);
+      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
   if (!OffsetEndBytes)
     return false;
 
@@ -276,10 +281,15 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     // For positive steps, check if
     //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
     // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes =
-        addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE, CtxI);
+    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
     if (!EndBytes)
       return false;
+
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
+
+    EndBytes = SE.applyLoopGuards(EndBytes, *LoopGuards);
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 
@@ -296,7 +306,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    DominatorTree *DT, AssumptionCache *AC) {
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -332,7 +343,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // separately checks that accesses cannot not wrap, so unsigned max
       // represents an upper bound.
       if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
-                                               DT, AC)) {
+                                               DT, AC, LoopGuards)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       } else {
         ScEnd = SE->getAddExpr(
@@ -381,7 +392,7 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
       Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-      &DC.getPointerBounds(), DC.getDT(), DC.getAC());
+      &DC.getPointerBounds(), DC.getDT(), DC.getAC(), LoopGuards);
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -1987,13 +1998,13 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
   ScalarEvolution &SE = *PSE.getSE();
   const auto &[SrcStart_, SrcEnd_] =
       getStartAndEndForAccess(InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC,
-                              &SE, &PointerBounds, DT, AC);
+                              &SE, &PointerBounds, DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(SrcStart_) || isa<SCEVCouldNotCompute>(SrcEnd_))
     return false;
 
   const auto &[SinkStart_, SinkEnd_] =
       getStartAndEndForAccess(InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC,
-                              &SE, &PointerBounds, DT, AC);
+                              &SE, &PointerBounds, DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(SinkStart_) ||
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
@@ -3040,8 +3051,9 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector) * 2;
 
   DepChecker = std::make_unique<MemoryDepChecker>(
-      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits);
-  PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
+      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits, LoopGuards);
+  PtrRtChecking =
+      std::make_unique<RuntimePointerChecking>(*DepChecker, SE, LoopGuards);
   if (canAnalyzeLoop())
     CanVecMem = analyzeLoop(AA, LI, TLI, DT);
 }
