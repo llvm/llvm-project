@@ -1005,6 +1005,41 @@ class LinuxCoreTestCase(TestBase):
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
 
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_module_list_dyld(self):
+        """
+        Test module list based dyld can successfully get images
+        list from NT_FILE without main executable
+        """
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.assertEqual(process.GetTarget().GetNumModules(), 1)
+        exe_module = process.GetTarget().GetModuleAtIndex(0)
+        # Module load address is got from coredump NT_FILE.
+        self.assertEqual(
+            exe_module.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x400000
+        )
+        self.dbg.DeleteTarget(target)
+
+    def test_replace_placeholder_module(self):
+        """
+        Test module list based dyld can successfully get images list from
+        NT_FILE without main executable. And `target module replace`
+        command can replace the Placeholder object file with real one.
+        """
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.runCmd("target module replace linux-x86_64.out -s a.out")
+        self.check_all(process, self._x86_64_pid, self._x86_64_regions, "a.out")
+        self.dbg.DeleteTarget(target)
+
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)
