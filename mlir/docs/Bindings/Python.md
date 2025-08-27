@@ -216,7 +216,7 @@ added to an attached operation, they need to be re-parented to the containing
 module).
 
 Due to the validity and parenting accounting needs, `PyOperation` is the owner
-for regions and blocks. Operations are also the only entity that are allowed to be in
+for regions and blocks. Operations are also the only entities which are allowed to be in
 a detached state.
 
 **Note**: Multiple `PyOperation` objects (i.e., the Python objects themselves) can alias a single `mlir::Operation`. 
