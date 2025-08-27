@@ -9,14 +9,14 @@
 ;; Run optimizer pass on an IR module without IR functions, and test that global
 ;; variables in the module could be annotated (i.e., no early return),
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX
+; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX,STAT
 
 ;; Run optimizer pass on the IR, and check the section prefix.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX
+; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,PREFIX,STAT
 
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix=false \
-; RUN: -debug-only=memprof -S input.ll -o - 2>&1 | FileCheck %s --implicit-check-not="section_prefix"
+; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --implicit-check-not="section_prefix" 
 
 ; LOG: Skip annotating string literal .str
 ; LOG: Global variable var1 is annotated as hot
@@ -51,14 +51,23 @@
 ; PREFIX: !0 = !{!"section_prefix", !"hot"}
 ; PREFIX-NEXT: !1 = !{!"section_prefix", !"unlikely"}
 
+; STAT: 1 memprof - Number of global vars annotated with 'unlikely' section prefix.
+; STAT: 2 memprof - Number of global vars with user-specified section (not annotated).
+; STAT: 2 memprof - Number of global vars annotated with 'hot' section prefix.
+; STAT: 1 memprof - Number of global vars with unknown hotness (no section prefix).
+
 ;--- memprof.yaml
 ---
+# The memprof pass won't make use of heap profiles for this test. The field
+# HeapProfileRecords and the subfields are provided since YAML reader requires
+# these fields for parsing (i.e., mapRequired) currently. If we can relax the
+# mapRequired to mapOptional, we can keep 'DataAccessProfiles' and simplify the
+# test. 
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
     AllocSites:
       - Callstack:
           - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
-          - { Function: 0x2222222222222222, LineOffset: 22, Column: 20, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      111
           TotalSize:       222
@@ -67,8 +76,6 @@ HeapProfileRecords:
     CallSites:
       - Frames:
         - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
-        - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
-        CalleeGuids: [ 0x100, 0x200 ]
 DataAccessProfiles:
   SampledRecords:
     - Symbol:          var1

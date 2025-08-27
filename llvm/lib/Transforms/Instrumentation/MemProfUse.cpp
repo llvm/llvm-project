@@ -95,6 +95,14 @@ STATISTIC(NumOfMemProfMatchedAllocs,
           "Number of matched memory profile allocs.");
 STATISTIC(NumOfMemProfMatchedCallSites,
           "Number of matched memory profile callsites.");
+STATISTIC(NumOfMemProfHotGlobalVars,
+          "Number of global vars annotated with 'hot' section prefix.");
+STATISTIC(NumOfMemProfColdGlobalVars,
+          "Number of global vars annotated with 'unlikely' section prefix.");
+STATISTIC(NumOfMemProfUnknownGlobalVars,
+          "Number of global vars with unknown hotness (no section prefix).");
+STATISTIC(NumOfMemProfExplicitSectionGlobalVars,
+          "Number of global vars with user-specified section (not annotated).");
 
 static void addCallsiteMetadata(Instruction &I,
                                 ArrayRef<uint64_t> InlinedCallStack,
@@ -811,6 +819,7 @@ bool MemProfUsePass::annotateGlobalVariables(
       continue;
 
     if (hasExplicitSectionName(GVar)) {
+      ++NumOfMemProfExplicitSectionGlobalVars;
       LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
                         << " has explicit section name. Skip annotating.\n");
       continue;
@@ -818,10 +827,11 @@ bool MemProfUsePass::annotateGlobalVariables(
 
     StringRef Name = GVar.getName();
     // Skip string literals as their mangled names don't stay stable across
-    // binary binary releases.
+    // binary releases.
     // TODO: Track string content hash in the profiles and compute it inside the
     // compiler to categeorize the hotness string literals.
     if (Name.starts_with(".str")) {
+
       LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
       continue;
     }
@@ -837,16 +847,19 @@ bool MemProfUsePass::annotateGlobalVariables(
     // it's not well defined how to associate a global variable with a function.
     // So we just print out the static data section prefix in LLVM_DEBUG.
     if (Record && Record->AccessCount > 0) {
+      ++NumOfMemProfHotGlobalVars;
       GVar.setSectionPrefix("hot");
       Changed = true;
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as hot\n");
     } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+      ++NumOfMemProfColdGlobalVars;
       GVar.setSectionPrefix("unlikely");
       Changed = true;
       LLVM_DEBUG(dbgs() << "Global variable " << Name
                         << " is annotated as unlikely\n");
     } else {
+      ++NumOfMemProfUnknownGlobalVars;
       LLVM_DEBUG(dbgs() << "Global variable " << Name << " is not annotated\n");
     }
   }
