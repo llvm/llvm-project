@@ -1050,12 +1050,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         context.messages().Say(
             "Character in intrinsic function %s must have length one"_err_en_US,
             name);
-      } else if (len.value() > 1) {
-        // Do not die, this was not checked before
-        context.Warn(common::UsageWarning::Portability,
-            "Character in intrinsic function %s should have length one"_port_en_US,
-            name);
       } else {
+        // Do not die, this was not checked before
+        if (len.value() > 1) {
+          context.Warn(common::UsageWarning::Portability,
+              "Character in intrinsic function %s should have length one"_port_en_US,
+              name);
+        }
         return common::visit(
             [&funcRef, &context, &FromInt64](const auto &str) -> Expr<T> {
               using Char = typename std::decay_t<decltype(str)>::Result;
