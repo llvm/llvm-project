@@ -16,18 +16,21 @@ __m64 test_mm_abs_pi8(__m64 a) {
   // CHECK: call <8 x i8> @llvm.abs.v8i8(
   return _mm_abs_pi8(a);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_abs_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}), 3, 2, 1, 0, 1, 2, 3, 4));
 
 __m64 test_mm_abs_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi16
   // CHECK: call <4 x i16> @llvm.abs.v4i16(
   return _mm_abs_pi16(a);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_abs_pi16((__m64)(__v4hi){+1, -2, +3, -4}), 1, 2, 3, 4));
 
 __m64 test_mm_abs_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi32
   // CHECK: call <2 x i32> @llvm.abs.v2i32(
   return _mm_abs_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_abs_pi32((__m64)(__v2si){+5, -3}), 5, 3));
 
 __m64 test_mm_add_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_pi8

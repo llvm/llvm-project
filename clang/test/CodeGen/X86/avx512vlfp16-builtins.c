@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-unknown-unknown -target-feature +avx512vl -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 _Float16 test_mm_cvtsh_h(__m128h __A) {
   // CHECK-LABEL: test_mm_cvtsh_h
@@ -401,12 +402,14 @@ __m128h test_mm_abs_ph(__m128h a) {
   // CHECK: and <4 x i32>
   return _mm_abs_ph(a);
 }
+TEST_CONSTEXPR(match_m128h(_mm_abs_ph((__m128h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0}), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0));
 
 __m256h test_mm256_abs_ph(__m256h a) {
   // CHECK-LABEL: test_mm256_abs_ph
   // CHECK: and <8 x i32>
   return _mm256_abs_ph(a);
 }
+TEST_CONSTEXPR(match_m256h(_mm256_abs_ph((__m256h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, 16.0}), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0));
 
 __m256h test_mm256_conj_pch(__m256h __A) {
   // CHECK-LABEL: test_mm256_conj_pch
