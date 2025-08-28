@@ -24,9 +24,9 @@
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
-#include <flang/Utils/OpenMP.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
+#include <flang/Utils/OpenMP.h>
 #include <llvm/Support/CommandLine.h>
 
 #include <iterator>
