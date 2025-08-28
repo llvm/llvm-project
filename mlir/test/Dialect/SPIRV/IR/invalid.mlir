@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s 
+// RUN: mlir-opt --split-input-file --verify-diagnostics %s
 
 //===----------------------------------------------------------------------===//
 // spirv.LoadOp

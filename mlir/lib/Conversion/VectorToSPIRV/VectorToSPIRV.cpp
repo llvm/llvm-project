@@ -743,15 +743,14 @@ struct VectorLoadOpConverter final
 
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
-    auto alignment = loadOp.getAlignment();
-    if (alignment.has_value() &&
-        alignment > std::numeric_limits<uint32_t>::max()) {
+    std::optional<uint64_t> alignment = loadOp.getAlignment();
+    if (alignment > std::numeric_limits<uint32_t>::max()) {
       return rewriter.notifyMatchFailure(loadOp,
                                          "invalid alignment requirement");
     }
 
     auto memoryAccess = spirv::MemoryAccess::None;
-    auto memoryAccessAttr = spirv::MemoryAccessAttr{};
+    spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr = nullptr;
     if (alignment.has_value()) {
       memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
@@ -800,8 +799,8 @@ struct VectorStoreOpConverter final
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
 
-    auto alignment = storeOp.getAlignment();
-    if (alignment && alignment > std::numeric_limits<uint32_t>::max()) {
+    std::optional<uint64_t> alignment = storeOp.getAlignment();
+    if (alignment > std::numeric_limits<uint32_t>::max()) {
       return rewriter.notifyMatchFailure(storeOp,
                                          "invalid alignment requirement");
     }
@@ -820,7 +819,7 @@ struct VectorStoreOpConverter final
                                        accessChain);
 
     auto memoryAccess = spirv::MemoryAccess::None;
-    auto memoryAccessAttr = spirv::MemoryAccessAttr{};
+    spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr = nullptr;
     if (alignment.has_value()) {
       memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
