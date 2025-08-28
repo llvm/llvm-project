@@ -765,6 +765,25 @@ private:
   CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                     const SCEV *&Constant) const;
 
+  /// Given \p Expr of the form
+  ///
+  ///   c_0*X_0*i_0 + c_1*X_1*i_1 + ...c_n*X_n*i_n + C
+  ///
+  /// compute
+  ///
+  ///   RunningGCD = gcd(RunningGCD, c_0, c_1, ..., c_n)
+  ///
+  /// where c_0, c_1, ..., and c_n are the constant values. The result is stored
+  /// in \p RunningGCD. Also, the initial value of \p RunningGCD affects the
+  /// result. If we find a term like (c_k * X_k * i_k), where i_k is the
+  /// induction variable of \p CurLoop, c_k is stored in \p CurLoopCoeff and not
+  /// included in the GCD computation. Returns false if we fail to find a
+  /// constant coefficient for some loop, e.g., when a term like (X+Y)*i is
+  /// present. Otherwise returns true.
+  bool accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
+                                 const SCEV *&CurLoopCoeff,
+                                 APInt &RunningGCD) const;
+
   /// getPositivePart - X^+ = max(X, 0).
   const SCEV *getPositivePart(const SCEV *X) const;
 

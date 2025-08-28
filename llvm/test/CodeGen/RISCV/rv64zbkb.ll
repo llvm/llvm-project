@@ -495,6 +495,36 @@ define void @pack_lo_packh_hi_packh_3(i8 %0, i8 %1, i8 %2, i8 %3, ptr %p) nounwi
   ret void
 }
 
+define i32 @pack_lo_packh_hi_packh_4(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, i8 zeroext %3, ptr %p) nounwind {
+; RV64I-LABEL: pack_lo_packh_hi_packh_4:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    slli a2, a2, 16
+; RV64I-NEXT:    slliw a3, a3, 24
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    or a2, a2, a3
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_4:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, a0, a1
+; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packw a0, a0, a1
+; RV64ZBKB-NEXT:    ret
+  %a = zext i8 %0 to i32
+  %b = zext i8 %1 to i32
+  %c = zext i8 %2 to i32
+  %d = zext i8 %3 to i32
+  %e = shl i32 %b, 8
+  %f = shl i32 %c, 16
+  %g = shl i32 %d, 24
+  %h = or i32 %a, %e
+  %i = or i32 %h, %f
+  %j = or i32 %i, %g
+  ret i32 %j
+}
+
 define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) nounwind {
 ; RV64I-LABEL: pack_lo_zext_hi_packh:
 ; RV64I:       # %bb.0:

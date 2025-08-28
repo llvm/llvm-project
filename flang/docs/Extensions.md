@@ -900,6 +900,16 @@ print *, [(j,j=1,10)]
   since these default values need to be available to process incomplete
   structure constructors.
 
+* When an `ALLOCATE` or `DEALLOCATE` statement with multiple variables
+  has a `STAT=` specifier that allows the program to continue execution
+  after an error, the variables after the one with the error are left
+  deallocated (or allocated).  This interpretation allows the program to
+  identify the variable that encountered the problem while avoiding any
+  ambiguity in the case of multiple errors with distinct status codes.
+  Some compilers work differently; for maximum portability, avoid
+  `ALLOCATE` and `DEALLOCATE` statements with error recovery for
+  multiple variables.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the

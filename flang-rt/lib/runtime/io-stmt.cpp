@@ -352,6 +352,17 @@ void OpenStatementState::CompleteOperation() {
     // Set default format (C.7.4 point 2).
     unit().isUnformatted = unit().access != Access::Sequential;
   }
+  if (unit().isUnformatted.value_or(false) && mustBeFormatted_) {
+    // This is an unformatted unit, but the OPEN statement contained at least
+    // one specifier that is not permitted unless the unit is formatted
+    // (e.g., BLANK=).  Programs that want to detect this error (i.e., tests)
+    // should be informed about it, but don't crash the program otherwise
+    // since most other compilers let it slide.
+    if (HasErrorRecovery()) {
+      SignalError("FORM='UNFORMATTED' is not allowed with OPEN specifiers that "
+                  "apply only to formatted units");
+    }
+  }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
     set_destroy();
@@ -1086,7 +1097,7 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   if constexpr (DIR == Direction::Input) {
     if (auto *listInput{child.parent()
                 .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->inNamelistSequence_ = listInput->inNamelistSequence();
+      this->namelistGroup_ = listInput->namelistGroup();
     }
   }
 #else
@@ -1095,10 +1106,14 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
 }
 
 template <Direction DIR>
-bool ChildUnformattedIoStatementState<DIR>::Receive(
-    char *data, std::size_t bytes, std::size_t elementBytes) {
+bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return this->child().parent().Receive(data, bytes, elementBytes);
+  // Allow child NAMELIST input to advance
+  if (DIR == Direction::Input && this->mutableModes().inNamelist) {
+    return this->child().parent().AdvanceRecord(n);
+  } else {
+    return false;
+  }
 #else
   this->ReportUnsupportedChildIo();
 #endif
@@ -1112,6 +1127,16 @@ template <Direction DIR> int ChildListIoStatementState<DIR>::EndIoStatement() {
     }
   }
   return ChildIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR>
+bool ChildUnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  return this->child().parent().Receive(data, bytes, elementBytes);
+#else
+  this->ReportUnsupportedChildIo();
+#endif
 }
 
 template class InternalIoStatementState<Direction::Output>;

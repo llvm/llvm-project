@@ -1,0 +1,23 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+
+// expected-error @below {{expected !cir.record type}}
+cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !cir.ptr<!rec_anon_struct>
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+
+// expected-error @below {{number of elements must match}}
+cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_anon_struct = !cir.record<struct  packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+
+// expected-error @below {{element at index 1 has type '!cir.float' but the expected type for this element is '!cir.int<s, 32>'}}
+cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct

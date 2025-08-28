@@ -82,27 +82,6 @@ template <typename A> bool IsVariable(const A &x) {
   }
 }
 
-// Predicate: true when an expression is assumed-rank
-bool IsAssumedRank(const Symbol &);
-bool IsAssumedRank(const ActualArgument &);
-template <typename A> bool IsAssumedRank(const A &) { return false; }
-template <typename A> bool IsAssumedRank(const Designator<A> &designator) {
-  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return IsAssumedRank(symbol->get());
-  } else {
-    return false;
-  }
-}
-template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
-  return common::visit([](const auto &x) { return IsAssumedRank(x); }, expr.u);
-}
-template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
-  return x && IsAssumedRank(*x);
-}
-template <typename A> bool IsAssumedRank(const A *x) {
-  return x && IsAssumedRank(*x);
-}
-
 // Finds the corank of an entity, possibly packaged in various ways.
 // Unlike rank, only data references have corank > 0.
 int GetCorank(const ActualArgument &);
@@ -1123,6 +1102,7 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
+bool HasVectorSubscript(const ActualArgument &);
 
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
@@ -1144,15 +1124,14 @@ std::optional<std::string> FindImpureCall(
 std::optional<std::string> FindImpureCall(
     FoldingContext &, const ProcedureRef &);
 
-// Predicate: is a scalar expression suitable for naive scalar expansion
-// in the flattening of an array expression?
-// TODO: capture such scalar expansions in temporaries, flatten everything
-class UnexpandabilityFindingVisitor
-    : public AnyTraverse<UnexpandabilityFindingVisitor> {
+// Predicate: does an expression contain anything that would prevent it from
+// being duplicated so that two instances of it then appear in the same
+// expression?
+class UnsafeToCopyVisitor : public AnyTraverse<UnsafeToCopyVisitor> {
 public:
-  using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
+  using Base = AnyTraverse<UnsafeToCopyVisitor>;
   using Base::operator();
-  explicit UnexpandabilityFindingVisitor(bool admitPureCall)
+  explicit UnsafeToCopyVisitor(bool admitPureCall)
       : Base{*this}, admitPureCall_{admitPureCall} {}
   template <typename T> bool operator()(const FunctionRef<T> &procRef) {
     return !admitPureCall_ || !procRef.proc().IsPure();
@@ -1163,14 +1142,22 @@ private:
   bool admitPureCall_{false};
 };
 
+template <typename A>
+bool IsSafelyCopyable(const A &x, bool admitPureCall = false) {
+  return !UnsafeToCopyVisitor{admitPureCall}(x);
+}
+
+// Predicate: is a scalar expression suitable for naive scalar expansion
+// in the flattening of an array expression?
+// TODO: capture such scalar expansions in temporaries, flatten everything
 template <typename T>
 bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
     const Shape &shape, bool admitPureCall = false) {
-  if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
+  if (IsSafelyCopyable(expr, admitPureCall)) {
+    return true;
+  } else {
     auto extents{AsConstantExtents(context, shape)};
     return extents && !HasNegativeExtent(*extents) && GetSize(*extents) == 1;
-  } else {
-    return true;
   }
 }
 
@@ -1548,7 +1535,19 @@ bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
+
+bool IsAssumedRank(const Symbol &);
+template <typename A> bool IsAssumedRank(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedRank(*symbol);
+}
+
 bool IsAssumedShape(const Symbol &);
+template <typename A> bool IsAssumedShape(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedShape(*symbol);
+}
+
 bool IsDeferredShape(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);

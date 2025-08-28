@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    UseSymbolicMaxBTCForDerefInLoop("use-symbolic-maxbtc-deref-loop",
+                                    cl::init(false));
+
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -276,8 +280,7 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   // this function is only used when one address use dominates the
   // other, which means that they'll always either have the same
   // value or one of them will have an undefined value.
-  if (isa<BinaryOperator>(A) || isa<CastInst>(A) || isa<PHINode>(A) ||
-      isa<GetElementPtrInst>(A))
+  if (isa<CastInst>(A) || isa<PHINode>(A) || isa<GetElementPtrInst>(A))
     if (const Instruction *BI = dyn_cast<Instruction>(B))
       if (cast<Instruction>(A)->isIdenticalToWhenDefined(BI))
         return true;
@@ -333,7 +336,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
-  if (isa<SCEVCouldNotCompute>(BECount)) {
+  if (isa<SCEVCouldNotCompute>(BECount) && !UseSymbolicMaxBTCForDerefInLoop) {
     // TODO: Support symbolic max backedge taken counts for loops without
     // computable backedge taken counts.
     MaxBECount =
@@ -341,6 +344,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
             ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
             : SE.getConstantMaxBackedgeTakenCount(L);
   }
+
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
       L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||

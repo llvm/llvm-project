@@ -295,9 +295,9 @@ TEST(QualTypeNameTest, TemplatedClass) {
   auto *A2 = *ASpec;
 
   // Their type names follow the records.
-  QualType A1RecordTy = Context.getRecordType(A1);
+  CanQualType A1RecordTy = Context.getCanonicalTagType(A1);
   EXPECT_EQ(getFullyQualifiedName(A1RecordTy), "A<1>");
-  QualType A2RecordTy = Context.getRecordType(A2);
+  CanQualType A2RecordTy = Context.getCanonicalTagType(A2);
   EXPECT_EQ(getFullyQualifiedName(A2RecordTy), "A<2U>");
 
   // getTemplateSpecializationType() gives types that print the integral
@@ -305,13 +305,13 @@ TEST(QualTypeNameTest, TemplatedClass) {
   TemplateArgument Args1[] = {
       {Context, llvm::APSInt::getUnsigned(1u), Context.UnsignedIntTy}};
   QualType A1TemplateSpecTy = Context.getTemplateSpecializationType(
-      TemplateName(A), Args1, Args1, A1RecordTy);
+      ElaboratedTypeKeyword::None, TemplateName(A), Args1, Args1, A1RecordTy);
   EXPECT_EQ(A1TemplateSpecTy.getAsString(), "A<1>");
 
   TemplateArgument Args2[] = {
       {Context, llvm::APSInt::getUnsigned(2u), Context.UnsignedIntTy}};
   QualType A2TemplateSpecTy = Context.getTemplateSpecializationType(
-      TemplateName(A), Args2, Args2, A2RecordTy);
+      ElaboratedTypeKeyword::None, TemplateName(A), Args2, Args2, A2RecordTy);
   EXPECT_EQ(A2TemplateSpecTy.getAsString(), "A<2>");
 
   // Find A<1>::B and its specialization B<3>.
@@ -321,21 +321,19 @@ TEST(QualTypeNameTest, TemplatedClass) {
   auto A1BSpec = A1B->spec_begin();
   ASSERT_NE(A1BSpec, A1B->spec_end());
   auto *A1B3 = *A1BSpec;
-  QualType A1B3RecordTy = Context.getRecordType(A1B3);
+  CanQualType A1B3RecordTy = Context.getCanonicalTagType(A1B3);
   EXPECT_EQ(getFullyQualifiedName(A1B3RecordTy), "A<1>::B<3>");
 
   // Construct A<1>::B<3> and check name.
+  NestedNameSpecifier A1Nested(A1TemplateSpecTy.getTypePtr());
+  TemplateName A1B3Name = Context.getQualifiedTemplateName(
+      A1Nested, /*TemplateKeyword=*/false, TemplateName(A1B));
+
   TemplateArgument Args3[] = {
       {Context, llvm::APSInt::getUnsigned(3u), Context.UnsignedIntTy}};
   QualType A1B3TemplateSpecTy = Context.getTemplateSpecializationType(
-      TemplateName(A1B), Args3, Args3, A1B3RecordTy);
-  EXPECT_EQ(A1B3TemplateSpecTy.getAsString(), "B<3>");
-
-  NestedNameSpecifier *A1Nested = NestedNameSpecifier::Create(
-      Context, nullptr, A1TemplateSpecTy.getTypePtr());
-  QualType A1B3ElaboratedTy = Context.getElaboratedType(
-      ElaboratedTypeKeyword::None, A1Nested, A1B3TemplateSpecTy);
-  EXPECT_EQ(A1B3ElaboratedTy.getAsString(), "A<1>::B<3>");
+      ElaboratedTypeKeyword::None, A1B3Name, Args3, Args3, A1B3RecordTy);
+  EXPECT_EQ(A1B3TemplateSpecTy.getAsString(), "A<1>::B<3>");
 
   // Find A<2u>::B and its specialization B<4u>.
   auto *A2B =
@@ -344,21 +342,19 @@ TEST(QualTypeNameTest, TemplatedClass) {
   auto A2BSpec = A2B->spec_begin();
   ASSERT_NE(A2BSpec, A2B->spec_end());
   auto *A2B4 = *A2BSpec;
-  QualType A2B4RecordTy = Context.getRecordType(A2B4);
+  CanQualType A2B4RecordTy = Context.getCanonicalTagType(A2B4);
   EXPECT_EQ(getFullyQualifiedName(A2B4RecordTy), "A<2U>::B<4U>");
 
   // Construct A<2>::B<4> and check name.
+  NestedNameSpecifier A2Nested(A2TemplateSpecTy.getTypePtr());
+  TemplateName A2B4Name = Context.getQualifiedTemplateName(
+      A2Nested, /*TemplateKeyword=*/false, TemplateName(A2B));
+
   TemplateArgument Args4[] = {
       {Context, llvm::APSInt::getUnsigned(4u), Context.UnsignedIntTy}};
   QualType A2B4TemplateSpecTy = Context.getTemplateSpecializationType(
-      TemplateName(A2B), Args4, Args4, A2B4RecordTy);
-  EXPECT_EQ(A2B4TemplateSpecTy.getAsString(), "B<4>");
-
-  NestedNameSpecifier *A2Nested = NestedNameSpecifier::Create(
-      Context, nullptr, A2TemplateSpecTy.getTypePtr());
-  QualType A2B4ElaboratedTy = Context.getElaboratedType(
-      ElaboratedTypeKeyword::None, A2Nested, A2B4TemplateSpecTy);
-  EXPECT_EQ(A2B4ElaboratedTy.getAsString(), "A<2>::B<4>");
+      ElaboratedTypeKeyword::None, A2B4Name, Args4, Args4, A2B4RecordTy);
+  EXPECT_EQ(A2B4TemplateSpecTy.getAsString(), "A<2>::B<4>");
 }
 
 TEST(QualTypeNameTest, AnonStrucs) {

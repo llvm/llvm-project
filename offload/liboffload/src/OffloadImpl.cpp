@@ -125,6 +125,7 @@ struct OffloadContext {
   bool TracingEnabled = false;
   bool ValidationEnabled = true;
   DenseMap<void *, AllocInfo> AllocInfoMap{};
+  std::mutex AllocInfoMapMutex{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
   size_t RefCount;
 
@@ -302,10 +303,57 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   };
 
   // These are not implemented by the plugin interface
-  if (PropName == OL_DEVICE_INFO_PLATFORM)
+  switch (PropName) {
+  case OL_DEVICE_INFO_PLATFORM:
     return Info.write<void *>(Device->Platform);
-  if (PropName == OL_DEVICE_INFO_TYPE)
+
+  case OL_DEVICE_INFO_TYPE:
     return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
+
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG: {
+    ol_device_fp_capability_flags_t flags{0};
+    flags |= OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+             OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+             OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
+             OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+    return Info.write(flags);
+  }
+
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(0);
+
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE:
+    return Info.write<uint32_t>(1);
+
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF:
+    return Info.write<uint32_t>(0);
+
+  // None of the existing plugins specify a limit on a single allocation,
+  // so return the global memory size instead
+  case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
+    [[fallthrough]];
+  // AMD doesn't provide the global memory size (trivially) with the device info
+  // struct, so use the plugin interface
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
+    uint64_t Mem;
+    if (auto Err = Device->Device->getDeviceMemorySize(Mem))
+      return Err;
+    return Info.write<uint64_t>(Mem);
+  } break;
+
+  default:
+    break;
+  }
+
   if (PropName >= OL_DEVICE_INFO_LAST)
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -316,6 +364,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                      "plugin did not provide a response for this information");
   auto Entry = *EntryOpt;
 
+  // Retrieve properties from the plugin interface
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
   case OL_DEVICE_INFO_VENDOR:
@@ -327,7 +376,12 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.writeString(std::get<std::string>(Entry->Value).c_str());
   }
 
-  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE: {
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+  case OL_DEVICE_INFO_VENDOR_ID:
+  case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
+  case OL_DEVICE_INFO_ADDRESS_BITS:
+  case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
       return makeError(ErrorCode::BACKEND_FAILURE,
@@ -389,9 +443,40 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return Info.writeString(LLVM_VERSION_STRING);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
-    return Info.write<uint64_t>(1);
+    return Info.write<uint32_t>(1);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION:
     return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
+  case OL_DEVICE_INFO_VENDOR_ID:
+    return Info.write<uint32_t>(0);
+  case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
+    return Info.write<uint32_t>(1);
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
+        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA);
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
+    return Info.write<ol_device_fp_capability_flags_t>(0);
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT:
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE:
+    return Info.write<uint32_t>(1);
+  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF:
+    return Info.write<uint32_t>(0);
+  case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE:
+  case OL_DEVICE_INFO_ADDRESS_BITS:
+    return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
+  case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
+  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
+    return Info.write<uint64_t>(0);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -449,25 +534,32 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
     return Alloc.takeError();
 
   *AllocationOut = *Alloc;
-  OffloadContext::get().AllocInfoMap.insert_or_assign(*Alloc,
-                                                      AllocInfo{Device, Type});
+  {
+    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
+    OffloadContext::get().AllocInfoMap.insert_or_assign(
+        *Alloc, AllocInfo{Device, Type});
+  }
   return Error::success();
 }
 
 Error olMemFree_impl(void *Address) {
-  if (!OffloadContext::get().AllocInfoMap.contains(Address))
-    return createOffloadError(ErrorCode::INVALID_ARGUMENT,
-                              "address is not a known allocation");
+  ol_device_handle_t Device;
+  ol_alloc_type_t Type;
+  {
+    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
+    if (!OffloadContext::get().AllocInfoMap.contains(Address))
+      return createOffloadError(ErrorCode::INVALID_ARGUMENT,
+                                "address is not a known allocation");
 
-  auto AllocInfo = OffloadContext::get().AllocInfoMap.at(Address);
-  auto Device = AllocInfo.Device;
-  auto Type = AllocInfo.Type;
+    auto AllocInfo = OffloadContext::get().AllocInfoMap.at(Address);
+    Device = AllocInfo.Device;
+    Type = AllocInfo.Type;
+    OffloadContext::get().AllocInfoMap.erase(Address);
+  }
 
   if (auto Res =
           Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type)))
     return Res;
-
-  OffloadContext::get().AllocInfoMap.erase(Address);
 
   return Error::success();
 }
@@ -553,8 +645,8 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
+  // No event info means that this event was complete on creation
   if (!Event->EventInfo)
-    // Event always complete
     return Plugin::success();
 
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
@@ -575,10 +667,22 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
                                ol_event_info_t PropName, size_t PropSize,
                                void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
+  auto Queue = Event->Queue;
 
   switch (PropName) {
   case OL_EVENT_INFO_QUEUE:
-    return Info.write<ol_queue_handle_t>(Event->Queue);
+    return Info.write<ol_queue_handle_t>(Queue);
+  case OL_EVENT_INFO_IS_COMPLETE: {
+    // No event info means that this event was complete on creation
+    if (!Event->EventInfo)
+      return Info.write<bool>(true);
+
+    auto Res = Queue->Device->Device->isEventComplete(Event->EventInfo,
+                                                      Queue->AsyncInfo);
+    if (auto Err = Res.takeError())
+      return Err;
+    return Info.write<bool>(*Res);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetEventInfo enum '%i' is invalid", PropName);
@@ -656,6 +760,12 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   return Error::success();
 }
 
+Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                     const void *PatternPtr, size_t FillSize) {
+  return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,
+                                         Queue->AsyncInfo);
+}
+
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
   // Make a copy of the program binary in case it is released by the caller.
@@ -694,6 +804,24 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
       std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
 
   return olDestroy(Program);
+}
+
+Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
+                                       ol_symbol_handle_t Kernel,
+                                       size_t DynamicMemSize,
+                                       size_t *GroupSize) {
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
+
+  auto Res = KernelImpl->maxGroupSize(*Device->Device, DynamicMemSize);
+  if (auto Err = Res.takeError())
+    return Err;
+
+  *GroupSize = *Res;
+
+  return Error::success();
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
@@ -765,7 +893,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
-    auto &Global = Program->KernelSymbols[Name];
+    auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
       GlobalTy GlobalObj{Name};
       if (auto Res =
@@ -831,6 +959,13 @@ Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
 Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
                                ol_symbol_info_t PropName, size_t *PropSizeRet) {
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
+}
+
+Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
+                                ol_host_function_cb_t Callback,
+                                void *UserData) {
+  return Queue->Device->Device->enqueueHostCall(Callback, UserData,
+                                                Queue->AsyncInfo);
 }
 
 } // namespace offload

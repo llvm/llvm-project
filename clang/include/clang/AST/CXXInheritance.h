@@ -359,7 +359,7 @@ class CXXFinalOverriderMap
 
 /// A set of all the primary bases for a class.
 class CXXIndirectPrimaryBaseSet
-  : public llvm::SmallSet<const CXXRecordDecl*, 32> {};
+    : public llvm::SmallPtrSet<const CXXRecordDecl *, 32> {};
 
 inline bool
 inheritanceModelHasVBPtrOffsetField(MSInheritanceModel Inheritance) {
