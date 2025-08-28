@@ -1216,7 +1216,10 @@ public:
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       setRequiresImmediate(Min, Max);
     }
-    unsigned getFlagOutputCCUpperBound() const { return ImmRange.Max; }
+    std::pair<unsigned, unsigned> getOutputOperandBounds() const {
+      return ImmRange.isConstrained ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                                    : std::make_pair(0, 0);
+    }
   };
 
   /// Validate register name used for global register variables.

@@ -2704,7 +2704,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const std::vector<unsigned> &ResultFlagRegCCBound) {
+              const std::vector<unsigned> &OutputOperandBounds) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2715,23 +2715,22 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
   // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
   // in which case its size may grow.
   assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
-  assert(ResultFlagRegCCBound.size() <= ResultRegDests.size());
+  assert(OutputOperandBounds.size() <= ResultRegDests.size());
 
   for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
     llvm::Value *Tmp = RegResults[i];
     llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
-    if ((i < ResultFlagRegCCBound.size()) && ResultFlagRegCCBound[i]) {
+    if ((i < OutputOperandBounds.size()) && OutputOperandBounds[i]) {
       // Target must guarantee the Value `Tmp` here is lowered to a boolean
       // value.
       // Lowering 'Tmp' as - 'icmp ult %Tmp , CCUpperBound'.
-      unsigned CCUpperBound = ResultFlagRegCCBound[i];
-      assert((CCUpperBound == 2 || CCUpperBound == 4) &&
-             "CC upper bound out of range!");
-      llvm::Constant *CCUpperBoundConst =
-          llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
+      unsigned UpperBound = OutputOperandBounds[i];
+      assert(UpperBound <= 4 && "Output operand out of range!");
+      llvm::Constant *UpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), UpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, CCUpperBoundConst);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, UpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
@@ -2860,7 +2859,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  std::vector<unsigned> ResultFlagRegCCBound;
+  std::vector<unsigned> OutputOperandBounds;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2918,7 +2917,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      ResultFlagRegCCBound.push_back(Info.getFlagOutputCCUpperBound());
+      const auto [_, UpperBound] = Info.getOutputOperandBounds();
+      OutputOperandBounds.push_back(UpperBound);
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&
@@ -3265,7 +3265,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
                 ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
-                ResultFlagRegCCBound);
+                OutputOperandBounds);
 
   // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
   // different insertion point; one for each indirect destination and with
@@ -3276,7 +3276,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       Builder.SetInsertPoint(Succ, --(Succ->end()));
       EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
                     ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
-                    ResultTypeRequiresCast, ResultFlagRegCCBound);
+                    ResultTypeRequiresCast, OutputOperandBounds);
     }
   }
 }
