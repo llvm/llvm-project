@@ -601,17 +601,7 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
   assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
   for (Function &F : M) {
-    std::unique_ptr<Embedder> Emb;
-    switch (IR2VecEmbeddingKind) {
-    case IR2VecKind::Symbolic:
-      Emb = std::make_unique<SymbolicEmbedder>(F, Vocabulary);
-      break;
-    case IR2VecKind::FlowAware:
-      Emb = std::make_unique<FlowAwareEmbedder>(F, Vocabulary);
-      break;
-    default:
-      llvm_unreachable("Unknown IR2Vec embedding kind");
-    }
+    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, Vocabulary);
     if (!Emb) {
       OS << "Error creating IR2Vec embeddings \n";
       continue;
