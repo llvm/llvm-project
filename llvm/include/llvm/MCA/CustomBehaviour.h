@@ -27,6 +27,9 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+
+class Target;
+
 namespace mca {
 
 /// Class which can be overriden by targets to modify the
@@ -177,9 +180,7 @@ protected:
 public:
   InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                     bool EnableDefaults = false,
-                    std::unique_ptr<InstrumentManager> TargetIM = {})
-      : STI(STI), MCII(MCII), EnableDefaults(EnableDefaults),
-        TargetIM(std::move(TargetIM)) {}
+                    const Target* TheTarget = nullptr);
 
   virtual ~InstrumentManager() = default;
 

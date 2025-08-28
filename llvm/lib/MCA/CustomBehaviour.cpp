@@ -13,6 +13,7 @@
 
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/Instruction.h"
+#include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
 namespace mca {
@@ -44,6 +45,14 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
 }
 
 static const llvm::StringRef CustomInstrumentName = "CUSTOMIZE";
+
+InstrumentManager::InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                                     bool EnableDefaults,const Target* TheTarget)
+    : STI(STI), MCII(MCII), EnableDefaults(EnableDefaults) {
+    if (TheTarget)
+      TargetIM = std::unique_ptr<InstrumentManager>(
+          TheTarget->createInstrumentManager(STI, MCII));
+}
 
 bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
   if (EnableDefaults && Type == CustomInstrumentName)
