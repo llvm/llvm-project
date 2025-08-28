@@ -8,7 +8,9 @@
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallSet.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
@@ -31,6 +33,24 @@ template <typename InputNode>
 using ResolveFnT = std::function<std::vector<const NamedDecl *>(
     const HeuristicResolver *, InputNode)>;
 
+std::string format_error(const clang::StoredDiagnostic *D) {
+  std::ostringstream Msg{};
+  if (D->getLevel() == DiagnosticsEngine::Level::Ignored)
+    Msg << "Ignored: ";
+  if (D->getLevel() == DiagnosticsEngine::Level::Note)
+    Msg << "Note: ";
+  if (D->getLevel() == DiagnosticsEngine::Level::Remark)
+    Msg << "Remark: ";
+  if (D->getLevel() == DiagnosticsEngine::Level::Warning)
+    Msg << "Warning: ";
+  if (D->getLevel() == DiagnosticsEngine::Level::Error)
+    Msg << "Error: ";
+  if (D->getLevel() == DiagnosticsEngine::Level::Fatal)
+    Msg << "Fatal: ";
+  Msg << D->getID() << ": " << D->getMessage().str();
+  return Msg.str();
+}
+
 // Test heuristic resolution on `Code` using the resolution procedure
 // `ResolveFn`, which takes a `HeuristicResolver` and an input AST node of type
 // `InputNode` and returns a `std::vector<const NamedDecl *>`.
@@ -41,7 +61,16 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
+  llvm::SmallSet<unsigned int, 16> IgnoredDiagnostics{};
   auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++23"});
+
+  for (auto D = TU->stored_diag_begin(), DEnd = TU->stored_diag_end();
+       D != DEnd; ++D) {
+    EXPECT_TRUE(D->getLevel() < DiagnosticsEngine::Warning ||
+                IgnoredDiagnostics.contains(D->getID()))
+        << format_error(D);
+  }
+
   auto &Ctx = TU->getASTContext();
   auto InputMatches = match(IM, Ctx);
   ASSERT_EQ(1u, InputMatches.size());

@@ -658,13 +658,15 @@ public:
                                             Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
-        Files);
+        Files, false, CaptureKinds);
     if (!AST)
       return false;
 
     ASTs.push_back(std::move(AST));
     return true;
   }
+
+  CaptureDiagsKind CaptureKinds{CaptureDiagsKind::None};
 };
 
 } // namespace
@@ -695,7 +697,10 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     DiagnosticConsumer *DiagConsumer, CaptureDiagsKind CaptureKind,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
+
   ASTBuilderAction Action(ASTs);
+  Action.CaptureKinds = CaptureDiagsKind::All;
+
   auto OverlayFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
           std::move(BaseFS));
