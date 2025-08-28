@@ -38,6 +38,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             ),
         )
 
+    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
         """
         Tests that the "scopes" request causes the currently selected

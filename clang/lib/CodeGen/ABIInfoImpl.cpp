@@ -114,7 +114,7 @@ CGCXXABI::RecordArgABI CodeGen::getRecordArgABI(const RecordType *RT,
 }
 
 CGCXXABI::RecordArgABI CodeGen::getRecordArgABI(QualType T, CGCXXABI &CXXABI) {
-  const RecordType *RT = T->getAs<RecordType>();
+  const RecordType *RT = T->getAsCanonical<RecordType>();
   if (!RT)
     return CGCXXABI::RAA_Default;
   return getRecordArgABI(RT, CXXABI);
@@ -260,7 +260,7 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
       WasArray = true;
     }
 
-  const RecordType *RT = FT->getAs<RecordType>();
+  const RecordType *RT = FT->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 

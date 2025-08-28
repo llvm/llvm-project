@@ -164,6 +164,76 @@ public:
   ConstString FindBestAlternateFunctionMangledName(
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
+  /// Substitutes Itanium type encoding substrings given by \c subst_from
+  /// in \c mangled_name with \c subst_to.
+  ///
+  /// This function will only replace Itanium type encodings (i.e., <type>
+  /// productions in the Itanium ABI mangling grammar). However, no verifiction
+  /// is done on whether \c subst_from or \c subst_to is a valid type encoding.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \param[in] subst_from The substring to substitute.
+  ///
+  /// \param[in] subst_to The substring to insert.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteType_ItaniumMangle(llvm::StringRef mangled_name,
+                               llvm::StringRef subst_from,
+                               llvm::StringRef subst_to);
+
+  /// Substitutes Itanium structor encoding substrings given by \c subst_from
+  /// in \c mangled_name with \c subst_to.
+  ///
+  /// This function will only replace Itanium structor encodings (i.e.,
+  /// <ctor-dtor-name> productions in the Itanium ABI mangling grammar).
+  /// However, no verifiction is done on whether \c subst_from or \c subst_to is
+  /// a valid structor encoding.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \param[in] subst_from The substring to substitute.
+  ///
+  /// \param[in] subst_to The substring to insert.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteStructor_ItaniumMangle(llvm::StringRef mangled_name,
+                                   llvm::StringRef subst_from,
+                                   llvm::StringRef subst_to);
+
+  /// Tries replacing Itanium structor encoding substrings in \c mangled_name
+  /// with potential aliases.j
+  ///
+  /// This function will only replace Itanium structor encodings (i.e.,
+  /// <ctor-dtor-name> productions in the Itanium ABI mangling grammar).
+  ///
+  /// E.g., on some platforms, the C1/D1 variants are aliased to the C2/D2
+  /// variants. This function will try to replace occurrences of C1/D1 with
+  /// C2/D2.
+  ///
+  /// \param[in] mangled_name Mangled name to perform the substitutions in.
+  /// This function only supports Itanium ABI mangling.
+  ///
+  /// \returns The mangled string with substitutions. If no substitutions
+  /// have been made, returns an empty \c ConstString (even if the string
+  /// already contained the substitutions). If an error occurred, this function
+  /// returns the error.
+  ///
+  static llvm::Expected<ConstString>
+  SubstituteStructorAliases_ItaniumMangle(llvm::StringRef mangled_name);
+
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;

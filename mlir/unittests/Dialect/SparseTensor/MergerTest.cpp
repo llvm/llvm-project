@@ -124,7 +124,7 @@ FOREVERY_BINOP(IMPL_BINOP_PATTERN)
 class MergerTestBase : public ::testing::TestWithParam<LevelFormat> {
 protected:
   MergerTestBase(unsigned numTensors, unsigned numLoops)
-      : merger(numTensors, numLoops, /*maxRank=*/numLoops) {
+      : merger(numTensors, numLoops, /*maxLvlRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
       tensors.push_back(merger.addTensorExp(tid(t)));

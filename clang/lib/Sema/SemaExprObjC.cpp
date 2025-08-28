@@ -3845,7 +3845,7 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   QualType QT = TDNDecl->getUnderlyingType();
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
-    if (const RecordType *RT = QT->getAs<RecordType>()) {
+    if (const RecordType *RT = QT->getAsCanonical<RecordType>()) {
       for (auto *Redecl :
            RT->getOriginalDecl()->getMostRecentDecl()->redecls()) {
         if (auto *attr = Redecl->getAttr<T>())

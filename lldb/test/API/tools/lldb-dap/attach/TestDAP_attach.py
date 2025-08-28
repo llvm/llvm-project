@@ -93,6 +93,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.set_and_hit_breakpoint(continueToExit=True)
 
     @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfWindows
     def test_commands(self):
         """
         Tests the "initCommands", "preRunCommands", "stopCommands",

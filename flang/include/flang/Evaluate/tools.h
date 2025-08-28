@@ -1104,6 +1104,9 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 bool HasVectorSubscript(const Expr<SomeType> &);
 bool HasVectorSubscript(const ActualArgument &);
 
+// Predicate: is an expression a section of an array?
+bool IsArraySection(const Expr<SomeType> &expr);
+
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
 
@@ -1115,6 +1118,18 @@ template <typename MESSAGES, typename... A>
 parser::Message *SayWithDeclaration(
     MESSAGES &messages, const Symbol &symbol, A &&...x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext context,
+    const Symbol &symbol, common::LanguageFeature feature, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(feature, std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext &context,
+    const Symbol &symbol, common::UsageWarning warning, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(warning, std::forward<A>(x)...), symbol);
 }
 
 // Check for references to impure procedures; returns the name

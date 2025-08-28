@@ -396,7 +396,7 @@ llvm::json::Array JSONNodeDumper::createCastPath(const CastExpr *C) {
   for (auto I = C->path_begin(), E = C->path_end(); I != E; ++I) {
     const CXXBaseSpecifier *Base = *I;
     const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAs<RecordType>()->getOriginalDecl());
+        Base->getType()->castAsCanonical<RecordType>()->getOriginalDecl());
 
     llvm::json::Object Val{{"name", RD->getName()}};
     if (Base->isVirtual())

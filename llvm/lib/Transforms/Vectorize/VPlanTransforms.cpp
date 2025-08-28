@@ -1084,6 +1084,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // AND x, 0 -> 0
+  if (match(&R, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt()))) {
+    Def->replaceAllUsesWith(R.getOperand(0) == X ? R.getOperand(1)
+                                                 : R.getOperand(0));
+    return;
+  }
+
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 

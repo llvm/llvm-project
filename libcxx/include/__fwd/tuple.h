@@ -26,6 +26,12 @@ struct tuple_element;
 template <class...>
 class tuple;
 
+template <class>
+inline const bool __is_tuple_v = false;
+
+template <class... _Tp>
+inline const bool __is_tuple_v<tuple<_Tp...>> = true;
+
 template <size_t _Ip, class... _Tp>
 struct tuple_element<_Ip, tuple<_Tp...> > {
   using type _LIBCPP_NODEBUG = __type_pack_element<_Ip, _Tp...>;
