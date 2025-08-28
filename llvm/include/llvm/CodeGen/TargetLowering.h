@@ -268,6 +268,7 @@ public:
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
+    CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -2275,6 +2276,18 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
+  }
+
   /// Perform a cmpxchg expansion using a target-specific method.
   virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
     llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
@@ -2379,8 +2392,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
-  /// to use an atomicrmw xchg.
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
+  /// will try to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
