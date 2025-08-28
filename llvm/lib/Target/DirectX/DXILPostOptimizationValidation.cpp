@@ -225,17 +225,18 @@ static void validateRootSignature(Module &M,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
-  hlsl::BoundRegs Info = Builder.calculateBoundRegs(
+  Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
            const llvm::hlsl::Binding &ReportedBinding) {
         const llvm::hlsl::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+  const hlsl::BoundRegs &BoundRegs = Builder.getBoundRegs();
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
-    if (!Info.isBound(RC, Binding.Space, Binding.LowerBound,
+    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
                       Binding.LowerBound + Binding.Size - 1))
       reportRegNotBound(M, RC, Binding);
   }
