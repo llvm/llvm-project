@@ -291,8 +291,7 @@ public:
   /// demangled name.
   ///
   /// For a demangled name like "ns::MyClass<int>::templateFunc", this returns
-  /// just "templateFunc". If the demangled name is not available or the
-  /// basename range is invalid, this falls back to GetDisplayDemangledName().
+  /// just "templateFunc".
   ///
   /// \return
   ///     A ConstString containing the basename, or nullptr if computation
