@@ -150,8 +150,10 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
        ++MBBI)
     ;
 
-  // SCTLR_EL1.BT[01] is set to 0 by default which means
-  // PACI[AB]SP are implicitly BTI C so no BTI C instruction is needed there.
+  // PACI[AB]SP are compatible with BTI c, independently of SCTLR_EL1.BT[01].
+  // If SCTLR_EL1.BT[01] is set to 1, they are compatible with BTI jc, but we
+  // cannot rely on that it compile time. Therefore, we can only skip adding a
+  // BTI c for these.
   if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
        MBBI->getOpcode() == AArch64::PACIBSP))
