@@ -4807,7 +4807,7 @@ TEST(Hover, HoverMacroContentsLimit) {
 
     EXPECT_EQ(H->Definition, Case.ExpectedDefinition);
   }
-};
+}
 
 TEST(Hover, FunctionParameters) {
   struct {
