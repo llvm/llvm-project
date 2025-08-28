@@ -1790,15 +1790,13 @@ define i32 @select_cst5_invert(i1 zeroext %cond) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst5_invert:
 ; RV64IMXVTCONDOPS:       # %bb.0:
-; RV64IMXVTCONDOPS-NEXT:    li a1, 2
-; RV64IMXVTCONDOPS-NEXT:    vt.maskc a0, a1, a0
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a0, 1
 ; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 2047
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; CHECKZICOND-LABEL: select_cst5_invert:
 ; CHECKZICOND:       # %bb.0:
-; CHECKZICOND-NEXT:    li a1, 2
-; CHECKZICOND-NEXT:    czero.eqz a0, a1, a0
+; CHECKZICOND-NEXT:    slli a0, a0, 1
 ; CHECKZICOND-NEXT:    addi a0, a0, 2047
 ; CHECKZICOND-NEXT:    ret
   %ret = select i1 %cond, i32 2049, i32 2047
@@ -1873,17 +1871,21 @@ define i32 @select_cst_diff2_invert(i1 zeroext %cond) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff2_invert:
 ; RV64IMXVTCONDOPS:       # %bb.0:
-; RV64IMXVTCONDOPS-NEXT:    li a1, -2
-; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 122
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a0, 1
+; RV64IMXVTCONDOPS-NEXT:    addiw a0, a0, 120
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
-; CHECKZICOND-LABEL: select_cst_diff2_invert:
-; CHECKZICOND:       # %bb.0:
-; CHECKZICOND-NEXT:    li a1, -2
-; CHECKZICOND-NEXT:    czero.nez a0, a1, a0
-; CHECKZICOND-NEXT:    addi a0, a0, 122
-; CHECKZICOND-NEXT:    ret
+; RV32IMZICOND-LABEL: select_cst_diff2_invert:
+; RV32IMZICOND:       # %bb.0:
+; RV32IMZICOND-NEXT:    slli a0, a0, 1
+; RV32IMZICOND-NEXT:    addi a0, a0, 120
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_cst_diff2_invert:
+; RV64IMZICOND:       # %bb.0:
+; RV64IMZICOND-NEXT:    slli a0, a0, 1
+; RV64IMZICOND-NEXT:    addiw a0, a0, 120
+; RV64IMZICOND-NEXT:    ret
   %ret = select i1 %cond, i32 122, i32 120
   ret i32 %ret
 }
@@ -1911,16 +1913,14 @@ define i32 @select_cst_diff4(i1 zeroext %cond) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff4:
 ; RV64IMXVTCONDOPS:       # %bb.0:
-; RV64IMXVTCONDOPS-NEXT:    li a1, -4
-; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 10
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a0, 2
+; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 6
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
 ; CHECKZICOND-LABEL: select_cst_diff4:
 ; CHECKZICOND:       # %bb.0:
-; CHECKZICOND-NEXT:    li a1, -4
-; CHECKZICOND-NEXT:    czero.nez a0, a1, a0
-; CHECKZICOND-NEXT:    addi a0, a0, 10
+; CHECKZICOND-NEXT:    slli a0, a0, 2
+; CHECKZICOND-NEXT:    addi a0, a0, 6
 ; CHECKZICOND-NEXT:    ret
   %ret = select i1 %cond, i32 10, i32 6
   ret i32 %ret
@@ -1987,17 +1987,21 @@ define i32 @select_cst_diff8(i1 zeroext %cond) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff8:
 ; RV64IMXVTCONDOPS:       # %bb.0:
-; RV64IMXVTCONDOPS-NEXT:    li a1, -8
-; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 14
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a0, 3
+; RV64IMXVTCONDOPS-NEXT:    addiw a0, a0, 6
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
-; CHECKZICOND-LABEL: select_cst_diff8:
-; CHECKZICOND:       # %bb.0:
-; CHECKZICOND-NEXT:    li a1, -8
-; CHECKZICOND-NEXT:    czero.nez a0, a1, a0
-; CHECKZICOND-NEXT:    addi a0, a0, 14
-; CHECKZICOND-NEXT:    ret
+; RV32IMZICOND-LABEL: select_cst_diff8:
+; RV32IMZICOND:       # %bb.0:
+; RV32IMZICOND-NEXT:    slli a0, a0, 3
+; RV32IMZICOND-NEXT:    addi a0, a0, 6
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_cst_diff8:
+; RV64IMZICOND:       # %bb.0:
+; RV64IMZICOND-NEXT:    slli a0, a0, 3
+; RV64IMZICOND-NEXT:    addiw a0, a0, 6
+; RV64IMZICOND-NEXT:    ret
   %ret = select i1 %cond, i32 14, i32 6
   ret i32 %ret
 }
@@ -2071,17 +2075,21 @@ define i32 @select_cst_diff1024(i1 zeroext %cond) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: select_cst_diff1024:
 ; RV64IMXVTCONDOPS:       # %bb.0:
-; RV64IMXVTCONDOPS-NEXT:    li a1, -1024
-; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a1, a0
-; RV64IMXVTCONDOPS-NEXT:    addi a0, a0, 1030
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a0, 10
+; RV64IMXVTCONDOPS-NEXT:    addiw a0, a0, 6
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
-; CHECKZICOND-LABEL: select_cst_diff1024:
-; CHECKZICOND:       # %bb.0:
-; CHECKZICOND-NEXT:    li a1, -1024
-; CHECKZICOND-NEXT:    czero.nez a0, a1, a0
-; CHECKZICOND-NEXT:    addi a0, a0, 1030
-; CHECKZICOND-NEXT:    ret
+; RV32IMZICOND-LABEL: select_cst_diff1024:
+; RV32IMZICOND:       # %bb.0:
+; RV32IMZICOND-NEXT:    slli a0, a0, 10
+; RV32IMZICOND-NEXT:    addi a0, a0, 6
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_cst_diff1024:
+; RV64IMZICOND:       # %bb.0:
+; RV64IMZICOND-NEXT:    slli a0, a0, 10
+; RV64IMZICOND-NEXT:    addiw a0, a0, 6
+; RV64IMZICOND-NEXT:    ret
   %ret = select i1 %cond, i32 1030, i32 6
   ret i32 %ret
 }

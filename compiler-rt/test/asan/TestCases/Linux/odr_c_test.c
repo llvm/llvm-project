@@ -1,7 +1,6 @@
 // Test that we can properly report an ODR violation between an instrumented
 // global and a non-instrumented global if not using private aliases.
 
-// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=0 -o %dynamiclib1  -DFILE1
 // RUN: %clang_asan -fcommon %s -fPIC -shared -mllvm -asan-use-private-alias=0 -o %dynamiclib2  -DFILE2
 // RUN: %clang_asan -fcommon %s -fPIE %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
