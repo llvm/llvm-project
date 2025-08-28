@@ -74,20 +74,13 @@ public:
     if (!PhysReg)
       return MCRegister();
 
-    const TargetRegisterClass *VirtRegRC = MRI.getRegClass(VReg);
-    if (!TRI.hasAGPRs(VirtRegRC))
-      return MCRegister();
-
-    if (!TRI.hasVGPRs(VirtRegRC))
-      return PhysReg;
-
     // If this is an AV register, we have to check if the actual assignment is
     // to an AGPR
     const TargetRegisterClass *AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
     return TRI.isAGPRClass(AssignedRC) ? PhysReg : MCRegister();
   }
 
-  bool tryReassigningMFMAChain(MachineInstr &MFMA, unsigned HintOpIdx,
+  bool tryReassigningMFMAChain(MachineInstr &MFMA, Register MFMAHintReg,
                                MCPhysReg PhysRegHint) const;
 
   /// Compute the register class constraints based on the uses of \p Reg,
@@ -187,13 +180,12 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
-    MachineInstr &MFMA, unsigned HintOpIdx, MCPhysReg PhysRegHint) const {
+    MachineInstr &MFMA, Register MFMAHintReg, MCPhysReg PhysRegHint) const {
   // src2 and dst have the same physical class constraint; try to preserve
   // the original src2 subclass if one were to exist.
   SmallVector<MachineInstr *, 4> RewriteCandidates = {&MFMA};
   SmallSetVector<Register, 4> RewriteRegs;
 
-  Register MFMAHintReg = MFMA.getOperand(HintOpIdx).getReg();
   // Make sure we reassign the MFMA we found the copy from first. We want
   // to ensure dst ends up in the physreg we were originally copying to.
   RewriteRegs.insert(MFMAHintReg);
@@ -352,7 +344,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesToAGPR(
 
     for (MachineInstr &CopySrcDefMI : MRI.def_instructions(CopySrcReg)) {
       if (isRewriteCandidate(CopySrcDefMI) &&
-          tryReassigningMFMAChain(CopySrcDefMI, 0, AssignedAGPR))
+          tryReassigningMFMAChain(
+              CopySrcDefMI, CopySrcDefMI.getOperand(0).getReg(), AssignedAGPR))
         MadeChange = true;
     }
   }
@@ -380,10 +373,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
 
     for (MachineInstr &CopyUseMI : MRI.use_instructions(CopyDstReg)) {
       if (isRewriteCandidate(CopyUseMI)) {
-        const MachineOperand *Op =
-            CopyUseMI.findRegisterUseOperand(CopyDstReg, /*TRI=*/nullptr);
-        if (tryReassigningMFMAChain(CopyUseMI, Op->getOperandNo(),
-                                    VRM.getPhys(Op->getReg())))
+        if (tryReassigningMFMAChain(CopyUseMI, CopyDstReg,
+                                    VRM.getPhys(CopyDstReg)))
           MadeChange = true;
       }
     }
