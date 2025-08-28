@@ -124,3 +124,4 @@ void Err2(RWBuffer<float4> B) {
 // These notes refer to the RWBuffer constructors that do not have source locations
 // expected-note@*{{candidate constructor (the implicit copy constructor) not viable}}
 // expected-note@*{{candidate constructor (the implicit move constructor) not viable}}
+// expected-note@*{{candidate constructor not viable}}
