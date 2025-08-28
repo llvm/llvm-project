@@ -5162,6 +5162,23 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_ballot_w{32,64}`` returns a bitmask that contains its
+boolean argument as a bit for every lane of the current wave that is currently
+active (i.e., that is converged with the executing thread), and a 0 bit for
+every lane that is not active.
+
+The result is uniform, i.e. it is the same in every active thread of the wave.
+
+__builtin_amdgcn_inverse_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
+returns the bit at the position of the current lane. It is almost equivalent to
+``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
+the given mask has the same value for all active lanes of the current wave.
 
 ARM/AArch64 Language Extensions
 -------------------------------
