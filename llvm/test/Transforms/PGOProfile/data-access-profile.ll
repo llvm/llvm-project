@@ -60,24 +60,6 @@
 
 ;--- memprof.yaml
 ---
-# The memprof pass won't make use of heap profiles for this test. The field
-# HeapProfileRecords and the subfields are provided since YAML reader requires
-# these fields for parsing (i.e., mapRequired) currently. If we can relax the
-# mapRequired to mapOptional, we can keep 'DataAccessProfiles' and simplify the
-# test. 
-HeapProfileRecords:
-  - GUID:            0xdeadbeef12345678
-    AllocSites:
-      - Callstack:
-          - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
-        MemInfoBlock:
-          AllocCount:      111
-          TotalSize:       222
-          TotalLifetime:   333
-          TotalLifetimeAccessDensity: 444
-    CallSites:
-      - Frames:
-        - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
 DataAccessProfiles:
   SampledRecords:
     - Symbol:          var1
