@@ -61,6 +61,8 @@
 #include <cstring>
 #include <utility>
 
+#define DEBUG_TYPE "irtranslator"
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -644,7 +646,7 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
 
   if (BFloatOpnd) {
     MIFlags |= MachineInstr::MIFlag::BFloat16;
-    LLVM_DEBUG(dbgs() << "bfloat detected at the MachineInstr" << "\n");
+    LLVM_DEBUG(dbgs() << "[BFLOAT] bfloat detected at the MachineInstr \n");
   }
 
   return MIFlags;

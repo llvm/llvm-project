@@ -2195,8 +2195,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  LLVM_DEBUG(dbgs() << "IRTranslator translateKnownIntrinsic for CI: " << CI << '\n');
-  LLVM_DEBUG(dbgs() << "IRTranslator translateKnownIntrinsic for ID: " << ID << '\n');
+  LLVM_DEBUG(dbgs() << "[BFLOAT] IRTranslator translateKnownIntrinsic for CI: " << CI << '\n');
+  LLVM_DEBUG(dbgs() << "[BFLOAT] IRTranslator translateKnownIntrinsic for ID: " << ID << '\n');
   switch (ID) {
   default:
     break;
@@ -2878,11 +2878,11 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
+  MIB->copyIRFlags(CI);
   if (containsBF16Type(U)) {
-    dbgs() << "Flagged at IRTranslator: " << *MIB.getInstr() << "\n";
+    dbgs() << "[BFLOAT] Flagged at IRTranslator: " << *MIB.getInstr() << "\n";
     MIB.getInstr()->setFlag(MachineInstr::MIFlag::BFloat16);
   }
-   MIB->copyIRFlags(CI);
   
   return true;
 }
@@ -4105,8 +4105,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower function: "
-      << ore::NV("Prototype", F.getFunctionType());
+    R << "u "
+      << ore::NV("Prototype", F.getnable to lower function:FunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
@@ -4118,6 +4118,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       continue; // Don't handle zero sized types.
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
+    LLVM_DEBUG(dbgs() << "[BFLOAT] Created vreg in IRTranslator: " << VRegs);
 
     if (Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
@@ -4165,10 +4166,12 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
         // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
-        LLVM_DEBUG(dbgs() << "Inst at IRTranslator: " << Inst << "\n");
+        LLVM_DEBUG(dbgs() << "[BFLOAT] Inst at IRTranslator: " << Inst << "\n");
 
-        if (translate(Inst))
+        if (translate(Inst)) {
+          LLVM_DEBUG(dbgs() << "[BFLOAT] Inst at IRTranslator after translate(Inst): " << Inst << "\n");
           continue;
+        }
 
         OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                    Inst.getDebugLoc(), BB);
