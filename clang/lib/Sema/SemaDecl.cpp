@@ -5291,10 +5291,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     //   UNION_TYPE;   <- where UNION_TYPE is a typedef union.
     if ((Tag && Tag->getDeclName()) ||
         DS.getTypeSpecType() == DeclSpec::TST_typename) {
-      RecordDecl *Record = dyn_cast_or_null<RecordDecl>(Tag);
-      if (!Record)
-        Record = DS.getRepAsType().get()->getAsRecordDecl();
-
+      RecordDecl *Record = Tag ? dyn_cast<RecordDecl>(Tag)
+                               : DS.getRepAsType().get()->getAsRecordDecl();
       if (Record && getLangOpts().MicrosoftExt) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
             << Record->isUnion() << DS.getSourceRange();
@@ -18544,8 +18542,14 @@ CreateNewDecl:
   if (PrevDecl)
     CheckRedeclarationInModule(New, PrevDecl);
 
-  if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip))
-    New->startDefinition();
+  if (TUK == TagUseKind::Definition) {
+    if (!SkipBody || !SkipBody->ShouldSkip) {
+      New->startDefinition();
+    } else {
+      New->setCompleteDefinition();
+      New->demoteThisDefinitionToDeclaration();
+    }
+  }
 
   ProcessDeclAttributeList(S, New, Attrs);
   AddPragmaAttributes(S, New);
