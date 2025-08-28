@@ -2359,8 +2359,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
-    Known.One = Known2.One.reverseBits();
-    Known.Zero = Known2.Zero.reverseBits();
+    Known = Known2.reverseBits();
     break;
   }
   case ISD::BSWAP: {
@@ -2393,8 +2392,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
-    Known.One = Known2.One.byteSwap();
-    Known.Zero = Known2.Zero.byteSwap();
+    Known = Known2.byteSwap();
     break;
   }
   case ISD::CTPOP: {
