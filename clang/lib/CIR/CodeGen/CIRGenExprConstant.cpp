@@ -109,8 +109,6 @@ class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
   /// non-packed LLVM struct will give the correct layout.
   bool naturalLayout = true;
 
-  std::optional<size_t> splitAt(CharUnits pos);
-
   static mlir::Attribute
   buildFrom(CIRGenModule &cgm, ArrayRef<mlir::TypedAttr> elems,
             ArrayRef<CharUnits> offsets, CharUnits startOffset, CharUnits size,
@@ -167,51 +165,8 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  std::optional<size_t> firstElemToReplace = splitAt(offset);
-  if (!firstElemToReplace)
-    return false;
-
-  CharUnits cSize = getSize(typedAttr);
-  std::optional<size_t> lastElemToReplace = splitAt(offset + cSize);
-  if (!lastElemToReplace)
-    return false;
-
-  assert((firstElemToReplace == lastElemToReplace || allowOverwrite) &&
-         "unexpectedly overwriting field");
-
-  replace(elems, *firstElemToReplace, *lastElemToReplace, {typedAttr});
-  replace(offsets, *firstElemToReplace, *lastElemToReplace, {offset});
-  size = std::max(size, offset + cSize);
-  naturalLayout = false;
-  return true;
-}
-
-/// Returns a position within Elems and Offsets such that all elements
-/// before the returned index end before Pos and all elements at or after
-/// the returned index begin at or after Pos. Splits elements as necessary
-/// to ensure this. Returns None if we find something we can't split.
-std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits pos) {
-  if (pos >= size)
-    return offsets.size();
-
-  clang::CharUnits *firstAfterPos = llvm::upper_bound(offsets, pos);
-  if (firstAfterPos == offsets.begin())
-    return 0;
-
-  // If we already have an element starting at Pos, we're done.
-  size_t lastAtOrBeforePosIndex = firstAfterPos - offsets.begin() - 1;
-  if (offsets[lastAtOrBeforePosIndex] == pos)
-    return lastAtOrBeforePosIndex;
-
-  // We found an element starting before Pos. Check for overlap.
-  mlir::TypedAttr c =
-      mlir::cast<mlir::TypedAttr>(elems[lastAtOrBeforePosIndex]);
-  if (offsets[lastAtOrBeforePosIndex] + getSize(c) <= pos)
-    return lastAtOrBeforePosIndex + 1;
-
-  // Try to decompose it into smaller constants.
-  cgm.errorNYI("split into smaller constants");
-  return std::nullopt;
+  cgm.errorNYI("overlapping constants");
+  return false;
 }
 
 mlir::Attribute ConstantAggregateBuilder::buildFrom(

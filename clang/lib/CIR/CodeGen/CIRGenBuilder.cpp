@@ -8,6 +8,7 @@
 
 #include "CIRGenBuilder.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -132,21 +133,20 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
 }
 
-static mlir::Type getAttributeType(mlir::Attribute attr) {
-  return mlir::cast<mlir::TypedAttr>(attr).getType();
-}
-
 cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
-    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name,
-    const clang::RecordDecl *ast) {
-  llvm::SmallVector<mlir::Type, 8> members;
+    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
+  assert(!cir::MissingFeatures::astRecordDeclAttr());
+  llvm::SmallVector<mlir::Type> members;
   members.reserve(fields.size());
-  llvm::transform(fields, std::back_inserter(members), getAttributeType);
+  llvm::transform(fields, std::back_inserter(members),
+                  [](mlir::Attribute attr) {
+                    return mlir::cast<mlir::TypedAttr>(attr).getType();
+                  });
 
   if (name.empty())
     return getAnonRecordTy(members, packed, padded);
 
-  return getCompleteRecordTy(members, name, packed, padded);
+  return getCompleteNamedRecordType(members, packed, padded, name);
 }
 
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
@@ -155,11 +155,7 @@ mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
 
   // Record type not specified: create anon record type from members.
   if (!recordTy) {
-    llvm::SmallVector<mlir::Type, 8> members;
-    members.reserve(arrayAttr.size());
-    llvm::transform(arrayAttr, std::back_inserter(members), getAttributeType);
-    recordTy = getType<cir::RecordType>(members, packed, padded,
-                                        cir::RecordType::Struct);
+    recordTy = getCompleteRecordType(arrayAttr, packed, padded);
   }
 
   // Return zero or anonymous constant record.
