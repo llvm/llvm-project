@@ -23,6 +23,24 @@ uint32_t pslli_h(uint32_t rs1, int32_t rs2) {
   return __riscv_pslli_h(rs1, 1);
 }
 
+// RV32P-LABEL: @psslai_h(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psslai.h.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t psslai_h(uint32_t rs1, int32_t rs2) {
+  return __riscv_psslai_h(rs1, 1);
+}
+
+// RV32P-LABEL: @sslai(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sslai.i32.i32(i32 [[RS1:%.*]], i32 1)
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t sslai(uint32_t rs1, int32_t rs2) {
+  return __riscv_sslai(rs1, 1);
+}
+
 // RV32P-LABEL: @psll_bs(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.psll.bs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])

@@ -31,6 +31,16 @@ __riscv_pslli_h(uint32_t __x, int __y) {
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+  __riscv_psslai_h(uint32_t __x, int __y) {
+  return __builtin_riscv_psslai_h_32(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__riscv_sslai(uint32_t __x, int __y) {
+  return __builtin_riscv_sslai(__x, __y);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_psll_bs(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_psll_bs_32(__x, __y);
 }
@@ -61,6 +71,16 @@ __riscv_pslli_h(uint64_t __x, int __y) {
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __riscv_pslli_w(uint64_t __x, int __y) {
   return __builtin_riscv_pslli_w(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psslai_h(uint64_t __x, int __y) {
+  return __builtin_riscv_psslai_h_64(__x, __y);
+}
+
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+__riscv_psslai_w(uint64_t __x, int __y) {
+  return __builtin_riscv_psslai_w(__x, __y);
 }
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))

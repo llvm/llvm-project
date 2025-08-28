@@ -300,6 +300,16 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pslli_w:
       ID = Intrinsic::riscv_pslli_w;
       break;
+    case RISCV::BI__builtin_riscv_psslai_h_32:
+    case RISCV::BI__builtin_riscv_psslai_h_64:
+      ID = Intrinsic::riscv_psslai_h;
+      break;
+    case RISCV::BI__builtin_riscv_psslai_w:
+      ID = Intrinsic::riscv_psslai_w;
+      break;
+    case RISCV::BI__builtin_riscv_sslai:
+      ID = Intrinsic::riscv_sslai;
+      break;
     }
     IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;

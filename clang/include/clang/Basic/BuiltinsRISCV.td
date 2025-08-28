@@ -141,20 +141,24 @@ def sm3p1 : RISCVBuiltin<"unsigned int(unsigned int)">;
 // Packed SIMD extension.
 //===----------------------------------------------------------------------===//
 let Features = "experimental-p,32bit" in {
-def pslli_b_32 : RISCVBuiltin<"unsigned int(unsigned int, int32_t)">;
-def pslli_h_32 : RISCVBuiltin<"unsigned int(unsigned int, int32_t)">;
-def psll_bs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
-def psll_hs_32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
-def sadd       : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def pslli_b_32  : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def pslli_h_32  : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def psslai_h_32 : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def sslai       : RISCVBuiltin<"uint32_t(uint32_t, int32_t)">;
+def psll_bs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def psll_hs_32  : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def sadd        : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 } // Features = "experimental-p,32bit"
 
 let Features = "experimental-p,64bit" in {
-def pslli_b_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
-def pslli_h_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
-def pslli_w    : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
-def psll_bs_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
-def psll_hs_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
-def psll_ws    : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def pslli_b_64  : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def pslli_h_64  : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def pslli_w     : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psslai_h_64 : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psslai_w    : RISCVBuiltin<"uint64_t(uint64_t, int64_t)">;
+def psll_bs_64  : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psll_hs_64  : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
+def psll_ws     : RISCVBuiltin<"uint64_t(uint64_t, uint64_t)">;
 } // Features = "experimental-p,64bit"
 } // Attributes = [Const, NoThrow]
 

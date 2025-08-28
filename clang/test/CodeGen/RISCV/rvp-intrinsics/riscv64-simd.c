@@ -35,6 +35,26 @@ uint64_t pslli_w(uint64_t rs1, int64_t rs2) {
   return __riscv_pslli_w(rs1, 1);
 }
 
+// RV64P-LABEL: @psslai_h(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psslai.h.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psslai_h(uint64_t rs1, int64_t rs2) {
+  return __riscv_psslai_h(rs1, 1);
+}
+
+// RV64P-LABEL: @psslai_w(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[CONV_I:%.*]] = sext i32 1 to i64
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psslai.w.i64.i64(i64 [[RS1:%.*]], i64 [[CONV_I]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psslai_w(uint64_t rs1, int64_t rs2) {
+  return __riscv_psslai_w(rs1, 1);
+}
+
 // RV64P-LABEL: @psll_bs(
 // RV64P-NEXT:  entry:
 // RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psll.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
