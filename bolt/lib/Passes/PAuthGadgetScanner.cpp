@@ -1671,29 +1671,6 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   }
 }
 
-// Compute the instruction address for printing (may be slow).
-static uint64_t getAddress(const MCInstReference &Inst) {
-  const BinaryFunction *BF = Inst.getFunction();
-
-  if (Inst.hasCFG()) {
-    const BinaryBasicBlock *BB = Inst.getBasicBlock();
-
-    auto It = static_cast<BinaryBasicBlock::const_iterator>(&Inst.getMCInst());
-    unsigned IndexInBB = std::distance(BB->begin(), It);
-
-    // FIXME: this assumes all instructions are 4 bytes in size. This is true
-    // for AArch64, but it might be good to extract this function so it can be
-    // used elsewhere and for other targets too.
-    return BF->getAddress() + BB->getOffset() + IndexInBB * 4;
-  }
-
-  for (auto I = BF->instrs().begin(), E = BF->instrs().end(); I != E; ++I) {
-    if (&I->second == &Inst.getMCInst())
-      return BF->getAddress() + I->first;
-  }
-  llvm_unreachable("Instruction not found in function");
-}
-
 static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
                     size_t StartIndex = 0, size_t EndIndex = -1) {
   if (EndIndex == (size_t)-1)
@@ -1703,7 +1680,7 @@ static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
     MCInstReference Inst(BB, I);
     if (BC.MIB->isCFI(Inst))
       continue;
-    BC.printInstruction(outs(), Inst, getAddress(Inst), BF);
+    BC.printInstruction(outs(), Inst, Inst.getAddress(), BF);
   }
 }
 
@@ -1728,9 +1705,9 @@ void Diagnostic::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", getAddress(Location)) << "\n";
+  OS << ", at address " << llvm::format("%x", Location.getAddress()) << "\n";
   OS << "  The instruction is ";
-  BC.printInstruction(OS, Location, getAddress(Location), BF);
+  BC.printInstruction(OS, Location, Location.getAddress(), BF);
 }
 
 void GadgetDiagnostic::generateReport(raw_ostream &OS,
@@ -1746,12 +1723,12 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   // Sort by address to ensure output is deterministic.
   SmallVector<MCInstReference> RI(RelatedInstrs);
   llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
-    return getAddress(A) < getAddress(B);
+    return A.getAddress() < B.getAddress();
   });
   for (unsigned I = 0; I < RI.size(); ++I) {
     MCInstReference InstRef = RI[I];
     OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, getAddress(InstRef), &BF);
+    BC.printInstruction(OS, InstRef, InstRef.getAddress(), &BF);
   };
   if (RelatedInstrs.size() == 1) {
     const MCInstReference RelatedInst = RelatedInstrs[0];

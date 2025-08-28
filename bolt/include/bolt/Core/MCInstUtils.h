@@ -14,6 +14,10 @@
 #include <variant>
 
 namespace llvm {
+class MCCodeEmitter;
+}
+
+namespace llvm {
 namespace bolt {
 
 class BinaryFunction;
@@ -54,7 +58,7 @@ public:
   const MCInst &getMCInst() const {
     assert(!empty() && "Empty reference");
     if (auto *Ref = tryGetRefInBB())
-      return *Ref->It;
+      return *Ref->Inst;
     return getRefInBF().It->second;
   }
 
@@ -82,6 +86,9 @@ public:
     return nullptr;
   }
 
+  // MCCodeEmitter is not thread safe.
+  uint64_t getAddress(const MCCodeEmitter *Emitter = nullptr) const;
+
   raw_ostream &print(raw_ostream &OS) const;
 
 private:
@@ -98,15 +105,15 @@ private:
   // iterator's type is `MCInst *`.
   struct RefInBB {
     RefInBB(const BinaryBasicBlock *BB, const MCInst *Inst)
-        : BB(BB), It(Inst) {}
+        : BB(BB), Inst(Inst) {}
     RefInBB(const RefInBB &Other) = default;
     RefInBB &operator=(const RefInBB &Other) = default;
 
     const BinaryBasicBlock *BB;
-    BinaryBasicBlock::const_iterator It;
+    const MCInst *Inst;
 
     bool operator==(const RefInBB &Other) const {
-      return BB == Other.BB && It == Other.It;
+      return BB == Other.BB && Inst == Other.Inst;
     }
   };
 
