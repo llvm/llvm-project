@@ -4399,7 +4399,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+      SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
   if (RemainingIterations->isZero())
@@ -4432,13 +4432,12 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    if (RemainingIterations && !NextVF.Width.isScalable()) {
-      if (SE.isKnownPredicate(
-              CmpInst::ICMP_UGT,
-              SE.getConstant(TCType, NextVF.Width.getFixedValue()),
-              RemainingIterations))
-        continue;
-    }
+    ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
+        estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
+    if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
+                            SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+                            RemainingIterations))
+      continue;
 
     if (Result.Width.isScalar() ||
         isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking()))
