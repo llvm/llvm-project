@@ -1036,7 +1036,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
-  // No FPOW or FREM in PTX.
+
+  // atom.b128 is legal in PTX but since we don't represent i128 as a legal
+  // type, we need to custom lower it.
+  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
+                     Custom);
 
   // Now deduce the information based on the above mentioned
   // actions
@@ -1044,7 +1048,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
-  setMaxAtomicSizeInBitsSupported(64);
+  setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands
@@ -1077,6 +1081,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case NVPTXISD::FIRST_NUMBER:
     break;
 
+    MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
     MAKE_CASE(NVPTXISD::RET_GLUE)
     MAKE_CASE(NVPTXISD::DeclareArrayParam)
     MAKE_CASE(NVPTXISD::DeclareScalarParam)
@@ -6236,6 +6242,49 @@ static void replaceProxyReg(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Res);
 }
 
+static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
+                                 const NVPTXSubtarget &STI,
+                                 SmallVectorImpl<SDValue> &Results) {
+  assert(N->getValueType(0) == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  if (!STI.hasAtomSwap128()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "Support for b128 atomics introduced in PTX ISA version 8.3 and "
+        "requires target sm_90.",
+        dl.getDebugLoc()));
+
+    Results.push_back(DAG.getUNDEF(MVT::i128));
+    Results.push_back(AN->getOperand(0)); // Chain
+    return;
+  }
+
+  SmallVector<SDValue, 6> Ops;
+  Ops.push_back(AN->getOperand(0)); // Chain
+  Ops.push_back(AN->getOperand(1)); // Ptr
+  for (const auto &Op : AN->ops().drop_front(2)) {
+    // Low part
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Op,
+                              DAG.getIntPtrConstant(0, dl)));
+    // High part
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Op,
+                              DAG.getIntPtrConstant(1, dl)));
+  }
+  unsigned Opcode = N->getOpcode() == ISD::ATOMIC_SWAP
+                        ? NVPTXISD::ATOMIC_SWAP_B128
+                        : NVPTXISD::ATOMIC_CMP_SWAP_B128;
+  SDVTList Tys = DAG.getVTList(MVT::i64, MVT::i64, MVT::Other);
+  SDValue Result = DAG.getMemIntrinsicNode(Opcode, dl, Tys, Ops, MVT::i128,
+                                           AN->getMemOperand());
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128,
+                                {Result.getValue(0), Result.getValue(1)}));
+  Results.push_back(Result.getValue(2));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -6255,6 +6304,10 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case NVPTXISD::ProxyReg:
     replaceProxyReg(N, DAG, *this, Results);
+    return;
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_SWAP:
+    replaceAtomicSwap128(N, DAG, STI, Results);
     return;
   }
 }
@@ -6280,16 +6333,19 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
-  auto ITy = cast<llvm::IntegerType>(Ty);
+  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
   switch (AI->getOperation()) {
   default:
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::BinOp::Xchg:
+    if (BitWidth == 128)
+      return AtomicExpansionKind::None;
+    LLVM_FALLTHROUGH;
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:
-  case AtomicRMWInst::BinOp::Xchg:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
@@ -6298,6 +6354,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     case 64:
       if (STI.hasAtomBitwise64())
         return AtomicExpansionKind::None;
+      return AtomicExpansionKind::CmpXChg;
+    case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
@@ -6308,7 +6366,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
   case AtomicRMWInst::BinOp::UMin:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
@@ -6318,17 +6376,20 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       if (STI.hasAtomMinMax64())
         return AtomicExpansionKind::None;
       return AtomicExpansionKind::CmpXChg;
+    case 128:
+      return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
   case AtomicRMWInst::BinOp::UIncWrap:
   case AtomicRMWInst::BinOp::UDecWrap:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
     case 8:
     case 16:
     case 64:
+    case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");

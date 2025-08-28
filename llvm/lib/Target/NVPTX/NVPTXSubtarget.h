@@ -82,6 +82,7 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasAtomSwap128() const { return SmVersion >= 90 && PTXVersion >= 83; }
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
