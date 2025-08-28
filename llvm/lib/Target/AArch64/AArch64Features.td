@@ -621,6 +621,9 @@ def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGP
 def FeatureZCRegMoveGPR32 : SubtargetFeature<"zcm-gpr32", "HasZeroCycleRegMoveGPR32", "true",
                                         "Has zero-cycle register moves for GPR32 registers">;
 
+def FeatureZCRegMoveFPR128 : SubtargetFeature<"zcm-fpr128", "HasZeroCycleRegMoveFPR128", "true",
+                                        "Has zero-cycle register moves for FPR128 registers">;
+
 def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
                                         "Has zero-cycle register moves for FPR64 registers">;
 
