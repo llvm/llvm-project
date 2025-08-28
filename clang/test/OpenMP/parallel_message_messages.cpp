@@ -8,9 +8,6 @@ T tmain(T argc, S **argv) {
   // Correct usage
   #pragma omp parallel message("correct message")
 
-  // Template parameter is not yet instantiated.
-  #pragma omp parallel message(argv[0]) // expected-warning {{expected string in 'clause message' - ignoring}}
-
   // Missing parentheses
   #pragma omp parallel message // expected-error {{expected '(' after 'message'}}
   
@@ -18,8 +15,9 @@ T tmain(T argc, S **argv) {
   #pragma omp parallel message() // expected-error {{expected expression}}
 
   // Non-string literal
-  #pragma omp parallel message(123) // expected-warning {{expected string in 'clause message' - ignoring}}
-  #pragma omp parallel message(argc) // expected-warning {{expected string in 'clause message' - ignoring}}
+  #pragma omp parallel message(123) // expected-warning {{expected string literal in 'clause message' - ignoring}}
+  #pragma omp parallel message(argc) // expected-warning {{expected string literal in 'clause message' - ignoring}}
+  #pragma omp parallel message(argv[0]) // expected-warning {{expected string literal in 'clause message' - ignoring}}
 
   // Multiple arguments
   #pragma omp parallel message("msg1", "msg2") // expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -49,10 +47,10 @@ T tmain(T argc, S **argv) {
 
   // Message clause with macro that is not a string
   #define NOT_A_STRING 123
-  #pragma omp parallel message(NOT_A_STRING) // expected-warning {{expected string in 'clause message' - ignoring}}
+  #pragma omp parallel message(NOT_A_STRING) // expected-warning {{expected string literal in 'clause message' - ignoring}}
 
   // Message clause with template parameter that is not a string
-  #pragma omp parallel message(N) // expected-warning {{expected string in 'clause message' - ignoring}}
+  #pragma omp parallel message(N) // expected-warning {{expected string literal in 'clause message' - ignoring}}
 
   // Message clause with macro that is a string
   #define A_STRING "macro string"
@@ -75,29 +73,15 @@ T tmain(T argc, S **argv) {
   return argc;
 }
 
-template<int N> int tmain(int argc, char **argv);
-
 int main(int argc, char **argv) {
-  const char str1[] = "msg";
-  const char *str2 = "msg";
-  char str3[] = "msg";
-  char *str4 = str3;
-  char * const str5 = str3;
-
   // Correct usage
   #pragma omp parallel message("main correct")
-  #pragma omp parallel message(argv[0])
-  #pragma omp parallel message(str1)
-  #pragma omp parallel message(str2)
-  #pragma omp parallel message(str3)
-  #pragma omp parallel message(str4)
-  #pragma omp parallel message(str5)
 
   // Invalid: missing string
   #pragma omp parallel message() // expected-error {{expression}}
 
   // Invalid: non-string
-  #pragma omp parallel message(argc) // expected-warning {{expected string in 'clause message' - ignoring}}
+  #pragma omp parallel message(argc) // expected-warning {{expected string literal in 'clause message' - ignoring}}
 
   foo();
 
