@@ -109,7 +109,7 @@ _LIBCPP_HIDE_FROM_ABI void random_shuffle(_RandomAccessIterator __first, _Random
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI void
-random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomNumberGenerator&& __rand) {
+random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomNumberGenerator& __rand) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __d = __last - __first;
   if (__d > 1) {
