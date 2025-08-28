@@ -11107,8 +11107,8 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
 
     if (MessageC && !SL)
       Diag(MessageC->getMessageString()->getBeginLoc(),
-           diag::warn_clause_expected_string_literal)
-          << getOpenMPClauseNameForDiag(OMPC_message);
+           diag::warn_clause_expected_string)
+          << getOpenMPClauseNameForDiag(OMPC_message) << 1;
     if (SeverityC && SeverityC->getSeverityKind() == OMPC_SEVERITY_warning)
       Diag(SeverityC->getSeverityKindKwLoc(), diag::warn_diagnose_if_succeeded)
           << SL.value_or("WARNING");
@@ -16473,7 +16473,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
   if ((!Type->isPointerType() && !Type->isArrayType()) ||
       !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
-        << getOpenMPClauseNameForDiag(OMPC_message);
+        << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;
   }
 
