@@ -615,7 +615,6 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
-  metadata.SetIsDynamicCXXType(false);
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),

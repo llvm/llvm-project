@@ -110,9 +110,11 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
   lldb::AccessType access_type = TranslateMemberAccess(access);
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
+  bool is_virtual = attrs.isVirtual();
+  m_any_virtual_method = m_any_virtual_method || is_virtual;
   m_ast_builder.clang().AddMethodToCXXRecordType(
       derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct, access_type,
-      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
+      is_virtual, attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
@@ -336,6 +338,9 @@ void UdtRecordCompleter::complete() {
   if (auto *record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(&m_tag_decl)) {
     m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, m_layout);
   }
+
+  if (auto meta = m_ast_builder.clang().GetMetadata(&m_tag_decl))
+    meta->SetIsDynamicCXXType(m_any_virtual_method);
 }
 
 uint64_t
