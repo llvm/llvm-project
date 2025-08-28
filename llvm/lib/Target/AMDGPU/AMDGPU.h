@@ -58,6 +58,16 @@ ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
 FunctionPass *createAMDGPUReserveWWMRegsPass();
+FunctionPass *createAMDGPUShuffleOptimizerPass();
+void initializeAMDGPUShuffleOptimizerPass(PassRegistry &);
+
+struct AMDGPUShuffleOptimizerPass : PassInfoMixin<AMDGPUShuffleOptimizerPass> {
+  AMDGPUShuffleOptimizerPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);

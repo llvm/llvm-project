@@ -199,6 +199,7 @@
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU IR optimizations
+; GCN-O1-NEXT:      AMDGPU Shuffle Optimizer
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:      Canonicalize natural loops
 ; GCN-O1-NEXT:      Scalar Evolution Analysis
@@ -497,6 +498,7 @@
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
+; GCN-O1-OPTS-NEXT:      AMDGPU Shuffle Optimizer
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
@@ -806,6 +808,7 @@
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU IR optimizations
+; GCN-O2-NEXT:      AMDGPU Shuffle Optimizer
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:      Function Alias Analysis Results
 ; GCN-O2-NEXT:      Memory SSA
@@ -1131,6 +1134,7 @@
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU IR optimizations
+; GCN-O3-NEXT:      AMDGPU Shuffle Optimizer
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory SSA
