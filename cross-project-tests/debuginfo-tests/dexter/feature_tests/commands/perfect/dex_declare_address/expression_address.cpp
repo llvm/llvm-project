@@ -2,9 +2,6 @@
 //      Test that a \DexDeclareAddress value can be used to compare the
 //      addresses of two local variables that refer to the same address.
 //
-// NB: This test passes with `--debugger lldb-dap` but fails with --debugger lldb
-// XFAIL: !system-windows && !lldb-dap
-//
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: expression_address.cpp
