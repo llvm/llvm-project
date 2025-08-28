@@ -8,21 +8,21 @@
 f1:
 	.cfi_startproc simple
 // CHECK: Non-default RA register {{.*}}
-	.cfi_return_column 0
+        .cfi_return_column 0
 	nop
 // CHECK: {{.*}} Adjusting CFA offset without a base register.{{.*}}
-	.cfi_def_cfa_offset 16 // no line number reported here.
+        .cfi_def_cfa_offset 16 // no line number reported here.
 	nop
 // CHECK: [[@LINE+1]]:{{.*}} Adjusting CFA offset without a base register.{{.*}}
-	.cfi_adjust_cfa_offset 16
+        .cfi_adjust_cfa_offset 16
 	nop
-	.cfi_endproc
+        .cfi_endproc
 
 f2:	
-	.cfi_startproc
+        .cfi_startproc
 	nop
 // CHECK: Canonical Frame Address not in stack- or frame-pointer. {{.*}}
-	.cfi_def_cfa 0, 4
+        .cfi_def_cfa 0, 4
 	nop
 	
         .cfi_endproc

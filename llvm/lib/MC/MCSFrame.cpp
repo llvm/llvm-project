@@ -145,8 +145,7 @@ class SFrameEmitterImpl {
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
       if (!setCFARegister(FRE, CFI))
         return false;
-      setCFAOffset(FRE, CFI.getLoc(), CFI.getOffset());
-      return true;
+      return setCFAOffset(FRE, CFI.getLoc(), CFI.getOffset());
     case MCCFIInstruction::OpOffset:
       if (CFI.getRegister() == FPReg)
         FRE.FPOffset = CFI.getOffset();
@@ -250,9 +249,12 @@ public:
     FDE.FREs.push_back(BaseFRE);
 
     for (const auto &CFI : DF.Instructions) {
-      // Instructions from InitialFrameState may not have a label, but if
-      // these instructions don't, then they are in dead code or otherwise
-      // unused.
+      // Instructions from InitialFrameState may not have a label, but if these
+      // instructions don't, then they are in dead code or otherwise unused.
+      // TODO: This check follows MCDwarf.cpp
+      // FrameEmitterImplementation::emitCFIInstructions, but nothing in the
+      // testsuite triggers it. We should see if it can be removed in both
+      // places, or alternately, add a test to exercise it.
       auto *L = CFI.getLabel();
       if (L && !L->isDefined())
         continue;
