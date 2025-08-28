@@ -24,3 +24,10 @@ with Context():
     # CHECK: %[[C:.*]] = arith.constant 2 : i32
     # CHECK: standalone.foo %[[C]] : i32
     print(str(module))
+
+try:
+    from mlir_standalone.dialects import quant
+except ImportError as e:
+    assert "symbol not found in flat namespace '_mlirTypeIsAAnyQuantizedType'" not in e.args[0]
+else:
+    assert False, "expected exception not raised"
