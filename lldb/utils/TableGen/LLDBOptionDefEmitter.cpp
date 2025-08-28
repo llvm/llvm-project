@@ -34,8 +34,10 @@ inline std::string underline(llvm::StringRef Str) {
     Stream << OpeningHead;
 
     // No opening brace: we're done.
-    if (OpeningHead == Str && OpeningTail.empty())
+    if (OpeningHead == Str)
       break;
+
+    assert(!OpeningTail.empty());
 
     // Find the closing brace.
     std::tie(ClosingHead, ClosingTail) = OpeningTail.split('}');
