@@ -266,6 +266,11 @@ private:
 class AllOfNode : public DecoderTreeNode {
   SmallVector<std::unique_ptr<DecoderTreeNode>, 0> Children;
 
+  static const DecoderTreeNode *
+  mapElement(decltype(Children)::const_reference Element) {
+    return Element.get();
+  }
+
 public:
   AllOfNode() : DecoderTreeNode(AllOf) {}
 
@@ -273,14 +278,29 @@ public:
     Children.push_back(std::move(N));
   }
 
-  // TODO: Provide an iterator that unwraps unique_ptr.
-  ArrayRef<std::unique_ptr<DecoderTreeNode>> getChildren() const {
-    return Children;
+  using child_iterator = mapped_iterator<decltype(Children)::const_iterator,
+                                         decltype(&mapElement)>;
+
+  child_iterator child_begin() const {
+    return child_iterator(Children.begin(), mapElement);
+  }
+
+  child_iterator child_end() const {
+    return child_iterator(Children.end(), mapElement);
+  }
+
+  iterator_range<child_iterator> children() const {
+    return make_range(child_begin(), child_end());
   }
 };
 
 class AnyOfNode : public DecoderTreeNode {
   SmallVector<std::unique_ptr<DecoderTreeNode>, 0> Children;
+
+  static const DecoderTreeNode *
+  mapElement(decltype(Children)::const_reference Element) {
+    return Element.get();
+  }
 
 public:
   AnyOfNode() : DecoderTreeNode(AnyOf) {}
@@ -289,9 +309,19 @@ public:
     Children.push_back(std::move(N));
   }
 
-  // TODO: Provide an iterator that unwraps unique_ptr.
-  ArrayRef<std::unique_ptr<DecoderTreeNode>> getChildren() const {
-    return Children;
+  using child_iterator = mapped_iterator<decltype(Children)::const_iterator,
+                                         decltype(&mapElement)>;
+
+  child_iterator child_begin() const {
+    return child_iterator(Children.begin(), mapElement);
+  }
+
+  child_iterator child_end() const {
+    return child_iterator(Children.end(), mapElement);
+  }
+
+  iterator_range<child_iterator> children() const {
+    return make_range(child_begin(), child_end());
   }
 };
 
@@ -299,6 +329,11 @@ class SwitchFieldNode : public DecoderTreeNode {
   unsigned StartBit;
   unsigned NumBits;
   std::map<uint64_t, std::unique_ptr<DecoderTreeNode>> Cases;
+
+  static std::pair<uint64_t, const DecoderTreeNode *>
+  mapElement(decltype(Cases)::const_reference Element) {
+    return std::pair(Element.first, Element.second.get());
+  }
 
 public:
   SwitchFieldNode(unsigned StartBit, unsigned NumBits)
@@ -312,9 +347,19 @@ public:
 
   unsigned getNumBits() const { return NumBits; }
 
-  // TODO: Provide an iterator that unwraps unique_ptr.
-  const std::map<uint64_t, std::unique_ptr<DecoderTreeNode>> &getCases() const {
-    return Cases;
+  using case_iterator =
+      mapped_iterator<decltype(Cases)::const_iterator, decltype(&mapElement)>;
+
+  case_iterator case_begin() const {
+    return case_iterator(Cases.begin(), mapElement);
+  }
+
+  case_iterator case_end() const {
+    return case_iterator(Cases.end(), mapElement);
+  }
+
+  iterator_range<case_iterator> cases() const {
+    return make_range(case_begin(), case_end());
   }
 };
 
@@ -1432,17 +1477,17 @@ unsigned DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *N) const {
   case DecoderTreeNode::AnyOf: {
     const auto *AnyOf = static_cast<const AnyOfNode *>(N);
     unsigned Size = 0;
-    for (const auto &Child : drop_end(AnyOf->getChildren())) {
-      unsigned ChildSize = computeNodeSize(Child.get());
+    for (const DecoderTreeNode *Child : drop_end(AnyOf->children())) {
+      unsigned ChildSize = computeNodeSize(Child);
       Size += 1 + getULEB128Size(ChildSize) + ChildSize;
     }
-    return Size + computeNodeSize(AnyOf->getChildren().back().get());
+    return Size + computeNodeSize(*std::prev(AnyOf->child_end()));
   }
   case DecoderTreeNode::AllOf: {
     const auto *AllOf = static_cast<const AllOfNode *>(N);
     unsigned Size = 0;
-    for (const auto &Child : AllOf->getChildren())
-      Size += computeNodeSize(Child.get());
+    for (const DecoderTreeNode *Child : AllOf->children())
+      Size += computeNodeSize(Child);
     return Size;
   }
   case DecoderTreeNode::CheckField: {
@@ -1454,13 +1499,13 @@ unsigned DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *N) const {
     const auto *SwitchN = static_cast<const SwitchFieldNode *>(N);
     unsigned Size = 1 + getULEB128Size(SwitchN->getStartBit()) + 1;
 
-    for (const auto &[Val, Child] : drop_end(SwitchN->getCases())) {
-      unsigned ChildSize = computeNodeSize(Child.get());
+    for (auto [Val, Child] : drop_end(SwitchN->cases())) {
+      unsigned ChildSize = computeNodeSize(Child);
       Size += getULEB128Size(Val) + getULEB128Size(ChildSize) + ChildSize;
     }
 
-    const auto &[Val, Child] = *SwitchN->getCases().rbegin();
-    unsigned ChildSize = computeNodeSize(Child.get());
+    auto [Val, Child] = *std::prev(SwitchN->case_end());
+    unsigned ChildSize = computeNodeSize(Child);
     Size += getULEB128Size(Val) + getULEB128Size(0) + ChildSize;
     return Size;
   }
@@ -1482,22 +1527,22 @@ unsigned DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *N) const {
 }
 
 void DecoderTableEmitter::emitAnyOfNode(const AnyOfNode *N, indent Indent) {
-  for (const auto &Child : drop_end(N->getChildren())) {
+  for (const DecoderTreeNode *Child : drop_end(N->children())) {
     emitOpcode("OPC_Scope");
-    emitULEB128(computeNodeSize(Child.get()));
+    emitULEB128(computeNodeSize(Child));
 
     emitComment(Indent) << "{\n";
-    emitNode(Child.get(), Indent + 1);
+    emitNode(Child, Indent + 1);
     emitComment(Indent) << "}\n";
   }
 
-  const auto &Child = N->getChildren().back();
-  emitNode(Child.get(), Indent);
+  const DecoderTreeNode *Child = *std::prev(N->child_end());
+  emitNode(Child, Indent);
 }
 
 void DecoderTableEmitter::emitAllOfNode(const AllOfNode *N, indent Indent) {
-  for (const auto &Child : N->getChildren())
-    emitNode(Child.get(), Indent);
+  for (const DecoderTreeNode *Child : N->children())
+    emitNode(Child, Indent);
 }
 
 void DecoderTableEmitter::emitSwitchFieldNode(const SwitchFieldNode *N,
@@ -1512,23 +1557,23 @@ void DecoderTableEmitter::emitSwitchFieldNode(const SwitchFieldNode *N,
 
   emitComment(Indent) << "switch Inst[" << MSB << ':' << LSB << "] {\n";
 
-  for (const auto &[Val, Child] : drop_end(N->getCases())) {
+  for (auto [Val, Child] : drop_end(N->cases())) {
     emitStartLine();
     emitULEB128(Val);
-    emitULEB128(computeNodeSize(Child.get()));
+    emitULEB128(computeNodeSize(Child));
 
     emitComment(Indent) << "case " << format_hex(Val, 0) << ": {\n";
-    emitNode(Child.get(), Indent + 1);
+    emitNode(Child, Indent + 1);
     emitComment(Indent) << "}\n";
   }
 
-  const auto &[Val, Child] = *N->getCases().rbegin();
+  auto [Val, Child] = *std::prev(N->case_end());
   emitStartLine();
   emitULEB128(Val);
   emitULEB128(0);
 
   emitComment(Indent) << "case " << format_hex(Val, 0) << ": {\n";
-  emitNode(Child.get(), Indent + 1);
+  emitNode(Child, Indent + 1);
   emitComment(Indent) << "}\n";
 
   emitComment(Indent) << "} // switch Inst[" << MSB << ':' << LSB << "]\n";
