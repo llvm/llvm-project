@@ -37,8 +37,6 @@ def note_constexpr_invalid_inhctor : Note<
   "constant expression; derived class cannot be implicitly initialized">;
 def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
-def note_constexpr_negative_allocation_size : Note<
-"cannot allocate array with negative size in a constant expression">;
 def note_constexpr_virtual_call : Note<
   "cannot evaluate call to virtual function in a constant expression "
   "in C++ standards before C++20">;
