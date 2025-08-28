@@ -113,10 +113,20 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   case AArch64::S_GOT_AUTH:            return ":got_auth:";
   case AArch64::S_GOT_AUTH_PAGE:       return ":got_auth:";
   case AArch64::S_GOT_AUTH_LO12:       return ":got_auth_lo12:";
+
+  case AArch64::S_GOTPCREL:            return "%gotpcrel";
+  case AArch64::S_PLT:                 return "%pltpcrel";
   default:
     llvm_unreachable("Invalid relocation specifier");
   }
   // clang-format on
+}
+
+AArch64::Specifier AArch64::parsePercentSpecifierName(StringRef name) {
+  return StringSwitch<AArch64::Specifier>(name)
+      .Case("pltpcrel", AArch64::S_PLT)
+      .Case("gotpcrel", AArch64::S_GOTPCREL)
+      .Default(0);
 }
 
 static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -232,8 +242,13 @@ void AArch64MCAsmInfoELF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
     return AE->print(OS, this);
-  OS << AArch64::getSpecifierName(Expr.getSpecifier());
+  auto Str = AArch64::getSpecifierName(Expr.getSpecifier());
+  OS << Str;
+  if (!Str.empty() && Str[0] == '%')
+    OS << '(';
   printExpr(OS, *Expr.getSubExpr());
+  if (!Str.empty() && Str[0] == '%')
+    OS << ')';
 }
 
 bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
