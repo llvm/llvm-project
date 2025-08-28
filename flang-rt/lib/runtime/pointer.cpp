@@ -67,12 +67,8 @@ void RTDEF(PointerAssociateScalar)(Descriptor &pointer, void *target) {
 }
 
 void RTDEF(PointerAssociate)(Descriptor &pointer, const Descriptor &target) {
-  if (target.ElementBytes() > 0) {
-    // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
-    // targets that have zero sized storage sequence.
-    pointer = target;
-    pointer.raw().attribute = CFI_attribute_pointer;
-  }
+  pointer = target;
+  pointer.raw().attribute = CFI_attribute_pointer;
 }
 
 void RTDEF(PointerAssociateLowerBounds)(Descriptor &pointer,
@@ -270,6 +266,11 @@ bool RTDEF(PointerIsAssociatedWith)(
     const Descriptor &pointer, const Descriptor *target) {
   if (!target) {
     return pointer.raw().base_addr != nullptr;
+  }
+  if (target->ElementBytes() == 0) {
+    // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
+    // targets that have zero sized storage sequence.
+    return false;
   }
   if (!target->raw().base_addr ||
       (target->raw().type != CFI_type_struct && target->ElementBytes() == 0)) {
