@@ -462,9 +462,18 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                 ObjectFilename);
   }
   auto FS = vfs::getRealFileSystem();
-  auto CoverageOrErr = CoverageMapping::load(
-      ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+
+  CoverageCapabilities RequestCapabilities =
+      CoverageCapabilities(CoverageCapabilities::CovInstrLevel::Statement);
+  if (ViewOpts.ShowBranches != CoverageViewOptions::BranchOutputType::Off)
+    RequestCapabilities |= CoverageCapabilities::CovInstrLevel::Branch;
+  if (ViewOpts.ShowMCDC || ViewOpts.ShowMCDCSummary)
+    RequestCapabilities |= CoverageCapabilities::CovInstrLevel::MCDC;
+
+  auto CoverageOrErr =
+      CoverageMapping::load(ObjectFilenames, PGOFilename, *FS, CoverageArches,
+                            ViewOpts.CompilationDirectory, BIDFetcher.get(),
+                            CheckBinaryIDs, RequestCapabilities);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
