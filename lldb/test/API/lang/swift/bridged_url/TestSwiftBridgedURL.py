@@ -13,4 +13,4 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
-        self.expect("v url", substrs=['url = "file:///tmp"'])
+        self.expect("v url", patterns=[r'url = "file:///tmp/?"'])
