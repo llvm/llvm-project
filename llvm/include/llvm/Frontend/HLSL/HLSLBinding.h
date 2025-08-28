@@ -132,10 +132,10 @@ class BoundRegs {
 public:
   BoundRegs(SmallVector<Binding> &&Bindings) : Bindings(std::move(Bindings)) {}
 
-  // UpperBound and Cookie are given dummy values, since they aren't
-  // interesting for operator<
   bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
                uint32_t UpperBound) const {
+    // UpperBound and Cookie are given dummy values, since they aren't
+    // interesting for operator<
     const Binding *It =
         llvm::upper_bound(Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
     if (It == Bindings.begin())
