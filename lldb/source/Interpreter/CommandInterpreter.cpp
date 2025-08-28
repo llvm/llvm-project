@@ -1994,23 +1994,23 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // Those will be collected by the on-exit-callback.
   });
 
-  helper.DispatchOnExit(
-      [&cmd_obj, &parsed_command_args, &result, detailed_command_telemetry,
-       command_id](lldb_private::telemetry::CommandInfo *info) {
-        // TODO: this is logging the time the command-handler finishes.
-        // But we may want a finer-grain durations too?
-        // (ie., the execute_time recorded below?)
-        info->command_id = command_id;
-        llvm::StringRef command_name =
-            cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-        info->command_name = command_name.str();
-        info->ret_status = result.GetStatus();
-        if (std::string error_str = result.GetErrorString(); !error_str.empty())
-          info->error_data = std::move(error_str);
+  helper.DispatchOnExit([&cmd_obj, &parsed_command_args, &result,
+                         detailed_command_telemetry, command_id](
+                            lldb_private::telemetry::CommandInfo *info) {
+    // TODO: this is logging the time the command-handler finishes.
+    // But we may want a finer-grain durations too?
+    // (ie., the execute_time recorded below?)
+    info->command_id = command_id;
+    llvm::StringRef command_name =
+        cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
+    info->command_name = command_name.str();
+    info->ret_status = result.GetStatus();
+    if (std::string error_str = result.GetErrorString(); !error_str.empty())
+      info->error_data = std::move(error_str);
 
-        if (detailed_command_telemetry)
-          info->args = parsed_command_args;
-      });
+    if (detailed_command_telemetry)
+      info->args = parsed_command_args;
+  });
 
   Log *log = GetLog(LLDBLog::Commands);
   LLDB_LOGF(log, "Processing command: %s", command_line);
