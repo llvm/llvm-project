@@ -3416,8 +3416,8 @@ define <4 x i1> @buildvec_i1_splat(i1 %e1) {
   ret <4 x i1> %v4
 }
 
-define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %arg2, <8 x i32> %arg3) nounwind {
-; RV32-LABEL: buildvec_vredsum:
+define <4 x i32> @buildvec_vredsum_slideup(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %arg2, <8 x i32> %arg3) nounwind {
+; RV32-LABEL: buildvec_vredsum_slideup:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.s.x v16, zero
@@ -3434,7 +3434,7 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
 ;
-; RV64V-ONLY-LABEL: buildvec_vredsum:
+; RV64V-ONLY-LABEL: buildvec_vredsum_slideup:
 ; RV64V-ONLY:       # %bb.0:
 ; RV64V-ONLY-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64V-ONLY-NEXT:    vmv.s.x v16, zero
@@ -3451,7 +3451,7 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64V-ONLY-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64V-ONLY-NEXT:    ret
 ;
-; RVA22U64-LABEL: buildvec_vredsum:
+; RVA22U64-LABEL: buildvec_vredsum_slideup:
 ; RVA22U64:       # %bb.0:
 ; RVA22U64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVA22U64-NEXT:    vmv.s.x v16, zero
@@ -3472,7 +3472,7 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RVA22U64-NEXT:    vslide1down.vx v8, v8, a1
 ; RVA22U64-NEXT:    ret
 ;
-; RVA22U64-PACK-LABEL: buildvec_vredsum:
+; RVA22U64-PACK-LABEL: buildvec_vredsum_slideup:
 ; RVA22U64-PACK:       # %bb.0:
 ; RVA22U64-PACK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVA22U64-PACK-NEXT:    vmv.s.x v16, zero
@@ -3491,7 +3491,7 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RVA22U64-PACK-NEXT:    vslide1down.vx v8, v8, a1
 ; RVA22U64-PACK-NEXT:    ret
 ;
-; RV64ZVE32-LABEL: buildvec_vredsum:
+; RV64ZVE32-LABEL: buildvec_vredsum_slideup:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64ZVE32-NEXT:    vmv.s.x v16, zero
@@ -3518,8 +3518,8 @@ define <4 x i32> @buildvec_vredsum(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
   ret <4 x i32> %255
 }
 
-define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %arg2, <8 x i32> %arg3) nounwind {
-; RV32-LABEL: buildvec_vredmax:
+define <4 x i32> @buildvec_vredmax_slideup(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %arg2, <8 x i32> %arg3) nounwind {
+; RV32-LABEL: buildvec_vredmax_slideup:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
@@ -3535,7 +3535,7 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV32-NEXT:    vslide1up.vx v8, v10, a0
 ; RV32-NEXT:    ret
 ;
-; RV64V-ONLY-LABEL: buildvec_vredmax:
+; RV64V-ONLY-LABEL: buildvec_vredmax_slideup:
 ; RV64V-ONLY:       # %bb.0:
 ; RV64V-ONLY-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64V-ONLY-NEXT:    vredmaxu.vs v8, v8, v8
@@ -3551,7 +3551,7 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RV64V-ONLY-NEXT:    vslide1up.vx v8, v10, a0
 ; RV64V-ONLY-NEXT:    ret
 ;
-; RVA22U64-LABEL: buildvec_vredmax:
+; RVA22U64-LABEL: buildvec_vredmax_slideup:
 ; RVA22U64:       # %bb.0:
 ; RVA22U64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVA22U64-NEXT:    vredmaxu.vs v8, v8, v8
@@ -3571,7 +3571,7 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RVA22U64-NEXT:    vslide1down.vx v8, v8, a1
 ; RVA22U64-NEXT:    ret
 ;
-; RVA22U64-PACK-LABEL: buildvec_vredmax:
+; RVA22U64-PACK-LABEL: buildvec_vredmax_slideup:
 ; RVA22U64-PACK:       # %bb.0:
 ; RVA22U64-PACK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVA22U64-PACK-NEXT:    vredmaxu.vs v8, v8, v8
@@ -3589,7 +3589,7 @@ define <4 x i32> @buildvec_vredmax(<8 x i32> %arg0, <8 x i32> %arg1, <8 x i32> %
 ; RVA22U64-PACK-NEXT:    vslide1down.vx v8, v8, a1
 ; RVA22U64-PACK-NEXT:    ret
 ;
-; RV64ZVE32-LABEL: buildvec_vredmax:
+; RV64ZVE32-LABEL: buildvec_vredmax_slideup:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64ZVE32-NEXT:    vredmaxu.vs v8, v8, v8

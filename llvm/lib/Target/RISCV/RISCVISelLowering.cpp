@@ -4514,9 +4514,15 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
 
   // General case: splat the first operand and slide other operands down one
-  // by one to form a vector. Alternatively, if the last operand is an
-  // extraction from element 0 of a vector, we can use that vector as the start
-  // value and slide up instead of slide down. Such that we can avoid the splat.
+  // by one to form a vector. Alternatively, if every operand is an
+  // extraction from element 0 of a vector, we use that vector from the last
+  // extraction as the start value and slide up instead of slide down. Such that
+  // (1) we can avoid the initial splat (2) we can turn those vslide1up into
+  // vslideup of 1 later and eliminate the vector to scalar movement, which is
+  // something we cannot do with vslide1down/vslidedown.
+  // Of course, using vslide1up/vslideup might increase the register pressure,
+  // and that's why we conservatively limit to cases where every operands is an
+  // extraction from first element.
   SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
   SDValue EVec;
   bool SlideUp = false;
@@ -4529,13 +4535,15 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                          Mask, VL, Policy);
   };
 
-  // Find the first first non-undef from the tail.
-  auto ItLastNonUndef = find_if(Operands.rbegin(), Operands.rend(),
-                                [](SDValue V) { return !V.isUndef(); });
-  if (ItLastNonUndef != Operands.rend()) {
+  // The reason we don't use all_of here is because we're also capturing EVec
+  // from the last non-undef operand. If the std::execution_policy of the
+  // underlying std::all_of is anything but std::sequenced_policy we might
+  // capture the wrong EVec.
+  for (SDValue V : Operands) {
     using namespace SDPatternMatch;
-    // Check if the last non-undef operand was an extraction.
-    SlideUp = sd_match(*ItLastNonUndef, m_ExtractElt(m_Value(EVec), m_Zero()));
+    SlideUp = V.isUndef() || sd_match(V, m_ExtractElt(m_Value(EVec), m_Zero()));
+    if (!SlideUp)
+      break;
   }
 
   if (SlideUp) {
