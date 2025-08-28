@@ -6,7 +6,7 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
-  %Sampler = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 3, i32 1, i32 0, i1 false, ptr nonnull @Smp.str)
+  %Sampler = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 3, i32 1, i32 0, ptr nonnull @Smp.str)
   ret void
 }
 

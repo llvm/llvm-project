@@ -8,7 +8,7 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
-  %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 0, i1 false, ptr nonnull @CB.str)
+  %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 0, ptr nonnull @CB.str)
   ret void
 }
 
