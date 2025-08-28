@@ -762,6 +762,42 @@ struct LinearizeVectorStore final
   }
 };
 
+/// This pattern linearizes `vector.from_elements` operations by converting
+/// the result type to a 1-D vector while preserving all element values.
+/// The transformation creates a linearized `vector.from_elements` followed by
+/// a `vector.shape_cast` to restore the original multidimensional shape.
+///
+/// Example:
+///
+///     %0 = vector.from_elements %a, %b, %c, %d : vector<2x2xf32>
+///
+/// is converted to:
+///
+///     %0 = vector.from_elements %a, %b, %c, %d : vector<4xf32>
+///     %1 = vector.shape_cast %0 : vector<4xf32> to vector<2x2xf32>
+///
+struct LinearizeVectorFromElements final
+    : public OpConversionPattern<vector::FromElementsOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorFromElements(const TypeConverter &typeConverter,
+                              MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+  LogicalResult
+  matchAndRewrite(vector::FromElementsOp fromElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstTy =
+        getTypeConverter()->convertType<VectorType>(fromElementsOp.getType());
+    assert(dstTy && "vector type destination expected.");
+
+    OperandRange elements = fromElementsOp.getElements();
+    assert(elements.size() == static_cast<size_t>(dstTy.getNumElements()) &&
+           "expected same number of elements");
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(fromElementsOp, dstTy,
+                                                        elements);
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -854,7 +890,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorSplat, LinearizeVectorCreateMask, LinearizeVectorLoad,
-           LinearizeVectorStore>(typeConverter, patterns.getContext());
+           LinearizeVectorStore, LinearizeVectorFromElements>(
+          typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
