@@ -23,8 +23,6 @@ APValue EvaluationResult::toAPValue() const {
     // Either a pointer or a function pointer.
     if (const auto *P = std::get_if<Pointer>(&Value))
       return P->toAPValue(Ctx->getASTContext());
-    else if (const auto *FP = std::get_if<FunctionPointer>(&Value))
-      return FP->toAPValue(Ctx->getASTContext());
     else
       llvm_unreachable("Unhandled LValue type");
     break;
@@ -46,8 +44,6 @@ std::optional<APValue> EvaluationResult::toRValue() const {
   // We have a pointer and want an RValue.
   if (const auto *P = std::get_if<Pointer>(&Value))
     return P->toRValue(*Ctx, getSourceType());
-  else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-    return FP->toAPValue(Ctx->getASTContext());
   llvm_unreachable("Unhandled lvalue kind");
 }
 
@@ -66,8 +62,12 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
 static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
                                   const Pointer &BasePtr,
                                   const ConstantArrayType *CAT) {
-  bool Result = true;
   size_t NumElems = CAT->getZExtSize();
+
+  if (NumElems == 0)
+    return true;
+
+  bool Result = true;
   QualType ElemType = CAT->getElementType();
 
   if (ElemType->isRecordType()) {
@@ -82,8 +82,18 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
       Result &= CheckArrayInitialized(S, Loc, ElemPtr, ElemCAT);
     }
   } else {
+    // Primitive arrays.
+    if (S.getContext().canClassify(ElemType)) {
+      if (BasePtr.allElementsInitialized()) {
+        return true;
+      } else {
+        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+        return false;
+      }
+    }
+
     for (size_t I = 0; I != NumElems; ++I) {
-      if (!BasePtr.atIndex(I).isInitialized()) {
+      if (!BasePtr.isElementInitialized(I)) {
         DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
         Result = false;
       }
