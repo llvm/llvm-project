@@ -132,6 +132,8 @@ class BoundRegs {
 public:
   BoundRegs(SmallVector<Binding> &&Bindings) : Bindings(std::move(Bindings)) {}
 
+  // UpperBound and Cookie are given dummy values, since they aren't
+  // interesting for operator<
   bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
                uint32_t UpperBound) const {
     const Binding *It =
@@ -172,7 +174,7 @@ public:
   LLVM_ABI BoundRegs calculateBoundRegs(
       llvm::function_ref<void(const BindingInfoBuilder &Builder,
                               const Binding &Overlapping)>
-            ReportOverlap);
+          ReportOverlap);
 
   /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
   /// finds a binding that the \c ReportedBinding overlaps with.
