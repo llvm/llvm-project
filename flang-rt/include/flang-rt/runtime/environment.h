@@ -48,20 +48,9 @@ struct ExecutionEnvironment {
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
 
-  // Optional callback routines to be invoked pre and post
-  // execution environment setup.
-  // RTNAME(RegisterConfigureEnv) will return true if callback
-  // function(s) is(are) successfully added to small array of
-  // pointers.  False if more than nConfigEnvCallback registrations
-  // for either pre or post functions.
-
+  // Maximum number of registered pre and post ExecutionEnvironment::Configure()
+  // callback functions.
   static constexpr int nConfigEnvCallback{8};
-  int nPreConfigEnvCallback{0};
-  void (*PreConfigEnvCallback[nConfigEnvCallback])(int, const char *[],
-      const char *[], const EnvironmentDefaultList *){nullptr};
-  int nPostConfigEnvCallback{0};
-  void (*PostConfigEnvCallback[nConfigEnvCallback])(int, const char *[],
-      const char *[], const EnvironmentDefaultList *){nullptr};
 
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);

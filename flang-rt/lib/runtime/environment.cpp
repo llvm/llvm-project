@@ -29,6 +29,22 @@ RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
 #endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
+// Optional callback routines to be invoked pre and post execution
+// environment setup.
+// RTNAME(RegisterConfigureEnv) will return true if callback function(s)
+// is(are) successfully added to small array of pointers.  False if more
+// than nConfigEnvCallback registrations for either pre or post functions.
+
+static int nPreConfigEnvCallback{0};
+static void (*PreConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+static int nPostConfigEnvCallback{0};
+static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -82,7 +98,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (0 != nPreConfigEnvCallback) {
     // Run an optional callback function after the core of the
     // ExecutionEnvironment() logic.
-    for (auto i = 0; i != nPreConfigEnvCallback; ++i) {
+    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
       PreConfigEnvCallback[i](ac, av, env, envDefaults);
     }
   }
@@ -186,7 +202,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (0 != nPostConfigEnvCallback) {
     // Run an optional callback function in reverse order of registration
     // after the core of the ExecutionEnvironment() logic.
-    for (auto i = 0; i != nPostConfigEnvCallback; ++i) {
+    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
       PostConfigEnvCallback[i](ac, av, env, envDefaults);
     }
   }
@@ -279,21 +295,16 @@ bool RTNAME(RegisterConfigureEnv)(
   bool ret{true};
 
   if (nullptr != pre) {
-    if (executionEnvironment.nPreConfigEnvCallback <
-        executionEnvironment.nConfigEnvCallback) {
-      executionEnvironment
-          .PreConfigEnvCallback[executionEnvironment.nPreConfigEnvCallback++] =
-          pre;
+    if (nPreConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PreConfigEnvCallback[nPreConfigEnvCallback++] = pre;
     } else {
       ret = false;
     }
   }
 
   if (ret && nullptr != post) {
-    if (executionEnvironment.nPostConfigEnvCallback <
-        executionEnvironment.nConfigEnvCallback) {
-      executionEnvironment.PostConfigEnvCallback[executionEnvironment
-              .nPostConfigEnvCallback++] = post;
+    if (nPostConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PostConfigEnvCallback[nPostConfigEnvCallback++] = post;
     } else {
       ret = false;
     }
