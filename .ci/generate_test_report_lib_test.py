@@ -125,7 +125,7 @@ class TestReports(unittest.TestCase):
                 ),
             ),
         )
-    
+
     def test_ninja_log_runtimes_failure(self):
         failures = generate_test_report_lib.find_failure_in_ninja_logs(
             [
