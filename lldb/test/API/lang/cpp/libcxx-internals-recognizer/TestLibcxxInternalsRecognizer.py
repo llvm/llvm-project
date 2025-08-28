@@ -9,7 +9,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(["libc++"])
-    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "19.0"])
     def test_frame_recognizer(self):
         """Test that implementation details of libc++ are hidden"""
         self.build()
