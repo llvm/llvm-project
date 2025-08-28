@@ -181,7 +181,15 @@ public:
     return m_target_list.GetSelectedTarget();
   }
 
+  /// Get the execution context for the selected target.
   ExecutionContext GetSelectedExecutionContext();
+
+  struct SelectedContext {
+    ExecutionContext exe_ctx;
+    std::optional<SymbolContext> sym_ctx;
+  };
+  SelectedContext GetSelectedContext();
+
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
