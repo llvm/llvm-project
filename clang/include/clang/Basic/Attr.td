@@ -974,7 +974,8 @@ def AnalyzerNoReturn : InheritableAttr {
   // vendor namespace, or should it use a vendor namespace specific to the
   // analyzer?
   let Spellings = [GNU<"analyzer_noreturn">];
-  // TODO: Add subject list.
+  let Args = [DefaultBoolArgument<"Value", /*default=*/1, /*fake=*/0>];
+  // let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Documentation = [Undocumented];
 }
 

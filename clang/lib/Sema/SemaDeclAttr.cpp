@@ -2072,7 +2072,23 @@ static void handleAnalyzerNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  D->addAttr(::new (S.Context) AnalyzerNoReturnAttr(S.Context, AL));
+  bool Value = true;
+
+  if (AL.getNumArgs() > 0) {
+    auto *E = AL.getArgAsExpr(0);
+
+    if (S.CheckBooleanCondition(AL.getLoc(), E, true).isInvalid())
+      return;
+
+    if (!E->EvaluateAsBooleanCondition(Value, S.Context, true)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+          << AL << 1 << AANT_ArgumentIntOrBool << E->getSourceRange();
+
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) AnalyzerNoReturnAttr(S.Context, AL, Value));
 }
 
 // PS3 PPU-specific.

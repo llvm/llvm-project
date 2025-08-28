@@ -141,6 +141,39 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
   }
 }
 
+void assertion_handler_imp() __attribute__((analyzer_noreturn));
+
+void assertion_handler();
+
+void assertion_handler() {
+    do {
+       assertion_handler_imp();
+    } while(0);
+}
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler(); // This will be deduced to have an implicit `analyzer_noreturn` attribute.
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
+}
+
+// Should be considered as 'noreturn' by CFG
+void halt() {
+    for(;;) {}
+}
+
+void function_calling_no_return_from_cfg(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      halt();
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
+}
+
 template <typename T>
 void function_template_without_user(const absl::optional<T> &opt) {
   opt.value(); // no-warning

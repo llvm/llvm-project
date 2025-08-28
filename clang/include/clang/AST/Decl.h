@@ -2021,6 +2021,18 @@ public:
 
   };
 
+  /// Three-state classification for function return behavior in CFG analysis:
+  /// undefined (not analyzed), no-return (never returns), or normal return.
+  enum class AnalyzerSinkKind {
+    // Function has no explicit `analyzer_noreturn` or `noreturn` attribute
+    Undefined,
+    // Function never returns control to the caller
+    NoReturn,
+    // Function returns control to the caller (marked with
+    // `analyzer_noreturn(false)`)
+    NoSink
+  };
+
   /// Stashed information about a defaulted/deleted function body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
@@ -2667,6 +2679,10 @@ public:
   /// Determines whether this function is known to be 'noreturn', through
   /// an attribute on its declaration or its type.
   bool isNoReturn() const;
+
+  /// Determines function return behavior
+  AnalyzerSinkKind getAnalyzerSinkKind() const;
+  void setAnalyzerSinkKind(AnalyzerSinkKind kind);
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }

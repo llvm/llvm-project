@@ -2833,8 +2833,29 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
-      NoReturn = true;
+    auto SinkKind = FD->getAnalyzerSinkKind();
+    NoReturn |= (SinkKind == FunctionDecl::AnalyzerSinkKind::NoReturn) ||
+                C->isBuiltinAssumeFalse(*Context);
+
+    if (BuildOpts.ExtendedNoReturnAnalysis && !NoReturn &&
+        SinkKind == FunctionDecl::AnalyzerSinkKind::Undefined) {
+      auto *CanCD = FD->getCanonicalDecl();
+      auto *DefFD = CanCD->getDefinition();
+
+      CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoSink);
+
+      if (DefFD && DefFD->getBody()) {
+        auto CalleeCFG = CFG::buildCFG(DefFD, DefFD->getBody(),
+                                       &DefFD->getASTContext(), BuildOpts);
+
+        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(
+                             CFGBlock::InterProcAnalysis::On)) {
+          CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
+          NoReturn = true;
+        }
+      }
+    }
+
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
@@ -6288,7 +6309,14 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 // There may be many more reasons why a sink would appear during analysis
 // (eg. checkers may generate sinks arbitrarily), but here we only consider
 // sinks that would be obvious by looking at the CFG.
-static bool isImmediateSinkBlock(const CFGBlock *Blk) {
+//
+// This function also performs inter-procedural analysis by recursively
+// examining called functions to detect forwarding chains to noreturn
+// functions. When a function is determined to never return through this
+// analysis, it's automatically marked with analyzer_noreturn attribute
+// for caching and future reference.
+static bool isImmediateSinkBlock(const CFGBlock *Blk,
+                                 CFGBlock::InterProcAnalysis flag) {
   if (Blk->hasNoReturnElement())
     return true;
 
@@ -6298,10 +6326,60 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   // at least for now, but once we have better support for exceptions,
   // we'd need to carefully handle the case when the throw is being
   // immediately caught.
-  if (llvm::any_of(*Blk, [](const CFGElement &Elm) {
+  if (llvm::any_of(*Blk, [](const CFGElement &Elm) -> bool {
         if (std::optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
-          if (isa<CXXThrowExpr>(StmtElm->getStmt()))
-            return true;
+          return isa<CXXThrowExpr>(StmtElm->getStmt());
+        return false;
+      }))
+    return true;
+
+  if (flag != CFGBlock::InterProcAnalysis::On)
+    return false;
+
+  auto HasNoReturnCall = [&](const CallExpr *CE) {
+    if (!CE)
+      return false;
+
+    auto *FD = CE->getDirectCallee();
+
+    if (!FD)
+      return false;
+
+    auto *CanCD = FD->getCanonicalDecl();
+    auto *DefFD = CanCD->getDefinition();
+    auto NoRetKind = CanCD->getAnalyzerSinkKind();
+    auto NoReturn = false;
+
+    if ((NoRetKind == FunctionDecl::AnalyzerSinkKind::Undefined) && DefFD &&
+        DefFD->getBody()) {
+      // HACK: we are gonna cache analysis result as implicit
+      // `analyzer_noreturn` attribute
+      auto *MutCD = const_cast<FunctionDecl *>(CanCD);
+
+      // Mark function as `analyzer_noreturn(false)` to:
+      //  * prevent infinite recursion in noreturn analysis
+      //  * indicate that we've already analyzed(-ing) this function
+      //  * serve as a safe default assumption (function may return)
+      MutCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoSink);
+
+      auto CalleeCFG =
+          CFG::buildCFG(DefFD, DefFD->getBody(), &DefFD->getASTContext(), {});
+
+      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(flag);
+
+      // Override to `analyzer_noreturn(true)`
+      if (NoReturn)
+        MutCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
+
+    } else
+      NoReturn = (NoRetKind == FunctionDecl::AnalyzerSinkKind::NoReturn);
+
+    return NoReturn;
+  };
+
+  if (llvm::any_of(*Blk, [&](const CFGElement &Elm) {
+        if (std::optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
+          return HasNoReturnCall(dyn_cast<CallExpr>(StmtElm->getStmt()));
         return false;
       }))
     return true;
@@ -6309,11 +6387,11 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   return false;
 }
 
-bool CFGBlock::isInevitablySinking() const {
+bool CFGBlock::isInevitablySinking(InterProcAnalysis flag) const {
   const CFG &Cfg = *getParent();
 
   const CFGBlock *StartBlk = this;
-  if (isImmediateSinkBlock(StartBlk))
+  if (isImmediateSinkBlock(StartBlk, flag))
     return true;
 
   llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
@@ -6333,7 +6411,7 @@ bool CFGBlock::isInevitablySinking() const {
 
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
+        if (!isImmediateSinkBlock(SuccBlk, flag) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
           DFSWorkList.push_back(SuccBlk);

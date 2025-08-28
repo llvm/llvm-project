@@ -892,6 +892,9 @@ private:
   CFG *Parent;
 
 public:
+  /// Determines inter-procedural analysis enablement
+  enum class InterProcAnalysis { On, Off };
+
   explicit CFGBlock(unsigned blockid, BumpVectorContext &C, CFG *parent)
       : Elements(C), Terminator(nullptr), BlockID(blockid), Preds(C, 1),
         Succs(C, 1), HasNoReturnElement(false), Parent(parent) {}
@@ -1080,7 +1083,8 @@ public:
 
   /// Returns true if the block would eventually end with a sink (a noreturn
   /// node).
-  bool isInevitablySinking() const;
+  bool
+  isInevitablySinking(InterProcAnalysis flag = InterProcAnalysis::Off) const;
 
   CFGTerminator getTerminator() const { return Terminator; }
 
@@ -1251,6 +1255,7 @@ public:
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
+    bool ExtendedNoReturnAnalysis = false;
 
     BuildOptions() = default;
 

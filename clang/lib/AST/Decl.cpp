@@ -3600,6 +3600,25 @@ bool FunctionDecl::isNoReturn() const {
   return false;
 }
 
+FunctionDecl::AnalyzerSinkKind FunctionDecl::getAnalyzerSinkKind() const {
+  if (isNoReturn())
+    return AnalyzerSinkKind::NoReturn;
+
+  if (auto *Attr = getAttr<AnalyzerNoReturnAttr>())
+    return Attr->getValue() ? AnalyzerSinkKind::NoReturn
+                            : AnalyzerSinkKind::NoSink;
+
+  return AnalyzerSinkKind::Undefined;
+}
+
+void FunctionDecl::setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind kind) {
+  dropAttr<AnalyzerNoReturnAttr>();
+
+  if (kind != AnalyzerSinkKind::Undefined)
+    addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+        getASTContext(), kind == AnalyzerSinkKind::NoReturn, getLocation()));
+}
+
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {
   // C++20 [temp.friend]p9:
   //   A non-template friend declaration with a requires-clause [or]
