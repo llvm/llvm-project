@@ -75,15 +75,15 @@ jobs:
             export LIT_XFAIL="functionalities/gdb_remote_client/TestqOffsets.py"
             export LIT_FILTER_OUT=TestqOffsets.py
           fi
-          env
 
-          if ! [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
+          if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
             # why we do not hardcode it.
             export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
             export SCCACHE_GCS_RW_MODE=READ_WRITE
           fi
+          env
 
           # Set the idle timeout to zero to ensure sccache runs for the
           # entire duration of the job. Otherwise it might stop if we run
