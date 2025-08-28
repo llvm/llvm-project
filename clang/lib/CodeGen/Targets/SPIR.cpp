@@ -562,12 +562,12 @@ getImageFormat(const LangOptions &LangOpts,
 }
 
 llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
-    const HLSLAttributedResourceType::Attributes &attributes,
-    QualType OriginalTy, CodeGenModule &CGM) const {
+    const HLSLAttributedResourceType::Attributes &attributes, QualType Ty,
+    CodeGenModule &CGM) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
   unsigned NumChannels = 1;
-  QualType Ty = OriginalTy->getCanonicalTypeUnqualified();
+  Ty = Ty->getCanonicalTypeUnqualified();
   if (const VectorType *V = dyn_cast<VectorType>(Ty)) {
     NumChannels = V->getNumElements();
     Ty = V->getElementType();

@@ -9519,7 +9519,7 @@ def fhlsl_spv_use_unknown_image_format
       HelpText<"For storage images and texel buffers, sets the default format "
                "to 'Unknown' when not specified via the `vk::image_format` "
                "attribute. If this option is not used, the format is inferred "
-               "fron the resource's data type.">,
+               "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
