@@ -27,7 +27,7 @@ bool lldb_protocol::mcp::fromJSON(const llvm::json::Value &V, ServerInfo &SM,
 }
 
 Server::Server(std::string name, std::string version,
-               std::unique_ptr<Transport> transport_up,
+               std::unique_ptr<MCPTransport> transport_up,
                lldb_private::MainLoop &loop)
     : m_name(std::move(name)), m_version(std::move(version)),
       m_transport_up(std::move(transport_up)), m_loop(loop) {
@@ -192,7 +192,7 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
 
   return make_error<MCPError>(
       llvm::formatv("no resource handler for uri: {0}", uri_str).str(),
-      eErrorCodeResourceNotFound);
+      MCPError::kResourceNotFound);
 }
 
 ServerCapabilities Server::GetCapabilities() {
@@ -231,7 +231,7 @@ void Server::Received(const Request &request) {
       response.takeError(),
       [&](const MCPError &err) { protocol_error = err.toProtocolError(); },
       [&](const llvm::ErrorInfoBase &err) {
-        protocol_error.code = eErrorCodeInternalError;
+        protocol_error.code = MCPError::kInternalError;
         protocol_error.message = err.message();
       });
   Response error_response;
