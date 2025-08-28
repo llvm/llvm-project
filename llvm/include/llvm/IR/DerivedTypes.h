@@ -847,7 +847,8 @@ public:
     CanBeLocal = 1U << 2,
     /// This type may be used as an element in a vector.
     CanBeVectorElement = 1U << 3,
-    /// All uses of this type must not attempt to introspect or obscure it.
+    // This type can only be used in intrinsic arguments and return values.
+    /// In particular, it cannot be used in select and phi instructions.
     IsTokenLike = 1U << 4,
   };
 

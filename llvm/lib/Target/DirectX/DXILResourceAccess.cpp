@@ -203,10 +203,10 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static void collectBlockUseDef(Instruction *Start,
-                               SmallVectorImpl<Instruction *> &Out) {
+static SmallVector<Instruction *> collectBlockUseDef(Instruction *Start) {
   SmallPtrSet<Instruction *, 32> Visited;
   SmallVector<Instruction *, 32> Worklist;
+  SmallVector<Instruction *> Out;
   auto *BB = Start->getParent();
 
   // Seed with direct users in this block.
@@ -247,6 +247,8 @@ static void collectBlockUseDef(Instruction *Start,
   llvm::sort(Out, [&](Instruction *A, Instruction *B) {
     return Ord.lookup(A) < Ord.lookup(B);
   });
+
+  return Out;
 }
 
 static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
@@ -272,7 +274,7 @@ static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
 }
 
 static void phiNodeReplacement(IntrinsicInst *II,
-                               SmallVector<Instruction *> &PrevBBDeadInsts,
+                               SmallVectorImpl<Instruction *> &PrevBBDeadInsts,
                                SetVector<BasicBlock *> &DeadBB) {
   SmallVector<Instruction *> CurrBBDeadInsts;
   for (User *U : II->users()) {
@@ -281,9 +283,8 @@ static void phiNodeReplacement(IntrinsicInst *II,
       continue;
 
     IRBuilder<> Builder(Phi);
-    SmallVector<Instruction *> UsesInBlock;
-    collectBlockUseDef(Phi, UsesInBlock);
-    bool HasReturnUse = isa<ReturnInst>(UsesInBlock[UsesInBlock.size() - 1]);
+    SmallVector<Instruction *> UsesInBlock = collectBlockUseDef(Phi);
+    bool HasReturnUse = isa<ReturnInst>(UsesInBlock.back());
 
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I < E; I++) {
       auto *CurrIncomingBB = Phi->getIncomingBlock(I);
