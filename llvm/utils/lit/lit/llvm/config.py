@@ -711,6 +711,9 @@ class LLVMConfig(object):
                     "%clang", command=self.config.clang, extra_args=additional_flags
                 ),
                 ToolSubst(
+                    "%/clang", command=self.config.clang.replace("\\", "/"), extra_args=additional_flags
+                ),
+                ToolSubst(
                     "%clang_analyze_cc1",
                     command="%clang_cc1",
                     # -setup-static-analyzer ensures that __clang_analyzer__ is defined

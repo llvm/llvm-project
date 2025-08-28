@@ -30,7 +30,7 @@
 // RUN: echo "TRANSLATION UNIT 2" >> %t/result.txt
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu2.casid >> %t/result.txt
 
-// RUN: cat %t/result.txt | sed 's/\\/\//g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t %s
 
 // Build the include-tree commands
 // RUN: %clang @%t/TwoSubs.rsp
@@ -39,27 +39,27 @@
 // RUN: not %clang @%t/tu2.rsp 2>&1 | FileCheck %s -check-prefix=TU2
 
 // CHECK: MODULE TwoSubs
-// CHECK: 2:1 [[PREFIX]]/Sub1.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 PREFIX{{/|\\}}Sub1.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: TwoSubs.Sub1
-// CHECK: 3:1 [[PREFIX]]/Sub2.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 3:1 PREFIX{{/|\\}}Sub2.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: TwoSubs.Sub2
 
 // CHECK: MODULE WithExplicit
-// CHECK: 2:1 [[PREFIX]]/TopLevel.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 PREFIX{{/|\\}}TopLevel.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: WithExplicit
-// CHECK: 3:1 [[PREFIX]]/Implicit.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 3:1 PREFIX{{/|\\}}Implicit.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: WithExplicit.Implicit
-// CHECK: 4:1 [[PREFIX]]/Explicit.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 4:1 PREFIX{{/|\\}}Explicit.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   Submodule: WithExplicit.Explicit
 
 // CHECK: TRANSLATION UNIT 1
-// CHECK: [[PREFIX]]/tu1.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK: PREFIX{{/|\\}}tu1.c llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 (Module) TwoSubs.Sub1
 // CHECK: 3:1 (Module) WithExplicit
 
 // CHECK: TRANSLATION UNIT 2
-// CHECK: [[PREFIX]]/tu2.c llvmcas://{{[[:xdigit:]]+}}
+// CHECK: PREFIX{{/|\\}}tu2.c llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 (Module) TwoSubs.Sub2
 // CHECK: 3:1 (Module) WithExplicit.Explicit
