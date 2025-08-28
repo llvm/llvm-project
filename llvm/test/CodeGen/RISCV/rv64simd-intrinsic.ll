@@ -56,3 +56,36 @@ define i64 @psslai.w(i64 %a, i64 %b) {
   %tmp = call i64 @llvm.riscv.psslai.w.i64.i64(i64 %a, i64 1)
   ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psll.bs.i64.i64(i64, i64)
+
+define i64 @psll_bs(i64 %a, i64 %b) {
+; RV64P-LABEL: psll_bs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psll.bs a0, a0, a1
+; RV64P-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.psll.bs.i64.i64(i64 %a, i64 %b)
+  ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psll.hs.i64.i64(i64, i64)
+
+define i64 @psll_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: psll_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psll.hs a0, a0, a1
+; RV64P-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.psll.hs.i64.i64(i64 %a, i64 %b)
+  ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psll.ws.i64.i64(i64, i64)
+
+define i64 @psll_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: psll_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psll.ws a0, a0, a1
+; RV64P-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.psll.ws.i64.i64(i64 %a, i64 %b)
+  ret i64 %tmp
+}

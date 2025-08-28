@@ -898,6 +898,8 @@ let Predicates = [HasStdExtP] in {
 def : PatGprImm<int_riscv_pslli_b,  PSLLI_B,  uimm3>;
 def : PatGprImm<int_riscv_pslli_h,  PSLLI_H,  uimm4>;
 def : PatGprImm<int_riscv_psslai_h, PSSLAI_H, uimm4>;
+def : PatGprGpr<int_riscv_psll_bs,  PSLL_BS>;
+def : PatGprGpr<int_riscv_psll_hs,  PSLL_HS>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -908,4 +910,5 @@ def : PatGprGpr<int_riscv_sadd,  SADD>;
 let Predicates = [HasStdExtP, IsRV64] in {
 def : PatGprImm<int_riscv_pslli_w,  PSLLI_W,  uimm5>;
 def : PatGprImm<int_riscv_psslai_w, PSSLAI_W, uimm5>;
+def : PatGprGpr<int_riscv_psll_ws,  PSLL_WS>;
 } // Predicates = [HasStdExtP, IsRV64]

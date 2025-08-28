@@ -1910,8 +1910,10 @@ let TargetPrefix = "riscv" in {
   multiclass RVPBinaryIntrinsics {
     def "int_riscv_" # NAME   : RVPBinaryIntrinsics;
   }
-
-  defm sadd : RVPBinaryIntrinsics;
+  defm psll_bs : RVPBinaryIntrinsics;
+  defm psll_hs : RVPBinaryIntrinsics;
+  defm psll_ws : RVPBinaryIntrinsics;
+  defm sadd    : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],
