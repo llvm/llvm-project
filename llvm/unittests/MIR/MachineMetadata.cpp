@@ -67,7 +67,8 @@ protected:
   }
 
   std::unique_ptr<TargetMachine>
-  createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+  createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
+    Triple TT(TargetStr);
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
@@ -563,8 +564,7 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_TRUE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_TRUE(Properties.hasTiedOpsRewritten());
 }
 
 TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
@@ -594,6 +594,5 @@ body:             |
   ASSERT_TRUE(M);
   auto *MF = MMI.getMachineFunction(*M->getFunction("foo"));
   MachineFunctionProperties &Properties = MF->getProperties();
-  ASSERT_FALSE(Properties.hasProperty(
-      MachineFunctionProperties::Property::TiedOpsRewritten));
+  ASSERT_FALSE(Properties.hasTiedOpsRewritten());
 }

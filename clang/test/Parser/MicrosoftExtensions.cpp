@@ -126,7 +126,7 @@ void template_uuid()
 }
 
 
-template <class T, const GUID* g = &__uuidof(T)> // expected-note 2{{template parameter is declared here}}
+template <class T, const GUID* g = &__uuidof(T)> // expected-note {{template parameter is declared here}}
 class COM_CLASS_TEMPLATE  { };
 
 typedef COM_CLASS_TEMPLATE<struct_with_uuid, &*&__uuidof(struct_with_uuid)> COM_TYPE_1; // expected-warning {{non-type template argument containing a dereference operation is a Microsoft extension}}
@@ -145,7 +145,7 @@ typedef COM_CLASS_TEMPLATE_REF<struct_with_uuid, __uuidof(struct_with_uuid)> COM
 
 COM_CLASS_TEMPLATE_REF<int, __uuidof(struct_with_uuid)> good_template_arg;
 
-COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument for template parameter of pointer type 'const GUID *' (aka 'const _GUID *') must have its address taken}}
+COM_CLASS_TEMPLATE<int, __uuidof(struct_with_uuid)> bad_template_arg; // expected-error {{non-type template argument for template parameter of pointer type 'const GUID *' (aka 'const struct _GUID *') must have its address taken}}
 
 namespace PR16911 {
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;

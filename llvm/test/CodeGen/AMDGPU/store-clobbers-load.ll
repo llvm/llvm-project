@@ -1,5 +1,4 @@
 ; RUN: opt -S --amdgpu-annotate-uniform < %s | FileCheck -check-prefix=OPT %s
-target datalayout = "A5"
 
 ; "load vaddr" depends on the store, so we should not mark vaddr as amdgpu.noclobber.
 
@@ -20,7 +19,7 @@ entry:
 
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-@lds0 = addrspace(3) global [512 x i32] undef, align 4
+@lds0 = addrspace(3) global [512 x i32] poison, align 4
 
 ; To check that %arrayidx0 is not marked as amdgpu.noclobber.
 

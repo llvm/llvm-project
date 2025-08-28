@@ -77,8 +77,9 @@ export using ::E;
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*VFS, DiagOpts);
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
@@ -100,7 +101,7 @@ export using ::E;
 
   PreambleCallbacks Callbacks;
   llvm::ErrorOr<PrecompiledPreamble> BuiltPreamble = PrecompiledPreamble::Build(
-      *Invocation, Buffer.get(), Bounds, *Diags, VFS,
+      *Invocation, Buffer.get(), Bounds, Diags, VFS,
       std::make_shared<PCHContainerOperations>(),
       /*StoreInMemory=*/false, /*StoragePath=*/TestDir, Callbacks);
 
@@ -110,10 +111,8 @@ export using ::E;
   EXPECT_TRUE(BuiltPreamble->CanReuse(*Invocation, *Buffer, Bounds, *VFS));
   BuiltPreamble->OverridePreamble(*Invocation, VFS, Buffer.get());
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->setInvocation(std::move(Invocation));
-  Clang->setDiagnostics(Diags.get());
+  auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
+  Clang->setDiagnostics(Diags);
 
   if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
           Clang->getInvocation(), Clang->getDiagnostics(), VFS))

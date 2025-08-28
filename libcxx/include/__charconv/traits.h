@@ -43,12 +43,9 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uin
   ///
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
-  /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
-  /// function requires its input to have at least one bit set the value of
-  /// zero is set to one. This means the first element of the lookup table is
-  /// zero.
+  /// Instead of using IntegerLogBase2 it uses __countl_zero.
   static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
-    auto __t = (32 - std::__libcpp_clz(static_cast<type>(__v | 1))) * 1233 >> 12;
+    auto __t = (32 - std::__countl_zero(static_cast<type>(__v | 1))) * 1233 >> 12;
     return __t - (__v < __itoa::__pow10_32[__t]) + 1;
   }
 
@@ -69,12 +66,9 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uin
   ///
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
-  /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
-  /// function requires its input to have at least one bit set the value of
-  /// zero is set to one. This means the first element of the lookup table is
-  /// zero.
+  /// Instead of using IntegerLogBase2 it uses __countl_zero.
   static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
-    auto __t = (64 - std::__libcpp_clz(static_cast<type>(__v | 1))) * 1233 >> 12;
+    auto __t = (64 - std::__countl_zero(static_cast<type>(__v | 1))) * 1233 >> 12;
     return __t - (__v < __itoa::__pow10_64[__t]) + 1;
   }
 
@@ -96,15 +90,12 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
   ///
   /// The algorithm is based on
   /// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
-  /// Instead of using IntegerLogBase2 it uses __libcpp_clz. Since that
-  /// function requires its input to have at least one bit set the value of
-  /// zero is set to one. This means the first element of the lookup table is
-  /// zero.
+  /// Instead of using IntegerLogBase2 it uses __countl_zero.
   static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
     _LIBCPP_ASSERT_INTERNAL(
         __v > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
     // There's always a bit set in the upper 64-bits.
-    auto __t = (128 - std::__libcpp_clz(static_cast<uint64_t>(__v >> 64))) * 1233 >> 12;
+    auto __t = (128 - std::__countl_zero(static_cast<uint64_t>(__v >> 64))) * 1233 >> 12;
     _LIBCPP_ASSERT_INTERNAL(__t >= __itoa::__pow10_128_offset, "Index out of bounds");
     // __t is adjusted since the lookup table misses the lower entries.
     return __t - (__v < __itoa::__pow10_128[__t - __itoa::__pow10_128_offset]) + 1;

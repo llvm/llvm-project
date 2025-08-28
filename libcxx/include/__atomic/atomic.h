@@ -23,6 +23,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_volatile.h>
@@ -230,8 +231,14 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
   }
 };
 
+template <typename _Tp>
+struct __check_atomic_mandates {
+  using type _LIBCPP_NODEBUG = _Tp;
+  static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
+};
+
 template <class _Tp>
-struct atomic : public __atomic_base<_Tp> {
+struct atomic : public __atomic_base<typename __check_atomic_mandates<_Tp>::type> {
   using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20

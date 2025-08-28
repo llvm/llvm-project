@@ -481,7 +481,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_flags = Doc.Header.Flags;
+  if (Doc.Header.Flags)
+    Header.e_flags = *Doc.Header.Flags;
+  else
+    Header.e_flags = 0;
+
   Header.e_ehsize = sizeof(Elf_Ehdr);
 
   if (Doc.Header.EPhOff)
@@ -1452,7 +1456,7 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
+      if (E.Version > 3)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
@@ -1483,6 +1487,8 @@ void ELFState<ELFT>::writeSectionContent(
     if (!E.BBRanges)
       continue;
     uint64_t TotalNumBlocks = 0;
+    bool EmitCallsiteEndOffsets =
+        FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
     for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
@@ -1500,6 +1506,15 @@ void ELFState<ELFT>::writeSectionContent(
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+        if (EmitCallsiteEndOffsets) {
+          size_t NumCallsiteEndOffsets =
+              BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
+          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
+          if (BBE.CallsiteEndOffsets) {
+            for (uint32_t Offset : *BBE.CallsiteEndOffsets)
+              SHeader.sh_size += CBA.writeULEB128(Offset);
+          }
+        }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
       }

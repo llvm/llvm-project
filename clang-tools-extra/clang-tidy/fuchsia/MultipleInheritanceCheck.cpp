@@ -49,7 +49,8 @@ bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
 bool MultipleInheritanceCheck::isCurrentClassInterface(
     const CXXRecordDecl *Node) const {
   // Interfaces should have no fields.
-  if (!Node->field_empty()) return false;
+  if (!Node->field_empty())
+    return false;
 
   // Interfaces should have exclusively pure methods.
   return llvm::none_of(Node->methods(), [](const CXXMethodDecl *M) {
@@ -68,12 +69,12 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
 
   // To be an interface, all base classes must be interfaces as well.
   for (const auto &I : Node->bases()) {
-    if (I.isVirtual()) continue;
-    const auto *Ty = I.getType()->getAs<RecordType>();
-    if (!Ty) continue;
-    const RecordDecl *D = Ty->getDecl()->getDefinition();
-    if (!D) continue;
-    const auto *Base = cast<CXXRecordDecl>(D);
+    if (I.isVirtual())
+      continue;
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
+      continue;
+    assert(Base->isCompleteDefinition());
     if (!isInterface(Base)) {
       addNodeToInterfaceMap(Node, false);
       return false;
@@ -97,20 +98,25 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     // concrete classes
     unsigned NumConcrete = 0;
     for (const auto &I : D->bases()) {
-      if (I.isVirtual()) continue;
-      const auto *Ty = I.getType()->getAs<RecordType>();
-      if (!Ty) continue;
-      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
-      if (!isInterface(Base)) NumConcrete++;
+      if (I.isVirtual())
+        continue;
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      if (!Base)
+        continue;
+      assert(Base->isCompleteDefinition());
+      if (!isInterface(Base))
+        NumConcrete++;
     }
 
     // Check virtual bases to see if there is more than one concrete
     // non-virtual base.
     for (const auto &V : D->vbases()) {
-      const auto *Ty = V.getType()->getAs<RecordType>();
-      if (!Ty) continue;
-      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
-      if (!isInterface(Base)) NumConcrete++;
+      const auto *Base = V.getType()->getAsCXXRecordDecl();
+      if (!Base)
+        continue;
+      assert(Base->isCompleteDefinition());
+      if (!isInterface(Base))
+        NumConcrete++;
     }
 
     if (NumConcrete > 1) {

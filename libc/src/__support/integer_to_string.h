@@ -57,8 +57,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
@@ -405,7 +404,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     // Returns the absolute value of 'value' as 'UNSIGNED_T'.
     LIBC_INLINE static UNSIGNED_T abs(T value) {
       if (cpp::is_unsigned_v<T> || value >= 0)
-        return value; // already of the right sign.
+        return static_cast<UNSIGNED_T>(value); // already of the right sign.
 
       // Signed integers are asymmetric (e.g., int8_t ∈ [-128, 127]).
       // Thus negating the type's minimum value would overflow.
@@ -422,7 +421,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       if (value == cpp::numeric_limits<T>::min()) {
         return cpp::bit_cast<UNSIGNED_T>(value);
       } else {
-        return -value; // legal and representable both as T and UNSIGNED_T.`
+        return static_cast<UNSIGNED_T>(
+            -value); // legal and representable both as T and UNSIGNED_T.`
       }
     }
 

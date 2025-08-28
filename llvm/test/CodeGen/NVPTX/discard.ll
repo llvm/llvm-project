@@ -13,7 +13,7 @@ define void @discard_global_L2(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [discard_global_L2_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [discard_global_L2_param_0];
 ; CHECK-PTX64-NEXT:    discard.global.L2 [%rd1], 128;
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.discard.global.L2(ptr addrspace(1) %global_ptr, i64 128)
@@ -26,7 +26,7 @@ define void @discard_L2(ptr %ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [discard_L2_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [discard_L2_param_0];
 ; CHECK-PTX64-NEXT:    discard.L2 [%rd1], 128;
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.discard.L2(ptr %ptr, i64 128)

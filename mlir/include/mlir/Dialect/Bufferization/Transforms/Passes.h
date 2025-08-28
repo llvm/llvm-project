@@ -2,6 +2,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES_H
 
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 
@@ -119,8 +120,10 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run the ownership-based buffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              DeallocationOptions options);
+LogicalResult
+deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                DeallocationOptions options,
+                                SymbolTableCollection &symbolTables);
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
@@ -145,14 +148,14 @@ struct BufferResultsToOutParamsOpts {
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
                                  MemRefType type) {
-    return builder.create<memref::AllocOp>(loc, type).getResult();
+    return memref::AllocOp::create(builder, loc, type).getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
   /// Default memref.copy is used.
   MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
                          Value to) {
-    builder.create<memref::CopyOp>(loc, from, to);
+    memref::CopyOp::create(builder, loc, from, to);
     return success();
   };
 

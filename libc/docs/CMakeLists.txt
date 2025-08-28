@@ -8,7 +8,12 @@ if (SPHINX_FOUND)
     # want the dynamically generated .rst files to pollute the source tree.
     add_custom_target(copy-libc-rst-docs
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
-              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+              "${CMAKE_CURRENT_BINARY_DIR}"
+      )
 
     # For headers that are nested in directories, we need to
     # `mkdir $build_dir/libc/docs/headers/$dir` since the above copy_directory
@@ -39,10 +44,12 @@ if (SPHINX_FOUND)
       assert
       cpio
       ctype
+      dirent
       endian
       errno
       fenv
       float
+      glob
       inttypes
       locale
       net/if
@@ -61,6 +68,7 @@ if (SPHINX_FOUND)
       sys/stat
       sys/statvfs
       sys/time
+      sys/utsname
       sys/wait
       termios
       threads

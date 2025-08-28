@@ -384,7 +384,7 @@ declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 define <8 x half> @fcopysignv8f16(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fcopysignv8f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (mem & (xmm0 ^ xmm1))
+; CHECK-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (m32bcst & (xmm0 ^ xmm1))
 ; CHECK-NEXT:    retq
   %a = call <8 x half> @llvm.copysign.v8f16(<8 x half> %x, <8 x half> %y)
   ret <8 x half> %a
@@ -439,7 +439,7 @@ declare <16 x half> @llvm.fabs.v16f16(<16 x half>)
 define <16 x half> @fcopysignv16f16(<16 x half> %x, <16 x half> %y) {
 ; CHECK-LABEL: fcopysignv16f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm1 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-NEXT:    retq
   %a = call <16 x half> @llvm.copysign.v16f16(<16 x half> %x, <16 x half> %y)
   ret <16 x half> %a
@@ -494,7 +494,7 @@ declare <32 x half> @llvm.fabs.v32f16(<32 x half>)
 define <32 x half> @fcopysignv32f16(<32 x half> %x, <32 x half> %y) {
 ; CHECK-LABEL: fcopysignv32f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (mem & (zmm0 ^ zmm1))
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & (zmm0 ^ zmm1))
 ; CHECK-NEXT:    retq
   %a = call <32 x half> @llvm.copysign.v32f16(<32 x half> %x, <32 x half> %y)
   ret <32 x half> %a

@@ -637,9 +637,12 @@ llvm.func @wsloop_simd_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Outlined function.
 // CHECK: define internal void @[[OUTLINED]]
 
-// Private reduction variable and its initialization.
+// reduction variable in wsloop
 // CHECK: %[[PRIVATE:.+]] = alloca float
+// reduction variable in simd
+// CHECK: %[[PRIVATE2:.+]] = alloca float
 // CHECK: store float 0.000000e+00, ptr %[[PRIVATE]]
+// CHECK: store float 0.000000e+00, ptr %[[PRIVATE2]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce
@@ -659,9 +662,9 @@ llvm.func @wsloop_simd_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // Update of the private variable using the reduction region
 // (the body block currently comes after all the other blocks).
-// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE]]
+// CHECK: %[[PARTIAL:.+]] = load float, ptr %[[PRIVATE2]]
 // CHECK: %[[UPDATED:.+]] = fadd float 2.000000e+00, %[[PARTIAL]]
-// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE]]
+// CHECK: store float %[[UPDATED]], ptr %[[PRIVATE2]]
 
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]

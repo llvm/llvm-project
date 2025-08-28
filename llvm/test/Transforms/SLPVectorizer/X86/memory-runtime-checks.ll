@@ -124,15 +124,15 @@ define double @preserve_loop_info(ptr %arg, i1 %arg2) {
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
-; CHECK-NEXT:    br i1 %arg2, label [[OUTER_LATCH:%.*]], label [[INNER]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[OUTER_LATCH:%.*]], label [[INNER]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    br i1 %arg2, label [[BB:%.*]], label [[OUTER_HEADER]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[BB:%.*]], label [[OUTER_HEADER]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [3 x double], ptr [[TMP]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[LOOP_3HEADER:%.*]]
 ; CHECK:       loop.3header:
-; CHECK-NEXT:    br i1 %arg2, label [[LOOP_3LATCH:%.*]], label [[BB9:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[LOOP_3LATCH:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [3 x double], ptr [[TMP5]], i64 undef, i64 1
 ; CHECK-NEXT:    store double undef, ptr [[TMP]], align 16
@@ -140,7 +140,7 @@ define double @preserve_loop_info(ptr %arg, i1 %arg2) {
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    br label [[LOOP_3LATCH]]
 ; CHECK:       loop.3latch:
-; CHECK-NEXT:    br i1 %arg2, label [[BB14:%.*]], label [[LOOP_3HEADER]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[BB14:%.*]], label [[LOOP_3HEADER]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call double undef(ptr [[TMP]], ptr [[ARG:%.*]])
 ; CHECK-NEXT:    ret double undef
@@ -189,7 +189,8 @@ define void @gather_sequence_crash(<2 x float> %arg, ptr %arg1, float %arg2, ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[ARG1:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[ARG:%.*]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, <4 x i32> <i32 poison, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[ARG2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> poison, float [[ARG2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP6]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    ret void

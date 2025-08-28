@@ -99,7 +99,7 @@ public:
   TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D, bool VisitLocs = false) {
-    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isImplicit())
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D && D->isImplicit())
       return;
 
     getNodeDelegate().AddChild([=] {
@@ -393,7 +393,15 @@ public:
     Visit(T->getPointeeType());
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
-    Visit(T->getClass());
+    // FIXME: Provide a NestedNameSpecifier visitor.
+    NestedNameSpecifier Qualifier = T->getQualifier();
+    if (NestedNameSpecifier::Kind K = Qualifier.getKind();
+        K == NestedNameSpecifier::Kind::Type)
+      Visit(Qualifier.getAsType());
+    if (T->isSugared())
+      Visit(cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
+                ->getQualifier()
+                .getAsType());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -444,6 +452,24 @@ public:
     if (!Contained.isNull())
       Visit(Contained);
   }
+  void VisitHLSLInlineSpirvType(const HLSLInlineSpirvType *T) {
+    for (auto &Operand : T->getOperands()) {
+      using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+      switch (Operand.getKind()) {
+      case SpirvOperandKind::ConstantId:
+      case SpirvOperandKind::Literal:
+        break;
+
+      case SpirvOperandKind::TypeId:
+        Visit(Operand.getResultType());
+        break;
+
+      default:
+        llvm_unreachable("Invalid SpirvOperand kind!");
+      }
+    }
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
@@ -485,7 +511,8 @@ public:
     }
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
-    Visit(TL.getClassTInfo()->getTypeLoc());
+    // FIXME: Provide NestedNamespecifierLoc visitor.
+    Visit(TL.getQualifierLoc().castAsTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -531,8 +558,8 @@ public:
       for (const auto *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (const Expr *TRC = D->getTrailingRequiresClause())
-      Visit(TRC);
+    if (const AssociatedConstraint &TRC = D->getTrailingRequiresClause())
+      Visit(TRC.ConstraintExpr);
 
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isDefaulted())
       return;
@@ -580,7 +607,7 @@ public:
   }
 
   void VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
-    Visit(D->getAsmString());
+    Visit(D->getAsmStringExpr());
   }
 
   void VisitTopLevelStmtDecl(const TopLevelStmtDecl *D) { Visit(D->getStmt()); }
@@ -747,17 +774,16 @@ public:
   }
 
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
-    if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
-      Visit(TD->getTypeForDecl());
+    Visit(D->getTargetDecl());
   }
 
   void VisitFriendDecl(const FriendDecl *D) {
     if (D->getFriendType()) {
       // Traverse any CXXRecordDecl owned by this type, since
       // it will not be in the parent context:
-      if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
-        if (auto *TD = ET->getOwnedTagDecl())
-          Visit(TD);
+      if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
+        if (TT->isTagOwned())
+          Visit(TT->getOriginalDecl());
     } else {
       Visit(D->getFriendDecl());
     }

@@ -119,8 +119,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
@@ -612,7 +611,7 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   }
 }
 
-static bool ContainsReg(const ArrayRef<std::pair<unsigned, bool>> &Regs,
+static bool ContainsReg(ArrayRef<std::pair<unsigned, bool>> Regs,
                         unsigned Reg) {
   for (const std::pair<unsigned, bool> &R : Regs)
     if (R.first == Reg)
@@ -2849,12 +2848,10 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         //  Erase the entry into the DbgValueSinkCandidates for the DBG_VALUE
         //  that was moved.
         auto DbgVar = createDebugVariableFromMachineInstr(DbgInstr);
-        auto DbgIt = DbgValueSinkCandidates.find(DbgVar);
-        // If the instruction is a DBG_VALUE_LIST, it may have already been
-        // erased from the DbgValueSinkCandidates. Only erase if it exists in
-        // the DbgValueSinkCandidates.
-        if (DbgIt != DbgValueSinkCandidates.end())
-          DbgValueSinkCandidates.erase(DbgIt);
+        // Erase DbgVar from DbgValueSinkCandidates if still present.  If the
+        // instruction is a DBG_VALUE_LIST, it may have already been erased from
+        // DbgValueSinkCandidates.
+        DbgValueSinkCandidates.erase(DbgVar);
         // Zero out original dbg instr
         forEachDbgRegOperand(DbgInstr,
                              [&](MachineOperand &Op) { Op.setReg(0); });

@@ -1,5 +1,6 @@
 header: Uefi.h
-standards: UEFI
+standards:
+  - uefi
 macros: []
 types:
   - type_name: EFI_BOOT_SERVICES
@@ -8,8 +9,4 @@ types:
   - type_name: EFI_SYSTEM_TABLE
 enums: []
 functions: []
-objects:
-  - object_name: efi_system_table
-    object_type: EFI_SYSTEM_TABLE *
-  - object_name: efi_image_handle
-    object_type: EFI_HANDLE
+objects: []

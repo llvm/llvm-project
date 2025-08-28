@@ -20,9 +20,11 @@
 #ifndef LLVM_ADT_SETVECTOR_H
 #define LLVM_ADT_SETVECTOR_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -80,6 +82,10 @@ public:
   SetVector(It Start, It End) {
     insert(Start, End);
   }
+
+  template <typename Range>
+  SetVector(llvm::from_range_t, Range &&R)
+      : SetVector(adl_begin(R), adl_end(R)) {}
 
   ArrayRef<value_type> getArrayRef() const { return vector_; }
 
@@ -184,6 +190,10 @@ public:
       insert(*Start);
   }
 
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
+  }
+
   /// Remove an item from the set vector.
   bool remove(const value_type& X) {
     if constexpr (canBeSmall())
@@ -240,8 +250,13 @@ public:
         if (isSmall())
           return llvm::remove_if(vector_, P);
 
-      return llvm::remove_if(vector_,
-                             TestAndEraseFromSet<UnaryPredicate>(P, set_));
+      return llvm::remove_if(vector_, [&](const value_type &V) {
+        if (P(V)) {
+          set_.erase(V);
+          return true;
+        }
+        return false;
+      });
     }();
 
     if (I == vector_.end())
@@ -251,7 +266,7 @@ public:
   }
 
   /// Check if the SetVector contains the given key.
-  bool contains(const key_type &key) const {
+  [[nodiscard]] bool contains(const key_type &key) const {
     if constexpr (canBeSmall())
       if (isSmall())
         return is_contained(vector_, key);
@@ -261,12 +276,8 @@ public:
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
-  size_type count(const key_type &key) const {
-    if constexpr (canBeSmall())
-      if (isSmall())
-        return is_contained(vector_, key);
-
-    return set_.count(key);
+  [[nodiscard]] size_type count(const key_type &key) const {
+    return contains(key) ? 1 : 0;
   }
 
   /// Completely clear the SetVector
@@ -303,9 +314,8 @@ public:
   bool set_union(const STy &S) {
     bool Changed = false;
 
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      if (insert(*SI))
+    for (const auto &Elem : S)
+      if (insert(Elem))
         Changed = true;
 
     return Changed;
@@ -316,9 +326,8 @@ public:
   ///       SetVector interface is inconsistent with DenseSet.
   template <class STy>
   void set_subtract(const STy &S) {
-    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
-         ++SI)
-      remove(*SI);
+    for (const auto &Elem : S)
+      remove(Elem);
   }
 
   void swap(SetVector<T, Vector, Set, N> &RHS) {
@@ -327,29 +336,6 @@ public:
   }
 
 private:
-  /// A wrapper predicate designed for use with std::remove_if.
-  ///
-  /// This predicate wraps a predicate suitable for use with std::remove_if to
-  /// call set_.erase(x) on each element which is slated for removal.
-  template <typename UnaryPredicate>
-  class TestAndEraseFromSet {
-    UnaryPredicate P;
-    set_type &set_;
-
-  public:
-    TestAndEraseFromSet(UnaryPredicate P, set_type &set_)
-        : P(std::move(P)), set_(set_) {}
-
-    template <typename ArgumentT>
-    bool operator()(const ArgumentT &Arg) {
-      if (P(Arg)) {
-        set_.erase(Arg);
-        return true;
-      }
-      return false;
-    }
-  };
-
   [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
 
   [[nodiscard]] bool isSmall() const { return set_.empty(); }
@@ -369,13 +355,7 @@ private:
 template <typename T, unsigned N>
 class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
-  SmallSetVector() = default;
-
-  /// Initialize a SmallSetVector with a range of elements
-  template<typename It>
-  SmallSetVector(It Start, It End) {
-    this->insert(Start, End);
-  }
+  using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
 };
 
 } // end namespace llvm

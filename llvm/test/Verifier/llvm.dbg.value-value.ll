@@ -1,6 +1,6 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK: invalid llvm.dbg.value intrinsic address/value
-; CHECK-NEXT: call void @llvm.dbg.value({{.*}})
+; CHECK: invalid #dbg record address/value
+; CHECK-NEXT: #dbg_value({{.*}})
 ; CHECK-NEXT: !""
 ; CHECK: warning: ignoring invalid debug info
 

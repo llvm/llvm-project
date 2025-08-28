@@ -1,5 +1,8 @@
 # RUN: llc -o - %s -O0 -regalloc=fast -run-pass=livedebugvalues | \
 # RUN:   FileCheck %s -implicit-check-not=DBG_VALUE
+
+# RUN: llc -o - %s -O0 -regalloc=fast -passes=live-debug-values | \
+# RUN:   FileCheck %s -implicit-check-not=DBG_VALUE
 --- |
   target triple = "arm64-apple-ios12.1.0"
 
@@ -65,6 +68,8 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
   maxCallFrameSize: 0
+machineFunctionInfo:
+  stackSizeSVE:     0
 stack:
   - { id: 0, type: spill-slot, offset: -20, size: 4, alignment: 4, stack-id: default }
   - { id: 1, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,

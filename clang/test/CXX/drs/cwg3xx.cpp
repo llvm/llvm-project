@@ -143,7 +143,7 @@ namespace cwg305 { // cwg305: no
   void h(B *b) {
     struct B {}; // #cwg305-h-B
     b->~B();
-    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'cwg305::A') of the object being destroyed}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'A') of the object being destroyed}}
     //   expected-note@#cwg305-h-B {{type 'B' found by destructor name lookup}}
   }
 
@@ -317,20 +317,18 @@ namespace cwg319 { // cwg319: no
   typedef int (*pa)[n1];
   pa parr; // ok, type has linkage despite using 'n1'
 
-  template<typename> struct X {}; // #cwg319-X
+  template<typename> struct X {};
 
   void f() {
     struct A { int n; };
     extern A a; // FIXME: ill-formed
     X<A> xa;
     // cxx98-error@-1 {{template argument uses local type 'A'}}
-    //   cxx98-note@#cwg319-X {{template parameter is declared here}}
 
     typedef A B;
     extern B b; // FIXME: ill-formed
     X<B> xb;
     // cxx98-error@-1 {{template argument uses local type 'A'}}
-    //   cxx98-note@#cwg319-X {{template parameter is declared here}}
 
     const int n = 1;
     typedef int (*C)[n];
@@ -605,7 +603,7 @@ namespace cwg336 { // cwg336: 2.7
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
     //   expected-note@#cwg336-B {{defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
   namespace Post {
     template<class T1> class A {
@@ -620,7 +618,7 @@ namespace cwg336 { // cwg336: 2.7
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // FIXME: This diagnostic isn't very good.
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
 } // namespace cwg336
 
@@ -999,7 +997,6 @@ namespace cwg354 { // cwg354: 3.1 c++11
   //   since-cxx17-note@#cwg354-ptr_mem {{template parameter is declared here}}
   ptr_mem<(int S::*)0> m1;
   // cxx98-error@-1 {{non-type template argument is not a pointer to member constant}}
-  //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
   ptr_mem<(float S::*)0> m2; // #cwg354-m2
   // cxx98-error@#cwg354-m2 {{non-type template argument of type 'float S::*' cannot be converted to a value of type 'int S::*'}}
   //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
@@ -1030,7 +1027,7 @@ namespace cwg357 { // cwg357: 2.7
     void f() const; // #cwg357-f
   };
   template<typename T> void A<T>::f() {}
-  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
+  // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::A<T>'}}
   //   expected-note@#cwg357-A {{defined here}}
   //   expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
@@ -1324,7 +1321,7 @@ namespace cwg381 { // cwg381: 2.7
   void f() {
     E e;
     e.B::a = 0;
-    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'cwg381::B':
+    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'B':
     struct cwg381::E -> C -> B
     struct cwg381::E -> D -> B}} */
     F f;
@@ -1336,9 +1333,9 @@ namespace cwg382 { // cwg382: 2.7 c++11
   // FIXME: Should we allow this in C++98 mode?
   struct A { typedef int T; };
   typename A::T t;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename cwg382::A a;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename A b;
   // expected-error@-1 {{expected a qualified name after 'typename'}}
 } // namespace cwg382
@@ -1505,7 +1502,7 @@ namespace cwg389 { // cwg389: no
     typedef struct {} const C; // #cwg389-C
     typedef enum {} const D; // #cwg389-D
   };
-  template<typename> struct T {}; // #cwg389-T
+  template<typename> struct T {};
 
   struct WithLinkage1 {};
   enum WithLinkage2 {};
@@ -1546,23 +1543,18 @@ namespace cwg389 { // cwg389: no
 
   typedef T<WithoutLinkage1> BadArg1;
   // expected-error@-1 {{template argument uses unnamed type}}
-  //   expected-note@#cwg389-T {{template parameter is declared here}}
   //   expected-note@#cwg389-no-link-1 {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage2> BadArg2;
   // expected-error@-1 {{template argument uses unnamed type}}
-  //   expected-note@#cwg389-T {{template parameter is declared here}}
   //   expected-note@#cwg389-no-link-2 {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage3> BadArg3;
   // expected-error@-1 {{template argument uses unnamed type}}
-  //   expected-note@#cwg389-T {{template parameter is declared here}}
   //   expected-note@#cwg389-C {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage4> BadArg4;
   // expected-error@-1 {{template argument uses unnamed type}}
-  //   expected-note@#cwg389-T {{template parameter is declared here}}
   //   expected-note@#cwg389-D {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage5> BadArg5;
   // expected-error@-1 {{template argument uses unnamed type}}
-  //   expected-note@#cwg389-T {{template parameter is declared here}}
   //   expected-note@#cwg389-C {{unnamed type used in template argument was declared here}}
 #endif
 
@@ -1808,8 +1800,8 @@ namespace cwg399 { // cwg399: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'cwg399::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#cwg399-B {{type 'cwg399::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg399-B {{type 'B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();

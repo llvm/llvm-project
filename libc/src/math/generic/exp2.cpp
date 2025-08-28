@@ -8,7 +8,6 @@
 
 #include "src/math/exp2.h"
 #include "common_constants.h" // Lookup tables EXP2_MID1 and EXP_M2.
-#include "explogxf.h"         // ziv_test_denorm.
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -24,6 +23,7 @@
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/exp_utils.h"      // ziv_test_denorm.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -35,11 +35,11 @@ using LIBC_NAMESPACE::operator""_u128;
 
 // Error bounds:
 // Errors when using double precision.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr double ERR_D = 0x1.0p-63;
 #else
 constexpr double ERR_D = 0x1.8p-63;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.

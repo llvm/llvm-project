@@ -46,6 +46,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
@@ -382,7 +383,7 @@ public:
     Node(LazyCallGraph &G, Function &F) : G(&G), F(&F) {}
 
     /// Implementation of the scan when populating.
-    EdgeSequence &populateSlow();
+    LLVM_ABI EdgeSequence &populateSlow();
 
     /// Internal helper to directly replace the function with a new one.
     ///
@@ -621,14 +622,14 @@ public:
     ///
     /// CAUTION: This method walks every edge in the \c RefSCC, it can be very
     /// expensive.
-    bool isParentOf(const RefSCC &RC) const;
+    LLVM_ABI bool isParentOf(const RefSCC &RC) const;
 
     /// Test if this RefSCC is an ancestor of \a RC.
     ///
     /// CAUTION: This method walks the directed graph of edges as far as
     /// necessary to find a possible path to the argument. In the worst case
     /// this may walk the entire graph and can be extremely expensive.
-    bool isAncestorOf(const RefSCC &RC) const;
+    LLVM_ABI bool isAncestorOf(const RefSCC &RC) const;
 
     /// Test if this RefSCC is a child of \a RC.
     ///
@@ -683,7 +684,7 @@ public:
     /// position within this RefSCC's postorder list. Any SCCs merged are
     /// merged into the TargetN's SCC in order to preserve reachability analyses
     /// which took place on that SCC.
-    bool switchInternalEdgeToCall(
+    LLVM_ABI bool switchInternalEdgeToCall(
         Node &SourceN, Node &TargetN,
         function_ref<void(ArrayRef<SCC *> MergedSCCs)> MergeCB = {});
 
@@ -693,7 +694,7 @@ public:
     /// If SourceN and TargetN in separate SCCs within this RefSCC, changing
     /// the call edge between them to a ref edge is a trivial operation that
     /// does not require any structural changes to the call graph.
-    void switchTrivialInternalEdgeToRef(Node &SourceN, Node &TargetN);
+    LLVM_ABI void switchTrivialInternalEdgeToRef(Node &SourceN, Node &TargetN);
 
     /// Make an existing internal call edge within a single SCC into a ref
     /// edge.
@@ -713,20 +714,20 @@ public:
     ///
     /// Note that if SourceN and TargetN are in separate SCCs, the simpler
     /// routine `switchTrivialInternalEdgeToRef` should be used instead.
-    iterator_range<iterator> switchInternalEdgeToRef(Node &SourceN,
-                                                     Node &TargetN);
+    LLVM_ABI iterator_range<iterator> switchInternalEdgeToRef(Node &SourceN,
+                                                              Node &TargetN);
 
     /// Make an existing outgoing ref edge into a call edge.
     ///
     /// Note that this is trivial as there are no cyclic impacts and there
     /// remains a reference edge.
-    void switchOutgoingEdgeToCall(Node &SourceN, Node &TargetN);
+    LLVM_ABI void switchOutgoingEdgeToCall(Node &SourceN, Node &TargetN);
 
     /// Make an existing outgoing call edge into a ref edge.
     ///
     /// This is trivial as there are no cyclic impacts and there remains
     /// a reference edge.
-    void switchOutgoingEdgeToRef(Node &SourceN, Node &TargetN);
+    LLVM_ABI void switchOutgoingEdgeToRef(Node &SourceN, Node &TargetN);
 
     /// Insert a ref edge from one node in this RefSCC to another in this
     /// RefSCC.
@@ -740,7 +741,7 @@ public:
     /// should be to first insert the necessary ref edge, and then to switch it
     /// to a call edge if needed and handle any invalidation that results. See
     /// the \c switchInternalEdgeToCall routine for details.
-    void insertInternalRefEdge(Node &SourceN, Node &TargetN);
+    LLVM_ABI void insertInternalRefEdge(Node &SourceN, Node &TargetN);
 
     /// Insert an edge whose parent is in this RefSCC and child is in some
     /// child RefSCC.
@@ -748,7 +749,8 @@ public:
     /// There must be an existing path from the \p SourceN to the \p TargetN.
     /// This operation is inexpensive and does not change the set of SCCs and
     /// RefSCCs in the graph.
-    void insertOutgoingEdge(Node &SourceN, Node &TargetN, Edge::Kind EK);
+    LLVM_ABI void insertOutgoingEdge(Node &SourceN, Node &TargetN,
+                                     Edge::Kind EK);
 
     /// Insert an edge whose source is in a descendant RefSCC and target is in
     /// this RefSCC.
@@ -775,8 +777,8 @@ public:
     /// FIXME: We could possibly optimize this quite a bit for cases where the
     /// caller and callee are very nearby in the graph. See comments in the
     /// implementation for details, but that use case might impact users.
-    SmallVector<RefSCC *, 1> insertIncomingRefEdge(Node &SourceN,
-                                                   Node &TargetN);
+    LLVM_ABI SmallVector<RefSCC *, 1> insertIncomingRefEdge(Node &SourceN,
+                                                            Node &TargetN);
 
     /// Remove an edge whose source is in this RefSCC and target is *not*.
     ///
@@ -788,7 +790,7 @@ public:
     /// This operation does not change the cyclic structure of the graph and so
     /// is very inexpensive. It may change the connectivity graph of the SCCs
     /// though, so be careful calling this while iterating over them.
-    void removeOutgoingEdge(Node &SourceN, Node &TargetN);
+    LLVM_ABI void removeOutgoingEdge(Node &SourceN, Node &TargetN);
 
     /// Remove a list of ref edges which are entirely within this RefSCC.
     ///
@@ -828,7 +830,7 @@ public:
     /// effort has been made to minimize the overhead of common cases such as
     /// self-edges and edge removals which result in a spanning tree with no
     /// more cycles.
-    [[nodiscard]] SmallVector<RefSCC *, 1>
+    [[nodiscard]] LLVM_ABI SmallVector<RefSCC *, 1>
     removeInternalRefEdges(ArrayRef<std::pair<Node *, Node *>> Edges);
 
     /// A convenience wrapper around the above to handle trivial cases of
@@ -840,7 +842,7 @@ public:
     ///
     /// To further make calling this convenient, it also handles inserting
     /// already existing edges.
-    void insertTrivialCallEdge(Node &SourceN, Node &TargetN);
+    LLVM_ABI void insertTrivialCallEdge(Node &SourceN, Node &TargetN);
 
     /// A convenience wrapper around the above to handle trivial cases of
     /// inserting a new ref edge.
@@ -851,7 +853,7 @@ public:
     ///
     /// To further make calling this convenient, it also handles inserting
     /// already existing edges.
-    void insertTrivialRefEdge(Node &SourceN, Node &TargetN);
+    LLVM_ABI void insertTrivialRefEdge(Node &SourceN, Node &TargetN);
 
     /// Directly replace a node's function with a new function.
     ///
@@ -862,7 +864,7 @@ public:
     /// It requires that the old function in the provided node have zero uses
     /// and the new function must have calls and references to it establishing
     /// an equivalent graph.
-    void replaceNodeFunction(Node &N, Function &NewF);
+    LLVM_ABI void replaceNodeFunction(Node &N, Function &NewF);
 
     ///@}
   };
@@ -934,24 +936,24 @@ public:
   /// This sets up the graph and computes all of the entry points of the graph.
   /// No function definitions are scanned until their nodes in the graph are
   /// requested during traversal.
-  LazyCallGraph(Module &M,
-                function_ref<TargetLibraryInfo &(Function &)> GetTLI);
+  LLVM_ABI LazyCallGraph(Module &M,
+                         function_ref<TargetLibraryInfo &(Function &)> GetTLI);
 
-  LazyCallGraph(LazyCallGraph &&G);
-  LazyCallGraph &operator=(LazyCallGraph &&RHS);
+  LLVM_ABI LazyCallGraph(LazyCallGraph &&G);
+  LLVM_ABI LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   /// Verify that every RefSCC is valid.
   void verify();
 #endif
 
-  bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
 
   EdgeSequence::iterator begin() { return EntryEdges.begin(); }
   EdgeSequence::iterator end() { return EntryEdges.end(); }
 
-  void buildRefSCCs();
+  LLVM_ABI void buildRefSCCs();
 
   postorder_ref_scc_iterator postorder_ref_scc_begin() {
     if (!EntryEdges.empty())
@@ -1029,7 +1031,7 @@ public:
   /// below.
 
   /// Update the call graph after inserting a new edge.
-  void insertEdge(Node &SourceN, Node &TargetN, Edge::Kind EK);
+  LLVM_ABI void insertEdge(Node &SourceN, Node &TargetN, Edge::Kind EK);
 
   /// Update the call graph after inserting a new edge.
   void insertEdge(Function &Source, Function &Target, Edge::Kind EK) {
@@ -1037,7 +1039,7 @@ public:
   }
 
   /// Update the call graph after deleting an edge.
-  void removeEdge(Node &SourceN, Node &TargetN);
+  LLVM_ABI void removeEdge(Node &SourceN, Node &TargetN);
 
   /// Update the call graph after deleting an edge.
   void removeEdge(Function &Source, Function &Target) {
@@ -1058,13 +1060,13 @@ public:
   /// These functions should have already been passed to markDeadFunction().
   /// This is done as a batch to prevent compile time blowup as a result of
   /// handling a single function at a time.
-  void removeDeadFunctions(ArrayRef<Function *> DeadFs);
+  LLVM_ABI void removeDeadFunctions(ArrayRef<Function *> DeadFs);
 
   /// Mark a function as dead to be removed later by removeDeadFunctions().
   ///
   /// The function body should have no incoming or outgoing call or ref edges.
   /// For example, a function with a single "unreachable" instruction.
-  void markDeadFunction(Function &F);
+  LLVM_ABI void markDeadFunction(Function &F);
 
   /// Add a new function split/outlined from an existing function.
   ///
@@ -1077,7 +1079,8 @@ public:
   /// The new function may also reference the original function.
   /// It may end up in a parent SCC in the case that the original function's
   /// edge to the new function is a ref edge, and the edge back is a call edge.
-  void addSplitFunction(Function &OriginalFunction, Function &NewFunction);
+  LLVM_ABI void addSplitFunction(Function &OriginalFunction,
+                                 Function &NewFunction);
 
   /// Add new ref-recursive functions split/outlined from an existing function.
   ///
@@ -1087,8 +1090,9 @@ public:
   ///
   /// The original function must reference (not call) all new functions.
   /// All new functions must reference (not call) each other.
-  void addSplitRefRecursiveFunctions(Function &OriginalFunction,
-                                     ArrayRef<Function *> NewFunctions);
+  LLVM_ABI void
+  addSplitRefRecursiveFunctions(Function &OriginalFunction,
+                                ArrayRef<Function *> NewFunctions);
 
   ///@}
 
@@ -1106,9 +1110,9 @@ public:
   /// updates that set with every constant visited.
   ///
   /// For each defined function, calls \p Callback with that function.
-  static void visitReferences(SmallVectorImpl<Constant *> &Worklist,
-                              SmallPtrSetImpl<Constant *> &Visited,
-                              function_ref<void(Function &)> Callback);
+  LLVM_ABI static void visitReferences(SmallVectorImpl<Constant *> &Worklist,
+                                       SmallPtrSetImpl<Constant *> &Visited,
+                                       function_ref<void(Function &)> Callback);
 
   ///@}
 
@@ -1153,7 +1157,7 @@ private:
 
   /// Helper to insert a new function, with an already looked-up entry in
   /// the NodeMap.
-  Node &insertInto(Function &F, Node *&MappedN);
+  LLVM_ABI Node &insertInto(Function &F, Node *&MappedN);
 
   /// Helper to initialize a new node created outside of creating SCCs and add
   /// it to the NodeMap if necessary. For example, useful when a function is
@@ -1259,7 +1263,7 @@ template <> struct GraphTraits<LazyCallGraph *> {
 class LazyCallGraphAnalysis : public AnalysisInfoMixin<LazyCallGraphAnalysis> {
   friend AnalysisInfoMixin<LazyCallGraphAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Inform generic clients of the result type.
@@ -1287,9 +1291,9 @@ class LazyCallGraphPrinterPass
   raw_ostream &OS;
 
 public:
-  explicit LazyCallGraphPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -1302,9 +1306,9 @@ class LazyCallGraphDOTPrinterPass
   raw_ostream &OS;
 
 public:
-  explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

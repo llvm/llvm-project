@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import threading
 import typing
+import traceback
 from typing import Optional, Tuple
 
 import io
@@ -41,6 +42,16 @@ class ScriptFatal(Exception):
     A script had a fatal error such that there's no point in retrying.  The
     message has not been emitted on stdout or stderr but is instead included in
     this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class TestUpdaterException(Exception):
+    """
+    There was an error not during test execution, but while invoking a function
+    in test_updaters on a failing RUN line.
     """
 
     def __init__(self, message):
@@ -201,7 +212,14 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
-    finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    try:
+        finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    except InternalShellError:
+        e = sys.exc_info()[1]
+        finalExitCode = 127
+        results.append(
+            ShellCommandResult(e.command, "", e.message, finalExitCode, False)
+        )
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
@@ -1105,15 +1123,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    try:
-        shenv = ShellEnvironment(cwd, test.config.environment)
-        exitCode, timeoutInfo = executeShCmd(
-            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
-        )
-    except InternalShellError:
-        e = sys.exc_info()[1]
-        exitCode = 127
-        results.append(ShellCommandResult(e.command, "", e.message, exitCode, False))
+    shenv = ShellEnvironment(cwd, test.config.environment)
+    exitCode, timeoutInfo = executeShCmd(
+        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+    )
 
     out = err = ""
     for i, result in enumerate(results):
@@ -1190,6 +1203,28 @@ def executeScriptInternal(
                 str(result.timeoutReached),
             )
 
+        if (
+            litConfig.update_tests
+            and result.exitCode != 0
+            and not timeoutInfo
+            # In theory tests marked XFAIL can fail in the form of XPASS, but the
+            # test updaters are not expected to be able to fix that, so always skip for XFAIL
+            and not test.isExpectedToFail()
+        ):
+            for test_updater in litConfig.test_updaters:
+                try:
+                    update_output = test_updater(result, test)
+                except Exception as e:
+                    output = out
+                    output += err
+                    output += "Exception occurred in test updater:\n"
+                    output += traceback.format_exc()
+                    raise TestUpdaterException(output)
+                if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
+                    break
+
     return out, err, exitCode, timeoutInfo
 
 
@@ -1231,7 +1266,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # the shell's execution trace for the 'set' commands by
                 # redirecting their stderr to /dev/null.
                 if command:
-                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
                 else:
                     msg = f"'{dbg}' has no command after substitutions"
                 commands[i] = (
@@ -2173,6 +2208,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:
@@ -2290,7 +2327,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
 
 def executeShTest(

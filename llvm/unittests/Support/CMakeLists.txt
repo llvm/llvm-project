@@ -31,6 +31,7 @@ add_llvm_unittest(SupportTests
   DataExtractorTest.cpp
   DebugCounterTest.cpp
   DebugTest.cpp
+  DebugLogTest.cpp
   DivisionByConstantTest.cpp
   DJBTest.cpp
   EndianStreamTest.cpp
@@ -50,6 +51,7 @@ add_llvm_unittest(SupportTests
   HashBuilderTest.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
+  InterleavedRangeTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
@@ -62,6 +64,7 @@ add_llvm_unittest(SupportTests
   MemoryBufferRefTest.cpp
   MemoryBufferTest.cpp
   MemoryTest.cpp
+  MustacheTest.cpp
   ModRefTest.cpp
   NativeFormatTests.cpp
   OptimizedStructLayoutTest.cpp
@@ -70,6 +73,7 @@ add_llvm_unittest(SupportTests
   PerThreadBumpPtrAllocatorTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
+  ProgramStackTest.cpp
   RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
@@ -85,6 +89,7 @@ add_llvm_unittest(SupportTests
   SuffixTreeTest.cpp
   SwapByteOrderTest.cpp
   TarWriterTest.cpp
+  TextEncodingTest.cpp
   ThreadPool.cpp
   ThreadSafeAllocatorTest.cpp
   Threading.cpp
@@ -106,6 +111,7 @@ add_llvm_unittest(SupportTests
   formatted_raw_ostream_test.cpp
   raw_fd_stream_test.cpp
   raw_ostream_test.cpp
+  raw_ostream_proxy_test.cpp
   raw_pwrite_stream_test.cpp
   raw_sha1_ostream_test.cpp
   raw_socket_stream_test.cpp

@@ -163,9 +163,9 @@ module m01
     type(pdtWithDefault(3)) :: defaultVar3
     type(pdtWithDefault(4)) :: defaultVar4
     character :: ch1
-    !ERROR: Actual argument variable length '1' is less than expected length '2'
+    !ERROR: Actual argument variable length '1' is less than expected length '2' [-Wshort-character-actual]
     call ch2(ch1)
-    !WARNING: Actual argument expression length '0' is less than expected length '2'
+    !WARNING: Actual argument expression length '0' is less than expected length '2' [-Wshort-character-actual]
     call ch2("")
     call pdtdefault(vardefault)
     !ERROR: Actual argument type 'pdt(n=3_4)' is not compatible with dummy argument type 'pdt'
@@ -300,10 +300,10 @@ module m01
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' is not definable
     !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
     call intentinout_arr(a(j))
-    !WARNING: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' is not definable
+    !WARNING: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
     !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
     call asynchronous_arr(a(j))
-    !WARNING: Actual argument associated with VOLATILE dummy argument 'x=' is not definable
+    !WARNING: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
     !BECAUSE: Variable 'a(int(j,kind=8))' has a vector subscript
     call volatile_arr(a(j))
   end subroutine
@@ -386,7 +386,9 @@ module m01
     call contiguous(a) ! ok
     call pointer(a) ! ok
     call pointer(b) ! ok
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     call pointer(c) ! ok
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     call pointer(d) ! ok
     call valueassumedsize(a) ! ok
     call valueassumedsize(b) ! ok

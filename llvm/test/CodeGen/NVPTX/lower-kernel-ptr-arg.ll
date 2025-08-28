@@ -11,9 +11,9 @@ define ptx_kernel void @kernel(ptr %input, ptr %output) {
 ; CHECK: cvta.to.global.u64
 ; CHECK: cvta.to.global.u64
   %1 = load float, ptr %input, align 4
-; CHECK: ld.global.f32
+; CHECK: ld.global.b32
   store float %1, ptr %output, align 4
-; CHECK: st.global.f32
+; CHECK: st.global.b32
   ret void
 }
 
@@ -21,9 +21,9 @@ define ptx_kernel void @kernel2(ptr addrspace(1) %input, ptr addrspace(1) %outpu
 ; CHECK-LABEL: .visible .entry kernel2(
 ; CHECK-NOT: cvta.to.global.u64
   %1 = load float, ptr addrspace(1) %input, align 4
-; CHECK: ld.global.f32
+; CHECK: ld.global.b32
   store float %1, ptr addrspace(1) %output, align 4
-; CHECK: st.global.f32
+; CHECK: st.global.b32
   ret void
 }
 
@@ -31,16 +31,16 @@ define ptx_kernel void @kernel2(ptr addrspace(1) %input, ptr addrspace(1) %outpu
 
 define ptx_kernel void @ptr_in_byval_kernel(ptr byval(%struct.S) %input, ptr %output) {
 ; CHECK-LABEL: .visible .entry ptr_in_byval_kernel(
-; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_kernel_param_1]
+; CHECK: ld.param.b64 	%[[optr:rd.*]], [ptr_in_byval_kernel_param_1]
 ; CHECK: cvta.to.global.u64 %[[optr_g:.*]], %[[optr]];
-; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_kernel_param_0+8]
+; CHECK: ld.param.b64 	%[[iptr:rd.*]], [ptr_in_byval_kernel_param_0+8]
 ; CHECK: cvta.to.global.u64 %[[iptr_g:.*]], %[[iptr]];
   %b_ptr = getelementptr inbounds %struct.S, ptr %input, i64 0, i32 1
   %b = load ptr, ptr %b_ptr, align 8
   %v = load i32, ptr %b, align 4
-; CHECK: ld.global.u32 %[[val:.*]], [%[[iptr_g]]]
+; CHECK: ld.global.b32 %[[val:.*]], [%[[iptr_g]]]
   store i32 %v, ptr %output, align 4
-; CHECK: st.global.u32 [%[[optr_g]]], %[[val]]
+; CHECK: st.global.b32 [%[[optr_g]]], %[[val]]
   ret void
 }
 
@@ -49,14 +49,14 @@ define ptx_kernel void @ptr_in_byval_kernel(ptr byval(%struct.S) %input, ptr %ou
 ; There's also no assumption that all pointers within are in global space.
 define void @ptr_in_byval_func(ptr byval(%struct.S) %input, ptr %output) {
 ; CHECK-LABEL: .visible .func ptr_in_byval_func(
-; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_func_param_1]
-; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_func_param_0+8]
+; CHECK: ld.param.b64 	%[[optr:rd.*]], [ptr_in_byval_func_param_1]
+; CHECK: ld.param.b64 	%[[iptr:rd.*]], [ptr_in_byval_func_param_0+8]
   %b_ptr = getelementptr inbounds %struct.S, ptr %input, i64 0, i32 1
   %b = load ptr, ptr %b_ptr, align 8
   %v = load i32, ptr %b, align 4
-; CHECK: ld.u32 %[[val:.*]], [%[[iptr]]]
+; CHECK: ld.b32 %[[val:.*]], [%[[iptr]]]
   store i32 %v, ptr %output, align 4
-; CHECK: st.u32 [%[[optr]]], %[[val]]
+; CHECK: st.b32 [%[[optr]]], %[[val]]
   ret void
 }
 

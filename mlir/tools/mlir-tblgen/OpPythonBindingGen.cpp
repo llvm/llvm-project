@@ -41,6 +41,7 @@ from ._ods_common import (
     segmented_accessor as _ods_segmented_accessor,
 )
 _ods_ir = _ods_cext.ir
+_ods_cext.globals.register_traceback_file_exclusion(__file__)
 
 import builtins
 from typing import Sequence as _Sequence, Union as _Union
@@ -1000,6 +1001,8 @@ static void emitValueBuilder(const Operator &op,
       });
   std::string nameWithoutDialect = sanitizeName(
       op.getOperationName().substr(op.getOperationName().find('.') + 1));
+  if (nameWithoutDialect == op.getCppClassName())
+    nameWithoutDialect += "_";
   std::string params = llvm::join(valueBuilderParams, ", ");
   std::string args = llvm::join(opBuilderArgs, ", ");
   const char *type =

@@ -44,7 +44,7 @@ def testTraverseOpRegionBlockIterators():
     op = module.operation
     assert op.context is ctx
     # Get the block using iterators off of the named collections.
-    regions = list(op.regions)
+    regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
     # CHECK: MODULE REGIONS=1 BLOCKS=1
     print(f"MODULE REGIONS={len(regions)} BLOCKS={len(blocks)}")
@@ -86,8 +86,24 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
-    print("    Block iter:", iter(op.regions[0]))
-    print("Operation iter:", iter(op.regions[0].blocks[0]))
+    print("    Block iter:", iter(op.regions[-1]))
+    print("Operation iter:", iter(op.regions[-1].blocks[-1]))
+
+    try:
+        op.regions[-42]
+    except IndexError as e:
+        # CHECK: Region OOB: index out of range
+        print("Region OOB:", e)
+    try:
+        op.regions[0].blocks[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds block
+        print(e)
+    try:
+        op.regions[0].blocks[0].operations[-42]
+    except IndexError as e:
+        # CHECK: attempt to access out of bounds operation
+        print(e)
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -670,6 +686,15 @@ def testOperationPrint():
         skip_regions=True,
     )
 
+    # Test print with large_resource_limit.
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK-NOT: resource1: "0x08
+    module.operation.print(large_resource_limit=2)
+
+    # Test large_elements_limit has no effect on resource string
+    # CHECK: func.func @f1(%arg0: i32) -> i32
+    # CHECK: resource1: "0x08
+    module.operation.print(large_elements_limit=2)
 
 # CHECK-LABEL: TEST: testKnownOpView
 @run
@@ -953,8 +978,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar
@@ -992,6 +1021,8 @@ def testDetachFromParent():
     with Context():
         m1 = Module.parse("func.func private @foo()")
         func = m1.body.operations[0].detach_from_parent()
+        # CHECK: func.attached=False
+        print(f"{func.attached=}")
 
         try:
             func.detach_from_parent()

@@ -10,7 +10,7 @@ void f0(void *a, void *b) {
 
 void *tp (void) {
   return __builtin_thread_pointer ();
-// CHECK-LINUX: call {{.*}} @llvm.thread.pointer()
+// CHECK-LINUX: call {{.*}} @llvm.thread.pointer.p0()
 }
 
 // CHECK: call {{.*}} @llvm.bitreverse.i32(i32 %a)

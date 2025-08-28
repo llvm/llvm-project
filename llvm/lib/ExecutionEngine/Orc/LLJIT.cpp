@@ -14,12 +14,12 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -58,8 +58,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  for (auto *T : WrapperFnType->params())
-    HelperArgTypes.push_back(T);
+  llvm::append_range(HelperArgTypes, WrapperFnType->params());
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -73,8 +72,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  for (auto *Arg : HelperPrefixArgs)
-    HelperArgs.push_back(Arg);
+  llvm::append_range(HelperArgs, HelperPrefixArgs);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);
@@ -272,9 +270,8 @@ public:
   }
 
   void registerInitFunc(JITDylib &JD, SymbolStringPtr InitName) {
-    getExecutionSession().runSessionLocked([&]() {
-        InitFunctions[&JD].add(InitName);
-      });
+    getExecutionSession().runSessionLocked(
+        [&]() { InitFunctions[&JD].add(InitName); });
   }
 
   void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
@@ -635,16 +632,19 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                  result, DSOHandles[&JD]);
-      if (result)
+      if (E)
+        return E;
+      else if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return E;
-    }
-    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                           DSOHandles[&JD], JD.getName(),
-                                           int32_t(ORC_RT_RTLD_LAZY));
+    } else
+      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
+                                             DSOHandles[&JD], JD.getName(),
+                                             int32_t(ORC_RT_RTLD_LAZY));
   } else
     return WrapperAddr.takeError();
+
+  return Error::success();
 }
 
 Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
@@ -938,8 +938,8 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                   SymbolStringPtr Name) {
   if (auto Sym = ES->lookup(
-        makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
-        Name))
+          makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
+          Name))
     return Sym->getAddress();
   else
     return Sym.takeError();
@@ -954,7 +954,9 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
-  auto GetMemMgr = []() { return std::make_unique<SectionMemoryManager>(); };
+  auto GetMemMgr = [](const MemoryBuffer &) {
+    return std::make_unique<SectionMemoryManager>();
+  };
   auto Layer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
@@ -1252,12 +1254,11 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
     // Otherwise fall back to standard unwind registration.
     if (UseEHFrames) {
       auto &ES = J.getExecutionSession();
-      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
-        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, std::move(*EHFrameRegistrar)));
+      if (auto EHFP = EHFrameRegistrationPlugin::Create(ES)) {
+        OLL->addPlugin(std::move(*EHFP));
         LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
       } else
-        return EHFrameRegistrar.takeError();
+        return EHFP.takeError();
     }
   }
 
@@ -1342,8 +1343,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
 }
 
 } // End namespace orc.

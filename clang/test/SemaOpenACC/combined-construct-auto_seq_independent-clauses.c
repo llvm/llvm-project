@@ -8,28 +8,28 @@ void uses() {
 #pragma acc parallel loop independent
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'seq' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'auto' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc parallel loop auto seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'auto' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc parallel loop auto independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'independent' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc parallel loop independent auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'seq' on 'parallel loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'independent' clause on a 'parallel loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc parallel loop independent seq
   for(unsigned i = 0; i < 5; ++i);
 
@@ -125,7 +125,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto vector_length(1)
@@ -242,7 +242,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) auto
@@ -360,7 +360,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent vector_length(1)
@@ -477,7 +477,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) independent
@@ -508,15 +508,15 @@ void uses() {
 
   // 'seq' cannot be combined with 'gang', 'worker' or 'vector'
   // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq gang
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq worker
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq vector
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
@@ -603,7 +603,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq vector_length(1)
@@ -631,15 +631,15 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc parallel loop gang seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc parallel loop worker seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'vector' clause on a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'vector' clause is here}}
 #pragma acc parallel loop vector seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'parallel loop' directive}}
@@ -726,7 +726,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) seq

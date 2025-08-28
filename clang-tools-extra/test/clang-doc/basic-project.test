@@ -1,11 +1,38 @@
 // RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
-// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com
+
+// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+
+// RUN: clang-doc --format=html --output=%t/docs-with-prefix --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com --repository-line-prefix=L
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-LINE-PREFIX
+
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-NO-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-NO-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-NO-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-NO-REPOSITORY
+
+// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com
+// RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefixes=JSON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-REPOSITORY
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-REPOSITORY
+
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefixes=MD-ALL-FILES
+// RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefixes=MD-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.md -check-prefixes=MD-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.md -check-prefixes=MD-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.md -check-prefixes=MD-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.md -check-prefixes=MD-CIRCLE
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
@@ -55,12 +82,14 @@
 // JSON-INDEX-NEXT: }
 
 //      HTML-SHAPE: <h1>class Shape</h1>
-// HTML-SHAPE-NEXT: <p>
-// HTML-SHAPE-NEXT: Defined at line
-// HTML-SHAPE-NEXT: <a href="https://repository.com/./include/Shape.h#8">8</a>
-// HTML-SHAPE-NEXT: of file
-// HTML-SHAPE-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
-// HTML-SHAPE-NEXT: </p>
+//   SHAPE-NO-REPOSITORY: <p>Defined at line 8 of file .{{.}}include{{.}}Shape.h</p>
+//      SHAPE-REPOSITORY: <p>
+// SHAPE-REPOSITORY-NEXT: Defined at line
+// SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#8">8</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L8">8</a>
+// SHAPE-REPOSITORY-NEXT: of file
+// SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
+// SHAPE-REPOSITORY-NEXT: </p>
 //      HTML-SHAPE: <div>brief</div>
 //      HTML-SHAPE: <p> Abstract base class for shapes.</p>
 //      HTML-SHAPE: <p> Provides a common interface for different types of shapes.</p>
@@ -77,60 +106,87 @@
 //      HTML-SHAPE: <p> double The perimeter of the shape.</p>
 //      HTML-SHAPE: <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
 //      HTML-SHAPE: <p>public void ~Shape()</p>
-//      HTML-SHAPE: Defined at line 
-// HTML-SHAPE-NEXT: <a href="https://repository.com/./include/Shape.h#13">13</a>
-// HTML-SHAPE-NEXT: of file 
-// HTML-SHAPE-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
+
+//   SHAPE-NO-REPOSITORY: Defined at line 13 of file .{{.}}include{{.}}Shape.h
+//      SHAPE-REPOSITORY: Defined at line 
+// SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#13">13</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L13">13</a>
+// SHAPE-REPOSITORY-NEXT: of file 
+// SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
+
 //      HTML-SHAPE: <div>brief</div>
 //      HTML-SHAPE: <p> Virtual destructor.</p>
 
 //      HTML-CALC: <h1>class Calculator</h1>
-// HTML-CALC-NEXT: <p>
-// HTML-CALC-NEXT: Defined at line 
-// HTML-CALC-NEXT: <a href="https://repository.com/./include/Calculator.h#8">8</a>
-// HTML-CALC-NEXT: of file 
-// HTML-CALC-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
-// HTML-CALC-NEXT: </p>
+// CALC-NO-REPOSITORY: <p>Defined at line 8 of file .{{.}}include{{.}}Calculator.h</p>
+//      CALC-REPOSITORY: <p>
+// CALC-REPOSITORY-NEXT: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#8">8</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L8">8</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
+// CALC-REPOSITORY-NEXT: </p>
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> A simple calculator class.</p>
 //      HTML-CALC: <p> Provides basic arithmetic operations.</p>
+
+//      HTML-CALC: <h2 id="Members">Members</h2>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> Holds a public value.</p>
+//      HTML-CALC: <div>public int public_val</div>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> A static value.</p>
+//      HTML-CALC: <div>public static const int static_val</div>
+
 //      HTML-CALC: <h2 id="Functions">Functions</h2>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">add</h3>
 //      HTML-CALC: <p>public int add(int a, int b)</p>
-//      HTML-CALC: Defined at line 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp#3">3</a>
-// HTML-CALC-NEXT: of file 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+//   CALC-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Calculator.cpp
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#3">3</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L3">3</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Adds two integers.</p>
 //      HTML-CALC: <div>return</div>
 //      HTML-CALC: <p> int The sum of a and b.</p>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
 //      HTML-CALC: <p>public int subtract(int a, int b)</p>
-//      HTML-CALC: Defined at line 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp#7">7</a>
-// HTML-CALC-NEXT: of file 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+//   CALC-NO-REPOSITORY: Defined at line 7 of file .{{.}}src{{.}}Calculator.cpp
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#7">7</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L7">7</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Subtracts the second integer from the first.</p>
 //      HTML-CALC: <div>return</div>
 //      HTML-CALC: <p> int The result of a - b.</p>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">multiply</h3>
 //      HTML-CALC: <p>public int multiply(int a, int b)</p>
-//      HTML-CALC: Defined at line 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp#11">11</a>
-// HTML-CALC-NEXT: of file 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+//   CALC-NO-REPOSITORY: Defined at line 11 of file .{{.}}src{{.}}Calculator.cpp
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#11">11</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L11">11</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Multiplies two integers.</p>
 //      HTML-CALC: <div>return</div>
 //      HTML-CALC: <p> int The product of a and b.</p>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">divide</h3>
 //      HTML-CALC: <p>public double divide(int a, int b)</p>
-//      HTML-CALC: Defined at line 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp#15">15</a>
-// HTML-CALC-NEXT: of file 
-// HTML-CALC-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+//   CALC-NO-REPOSITORY: Defined at line 15 of file .{{.}}src{{.}}Calculator.cpp
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#15">15</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L15">15</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Divides the first integer by the second.</p>
 //      HTML-CALC: <div>return</div>
@@ -138,13 +194,28 @@
 //      HTML-CALC: <div>throw</div>
 //      HTML-CALC: <p>if b is zero.</p>
 
+//      HTML-CALC: <p>public static int mod(int a, int b)</p>
+//   CALC-NO-REPOSITORY: Defined at line 54 of file .{{.}}include{{.}}Calculator.h
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#54">54</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L54">54</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> Performs the mod operation on integers.</p>
+//      HTML-CALC: <div>return</div>
+//      HTML-CALC: <p> The result of a % b.</p>
+
 //      HTML-RECTANGLE: <h1>class Rectangle</h1>
-// HTML-RECTANGLE-NEXT: <p>
-// HTML-RECTANGLE-NEXT: Defined at line
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./include/Rectangle.h#10">10</a>
-// HTML-RECTANGLE-NEXT: of file 
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
-// HTML-RECTANGLE-NEXT: </p>
+// RECTANGLE-NO-REPOSITORY: <p>Defined at line 10 of file .{{.}}include{{.}}Rectangle.h</p>
+//      RECTANGLE-REPOSITORY: <p>
+// RECTANGLE-REPOSITORY-NEXT: Defined at line
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h#10">10</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./include/Rectangle.h#L10">10</a>
+// RECTANGLE-REPOSITORY-NEXT: of file 
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
+// RECTANGLE-REPOSITORY-NEXT: </p>
+
 //      HTML-RECTANGLE: <p> Represents a rectangle with a given width and height.</p>
 //      HTML-RECTANGLE: <p>
 //      HTML-RECTANGLE:   Inherits from
@@ -158,40 +229,51 @@
 //      HTML-RECTANGLE: <h2 id="Functions">Functions</h2>
 //      HTML-RECTANGLE: <h3 id="{{([0-9A-F]{40})}}">Rectangle</h3>
 //      HTML-RECTANGLE: <p>public void Rectangle(double width, double height)</p>
-//      HTML-RECTANGLE: Defined at line
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#3">3</a>
-// HTML-RECTANGLE-NEXT: of file 
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+//   RECTANGLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Rectangle.cpp
+//      RECTANGLE-REPOSITORY: Defined at line
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#3">3</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L3">3</a>
+// RECTANGLE-REPOSITORY-NEXT: of file 
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+
 //      HTML-RECTANGLE: <div>brief</div>
 //      HTML-RECTANGLE: <p> Constructs a new Rectangle object.</p>
 //      HTML-RECTANGLE: <h3 id="{{([0-9A-F]{40})}}">area</h3>
 //      HTML-RECTANGLE: <p>public double area()</p>
-//      HTML-RECTANGLE: Defined at line
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#6">6</a>
-// HTML-RECTANGLE-NEXT: of file 
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+//   RECTANGLE-NO-REPOSITORY: Defined at line 6 of file .{{.}}src{{.}}Rectangle.cpp
+//      RECTANGLE-REPOSITORY: Defined at line
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#6">6</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L6">6</a>
+// RECTANGLE-REPOSITORY-NEXT: of file 
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+
 //      HTML-RECTANGLE: <div>brief</div>
 //      HTML-RECTANGLE: <p> Calculates the area of the rectangle.</p>
 //      HTML-RECTANGLE: <div>return</div>
 //      HTML-RECTANGLE: <p> double The area of the rectangle.</p>
 //      HTML-RECTANGLE: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
 //      HTML-RECTANGLE: <p>public double perimeter()</p>
-//      HTML-RECTANGLE: Defined at line
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#10">10</a>
-// HTML-RECTANGLE-NEXT: of file 
-// HTML-RECTANGLE-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+//   RECTANGLE-NO-REPOSITORY: Defined at line 10 of file .{{.}}src{{.}}Rectangle.cpp
+//      RECTANGLE-REPOSITORY: Defined at line
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#10">10</a>
+// RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L10">10</a>
+// RECTANGLE-REPOSITORY-NEXT: of file 
+// RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 //      HTML-RECTANGLE: <div>brief</div>
 //      HTML-RECTANGLE: <p> Calculates the perimeter of the rectangle.</p>
 //      HTML-RECTANGLE: <div>return</div>
 //      HTML-RECTANGLE: <p> double The perimeter of the rectangle.</p>
 
 //      HTML-CIRCLE: <h1>class Circle</h1>
-// HTML-CIRCLE-NEXT: <p>
-// HTML-CIRCLE-NEXT: Defined at line 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./include/Circle.h#10">10</a>
-// HTML-CIRCLE-NEXT: of file 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
-// HTML-CIRCLE-NEXT: </p>
+// CIRCLE-NO-REPOSITORY: <p>Defined at line 10 of file .{{.}}include{{.}}Circle.h</p>
+//      CIRCLE-REPOSITORY: <p>
+// CIRCLE-REPOSITORY-NEXT: Defined at line 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h#10">10</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./include/Circle.h#L10">10</a>
+// CIRCLE-REPOSITORY-NEXT: of file 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
+// CIRCLE-REPOSITORY-NEXT: </p>
+
 //      HTML-CIRCLE: <div>brief</div>
 //      HTML-CIRCLE: <p> Circle class derived from Shape.</p>
 //      HTML-CIRCLE: <p> Represents a circle with a given radius.</p>
@@ -205,28 +287,37 @@
 //      HTML-CIRCLE: <h2 id="Functions">Functions</h2>
 //      HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
 //      HTML-CIRCLE: <p>public void Circle(double radius)</p>
-//      HTML-CIRCLE: Defined at line 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp#3">3</a>
-// HTML-CIRCLE-NEXT:  of file 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+//   CIRCLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Circle.cpp
+//      CIRCLE-REPOSITORY: Defined at line 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#3">3</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L3">3</a>
+// CIRCLE-REPOSITORY-NEXT:  of file 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+
 //      HTML-CIRCLE: <div>brief</div>
 //      HTML-CIRCLE: <p> Constructs a new Circle object.</p>
 //      HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">area</h3>
 //      HTML-CIRCLE: <p>public double area()</p>
-//      HTML-CIRCLE: Defined at line 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp#5">5</a>
-// HTML-CIRCLE-NEXT:  of file 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+//   CIRCLE-NO-REPOSITORY: Defined at line 5 of file .{{.}}src{{.}}Circle.cpp
+//      CIRCLE-REPOSITORY: Defined at line 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#5">5</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L5">5</a>
+// CIRCLE-REPOSITORY-NEXT:  of file 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+
 //      HTML-CIRCLE: <div>brief</div>
 //      HTML-CIRCLE: <p> Calculates the area of the circle.</p>
 //      HTML-CIRCLE: <div>return</div>
 //      HTML-CIRCLE: <p> double The area of the circle.</p>
 //      HTML-CIRCLE: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
 //      HTML-CIRCLE: <p>public double perimeter()</p>
-//      HTML-CIRCLE: Defined at line 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp#9">9</a>
-// HTML-CIRCLE-NEXT:  of file 
-// HTML-CIRCLE-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+//   CIRCLE-NO-REPOSITORY: Defined at line  9 of file .{{.}}src{{.}}Circle.cpp
+//      CIRCLE-REPOSITORY: Defined at line 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#9">9</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L9">9</a>
+// CIRCLE-REPOSITORY-NEXT:  of file 
+// CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
+
 //      HTML-CIRCLE: <div>brief</div>
 //      HTML-CIRCLE: <p> Calculates the perimeter of the circle.</p>
 //      HTML-CIRCLE: <div>return</div>
@@ -236,6 +327,9 @@
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
 // MD-CALC: **brief** A simple calculator class.
 // MD-CALC:  Provides basic arithmetic operations.
+// MD-CALC: ## Members
+// MD-CALC: public int public_val
+// MD-CALC: public static const int static_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
@@ -266,6 +360,13 @@
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** double The result of a / b.
 // MD-CALC: **throw**if b is zero.
+// MD-CALC: ### mod
+// MD-CALC: *public static int mod(int a, int b)*
+// MD-CALC: *Defined at ./include{{[\/]}}Calculator.h#54*
+// MD-CALC: **brief** Performs the mod operation on integers.
+// MD-CALC: **a** First integer.
+// MD-CALC: **b** Second integer.
+// MD-CALC: **return** The result of a % b.
 
 // MD-CIRCLE: # class Circle
 // MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#10*
@@ -322,10 +423,6 @@
 // MD-SHAPE: **brief** Abstract base class for shapes.
 // MD-SHAPE:  Provides a common interface for different types of shapes.
 // MD-SHAPE: ## Functions
-// MD-SHAPE: ### ~Shape
-// MD-SHAPE: *public void ~Shape()*
-// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
-// MD-SHAPE: **brief** Virtual destructor.
 // MD-SHAPE: ### area
 // MD-SHAPE: *public double area()*
 // MD-SHAPE: **brief** Calculates the area of the shape.
@@ -334,9 +431,14 @@
 // MD-SHAPE: *public double perimeter()*
 // MD-SHAPE: **brief** Calculates the perimeter of the shape.
 // MD-SHAPE: **return** double The perimeter of the shape.
+// MD-SHAPE: ### ~Shape
+// MD-SHAPE: *public void ~Shape()*
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
+// MD-SHAPE: **brief** Virtual destructor.
 
 // MD-ALL-FILES: # All Files
 // MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
+

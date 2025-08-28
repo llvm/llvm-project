@@ -111,7 +111,8 @@ define <4 x i32> @eq_or_eq_ult_2_fail_multiuse(<4 x i32> %x) {
 ; AVX512-NEXT:    callq use.v4.i32@PLT
 ; AVX512-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
-; AVX512-NEXT:    vmovdqa32 {{.*#+}} xmm0 {%k1} {z} = [4294967295,4294967295,4294967295,4294967295]
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-NEXT:    retq

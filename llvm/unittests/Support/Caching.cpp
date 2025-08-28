@@ -29,10 +29,8 @@ using namespace llvm;
 char data[] = "some data";
 
 TEST(Caching, Normal) {
-  SmallString<256> TempDir;
-  sys::path::system_temp_directory(true, TempDir);
   SmallString<256> CacheDir;
-  sys::path::append(CacheDir, TempDir, "llvm_test_cache");
+  sys::fs::createUniquePath("llvm_test_cache-%%%%%%", CacheDir, true);
 
   sys::fs::remove_directories(CacheDir.str());
 
@@ -78,10 +76,8 @@ TEST(Caching, Normal) {
 }
 
 TEST(Caching, WriteAfterCommit) {
-  SmallString<256> TempDir;
-  sys::path::system_temp_directory(true, TempDir);
   SmallString<256> CacheDir;
-  sys::path::append(CacheDir, TempDir, "llvm_test_cache");
+  sys::fs::createUniquePath("llvm_test_cache-%%%%%%", CacheDir, true);
 
   sys::fs::remove_directories(CacheDir.str());
 
@@ -117,10 +113,8 @@ TEST(Caching, WriteAfterCommit) {
 }
 
 TEST(Caching, NoCommit) {
-  SmallString<256> TempDir;
-  sys::path::system_temp_directory(true, TempDir);
   SmallString<256> CacheDir;
-  sys::path::append(CacheDir, TempDir, "llvm_test_cache");
+  sys::fs::createUniquePath("llvm_test_cache-%%%%%%", CacheDir, true);
 
   sys::fs::remove_directories(CacheDir.str());
 

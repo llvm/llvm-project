@@ -283,8 +283,7 @@ void WindowScheduler::restoreMBB() {
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
-  for (auto *MI : OriMIs)
-    MBB->push_back(MI);
+  llvm::append_range(*MBB, OriMIs);
   updateLiveIntervals();
 }
 
@@ -680,8 +679,7 @@ MachineInstr *WindowScheduler::getOriMI(MachineInstr *NewMI) {
 }
 
 unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
-  assert(llvm::find(OriMIs, OriMI) != OriMIs.end() &&
-         "Cannot find OriMI in OriMIs!");
+  assert(llvm::is_contained(OriMIs, OriMI) && "Cannot find OriMI in OriMIs!");
   // If there is no instruction fold, all MI stages are 0.
   if (Offset == SchedPhiNum)
     return 0;

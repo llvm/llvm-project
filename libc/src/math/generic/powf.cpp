@@ -9,20 +9,17 @@
 #include "src/math/powf.h"
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/exp10f.h" // Speedup for powf(10, y) = exp10f(y)
 
-#include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
 namespace LIBC_NAMESPACE_DECL {
@@ -165,11 +162,11 @@ alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {
 };
 #else
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr uint64_t ERR = 64;
 #else
 constexpr uint64_t ERR = 128;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // We choose the precision of the high part to be 53 - 24 - 8, so that when
 //   y * (e_x + LOG2_R_DD[i].hi) is exact.
@@ -664,6 +661,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
+    // y is signaling NaN
+    if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     // Exceptional exponents.
     if (y == 0.0f)
       return 1.0f;
@@ -736,8 +739,8 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         }
       }
       if (y_abs > 0x4f17'0000) {
+        // if y is NaN
         if (y_abs > 0x7f80'0000) {
-          // y is NaN
           if (x_u == 0x3f80'0000) { // x = 1.0f
             // pow(1, NaN) = 1
             return 1.0f;
@@ -759,6 +762,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // y is finite and non-zero.
   if (LIBC_UNLIKELY(((x_u & 0x801f'ffffU) == 0) || x_u >= 0x7f80'0000U ||
                     x_u < 0x0080'0000U)) {
+    // if x is signaling NaN
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     switch (x_u) {
     case 0x3f80'0000: // x = 1.0f
       return 1.0f;
@@ -769,7 +778,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       return generic::exp2f(y);
     case 0x4120'0000: // x = 10.0f
       // pow(10, y) = exp10(y)
-      return generic::exp10f(y);
+      return math::exp10f(y);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
@@ -851,11 +860,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   log2(m_x) = log2( (1 + dx) / r )
   //             = log2(1 + dx) - log2(r).
   double dx;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   dx = static_cast<double>(fputil::multiply_add(m_x, R[idx_x], -1.0f)); // Exact
 #else
   dx = fputil::multiply_add(static_cast<double>(m_x), RD[idx_x], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   // Degree-5 polynomial approximation:
   //   dx * P(dx) ~ log2(1 + dx)

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH1024K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH2048K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH1024K %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH2048K %s
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo16:
 ; GCN: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
@@ -16,7 +16,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo16() {
   store volatile i32 15, ptr addrspace(5) %alloca
   %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 65535
-  store volatile i32 %masked, ptr addrspace(1) undef
+  store volatile i32 %masked, ptr addrspace(1) poison
   ret void
 }
 
@@ -36,7 +36,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo17() {
   store volatile i32 15, ptr addrspace(5) %alloca
   %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 131071
-  store volatile i32 %masked, ptr addrspace(1) undef
+  store volatile i32 %masked, ptr addrspace(1) poison
   ret void
 }
 
@@ -58,7 +58,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo18() {
   store volatile i32 15, ptr addrspace(5) %alloca
   %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 262143
-  store volatile i32 %masked, ptr addrspace(1) undef
+  store volatile i32 %masked, ptr addrspace(1) poison
   ret void
 }
 
@@ -79,7 +79,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo20() {
   store volatile i32 15, ptr addrspace(5) %alloca
   %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 1048575
-  store volatile i32 %masked, ptr addrspace(1) undef
+  store volatile i32 %masked, ptr addrspace(1) poison
   ret void
 }
 
@@ -92,6 +92,6 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo21() {
   store volatile i32 15, ptr addrspace(5) %alloca
   %toint = ptrtoint ptr addrspace(5) %alloca to i32
   %masked = and i32 %toint, 2097151
-  store volatile i32 %masked, ptr addrspace(1) undef
+  store volatile i32 %masked, ptr addrspace(1) poison
   ret void
 }

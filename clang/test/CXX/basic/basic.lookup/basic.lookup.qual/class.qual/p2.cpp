@@ -190,14 +190,14 @@ namespace InhCtor {
   }
   struct DerivedFromNS : NS::NS {
     // No special case unless the NNS names a class.
-    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS::', which is not a class}}
+    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS', which is not a class}}
 
   };
 
   // FIXME: Consider reusing the same diagnostic between dependent and non-dependent contexts
   typedef int I;
   struct UsingInt {
-    using I::I; // expected-error {{'InhCtor::I' (aka 'int') is not a class, namespace, or enumeration}}
+    using I::I; // expected-error {{'I' (aka 'int') is not a class, namespace, or enumeration}}
   };
   template<typename T> struct UsingIntTemplate {
     using T::T; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}

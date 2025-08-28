@@ -41,17 +41,91 @@ using namespace mlir::tosa;
 
 namespace {
 
-static LogicalResult checkConstantOperandPad(Operation *op) {
-  if (auto padOp = dyn_cast<tosa::PadOp>(op)) {
-    DenseElementsAttr paddings;
-    if (!matchPattern(padOp.getPadding(), m_Constant(&paddings)))
-      return op->emitOpError("padding of pad is not constant");
+static LogicalResult
+checkConstantOperands(Operation *op, ArrayRef<unsigned int> operandIndices) {
+  for (const auto index : operandIndices) {
+    Attribute attr;
+    if (!matchPattern(op->getOperand(index), m_Constant(&attr))) {
+      return op->emitOpError("expected compile time resolvable constant, but "
+                             "got variable value for operand #")
+             << index;
+    }
+  }
+  return success();
+}
 
-    DenseElementsAttr padConst;
-    // Assume this op is zero-padding if padConst is not presented.
-    if (padOp.getPadConst() &&
-        !matchPattern(padOp.getPadConst(), m_Constant(&padConst)))
-      return op->emitOpError("pad_const of pad is not constant");
+static LogicalResult checkConstantOperandMul(Operation *op,
+                                             const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::MulOp>(op)) {
+    // Check 'shift'
+    return checkConstantOperands(op, {2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandTable(Operation *op,
+                                               const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::TableOp>(op)) {
+    // Check 'table'
+    return checkConstantOperands(op, {1});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandPad(Operation *op,
+                                             const TargetEnv &env) {
+  if (auto padOp = dyn_cast<tosa::PadOp>(op)) {
+    // Assume this op is zero-padding if padConst is not presented
+    if (!env.allows(Extension::dynamic) && padOp.getPadConst())
+      // Check 'pad_const'
+      // Note: 'padding' (operand 1) is not checked as it is a tosa.shape type
+      return checkConstantOperands(op, {2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandRescale(Operation *op,
+                                                 const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RescaleOp>(op)) {
+    // Check 'multiplier', 'shift', 'input_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2, 3, 4});
+  }
+  return success();
+}
+
+template <typename T>
+static LogicalResult checkConstantOperandConvOps(Operation *op,
+                                                 const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<T>(op)) {
+    // Check 'input_zp' and 'weight_zp'
+    return checkConstantOperands(op, {3, 4});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandMatMul(Operation *op,
+                                                const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+    // Check 'A_zp' and 'B_zp'
+    return checkConstantOperands(op, {2, 3});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
+    // Check 'input_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandNegate(Operation *op,
+                                                const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::NegateOp>(op)) {
+    // Check 'input1_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2});
   }
   return success();
 }
@@ -91,19 +165,22 @@ public:
     this->profile = options.profile;
     this->extension = options.extension;
     this->strictOpSpecAlignment = options.strictOpSpecAlignment;
+    this->allowInvalidOpDatatypeCombinations =
+        options.allowInvalidOpDatatypeCombinations;
     this->level = options.level;
   }
   void runOnOperation() final;
 
   LogicalResult applyConstantOperandCheck(Operation *op) {
     for (auto &checker : constCheckers) {
-      if (failed(checker(op)))
+      if (failed(checker(op, targetEnv)))
         return failure();
     }
     return success();
   }
 
   LogicalResult applyLevelCheck(Operation *op);
+  LogicalResult applyAttributeCheck(Operation *op);
 
   // check variable read/write data types against variable declarations
   LogicalResult applyVariableCheck(Operation *op);
@@ -113,7 +190,19 @@ public:
 
 private:
   void populateConstantOperandChecks() {
+    constCheckers.emplace_back(checkConstantOperandMul);
+    constCheckers.emplace_back(checkConstantOperandTable);
     constCheckers.emplace_back(checkConstantOperandPad);
+    constCheckers.emplace_back(checkConstantOperandRescale);
+    constCheckers.emplace_back(checkConstantOperandConvOps<tosa::Conv2DOp>);
+    constCheckers.emplace_back(checkConstantOperandConvOps<tosa::Conv3DOp>);
+    constCheckers.emplace_back(
+        checkConstantOperandConvOps<tosa::DepthwiseConv2DOp>);
+    constCheckers.emplace_back(
+        checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
+    constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandAvgPool2d);
+    constCheckers.emplace_back(checkConstantOperandNegate);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v, const StringRef checkDesc) {
@@ -149,10 +238,10 @@ private:
     return true;
   }
 
-  template <typename T>
-  bool levelCheckRank(Operation *op, const T &v,
+  // Perform the Level Rank check on the tensor type.
+  bool levelCheckRank(Operation *op, const Type typeToCheck,
                       const StringRef operandOrResult, int32_t highest_rank) {
-    if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+    if (ShapedType type = dyn_cast<ShapedType>(typeToCheck)) {
       if (!type.hasRank()) {
         op->emitOpError() << "failed level check: unranked tensor";
         return false;
@@ -166,9 +255,21 @@ private:
     return true;
   }
 
-  // Perform the Level tensor size check on the input tensor.
-  bool levelCheckSize(Operation *op, const Value &v,
+  // Perform the Level Rank check on the tensor value.
+  bool levelCheckRank(Operation *op, const Value &v,
+                      const StringRef operandOrResult, int32_t highest_rank) {
+    return levelCheckRank(op, v.getType(), operandOrResult, highest_rank);
+  }
+
+  // Perform the Level tensor size check on the tensor type.
+  bool levelCheckSize(Operation *op, const Type &typeToCheck,
                       const StringRef operandOrResult);
+
+  // Perform the Level tensor size check on the tensor value.
+  bool levelCheckSize(Operation *op, const Value &v,
+                      const StringRef operandOrResult) {
+    return levelCheckSize(op, v.getType(), operandOrResult);
+  }
 
   // Level check sizes of all operands and results of the operation.
   template <typename T>
@@ -193,15 +294,6 @@ private:
     for (auto v : op->getOperands()) {
       if (!levelCheckRank(op, v, "operand", tosaLevel.MAX_RANK))
         return false;
-    }
-
-    if (!op->getAttrs().empty()) {
-      for (NamedAttribute attr : op->getAttrs()) {
-        if (auto elemAttr = dyn_cast<ElementsAttr>(attr.getValue())) {
-          if (!levelCheckRank(op, elemAttr, "attribute", tosaLevel.MAX_RANK))
-            return false;
-        }
-      }
     }
 
     for (auto v : op->getResults()) {
@@ -360,6 +452,34 @@ private:
     return true;
   }
 
+  // Recursively perform a bottom-up search to determine the maximum nesting
+  // depth, starting from a specific operation and continuing up to the function
+  // or module scope. Tosa nesting_depth starts at 0 and increments by one each
+  // time a new nested `region` is encountered.
+  static void getMaxNestedDepth(Operation *op, int32_t &depth) {
+    if (isa<mlir::func::FuncOp>(op) || isa<ModuleOp>(op))
+      return;
+
+    op = op->getParentOp();
+    if (!op)
+      return;
+
+    depth++;
+    getMaxNestedDepth(op, depth);
+  }
+
+  bool levelCheckMaxNesting(Operation *op) {
+    int32_t maxNestedDepth = 0;
+    getMaxNestedDepth(op, maxNestedDepth);
+
+    if (maxNestedDepth >= tosaLevel.MAX_NESTING) {
+      op->emitOpError() << "failed level check: " << maxNestedDepth
+                        << " >= MAX_NESTING";
+      return false;
+    }
+    return true;
+  }
+
   bool levelCheckListSize(Operation *op) {
     if (auto concat = dyn_cast<tosa::ConcatOp>(op)) {
       return levelCheckListSize(op, concat.getInput1().size(), "input1");
@@ -380,6 +500,26 @@ private:
     if (auto w = dyn_cast<tosa::WhileOp>(op)) {
       if (!levelCheckListSize(op, w.getInputList().size(), "inputs") ||
           !levelCheckListSize(op, w.getOutputList().size(), "outputs")) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool attributeCheckRescale(Operation *op) {
+    if (auto rescale = dyn_cast<tosa::RescaleOp>(op)) {
+      if (rescale.getRoundingMode() == "DOUBLE_ROUND" &&
+          !targetEnv.allows(Extension::doubleround)) {
+        op->emitOpError()
+            << "failed attribute check: rounding_mode = DOUBLE_ROUND "
+            << "requires extension [doubleround]";
+        return false;
+      }
+      if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
+          !targetEnv.allows(Extension::inexactround)) {
+        op->emitOpError()
+            << "failed attribute check: rounding_mode = INEXACT_ROUND "
+            << "requires extension [inexactround]";
         return false;
       }
     }
@@ -415,7 +555,8 @@ private:
         } else {
           llvm::errs() << "unknown TOSA extension name passed in: " << ext
                        << ", supported extension are int16, int4, bf16, "
-                       << "fp8e4m3, fp8e5m2, fft, variable and controlflow\n";
+                       << "fp8e4m3, fp8e5m2, fft, variable, controlflow, "
+                       << "doubleround, inexactround and dynamic\n";
           return signalPassFailure();
         }
       }
@@ -424,9 +565,11 @@ private:
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
-  bool isValidElementType(Type type);
+  bool isValidElementType(Type type, const bool allowUnsigned = false);
 
-  SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
+  SmallVector<
+      std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
+      constCheckers;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
   TosaProfileCompliance profileComp;
@@ -452,6 +595,26 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
 
   // Only the condition input has rank limitation.
   if (!levelCheckRank(op, tosaOp.getCondition(), "operand", tosaLevel.MAX_RANK))
+    return false;
+
+  return true;
+}
+
+template <>
+bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
+  auto op = tosaOp.getOperation();
+  auto variableType = getVariableType(tosaOp);
+  if (!levelCheckRank(op, variableType, "variable type", tosaLevel.MAX_RANK))
+    return false;
+
+  return true;
+}
+
+template <>
+bool TosaValidation::levelCheckSizes(tosa::VariableOp tosaOp) {
+  auto op = tosaOp.getOperation();
+  auto variableType = getVariableType(tosaOp);
+  if (!levelCheckSize(op, variableType, "variable type"))
     return false;
 
   return true;
@@ -575,10 +738,10 @@ bool TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   return true;
 }
 
-// Perform the Level tensor size check
-bool TosaValidation::levelCheckSize(Operation *op, const Value &v,
+// Perform the Level tensor size check on the tensor type.
+bool TosaValidation::levelCheckSize(Operation *op, const Type &typeToCheck,
                                     const StringRef operandOrResult) {
-  if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+  if (ShapedType type = dyn_cast<ShapedType>(typeToCheck)) {
     if (!type.hasRank()) {
       op->emitOpError() << "failed level check: unranked tensor";
       return false;
@@ -618,6 +781,10 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return success();
   }
 
+  // check rank and sizes early so later checks can assume shaped operands
+  if (!levelCheckRanksAndSizes(op))
+    return failure();
+
   // additional level checks from spec 0.70
   if (!levelCheckPool<tosa::AvgPool2dOp>(op) ||
       !levelCheckConv<tosa::Conv2DOp>(op) ||
@@ -630,15 +797,23 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
   }
 
-  if (!levelCheckRanksAndSizes(op)) {
-    return failure();
-  }
-
   // level check MAX_TENSOR_LIST_SIZE
   if (!levelCheckListSize(op)) {
     return failure();
   }
 
+  if (isa<tosa::IfOp>(op) || isa<tosa::WhileOp>(op)) {
+    if (!levelCheckMaxNesting(op)) {
+      return failure();
+    }
+  }
+
+  return success();
+}
+
+LogicalResult TosaValidation::applyAttributeCheck(Operation *op) {
+  if (!attributeCheckRescale(op))
+    return failure();
   return success();
 }
 
@@ -649,18 +824,21 @@ inline bool CompatibleTypes(const mlir::Type &type,
 }
 
 bool TosaValidation::CheckVariable(Operation *op) {
-  if (isa<mlir::tosa::VariableOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+  if (auto variableOp = dyn_cast<mlir::tosa::VariableOp>(op)) {
+    mlir::StringAttr nameAttr = variableOp.getNameAttr();
 
     if (variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has already been declared";
       return false;
     }
 
-    auto typeAttr = cast<mlir::TypeAttr>(op->getAttr("type"));
-    mlir::Type type = typeAttr.getValue();
+    auto elementType = variableOp.getType();
+    DenseIntElementsAttr varShapeAttr = variableOp.getVarShape();
+    SmallVector<int64_t> shape = to_vector(varShapeAttr.getValues<int64_t>());
+    RankedTensorType variableType =
+        RankedTensorType::get(ArrayRef<int64_t>(shape), elementType);
 
-    variablesMap[nameAttr] = type;
+    variablesMap[nameAttr] = variableType;
   }
 
   return true;
@@ -669,8 +847,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
-
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
     if (!variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has not been declared";
       return false;
@@ -862,17 +1039,277 @@ bool checkErrorIfResize(Operation *op) {
   return true;
 }
 
+bool checkErrorIfMul(Operation *op) {
+  auto mul = dyn_cast<tosa::MulOp>(op);
+  if (!mul)
+    return true;
+
+  // REQUIRE(0 <= shift && shift <= 63);
+  // REQUIRE(is_same<in_t,int32_t>() || shift == 0);
+  ElementsAttr shift_elem;
+  if (!matchPattern(mul.getShift(), m_Constant(&shift_elem))) {
+    return true;
+  }
+  int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+  auto inputElemType = getElementTypeOrSelf(mul.getInput1());
+  if (inputElemType.isInteger(32)) {
+    // 0 <= shift <= 63 for int32_t type
+    if (shift < 0 || shift > 63) {
+      op->emitOpError() << "requires 0 <= shift && shift <= 63, but got: "
+                        << shift;
+      return false;
+    }
+  } else {
+    // shift must be 0 for all other types
+    if (shift != 0) {
+      op->emitOpError() << "requires shift = 0 for all input data types that "
+                           "are not int32_t, but got: "
+                        << shift;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool checkErrorIfTable(Operation *op) {
+  auto table = dyn_cast<tosa::TableOp>(op);
+  if (!table)
+    return true;
+
+  // REQUIRE(length(table) == TABLE_SIZE) where TABLE_SIZE is 256 or 513
+  const auto inputElemType = getElementTypeOrSelf(table.getInput1().getType());
+  const int tableSize = inputElemType.isInteger(8) ? 256 : 513;
+
+  const ShapeAdaptor tableShape(table.getTable().getType());
+  if (tableShape.hasStaticShape()) {
+    const auto numElements = tableShape.getNumElements();
+    if (numElements != tableSize) {
+      op->emitOpError() << "requires table size of " << tableSize << ", got "
+                        << numElements;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool checkErrorIfRescale(Operation *op) {
+  auto rescale = dyn_cast<tosa::RescaleOp>(op);
+  if (!rescale)
+    return true;
+
+  auto inputType = llvm::dyn_cast<ShapedType>(rescale.getInput().getType());
+  auto outputType = llvm::dyn_cast<ShapedType>(rescale.getOutput().getType());
+  if (!inputType || !outputType || !inputType.getElementType().isInteger() ||
+      !outputType.getElementType().isInteger())
+    return true;
+
+  auto inElemType = inputType.getElementType();
+  auto outElemType = outputType.getElementType();
+  auto inWidth = inElemType.getIntOrFloatBitWidth();
+  auto outWidth = outElemType.getIntOrFloatBitWidth();
+
+  bool inputUnsigned = rescale.getInputUnsigned();
+  bool outputUnsigned = rescale.getOutputUnsigned();
+
+  bool scale32 = rescale.getScale32();
+  auto roundingMode = rescale.getRoundingMode();
+
+  // ERROR_IF(scale32 && is_same<in_t,i48_t>())
+  if (scale32 && inWidth == 48) {
+    op->emitOpError() << "scale32 is not allowed with 48-bit input.";
+    return false;
+  }
+
+  // ERROR_IF(!scale32 && (rounding_mode == DOUBLE_ROUND))
+  if (!scale32 && roundingMode == "DOUBLE_ROUND") {
+    op->emitOpError() << "DOUBLE_ROUND is only allowed with scale32=true.";
+    return false;
+  }
+
+  // ERROR_IF(input_unsigned && output_unsigned)
+  if (inputUnsigned && outputUnsigned) {
+    op->emitOpError() << "input and output cannot be both unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<out_t,i32_t>() && input_unsigned)
+  if (outWidth == 32 && inputUnsigned) {
+    op->emitOpError() << "i32 output type is not allowed with unsigned input.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t,i32_t>() && output_unsigned)
+  if (inWidth == 32 && outputUnsigned) {
+    op->emitOpError() << "i32 input type is not allowed with unsigned output.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t,i48_t>() && output_unsigned)
+  if (inWidth == 48 && outputUnsigned) {
+    op->emitOpError() << "i48 input type is not allowed with unsigned output.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t, i48_t> && input_unsigned)
+  if (inWidth == 48 && inputUnsigned) {
+    op->emitOpError() << "i48 input type cannot be unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<in_t, i32_t> && input_unsigned)
+  if (inWidth == 32 && inputUnsigned) {
+    op->emitOpError() << "i32 input type cannot be unsigned.";
+    return false;
+  }
+
+  // ERROR_IF(is_same<out_t, i32_t> && output_unsigned)
+  if (outWidth == 32 && outputUnsigned) {
+    op->emitOpError() << "i32 output type cannot be unsigned.";
+    return false;
+  }
+
+  return true;
+}
+
+bool checkErrorIfPad(Operation *op) {
+  auto pad = dyn_cast<tosa::PadOp>(op);
+  if (!pad)
+    return true;
+
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(pad.getPadding(), m_Constant(&paddingAttr)))
+    // Pad verifier will catch this
+    return true;
+
+  for (const APInt &val : paddingAttr.getValues<APInt>()) {
+    if (val.getSExtValue() < 0) {
+      op->emitOpError() << "padding value must all be non-negative, got "
+                        << val.getSExtValue();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
+  return llvm::all_of(op->getOperands(), [&](auto operand) {
+    Region *operandRegion = operand.getParentRegion();
+    return operandRegion && region->isAncestor(operandRegion);
+  });
+}
+
+static bool isRegionIsolatedFromAbove(Region &regionToCheck) {
+  bool noLiveInValue = true;
+  regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *op) {
+    if (!isOpIsolatedWithinRegion(op, &regionToCheck)) {
+      noLiveInValue = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return noLiveInValue;
+}
+
+LogicalResult checkIsolatedRegion(Operation *op, Region &regionToCheck,
+                                  StringRef regionName) {
+  if (isRegionIsolatedFromAbove(regionToCheck))
+    return success();
+  op->emitOpError()
+      << "is not conformant to the TOSA specification. It requires the '"
+      << regionName << "' region is isolated from above.\n";
+  return failure();
+}
+
+bool checkErrorIfCondIf(Operation *op) {
+  auto ifOp = dyn_cast<tosa::IfOp>(op);
+  if (!ifOp)
+    return true;
+
+  // Currently the dialect supports declaring cond_if operations that
+  // have then/else regions that reference values from outside these
+  // regions. According to the specification, all values used by the
+  // then/else regions must be explicitly declared within the regions.
+  // Therefore we must check that the then/else regions are
+  // "isolated from above", in order to be conformant to the
+  // specification.
+  //
+  // Note: the dialect currently supports two styles of syntax for
+  // declaring "cond_if" operations. We'll refer to these as follows:
+  //
+  // Generic:
+  // %0 = "tosa.cond_if"(%arg0, %arg1, %arg2) ({
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg3
+  // },  {
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg4
+  // })
+  //
+  // Simplified:
+  // %0 = tosa.cond_if %arg2 (%arg3 = %arg0, %arg4 = %arg1) {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg3
+  // } else {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg4
+  // }
+
+  return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
+         failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
+}
+
+bool checkErrorIfWhileLoop(Operation *op) {
+  auto whileOp = dyn_cast<tosa::WhileOp>(op);
+  if (!whileOp)
+    return true;
+
+  return failed(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) ||
+         failed(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
+}
+
+bool checkErrorIfScatter(Operation *op) {
+  auto scatterOp = dyn_cast<tosa::ScatterOp>(op);
+  if (!scatterOp)
+    return true;
+
+  // for constant indices, check that there are no duplicate values
+  DenseIntElementsAttr indicesAttr;
+  if (!matchPattern(scatterOp.getIndices(), m_Constant(&indicesAttr)))
+    return true;
+
+  auto const indicesType =
+      dyn_cast<ShapedType>(scatterOp.getIndices().getType());
+  if (!indicesType || !indicesType.hasRank()) {
+    op->emitOpError("expect ranked indices tensor");
+    return false;
+  }
+
+  if (!hasUniqueConstantScatterIndices(indicesType, indicesAttr)) {
+    op->emitOpError("indices values contain duplicates");
+    return false;
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (!checkErrorIfResize(op))
+  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
+      !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
+      !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
+      !checkErrorIfWhileLoop(op) || !checkErrorIfScatter(op))
     return failure();
   return success();
 }
 
-bool TosaValidation::isValidElementType(Type type) {
+bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
                Float8E5M2Type>(type);
-  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
@@ -881,6 +1318,13 @@ bool TosaValidation::isValidElementType(Type type) {
       case 16:
       case 32:
       case 48:
+        return true;
+      }
+    } else if (allowUnsigned && intTy.isUnsigned()) {
+      switch (intTy.getWidth()) {
+      case 8:
+      case 16:
+      case 32:
         return true;
       }
     }
@@ -901,7 +1345,30 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
-    // Profile-Extension based validation should be performed at the beginning.
+    // validate operator element types:
+    // - rescale operator is allowed to have ui8/ui16/ui32
+    //   operands/results when strictOpSpecAlignment is false
+    // - perform valid element type check at the beginning to
+    //   protect rest of code against quantized element types
+    const bool allowUnsigned =
+        !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
+    for (Value operand : op->getOperands()) {
+      auto elementTy = getElementTypeOrSelf(operand);
+      if (!isValidElementType(elementTy, allowUnsigned)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
+        return signalPassFailure();
+      }
+    }
+    for (Type resultTy : op->getResultTypes()) {
+      auto elementTy = getElementTypeOrSelf(resultTy);
+      if (!isValidElementType(elementTy, allowUnsigned)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
+        return signalPassFailure();
+      }
+    }
+
     if (strictOpSpecAlignment &&
         failed(profileComp.checkProfile(op, targetEnv)))
       return signalPassFailure();
@@ -910,30 +1377,21 @@ void TosaValidation::runOnOperation() {
         failed(profileComp.checkExtension(op, targetEnv)))
       return signalPassFailure();
 
-    for (Value operand : op->getOperands()) {
-      auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
-    for (Type resultTy : op->getResultTypes()) {
-      auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
+    if (!allowInvalidOpDatatypeCombinations &&
+        failed(profileComp.checkInvalid(op)))
+      return signalPassFailure();
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
-    if (strictOpSpecAlignment && failed(applyConstantOperandCheck(op)))
+    if (failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks
     if (failed(applyLevelCheck(op)))
+      signalPassFailure();
+
+    // check additional attribute restrictions
+    if (failed(applyAttributeCheck(op)))
       signalPassFailure();
 
     // do variable type checks

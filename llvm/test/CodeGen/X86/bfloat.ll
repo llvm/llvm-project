@@ -842,7 +842,6 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ;
 ; SSE2-LABEL: pr63017_2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jne .LBB16_1
 ; SSE2-NEXT:  # %bb.2: # %cond.load
@@ -1087,7 +1086,6 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; AVXNC-LABEL: pr63017_2:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    vbroadcastss {{.*#+}} ymm0 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
-; AVXNC-NEXT:    xorl %eax, %eax
 ; AVXNC-NEXT:    testb %al, %al
 ; AVXNC-NEXT:    jne .LBB16_2
 ; AVXNC-NEXT:  # %bb.1: # %cond.load

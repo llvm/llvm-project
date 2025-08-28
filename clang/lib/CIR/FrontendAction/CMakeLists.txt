@@ -11,11 +11,14 @@ add_clang_library(clangCIRFrontendAction
   DEPENDS
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinOpsIncGen
 
   LINK_LIBS
   clangAST
+  clangBasic
   clangFrontend
   clangCIR
+  clangCIRLoweringCommon
   clangCIRLoweringDirectToLLVM
   clangCodeGen
   MLIRCIR

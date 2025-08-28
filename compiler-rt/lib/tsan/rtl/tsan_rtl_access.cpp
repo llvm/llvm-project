@@ -419,6 +419,11 @@ NOINLINE void TraceRestartMemoryAccess(ThreadState* thr, uptr pc, uptr addr,
 
 ALWAYS_INLINE USED void MemoryAccess(ThreadState* thr, uptr pc, uptr addr,
                                      uptr size, AccessType typ) {
+#if SANITIZER_APPLE && !SANITIZER_GO
+  // Swift symbolizer can be intercepted and deadlock without this
+  if (thr->in_symbolizer)
+    return;
+#endif
   RawShadow* shadow_mem = MemToShadow(addr);
   UNUSED char memBuf[4][64];
   DPrintf2("#%d: Access: %d@%d %p/%zd typ=0x%x {%s, %s, %s, %s}\n", thr->tid,
@@ -523,9 +528,9 @@ SECOND:
 }
 
 void ShadowSet(RawShadow* p, RawShadow* end, RawShadow v) {
-  DCHECK_LE(p, end);
+  DCHECK_LT(p, end);
   DCHECK(IsShadowMem(p));
-  DCHECK(IsShadowMem(end));
+  DCHECK(IsShadowMem(end - 1));
   UNUSED const uptr kAlign = kShadowCnt * kShadowSize;
   DCHECK_EQ(reinterpret_cast<uptr>(p) % kAlign, 0);
   DCHECK_EQ(reinterpret_cast<uptr>(end) % kAlign, 0);
@@ -569,6 +574,7 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
   RawShadow* mid1 =
       Min(end, reinterpret_cast<RawShadow*>(RoundUp(
                    reinterpret_cast<uptr>(begin) + kPageSize / 2, kPageSize)));
+  // begin must < mid1
   ShadowSet(begin, mid1, val);
   // Reset middle part.
   RawShadow* mid2 = RoundDown(end, kPageSize);
@@ -577,7 +583,10 @@ static void MemoryRangeSet(uptr addr, uptr size, RawShadow val) {
       Die();
   }
   // Set the ending.
-  ShadowSet(mid2, end, val);
+  if (mid2 < end)
+    ShadowSet(mid2, end, val);
+  else
+    DCHECK_EQ(mid2, end);
 }
 
 void MemoryResetRange(ThreadState* thr, uptr pc, uptr addr, uptr size) {
@@ -669,7 +678,7 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
   RawShadow* shadow_mem = MemToShadow(addr);
   DPrintf2("#%d: MemoryAccessRange: @%p %p size=%d is_read=%d\n", thr->tid,
            (void*)pc, (void*)addr, (int)size, is_read);
-
+  DCHECK_NE(size, 0);
 #if SANITIZER_DEBUG
   if (!IsAppMem(addr)) {
     Printf("Access to non app mem start: %p\n", (void*)addr);
@@ -680,20 +689,22 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
     DCHECK(IsAppMem(addr + size - 1));
   }
   if (!IsShadowMem(shadow_mem)) {
-    Printf("Bad shadow start addr: %p (%p)\n", shadow_mem, (void*)addr);
+    Printf("Bad shadow start addr: %p (%p)\n", (void*)shadow_mem, (void*)addr);
     DCHECK(IsShadowMem(shadow_mem));
   }
 
-  RawShadow* shadow_mem_end = reinterpret_cast<RawShadow*>(
-      reinterpret_cast<uptr>(shadow_mem) + size * kShadowMultiplier - 1);
-  if (!IsShadowMem(shadow_mem_end)) {
-    Printf("Bad shadow end addr: %p (%p)\n", shadow_mem_end,
+  uptr rounded_size =
+      (RoundUpTo(addr + size, kShadowCell) - RoundDownTo(addr, kShadowCell));
+  RawShadow* shadow_mem_end =
+      shadow_mem + rounded_size / kShadowCell * kShadowCnt;
+  if (!IsShadowMem(shadow_mem_end - 1)) {
+    Printf("Bad shadow end addr: %p (%p)\n", (void*)(shadow_mem_end - 1),
            (void*)(addr + size - 1));
     Printf(
-        "Shadow start addr (ok): %p (%p); size: 0x%zx; kShadowMultiplier: "
-        "%zx\n",
-        shadow_mem, (void*)addr, size, kShadowMultiplier);
-    DCHECK(IsShadowMem(shadow_mem_end));
+        "Shadow start addr (ok): %p (%p); size: 0x%zx; rounded_size: 0x%zx; "
+        "kShadowMultiplier: %zx\n",
+        (void*)shadow_mem, (void*)addr, size, rounded_size, kShadowMultiplier);
+    DCHECK(IsShadowMem(shadow_mem_end - 1));
   }
 #endif
 

@@ -718,18 +718,6 @@ func.func @vector_load_i8_with_offset(%arg0 : memref<?x?xi8>) -> vector<[16]x[16
 
 // -----
 
-// CHECK-LABEL: @vector_load_i8_from_rank_1_memref(
-// CHECK-SAME:                                     %[[MEMREF:.*]]: memref<?xi8>)
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: arm_sme.tile_load %[[MEMREF]][%[[C0]]] : memref<?xi8>, vector<[16]x[16]xi8>
-func.func @vector_load_i8_from_rank_1_memref(%arg0 : memref<?xi8>) -> vector<[16]x[16]xi8> {
-  %c0 = arith.constant 0 : index
-  %tile = vector.load %arg0[%c0] : memref<?xi8>, vector<[16]x[16]xi8>
-  return %tile : vector<[16]x[16]xi8>
-}
-
-// -----
-
 // CHECK-LABEL: @vector_load_i16(
 // CHECK: arm_sme.tile_load {{.*}} : memref<?x?xi16>, vector<[8]x[8]xi16>
 func.func @vector_load_i16(%arg0 : memref<?x?xi16>) -> vector<[8]x[8]xi16> {

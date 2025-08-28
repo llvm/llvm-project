@@ -43,8 +43,9 @@ TypeSummaryOptions::SetCapping(lldb::TypeSummaryCapping cap) {
   return *this;
 }
 
-TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags)
-    : m_flags(flags), m_kind(kind) {}
+TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags,
+                                 uint32_t ptr_match_depth)
+    : m_flags(flags), m_kind(kind), m_ptr_match_depth(ptr_match_depth) {}
 
 std::string TypeSummaryImpl::GetSummaryKindName() {
   switch (m_kind) {
@@ -63,8 +64,10 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
 }
 
 StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
-                                         const char *format_cstr)
-    : TypeSummaryImpl(Kind::eSummaryString, flags), m_format_str() {
+                                         const char *format_cstr,
+                                         uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eSummaryString, flags, ptr_match_depth),
+      m_format_str() {
   SetSummaryString(format_cstr);
 }
 
@@ -117,7 +120,7 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
 std::string StringSummaryFormat::GetDescription() {
   StreamString sstr;
 
-  sstr.Printf("`%s`%s%s%s%s%s%s%s%s%s", m_format_str.c_str(),
+  sstr.Printf("`%s`%s%s%s%s%s%s%s%s%s ptr-match-depth=%u", m_format_str.c_str(),
               m_error.Fail() ? " error: " : "",
               m_error.Fail() ? m_error.AsCString() : "",
               Cascades() ? "" : " (not cascading)",
@@ -126,15 +129,17 @@ std::string StringSummaryFormat::GetDescription() {
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
-              HideNames(nullptr) ? " (hide member names)" : "");
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
   return std::string(sstr.GetString());
 }
 
 std::string StringSummaryFormat::GetName() { return m_format_str; }
 
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
-    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description)
-    : TypeSummaryImpl(Kind::eCallback, flags), m_impl(impl),
+    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description,
+    uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eCallback, flags, ptr_match_depth), m_impl(impl),
       m_description(description ? description : "") {}
 
 bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
@@ -150,14 +155,15 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
 
 std::string CXXFunctionSummaryFormat::GetDescription() {
   StreamString sstr;
-  sstr.Printf("%s%s%s%s%s%s%s %s", Cascades() ? "" : " (not cascading)",
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u %s",
+              Cascades() ? "" : " (not cascading)",
               !DoesPrintChildren(nullptr) ? "" : " (show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "",
-              m_description.c_str());
+              GetPtrMatchDepth(), m_description.c_str());
   return std::string(sstr.GetString());
 }
 
@@ -165,8 +171,9 @@ std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
-                                         const char *python_script)
-    : TypeSummaryImpl(Kind::eScript, flags), m_function_name(),
+                                         const char *python_script,
+                                         uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eScript, flags, ptr_match_depth), m_function_name(),
       m_python_script(), m_script_function_sp() {
   // Take preference in the python script name over the function name.
   if (function_name) {
@@ -211,13 +218,15 @@ bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
 
 std::string ScriptSummaryFormat::GetDescription() {
   StreamString sstr;
-  sstr.Printf("%s%s%s%s%s%s%s\n  ", Cascades() ? "" : " (not cascading)",
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u\n  ",
+              Cascades() ? "" : " (not cascading)",
               !DoesPrintChildren(nullptr) ? "" : " (show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
-              HideNames(nullptr) ? " (hide member names)" : "");
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
   if (m_python_script.empty()) {
     if (m_function_name.empty()) {
       sstr.PutCString("no backing script");

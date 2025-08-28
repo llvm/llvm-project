@@ -2461,7 +2461,7 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2 # [197,0,27,0,1,0,1,0,223,0,205,0,161,0,171,0,171,0,183,0,61,0,127,0,9,0,41,0,1,0,161,0]
 ; CHECK-AVX512VL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm3 # [0,205,0,241,0,1,0,163,0,223,0,183,0,1,0,239,0,103,0,171,0,1,0,183,0,0,0,183,0,1,0,221]
 ; CHECK-AVX512VL-NEXT:    vpsllw $8, %ymm3, %ymm3
-; CHECK-AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 | (ymm2 & mem)
+; CHECK-AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 | (ymm2 & m32bcst)
 ; CHECK-AVX512VL-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm2
 ; CHECK-AVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; CHECK-AVX512VL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3 # [128,128,1,1,1,128,1,64,128,1,128,1,128,32,1,1]

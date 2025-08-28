@@ -174,6 +174,14 @@ public:
   }
   const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &attrs() { return attrs_; }
+  bool isPossibleSequenceAssociation() const {
+    return isPossibleSequenceAssociation_;
+  }
+  TypeAndShape &set_isPossibleSequenceAssociation(bool yes) {
+    isPossibleSequenceAssociation_ = yes;
+    return *this;
+  }
   int corank() const { return corank_; }
   void set_corank(int n) { corank_ = n; }
 
@@ -195,6 +203,12 @@ public:
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
       FoldingContext &) const;
 
+  bool IsExplicitShape() const {
+    // If it's array and no special attributes are set, then must be
+    // explicit shape.
+    return Rank() > 0 && attrs_.none();
+  }
+
   // called by Fold() to rewrite in place
   TypeAndShape &Rewrite(FoldingContext &);
 
@@ -209,18 +223,18 @@ private:
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
 
-protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
   std::optional<Shape> shape_;
   Attrs attrs_;
+  bool isPossibleSequenceAssociation_{false};
   int corank_{0};
 };
 
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual)
+      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);

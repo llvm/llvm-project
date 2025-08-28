@@ -281,7 +281,7 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
   %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
-  // expected-error @+1 {{invalid kind of Type specified}}
+  // expected-error @+1 {{invalid kind of type specified: expected emitc.lvalue, but found '!emitc.array<4xi32>'}}
   emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
   return
 }
@@ -342,6 +342,28 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
     emitc.yield %a : i32
   }
   return %r : i32
+}
+
+// -----
+
+emitc.func @test_expression_no_defining_op(%a : i32) {
+  // expected-error @+1 {{'emitc.expression' op yielded value has no defining op}}
+  %res = emitc.expression : i32 {
+    emitc.yield %a : i32
+  }
+
+  return
+}
+
+// -----
+
+emitc.func @test_expression_op_outside_expression() {
+  %cond = literal "true" : i1
+  // expected-error @+1 {{'emitc.expression' op yielded value not defined within expression}}
+  %res = emitc.expression : i1 {
+    emitc.yield %cond : i1
+  }
+  return
 }
 
 // -----
@@ -653,4 +675,36 @@ func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
   // expected-error @+1 {{'emitc.verbatim' op expected '}' after unescaped '{'}}
   emitc.verbatim "{a} " args %arg0, %arg1 : !emitc.ptr<i32>, i32
   return
+}
+
+// -----
+
+// expected-error @+1 {{'emitc.field' op field must be nested within an emitc.class operation}}
+emitc.field @testField : !emitc.array<1xf32>
+
+// -----
+
+// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+%1 = emitc.get_field @testField : !emitc.array<1xf32>
+
+// -----
+
+emitc.func @testMethod() {
+  %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  %1 = get_field @testField : !emitc.array<1xf32>
+  %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+  return
+}
+
+// -----
+
+emitc.class @testClass {
+  emitc.func @testMethod() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    // expected-error @+1 {{'emitc.get_field' op field '@testField' not found in the class}}
+    %1 = get_field @testField : !emitc.array<1xf32>
+    %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
 }

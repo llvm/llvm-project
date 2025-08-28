@@ -27,12 +27,14 @@ def LLVM_Dialect : Dialect {
   );
 
   let extraClassDeclaration = [{
+    static StringRef getTargetAttrName() { return "llvm.target"; }
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
     static StringRef getIdentAttrName() { return "llvm.ident"; }
+    static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
 
     /// Names of llvm parameter attributes.
@@ -80,6 +82,22 @@ def LLVM_Dialect : Dialect {
     /// Name of the C wrapper emission attribute.
     static StringRef getEmitCWrapperAttrName() {
       return "llvm.emit_c_interface";
+    }
+
+    /// Name of the module level assembly attribute.
+    static StringRef getModuleLevelAsmAttrName() { return "llvm.module_asm"; }
+
+    /// Name of the dependent libraries attribute.
+    static StringRef getDependentLibrariesAttrName() {
+      return "llvm.dependent_libraries";
+    }
+
+    /// Names of known llvm module flag keys.
+    static StringRef getModuleFlagKeyCGProfileName() {
+      return "CG Profile";
+    }
+    static StringRef getModuleFlagKeyProfileSummaryName() {
+      return "ProfileSummary";
     }
 
     /// Returns `true` if the given type is compatible with the LLVM dialect.

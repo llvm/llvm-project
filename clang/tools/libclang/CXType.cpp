@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -117,7 +118,6 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(ExtVector);
     TKCASE(MemberPointer);
     TKCASE(Auto);
-    TKCASE(Elaborated);
     TKCASE(Pipe);
     TKCASE(Attributed);
     TKCASE(BTFTagAttributed);
@@ -224,6 +224,11 @@ FindTemplateArgumentTypeAt(ArrayRef<TemplateArgument> TA, unsigned index) {
   return std::nullopt;
 }
 
+static CXType getTypeDeclType(const ASTContext &Context, CXTranslationUnit TU,
+                              const TypeDecl *TD) {
+  return MakeCXType(Context.getTypeDeclType(TD), TU);
+}
+
 CXType clang_getCursorType(CXCursor C) {
   using namespace cxcursor;
 
@@ -243,7 +248,7 @@ CXType clang_getCursorType(CXCursor C) {
       return MakeCXType(QualType(), TU);
 
     if (const TypeDecl *TD = dyn_cast<TypeDecl>(D))
-      return MakeCXType(Context.getTypeDeclType(TD), TU);
+      return getTypeDeclType(Context, TU, TD);
     if (const ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(D))
       return MakeCXType(Context.getObjCInterfaceType(ID), TU);
     if (const DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D))
@@ -270,11 +275,8 @@ CXType clang_getCursorType(CXCursor C) {
       return MakeCXType(T, TU);
     }
 
-    case CXCursor_TypeRef: {
-      QualType T = Context.getTypeDeclType(getCursorTypeRef(C).first);
-      return MakeCXType(T, TU);
-
-    }
+    case CXCursor_TypeRef:
+      return getTypeDeclType(Context, TU, getCursorTypeRef(C).first);
 
     case CXCursor_CXXBaseSpecifier:
       return cxtype::MakeCXType(getCursorCXXBaseSpecifier(C)->getType(), TU);
@@ -326,6 +328,22 @@ CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
   T.print(OS, *UserPolicy);
 
   return cxstring::createDup(OS.str());
+}
+
+CXString clang_getFullyQualifiedName(CXType CT, CXPrintingPolicy cxPolicy,
+                                     unsigned int WithGlobalNsPrefix) {
+  const QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+  const CXTranslationUnit TU = GetTU(CT);
+  const ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
+  const PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+  const bool WithGlobalNs = (WithGlobalNsPrefix != 0);
+
+  const std::string Str =
+      TypeName::getFullyQualifiedName(T, Ctx, *UserPolicy, WithGlobalNs);
+
+  return cxstring::createDup(Str);
 }
 
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
@@ -528,11 +546,11 @@ try_again:
     break;
   case Type::Record:
   case Type::Enum:
-    D = cast<TagType>(TP)->getDecl();
+    D = cast<TagType>(TP)->getOriginalDecl();
     break;
   case Type::TemplateSpecialization:
     if (const RecordType *Record = TP->getAs<RecordType>())
-      D = Record->getDecl();
+      D = Record->getOriginalDecl();
     else
       D = cast<TemplateSpecializationType>(TP)->getTemplateName()
                                                          .getAsTemplateDecl();
@@ -546,14 +564,10 @@ try_again:
     break;
 
   case Type::InjectedClassName:
-    D = cast<InjectedClassNameType>(TP)->getDecl();
+    D = cast<InjectedClassNameType>(TP)->getOriginalDecl();
     break;
 
-  // FIXME: Template type parameters!      
-
-  case Type::Elaborated:
-    TP = cast<ElaboratedType>(TP)->getNamedType().getTypePtrOrNull();
-    goto try_again;
+    // FIXME: Template type parameters!
 
   default:
     break;
@@ -636,6 +650,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
+    TKIND(HLSLInlineSpirv);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -714,8 +729,8 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
-    case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
-    case CC_OpenCLKernel: return CXCallingConv_Unexposed;
+    case CC_DeviceKernel:
+      return CXCallingConv_Unexposed;
       break;
     }
 #undef TCALLINGCONV
@@ -966,12 +981,14 @@ long long clang_Type_getAlignOf(CXType T) {
 }
 
 CXType clang_Type_getClassType(CXType CT) {
+  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
   QualType ET = QualType();
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();
 
   if (TP && TP->getTypeClass() == Type::MemberPointer) {
-    ET = QualType(cast<MemberPointerType> (TP)->getClass(), 0);
+    ET = Ctx.getCanonicalTagType(
+        cast<MemberPointerType>(TP)->getMostRecentCXXRecordDecl());
   }
   return MakeCXType(ET, GetTU(CT));
 }
@@ -1020,7 +1037,7 @@ static long long visitRecordForValidation(const RecordDecl *RD) {
       return CXTypeLayoutError_Dependent;
     // recurse
     if (const RecordType *ChildType = I->getType()->getAs<RecordType>()) {
-      if (const RecordDecl *Child = ChildType->getDecl()) {
+      if (const RecordDecl *Child = ChildType->getOriginalDecl()) {
         long long ret = visitRecordForValidation(Child);
         if (ret < 0)
           return ret;
@@ -1370,10 +1387,9 @@ unsigned clang_Cursor_isInlineNamespace(CXCursor C) {
 
 CXType clang_Type_getNamedType(CXType CT){
   QualType T = GetQualType(CT);
-  const Type *TP = T.getTypePtrOrNull();
 
-  if (TP && TP->getTypeClass() == Type::Elaborated)
-    return MakeCXType(cast<ElaboratedType>(TP)->getNamedType(), GetTU(CT));
+  if (!T.isNull() && !T.isCanonical())
+    return MakeCXType(T, GetTU(CT));
 
   return MakeCXType(QualType(), GetTU(CT));
 }

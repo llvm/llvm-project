@@ -22,6 +22,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
 
+
+constexpr bool test_bad_bool = __builtin_bit_cast(bool, (char)0xff); // both-error {{must be initialized by a constant expression}} \
+                                                                     // both-note {{value 255 cannot be represented in type 'bool'}}
+
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
@@ -501,6 +505,16 @@ namespace OversizedBitField {
   static_assert(__builtin_bit_cast(S, (uint32_t)32).a == (LITTLE_END ? 32 : 0)); // ref-error {{not an integral constant expression}} \
                                                                                  // ref-note {{constexpr bit_cast involving bit-field is not yet supported}}
 #endif
+}
+
+namespace Discarded {
+  enum my_byte : unsigned char {};
+  struct pad {
+    char a;
+    int b;
+  };
+  constexpr int bad_my_byte = (__builtin_bit_cast(my_byte[8], pad{1, 2}), 0); // both-error {{must be initialized by a constant expression}} \
+                                                                              // both-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte';}}
 }
 
 typedef bool bool9 __attribute__((ext_vector_type(9)));

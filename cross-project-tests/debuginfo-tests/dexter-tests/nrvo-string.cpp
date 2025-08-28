@@ -7,11 +7,11 @@
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
 //
-// RUN: %clang -std=gnu++11 -O0 -glldb -fno-exceptions %s -o %t
+// RUN: %clang++ -std=gnu++11 -O0 -glldb -fno-exceptions %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
 //
-// RUN: %clang -std=gnu++11 -O1 -glldb -fno-exceptions %s -o %t
+// RUN: %clang++ -std=gnu++11 -O1 -glldb -fno-exceptions %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
 //

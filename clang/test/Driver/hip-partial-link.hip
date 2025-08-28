@@ -32,11 +32,11 @@
 // LD-R: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID1]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID2]]
-// LD-R: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
-// LD-R: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
-// LD-R: "{{.*}}/clang-offload-bundler"
-// LD-R: "{{.*}}/clang{{.*}}" -target x86_64-unknown-linux-gnu
-// LD-R: "{{.*}}/ld.lld" {{.*}} -r
+// LD-R: "{{.*[/\\]}}clang-offload-bundler" {{.*}}-unbundle
+// LD-R: "{{.*[/\\]}}lld" -flavor gnu -m elf64_amdgpu
+// LD-R: "{{.*[/\\]}}clang-offload-bundler"
+// LD-R: "{{.*[/\\]}}clang{{.*}}" -target x86_64-unknown-linux-gnu
+// LD-R: "{{.*[/\\]}}ld.lld" {{.*}} -r
 
 // RUN: llvm-nm  %t.lib.o | FileCheck -check-prefix=OBJ %s
 // OBJ:  B __hip_cuid_[[ID1:[0-9a-f]+]]

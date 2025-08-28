@@ -47,9 +47,9 @@ define <4 x i32> @select_addsub_v4i32(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) 
 define <4 x i32> @select_addsub_v4i32_select_swapped(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_select_swapped:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
+; CHECK-NEXT:    vmerge.vvm v9, v10, v9, v0
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %sub = sub <4 x i32> %a, %b
@@ -74,9 +74,9 @@ define <4 x i32> @select_addsub_v4i32_add_swapped(<4 x i1> %cc, <4 x i32> %a, <4
 define <4 x i32> @select_addsub_v4i32_both_swapped(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_both_swapped:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vi v10, v9, 0
+; CHECK-NEXT:    vmerge.vvm v9, v10, v9, v0
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %sub = sub <4 x i32> %a, %b
@@ -148,7 +148,7 @@ define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32>
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a1, 32
@@ -163,7 +163,7 @@ define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32>
 ; CHECK-NEXT:    vadd.vv v8, v16, v8
 ; CHECK-NEXT:    vrsub.vi v24, v24, 0, v0.t
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vadd.vv v16, v16, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3

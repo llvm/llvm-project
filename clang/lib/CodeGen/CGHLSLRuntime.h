@@ -62,11 +62,13 @@ class VarDecl;
 class ParmVarDecl;
 class InitListExpr;
 class HLSLBufferDecl;
+class HLSLVkBindingAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
 class DeclContext;
 class HLSLPackOffsetAttr;
+class ArraySubscriptExpr;
 
 class FunctionDecl;
 
@@ -74,6 +76,7 @@ namespace CodeGen {
 
 class CodeGenModule;
 class CodeGenFunction;
+class LValue;
 
 class CGHLSLRuntime {
 public:
@@ -86,6 +89,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
+                                   flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -105,6 +110,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
@@ -117,6 +123,8 @@ public:
                                    resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
+                                   resource_handlefromimplicitbinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
@@ -124,15 +132,6 @@ public:
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  struct BufferResBinding {
-    // The ID like 2 in register(b2, space1).
-    std::optional<unsigned> Reg;
-    // The Space like 1 is register(b2, space1).
-    // Default value is 0.
-    unsigned Space;
-    BufferResBinding(HLSLResourceBindingAttr *Attr);
-  };
 
 protected:
   CodeGenModule &CGM;
@@ -146,9 +145,8 @@ public:
 
   llvm::Type *
   convertHLSLSpecificType(const Type *T,
-                          SmallVector<unsigned> *Packoffsets = nullptr);
+                          SmallVector<int32_t> *Packoffsets = nullptr);
 
-  void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
 
   void addBuffer(const HLSLBufferDecl *D);
@@ -168,14 +166,19 @@ public:
                                llvm::TargetExtType *LayoutTy);
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
+  std::optional<LValue>
+  emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
+                                 CodeGenFunction &CGF);
+
 private:
-  void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                   llvm::hlsl::ResourceClass RC,
-                                   llvm::hlsl::ResourceKind RK, bool IsROV,
-                                   llvm::hlsl::ElementType ET,
-                                   BufferResBinding &Binding);
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLVkBindingAttr *VkBinding);
+  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                   llvm::GlobalVariable *GV,
+                                   HLSLResourceBindingAttr *RBA);
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;

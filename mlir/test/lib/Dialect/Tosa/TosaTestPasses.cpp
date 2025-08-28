@@ -87,9 +87,9 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
     return failure();
 
   auto newConstOp =
-      rewriter.create<tosa::ConstOp>(op->getLoc(), dstQConstType, inputElems);
-  auto newNegateOp = rewriter.create<tosa::NegateOp>(
-      op->getLoc(), dstQConstType, newConstOp.getResult());
+      tosa::ConstOp::create(rewriter, op->getLoc(), dstQConstType, inputElems);
+  auto newNegateOp = tosa::NegateOp::create(
+      rewriter, op->getLoc(), dstQConstType, newConstOp.getResult());
 
   rewriter.replaceOp(op, {newNegateOp.getResult()});
   return success();
@@ -145,8 +145,8 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   auto newTosaConv2DOpType =
       RankedTensorType::get(outputType.getShape(), rewriter.getIntegerType(32));
 
-  auto newTosaConv2DOp = rewriter.create<tosa::Conv2DOp>(
-      op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
+  auto newTosaConv2DOp = tosa::Conv2DOp::create(
+      rewriter, op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
       tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(),
       tosaConv2DOp.getPadAttr(), tosaConv2DOp.getStrideAttr(),
       tosaConv2DOp.getDilationAttr(), tosaConv2DOp.getAccTypeAttr());
@@ -155,7 +155,15 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   double inputScale = inputQType.getScale();
   double weightScale = weightQType.getScale();
   double outputScale = outputQType.getScale();
-  int64_t outputZp = outputQType.getZeroPoint();
+  int64_t outputZpVal = outputQType.getZeroPoint();
+
+  auto inputZp =
+      createZeroPointTensor(rewriter, op->getLoc(), newTosaConv2DOpType, 0);
+  auto outputZp = createZeroPointTensor(
+      rewriter, op->getLoc(), tosaConv2DOp.getOutput().getType(), outputZpVal);
+
+  if (!inputZp || !outputZp)
+    return failure();
 
   double opTensorScale = (inputScale * weightScale) / outputScale;
 
@@ -170,15 +178,14 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       newTosaConv2DOp.getResult().getType().isUnsignedInteger();
   bool outputUnsigned = outputType.isUnsignedInteger();
 
-  auto newTosaRescaleOp = rewriter.create<tosa::RescaleOp>(
-      op->getLoc(), outputType, newTosaConv2DOp.getResult(),
+  auto newTosaRescaleOp = tosa::RescaleOp::create(
+      rewriter, op->getLoc(), outputType, newTosaConv2DOp.getResult(),
       getConstTensorInt<int32_t>(rewriter, op->getLoc(), {multiplier}),
       getConstTensorInt<int8_t>(rewriter, op->getLoc(),
                                 {static_cast<int8_t>(shift)}),
-      /* input_zp = */ rewriter.getI32IntegerAttr(0),
-      /* output_zp = */ rewriter.getI32IntegerAttr(outputZp),
+      inputZp.value(), outputZp.value(),
       /* scale32 = */ rewriter.getBoolAttr(true),
-      /* double_round = */ rewriter.getBoolAttr(true),
+      /* double_round = */ rewriter.getStringAttr("DOUBLE_ROUND"),
       /* per_channel = */ rewriter.getBoolAttr(false),
       rewriter.getBoolAttr(inputUnsigned),
       rewriter.getBoolAttr(outputUnsigned));

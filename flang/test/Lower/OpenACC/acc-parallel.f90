@@ -60,9 +60,9 @@ subroutine acc_parallel
   !$acc parallel async
   !$acc end parallel
 
-! CHECK: acc.parallel {
+! CHECK: acc.parallel async {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc parallel async(1)
   !$acc end parallel
@@ -203,7 +203,7 @@ subroutine acc_parallel
   !$acc parallel self(ifCondition)
   !$acc end parallel
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.parallel self(%[[SELF2]]) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}

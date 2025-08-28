@@ -11,7 +11,7 @@ A(int) -> A<int>;
 // Make sure we still correctly parse cases where a template can appear without arguments.
 namespace template_template_arg {
   template<template<typename> typename> struct X {};
-  template<typename> struct Y {}; // expected-note 2{{template parameter is declared here}}
+  template<typename> struct Y {};
 
   X<A> xa;
   Y<A> ya; // expected-error {{requires template arguments}}
@@ -36,7 +36,7 @@ namespace template_template_arg {
 
 namespace template_template_arg_pack {
   template<template<typename> typename...> struct XP {};
-  template<typename...> struct YP {}; // expected-note 2{{template parameter is declared here}}
+  template<typename...> struct YP {};
 
   struct Z { template<typename T> struct Q {}; }; // expected-note 2{{here}}
 
@@ -116,7 +116,7 @@ namespace stmt {
 }
 
 namespace expr {
-  template<typename T> struct U {}; // expected-note {{template parameter is declared here}}
+  template<typename T> struct U {};
   void j() {
     (void)typeid(A); // expected-error{{requires template arguments; argument deduction not allowed here}}
     (void)sizeof(A); // expected-error{{requires template arguments; argument deduction not allowed here}}
@@ -152,7 +152,7 @@ namespace decl {
   A a;
   A b = 0;
   const A c = 0;
-  A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
+  A (parens) = 0;
   A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
@@ -179,7 +179,7 @@ namespace typename_specifier {
   }
   typename ::A a = 0;
   const typename ::A b = 0;
-  typename ::A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
+  typename ::A (parens) = 0;
   typename ::A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   typename ::A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   typename ::A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
@@ -196,8 +196,8 @@ namespace typename_specifier {
     new typename T::A{0};
     typename T::A a = 0;
     const typename T::A b = 0;
-    if (typename T::A a = 0) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
-    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
+    if (typename T::A a = 0) {} // expected-error {{value of type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
+    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error {{value of type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
 
     {(void)(typename T::A)(0);} // expected-error{{refers to class template member}}
     {(void)(typename T::A){0};} // expected-error{{refers to class template member}}
@@ -208,7 +208,7 @@ namespace typename_specifier {
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
     {typename T::A F::*pm = 0;} // expected-error {{refers to class template member}}
     {typename T::A (*fp)() = 0;} // expected-error {{refers to class template member}}
-    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
+    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
   }
   template void f<X>(); // expected-note {{instantiation of}}
 

@@ -42,3 +42,13 @@ _Static_assert(__builtin_offsetof(typeof(s), i) == 0);
 _Static_assert(__builtin_offsetof(typeof_unqual(struct S), i) == 0);
 _Static_assert(__builtin_offsetof(typeof_unqual(s), i) == 0);
 
+// Show that typeof and typeof_unqual can be used in the underlying type of an
+// enumeration even when given the type form. Note, this can look like a
+// compound literal expression, which caused GH146351.
+enum E3 : typeof(int) { ThirdZero }; // (int) {}; is not a compound literal!
+enum E4 : typeof_unqual(int) { FourthZero }; // Same here
+
+// Ensure that this invalid construct is diagnosed instead of being treated
+// as typeof((int){ 0 }).
+typeof(int) { 0 } x; // expected-error {{a type specifier is required for all declarations}} \
+                        expected-error {{expected identifier or '('}}

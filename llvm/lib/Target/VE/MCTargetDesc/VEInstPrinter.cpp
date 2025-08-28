@@ -12,6 +12,7 @@
 
 #include "VEInstPrinter.h"
 #include "VE.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,20 +62,12 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void VEInstPrinter::printMemASXOperand(const MCInst *MI, int OpNum,
                                        const MCSubtargetInfo &STI,
-                                       raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, OpNum, STI, O);
-    O << ", ";
-    printOperand(MI, OpNum + 1, STI, O);
-    return;
-  }
-
+                                       raw_ostream &O) {
   if (MI->getOperand(OpNum + 2).isImm() &&
       MI->getOperand(OpNum + 2).getImm() == 0) {
     // don't print "+0"
@@ -110,15 +103,7 @@ void VEInstPrinter::printMemASXOperand(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandASX(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
-                                         raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, OpNum, STI, O);
-    O << ", ";
-    printOperand(MI, OpNum + 1, STI, O);
-    return;
-  }
-
+                                         raw_ostream &O) {
   if (MI->getOperand(OpNum + 1).isImm() &&
       MI->getOperand(OpNum + 1).getImm() == 0) {
     // don't print "+0"
@@ -141,15 +126,7 @@ void VEInstPrinter::printMemASOperandASX(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandRRM(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
-                                         raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, OpNum, STI, O);
-    O << ", ";
-    printOperand(MI, OpNum + 1, STI, O);
-    return;
-  }
-
+                                         raw_ostream &O) {
   if (MI->getOperand(OpNum + 1).isImm() &&
       MI->getOperand(OpNum + 1).getImm() == 0) {
     // don't print "+0"
@@ -172,15 +149,7 @@ void VEInstPrinter::printMemASOperandRRM(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandHM(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &STI,
-                                        raw_ostream &O, const char *Modifier) {
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    printOperand(MI, OpNum, STI, O);
-    O << ", ";
-    printOperand(MI, OpNum + 1, STI, O);
-    return;
-  }
-
+                                        raw_ostream &O) {
   if (MI->getOperand(OpNum + 1).isImm() &&
       MI->getOperand(OpNum + 1).getImm() == 0) {
     // don't print "+0"

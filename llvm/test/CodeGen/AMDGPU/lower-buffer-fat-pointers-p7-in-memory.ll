@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 define void @scalar_copy(ptr %a, ptr %b) {
@@ -14,11 +13,7 @@ define void @scalar_copy(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc i160 [[X]] to i32
 ; CHECK-NEXT:    [[B1:%.*]] = getelementptr i160, ptr [[B]], i64 1
-; CHECK-NEXT:    [[X_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[X_PTR_RSRC]] to i160
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i160 [[X_PTR_INT_RSRC]], 32
-; CHECK-NEXT:    [[X_PTR_INT_OFF:%.*]] = zext i32 [[X_PTR_OFF]] to i160
-; CHECK-NEXT:    [[X_PTR_INT:%.*]] = or i160 [[TMP3]], [[X_PTR_INT_OFF]]
-; CHECK-NEXT:    store i160 [[X_PTR_INT]], ptr [[B1]], align 32
+; CHECK-NEXT:    store i160 [[X]], ptr [[B1]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %x = load ptr addrspace(7), ptr %a
@@ -36,11 +31,7 @@ define void @vector_copy(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr <4 x i128> [[TMP2]] to <4 x ptr addrspace(8)>
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc <4 x i160> [[X]] to <4 x i32>
 ; CHECK-NEXT:    [[B1:%.*]] = getelementptr <4 x i160>, ptr [[B]], i64 2
-; CHECK-NEXT:    [[X_PTR_INT_RSRC:%.*]] = ptrtoint <4 x ptr addrspace(8)> [[X_PTR_RSRC]] to <4 x i160>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i160> [[X_PTR_INT_RSRC]], splat (i160 32)
-; CHECK-NEXT:    [[X_PTR_INT_OFF:%.*]] = zext <4 x i32> [[X_PTR_OFF]] to <4 x i160>
-; CHECK-NEXT:    [[X_PTR_INT:%.*]] = or <4 x i160> [[TMP3]], [[X_PTR_INT_OFF]]
-; CHECK-NEXT:    store <4 x i160> [[X_PTR_INT]], ptr [[B1]], align 128
+; CHECK-NEXT:    store <4 x i160> [[X]], ptr [[B1]], align 128
 ; CHECK-NEXT:    ret void
 ;
   %x = load <4 x ptr addrspace(7)>, ptr %a
@@ -59,21 +50,13 @@ define void @alloca(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[X_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[X_PTR_OFF:%.*]] = trunc i160 [[X]] to i32
 ; CHECK-NEXT:    [[L:%.*]] = getelementptr i160, ptr addrspace(5) [[ALLOCA]], i32 1
-; CHECK-NEXT:    [[X_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[X_PTR_RSRC]] to i160
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i160 [[X_PTR_INT_RSRC]], 32
-; CHECK-NEXT:    [[X_PTR_INT_OFF:%.*]] = zext i32 [[X_PTR_OFF]] to i160
-; CHECK-NEXT:    [[X_PTR_INT:%.*]] = or i160 [[TMP3]], [[X_PTR_INT_OFF]]
-; CHECK-NEXT:    store i160 [[X_PTR_INT]], ptr addrspace(5) [[L]], align 32
+; CHECK-NEXT:    store i160 [[X]], ptr addrspace(5) [[L]], align 32
 ; CHECK-NEXT:    [[Y:%.*]] = load i160, ptr addrspace(5) [[L]], align 32
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i160 [[Y]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i160 [[TMP4]] to i128
-; CHECK-NEXT:    [[Y_PTR_RSRC:%.*]] = inttoptr i128 [[TMP5]] to ptr addrspace(8)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i160 [[Y]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i160 [[TMP3]] to i128
+; CHECK-NEXT:    [[Y_PTR_RSRC:%.*]] = inttoptr i128 [[TMP4]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[Y_PTR_OFF:%.*]] = trunc i160 [[Y]] to i32
-; CHECK-NEXT:    [[Y_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[Y_PTR_RSRC]] to i160
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i160 [[Y_PTR_INT_RSRC]], 32
-; CHECK-NEXT:    [[Y_PTR_INT_OFF:%.*]] = zext i32 [[Y_PTR_OFF]] to i160
-; CHECK-NEXT:    [[Y_PTR_INT:%.*]] = or i160 [[TMP6]], [[Y_PTR_INT_OFF]]
-; CHECK-NEXT:    store i160 [[Y_PTR_INT]], ptr [[B]], align 32
+; CHECK-NEXT:    store i160 [[Y]], ptr [[B]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [5 x ptr addrspace(7)], addrspace(5)
@@ -117,35 +100,7 @@ define void @complex_copy(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_2_PTR_RSRC]], 0
 ; CHECK-NEXT:    [[X_2_PTR:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP18]], i32 [[X_2_PTR_OFF]], 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP14]], { ptr addrspace(8), i32 } [[X_2_PTR]], 2
-; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP19]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue [2 x { ptr addrspace(8), i32 }] [[TMP20]], 0
-; CHECK-NEXT:    [[DOTRSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP21]], 0
-; CHECK-NEXT:    [[DOTOFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP21]], 1
-; CHECK-NEXT:    [[DOT0_0_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[DOTRSRC]] to i160
-; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw i160 [[DOT0_0_INT_RSRC]], 32
-; CHECK-NEXT:    [[DOT0_0_INT_OFF:%.*]] = zext i32 [[DOTOFF]] to i160
-; CHECK-NEXT:    [[DOT0_0_INT:%.*]] = or i160 [[TMP22]], [[DOT0_0_INT_OFF]]
-; CHECK-NEXT:    [[TMP23:%.*]] = insertvalue [2 x i160] poison, i160 [[DOT0_0_INT]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue [2 x { ptr addrspace(8), i32 }] [[TMP20]], 1
-; CHECK-NEXT:    [[DOTRSRC1:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP24]], 0
-; CHECK-NEXT:    [[DOTOFF2:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP24]], 1
-; CHECK-NEXT:    [[DOT0_1_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[DOTRSRC1]] to i160
-; CHECK-NEXT:    [[TMP25:%.*]] = shl nuw i160 [[DOT0_1_INT_RSRC]], 32
-; CHECK-NEXT:    [[DOT0_1_INT_OFF:%.*]] = zext i32 [[DOTOFF2]] to i160
-; CHECK-NEXT:    [[DOT0_1_INT:%.*]] = or i160 [[TMP25]], [[DOT0_1_INT_OFF]]
-; CHECK-NEXT:    [[TMP26:%.*]] = insertvalue [2 x i160] [[TMP23]], i160 [[DOT0_1_INT]], 1
-; CHECK-NEXT:    [[TMP27:%.*]] = insertvalue { [2 x i160], i32, i160 } poison, [2 x i160] [[TMP26]], 0
-; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP19]], 1
-; CHECK-NEXT:    [[TMP29:%.*]] = insertvalue { [2 x i160], i32, i160 } [[TMP27]], i32 [[TMP28]], 1
-; CHECK-NEXT:    [[TMP30:%.*]] = extractvalue { [2 x { ptr addrspace(8), i32 }], i32, { ptr addrspace(8), i32 } } [[TMP19]], 2
-; CHECK-NEXT:    [[DOTRSRC3:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP30]], 0
-; CHECK-NEXT:    [[DOTOFF4:%.*]] = extractvalue { ptr addrspace(8), i32 } [[TMP30]], 1
-; CHECK-NEXT:    [[DOT2_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[DOTRSRC3]] to i160
-; CHECK-NEXT:    [[TMP31:%.*]] = shl nuw i160 [[DOT2_INT_RSRC]], 32
-; CHECK-NEXT:    [[DOT2_INT_OFF:%.*]] = zext i32 [[DOTOFF4]] to i160
-; CHECK-NEXT:    [[DOT2_INT:%.*]] = or i160 [[TMP31]], [[DOT2_INT_OFF]]
-; CHECK-NEXT:    [[TMP32:%.*]] = insertvalue { [2 x i160], i32, i160 } [[TMP29]], i160 [[DOT2_INT]], 2
-; CHECK-NEXT:    store { [2 x i160], i32, i160 } [[TMP32]], ptr [[B]], align 32
+; CHECK-NEXT:    store { [2 x i160], i32, i160 } [[X]], ptr [[B]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %x = load {[2 x ptr addrspace(7)], i32, ptr addrspace(7)}, ptr %a

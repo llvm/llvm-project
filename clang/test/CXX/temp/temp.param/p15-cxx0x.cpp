@@ -77,9 +77,9 @@ template<typename T> struct wrap {
 
 template<typename T> struct takedrop_impl;
 template<place...X> struct takedrop_impl<places<X...>> {
-  template<template<decltype(X)> class ...Take, // expected-note 2{{template parameter is declared here}}
+  template<template<decltype(X)> class ...Take,
            template<place      > class ...Drop>
-  struct inner {
+  struct inner { // expected-note 2{{declared}}
     typedef types<typename Take<_>::type...> take;
     typedef types<typename Drop<_>::type...> drop;
   };
@@ -87,24 +87,24 @@ template<place...X> struct takedrop_impl<places<X...>> {
 
 template<unsigned N, typename...Ts> struct take {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::take; // expected-error {{missing template argument}}
+    template inner<wrap<Ts>::template inner...>::take; // expected-error {{too few template arguments}}
 };
 template<unsigned N, typename...Ts> struct drop {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{missing template argument}}
+    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{too few template arguments}}
 };
 
 using T1 = take<3, int, char, double, long>::type; // expected-note {{previous}}
 // FIXME: Desguar the types on the RHS in this diagnostic.
 // desired-error {{'types<void, void, void, void>' vs 'types<int, char, double, (no argument)>'}}
-using T1 = types<void, void, void, void>; // expected-error {{'types<void, void, void, void>' vs 'types<typename inner<_>::type, typename inner<_>::type, typename inner<_>::type, (no argument)>'}}
+using T1 = types<void, void, void, void>; // expected-error {{'types<void, void, void, void>' vs 'types<typename ParameterPackExpansions::wrap<int>::inner<_>::type, typename ParameterPackExpansions::wrap<char>::inner<_>::type, typename ParameterPackExpansions::wrap<double>::inner<_>::type, (no argument)>'}}
 using D1 = drop<3, int, char, double, long>::type;
 using D1 = types<long>;
 
 using T2 = take<4, int, char, double, long>::type; // expected-note {{previous}}
 // FIXME: Desguar the types on the RHS in this diagnostic.
 // desired-error {{'types<void, void, void, void>' vs 'types<int, char, double, long>'}}
-using T2 = types<void, void, void, void>; // expected-error {{'types<void, void, void, void>' vs 'types<typename inner<_>::type, typename inner<_>::type, typename inner<_>::type, typename inner<_>::type>'}}
+using T2 = types<void, void, void, void>; // expected-error {{'types<void, void, void, void>' vs 'types<typename ParameterPackExpansions::wrap<int>::inner<_>::type, typename ParameterPackExpansions::wrap<char>::inner<_>::type, typename ParameterPackExpansions::wrap<double>::inner<_>::type, typename ParameterPackExpansions::wrap<long>::inner<_>::type>'}}
 using T2 = types<int, char, double, long>;
 using D2 = drop<4, int, char, double, long>::type;
 using D2 = types<>;
@@ -118,7 +118,7 @@ using D3 = drop<5, int, char, double, long>::type; // expected-note {{in instant
 // implicitly a pack expansion.
 template<typename ...Default> struct DefArg {
   template<template<typename T = Default> class ...Classes> struct Inner { // expected-error {{default argument contains unexpanded parameter pack}} expected-note {{here}}
-    Inner(Classes<>...); // expected-error {{missing template argument}}
+    Inner(Classes<>...); // expected-error {{too few}}
   };
 };
 template<typename T> struct vector {};

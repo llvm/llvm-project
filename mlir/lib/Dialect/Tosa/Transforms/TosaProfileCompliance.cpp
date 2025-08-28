@@ -43,156 +43,193 @@ TosaProfileCompliance::getProfileComplianceMap() {
 }
 
 // Base populating function
-void ProfileInfoDepot::populateProfileInfo(ValueRange operands, Value output) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(ValueRange operands,
+                                                    Value output) {
   for (auto operand : operands)
     addValue(operand);
   addValue(output);
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::ConcatOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ConcatOp op) {
   addValue(op.getInput1().front());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   addValue(op.getInput());
   addValue(op.getInputZp());
   addValue(op.getOutputZp());
   addType(op.getAccType());
   addValue(op.getOutput());
+  return success();
 }
 
 template <typename T>
-void ProfileInfoDepot::populateProfileInfoConv(T op) {
+LogicalResult ProfileInfoDepot::populateProfileInfoConv(T op) {
   addValue(op.getInput());
   addValue(op.getWeight());
   addValue(op.getBias());
+  addValue(op.getInputZp());
+  addValue(op.getWeightZp());
   addType(op.getAccType());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::Conv2DOp op) {
-  populateProfileInfoConv(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::Conv2DOp op) {
+  return populateProfileInfoConv(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::Conv3DOp op) {
-  populateProfileInfoConv(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::Conv3DOp op) {
+  return populateProfileInfoConv(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::TransposeConv2DOp op) {
-  populateProfileInfoConv(op);
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::TransposeConv2DOp op) {
+  return populateProfileInfoConv(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::DepthwiseConv2DOp op) {
-  populateProfileInfoConv(op);
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::DepthwiseConv2DOp op) {
+  return populateProfileInfoConv(op);
+}
+
+template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
+  addValue(op.getInput1());
+  addValue(op.getPadConst());
+  addValue(op.getOutput());
+  return success();
 }
 
 template <typename T>
-void ProfileInfoDepot::populateProfileInfoDataLayout(T op) {
+LogicalResult ProfileInfoDepot::populateProfileInfoDataLayout(T op) {
   addValue(op.getInput1());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
-  populateProfileInfoDataLayout(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ReshapeOp op) {
+  return populateProfileInfoDataLayout(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::ReshapeOp op) {
-  populateProfileInfoDataLayout(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SliceOp op) {
+  return populateProfileInfoDataLayout(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::SliceOp op) {
-  populateProfileInfoDataLayout(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::TileOp op) {
+  return populateProfileInfoDataLayout(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::TileOp op) {
-  populateProfileInfoDataLayout(op);
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::TransposeOp op) {
+  return populateProfileInfoDataLayout(op);
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::TransposeOp op) {
-  populateProfileInfoDataLayout(op);
-}
-
-template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
   addValue(op.getValues());
+  addValue(op.getIndices());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::ScatterOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ScatterOp op) {
   addValue(op.getValuesIn());
+  addValue(op.getIndices());
   addValue(op.getInput());
   addValue(op.getValuesOut());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::MulOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MulOp op) {
   addValue(op.getInput1());
   addValue(op.getInput2());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::ResizeOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ResizeOp op) {
   addValue(op.getInput());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::FFT2dOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::FFT2dOp op) {
   addValue(op.getInputReal());
   addValue(op.getInputImag());
   addValue(op.getOutputReal());
   addValue(op.getOutputImag());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
-  addValue(op.getInput());
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
+  addValue(op.getInputReal());
   addValue(op.getOutputReal());
   addValue(op.getOutputImag());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
-  addValue(op.getInput2());
-  addValue(op.getInput3());
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
+  addValue(op.getOnTrue());
+  addValue(op.getOnFalse());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::RescaleOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RescaleOp op) {
   addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
   addValue(op.getOutput());
+  return success();
 }
 
 template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
   addValue(op.getA());
   addValue(op.getB());
   addValue(op.getAZp());
   addValue(op.getBZp());
   addValue(op.getOutput());
+  return success();
+}
+
+template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
+  addType(op.getType());
+  return success();
+}
+
+template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
+  addValue(op.getInput1());
+  return success();
 }
 
 LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function only populates the info for the customised operands.
 #define POPULATE_PROFILE_INFO_CUSTOM(tosaOp)                                   \
   if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    populateProfileInfo(cast<tosa::tosaOp##Op>(op));                           \
-    return success();                                                          \
+    return populateProfileInfo(cast<tosa::tosaOp##Op>(op));                    \
   }
 
 #define POPULATE_PROFILE_INFO_SKIP(tosaOp)                                     \
@@ -202,8 +239,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function populates the info for all operands.
 #define POPULATE_PROFILE_INFO_COMMON(tosaOp)                                   \
   if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    populateProfileInfo(op->getOperands(), op->getResult(0));                  \
-    return success();                                                          \
+    return populateProfileInfo(op->getOperands(), op->getResult(0));           \
   }
 
   // Skip irrelevant operands when they are independent and not tied to any
@@ -228,17 +264,8 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Select)
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
-
-  // Type Invariant Extension, a capability extension that is independent
-  // of the data type, meaning any compatible type can be used. No type
-  // constraint for those operations.
-  POPULATE_PROFILE_INFO_SKIP(ConstShape)
-  POPULATE_PROFILE_INFO_SKIP(Variable)
-  POPULATE_PROFILE_INFO_SKIP(VariableRead)
-  POPULATE_PROFILE_INFO_SKIP(VariableWrite)
-  POPULATE_PROFILE_INFO_SKIP(If)
-  POPULATE_PROFILE_INFO_SKIP(While)
-  POPULATE_PROFILE_INFO_SKIP(Yield)
+  POPULATE_PROFILE_INFO_CUSTOM(Variable)
+  POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
 
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
@@ -290,6 +317,15 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(Greater)
   POPULATE_PROFILE_INFO_COMMON(Reverse)
   POPULATE_PROFILE_INFO_COMMON(Identity)
+  POPULATE_PROFILE_INFO_COMMON(VariableRead)
+
+  // Type Invariant Extension, a capability extension that is independent
+  // of the data type, meaning any compatible type can be used. No type
+  // constraint for those operations.
+  POPULATE_PROFILE_INFO_SKIP(ConstShape)
+  POPULATE_PROFILE_INFO_SKIP(Yield)
+  POPULATE_PROFILE_INFO_SKIP(If)
+  POPULATE_PROFILE_INFO_SKIP(While)
 
   return failure();
 }
@@ -297,6 +333,19 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 //===----------------------------------------------------------------------===//
 // Tosa Profile And Extension Compliance Checker
 //===----------------------------------------------------------------------===//
+
+template <typename T>
+FailureOr<SmallVector<T>>
+TosaProfileCompliance::getOperatorDefinition(Operation *op,
+                                             CheckCondition &condition) {
+  const std::string opName = op->getName().getStringRef().str();
+  const auto complianceMap = getProfileComplianceMap<T>();
+  const auto it = complianceMap.find(opName);
+  if (it == complianceMap.end())
+    return {};
+
+  return findMatchedProfile<T>(op, it->second, condition);
+}
 
 template <typename T>
 LogicalResult TosaProfileCompliance::checkProfileOrExtension(
@@ -307,12 +356,10 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   if (specRequiredModeSet.size() == 0)
     return success();
 
-  auto opName = op->getName().getStringRef().str();
-  auto compMap = getProfileComplianceMap<T>();
-  auto it = compMap.find(opName);
-
-  if (it == compMap.end()) {
-    // Operators such as variable and shape ops do not have an operand type
+  CheckCondition condition = CheckCondition::invalid;
+  const auto maybeOpRequiredMode = getOperatorDefinition<T>(op, condition);
+  if (failed(maybeOpRequiredMode)) {
+    // Operators such as control-flow and shape ops do not have an operand type
     // restriction. When the profile compliance information of operation is not
     // found, confirm if the target have enabled the profile required from the
     // specification.
@@ -332,12 +379,9 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     return failure();
   }
 
-  CheckCondition condition = CheckCondition::invalid;
-  // Find the profiles or extensions requirement according to the signature of
-  // type of the operand list.
-  SmallVector<T> opRequiredMode =
-      findMatchedProfile<T>(op, it->second, condition);
-
+  // Find the required profiles or extensions according to the operand type
+  // combination.
+  const auto opRequiredMode = maybeOpRequiredMode.value();
   if (opRequiredMode.size() == 0) {
     // No matched restriction found.
     return success();
@@ -379,9 +423,8 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   // Ensure the profile inference match the profile knowledge of the
   // specification.
   for (const auto &cands : specRequiredModeSet) {
-    for (size_t i = 0; i < opRequiredMode.size(); i++) {
-      if (std::find(cands.begin(), cands.end(), opRequiredMode[i]) ==
-          cands.end()) {
+    for (const auto &mode : opRequiredMode) {
+      if (!llvm::is_contained(cands, mode)) {
         op->emitOpError() << "illegal: requires ["
                           << llvm::join(stringifyProfile<T>(opRequiredMode),
                                         ", ")
@@ -417,13 +460,71 @@ TosaProfileCompliance::checkExtension(Operation *op,
   return success();
 }
 
+LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
+  CheckCondition condition = CheckCondition::invalid;
+  const auto maybeProfDef = getOperatorDefinition<Profile>(op, condition);
+  const auto maybeExtDef = getOperatorDefinition<Extension>(op, condition);
+  if (failed(maybeProfDef) && failed(maybeExtDef))
+    return success();
+
+  const bool hasEntry = (succeeded(maybeProfDef) && !maybeProfDef->empty()) ||
+                        (succeeded(maybeExtDef) && !maybeExtDef->empty());
+  if (!hasEntry) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    os << "illegal: operation operand/result data types did not align with any "
+          "profile or extension, got (";
+
+    ProfileInfoDepot depot(op);
+    SmallVector<TypeInfo> current = depot.getInfo();
+    for (const auto &typeInfo : llvm::drop_end(current))
+      os << stringifyTypeInfo(typeInfo) << ",";
+    os << stringifyTypeInfo(current.back()) << ")";
+
+    // avoid polluting the error message output by outputting only
+    // the best match
+    const std::string opName = op->getName().getStringRef().str();
+    int maxMatches = -1;
+    SmallVector<TypeInfo> bestTypeInfo;
+    const auto searchBestMatch = [&](auto map) {
+      for (const auto &complianceInfos : map[opName]) {
+        for (const auto &typeInfos : complianceInfos.operandTypeInfoSet) {
+          const int matches = llvm::count_if(
+              llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
+                return isSameTypeInfo(std::get<0>(zipType),
+                                      std::get<1>(zipType));
+              });
+          if (matches > maxMatches) {
+            maxMatches = matches;
+            bestTypeInfo = typeInfos;
+          }
+        }
+      }
+    };
+    searchBestMatch(getProfileComplianceMap<Profile>());
+    searchBestMatch(getProfileComplianceMap<Extension>());
+
+    os << ", did you mean (";
+    for (const auto &typeInfo : llvm::drop_end(bestTypeInfo))
+      os << stringifyTypeInfo(typeInfo) << ",";
+    os << stringifyTypeInfo(bestTypeInfo.back()) << ")? ";
+    os << "Otherwise, please refer to the 'supported data types' for '"
+       << opName << "' in the specification.";
+    op->emitOpError(message);
+    return failure();
+  }
+
+  return success();
+}
+
 // Find the profiles or extensions requirement according to the signature of
 // type of the operand list.
 template <typename T>
 SmallVector<T> TosaProfileCompliance::findMatchedProfile(
     Operation *op, SmallVector<OpComplianceInfo<T>> compInfo,
     CheckCondition &condition) {
-  assert(compInfo.size() != 0);
+  assert(compInfo.size() != 0 &&
+         "profile-based compliance information is empty");
 
   // Populate the type of profile/extension relevant operands.
   ProfileInfoDepot depot(op);
@@ -433,9 +534,11 @@ SmallVector<T> TosaProfileCompliance::findMatchedProfile(
 
   for (size_t i = 0; i < compInfo.size(); i++) {
     SmallVector<SmallVector<TypeInfo>> sets = compInfo[i].operandTypeInfoSet;
-
     for (SmallVector<TypeInfo> expected : sets) {
-      assert(present.size() == expected.size());
+      assert(present.size() == expected.size() &&
+             "the entries for profile-based compliance do not match between "
+             "the generated metadata and the type definition retrieved from "
+             " the operation");
 
       bool is_found = true;
       // Compare the type signature between the given operation and the
@@ -479,9 +582,26 @@ SmallVector<StringRef> TosaProfileCompliance::stringifyProfile(
 
   for (const auto &profiles : profileSet) {
     auto tempStrings = stringifyProfile<T>(profiles);
-    debugStrings.insert(debugStrings.end(), tempStrings.begin(),
-                        tempStrings.end());
+    llvm::append_range(debugStrings, tempStrings);
   }
 
   return debugStrings;
+}
+
+llvm::SmallString<7>
+TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
+  if (typeInfo.typeID == mlir::IntegerType::getTypeID()) {
+    return {"i" + llvm::utostr(typeInfo.bitWidth)};
+  } else if (typeInfo.typeID == mlir::Float16Type::getTypeID()) {
+    return {"f16"};
+  } else if (typeInfo.typeID == mlir::Float32Type::getTypeID()) {
+    return {"f32"};
+  } else if (typeInfo.typeID == mlir::BFloat16Type::getTypeID()) {
+    return {"bf16"};
+  } else if (typeInfo.typeID == mlir::Float8E4M3FNType::getTypeID()) {
+    return {"fp8e4m3"};
+  } else if (typeInfo.typeID == mlir::Float8E5M2Type::getTypeID()) {
+    return {"fp8e5m2"};
+  }
+  llvm_unreachable("unknown type");
 }

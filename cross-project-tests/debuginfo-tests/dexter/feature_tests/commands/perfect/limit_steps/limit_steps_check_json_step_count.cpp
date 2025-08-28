@@ -1,7 +1,7 @@
 // Purpose:
 //      Check number of step lines are correctly reported in json output.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t --verbose -- %s | FileCheck %s
 // CHECK: limit_steps_check_json_step_count.cpp
 // CHECK: ## BEGIN ##
