@@ -14,10 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <map>
 
-#define VARREF_FIRST_VAR_IDX (int64_t)4
-#define VARREF_LOCALS (int64_t)1
-#define VARREF_GLOBALS (int64_t)2
-#define VARREF_REGS (int64_t)3
+#define VARREF_FIRST_VAR_IDX (int64_t)1
 
 namespace lldb_dap {
 
