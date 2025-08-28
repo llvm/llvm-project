@@ -616,5 +616,9 @@ int main(int argc, char **argv) {
     outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
     return 0;
   }
+  if (Subcommand == "--version") {
+    cl::PrintVersionMessage();
+    return 0;
+  }
   return usage();
 }

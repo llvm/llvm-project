@@ -561,7 +561,8 @@ _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_abs_ph(__m512h __A) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_abs_ph(__m512h __A) {
   return (__m512h)_mm512_and_epi32(_mm512_set1_epi32(0x7FFF7FFF), (__m512i)__A);
 }
 

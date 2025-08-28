@@ -603,3 +603,207 @@ define i4 @vmsk_eq_allzeros_v4i8(<4 x i8> %a) {
   %2 = bitcast <4 x i1> %1 to i4
   ret i4 %2
 }
+
+define i32 @vmsk2_eq_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_eq_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vseqi.b $vr0, $vr0, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vseqi.b $vr0, $vr1, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp eq <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sgt_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_sgt_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 0
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sgt <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sgt_allones_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_sgt_allones_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, -1
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sgt <32 x i8> %a, splat (i8 -1)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sge_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_sge_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 0
+; CHECK-NEXT:    vsle.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vsle.b $vr0, $vr2, $vr1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sge <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_slt_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_slt_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr1
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp slt <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sle_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_sle_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vslei.b $vr0, $vr0, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslei.b $vr0, $vr1, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sle <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sle_allones_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_sle_allones_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vslei.b $vr0, $vr0, -1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslei.b $vr0, $vr1, -1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp sle <32 x i8> %a, splat (i8 -1)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_ne_allzeros_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_ne_allzeros_i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vseqi.b $vr0, $vr0, 0
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vseqi.b $vr0, $vr1, 0
+; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  %1 = icmp ne <32 x i8> %a, splat (i8 0)
+  %2 = bitcast <32 x i1> %1 to i32
+  ret i32 %2
+}
+
+define i32 @vmsk2_sgt_v32i8(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: vmsk2_sgt_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslt.b $vr0, $vr3, $vr1
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %x = icmp sgt <32 x i8> %a, %b
+  %res = bitcast <32 x i1> %x to i32
+  ret i32 %res
+}
+
+define i32 @vmsk2_sgt_and_sgt_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
+; CHECK-LABEL: vmsk2_sgt_and_sgt_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslt.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr1
+; CHECK-NEXT:    vslt.b $vr2, $vr6, $vr4
+; CHECK-NEXT:    vslt.b $vr3, $vr7, $vr5
+; CHECK-NEXT:    vand.v $vr1, $vr1, $vr3
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr1
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %x0 = icmp sgt <32 x i8> %a, %b
+  %x1 = icmp sgt <32 x i8> %c, %d
+  %y = and <32 x i1> %x0, %x1
+  %res = bitcast <32 x i1> %y to i32
+  ret i32 %res
+}
+
+define i32 @vmsk2_trunc_i8(<32 x i8> %a) {
+; CHECK-LABEL: vmsk2_trunc_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslli.b $vr0, $vr0, 7
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    vslli.b $vr0, $vr1, 7
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a1, $vr0, 0
+; CHECK-NEXT:    slli.d $a1, $a1, 16
+; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %y = trunc <32 x i8> %a to <32 x i1>
+  %res = bitcast <32 x i1> %y to i32
+  ret i32 %res
+}

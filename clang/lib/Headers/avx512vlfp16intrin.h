@@ -26,6 +26,14 @@
                  __target__("avx512fp16,avx512vl,no-evex512"),                 \
                  __min_vector_width__(128)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
 static __inline__ _Float16 __DEFAULT_FN_ATTRS128 _mm_cvtsh_h(__m128h __a) {
   return __a[0];
 }
@@ -315,11 +323,13 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_max_ph(__mmask8 __U,
       (__v8hf)_mm_setzero_ph());
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_abs_ph(__m256h __A) {
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_abs_ph(__m256h __A) {
   return (__m256h)_mm256_and_epi32(_mm256_set1_epi32(0x7FFF7FFF), (__m256i)__A);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_abs_ph(__m128h __A) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_abs_ph(__m128h __A) {
   return (__m128h)_mm_and_epi32(_mm_set1_epi32(0x7FFF7FFF), (__m128i)__A);
 }
 
@@ -2066,6 +2076,8 @@ _mm_reduce_min_ph(__m128h __V) {
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
 
 #endif
 #endif
