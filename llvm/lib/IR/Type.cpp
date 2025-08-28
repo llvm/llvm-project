@@ -1055,6 +1055,14 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   return TargetTypeInfo(Type::getVoidTy(C));
 }
 
+bool Type::isTokenLikeTy() const {
+  if (isTokenTy())
+    return true;
+  if (auto *TT = dyn_cast<TargetExtType>(this))
+    return TT->hasProperty(TargetExtType::Property::IsTokenLike);
+  return false;
+}
+
 Type *TargetExtType::getLayoutType() const {
   return getTargetTypeInfo(this).LayoutType;
 }

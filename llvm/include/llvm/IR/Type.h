@@ -15,7 +15,6 @@
 #define LLVM_IR_TYPE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -26,7 +25,6 @@
 #include <iterator>
 
 namespace llvm {
-
 class IntegerType;
 struct fltSemantics;
 class LLVMContext;
@@ -234,13 +232,8 @@ public:
   /// Return true if this is 'token'.
   bool isTokenTy() const { return getTypeID() == TokenTyID; }
 
-  // Returns true if this is 'token' or 'token-like'.
-  bool isTokenLikeTy() const {
-    if (isTokenTy())
-      return true;
-    if (auto *TT = dyn_cast<TargetExtType>(this))
-      return TT->hasProperty(TargetExtType::Property::IsTokenLike);
-  }
+  /// Returns true if this is 'token' or 'token-like'.
+  bool isTokenLikeTy() const;
 
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
