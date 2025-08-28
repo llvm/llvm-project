@@ -118,10 +118,8 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void
-reportOverlappingRegisters(Module &M,
-                           const llvm::hlsl::Binding &R1,
-                           const llvm::hlsl::Binding &R2) {
+static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
+                                       const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
 
   raw_svector_ostream OS(Message);
@@ -239,7 +237,7 @@ static void validateRootSignature(Module &M,
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
     if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
-                      Binding.LowerBound + Binding.Size - 1))
+                           Binding.LowerBound + Binding.Size - 1))
       reportRegNotBound(M, RC, Binding);
   }
 }

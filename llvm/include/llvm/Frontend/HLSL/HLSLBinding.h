@@ -107,25 +107,25 @@ struct Binding {
   uint32_t UpperBound;
   const void *Cookie;
 
-    Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound, const void *Cookie)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
-          Cookie(Cookie) {}
+  Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+          uint32_t UpperBound, const void *Cookie)
+      : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
+        Cookie(Cookie) {}
 
-    bool isUnbounded() const { return UpperBound == ~0U; }
+  bool isUnbounded() const { return UpperBound == ~0U; }
 
-    bool operator==(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
-                      RHS.Cookie);
-    }
-    bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
+  bool operator==(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
+           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+                    RHS.Cookie);
+  }
+  bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
 
-    bool operator<(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound) <
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
-    }
-  };
+  bool operator<(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound) <
+           std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
+  }
+};
 class BoundRegs {
   SmallVector<Binding> Bindings;
 
@@ -171,7 +171,7 @@ public:
         [&HasOverlap](auto, auto) { HasOverlap = true; });
   }
 
-  LLVM_ABI BoundRegs getBoundRegs(){
+  LLVM_ABI BoundRegs getBoundRegs() {
     assert(std::is_sorted(Bindings.begin(), Bindings.end()) &&
            "Bindings must be sorted");
     return BoundRegs(std::move(Bindings));
