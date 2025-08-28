@@ -2095,6 +2095,16 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
   QualType type = D->getType();
 
   if (type->isReferenceType()) {
+    // Only special-case when actually binding to a vector element.
+    if (init->refersToVectorElement()) {
+      LValue SrcLV = EmitLValue(init);
+      if (SrcLV.isVectorElt()) {
+        if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          VectorEltRefBindings[VD] = SrcLV;
+          return; // Uses of the reference will reload this LV.
+        }
+      }
+    }
     RValue rvalue = EmitReferenceBindingToExpr(init);
     if (capturedByInit)
       drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));

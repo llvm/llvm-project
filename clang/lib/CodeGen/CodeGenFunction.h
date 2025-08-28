@@ -1750,6 +1750,10 @@ private:
   /// The last regular (non-return) debug location (breakpoint) in the function.
   SourceLocation LastStopPoint;
 
+  /// Remember bindings for references initialized from vector elements.
+  llvm::DenseMap<const clang::VarDecl *, clang::CodeGen::LValue>
+      VectorEltRefBindings;
+
 public:
   /// Source location information about the default argument or member
   /// initializer expression we're evaluating, if any.
