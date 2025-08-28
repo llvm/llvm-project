@@ -14,17 +14,17 @@
 
 void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
 {
-  // expected-error@+2 {{'svaesd_u8' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svaesd' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svaesd_u8' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
+  // overload-error@+1 {{'svaesd' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
   SVE_ACLE_FUNC(svaesd,_u8,,)(svundef_u8(), svundef_u8());
-  // expected-error@+2 {{'svaese_u8' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svaese' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svaese_u8' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
+  // overload-error@+1 {{'svaese' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
   SVE_ACLE_FUNC(svaese,_u8,,)(svundef_u8(), svundef_u8());
-  // expected-error@+2 {{'svaesimc_u8' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svaesimc' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svaesimc_u8' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
+  // overload-error@+1 {{'svaesimc' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
   SVE_ACLE_FUNC(svaesimc,_u8,,)(svundef_u8());
-  // expected-error@+2 {{'svaesmc_u8' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svaesmc' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svaesmc_u8' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
+  // overload-error@+1 {{'svaesmc' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}
   SVE_ACLE_FUNC(svaesmc,_u8,,)(svundef_u8());
   // expected-error@+2 {{'svbdep_u8' needs target feature (sve,sve2,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbdep' needs target feature (sve,sve2,sve-bitperm)|(sme,ssve-bitperm)}}
@@ -107,17 +107,17 @@ void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
   // expected-error@+2 {{'svbgrp_n_u64' needs target feature (sve,sve2,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbgrp' needs target feature (sve,sve2,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbgrp,_n_u64,,)(svundef_u64(), u64);
-  // expected-error@+2 {{'svpmullb_pair_u64' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svpmullb_pair' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svpmullb_pair_u64' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
+  // overload-error@+1 {{'svpmullb_pair' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
   SVE_ACLE_FUNC(svpmullb_pair,_u64,,)(svundef_u64(), svundef_u64());
-  // expected-error@+2 {{'svpmullb_pair_n_u64' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svpmullb_pair' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svpmullb_pair_n_u64' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
+  // overload-error@+1 {{'svpmullb_pair' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
   SVE_ACLE_FUNC(svpmullb_pair,_n_u64,,)(svundef_u64(), u64);
-  // expected-error@+2 {{'svpmullt_pair_u64' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svpmullt_pair' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svpmullt_pair_u64' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
+  // overload-error@+1 {{'svpmullt_pair' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
   SVE_ACLE_FUNC(svpmullt_pair,_u64,,)(svundef_u64(), svundef_u64());
-  // expected-error@+2 {{'svpmullt_pair_n_u64' needs target feature sve,sve2,sve-aes}}
-  // overload-error@+1 {{'svpmullt_pair' needs target feature sve,sve2,sve-aes}}
+  // expected-error@+2 {{'svpmullt_pair_n_u64' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
+  // overload-error@+1 {{'svpmullt_pair' needs target feature (sve,sve2,sve-aes)|(sme,ssve-aes)}}}
   SVE_ACLE_FUNC(svpmullt_pair,_n_u64,,)(svundef_u64(), u64);
   // expected-error@+2 {{'svrax1_u64' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
   // overload-error@+1 {{'svrax1' needs target feature (sve,sve-sha3)|(sme,sve-sha3,sme2p1)}}
