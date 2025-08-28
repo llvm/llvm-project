@@ -556,3 +556,21 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
       break;
   }
 }
+
+ConstString Mangled::GetBaseName() const {
+  const auto &demangled_info = GetDemangledInfo();
+  if (!demangled_info.has_value())
+    return GetDisplayDemangledName();
+
+  ConstString demangled_name = GetDemangledName();
+  if (!demangled_name)
+    return GetDisplayDemangledName();
+
+  const char *name_str = demangled_name.AsCString();
+  const auto &range = demangled_info->BasenameRange;
+  if (range.first >= range.second || range.second > strlen(name_str))
+    return ConstString();
+
+  return ConstString(
+      llvm::StringRef(name_str + range.first, range.second - range.first));
+}
