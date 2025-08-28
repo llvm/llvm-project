@@ -24,6 +24,28 @@ define i32 @pslli_h(i32 %a, i32 %b) {
   ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.psslai.h.i32.i32(i32, i32)
+
+define i32 @psslai_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psslai_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psslai.h a0, a0, 1
+; RV32P-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.psslai.h.i32.i32(i32 %a, i32 1)
+  ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.sslai.i32.i32(i32, i32)
+
+define i32 @sslai(i32 %a, i32 %b) {
+; RV32P-LABEL: sslai:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    sslai a0, a0, 1
+; RV32P-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.sslai.i32.i32(i32 %a, i32 1)
+  ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {

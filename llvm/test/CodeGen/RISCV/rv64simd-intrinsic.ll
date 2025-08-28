@@ -34,3 +34,25 @@ define i64 @pslli.w(i64 %a, i64 %b) {
   %tmp = call i64 @llvm.riscv.pslli.w.i64.i64(i64 %a, i64 1)
   ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psslai_h.i64.i64(i64, i64)
+
+define i64 @psslai.h(i64 %a, i64 %b) {
+; RV64P-LABEL: psslai.h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psslai.h a0, a0, 1
+; RV64P-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.psslai.h.i64.i64(i64 %a, i64 1)
+  ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psslai_w.i64.i64(i64, i64)
+
+define i64 @psslai.w(i64 %a, i64 %b) {
+; RV64P-LABEL: psslai.w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psslai.w a0, a0, 1
+; RV64P-NEXT:    ret
+  %tmp = call i64 @llvm.riscv.psslai.w.i64.i64(i64 %a, i64 1)
+  ret i64 %tmp
+}

@@ -1922,9 +1922,12 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
   }
 
-  defm pslli_b : RVPBinaryAABIntrinsics;
-  defm pslli_h : RVPBinaryAABIntrinsics;
-  defm pslli_w : RVPBinaryAABIntrinsics;
+  defm pslli_b  : RVPBinaryAABIntrinsics;
+  defm pslli_h  : RVPBinaryAABIntrinsics;
+  defm pslli_w  : RVPBinaryAABIntrinsics;
+  defm psslai_h : RVPBinaryAABIntrinsics;
+  defm psslai_w : RVPBinaryAABIntrinsics;
+  defm sslai    : RVPBinaryAABIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions
