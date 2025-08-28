@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - depot-ubuntu-24.04-arm-64
+          - depot-ubuntu-24.04-arm-16
           - llvm-premerge-linux-runners
     runs-on: ${{ matrix.runs-on }}
     container:
@@ -73,7 +73,9 @@ jobs:
           if "$RUNNER_ARCH" = "ARM64"; then
             # XFAIL lldb test: https://github.com/llvm/llvm-project/issues/155895
             export LIT_XFAIL="functionalities/gdb_remote_client/TestqOffsets.py"
+            export LIT_FILTER_OUT=TestqOffsets.py
           fi
+          env
 
           if ! [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
