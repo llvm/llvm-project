@@ -4307,7 +4307,7 @@ def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
-                    [ClangOption, CC1Option, FlangOption, FC1Option]>;
+                    [ClangOption, FlangOption, FC1Option]>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
