@@ -1907,6 +1907,70 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTTAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
+  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Get the VTT address point";
+  let description = [{
+    The `vtt.address_point` operation retrieves an element from the virtual
+    table table (VTT), which is the address point of a C++ vtable. In virtual
+    inheritance, a set of internal `__vptr` members for an object are
+    initialized by this operation, which assigns an element from the VTT. The
+    initialization order is as follows:
+
+    The complete object constructors and destructors find the VTT,
+    via the mangled name of the VTT global variable. They pass the address of
+    the subobject's sub-VTT entry in the VTT as a second parameter
+    when calling the base object constructors and destructors.
+    The base object constructors and destructors use the address passed to
+    initialize the primary virtual pointer and virtual pointers that point to
+    the classes which either have virtual bases or override virtual functions
+    with a virtual step.
+
+    The first parameter is either the mangled name of VTT global variable
+    or the address of the subobject's sub-VTT entry in the VTT.
+    The second parameter `offset` provides a virtual step to adjust to
+    the actual address point of the vtable.
+
+    The return type is always a `!cir.ptr<!cir.ptr<void>>`.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.base_class_addr(%1 : !cir.ptr<!rec_D> nonnull) [0]
+             -> !cir.ptr<!rec_B>
+    %4 = cir.vtt.address_point @_ZTT1D, offset = 1
+             -> !cir.ptr<!cir.ptr<!void>>
+    cir.call @_ZN1BC2Ev(%3, %4)
+    ```
+    Or:
+    ```mlir
+    %7 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1
+             -> !cir.ptr<!cir.ptr<!void>>
+    ```
+  }];
+
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
+                       Optional<CIR_AnyType>:$sym_addr,
+                       I32Attr:$offset);
+  let results = (outs CIR_PointerType:$addr);
+
+  let assemblyFormat = [{
+      ($name^)?
+      ($sym_addr^ `:` type($sym_addr))?
+      `,`
+      `offset` `=` $offset
+    `->` qualified(type($addr)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 

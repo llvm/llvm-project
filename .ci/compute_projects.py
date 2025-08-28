@@ -333,6 +333,7 @@ if __name__ == "__main__":
     current_platform = platform.system()
     if len(sys.argv) == 2:
         current_platform = sys.argv[1]
-    env_variables = get_env_variables(sys.stdin.readlines(), current_platform)
+    changed_files = [line.strip() for line in sys.stdin.readlines()]
+    env_variables = get_env_variables(changed_files, current_platform)
     for env_variable in env_variables:
         print(f"{env_variable}='{env_variables[env_variable]}'")
