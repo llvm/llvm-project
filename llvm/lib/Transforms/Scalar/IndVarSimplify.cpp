@@ -118,6 +118,10 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
 
+static cl::opt<bool> LoopPredicationTraps(
+    "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
+    cl::desc("Predicate conditions that trap in loops with only local writes"));
+
 static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
@@ -1822,11 +1826,12 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
+        if (!LoopPredicationTraps)
+          return false;
         HasLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          if (findAllocaForValue(SI->getPointerOperand(), false) == nullptr) {
+          if (findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
             return false;
-          }
         } else {
           return false;
         }
