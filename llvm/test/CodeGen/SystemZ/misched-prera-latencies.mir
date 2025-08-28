@@ -2,43 +2,16 @@
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
 # RUN:   | FileCheck %s
 
-# The CDFBR has a longer latency than the VL64, so schedule it above.
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun0:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK:      Latency scheduling enabled.
-# CHECK:      *** Final schedule for %bb.0 ***
-# CHECK-NEXT: SU(0):   %0:gr32bit = COPY $r2l
-# CHECK-NEXT: SU(2):   %2:fp64bit = nofpexcept CDFBR %0:gr32bit, implicit $fpc
-# CHECK-NEXT: SU(1):   %1:vr64bit = VL64 $noreg, 0, $noreg
-# CHECK-NEXT: SU(3):   undef %3.subreg_h64:vr128bit = nofpexcept WFDDB %1:vr64bit,
----
-name:            fun0
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $r2l
-  
-    %0:gr32bit = COPY $r2l
-    %1:vr64bit = VL64 $noreg, 0, $noreg :: (load (s64) from `ptr null`)
-    %2:fp64bit = nofpexcept CDFBR %0, implicit $fpc
-    undef %3.subreg_h64:vr128bit = nofpexcept WFDDB %1, %2, implicit $fpc
-    %4:vr128bit = VGBM 0
-    %5:vr128bit = VMRHG %3, %4
-    VST %5, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
-    Return
-...
-
 # The TMLMux will be scheduled first even though the LA is available and of lesser
 # height, because the TMLMux Depth equals the remaining latency (on CP).
 # Then, the AGHIK will follow even though it also have a Height of 1, because
-# it does not increase the scheduled latency as the TMLMux also has a Height of 1.
+# it does not increase the scheduled latency after the TMLMux.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun1:%bb.0
+# CHECK-NEXT: fun0:%bb.0
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun1:%bb.1
+# CHECK-NEXT: fun0:%bb.1
 # CHECK:      Region is not tiny.
-# CHECK:      Latency scheduling enabled.
+# CHECK:      Latency scheduling enabled for data sequences.
 # CHECK:      SU(2):   %3:addr64bit = LA %3:addr64bit, 1, $noreg
 # CHECK:        Depth              : 0
 # CHECK:        Height             : 0
@@ -57,7 +30,7 @@ body:             |
 # CHECK-NEXT: SU(9):   dead %13:gr64bit = AGHIK %12:gr64bit, -1,
 # CHECK-NEXT: SU(10):  TMLMux %0:gr32bit, 1, implicit-def $cc
 ---
-name:            fun1
+name:            fun0
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -78,7 +51,7 @@ body:             |
     %6:gr32bit = MSRKC %1, %5, implicit-def dead $cc
     %2:gr32bit = ORK %6, %2, implicit-def dead $cc
     %3:addr64bit = LA %3, 1, $noreg
-    %7:gr64bit = COPY %4   ; Make region non-tiny.
+    %7:gr64bit = COPY %4   ; Make region non-tiny with data sequence.
     %8:gr64bit = COPY %7   ;
     %9:gr64bit = COPY %8   ;
     %10:gr64bit = COPY %9  ;
@@ -94,9 +67,9 @@ body:             |
 # care about heights/latencies. The AGRKs will remain interleaved with
 # the COPYs instead of all ending up at the bottom.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun2:%bb.0
+# CHECK-NEXT: fun1:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling disabled.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
 # CHECK-NEXT: SU(1):   dead %2:gr64bit = AGRK %0:gr64bit, %0:gr64bit,
@@ -111,7 +84,7 @@ body:             |
 # CHECK-NEXT: SU(10):  %11:gr64bit = COPY undef %1:gr64bit
 # CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
 ---
-name:            fun2
+name:            fun1
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -130,25 +103,34 @@ body:             |
     Return
 ...
 
-# The first WFDDB is scheduled first as it is on the Critical Path below the
-# other WFDDB. The CDFBR is then scheduled below the VL64 per the original order
-# even though it has a greater height as neither of these SUs would extend the
-# scheduled latency.
+# Schedule the WFDDB high as it extends the scheduled latency.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun3:%bb.0
+# CHECK-NEXT: fun2:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled.
-# CHECK:      SU(1):   dead %1:vr64bit = VL64 $noreg, 0, $noreg ::
-# CHECK:        Height             : 3
-# CHECK:      SU(2):   dead %2:fp64bit = nofpexcept CDFBR %0:gr32bit,
-# CHECK:        Height             : 6
+# CHECK-NEXT: Latency scheduling enabled for data sequences.
+# CHECK: Queue BotQ.A: 7 1
+# CHECK: Pick Bot BOT-HEIGHT
+# CHECK: Scheduling SU(1)
+# CHECK: Queue BotQ.A: 7 2
+# CHECK: Pick Bot BOT-HEIGHT
+# CHECK: Scheduling SU(2)
+# CHECK: Queue BotQ.A: 7 0
+# CHECK: Pick Bot PHYS-REG
+# CHECK: Scheduling SU(7) {{.*}} WFDDB
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(5):   undef %6.subreg_h64:vr128bit = WFDDB %3:vr64bit, %4:vr64bit,
-# CHECK-NEXT: SU(1):   dead %1:vr64bit = VL64 $noreg, 0, $noreg ::
-# CHECK-NEXT: SU(2):   dead %2:fp64bit = nofpexcept CDFBR %0:gr32bit,
-# CHECK:      SU(8):   dead undef %10.subreg_h64:vr128bit = WFDDB %7:vr64bit,
+# CHECK-NEXT: SU(0):   %0:gr32bit = COPY $r2l
+# CHECK-NEXT: SU(5):   %5:vr64bit = COPY undef %6:vr64bit
+# CHECK-NEXT: SU(6):   %7:vr64bit = COPY %5:vr64bit
+# CHECK-NEXT: SU(7):   undef %8.subreg_h64:vr128bit = WFDDB %7:vr64bit, %5:vr64bit,
+# CHECK-NEXT: SU(2):   dead %2:fp64bit = nofpexcept CDFBR %0:gr32bit, implicit $fpc
+# CHECK-NEXT: SU(1):   %1:vr64bit = VL64 $noreg, 0, $noreg :: (load 
+# CHECK-NEXT: SU(8):   %9:vr64bit = COPY %8.subreg_h64:vr128bit
+# CHECK-NEXT: SU(3):   %3:vr64bit = COPY %1:vr64bit
+# CHECK-NEXT: SU(9):   %10:vr64bit = COPY %9:vr64bit
+# CHECK-NEXT: SU(4):   dead %4:vr64bit = COPY %3:vr64bit
+# CHECK-NEXT: SU(10):  dead %11:vr64bit = COPY %10:vr64bit
 ---
-name:            fun3
+name:            fun2
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -157,11 +139,46 @@ body:             |
     %0:gr32bit = COPY $r2l
     %1:vr64bit = VL64 $noreg, 0, $noreg :: (load (s64) from `ptr null`)
     %2:fp64bit = nofpexcept CDFBR %0, implicit $fpc
-    %3:vr64bit = COPY undef %3:vr64bit
-    %5:vr64bit = COPY undef %4:vr64bit
-    undef %6.subreg_h64:vr128bit = WFDDB %3, %5, implicit $fpc
-    %7:vr64bit = COPY %6.subreg_h64:vr128bit
-    %9:vr64bit = COPY undef %8:vr64bit
-    undef %10.subreg_h64:vr128bit = WFDDB %7, %9, implicit $fpc
+    %3:vr64bit = COPY %1:vr64bit
+    %4:vr64bit = COPY %3:vr64bit
+    %6:vr64bit = COPY undef %5:vr64bit
+    %7:vr64bit = COPY %6:vr64bit
+    undef %10.subreg_h64:vr128bit = WFDDB %7, %6, implicit $fpc
+    %11:vr64bit = COPY %10.subreg_h64:vr128bit   ; Make region non-tiny.
+    %12:vr64bit = COPY %11:vr64bit
+    %13:vr64bit = COPY %12:vr64bit
     Return
+...
+
+# Use the GenericScheduler latency heuristic for this single block loop.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun3:%bb.1
+# CHECK: Region is not tiny.
+# CHECK: Latency scheduling not enabled for data sequences.
+# CHECK: ACYCLIC LATENCY LIMIT
+# CHECK: Pick Bot BOT-HEIGHT [pre-RA]
+---
+name:            fun3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %19:vr128bit = VREPIF 1
+
+  bb.1:
+    %3:gr64bit = VLGVF %19, $noreg, 0
+    %6:gr64bit = LLGFR %3.subreg_l32
+    %6:gr64bit = MSGFI %6, 274877907
+    %7:gr64bit = SRLG %6, $noreg, 39
+    %9:gr64bit = VLGVF %19, $noreg, 1
+    %12:gr64bit = LLGFR %9.subreg_l32
+    %12:gr64bit = MSGFI %12, 274877907
+    %13:gr64bit = SRLG %12, $noreg, 39
+    %15:vr128bit = VLVGP %13, %13
+    %15:vr128bit = VLVGF %15, %7.subreg_l32, $noreg, 0
+    %16:vr128bit = VUPLHF %15
+    %17:vr128bit = nofpexcept VCDLGB %16, 0, 0, implicit $fpc
+    %19:vr128bit = VGBM 0
+    %18:vr128bit = nofpexcept VFMDB %17, %19, implicit $fpc
+    VST %18, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    J %bb.1
 ...

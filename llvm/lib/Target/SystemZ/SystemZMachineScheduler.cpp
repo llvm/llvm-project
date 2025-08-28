@@ -20,7 +20,28 @@ using namespace llvm;
 static cl::opt<unsigned> TinyRegionLim(
     "tiny-region-lim", cl::Hidden, cl::init(10),
     cl::desc("Run limited pre-ra scheduling on regions of this size or "
-             "smaller. Mainly for testing."));
+             "smaller."));
+
+namespace SystemZSched {
+enum LatencyReduction { Always, Never, More, Heuristics, CycleBased };
+} // namespace SystemZSched
+
+static cl::opt<SystemZSched::LatencyReduction> PreRALatRed(
+    "prera-lat-red", cl::Hidden,
+    cl::desc("Tuning of latency reduction during pre-ra mi-scheduling."),
+    cl::init(SystemZSched::LatencyReduction::Heuristics),
+    cl::values(
+        clEnumValN(SystemZSched::LatencyReduction::Always, "always",
+                   "Reduce scheduled latency always."),
+        clEnumValN(SystemZSched::LatencyReduction::Never, "never",
+                   "Don't reduce scheduled latency."),
+        clEnumValN(SystemZSched::LatencyReduction::More, "more",
+                   "Reduce scheduled latency on most DAGs."),
+        clEnumValN(SystemZSched::LatencyReduction::Heuristics, "heuristics",
+                   "Use heuristics for reduction of scheduled latency."),
+        clEnumValN(SystemZSched::LatencyReduction::CycleBased, "cycle-based",
+                   "Use GenericSched cycle based decisions for reduction of "
+                   "scheduled latency.")));
 
 // EXPERIMENTAL
 static cl::opt<bool>
@@ -86,57 +107,48 @@ void SystemZPreRASchedStrategy::initializePressureSets(
   // If %7 is already live, there would also be 'VR16Bit -1', which is the
   // interesting case.
   //
-  // Rather than hard coding VR16Bit and GRX32Bit PressureSets, they are
-  // inferred below as the intersections of various register class groups.
-  //
-  // TODO: Could TableGen emit these directly instead?
+  // misched-prera-pdiffs.mir tests against any future change in the
+  // PressureSets, so simply hard-code them here:
+
   if (!WITHPDIFFS)
     return;
+  PrioPressureSet = SystemZ::VR16Bit;
+  GPRPressureSet = SystemZ::GRX32Bit;
+}
 
-  auto addPSets = [&TRI](std::set<unsigned> &S, const TargetRegisterClass *RC,
-                         std::set<unsigned> *Intersect = nullptr) {
-    for (const int *PS = TRI->getRegClassPressureSets(RC); *PS != -1; ++PS)
-      if (!Intersect || Intersect->count(*PS))
-        S.insert(*PS);
-  };
+bool SystemZPreRASchedStrategy::shouldReduceLatency(SchedBoundary *Zone) const {
+  if (PreRALatRed == SystemZSched::Always)
+    return true;
+  if (PreRALatRed == SystemZSched::Never)
+    return false;
 
-  std::set<unsigned> SetA, SetB;
-  addPSets(SetA, &SystemZ::VR16BitRegClass);
-  addPSets(SetA, &SystemZ::VR32BitRegClass);
-  addPSets(SetA, &SystemZ::VR64BitRegClass);
-  addPSets(SetA, &SystemZ::VR128BitRegClass);
-  assert(SetA.size() == 1 && "Expected one pressure set (VR16Bit).");
+  if (IsWideDAG)
+    return false;
 
-  addPSets(SetB, &SystemZ::FP16BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::FP32BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::FP64BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::VF128BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::FP128BitRegClass, &SetA);
-  assert(SetB.size() == 1 && *SetA.begin() == *SetB.begin() &&
-         "Expected one pressure set (VR16Bit).");
-  PrioPressureSet = *SetB.begin();
+  if (PreRALatRed == SystemZSched::More)
+    return true;
+  if (PreRALatRed == SystemZSched::Heuristics)
+    return HasDataSequences || Rem.IsAcyclicLatencyLimited;
 
-  SetA.clear();
-  SetB.clear();
-  addPSets(SetA, &SystemZ::GRX32BitRegClass);
-  addPSets(SetA, &SystemZ::GR64BitRegClass);
-  addPSets(SetA, &SystemZ::ADDR64BitRegClass);
-  addPSets(SetA, &SystemZ::GR128BitRegClass);
-  addPSets(SetA, &SystemZ::ADDR128BitRegClass);
-  assert(SetA.size() == 1 && "Expected one pressure set (GRX32Bit).");
+  if (PreRALatRed == SystemZSched::CycleBased) {
+    CandPolicy P;
+    getRemLat(Zone);
+    return GenericScheduler::shouldReduceLatency(P, *Zone, false, RemLat);
+  }
 
-  addPSets(SetB, &SystemZ::GR32BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::GRH32BitRegClass, &SetA);
-  addPSets(SetB, &SystemZ::ADDR32BitRegClass, &SetA);
-  assert(SetB.size() == 1 && *SetA.begin() == *SetB.begin() &&
-         "Expected one pressure set (GRX32Bit).");
-  GPRPressureSet = *SetB.begin();
+  llvm_unreachable("Unhandled option value.");
 }
 
 unsigned SystemZPreRASchedStrategy::getRemLat(SchedBoundary *Zone) const {
   if (RemLat == ~0U)
     RemLat = computeRemLatency(*Zone);
   return RemLat;
+}
+
+static bool isStoreOfVReg(const MachineInstr *MI) {
+  return MI->mayStore() && !MI->mayLoad() && MI->getNumOperands() &&
+         isVirtRegUse(MI->getOperand(0)) &&
+         MI->getDesc().operands()[0].OperandType != MCOI::OPERAND_MEMORY;
 }
 
 void SystemZPreRASchedStrategy::initializeStoresGroup() {
@@ -149,18 +161,7 @@ void SystemZPreRASchedStrategy::initializeStoresGroup() {
     const MachineInstr *MI = SU->getInstr();
     if (!MI->getNumOperands() || MI->isCopy())
       continue;
-
-    bool HasVirtDef = false;
-    bool HasVirtUse = false;
-    for (unsigned I = 0; I < MI->getDesc().getNumOperands(); ++I) {
-      const MachineOperand &MO = MI->getOperand(I);
-      if (isVirtRegDef(MO) && !MO.isDead())
-        HasVirtDef = true;
-      else if (isVirtRegUse(MO) &&
-               MI->getDesc().operands()[I].OperandType != MCOI::OPERAND_MEMORY)
-        HasVirtUse = true;
-    }
-    bool IsStore = !HasVirtDef && HasVirtUse;
+    bool IsStore = isStoreOfVReg(MI);
 
     // Find a group of stores that all are at the bottom while avoiding
     // regions with any additional group of lesser depth.
@@ -198,8 +199,14 @@ static int biasPhysRegExtra(const SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
   if (MI->getNumOperands() && !MI->isCopy()) {
     const MachineOperand &DefMO = MI->getOperand(0);
-    if (isPhysRegDef(DefMO))
+    if (isPhysRegDef(DefMO)) {
+#ifndef NDEBUG
+      for (const MachineOperand &MO : MI->all_uses())
+        assert(!MO.getReg().isVirtual() &&
+               "Did not expect a virtual register use operand.");
+#endif
       return 1;
+    }
   }
 
   return 0;
@@ -216,9 +223,8 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
 
   const MachineOperand &MO0 = MI->getOperand(0);
   assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
-  bool IsLoad =
-      isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
-  bool IsStore = (!isRegDef(MO0) || MO0.isDead());
+  bool IsLoad = isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
+  bool IsStore = isStoreOfVReg(MI);
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
@@ -272,12 +278,10 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     if (IsLoad) {
       bool PrioDefNoKill = PrioPressureChange == -RegWeight;
       bool GPRDefNoKill = GPRPressureChange == -RegWeight;
-      UsesLivePrio =
-          (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
+      UsesLivePrio = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
       UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
                     (!PrioPressureChange && GPRDefNoKill);
-    }
-    else if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
+    } else if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
       bool SrcKill = !DAG->getBotRPTracker().isRegLive(MO0.getReg());
       StoreKill =
           SrcKill && (PrioPressureChange == RegWeight ||
@@ -344,7 +348,7 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     // Don't extend the scheduled latency in regions with many nodes in
     // simple data sequences, or for (single block loop) regions that are
     // acyclically (within a single loop iteration) latency limited.
-    if ((HasDataSequences || Rem.IsAcyclicLatencyLimited) &&
+    if (shouldReduceLatency(Zone) &&
         TryCand.SU->getHeight() != Cand.SU->getHeight() &&
         (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
          Zone->getScheduledLatency())) {
@@ -359,7 +363,7 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     }
   }
 
-  // Weak edges are for clustering and other constraints.
+  // Weak edges help copy coalescing.
   if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft, TryCand, Cand,
               Weak))
     return TryCand.Reason != NoCand;
@@ -378,9 +382,7 @@ void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            unsigned NumRegionInstrs) {
   TinyRegion = NumRegionInstrs <= TinyRegionLim;
 
-  //  RegionPolicy.ShouldTrackPressure = !TinyRegion;
-  // Some exceptions are made, see initialize().
-  RegionPolicy.ShouldTrackPressure = NumRegionInstrs > 6;
+  RegionPolicy.ShouldTrackPressure = !TinyRegion;
 
   // These heuristics has so far seemed to work better without adding a
   // top-down boundary.
@@ -407,7 +409,8 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   unsigned DAGHeight = 0;
   for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
     DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
-  if ((HasDataSequences = DAG->SUnits.size() < 3 * std::max(DAGHeight, 1u))) {
+  IsWideDAG = DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+  if ((HasDataSequences = !IsWideDAG)) {
     unsigned CurrSequence = 0, NumSeqNodes = 0;
     auto countSequence = [&CurrSequence, &NumSeqNodes]() {
       NumSeqNodes += CurrSequence >= 2 ? CurrSequence : 0;
@@ -443,14 +446,15 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
 
   // If MI uses the register it defines, record it one time here.
   IsRedefining = std::vector<bool>(DAG->SUnits.size(), false);
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-    const MachineInstr *MI = DAG->SUnits[Idx].getInstr();
-    if (MI->getNumOperands()) {
-      const MachineOperand &DefMO = MI->getOperand(0);
-      if (isVirtRegDef(DefMO))
-        IsRedefining[Idx] = MI->readsVirtualRegister(DefMO.getReg());
+  if (!WITHPDIFFS) // This is not needed if using PressureDiffs.
+    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+      const MachineInstr *MI = DAG->SUnits[Idx].getInstr();
+      if (MI->getNumOperands()) {
+        const MachineOperand &DefMO = MI->getOperand(0);
+        if (isVirtRegDef(DefMO))
+          IsRedefining[Idx] = MI->readsVirtualRegister(DefMO.getReg());
+      }
     }
-  }
 
   initializeStoresGroup();
   LLVM_DEBUG(if (!StoresGroup.empty()) dbgs()

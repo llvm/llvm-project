@@ -99,11 +99,11 @@ define i128 @f7(i128 %a, i128 %sh) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhi %r0, 63
 ; CHECK-NEXT:    n %r0, 12(%r4)
-; CHECK-NEXT:    vlvgp %v0, %r0, %r0
-; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    vrepb %v0, %v0, 15
-; CHECK-NEXT:    vsrlb %v1, %v1, %v0
-; CHECK-NEXT:    vsrl %v0, %v1, %v0
+; CHECK-NEXT:    vlvgp %v1, %r0, %r0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vsrlb %v0, %v0, %v1
+; CHECK-NEXT:    vsrl %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i128 %sh, 63
@@ -119,11 +119,11 @@ define i128 @f8(i128 %a, i128 %b, i128 %sh) {
 ; CHECK-NEXT:    vl %v1, 0(%r5), 3
 ; CHECK-NEXT:    vn %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvf %r0, %v0, 3
-; CHECK-NEXT:    vlvgp %v0, %r0, %r0
-; CHECK-NEXT:    vl %v1, 0(%r3), 3
-; CHECK-NEXT:    vrepb %v0, %v0, 15
-; CHECK-NEXT:    vsrlb %v1, %v1, %v0
-; CHECK-NEXT:    vsrl %v0, %v1, %v0
+; CHECK-NEXT:    vlvgp %v1, %r0, %r0
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vsrlb %v0, %v0, %v1
+; CHECK-NEXT:    vsrl %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i128 %sh, %b

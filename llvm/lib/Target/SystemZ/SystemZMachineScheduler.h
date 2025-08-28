@@ -54,14 +54,20 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // Num instructions left to schedule.
   unsigned NumLeft;
 
+  // True if there are many more SUs than the overall height of the DAG.
+  bool IsWideDAG;
+
   // True if the region has many instructions in def-use sequences and would
   // likely benefit from latency reduction.
   bool HasDataSequences;
 
+  // Return true if the scheduled latency should be minimized.
+  bool shouldReduceLatency(SchedBoundary *Zone) const;
+
   // True if MI is also using the register it defines.
   std::vector<bool> IsRedefining;
 
-  // Only call computeRemLatency() once per scheduled node.
+  // Only call computeRemLatency() once before each scheduled node.
   mutable unsigned RemLat;
   unsigned getRemLat(SchedBoundary *Zone) const;
 

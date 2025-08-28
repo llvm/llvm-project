@@ -15,15 +15,26 @@
   define void @fun8() { ret void }
 ...
 
-# Schedule the LG low. The heurstic to move a load down to its user to
+# Schedule the LG low. The heuristic to move a load down to its user to
 # shorten the live range (of %1) makes sure to not increase the scheduled latency, so
 # therefore it ends up above the AG.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled.
+# CHECK:        SU(1):   %1:addr64bit = LG $noreg, 0, $noreg
+# CHECK:        Height             : 4
+# CHECK:        SU(2):
+# CHECK:        SU(7):   dead %7:gr64bit = AG %6:gr64bit(tied-def 0),
+# CHECK:        Height             : 4
+# CHECK:        SU(8):
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(1):   %1:addr64bit = LG $noreg, 0, $noreg
+# CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r2d
+# CHECK-NEXT: SU(3):   %3:gr64bit = LGHI 1
+# CHECK-NEXT: SU(4):   %4:gr64bit = COPY %3:gr64bit
+# CHECK-NEXT: SU(2):   %2:gr64bit = COPY %0:addr64bit
+# CHECK-NEXT: SU(5):   %5:gr64bit = COPY %4:gr64bit
+# CHECK-NEXT: SU(6):   %6:gr64bit = AGRK %2:gr64bit, %5:gr64bit, implicit-def $cc
+# CHECK-NEXT: SU(1):   %1:addr64bit = LG $noreg, 0, $noreg
 # CHECK-NEXT: SU(7):   dead %7:gr64bit = AG %6:gr64bit(tied-def 0),
 # CHECK-NEXT: SU(8):   dead %8:addr64bit = LGHI 0
 # CHECK-NEXT: SU(9):   STG %1:addr64bit, $noreg, 0, $noreg
@@ -49,28 +60,24 @@ body:             |
     Return
 ...
 
-# Schedule the '%3 = WFMADB' as soon as its only user and its use operands are
-# already live:
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun1:%bb.0
+# Schedule the '%3 = WFMDB' as soon as its use operand (%2) is already live. This
+# closes the liveness range of %3 without extending the scheduled latency.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled.
-#
-# CHECK:      Pick Bot LIVE-REDUC
-#
-# CHECK:      Queue BotQ.A: 5 7 3
-# CHECK:      Scheduling SU(7)
-# CHECK:      LiveReg: %1
-# CHECK:      Queue BotQ.A: 5 3
-# CHECK:      Pick Bot LIVE-REDUC
-# CHECK-NEXT: Scheduling SU(3) %3:vr64bit = nofpexcept WFMADB %2:fp64bit,
-#
 # CHECK:      *** Final schedule for %bb.0 ***
-# CHECK:      SU(3):   %3:vr64bit = nofpexcept WFMADB %2:fp64bit, %2:fp64bit, %1:fp64bit,
-# CHECK-NEXT: SU(7):   %7:vr64bit = nofpexcept WFMADB %1:fp64bit, %2:fp64bit, %2:fp64bit,
-# CHECK-NEXT: SU(4):   %4:vr64bit = nofpexcept WFMDB %3:vr64bit, %2:fp64bit,
+# CHECK-NEXT: SU(0):   dead %0:fp64bit = COPY $f2d
+# CHECK-NEXT: SU(1):   dead %1:fp64bit = COPY $f0d
+# CHECK-NEXT: SU(2):   %2:fp64bit = LZDR
+# CHECK-NEXT: SU(4):   %4:vr64bit = nofpexcept WFMDB %2:fp64bit, %2:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(5):   %5:vr64bit = nofpexcept WFMDB %2:fp64bit, %4:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(6):   %6:vr64bit = nofpexcept WFMDB %2:fp64bit, %5:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(3):   %3:vr64bit = nofpexcept WFMDB %2:fp64bit, %2:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(7):   %7:vr64bit = nofpexcept WFMDB %2:fp64bit, %6:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(8):   %8:vr64bit = nofpexcept WFDDB %7:vr64bit, %7:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(9):   %9:vr64bit = nofpexcept WFMDB %8:vr64bit, %3:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(10):   VST64 %8:vr64bit, $noreg, 0, $noreg
+# CHECK-NEXT: SU(11):   $f0d = COPY %9:vr64bit
 ---
 name:            fun1
 tracksRegLiveness: true
@@ -78,23 +85,19 @@ body:             |
   bb.0:
     liveins: $f0d, $f2d
   
-    %0:fp64bit = COPY $f2d
-    %1:fp64bit = COPY $f0d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
     %2:fp64bit = LZDR
-    %3:vr64bit = nofpexcept WFMADB %2, %2, %1, implicit $fpc
-    %4:vr64bit = nofpexcept WFMDB %3, %2, implicit $fpc
-    %5:vr64bit = nofpexcept WFMADB %2, %2, %0, implicit $fpc
-    %6:vr64bit = nofpexcept WFMDB %5, %2, implicit $fpc
-    %7:vr64bit = nofpexcept WFMADB %1, %2, %2, implicit $fpc
-    %8:vr64bit = nofpexcept WFADB %7, %2, implicit $fpc
-    %9:addr64bit = LGHI 0
-    $f0d = COPY %2
-    $f2d = COPY %2
-    CallBASR %9, $f0d, $f2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def dead $f0d
-    %10:vr64bit = nofpexcept WFMADB %8, %2, %4, implicit $fpc
-    %11:vr64bit = nofpexcept WFMADB %6, %2, %10, implicit $fpc
-    VST64 %11, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
-    Return
+    %3:vr64bit = nofpexcept WFMDB %2, %2, implicit $fpc
+    %4:vr64bit = nofpexcept WFMDB %2, %2, implicit $fpc
+    %5:vr64bit = nofpexcept WFMDB %2, %4, implicit $fpc
+    %6:vr64bit = nofpexcept WFMDB %2, %5, implicit $fpc
+    %7:vr64bit = nofpexcept WFMDB %2, %6, implicit $fpc
+    %8:vr64bit = nofpexcept WFDDB %7, %7, implicit $fpc
+    %9:vr64bit = nofpexcept WFMDB %8, %3, implicit $fpc
+    VST64 %8, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    $f0d = COPY %9
+    Return implicit $f0d
 ...
 
 # *Don't* schedule the AGR low since %1 continues to be live above it.
@@ -153,6 +156,9 @@ body:             |
     %2:gr64bit = MSGF %2, $noreg, 4, $noreg :: (load (s32))
     %4:gr64bit = OGRK %2, %3, implicit-def dead $cc
     %5:addr64bit = SLLG %4, $noreg, 3
+    %7:gr64bit = COPY undef %6:gr64bit ; Make region non-tiny
+    %8:gr64bit = COPY undef %6:gr64bit ;
+    %9:gr64bit = COPY undef %6:gr64bit ;
 ...
 
 # Schedule the VL64 low, above the first LG. It is loading a (live out) vr64,
@@ -245,9 +251,14 @@ body:             |
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun6:%bb.0
 # CHECK:      Region is not tiny.
+# CHECK:      Scheduling SU(32) VST64 %0:vr64bit, $noreg, 0, $noreg
+# CHECK:      Pick Bot LIVE-REDUC [pre-RA]
+# CHECK-NEXT: Scheduling SU(0) %0:vr64bit = VL64 $noreg, 0, $noreg
+
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(0):   %0:vr64bit = VL64 $noreg, 0, $noreg
-# CHECK-NEXT: SU(32):   VST64 %0:vr64bit, $noreg, 0, $noreg
+# CHECK-NEXT: SU(32):  VST64 %0:vr64bit, $noreg, 0, $noreg
+# CHECK-NOT:  SU({{[0-9]+}}):
 ---
 name:            fun6
 tracksRegLiveness: true
@@ -329,8 +340,9 @@ body:             |
 
 # Same as fun6 but the VL64 is using %0, making it become live. It is therefore
 # not pulled down even though there are still many instructions remaining.
-# Scheduling 24 of the COPYs means 4 cycles have been scheduled, at which point
-# the VL64 can be scheduled without increasing the scheduled latency.
+# However, scheduling 24 instructions means 4 cycles have been scheduled, at
+# which point the VL64 can be scheduled without increasing the scheduled
+# latency.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun8:%bb.0
 # CHECK:      Region is not tiny.
@@ -343,7 +355,7 @@ body:             |
 # CHECK-NEXT: SU(6):   dead %7:gr64bit = COPY undef %3:gr64bit
 # CHECK-NEXT: SU(7):   dead %8:gr64bit = COPY undef %3:gr64bit
 # CHECK-NEXT: SU(8):   dead %9:gr64bit = COPY undef %3:gr64bit
-# CHECK-NEXT: SU(9):   dead %3:gr64bit = COPY undef %3:gr64bit
+# CHECK-NEXT: SU(9):   dead %10:gr64bit = COPY undef %3:gr64bit
 # CHECK-NEXT: SU(1):   %1:vr64bit = VL64 %0:addr64bit, 0, $noreg
 ---
 name:            fun8
@@ -352,8 +364,9 @@ body:             |
   bb.0:
     liveins: $r2d
 
-    %1:addr64bit = COPY $r2d
-    %2:vr64bit = VL64 %1, 0, $noreg
+    %0:addr64bit = COPY $r2d
+    %1:vr64bit = VL64 %0, 0, $noreg
+    %2:gr64bit = COPY undef %11:gr64bit ;
     %3:gr64bit = COPY undef %11:gr64bit ;
     %4:gr64bit = COPY undef %11:gr64bit ;
     %5:gr64bit = COPY undef %11:gr64bit ;
@@ -361,6 +374,7 @@ body:             |
     %7:gr64bit = COPY undef %11:gr64bit ;
     %8:gr64bit = COPY undef %11:gr64bit ;
     %9:gr64bit = COPY undef %11:gr64bit ;
+    %10:gr64bit = COPY undef %11:gr64bit ;
     %11:gr64bit = COPY undef %11:gr64bit ;
     %12:gr64bit = COPY undef %11:gr64bit ;
     %13:gr64bit = COPY undef %11:gr64bit ;
@@ -383,8 +397,6 @@ body:             |
     %30:gr64bit = COPY undef %11:gr64bit ;
     %31:gr64bit = COPY undef %11:gr64bit ;
     %32:gr64bit = COPY undef %11:gr64bit ;
-    %33:gr64bit = COPY undef %11:gr64bit ;
-    %34:gr64bit = COPY undef %11:gr64bit ;
-    VST64 %2, $noreg, 0, $noreg
+    VST64 %1, $noreg, 0, $noreg
     Return
 ...

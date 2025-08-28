@@ -48,16 +48,16 @@ define void @fun3(<4 x i16> %Src, ptr %Dst) {
 ; Z14:       # %bb.0:
 ; Z14-NEXT:    vuphh %v0, %v24
 ; Z14-NEXT:    vlgvf %r0, %v0, 3
-; Z14-NEXT:    vlgvf %r1, %v0, 2
-; Z14-NEXT:    cefbr %f1, %r1
-; Z14-NEXT:    vlgvf %r3, %v0, 1
-; Z14-NEXT:    cefbr %f2, %r3
-; Z14-NEXT:    vlgvf %r4, %v0, 0
+; Z14-NEXT:    vlgvf %r1, %v0, 0
+; Z14-NEXT:    cefbr %f1, %r0
+; Z14-NEXT:    vlgvf %r0, %v0, 2
+; Z14-NEXT:    cefbr %f2, %r0
+; Z14-NEXT:    vlgvf %r0, %v0, 1
 ; Z14-NEXT:    cefbr %f0, %r0
-; Z14-NEXT:    vmrhf %v0, %v1, %v0
-; Z14-NEXT:    cefbr %f3, %r4
-; Z14-NEXT:    vmrhf %v1, %v3, %v2
-; Z14-NEXT:    vmrhg %v0, %v1, %v0
+; Z14-NEXT:    vmrhf %v1, %v2, %v1
+; Z14-NEXT:    cefbr %f2, %r1
+; Z14-NEXT:    vmrhf %v0, %v2, %v0
+; Z14-NEXT:    vmrhg %v0, %v0, %v1
 ; Z14-NEXT:    vst %v0, 0(%r2), 3
 ; Z14-NEXT:    br %r14
 ;
@@ -119,16 +119,16 @@ define void @fun7(<4 x i16> %Src, ptr %Dst) {
 ; Z14:       # %bb.0:
 ; Z14-NEXT:    vuplhh %v0, %v24
 ; Z14-NEXT:    vlgvf %r0, %v0, 3
-; Z14-NEXT:    vlgvf %r1, %v0, 2
-; Z14-NEXT:    celfbr %f1, 0, %r1, 0
-; Z14-NEXT:    vlgvf %r3, %v0, 1
-; Z14-NEXT:    celfbr %f2, 0, %r3, 0
-; Z14-NEXT:    vlgvf %r4, %v0, 0
+; Z14-NEXT:    vlgvf %r1, %v0, 0
+; Z14-NEXT:    celfbr %f1, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v0, 2
+; Z14-NEXT:    celfbr %f2, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v0, 1
 ; Z14-NEXT:    celfbr %f0, 0, %r0, 0
-; Z14-NEXT:    vmrhf %v0, %v1, %v0
-; Z14-NEXT:    celfbr %f3, 0, %r4, 0
-; Z14-NEXT:    vmrhf %v1, %v3, %v2
-; Z14-NEXT:    vmrhg %v0, %v1, %v0
+; Z14-NEXT:    vmrhf %v1, %v2, %v1
+; Z14-NEXT:    celfbr %f2, 0, %r1, 0
+; Z14-NEXT:    vmrhf %v0, %v2, %v0
+; Z14-NEXT:    vmrhg %v0, %v0, %v1
 ; Z14-NEXT:    vst %v0, 0(%r2), 3
 ; Z14-NEXT:    br %r14
 ;
@@ -150,13 +150,13 @@ define void @fun8(<2 x i64> %dwords, ptr %ptr) {
 ; CHECK-LABEL: fun8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vlgvg %r0, %v24, 0
-; CHECK-NEXT:    vlgvg %r1, %v24, 1
 ; CHECK-NEXT:    cxlgbr %f0, 0, %r0, 0
-; CHECK-NEXT:    cxlgbr %f1, 0, %r1, 0
-; CHECK-NEXT:    vmrhg %v1, %v1, %v3
+; CHECK-NEXT:    vlgvg %r0, %v24, 1
 ; CHECK-NEXT:    vmrhg %v0, %v0, %v2
-; CHECK-NEXT:    vst %v1, 16(%r2), 4
 ; CHECK-NEXT:    vst %v0, 0(%r2), 4
+; CHECK-NEXT:    cxlgbr %f1, 0, %r0, 0
+; CHECK-NEXT:    vmrhg %v1, %v1, %v3
+; CHECK-NEXT:    vst %v1, 16(%r2), 4
 ; CHECK-NEXT:    br %r14
  %conv = uitofp <2 x i64> %dwords to <2 x fp128>
  store <2 x fp128> %conv, ptr %ptr
@@ -167,58 +167,42 @@ define void @fun8(<2 x i64> %dwords, ptr %ptr) {
 define void @fun9(ptr %Src, ptr %ptr) {
 ; Z14-LABEL: fun9:
 ; Z14:       # %bb.0:
-; Z14-NEXT:    stmg %r10, %r15, 80(%r15)
-; Z14-NEXT:    .cfi_offset %r10, -80
-; Z14-NEXT:    .cfi_offset %r11, -72
-; Z14-NEXT:    .cfi_offset %r12, -64
-; Z14-NEXT:    .cfi_offset %r13, -56
-; Z14-NEXT:    .cfi_offset %r14, -48
-; Z14-NEXT:    .cfi_offset %r15, -40
-; Z14-NEXT:    aghi %r15, -16
-; Z14-NEXT:    .cfi_def_cfa_offset 176
-; Z14-NEXT:    std %f8, 8(%r15) # 8-byte Spill
-; Z14-NEXT:    std %f9, 0(%r15) # 8-byte Spill
-; Z14-NEXT:    .cfi_offset %f8, -168
-; Z14-NEXT:    .cfi_offset %f9, -176
-; Z14-NEXT:    vl %v0, 16(%r2), 4
 ; Z14-NEXT:    vl %v1, 0(%r2), 4
 ; Z14-NEXT:    vuplhh %v2, %v1
-; Z14-NEXT:    vupllh %v1, %v1
-; Z14-NEXT:    vuplhh %v0, %v0
 ; Z14-NEXT:    vlgvf %r0, %v2, 3
-; Z14-NEXT:    vlgvf %r1, %v2, 2
-; Z14-NEXT:    vlgvf %r2, %v2, 1
-; Z14-NEXT:    vlgvf %r4, %v2, 0
-; Z14-NEXT:    celfbr %f2, 0, %r2, 0
-; Z14-NEXT:    vlgvf %r5, %v1, 3
-; Z14-NEXT:    celfbr %f3, 0, %r4, 0
-; Z14-NEXT:    vlgvf %r14, %v1, 2
-; Z14-NEXT:    celfbr %f4, 0, %r5, 0
-; Z14-NEXT:    vlgvf %r13, %v1, 1
-; Z14-NEXT:    celfbr %f5, 0, %r14, 0
-; Z14-NEXT:    vlgvf %r12, %v1, 0
-; Z14-NEXT:    celfbr %f1, 0, %r1, 0
-; Z14-NEXT:    vlgvf %r11, %v0, 1
-; Z14-NEXT:    celfbr %f6, 0, %r13, 0
-; Z14-NEXT:    vlgvf %r10, %v0, 0
+; Z14-NEXT:    celfbr %f3, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v2, 2
+; Z14-NEXT:    celfbr %f4, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v2, 1
+; Z14-NEXT:    vlgvf %r1, %v2, 0
+; Z14-NEXT:    vmrhf %v3, %v4, %v3
+; Z14-NEXT:    vupllh %v1, %v1
+; Z14-NEXT:    celfbr %f2, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v1, 3
+; Z14-NEXT:    celfbr %f4, 0, %r1, 0
+; Z14-NEXT:    vmrhf %v2, %v4, %v2
+; Z14-NEXT:    vmrhg %v2, %v2, %v3
+; Z14-NEXT:    vlgvf %r1, %v1, 0
+; Z14-NEXT:    vl %v0, 16(%r2), 4
+; Z14-NEXT:    celfbr %f3, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v1, 2
+; Z14-NEXT:    celfbr %f4, 0, %r0, 0
+; Z14-NEXT:    vlgvf %r0, %v1, 1
+; Z14-NEXT:    celfbr %f1, 0, %r0, 0
+; Z14-NEXT:    vmrhf %v3, %v4, %v3
+; Z14-NEXT:    celfbr %f4, 0, %r1, 0
+; Z14-NEXT:    vuplhh %v0, %v0
+; Z14-NEXT:    vlgvf %r0, %v0, 1
+; Z14-NEXT:    vlgvf %r1, %v0, 0
+; Z14-NEXT:    vmrhf %v1, %v4, %v1
 ; Z14-NEXT:    celfbr %f0, 0, %r0, 0
-; Z14-NEXT:    vmrhf %v0, %v1, %v0
-; Z14-NEXT:    celfbr %f7, 0, %r12, 0
-; Z14-NEXT:    vmrhf %v1, %v3, %v2
-; Z14-NEXT:    celfbr %f8, 0, %r11, 0
-; Z14-NEXT:    vmrhf %v2, %v5, %v4
-; Z14-NEXT:    celfbr %f9, 0, %r10, 0
-; Z14-NEXT:    vmrhf %v3, %v7, %v6
-; Z14-NEXT:    vmrhf %v4, %v9, %v8
-; Z14-NEXT:    ld %f8, 8(%r15) # 8-byte Reload
-; Z14-NEXT:    ld %f9, 0(%r15) # 8-byte Reload
-; Z14-NEXT:    vmrhg %v0, %v1, %v0
-; Z14-NEXT:    vmrhg %v1, %v3, %v2
-; Z14-NEXT:    vmrhg %v2, %v4, %v4
-; Z14-NEXT:    vsteg %v2, 32(%r3), 0
+; Z14-NEXT:    vmrhg %v1, %v1, %v3
+; Z14-NEXT:    celfbr %f4, 0, %r1, 0
+; Z14-NEXT:    vmrhf %v0, %v4, %v0
+; Z14-NEXT:    vmrhg %v0, %v0, %v0
+; Z14-NEXT:    vsteg %v0, 32(%r3), 0
 ; Z14-NEXT:    vst %v1, 16(%r3), 4
-; Z14-NEXT:    vst %v0, 0(%r3), 4
-; Z14-NEXT:    lmg %r10, %r15, 96(%r15)
+; Z14-NEXT:    vst %v2, 0(%r3), 4
 ; Z14-NEXT:    br %r14
 ;
 ; Z15-LABEL: fun9:

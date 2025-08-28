@@ -16,7 +16,7 @@
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling disabled.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(10):   STG %2:gr64bit, %0:addr64bit, 0, $noreg ::
@@ -63,18 +63,18 @@ body:             |
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.1
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
 # CHECK:      *** Final schedule for %bb.1 ***
-# CHECK:      SU(4):   VST32 %2:fp32bit, %3:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(5):   VST32 %2:fp32bit, $noreg, 0, $noreg
-# CHECK-NEXT: SU(6):   VST32 %2:fp32bit, %1:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(7):   VST32 %4:vr32bit, %0:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(8):   VST32 %2:fp32bit, %3:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(9):   VST32 %2:fp32bit, %1:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(10):  VST32 %2:fp32bit, %3:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(11):  VST32 %2:fp32bit, %1:addr64bit, 0, $noreg
-# CHECK-NEXT: SU(12):  $r2l = COPY %7:grx32bit
+# CHECK:      SU(6):   VST32 %8:fp32bit, %3:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(7):   VST32 %8:fp32bit, $noreg, 0, $noreg
+# CHECK-NEXT: SU(8):   VST32 %8:fp32bit, %1:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(9):   VST32 %9:vr32bit, %0:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(10):  VST32 %8:fp32bit, %3:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(11):  VST32 %8:fp32bit, %1:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(12):  VST32 %8:fp32bit, %3:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(13):  VST32 %8:fp32bit, %1:addr64bit, 0, $noreg
+# CHECK-NEXT: SU(14):  $r2l = LHI 0
 ---
 name:            fun1
 tracksRegLiveness: true
@@ -94,15 +94,17 @@ body:             |
     dead %6:fp32bit = nofpexcept LTEBR %5, implicit-def $cc, implicit $fpc
     %7:grx32bit = LHIMux 0
     %7:grx32bit = LOCHIMux %7, 1, 15, 2, implicit killed $cc
-    VST32 %2, %3, 0, $noreg
-    VST32 %2, $noreg, 0, $noreg
-    VST32 %2, %1, 0, $noreg
-    VST32 %4, %0, 0, $noreg
-    VST32 %2, %3, 0, $noreg
-    VST32 %2, %1, 0, $noreg
-    VST32 %2, %3, 0, $noreg
-    VST32 %2, %1, 0, $noreg
-    $r2l = COPY %7
+    %8:fp32bit = COPY %2
+    %9:vr32bit = COPY %4
+    VST32 %8, %3, 0, $noreg
+    VST32 %8, $noreg, 0, $noreg
+    VST32 %8, %1, 0, $noreg
+    VST32 %9, %0, 0, $noreg
+    VST32 %8, %3, 0, $noreg
+    VST32 %8, %1, 0, $noreg
+    VST32 %8, %3, 0, $noreg
+    VST32 %8, %1, 0, $noreg
+    $r2l = LHI 0
     Return implicit $r2l
 ...
 
@@ -112,7 +114,7 @@ body:             |
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun2:%bb.0
 # CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling disabled.
+# CHECK-NEXT: Latency scheduling not enabled for data sequences.
 # CHECK:      No StoresGroup.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(10):   STG %2:gr64bit, %0:addr64bit, 0, $noreg :: (store (s64) into %ir.Arg2)
