@@ -1855,3 +1855,4 @@ func.func @negative_warp_step_more_than_warp_size(%laneid: index, %buffer: memre
 
 // CHECK-PROP-LABEL: @negative_warp_step_more_than_warp_size
 // CHECK-PROP-NOT: vector.broadcast
+// CHECK-PROP: vector.step : vector<64xindex>
