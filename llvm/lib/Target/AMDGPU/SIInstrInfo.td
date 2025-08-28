@@ -2596,6 +2596,17 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
 
+class getEquivalentAGPRClass<RegisterClass RC> {
+  RegisterClass ret =
+    !cond(!eq(RC.Size, 32)   : AGPR_32,
+          !eq(RC.Size, 64)   : AReg_64,
+          !eq(RC.Size, 96)   : AReg_96,
+          !eq(RC.Size, 128)  : AReg_128,
+          !eq(RC.Size, 160)  : AReg_160,
+          !eq(RC.Size, 1024) : AReg_1024);
+}
+
+
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
   bit ret =    !if(!eq(DstVT.Size, 64),
