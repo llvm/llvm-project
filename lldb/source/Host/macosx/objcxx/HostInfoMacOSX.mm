@@ -224,20 +224,6 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   return true;
 }
 
-bool HostInfoMacOSX::ComputeUserHomeDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("~");
-  FileSystem::Instance().Resolve(temp_file);
-  file_spec.SetDirectory(temp_file.GetPathAsConstString());
-  return true;
-}
-
-bool HostInfoMacOSX::ComputeUserLLDBHomeDirectory(FileSpec &file_spec) {
-  FileSpec home_dir_spec = GetUserHomeDir();
-  home_dir_spec.AppendPathComponent(".lldb");
-  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
-  return true;
-}
-
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   FileSpec home_dir_spec = GetUserHomeDir();
   home_dir_spec.AppendPathComponent("Library/Application Support/LLDB/PlugIns");

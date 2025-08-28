@@ -51,8 +51,6 @@ protected:
                                              ArchSpec &arch_64);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
-  static bool ComputeUserHomeDirectory(FileSpec &file_spec);
-  static bool ComputeUserLLDBHomeDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static std::string FindComponentInPath(llvm::StringRef path,

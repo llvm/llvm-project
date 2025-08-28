@@ -175,6 +175,8 @@ protected:
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
+  static bool ComputeUserHomeDirectory(FileSpec &file_spec);
+  static bool ComputeUserLLDBHomeDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

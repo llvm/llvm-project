@@ -341,6 +341,20 @@ bool HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   return false;
 }
 
+bool HostInfoBase::ComputeUserHomeDirectory(FileSpec &file_spec) {
+  FileSpec temp_file("~");
+  FileSystem::Instance().Resolve(temp_file);
+  file_spec.SetDirectory(temp_file.GetPathAsConstString());
+  return true;
+}
+
+bool HostInfoBase::ComputeUserLLDBHomeDirectory(FileSpec &file_spec) {
+  FileSpec home_dir_spec = GetUserHomeDir();
+  home_dir_spec.AppendPathComponent(".lldb");
+  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
+  return true;
+}
+
 bool HostInfoBase::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   // TODO(zturner): Figure out how to compute the user plugins directory for
   // all platforms.
