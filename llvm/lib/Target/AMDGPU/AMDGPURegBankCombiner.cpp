@@ -261,7 +261,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   // nodes(max/min) have same behavior when one input is NaN and other isn't.
   // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
   // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
-  if ((getIEEE() && isFminnumIeee(MI)) || isKnownNeverNaN(Dst, MRI)) {
+  if ((getIEEE() && isFminnumIeee(MI)) || isKnownNeverNaN(Dst, MRI, VT)) {
     // Don't fold single use constant that can't be inlined.
     if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
         (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
@@ -291,8 +291,8 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   // For IEEE=true consider NaN inputs. Only min(max(QNaN, 0.0), 1.0) evaluates
   // to 0.0 requires dx10_clamp = true.
   if ((getIEEE() && getDX10Clamp() && isFminnumIeee(MI) &&
-       isKnownNeverSNaN(Val, MRI)) ||
-      isKnownNeverNaN(MI.getOperand(0).getReg(), MRI)) {
+       isKnownNeverSNaN(Val, MRI, VT)) ||
+      isKnownNeverNaN(MI.getOperand(0).getReg(), MRI, VT)) {
     Reg = Val;
     return true;
   }
@@ -329,6 +329,8 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   Register Val = Src0->getOperand(0).getReg();
 
   auto isOp3Zero = [&]() {
+    if (MI.getNumOperands() < 5)
+      return false;
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(4).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
       return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
@@ -338,9 +340,9 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   // no NaN inputs. Most often MI is marked with nnan fast math flag.
   // For IEEE=true consider NaN inputs. Requires dx10_clamp = true. Safe to fold
   // when Val could be QNaN. If Val can also be SNaN third input should be 0.0.
-  if (isKnownNeverNaN(MI.getOperand(0).getReg(), MRI) ||
+  if (isKnownNeverNaN(MI.getOperand(0).getReg(), MRI, VT) ||
       (getIEEE() && getDX10Clamp() &&
-       (isKnownNeverSNaN(Val, MRI) || isOp3Zero()))) {
+       (isKnownNeverSNaN(Val, MRI, VT) || isOp3Zero()))) {
     Reg = Val;
     return true;
   }
