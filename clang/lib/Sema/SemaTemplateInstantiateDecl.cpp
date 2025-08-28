@@ -245,12 +245,13 @@ static void sharedInstantiateConstructorDestructorAttr(
     if (Result.isInvalid())
       return;
     tempInstPriority = Result.get();
-    if (auto CE = tempInstPriority->getIntegerConstantExpr(C)) {
+    if (std::optional<llvm::APSInt> CE =
+            tempInstPriority->getIntegerConstantExpr(C)) {
       // Consistent with non-templated priority arguments, which must fit in a
       // 32-bit unsigned integer.
       if (!CE->isIntN(32)) {
         S.Diag(tempInstPriority->getExprLoc(), diag::err_ice_too_large)
-            << toString(*CE, 10, false) << 32 << 1;
+            << toString(*CE, 10, false) << /*Size=*/32 << /*Unsigned=*/1;
         return;
       }
     }

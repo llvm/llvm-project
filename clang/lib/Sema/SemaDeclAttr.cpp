@@ -2156,11 +2156,11 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
-static std::optional<Expr *>
-sharedGetConstructorDestructorAttrExpr(Sema &S, const ParsedAttr &AL) {
-  // If no Expr node exists on the attribute, return a nullptr (default priority
-  // to be used). If Expr node exists but is not valid, return a nullopt.
-  // Otherwise, return the Expr.
+static ExprResult sharedGetConstructorDestructorAttrExpr(Sema &S,
+                                                         const ParsedAttr &AL) {
+  // If no Expr node exists on the attribute, return a nullptr result (default
+  // priority to be used). If Expr node exists but is not valid, return an
+  // invalid result. Otherwise, return the Expr.
   Expr *E = nullptr;
   if (AL.getNumArgs() == 1) {
     E = AL.getArgAsExpr(0);
@@ -2168,12 +2168,12 @@ sharedGetConstructorDestructorAttrExpr(Sema &S, const ParsedAttr &AL) {
       if (!E->isTypeDependent() && !E->getType()->isIntegerType()) {
         S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
             << AL << AANT_ArgumentIntegerConstant << E->getSourceRange();
-        return std::nullopt;
+        return ExprResult(/*Invalid=*/true);
       }
     } else {
       uint32_t priority;
       if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority)) {
-        return std::nullopt;
+        return ExprResult(/*Invalid=*/true);
       }
       return ConstantExpr::Create(S.Context, E,
                                   APValue(llvm::APSInt::getUnsigned(priority)));
@@ -2187,20 +2187,20 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
-  auto E = sharedGetConstructorDestructorAttrExpr(S, AL);
-  if (!E.has_value())
+  ExprResult E = sharedGetConstructorDestructorAttrExpr(S, AL);
+  if (!E.isUsable())
     return;
   S.Diag(D->getLocation(), diag::warn_global_constructor)
       << D->getSourceRange();
-  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, E.value()));
+  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, E.get()));
 }
 
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto E = sharedGetConstructorDestructorAttrExpr(S, AL);
-  if (!E.has_value())
+  ExprResult E = sharedGetConstructorDestructorAttrExpr(S, AL);
+  if (!E.isUsable())
     return;
   S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
-  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, E.value()));
+  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, E.get()));
 }
 
 template <typename AttrTy>
