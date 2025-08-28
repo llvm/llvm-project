@@ -1868,25 +1868,8 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
 
         // Extract size from preceding instructions (AArch64 only).
         // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2.
-        std::optional<uint64_t> KnownSize = std::nullopt;
-        if (BC.isAArch64()) {
-          BitVector WrittenRegs(BC.MRI->getNumRegs());
-          MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
-          std::optional<uint64_t> ExtractedSize;
-
-          // Look backwards for size-setting instruction.
-          for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
-            MCInst &Inst = *InstIt;
-            WrittenRegs.reset();
-            BC.MIB->getWrittenRegs(Inst, WrittenRegs);
-
-            if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg] &&
-                (ExtractedSize = BC.MIB->extractMoveImmediate(Inst, SizeReg))) {
-              KnownSize = *ExtractedSize;
-              break;
-            }
-          }
-        }
+        std::optional<uint64_t> KnownSize =
+            BC.MIB->findMemcpySizeInBytes(BB, II);
 
         if (BC.isAArch64() && !KnownSize.has_value()) {
           ++II;

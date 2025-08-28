@@ -2604,12 +2604,30 @@ public:
 
   std::optional<uint64_t>
   extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
-    if (Inst.getOpcode() == AArch64::MOVZXi && Inst.getNumOperands() >= 3 &&
-        Inst.getOperand(0).isReg() &&
+    // Match MOVZXi with the target register and no shift.
+    if (Inst.getOpcode() == AArch64::MOVZXi &&
         Inst.getOperand(0).getReg() == TargetReg &&
-        Inst.getOperand(1).isImm() && Inst.getOperand(2).isImm() &&
         Inst.getOperand(2).getImm() == 0)
       return Inst.getOperand(1).getImm();
+    return std::nullopt;
+  }
+
+  std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const override {
+    BitVector WrittenRegs(RegInfo->getNumRegs());
+    MCPhysReg SizeReg = getIntArgRegister(2);
+    std::optional<uint64_t> ExtractedSize;
+
+    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+      const MCInst &Inst = *InstIt;
+      WrittenRegs.reset();
+      getWrittenRegs(Inst, WrittenRegs);
+
+      if (SizeReg != getNoRegister() && WrittenRegs[SizeReg] &&
+          (ExtractedSize = extractMoveImmediate(Inst, SizeReg)))
+        return *ExtractedSize;
+    }
     return std::nullopt;
   }
 
@@ -2633,7 +2651,7 @@ public:
 
   InstructionListType generateSizeSpecificMemcpy(InstructionListType &Code,
                                                  uint64_t Size) const {
-    auto addLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
+    auto AddLoadStorePair = [&](unsigned LoadOpc, unsigned StoreOpc,
                                 unsigned Reg, unsigned Offset = 0) {
       Code.emplace_back(MCInstBuilder(LoadOpc)
                             .addReg(Reg)
@@ -2648,23 +2666,23 @@ public:
     // Generate optimal instruction sequences based on exact size.
     switch (Size) {
     case 1:
-      addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3);
       break;
     case 2:
-      addLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3);
       break;
     case 4:
-      addLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3);
       break;
     case 8:
-      addLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3);
+      AddLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3);
       break;
     case 16:
-      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0);
       break;
     case 32:
-      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0, 0);
-      addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q1, 1);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0, 0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q1, 1);
       break;
 
     default:
@@ -2673,33 +2691,20 @@ public:
         uint64_t Remaining = Size;
         uint64_t Offset = 0;
 
-        while (Remaining >= 16) {
-          addLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0,
-                           Offset / 16);
-          Remaining -= 16;
-          Offset += 16;
-        }
-        if (Remaining >= 8) {
-          addLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3,
-                           Offset / 8);
-          Remaining -= 8;
-          Offset += 8;
-        }
-        if (Remaining >= 4) {
-          addLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3,
-                           Offset / 4);
-          Remaining -= 4;
-          Offset += 4;
-        }
-        if (Remaining >= 2) {
-          addLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3,
-                           Offset / 2);
-          Remaining -= 2;
-          Offset += 2;
-        }
-        if (Remaining == 1)
-          addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3,
-                           Offset);
+        const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
+            LoadStoreOps = {
+                {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q0},
+                 {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X3},
+                 {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W3},
+                 {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3},
+                 {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3}}};
+
+        for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
+          while (Remaining >= OpSize) {
+            AddLoadStorePair(LoadOp, StoreOp, TempReg, Offset / OpSize);
+            Remaining -= OpSize;
+            Offset += OpSize;
+          }
       } else
         Code.clear();
       break;

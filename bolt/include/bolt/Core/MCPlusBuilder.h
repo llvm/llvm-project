@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1886,6 +1887,15 @@ public:
                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
+  }
+
+  /// Find memcpy size in bytes by using preceding instructions.
+  /// Returns std::nullopt if size cannot be determined (no-op for most
+  /// targets).
+  virtual std::optional<uint64_t>
+  findMemcpySizeInBytes(const BinaryBasicBlock &BB,
+                        BinaryBasicBlock::iterator CallInst) const {
+    return std::nullopt;
   }
 
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
