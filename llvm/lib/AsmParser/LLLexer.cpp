@@ -155,15 +155,6 @@ static bool isLabelChar(char C) {
          C == '.' || C == '_';
 }
 
-/// isLabelTail - Return true if this pointer points to a valid end of a label.
-static const char *isLabelTail(const char *CurPtr) {
-  while (true) {
-    if (CurPtr[0] == ':') return CurPtr+1;
-    if (!isLabelChar(CurPtr[0])) return nullptr;
-    ++CurPtr;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Lexer definition.
 //===----------------------------------------------------------------------===//
@@ -174,28 +165,27 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
   CurPtr = CurBuf.begin();
 }
 
+const char *LLLexer::getLabelTail(const char *Ptr) {
+  while (Ptr != CurBuf.end()) {
+    if (Ptr[0] == ':')
+      return Ptr + 1;
+    if (!isLabelChar(Ptr[0]))
+      return nullptr;
+    ++Ptr;
+  }
+  return nullptr;
+}
+
 int LLLexer::getNextChar() {
-  char CurChar = *CurPtr++;
+  if (CurPtr == CurBuf.end())
+    return EOF;
   // Increment line number if this is the first character after a newline
-  // CurPtr points to the char after CurChar, so two positions before that
-  if ((CurPtr - 2) >= CurBuf.begin() && *(CurPtr - 2) == '\n') {
+  if (CurPtr > CurBuf.begin() && *(CurPtr-1) == '\n'){
     CurLineNum++;
     CurColNum = 0;
   } else
     CurColNum++;
-
-  switch (CurChar) {
-  default: return (unsigned char)CurChar;
-  case 0:
-    // A nul character in the stream is either the end of the current buffer or
-    // a random nul in the file.  Disambiguate that here.
-    if (CurPtr-1 != CurBuf.end())
-      return 0;  // Just whitespace.
-
-    // Otherwise, return end of file.
-    --CurPtr;  // Another call to lex will return EOF again.
-    return EOF;
-  }
+  return *CurPtr++;
 }
 
 const char *LLLexer::skipNChars(unsigned N) {
@@ -210,7 +200,7 @@ void LLLexer::advancePositionTo(const char *Ptr) {
     if (CurPtr > Ptr) {
       --CurPtr;
       --CurColNum;
-      // Since CurPtr is one char ahead of the stored position, chech if the
+      // Since CurPtr is one char ahead of the stored position, check if the
       // previous char is not a newline
       if (CurPtr != CurBuf.begin() && *(CurPtr - 1) == '\n') {
         --CurLineNum;
@@ -264,7 +254,7 @@ lltok::Kind LLLexer::LexToken() {
     case '%': return LexPercent();
     case '"': return LexQuote();
     case '.':
-      if (const char *Ptr = isLabelTail(CurPtr)) {
+      if (const char *Ptr = getLabelTail(CurPtr)) {
         advancePositionTo(Ptr);
         StrVal.assign(TokStart, CurPtr-1);
         return lltok::LabelStr;
@@ -347,7 +337,7 @@ lltok::Kind LLLexer::LexAt() {
 }
 
 lltok::Kind LLLexer::LexDollar() {
-  if (const char *Ptr = isLabelTail(TokStart)) {
+  if (const char *Ptr = getLabelTail(TokStart)) {
     advancePositionTo(Ptr);
     StrVal.assign(TokStart, CurPtr - 1);
     return lltok::LabelStr;
@@ -1198,7 +1188,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   if (!isdigit(static_cast<unsigned char>(TokStart[0])) &&
       !isdigit(static_cast<unsigned char>(CurPtr[0]))) {
     // Okay, this is not a number after the -, it's probably a label.
-    if (const char *End = isLabelTail(CurPtr)) {
+    if (const char *End = getLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
       advancePositionTo(End);
       return lltok::LabelStr;
@@ -1225,7 +1215,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
 
   // Check to see if this really is a string label, e.g. "-1:".
   if (isLabelChar(CurPtr[0]) || CurPtr[0] == ':') {
-    if (const char *End = isLabelTail(CurPtr)) {
+    if (const char *End = getLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
       advancePositionTo(End);
       return lltok::LabelStr;
