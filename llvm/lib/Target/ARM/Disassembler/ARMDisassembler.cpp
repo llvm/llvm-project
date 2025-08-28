@@ -13,6 +13,7 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -31,6 +32,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "arm-disassembler"
 
@@ -38,94 +40,80 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-  // Handles the condition code status of instructions in IT blocks
-  class ITStatus
-  {
-    public:
-      // Returns the condition code for instruction in IT block
-      unsigned getITCC() {
-        unsigned CC = ARMCC::AL;
-        if (instrInITBlock())
-          CC = ITStates.back();
-        return CC;
-      }
+// Handles the condition code status of instructions in IT blocks
+class ITStatus {
+public:
+  // Returns the condition code for instruction in IT block
+  unsigned getITCC() {
+    unsigned CC = ARMCC::AL;
+    if (instrInITBlock())
+      CC = ITStates.back();
+    return CC;
+  }
 
-      // Advances the IT block state to the next T or E
-      void advanceITState() {
-        ITStates.pop_back();
-      }
+  // Advances the IT block state to the next T or E
+  void advanceITState() { ITStates.pop_back(); }
 
-      // Returns true if the current instruction is in an IT block
-      bool instrInITBlock() {
-        return !ITStates.empty();
-      }
+  // Returns true if the current instruction is in an IT block
+  bool instrInITBlock() { return !ITStates.empty(); }
 
-      // Returns true if current instruction is the last instruction in an IT block
-      bool instrLastInITBlock() {
-        return ITStates.size() == 1;
-      }
+  // Returns true if current instruction is the last instruction in an IT block
+  bool instrLastInITBlock() { return ITStates.size() == 1; }
 
-      // Called when decoding an IT instruction. Sets the IT state for
-      // the following instructions that for the IT block. Firstcond
-      // corresponds to the field in the IT instruction encoding; Mask
-      // is in the MCOperand format in which 1 means 'else' and 0 'then'.
-      void setITState(char Firstcond, char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
-        assert(NumTZ <= 3 && "Invalid IT mask!");
-        // push condition codes onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          unsigned Else = (Mask >> Pos) & 1;
-          ITStates.push_back(CCBits ^ Else);
-        }
-        ITStates.push_back(CCBits);
-      }
+  // Called when decoding an IT instruction. Sets the IT state for
+  // the following instructions that for the IT block. Firstcond
+  // corresponds to the field in the IT instruction encoding; Mask
+  // is in the MCOperand format in which 1 means 'else' and 0 'then'.
+  void setITState(char Firstcond, char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
+    assert(NumTZ <= 3 && "Invalid IT mask!");
+    // push condition codes onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      unsigned Else = (Mask >> Pos) & 1;
+      ITStates.push_back(CCBits ^ Else);
+    }
+    ITStates.push_back(CCBits);
+  }
 
-    private:
-      std::vector<unsigned char> ITStates;
-  };
+private:
+  std::vector<unsigned char> ITStates;
+};
 
-  class VPTStatus
-  {
-    public:
-      unsigned getVPTPred() {
-        unsigned Pred = ARMVCC::None;
-        if (instrInVPTBlock())
-          Pred = VPTStates.back();
-        return Pred;
-      }
+class VPTStatus {
+public:
+  unsigned getVPTPred() {
+    unsigned Pred = ARMVCC::None;
+    if (instrInVPTBlock())
+      Pred = VPTStates.back();
+    return Pred;
+  }
 
-      void advanceVPTState() {
-        VPTStates.pop_back();
-      }
+  void advanceVPTState() { VPTStates.pop_back(); }
 
-      bool instrInVPTBlock() {
-        return !VPTStates.empty();
-      }
+  bool instrInVPTBlock() { return !VPTStates.empty(); }
 
-      bool instrLastInVPTBlock() {
-        return VPTStates.size() == 1;
-      }
+  bool instrLastInVPTBlock() { return VPTStates.size() == 1; }
 
-      void setVPTState(char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        assert(NumTZ <= 3 && "Invalid VPT mask!");
-        // push predicates onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          bool T = ((Mask >> Pos) & 1) == 0;
-          if (T)
-            VPTStates.push_back(ARMVCC::Then);
-          else
-            VPTStates.push_back(ARMVCC::Else);
-        }
+  void setVPTState(char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    assert(NumTZ <= 3 && "Invalid VPT mask!");
+    // push predicates onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      bool T = ((Mask >> Pos) & 1) == 0;
+      if (T)
         VPTStates.push_back(ARMVCC::Then);
-      }
+      else
+        VPTStates.push_back(ARMVCC::Else);
+    }
+    VPTStates.push_back(ARMVCC::Then);
+  }
 
-    private:
-      SmallVector<unsigned char, 4> VPTStates;
-  };
+private:
+  SmallVector<unsigned char, 4> VPTStates;
+};
 
 /// ARM disassembler for all ARM platforms.
 class ARMDisassembler : public MCDisassembler {
@@ -704,6 +692,42 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.  The immediate Value has had any PC
+/// adjustment made by the caller.  If the instruction is a branch instruction
+/// then isBranch is true, else false.  If the getOpInfo() function was set as
+/// part of the setupForSymbolicDisassembly() call then that function is called
+/// to get any symbolic information at the Address for this instruction.  If
+/// that returns non-zero then the symbolic information it returns is used to
+/// create an MCExpr and that is added as an operand to the MCInst.  If
+/// getOpInfo() returns zero and isBranch is true then a symbol look up for
+/// Value is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with Value is created.  This function returns true if it adds an
+/// operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
+                                     bool isBranch, uint64_t InstSize,
+                                     MCInst &MI,
+                                     const MCDisassembler *Decoder) {
+  // FIXME: Does it make sense for value to be negative?
+  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
+                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
+                                           InstSize);
+}
+
+/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
+/// referenced by a load instruction with the base register that is the Pc.
+/// These can often be values in a literal pool near the Address of the
+/// instruction.  The Address of the instruction and its immediate Value are
+/// used as a possible literal pool entry.  The SymbolLookUp call back will
+/// return the name of a symbol referenced by the literal pool's entry if
+/// the referenced address is that of a symbol.  Or it will return a pointer to
+/// a literal 'C' string if the referenced address of the literal pool's entry
+/// is an address into a section with 'C' string literals.
+static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
+                                            const MCDisassembler *Decoder) {
+  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
+}
+
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -842,42 +866,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
 
   Size = 4;
   return MCDisassembler::Fail;
-}
-
-/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
-/// immediate Value in the MCInst.  The immediate Value has had any PC
-/// adjustment made by the caller.  If the instruction is a branch instruction
-/// then isBranch is true, else false.  If the getOpInfo() function was set as
-/// part of the setupForSymbolicDisassembly() call then that function is called
-/// to get any symbolic information at the Address for this instruction.  If
-/// that returns non-zero then the symbolic information it returns is used to
-/// create an MCExpr and that is added as an operand to the MCInst.  If
-/// getOpInfo() returns zero and isBranch is true then a symbol look up for
-/// Value is done and if a symbol is found an MCExpr is created with that, else
-/// an MCExpr with Value is created.  This function returns true if it adds an
-/// operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
-                                     bool isBranch, uint64_t InstSize,
-                                     MCInst &MI,
-                                     const MCDisassembler *Decoder) {
-  // FIXME: Does it make sense for value to be negative?
-  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
-                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
-                                           InstSize);
-}
-
-/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
-/// referenced by a load instruction with the base register that is the Pc.
-/// These can often be values in a literal pool near the Address of the
-/// instruction.  The Address of the instruction and its immediate Value are
-/// used as a possible literal pool entry.  The SymbolLookUp call back will
-/// return the name of a symbol referenced by the literal pool's entry if
-/// the referenced address is that of a symbol.  Or it will return a pointer to
-/// a literal 'C' string if the referenced address of the literal pool's entry
-/// is an address into a section with 'C' string literals.
-static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
-                                            const MCDisassembler *Decoder) {
-  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
 // Thumb1 instructions don't have explicit S bits.  Rather, they

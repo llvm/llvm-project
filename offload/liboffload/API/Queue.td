@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olCreateQueue";
+def olCreateQueue : Function {
     let desc = "Create a queue for the given device.";
     let details = [];
     let params = [
@@ -21,8 +20,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olDestroyQueue";
+def olDestroyQueue : Function {
     let desc = "Destroy the queue and free all underlying resources.";
     let details = [
       "Any work previously enqueued to the queue is still performed and any events generated for this queue remain valid."
@@ -33,8 +31,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olSyncQueue";
+def olSyncQueue : Function {
     let desc = "Block the calling thread until the enqueued work on a queue is complete.";
     let details = [];
     let params = [
@@ -43,8 +40,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olWaitEvents";
+def olWaitEvents : Function {
     let desc = "Make any future work submitted to this queue wait until the provided events are complete.";
     let details = [
       "All events in `Events` must complete before the queue is unblocked.",
@@ -60,8 +56,7 @@ def : Function {
     ];
 }
 
-def : Enum {
-  let name = "ol_queue_info_t";
+def ol_queue_info_t : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
@@ -70,8 +65,7 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetQueueInfo";
+def olGetQueueInfo : Function {
   let desc = "Queries the given property of the queue.";
   let details = [
     "`olGetQueueInfoSize` can be used to query the storage size "
@@ -95,8 +89,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetQueueInfoSize";
+def olGetQueueInfoSize : Function {
   let desc = "Returns the storage size of the given queue query.";
   let details = [];
   let params = [
@@ -109,8 +102,7 @@ def : Function {
   ];
 }
 
-def : FptrTypedef {
-  let name = "ol_host_function_cb_t";
+def ol_host_function_cb_t : FptrTypedef {
   let desc = "Host function for use by `olLaunchHostFunction`.";
   let params = [
     Param<"void *", "UserData", "user specified data passed into `olLaunchHostFunction`.", PARAM_IN>,
@@ -118,8 +110,7 @@ def : FptrTypedef {
   let return = "void";
 }
 
-def : Function {
-  let name = "olLaunchHostFunction";
+def olLaunchHostFunction : Function {
   let desc = "Enqueue a callback function on the host.";
   let details = [
     "The provided function will be called from the same process as the one that called `olLaunchHostFunction`.",
