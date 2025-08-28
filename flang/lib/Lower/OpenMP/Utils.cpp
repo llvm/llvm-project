@@ -599,7 +599,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 }
 
 /// Populates the sizes vector with values if the given OpenMPConstruct
-/// Contains a loop construct with an inner tiling construct.
+/// contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
     llvm::SmallVectorImpl<int64_t> &tileSizes, SemanticsContext &semaCtx) {
@@ -632,6 +632,7 @@ void collectTileSizesFromOpenMPConstruct(
               if (const auto v{EvaluateInt64(semaCtx, tval)})
                 tileSizes.push_back(*v);
             }
+            break;
           }
       }
     }
@@ -685,15 +686,14 @@ int64_t collectLoopRelatedInfo(
             if (const auto tclause{
                     std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
               sizesLengthValue = tclause->v.size();
+              break;
             }
         }
       }
     }
   }
 
-  collapseValue = collapseValue - sizesLengthValue;
-  collapseValue =
-      collapseValue < sizesLengthValue ? sizesLengthValue : collapseValue;
+  collapseValue = std::max(collapseValue, sizesLengthValue);
   std::size_t loopVarTypeSize = 0;
   do {
     lower::pft::Evaluation *doLoop =

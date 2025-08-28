@@ -3046,11 +3046,11 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Do tiling.
   if (const auto &tiles = loopOp.getTileSizes()) {
-    llvm::Type *IVType = loopInfos.front()->getIndVarType();
+    llvm::Type *ivType = loopInfos.front()->getIndVarType();
     SmallVector<llvm::Value *> TileSizes;
 
     for (auto tile : tiles.value()) {
-      llvm::Value *TileVal = llvm::ConstantInt::get(IVType, tile);
+      llvm::Value *TileVal = llvm::ConstantInt::get(ivType, tile);
       TileSizes.push_back(TileVal);
     }
 
