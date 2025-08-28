@@ -135,6 +135,13 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
+  check.
+
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
@@ -225,7 +232,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
-  generating fix-it hints when size method is called from implicit ``this``.
+  generating fix-it hints when size method is called from implicit ``this``
+  and adding detection in container's method except ``empty``.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring

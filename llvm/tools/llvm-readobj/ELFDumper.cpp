@@ -8106,8 +8106,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             DictScope BBED(W);
             W.printNumber("ID", BBE.ID);
             W.printHex("Offset", BBE.Offset);
-            if (!BBE.CallsiteOffsets.empty())
-              W.printList("Callsite Offsets", BBE.CallsiteOffsets);
+            if (!BBE.CallsiteEndOffsets.empty())
+              W.printList("Callsite End Offsets", BBE.CallsiteEndOffsets);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());
