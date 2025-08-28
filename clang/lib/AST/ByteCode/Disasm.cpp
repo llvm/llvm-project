@@ -549,7 +549,6 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
-  assert(Ctx);
   auto &OS = llvm::errs();
 
   if (empty()) {
@@ -558,6 +557,9 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
     OS << "Invalid\n";
   } else {
     OS << "Value: ";
+#ifndef NDEBUG
+    assert(Ctx);
     Value.dump(OS, Ctx->getASTContext());
+#endif
   }
 }
