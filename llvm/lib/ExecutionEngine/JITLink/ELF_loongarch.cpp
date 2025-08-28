@@ -306,6 +306,14 @@ private:
       return RequestGOTAndTransformToPageOffset12;
     case ELF::R_LARCH_CALL36:
       return Call36PCRel;
+    case ELF::R_LARCH_GOT64_PC_HI12:
+      return RequestGOTAndTransformToPage64HI12;
+    case ELF::R_LARCH_GOT64_PC_LO20:
+      return RequestGOTAndTransformToPage64LO20;
+    case ELF::R_LARCH_PCALA64_HI12:
+      return Page64HI12;
+    case ELF::R_LARCH_PCALA64_LO20:
+      return Page64LO20;
     case ELF::R_LARCH_ADD6:
       return Add6;
     case ELF::R_LARCH_ADD8:
