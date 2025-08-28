@@ -1060,8 +1060,3 @@ define void @flat_atomic_cmpxchg_i64_ret_a_av__av(ptr %ptr) #0 {
 }
 
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="10,10" }
-
-
-
-
-
