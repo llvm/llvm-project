@@ -76,6 +76,7 @@ void ExternalNameConversionPass::runOnOperation() {
   auto *context = &getContext();
 
   llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
+  mlir::SymbolTable symbolTable(op);
 
   auto processFctOrGlobal = [&](mlir::Operation &funcOrGlobal) {
     auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
@@ -92,7 +93,6 @@ void ExternalNameConversionPass::runOnOperation() {
           bool hasConflictingCommonBlock = false;
 
           // Check if any existing global has the same mangled name.
-          mlir::SymbolTable symbolTable(mod);
           if (auto conflictingOp = symbolTable.lookup(mangledName)) {
             if (mlir::isa<fir::GlobalOp>(conflictingOp)) {
               hasConflictingCommonBlock = true;
