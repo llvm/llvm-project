@@ -22,68 +22,9 @@ class BinaryFunction;
 /// in a BinaryFunction (i.e. before a CFG is created), or in a BinaryBasicBlock
 /// (after a CFG is created).
 class MCInstReference {
+public:
   using nocfg_const_iterator = std::map<uint32_t, MCInst>::const_iterator;
 
-  // Two cases are possible:
-  // * functions with CFG reconstructed - a function stores a collection of
-  //   basic blocks, each basic block stores a contiguous vector of MCInst
-  // * functions without CFG - there are no basic blocks created,
-  //   the instructions are directly stored in std::map in BinaryFunction
-  //
-  // In both cases, the direct parent of MCInst is stored together with an
-  // iterator pointing to the instruction.
-
-  // Helper struct: CFG is available, the direct parent is a basic block,
-  // iterator's type is `MCInst *`.
-  struct RefInBB {
-    RefInBB(const BinaryBasicBlock *BB, const MCInst *Inst)
-        : BB(BB), It(Inst) {}
-    RefInBB(const RefInBB &Other) = default;
-    RefInBB &operator=(const RefInBB &Other) = default;
-
-    const BinaryBasicBlock *BB;
-    BinaryBasicBlock::const_iterator It;
-
-    bool operator==(const RefInBB &Other) const {
-      return BB == Other.BB && It == Other.It;
-    }
-  };
-
-  // Helper struct: CFG is *not* available, the direct parent is a function,
-  // iterator's type is std::map<uint32_t, MCInst>::iterator (the mapped value
-  // is an instruction's offset).
-  struct RefInBF {
-    RefInBF(const BinaryFunction *BF, nocfg_const_iterator It)
-        : BF(BF), It(It) {}
-    RefInBF(const RefInBF &Other) = default;
-    RefInBF &operator=(const RefInBF &Other) = default;
-
-    const BinaryFunction *BF;
-    nocfg_const_iterator It;
-
-    bool operator==(const RefInBF &Other) const {
-      return BF == Other.BF && It->first == Other.It->first;
-    }
-  };
-
-  std::variant<RefInBB, RefInBF> Reference;
-
-  // Utility methods to be used like this:
-  //
-  //     if (auto *Ref = tryGetRefInBB())
-  //       return Ref->doSomething(...);
-  //     return getRefInBF().doSomethingElse(...);
-  const RefInBB *tryGetRefInBB() const {
-    assert(std::get_if<RefInBB>(&Reference) ||
-           std::get_if<RefInBF>(&Reference));
-    return std::get_if<RefInBB>(&Reference);
-  }
-  const RefInBF &getRefInBF() const {
-    assert(std::get_if<RefInBF>(&Reference));
-    return *std::get_if<RefInBF>(&Reference);
-  }
-
-public:
   /// Constructs an empty reference.
   MCInstReference() : Reference(RefInBB(nullptr, nullptr)) {}
   /// Constructs a reference to the instruction inside the basic block.
@@ -142,6 +83,66 @@ public:
   }
 
   raw_ostream &print(raw_ostream &OS) const;
+
+private:
+  // Two cases are possible:
+  // * functions with CFG reconstructed - a function stores a collection of
+  //   basic blocks, each basic block stores a contiguous vector of MCInst
+  // * functions without CFG - there are no basic blocks created,
+  //   the instructions are directly stored in std::map in BinaryFunction
+  //
+  // In both cases, the direct parent of MCInst is stored together with an
+  // iterator pointing to the instruction.
+
+  // Helper struct: CFG is available, the direct parent is a basic block,
+  // iterator's type is `MCInst *`.
+  struct RefInBB {
+    RefInBB(const BinaryBasicBlock *BB, const MCInst *Inst)
+        : BB(BB), It(Inst) {}
+    RefInBB(const RefInBB &Other) = default;
+    RefInBB &operator=(const RefInBB &Other) = default;
+
+    const BinaryBasicBlock *BB;
+    BinaryBasicBlock::const_iterator It;
+
+    bool operator==(const RefInBB &Other) const {
+      return BB == Other.BB && It == Other.It;
+    }
+  };
+
+  // Helper struct: CFG is *not* available, the direct parent is a function,
+  // iterator's type is std::map<uint32_t, MCInst>::iterator (the mapped value
+  // is an instruction's offset).
+  struct RefInBF {
+    RefInBF(const BinaryFunction *BF, nocfg_const_iterator It)
+        : BF(BF), It(It) {}
+    RefInBF(const RefInBF &Other) = default;
+    RefInBF &operator=(const RefInBF &Other) = default;
+
+    const BinaryFunction *BF;
+    nocfg_const_iterator It;
+
+    bool operator==(const RefInBF &Other) const {
+      return BF == Other.BF && It->first == Other.It->first;
+    }
+  };
+
+  std::variant<RefInBB, RefInBF> Reference;
+
+  // Utility methods to be used like this:
+  //
+  //     if (auto *Ref = tryGetRefInBB())
+  //       return Ref->doSomething(...);
+  //     return getRefInBF().doSomethingElse(...);
+  const RefInBB *tryGetRefInBB() const {
+    assert(std::get_if<RefInBB>(&Reference) ||
+           std::get_if<RefInBF>(&Reference));
+    return std::get_if<RefInBB>(&Reference);
+  }
+  const RefInBF &getRefInBF() const {
+    assert(std::get_if<RefInBF>(&Reference));
+    return *std::get_if<RefInBF>(&Reference);
+  }
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS,
