@@ -75,8 +75,9 @@ struct VectorMaskedLoadOpConverter final
       auto ifOp = scf::IfOp::create(
           rewriter, loc, maskBit,
           [&](OpBuilder &builder, Location loc) {
-            auto loadedValue = memref::LoadOp::create(
-                builder, loc, base, indices, nontemporal, alignment.value_or(0));
+            auto loadedValue =
+                memref::LoadOp::create(builder, loc, base, indices, nontemporal,
+                                       alignment.value_or(0));
             auto combinedValue =
                 vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
             scf::YieldOp::create(builder, loc, combinedValue.getResult());
