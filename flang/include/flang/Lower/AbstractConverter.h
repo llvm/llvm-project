@@ -117,7 +117,7 @@ public:
   bindSymbolStorage(SymbolRef sym,
                     Fortran::lower::SymMap::StorageDesc storage) = 0;
 
-  /// Returns the storage descriptor previouslt bound to this symbol.
+  /// Returns the storage descriptor previously bound to this symbol.
   /// If there is no bound storage, the descriptor will contain
   /// nullptr base address.
   virtual Fortran::lower::SymMap::StorageDesc
