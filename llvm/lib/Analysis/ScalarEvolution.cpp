@@ -2338,15 +2338,23 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
-  // TODO: Support mul.
-  if (BinOp == Instruction::Mul)
-    return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
   if (!RHSC)
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
+  if (BinOp == Instruction::Mul) {
+    // Multiplying by 0 or 1 never overflows
+    if (C.isZero() || C.isOne())
+      return true;
+    if (Signed)
+      return false;
+    APInt Limit = APInt::getMaxValue(NumBits).udiv(C);
+    // To avoid overflow, we need to make sure that LHS <= MAX / C.
+    return isKnownPredicateAt(ICmpInst::ICMP_ULE, LHS, getConstant(Limit),
+                              CtxI);
+  }
   bool IsSub = (BinOp == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.
@@ -3199,6 +3207,21 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           return getAddRecExpr(Operands, AddRec->getLoop(),
                                AddRec->getNoWrapFlags(FlagsMask));
         }
+      }
+
+      // Try to push the constant operand into a ZExt: C * zext (A + B) ->
+      // zext (C*A + C*B) if trunc (C) * (A + B)  does not unsigned-wrap.
+      const SCEVAddExpr *InnerAdd;
+      if (match(Ops[1], m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+        const SCEV *NarrowC = getTruncateExpr(LHSC, InnerAdd->getType());
+        if (isa<SCEVConstant>(InnerAdd->getOperand(0)) &&
+            getZeroExtendExpr(NarrowC, Ops[1]->getType()) == LHSC &&
+            hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
+                                           SCEV::FlagAnyWrap),
+                     SCEV::FlagNUW)) {
+          auto *Res = getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
+          return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
+        };
       }
     }
   }

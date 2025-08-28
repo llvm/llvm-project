@@ -56,8 +56,8 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
   const llvm::APSInt &Val = TemplArg.getAsIntegral();
 
   if (Policy.UseEnumerators) {
-    if (const EnumType *ET = T->getAs<EnumType>()) {
-      for (const EnumConstantDecl *ECD : ET->getOriginalDecl()->enumerators()) {
+    if (const auto *ED = T->getAsEnumDecl()) {
+      for (const EnumConstantDecl *ECD : ED->enumerators()) {
         // In Sema::CheckTemplateArugment, enum template arguments value are
         // extended to the size of the integer underlying the enum type.  This
         // may create a size difference between the enum value and template
