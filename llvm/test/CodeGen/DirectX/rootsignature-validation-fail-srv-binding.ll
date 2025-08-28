@@ -6,7 +6,7 @@
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
 ; StructuredBuffer<int> In : register(t0, space0);
-  %SB = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @SB.str)
+  %SB = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_0_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @SB.str)
   ret void
 }
 

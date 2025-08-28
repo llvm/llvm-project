@@ -170,6 +170,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case NVPTXISD::ATOMIC_CMP_SWAP_B128:
+  case NVPTXISD::ATOMIC_SWAP_B128:
+    selectAtomicSwap128(N);
+    return;
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
@@ -1027,9 +1031,16 @@ static inline bool isAddLike(const SDValue V) {
          (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
 }
 
+static SDValue stripAssertAlign(SDValue N) {
+  if (N.getOpcode() == ISD::AssertAlign)
+    N = N.getOperand(0);
+  return N;
+}
+
 // selectBaseADDR - Match a dag node which will serve as the base address for an
 // ADDR operand pair.
 static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
+  N = stripAssertAlign(N);
   if (const auto *GA = dyn_cast<GlobalAddressSDNode>(N))
     return DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(N),
                                        GA->getValueType(0), GA->getOffset(),
@@ -1044,6 +1055,7 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
 }
 
 static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
+  Addr = stripAssertAlign(Addr);
   APInt AccumulatedOffset(64u, 0);
   while (isAddLike(Addr)) {
     const auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
@@ -1055,7 +1067,7 @@ static SDValue accumulateOffset(SDValue &Addr, SDLoc DL, SelectionDAG *DAG) {
       break;
 
     AccumulatedOffset += CI;
-    Addr = Addr->getOperand(0);
+    Addr = stripAssertAlign(Addr->getOperand(0));
   }
   return DAG->getSignedTargetConstant(AccumulatedOffset.getSExtValue(), DL,
                                       MVT::i32);
@@ -1089,11 +1101,6 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (PlainLoad && PlainLoad->isIndexed())
     return false;
 
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
@@ -1103,7 +1110,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
 
-  const unsigned FromTypeWidth = LoadedVT.getSizeInBits();
+  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
   // Vector Setting
   const unsigned FromType =
@@ -1142,15 +1149,12 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
-static unsigned getLoadStoreVectorNumElts(SDNode *N) {
+static unsigned getStoreVectorNumElts(SDNode *N) {
   switch (N->getOpcode()) {
-  case NVPTXISD::LoadV2:
   case NVPTXISD::StoreV2:
     return 2;
-  case NVPTXISD::LoadV4:
   case NVPTXISD::StoreV4:
     return 4;
-  case NVPTXISD::LoadV8:
   case NVPTXISD::StoreV8:
     return 8;
   default:
@@ -1160,10 +1164,6 @@ static unsigned getLoadStoreVectorNumElts(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
-  const EVT MemEVT = LD->getMemoryVT();
-  if (!MemEVT.isSimple())
-    return false;
-  const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(LD);
@@ -1183,18 +1183,15 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   // Read at least 8 bits (predicates are stored as 8-bit values)
   // The last operand holds the original LoadSDNode::getExtensionType() value
-  const unsigned TotalWidth = MemVT.getSizeInBits();
   const unsigned ExtensionType =
       N->getConstantOperandVal(N->getNumOperands() - 1);
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
-  const unsigned FromTypeWidth = TotalWidth / getLoadStoreVectorNumElts(N);
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
-  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
-         FromTypeWidth <= 128 && TotalWidth <= 256 && "Invalid width for load");
 
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
@@ -1236,33 +1233,22 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
-  const EVT LoadedEVT = LD->getMemoryVT();
-  if (!LoadedEVT.isSimple())
-    return false;
-  const MVT LoadedVT = LoadedEVT.getSimpleVT();
-
   SDLoc DL(LD);
 
-  const unsigned TotalWidth = LoadedVT.getSizeInBits();
   unsigned ExtensionType;
-  unsigned NumElts;
   if (const auto *Load = dyn_cast<LoadSDNode>(LD)) {
     ExtensionType = Load->getExtensionType();
-    NumElts = 1;
   } else {
     ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
-    NumElts = getLoadStoreVectorNumElts(LD);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
-  const unsigned FromTypeWidth = TotalWidth / NumElts;
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
 
   assert(!(LD->getSimpleValueType(0).isVector() &&
            ExtensionType != ISD::NON_EXTLOAD));
-  assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
-         FromTypeWidth <= 128 && TotalWidth <= 256 && "Invalid width for load");
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(FromType, DL), getI32Imm(FromTypeWidth, DL), Base,
@@ -1301,26 +1287,21 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   return true;
 }
 
+unsigned NVPTXDAGToDAGISel::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  auto TotalWidth = Mem->getMemoryVT().getSizeInBits();
+  auto NumElts = Mem->getNumValues() - 1;
+  auto ElementBitWidth = TotalWidth / NumElts;
+  assert(isPowerOf2_32(ElementBitWidth) && ElementBitWidth >= 8 &&
+         ElementBitWidth <= 128 && TotalWidth <= 256 &&
+         "Invalid width for load");
+  return ElementBitWidth;
+}
+
 bool NVPTXDAGToDAGISel::tryLDU(SDNode *N) {
   auto *LD = cast<MemSDNode>(N);
 
-  unsigned NumElts;
-  switch (N->getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case ISD::INTRINSIC_W_CHAIN:
-    NumElts = 1;
-    break;
-  case NVPTXISD::LDUV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::LDUV4:
-    NumElts = 4;
-    break;
-  }
-
   SDLoc DL(N);
-  const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits() / NumElts;
+  const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
 
   // If this is an LDU intrinsic, the address is the third operand. If its an
@@ -1368,10 +1349,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   if (PlainStore && PlainStore->isIndexed())
     return false;
 
-  const EVT StoreVT = ST->getMemoryVT();
-  if (!StoreVT.isSimple())
-    return false;
-
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
 
@@ -1380,7 +1357,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
-  const unsigned ToTypeWidth = StoreVT.getSimpleVT().getSizeInBits();
+  const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
@@ -1417,8 +1394,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   MemSDNode *ST = cast<MemSDNode>(N);
-  const EVT StoreVT = ST->getMemoryVT();
-  assert(StoreVT.isSimple() && "Store value is not simple");
+  const unsigned TotalWidth = ST->getMemoryVT().getSizeInBits();
 
   // Address Space Setting
   const auto CodeAddrSpace = getAddrSpace(ST);
@@ -1431,11 +1407,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDValue Chain = ST->getChain();
   const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
-  // Type Setting: toType + toTypeWidth
-  // - for integer type, always use 'u'
-  const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
-
-  const unsigned NumElts = getLoadStoreVectorNumElts(ST);
+  const unsigned NumElts = getStoreVectorNumElts(ST);
 
   SmallVector<SDValue, 16> Ops;
   for (auto &V : ST->ops().slice(1, NumElts))
@@ -2347,4 +2319,29 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   }
   }
+}
+
+void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
+  MemSDNode *AN = cast<MemSDNode>(N);
+  SDLoc dl(N);
+
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  SmallVector<SDValue, 5> Ops{Base, Offset};
+  Ops.append(N->op_begin() + 2, N->op_end());
+  Ops.append({
+      getI32Imm(getMemOrder(AN), dl),
+      getI32Imm(getAtomicScope(AN), dl),
+      getI32Imm(getAddrSpace(AN), dl),
+  });
+
+  assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||
+         N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128);
+  unsigned Opcode = N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128
+                        ? NVPTX::ATOM_EXCH_B128
+                        : NVPTX::ATOM_CAS_B128;
+
+  auto *ATOM = CurDAG->getMachineNode(Opcode, dl, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
+
+  ReplaceNode(N, ATOM);
 }

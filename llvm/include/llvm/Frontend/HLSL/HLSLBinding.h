@@ -13,6 +13,7 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLBINDING_H
 #define LLVM_FRONTEND_HLSL_HLSLBINDING_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -105,36 +106,64 @@ public:
   friend class BindingInfoBuilder;
 };
 
+struct Binding {
+  dxil::ResourceClass RC;
+  uint32_t Space;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+  const void *Cookie;
+
+  Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+          uint32_t UpperBound, const void *Cookie)
+      : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
+        Cookie(Cookie) {}
+
+  bool isUnbounded() const { return UpperBound == ~0U; }
+
+  bool operator==(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
+           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+                    RHS.Cookie);
+  }
+  bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
+
+  bool operator<(const Binding &RHS) const {
+    return std::tie(RC, Space, LowerBound) <
+           std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
+  }
+};
+
+class BoundRegs {
+  SmallVector<Binding> Bindings;
+
+public:
+  BoundRegs(SmallVector<Binding> &&Bindings) : Bindings(std::move(Bindings)) {}
+
+  bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+               uint32_t UpperBound) const {
+    // UpperBound and Cookie are given dummy values, since they aren't
+    // interesting for operator<
+    const Binding *It =
+        llvm::upper_bound(Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
+    if (It == Bindings.begin())
+      return false;
+    --It;
+    return It->RC == RC && It->Space == Space && It->LowerBound <= LowerBound &&
+           It->UpperBound >= UpperBound;
+  }
+
+  const Binding* getReg(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
+               uint32_t UpperBound) const {
+    const Binding *It =
+        llvm::upper_bound(Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
+    if (It == Bindings.begin())
+      llvm_unreachable("getReg expectes to be called only when isBound is true");
+    return --It;
+  }
+};
+
 /// Builder class for creating a /c BindingInfo.
 class BindingInfoBuilder {
-public:
-  struct Binding {
-    dxil::ResourceClass RC;
-    uint32_t Space;
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    const void *Cookie;
-
-    Binding(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound, const void *Cookie)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
-          Cookie(Cookie) {}
-
-    bool isUnbounded() const { return UpperBound == ~0U; }
-
-    bool operator==(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
-                      RHS.Cookie);
-    }
-    bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
-
-    bool operator<(const Binding &RHS) const {
-      return std::tie(RC, Space, LowerBound) <
-             std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
-    }
-  };
-
 private:
   SmallVector<Binding> Bindings;
 
@@ -156,6 +185,12 @@ public:
     HasOverlap = false;
     return calculateBindingInfo(
         [&HasOverlap](auto, auto) { HasOverlap = true; });
+  }
+
+  LLVM_ABI BoundRegs takeBoundRegs() {
+    assert(std::is_sorted(Bindings.begin(), Bindings.end()) &&
+           "takeBoundRegs should only be called after calculateBindingInfo");
+    return BoundRegs(std::move(Bindings));
   }
 
   /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -

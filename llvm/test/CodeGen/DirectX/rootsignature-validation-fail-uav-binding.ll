@@ -6,7 +6,7 @@
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
 ; RWBuffer<float> UAV : register(4294967294);
-  %RWB = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 4294967294, i32 1, i32 0, i1 false, ptr nonnull @RWB.str)
+  %RWB = tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 4294967294, i32 1, i32 0, ptr nonnull @RWB.str)
   ret void
 }
 

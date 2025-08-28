@@ -90,9 +90,8 @@ void SlicingCheck::diagnoseSlicedOverriddenMethods(
   }
   // Recursively process bases.
   for (const auto &Base : DerivedDecl.bases()) {
-    if (const auto *BaseRecordType = Base.getType()->getAs<RecordType>()) {
-      if (const auto *BaseRecord = cast_or_null<CXXRecordDecl>(
-              BaseRecordType->getOriginalDecl()->getDefinition()))
+    if (const auto *BaseRecord = Base.getType()->getAsCXXRecordDecl()) {
+      if (BaseRecord->isCompleteDefinition())
         diagnoseSlicedOverriddenMethods(Call, *BaseRecord, BaseDecl);
     }
   }

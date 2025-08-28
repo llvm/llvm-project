@@ -95,7 +95,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  bool ErrorFound = false;
+  [[maybe_unused]] bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
@@ -118,19 +118,18 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void reportInvalidHandleTyError(Module &M, Twine Type,
+static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
                                        ResourceInfo::ResourceBinding Binding) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << Type << " at register " << Binding.LowerBound << " and space "
-     << Binding.Space << " is bound to a texture or typed buffer.";
+  OS << getResourceClassName(RC) << " at register " << Binding.LowerBound << " and space "
+     << Binding.Space << " is bound to a texture or typed buffer. " <<
+     "SRV or UAV root descriptors can only be Raw or Structured buffers.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void
-reportOverlappingRegisters(Module &M,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R1,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
+static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
+                                       const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
 
   raw_svector_ostream OS(Message);
@@ -151,19 +150,6 @@ reportRegNotBound(Module &M, ResourceClass Class,
      << " in space " << Unbound.Space
      << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
-}
-
-static void checkInvalidHandleTy(
-    Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
-    const llvm::dxil::ResourceInfo::ResourceBinding &Binding,
-    const ResourceKind &Kind, const dxil::ResourceClass &RC) {
-  for (const auto &RD : RDs) {
-    if (Binding.overlapsWith(RD)) {
-
-      if (Kind != ResourceKind::RawBuffer)
-        reportInvalidHandleTyError(M, getResourceClassName(RC), Binding);
-    }
-  }
 }
 
 static dxbc::ShaderVisibility
@@ -188,46 +174,6 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-static SmallVector<ResourceInfo::ResourceBinding>
-getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
-                              dxbc::ShaderVisibility Visibility) {
-
-  SmallVector<ResourceInfo::ResourceBinding> RDs;
-
-  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
-    dxbc::ShaderVisibility ParamVisibility =
-        static_cast<dxbc::ShaderVisibility>(Info.Header.ShaderVisibility);
-    if (ParamVisibility != dxbc::ShaderVisibility::All &&
-        ParamVisibility != Visibility)
-      continue;
-
-    dxbc::RootParameterType ParamType =
-        static_cast<dxbc::RootParameterType>(Info.Header.ParameterType);
-    switch (ParamType) {
-
-    case dxbc::RootParameterType::SRV:
-    case dxbc::RootParameterType::UAV:
-    case dxbc::RootParameterType::CBV: {
-      dxbc::RTS0::v2::RootDescriptor Desc =
-          RSD.ParametersContainer.getRootDescriptor(Info.Location);
-
-      ResourceInfo::ResourceBinding Binding;
-      Binding.LowerBound = Desc.ShaderRegister;
-      Binding.Space = Desc.RegisterSpace;
-      Binding.Size = 1;
-
-      RDs.push_back(Binding);
-      break;
-    }
-    case dxbc::RootParameterType::DescriptorTable:
-    case dxbc::RootParameterType::Constants32Bit:
-      break;
-    }
-  }
-
-  return RDs;
-}
-
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
                                   dxil::ModuleMetadataInfo &MMI,
@@ -239,12 +185,11 @@ static void validateRootSignature(Module &M,
 
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     dxbc::ShaderVisibility ParamVisibility =
-        static_cast<dxbc::ShaderVisibility>(ParamInfo.Header.ShaderVisibility);
+        dxbc::ShaderVisibility(ParamInfo.Visibility);
     if (ParamVisibility != dxbc::ShaderVisibility::All &&
         ParamVisibility != Visibility)
       continue;
-    dxbc::RootParameterType ParamType =
-        static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType);
+    dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
       dxbc::RTS0::v1::RootConstants Const =
@@ -260,10 +205,9 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
-                               ParamInfo.Header.ParameterType)),
-                           Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &ParamInfo);
+      Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
+                           Desc.ShaderRegister, Desc.ShaderRegister,
+                           &ParamInfo);
 
       break;
     }
@@ -291,27 +235,37 @@ static void validateRootSignature(Module &M,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 
-  hlsl::BindingInfo Info = Builder.calculateBindingInfo(
+  Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
-           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-        const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+           const llvm::hlsl::Binding &ReportedBinding) {
+        const llvm::hlsl::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
 
-  SmallVector<ResourceInfo::ResourceBinding> RDs =
-      getRootDescriptorsBindingInfo(RSD, Visibility);
+  const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
 
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
-    dxil::ResourceTypeInfo RTI = DRTM[RI.getHandleTy()];
+    const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
     dxil::ResourceClass RC = RTI.getResourceClass();
-
-    if (!Info.isBound(RC, Binding.Space,
-                      {Binding.LowerBound, Binding.LowerBound + Binding.Size}))
+    dxil::ResourceKind RK = RTI.getResourceKind();
+    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
+                           Binding.LowerBound + Binding.Size - 1))
       reportRegNotBound(M, RC, Binding);
+    else {
 
-    checkInvalidHandleTy(M, RDs, Binding, RTI.getResourceKind(), RC);
+      const llvm::hlsl::Binding *Reg =
+          BoundRegs.getReg(RC, Binding.Space, Binding.LowerBound,
+                           Binding.LowerBound + Binding.Size - 1);
+      const mcdxbc::RootParameterInfo *ParamInfo = static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+      if((RC == ResourceClass::SRV || RC == ResourceClass::UAV) && 
+            ParamInfo->Type != dxbc::RootParameterType::DescriptorTable &&
+           !(RK == ResourceKind::RawBuffer || RK == ResourceKind::StructuredBuffer))
+            reportInvalidHandleTyError(M, RC, Binding);
+    }
+
   }
 }
 
