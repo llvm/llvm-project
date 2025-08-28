@@ -56248,7 +56248,7 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   SDValue Masked = BroadcastOp;
   if (N != 0) {
     unsigned BroadcastOpBitWidth = BroadcastOpVT.getSizeInBits();
-    unsigned NumDefinedElts = UndefElts.getBitWidth() - UndefElts.popcount();
+    unsigned NumDefinedElts = UndefElts.countTrailingZeros();
 
     if (NumDefinedElts > BroadcastOpBitWidth)
       return SDValue();
