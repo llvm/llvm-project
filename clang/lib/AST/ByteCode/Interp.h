@@ -3491,8 +3491,10 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return true;
   }
   if (!NumElements.isPositive()) {
-    if (!IsNoThrow)
+    if (!IsNoThrow) {
+      S.FFDiag(Source, diag::note_constexpr_negative_allocation_size);
       return false;
+    }
     S.Stk.push<Pointer>(0, nullptr);
     return true;
   }
