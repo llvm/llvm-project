@@ -7,8 +7,8 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (9 successful inlines out of 12 total calls)
-# CHECK-INLINE: BOLT-INFO: inlined 9 memcpy() calls
+# Verify BOLT reports that it inlined memcpy calls (10 successful inlines out of 13 total calls)
+# CHECK-INLINE: BOLT-INFO: inlined 10 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
 
@@ -60,6 +60,12 @@
 # CHECK-ASM: str{{.*}}w{{[0-9]+}}, [x0, #0x20]
 # CHECK-ASM: ldrb{{.*}}w{{[0-9]+}}, [x1, #0x24]
 # CHECK-ASM: strb{{.*}}w{{[0-9]+}}, [x0, #0x24]
+# CHECK-ASM-NOT: bl{{.*}}<memcpy
+
+# 0-byte copy should be inlined with no load/store instructions (nothing to copy)
+# CHECK-ASM-LABEL: <test_0_byte>:
+# CHECK-ASM-NOT: ldr
+# CHECK-ASM-NOT: str  
 # CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 # 128-byte copy should be "inlined" by removing the call entirely (too large for real inlining)
@@ -178,6 +184,19 @@ test_37_byte_arbitrary:
 	ret
 	.size	test_37_byte_arbitrary, .-test_37_byte_arbitrary
 
+	.globl	test_0_byte
+	.type	test_0_byte,@function
+test_0_byte:
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	add	x1, sp, #16
+	add	x0, sp, #8
+	mov	x2, #0
+	bl	memcpy
+	ldp	x29, x30, [sp], #32
+	ret
+	.size	test_0_byte, .-test_0_byte
+
 	.globl	test_128_byte_too_large
 	.type	test_128_byte_too_large,@function
 test_128_byte_too_large:
@@ -272,12 +291,12 @@ main:
 	bl	test_16_byte_direct  
 	bl	test_32_byte_direct
 	bl	test_37_byte_arbitrary
+	bl	test_0_byte
 	bl	test_128_byte_too_large
 	bl	test_4_byte_add_immediate
 	bl	test_register_move_negative
 	bl	test_live_in_negative
 	bl	test_memcpy8_4_byte
-	bl	test_memcpy8_large_size
 	
 	mov	w0, #0
 	ldp	x29, x30, [sp], #16
