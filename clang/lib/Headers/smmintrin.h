@@ -567,8 +567,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mullo_epi32(__m128i __V1,
 ///    A 128-bit vector of [4 x i32].
 /// \returns A 128-bit vector of [2 x i64] containing the products of both
 ///    operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mul_epi32(__m128i __V1,
-                                                           __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mul_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_ia32_pmuldq128((__v4si)__V1, (__v4si)__V2);
 }
 
