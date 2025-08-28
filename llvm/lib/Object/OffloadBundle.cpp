@@ -104,7 +104,7 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
                                        uint64_t SectionOffset) {
   uint64_t NumOfEntries = 0;
 
-  BinaryStreamReader Reader(Buffer, endianness::little);
+  BinaryStreamReader Reader(Buffer, llvm::endianness::little);
 
   // Read the Magic String first.
   StringRef Magic;
@@ -200,15 +200,16 @@ Error object::extractOffloadBundleFatBinary(
       return Buffer.takeError();
 
     // If it does not start with the reserved suffix, just skip this section.
-    if ((identify_magic(*Buffer) == file_magic::offload_bundle) ||
-        (identify_magic(*Buffer) == file_magic::offload_bundle_compressed)) {
+    if ((llvm::identify_magic(*Buffer) == file_magic::offload_bundle) ||
+        (llvm::identify_magic(*Buffer) ==
+         file_magic::offload_bundle_compressed)) {
 
       uint64_t SectionOffset = 0;
       if (Obj.isELF()) {
         SectionOffset = ELFSectionRef(Sec).getOffset();
       } else if (Obj.isCOFF()) // TODO: add COFF Support.
         return createStringError(object_error::parse_failed,
-                                 "COFF object files not supported.\n");
+                                 "COFF object files not supported");
 
       MemoryBufferRef Contents(*Buffer, Obj.getFileName());
       if (Error Err = extractOffloadBundle(Contents, SectionOffset,
@@ -334,12 +335,12 @@ CompressedOffloadBundle::compress(compression::Params P,
     // For V2, ensure the sizes don't exceed 32-bit limit.
     if (UncompressedSize64 > std::numeric_limits<uint32_t>::max())
       return createStringError(inconvertibleErrorCode(),
-                               "uncompressed size exceeds version 2 limit.");
+                               "uncompressed size exceeds version 2 limit");
     if ((MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
          sizeof(CompressionMethod) + sizeof(uint32_t) + sizeof(TruncatedHash) +
          CompressedBuffer.size()) > std::numeric_limits<uint32_t>::max())
       return createStringError(inconvertibleErrorCode(),
-                               "total file size exceeds version 2 limit.");
+                               "total file size exceeds version 2 limit");
 
     TotalFileSize64 = MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
                       sizeof(CompressionMethod) + sizeof(uint32_t) +
@@ -471,7 +472,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
 
   if (Blob.size() < RequiredSize)
     return createStringError(inconvertibleErrorCode(),
-                             "compressed bundle header size too small.");
+                             "compressed bundle header size too small");
 
   switch (Normalized.Version) {
   case 1:
@@ -490,7 +491,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
     break;
   default:
     return createStringError(inconvertibleErrorCode(),
-                             "unknown compressed bundle version.");
+                             "unknown compressed bundle version");
   }
 
   // Determine compression format.
@@ -502,7 +503,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
     break;
   default:
     return createStringError(inconvertibleErrorCode(),
-                             "unknown compressing method.");
+                             "unknown compressing method");
   }
 
   return Normalized;
@@ -518,7 +519,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input, bool Verbose) {
 
   if (identify_magic(Blob) != file_magic::offload_bundle_compressed) {
     if (Verbose)
-      errs() << "Uncompressed bundle.\n";
+      errs() << "Uncompressed bundle\n";
     return MemoryBuffer::getMemBufferCopy(Blob);
   }
 
