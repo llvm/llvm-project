@@ -71,7 +71,9 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -118,7 +120,9 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -136,7 +140,9 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 /// Shared pointer for SMTExprs, used by SMTSolver API.
@@ -152,7 +158,9 @@ public:
   SMTSolver() = default;
   virtual ~SMTSolver() = default;
 
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   // Returns an appropriate floating-point sort for the given bitwidth.
   SMTSortRef getFloatSort(unsigned BitWidth) {

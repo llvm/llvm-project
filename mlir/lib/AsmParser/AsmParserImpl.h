@@ -206,6 +206,16 @@ public:
     return success(parser.consumeIf(Token::question));
   }
 
+  /// Parses a '/' token.
+  ParseResult parseSlash() override {
+    return parser.parseToken(Token::slash, "expected '/'");
+  }
+
+  /// Parses a '/' if present.
+  ParseResult parseOptionalSlash() override {
+    return success(parser.consumeIf(Token::slash));
+  }
+
   /// Parses a '*' token.
   ParseResult parseStar() override {
     return parser.parseToken(Token::star, "expected '*'");

@@ -638,3 +638,48 @@ define signext i32 @select_fcmp_uge_1_2(double %a, double %b) nounwind {
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
 }
+
+define double @CascadedSelect(double noundef %a) {
+; CHECKRV32ZDINX-LABEL: CascadedSelect:
+; CHECKRV32ZDINX:       # %bb.0: # %entry
+; CHECKRV32ZDINX-NEXT:    lui a3, %hi(.LCPI20_0)
+; CHECKRV32ZDINX-NEXT:    lw a2, %lo(.LCPI20_0)(a3)
+; CHECKRV32ZDINX-NEXT:    addi a3, a3, %lo(.LCPI20_0)
+; CHECKRV32ZDINX-NEXT:    lw a3, 4(a3)
+; CHECKRV32ZDINX-NEXT:    flt.d a4, a2, a0
+; CHECKRV32ZDINX-NEXT:    bnez a4, .LBB20_3
+; CHECKRV32ZDINX-NEXT:  # %bb.1: # %entry
+; CHECKRV32ZDINX-NEXT:    flt.d a4, a0, zero
+; CHECKRV32ZDINX-NEXT:    li a2, 0
+; CHECKRV32ZDINX-NEXT:    li a3, 0
+; CHECKRV32ZDINX-NEXT:    bnez a4, .LBB20_3
+; CHECKRV32ZDINX-NEXT:  # %bb.2: # %entry
+; CHECKRV32ZDINX-NEXT:    mv a2, a0
+; CHECKRV32ZDINX-NEXT:    mv a3, a1
+; CHECKRV32ZDINX-NEXT:  .LBB20_3: # %entry
+; CHECKRV32ZDINX-NEXT:    mv a0, a2
+; CHECKRV32ZDINX-NEXT:    mv a1, a3
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: CascadedSelect:
+; CHECKRV64ZDINX:       # %bb.0: # %entry
+; CHECKRV64ZDINX-NEXT:    li a1, 1023
+; CHECKRV64ZDINX-NEXT:    slli a1, a1, 52
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a1, a0
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB20_3
+; CHECKRV64ZDINX-NEXT:  # %bb.1: # %entry
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a0, zero
+; CHECKRV64ZDINX-NEXT:    li a1, 0
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB20_3
+; CHECKRV64ZDINX-NEXT:  # %bb.2: # %entry
+; CHECKRV64ZDINX-NEXT:    mv a1, a0
+; CHECKRV64ZDINX-NEXT:  .LBB20_3: # %entry
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:    ret
+entry:
+  %cmp = fcmp ogt double %a, 1.000000e+00
+  %cmp1 = fcmp olt double %a, 0.000000e+00
+  %.a = select i1 %cmp1, double 0.000000e+00, double %a
+  %retval.0 = select i1 %cmp, double 1.000000e+00, double %.a
+  ret double %retval.0
+}

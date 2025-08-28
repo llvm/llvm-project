@@ -347,7 +347,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-  createDiagnostics(clang::DiagnosticOptions *opts,
+  createDiagnostics(clang::DiagnosticOptions &opts,
                     clang::DiagnosticConsumer *client = nullptr,
                     bool shouldOwnClient = true);
   void createDiagnostics(clang::DiagnosticConsumer *client = nullptr,

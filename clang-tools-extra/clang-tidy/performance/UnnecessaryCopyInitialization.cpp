@@ -15,10 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
-#include <utility>
 
 namespace clang::tidy::performance {
-namespace {
 
 using namespace ::clang::ast_matchers;
 using llvm::StringRef;
@@ -31,8 +29,8 @@ static constexpr StringRef MethodDeclId = "methodDecl";
 static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
-void recordFixes(const VarDecl &Var, ASTContext &Context,
-                 DiagnosticBuilder &Diagnostic) {
+static void recordFixes(const VarDecl &Var, ASTContext &Context,
+                        DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
@@ -41,8 +39,8 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
-std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                   SourceManager &SM) {
+static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
+                                                          SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid) {
@@ -52,8 +50,8 @@ std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
 }
 
-void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
-                   DiagnosticBuilder &Diagnostic) {
+static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
+                          DiagnosticBuilder &Diagnostic) {
   auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
@@ -74,6 +72,8 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
     Diagnostic << FixItHint::CreateRemoval(Stmt.getSourceRange());
   }
 }
+
+namespace {
 
 AST_MATCHER_FUNCTION_P(StatementMatcher,
                        isRefReturningMethodCallWithConstOverloads,
@@ -112,10 +112,11 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // an alias to one of its arguments and the arguments need to be checked
   // for const use as well.
   return callExpr(argumentCountIs(0),
-                  callee(functionDecl(returns(hasCanonicalType(matchers::isReferenceToConst())),
+                  callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())),
                                       unless(cxxMethodDecl(unless(isStatic()))))
-                         .bind(FunctionDeclId)))
-         .bind(InitFunctionCallId);
+                             .bind(FunctionDeclId)))
+      .bind(InitFunctionCallId);
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
@@ -129,6 +130,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
 }
+
+} // namespace
 
 // This checks that the variable itself is only used as const, and also makes
 // sure that it does not reference another variable that could be modified in
@@ -180,13 +183,13 @@ static bool isInitializingVariableImmutable(
   return false;
 }
 
-bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
-                      ASTContext &Context) {
+static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
+                             ASTContext &Context) {
   return allDeclRefExprs(Var, BlockStmt, Context).empty();
 }
 
-const SubstTemplateTypeParmType *getSubstitutedType(const QualType &Type,
-                                                    ASTContext &Context) {
+static const SubstTemplateTypeParmType *
+getSubstitutedType(const QualType &Type, ASTContext &Context) {
   auto Matches = match(
       qualType(anyOf(substTemplateTypeParmType().bind("subst"),
                      hasDescendant(substTemplateTypeParmType().bind("subst")))),
@@ -194,9 +197,9 @@ const SubstTemplateTypeParmType *getSubstitutedType(const QualType &Type,
   return selectFirst<SubstTemplateTypeParmType>("subst", Matches);
 }
 
-bool differentReplacedTemplateParams(const QualType &VarType,
-                                     const QualType &InitializerType,
-                                     ASTContext &Context) {
+static bool differentReplacedTemplateParams(const QualType &VarType,
+                                            const QualType &InitializerType,
+                                            ASTContext &Context) {
   if (const SubstTemplateTypeParmType *VarTmplType =
           getSubstitutedType(VarType, Context)) {
     if (const SubstTemplateTypeParmType *InitializerTmplType =
@@ -212,8 +215,8 @@ bool differentReplacedTemplateParams(const QualType &VarType,
   return false;
 }
 
-QualType constructorArgumentType(const VarDecl *OldVar,
-                                 const BoundNodes &Nodes) {
+static QualType constructorArgumentType(const VarDecl *OldVar,
+                                        const BoundNodes &Nodes) {
   if (OldVar) {
     return OldVar->getType();
   }
@@ -224,8 +227,6 @@ QualType constructorArgumentType(const VarDecl *OldVar,
   return MethodDecl->getReturnType();
 }
 
-} // namespace
-
 UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -235,12 +236,14 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom = [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
-    return compoundStmt(
-               forEachDescendant(
-                   declStmt(
-                       unless(has(decompositionDecl())),
-                       has(varDecl(hasLocalStorage(),
+  auto LocalVarCopiedFrom =
+      [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
+        return compoundStmt(
+                   forEachDescendant(
+                       declStmt(
+                           unless(has(decompositionDecl())),
+                           has(varDecl(
+                                   hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(
                                            matchers::isExpensiveToCopy(),
@@ -257,10 +260,10 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                                isCopyConstructor())),
                                            hasArgument(0, CopyCtorArg))
                                            .bind("ctorCall"))))
-                               .bind("newVarDecl")))
-                       .bind("declStmt")))
-        .bind("blockStmt");
-  };
+                                   .bind("newVarDecl")))
+                           .bind("declStmt")))
+            .bind("blockStmt");
+      };
 
   Finder->addMatcher(
       LocalVarCopiedFrom(anyOf(
@@ -347,12 +350,13 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
     const CheckContext &Ctx) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "the %select{|const qualified }0variable %1 is "
+           "the %select{|const qualified }0variable %1 of type %2 is "
            "copy-constructed "
            "from a const reference%select{%select{ but is only used as const "
-           "reference|}0| but is never used}2; consider "
-           "%select{making it a const reference|removing the statement}2")
-      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.IsVarUnused;
+           "reference|}0| but is never used}3; consider "
+           "%select{making it a const reference|removing the statement}3")
+      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.Var.getType()
+      << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
@@ -360,10 +364,11 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
     const CheckContext &Ctx, const VarDecl &OldVar) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "local copy %1 of the variable %0 is never modified%select{"
-           "| and never used}2; consider %select{avoiding the copy|removing "
-           "the statement}2")
-      << &OldVar << &Ctx.Var << Ctx.IsVarUnused;
+           "local copy %0 of the variable %1 of type %2 is never "
+           "modified%select{"
+           "| and never used}3; consider %select{avoiding the copy|removing "
+           "the statement}3")
+      << &Ctx.Var << &OldVar << Ctx.Var.getType() << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 

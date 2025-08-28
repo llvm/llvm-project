@@ -30,7 +30,3 @@ module missing_umbrella_with_inferred_submodules {
   module * { export * }
   export *
 }
-
-module missing_textual_header {
-  textual header "missing_textual.h"
-}

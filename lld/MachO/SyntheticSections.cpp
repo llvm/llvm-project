@@ -12,20 +12,18 @@
 #include "ExportTrie.h"
 #include "ICF.h"
 #include "InputFiles.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 #if defined(__APPLE__)
@@ -949,9 +947,7 @@ uint64_t ObjCStubsSection::getSize() const {
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
-  for (size_t i = 0, n = symbols.size(); i < n; ++i) {
-    Defined *sym = symbols[i];
-
+  for (Defined *sym : symbols) {
     auto methname = getMethname(sym);
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
@@ -1248,10 +1244,7 @@ void SymtabSection::emitStabs() {
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SortingPair &a, const SortingPair &b) {
-                      return a.second < b.second;
-                    });
+  llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
@@ -1766,26 +1759,25 @@ void DeduplicatedCStringSection::finalizeContents() {
     }
   }
 
-  // Assign an offset for each string and save it to the corresponding
+  // Sort the strings for performance and compression size win, and then
+  // assign an offset for each string and save it to the corresponding
   // StringPieces for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
-      if (!piece.live)
-        continue;
-      auto s = isec->getCachedHashStringRef(i);
-      auto it = stringOffsetMap.find(s);
-      assert(it != stringOffsetMap.end());
-      StringOffset &offsetInfo = it->second;
-      if (offsetInfo.outSecOff == UINT64_MAX) {
-        offsetInfo.outSecOff =
-            alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
-        size =
-            offsetInfo.outSecOff + s.size() + 1; // account for null terminator
-      }
-      piece.outSecOff = offsetInfo.outSecOff;
+  for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
+    auto &piece = isec->pieces[i];
+    auto s = isec->getCachedHashStringRef(i);
+    auto it = stringOffsetMap.find(s);
+    assert(it != stringOffsetMap.end());
+    lld::macho::DeduplicatedCStringSection::StringOffset &offsetInfo =
+        it->second;
+    if (offsetInfo.outSecOff == UINT64_MAX) {
+      offsetInfo.outSecOff =
+          alignToPowerOf2(size, 1ULL << offsetInfo.trailingZeros);
+      size = offsetInfo.outSecOff + s.size() + 1; // account for null terminator
     }
-    isec->isFinal = true;
+    piece.outSecOff = offsetInfo.outSecOff;
   }
+  for (CStringInputSection *isec : inputs)
+    isec->isFinal = true;
 }
 
 void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {

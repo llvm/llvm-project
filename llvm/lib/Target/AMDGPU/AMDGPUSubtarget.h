@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/TargetParser/Triple.h"
@@ -58,7 +59,9 @@ protected:
   bool HasCvtPkF16F32Inst = false;
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
+  bool HasBF16PackedInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -107,6 +110,13 @@ public:
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
+
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned>
+  getWavesPerEU(const Function &F,
+                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Overload which uses the specified values for the flat workgroup sizes and
   /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
@@ -194,9 +204,13 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
+
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;
   }
+
+  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

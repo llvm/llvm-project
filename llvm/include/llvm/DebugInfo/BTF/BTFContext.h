@@ -16,10 +16,11 @@
 
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class BTFContext final : public DIContext {
+class LLVM_ABI BTFContext final : public DIContext {
   BTFParser BTF;
 
 public:

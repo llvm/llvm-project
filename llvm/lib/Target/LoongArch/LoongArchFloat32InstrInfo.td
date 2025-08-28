@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the baisc single-precision floating-point instructions.
+// This file describes the basic single-precision floating-point instructions.
 //
 //===----------------------------------------------------------------------===//
 

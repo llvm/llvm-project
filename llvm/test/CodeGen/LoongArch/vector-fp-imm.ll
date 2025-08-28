@@ -132,8 +132,7 @@ define void @test_f2(ptr %P, ptr %S) nounwind {
 ; LA64D-NEXT:    lu52i.d $a0, $a0, 1024
 ; LA64D-NEXT:    vreplgr2vr.d $vr1, $a0
 ; LA64D-NEXT:    vfadd.s $vr0, $vr0, $vr1
-; LA64D-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64D-NEXT:    st.d $a0, $a1, 0
+; LA64D-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; LA64D-NEXT:    ret
   %p = load %f2, ptr %P
   %R = fadd %f2 %p, < float 1.000000e+00, float 2.000000e+00 >

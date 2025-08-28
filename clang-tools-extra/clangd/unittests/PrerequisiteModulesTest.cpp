@@ -247,13 +247,11 @@ import Dep;
       ProjectModules->getRequiredModules(getFullPath("M.cppm")).empty());
 
   // Set the mangler to filter out the invalid flag
-  ProjectModules->setCommandMangler(
-      [](tooling::CompileCommand &Command, PathRef) {
-        auto const It =
-            std::find(Command.CommandLine.begin(), Command.CommandLine.end(),
-                      "-invalid-unknown-flag");
-        Command.CommandLine.erase(It);
-      });
+  ProjectModules->setCommandMangler([](tooling::CompileCommand &Command,
+                                       PathRef) {
+    auto const It = llvm::find(Command.CommandLine, "-invalid-unknown-flag");
+    Command.CommandLine.erase(It);
+  });
 
   // And now it returns a non-empty list of required modules since the
   // compilation succeeded

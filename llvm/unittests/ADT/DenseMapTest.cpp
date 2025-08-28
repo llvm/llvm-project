@@ -10,11 +10,13 @@
 #include "CountCopyAndMove.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <variant>
@@ -86,6 +88,10 @@ struct CtorTesterMapInfo {
 CtorTester getTestKey(int i, CtorTester *) { return CtorTester(i); }
 CtorTester getTestValue(int i, CtorTester *) { return CtorTester(42 + i); }
 
+std::optional<uint32_t> getTestKey(int i, std::optional<uint32_t> *) {
+  return i;
+}
+
 // Test fixture, with helper functions implemented by forwarding to global
 // function overloads selected by component types of the type parameter. This
 // allows all of the map implementations to be tested with shared
@@ -117,11 +123,13 @@ typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          DenseMap<uint32_t *, uint32_t *>,
                          DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
                          DenseMap<EnumClass, uint32_t>,
+                         DenseMap<std::optional<uint32_t>, uint32_t>,
                          SmallDenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<uint32_t *, uint32_t *>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
                                        CtorTesterMapInfo>,
-                         SmallDenseMap<EnumClass, uint32_t>
+                         SmallDenseMap<EnumClass, uint32_t>,
+                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
                          > DenseMapTestTypes;
 // clang-format on
 
@@ -242,6 +250,25 @@ TYPED_TEST(DenseMapTest, CopyConstructorNotSmallTest) {
     EXPECT_EQ(this->getValue(Key), copyMap[this->getKey(Key)]);
 }
 
+// Test range constructors.
+TYPED_TEST(DenseMapTest, RangeConstructorTest) {
+  using KeyAndValue =
+      std::pair<typename TypeParam::key_type, typename TypeParam::mapped_type>;
+  KeyAndValue PlainArray[] = {{this->getKey(0), this->getValue(0)},
+                              {this->getKey(1), this->getValue(1)}};
+
+  TypeParam MapFromRange(llvm::from_range, PlainArray);
+  EXPECT_EQ(2u, MapFromRange.size());
+  EXPECT_EQ(this->getValue(0), MapFromRange[this->getKey(0)]);
+  EXPECT_EQ(this->getValue(1), MapFromRange[this->getKey(1)]);
+
+  TypeParam MapFromInitList({{this->getKey(0), this->getValue(1)},
+                             {this->getKey(1), this->getValue(2)}});
+  EXPECT_EQ(2u, MapFromInitList.size());
+  EXPECT_EQ(this->getValue(1), MapFromInitList[this->getKey(0)]);
+  EXPECT_EQ(this->getValue(2), MapFromInitList[this->getKey(1)]);
+}
+
 // Test copying from a default-constructed map.
 TYPED_TEST(DenseMapTest, CopyConstructorFromDefaultTest) {
   TypeParam copyMap(this->Map);
@@ -360,9 +387,16 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
+// TYPED_TEST below cycles through different types.  We define UniversalSmallSet
+// here so that we'll use SmallSet or SmallPtrSet depending on whether the
+// element type is a pointer.
+template <typename T, unsigned N>
+using UniversalSmallSet =
+    std::conditional_t<std::is_pointer_v<T>, SmallPtrSet<T, N>, SmallSet<T, N>>;
+
 TYPED_TEST(DenseMapTest, KeysValuesIterator) {
-  SmallSet<typename TypeParam::key_type, 10> Keys;
-  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  UniversalSmallSet<typename TypeParam::key_type, 10> Keys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> Values;
   for (int I = 0; I < 10; ++I) {
     auto K = this->getKey(I);
     auto V = this->getValue(I);
@@ -371,8 +405,8 @@ TYPED_TEST(DenseMapTest, KeysValuesIterator) {
     this->Map[K] = V;
   }
 
-  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
-  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  UniversalSmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> ActualValues;
   for (auto K : this->Map.keys())
     ActualKeys.insert(K);
   for (auto V : this->Map.values())
@@ -383,8 +417,8 @@ TYPED_TEST(DenseMapTest, KeysValuesIterator) {
 }
 
 TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
-  SmallSet<typename TypeParam::key_type, 10> Keys;
-  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  UniversalSmallSet<typename TypeParam::key_type, 10> Keys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> Values;
   for (int I = 0; I < 10; ++I) {
     auto K = this->getKey(I);
     auto V = this->getValue(I);
@@ -394,8 +428,8 @@ TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
   }
 
   const TypeParam &ConstMap = this->Map;
-  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
-  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  UniversalSmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  UniversalSmallSet<typename TypeParam::mapped_type, 10> ActualValues;
   for (auto K : ConstMap.keys())
     ActualKeys.insert(K);
   for (auto V : ConstMap.values())
@@ -671,6 +705,13 @@ TEST(DenseMapCustomTest, LookupOr) {
   EXPECT_EQ(M.lookup_or(2, 4u), 4u);
 }
 
+TEST(DenseMapCustomTest, LookupOrConstness) {
+  DenseMap<int, unsigned *> M;
+  unsigned Default = 3u;
+  unsigned *Ret = M.lookup_or(0, &Default);
+  EXPECT_EQ(Ret, &Default);
+}
+
 // Key traits that allows lookup with either an unsigned or char* key;
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
@@ -710,6 +751,15 @@ TEST(DenseMapCustomTest, FindAsTest) {
   EXPECT_EQ(2u, map.find_as("b")->second);
   EXPECT_EQ(3u, map.find_as("c")->second);
   EXPECT_TRUE(map.find_as("d") == map.end());
+}
+
+TEST(DenseMapCustomTest, SmallDenseMapFromRange) {
+  std::pair<int, StringRef> PlainArray[] = {{0, "0"}, {1, "1"}, {2, "2"}};
+  SmallDenseMap<int, StringRef> M(llvm::from_range, PlainArray);
+  EXPECT_EQ(3u, M.size());
+  using testing::Pair;
+  EXPECT_THAT(M, testing::UnorderedElementsAre(Pair(0, "0"), Pair(1, "1"),
+                                               Pair(2, "2")));
 }
 
 TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {

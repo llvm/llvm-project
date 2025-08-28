@@ -1201,8 +1201,20 @@ public:
   struct ReductionOptionsTy {
     bool WithNowait;
     bool SimpleReduction;
+    llvm::SmallVector<bool, 8> IsPrivateVarReduction;
     OpenMPDirectiveKind ReductionKind;
   };
+
+  /// Emits code for private variable reduction
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  void emitPrivateReduction(CodeGenFunction &CGF, SourceLocation Loc,
+                            const Expr *Privates, const Expr *LHSExprs,
+                            const Expr *RHSExprs, const Expr *ReductionOps);
+
   /// Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
   /// \code

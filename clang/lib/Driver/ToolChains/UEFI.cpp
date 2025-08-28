@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UEFI.h"
-#include "CommonArgs.h"
-#include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -90,8 +83,8 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // This should ideally be handled by ToolChain::GetLinkerPath but we need
   // to special case some linker paths. In the case of lld, we need to
   // translate 'lld' into 'lld-link'.
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+                                          TC.getDriver().getPreferredLinker());
   if (Linker.empty() || Linker == "lld")
     Linker = "lld-link";
 

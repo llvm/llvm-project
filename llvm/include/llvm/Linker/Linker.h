@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -30,7 +31,7 @@ public:
     LinkOnlyNeeded = (1 << 1),
   };
 
-  Linker(Module &M);
+  LLVM_ABI Linker(Module &M);
 
   /// Link \p Src into the composite.
   ///
@@ -39,14 +40,15 @@ public:
   /// callback.
   ///
   /// Returns true on error.
-  bool linkInModule(std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
-                    std::function<void(Module &, const StringSet<> &)>
-                        InternalizeCallback = {});
+  LLVM_ABI bool linkInModule(std::unique_ptr<Module> Src,
+                             unsigned Flags = Flags::None,
+                             std::function<void(Module &, const StringSet<> &)>
+                                 InternalizeCallback = {});
 
-  static bool linkModules(Module &Dest, std::unique_ptr<Module> Src,
-                          unsigned Flags = Flags::None,
-                          std::function<void(Module &, const StringSet<> &)>
-                              InternalizeCallback = {});
+  LLVM_ABI static bool linkModules(
+      Module &Dest, std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
+      std::function<void(Module &, const StringSet<> &)> InternalizeCallback =
+          {});
 };
 
 } // End llvm namespace

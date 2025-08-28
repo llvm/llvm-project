@@ -60,7 +60,7 @@ public:
     int64_t Begin;
     int64_t End;
     LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) { return Idx >= Begin && Idx <= End; }
+    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
   };
 
   LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
@@ -119,8 +119,10 @@ public:
     Counter.CurrChunkIdx = State.ChunkIdx;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Dump or print the current counter set into llvm::dbgs().
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   LLVM_ABI void print(raw_ostream &OS) const;
 

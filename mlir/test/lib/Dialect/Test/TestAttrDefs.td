@@ -347,6 +347,7 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
   let mnemonic = "copy_count";
   let parameters = (ins TestParamCopyCount:$copy_count);
   let assemblyFormat = "`<` $copy_count `>`";
+  let genVerifyDecl = 1;
 }
 
 def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
@@ -416,6 +417,26 @@ def TestOpAsmAttrInterfaceTablegenDefaultAttr : Test_Attr<"TestOpAsmAttrInterfac
   }];
 
   let genMnemonicAlias = 1;
+}
+
+// Test attribute containing a slash token
+def SlashAttr: Test_Attr<"Slash">{
+  let mnemonic = "slash_attr";
+
+  let parameters = (
+    ins
+    "int":$lhs,
+    "int":$rhs
+  );
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+def TestCustomStorageCtorAttr : Test_Attr<"TestCustomStorageCtorAttr"> {
+    let mnemonic = "custom_storage_ctor_attr";
+    let parameters = (ins "int":$value);
+    let assemblyFormat = "`<` $value `>`";
+    let hasStorageCustomConstructor = 1;
 }
 
 #endif // TEST_ATTRDEFS

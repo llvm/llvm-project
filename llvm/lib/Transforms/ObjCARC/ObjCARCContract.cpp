@@ -42,6 +42,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/ObjCARC.h"
 
 using namespace llvm;
@@ -51,6 +52,11 @@ using namespace llvm::objcarc;
 
 STATISTIC(NumPeeps,       "Number of calls peephole-optimized");
 STATISTIC(NumStoreStrongs, "Number objc_storeStrong calls formed");
+
+static cl::opt<cl::boolOrDefault> UseObjCClaimRV(
+    "arc-contract-use-objc-claim-rv",
+    cl::desc(
+        "Enable generation of calls to objc_claimAutoreleasedReturnValue"));
 
 //===----------------------------------------------------------------------===//
 //                                Declarations
@@ -73,6 +79,9 @@ class ObjCARCContract {
 
   /// A flag indicating whether this optimization pass should run.
   bool Run;
+
+  /// Whether objc_claimAutoreleasedReturnValue is available.
+  bool HasClaimRV = false;
 
   /// The inline asm string to insert between calls and RetainRV calls to make
   /// the optimization work on targets which need it.
@@ -517,6 +526,39 @@ bool ObjCARCContract::tryToPeepholeInstruction(
   }
 }
 
+/// Should we use objc_claimAutoreleasedReturnValue?
+static bool useClaimRuntimeCall(Module &M) {
+  // Let the flag override our OS-based default.
+  if (UseObjCClaimRV != cl::BOU_UNSET)
+    return UseObjCClaimRV == cl::BOU_TRUE;
+
+  Triple TT(M.getTargetTriple());
+
+  // On x86_64, claimARV doesn't make sense, as the marker isn't actually a nop
+  // there (it's needed by the calling convention).
+  if (!TT.isAArch64())
+    return false;
+
+  unsigned Major = TT.getOSMajorVersion();
+  switch (TT.getOS()) {
+  default:
+    return false;
+  case Triple::IOS:
+  case Triple::TvOS:
+    return Major >= 16;
+  case Triple::WatchOS:
+    return Major >= 9;
+  case Triple::BridgeOS:
+    return Major >= 7;
+  case Triple::MacOSX:
+    return Major >= 13;
+  case Triple::Darwin:
+    return Major >= 21;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 //                              Top Level Driver
 //===----------------------------------------------------------------------===//
@@ -527,6 +569,8 @@ bool ObjCARCContract::init(Module &M) {
     return false;
 
   EP.init(&M);
+
+  HasClaimRV = useClaimRuntimeCall(M);
 
   // Initialize RVInstMarker.
   RVInstMarker = getRVInstMarker(M);
@@ -545,7 +589,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(/*ContractPass=*/true);
+  BundledRetainClaimRVs BRV(EP, /*ContractPass=*/true, HasClaimRV);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);

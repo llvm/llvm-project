@@ -220,9 +220,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
 
   // Emit the handlers.
-  for (unsigned I = 0, E = Handlers.size(); I != E; ++I) {
-    CatchHandler &Handler = Handlers[I];
-
+  for (CatchHandler &Handler : Handlers) {
     CGF.EmitBlock(Handler.Block);
 
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
@@ -441,8 +439,8 @@ void CGObjCRuntime::destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
       CGF.EmitARCRelease(RV.getScalarVal(), ARCImpreciseLifetime);
     } else {
       QualType QT = param->getType();
-      auto *RT = QT->getAs<RecordType>();
-      if (RT && RT->getDecl()->isParamDestroyedInCallee()) {
+      auto *RD = QT->getAsRecordDecl();
+      if (RD && RD->isParamDestroyedInCallee()) {
         RValue RV = I->getRValue(CGF);
         QualType::DestructionKind DtorKind = QT.isDestructedType();
         switch (DtorKind) {

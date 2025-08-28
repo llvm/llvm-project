@@ -20,8 +20,7 @@
 ; CHECK: )
 ; CHECK: {
 ; CHECK-DAG: .reg .pred      %p<2>;
-; CHECK-DAG: .reg .b32       %f<5>;
-; CHECK-DAG: .reg .b32       %r<6>;
+; CHECK-DAG: .reg .b32       %r<10>;
 ; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0
 ; CHECK: ld.param.b32    %r{{.+}}, [{{.+}}];
@@ -41,18 +40,18 @@
 ; CHECK: setp.ge.s32     %p{{.+}}, %r{{.+}}, %r{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 7
 ; CHECK: @%p{{.+}} bra   [[BB:\$L__.+]];
-; CHECK: ld.param.b32    %f{{.+}}, [{{.+}}];
+; CHECK: ld.param.b32    %r{{.+}}, [{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: mul.wide.u32    %rd{{.+}}, %r{{.+}}, 4;
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.global.b32   %f{{.+}}, [%rd{{.+}}];
+; CHECK: ld.global.b32   %r{{.+}}, [%rd{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 19
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.global.b32   %f{{.+}}, [%rd{{.+}}];
+; CHECK: ld.global.b32   %r{{.+}}, [%rd{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 3 82
-; CHECK: fma.rn.f32      %f{{.+}}, %f{{.+}}, %f{{.+}}, %f{{.+}};
+; CHECK: fma.rn.f32      %r{{.+}}, %r{{.+}}, %r{{.+}}, %r{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 3 78
-; CHECK: st.global.b32   [%rd{{.+}}], %f{{.+}};
+; CHECK: st.global.b32   [%rd{{.+}}], %r{{.+}};
 ; CHECK: [[BB]]:
 ; CHECK: .loc [[DEBUG_INFO_CU]] 9 1
 ; CHECK: ret;
@@ -105,8 +104,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 5                                   // Loc expr size
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 144                                 // DW_OP_regx
-; CHECK-NEXT: .b8 177                                 // 2450993
-; CHECK-NEXT: .b8 204                                 // 
+; CHECK-NEXT: .b8 178                                 // 2454066
+; CHECK-NEXT: .b8 228                                 // 
 ; CHECK-NEXT: .b8 149                                 // 
 ; CHECK-NEXT: .b8 1                                   // 
 ; CHECK-NEXT: .b64 0
@@ -2514,7 +2513,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 2                                   // DW_AT_address_class
 ; CHECK-NEXT: .b8 5                                   // DW_AT_location
 ; CHECK-NEXT: .b8 144
-; CHECK-NEXT: .b8 178
+; CHECK-NEXT: .b8 179
 ; CHECK-NEXT: .b8 228
 ; CHECK-NEXT: .b8 149
 ; CHECK-NEXT: .b8 1
@@ -2597,8 +2596,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 2                                   // DW_AT_address_class
 ; CHECK-NEXT: .b8 5                                   // DW_AT_location
 ; CHECK-NEXT: .b8 144
-; CHECK-NEXT: .b8 179
-; CHECK-NEXT: .b8 204
+; CHECK-NEXT: .b8 184
+; CHECK-NEXT: .b8 228
 ; CHECK-NEXT: .b8 149
 ; CHECK-NEXT: .b8 1
 ; CHECK-NEXT: .b32 2079                               // DW_AT_abstract_origin

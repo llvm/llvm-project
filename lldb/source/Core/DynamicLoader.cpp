@@ -211,7 +211,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   if (uuid.IsValid())
     prog_str << uuid.GetAsString();
   if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
-    prog_str << "at 0x";
+    prog_str << " at 0x";
     prog_str.PutHex64(value);
   }
 
@@ -229,6 +229,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   ModuleSpec module_spec;
   module_spec.GetUUID() = uuid;
   FileSpec name_filespec(name);
+  if (FileSystem::Instance().Exists(name_filespec))
+    module_spec.GetFileSpec() = name_filespec;
 
   if (uuid.IsValid()) {
     Progress progress("Locating binary", prog_str.GetString().str());

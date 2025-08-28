@@ -57,11 +57,9 @@ int main(int argc, char *argv[]) {
   llvm::sort(Entries);
 
   unsigned LargestValue =
-      std::max_element(Entries.begin(), Entries.end(),
-                       [](const auto &Entry0, const auto &Entry1) {
-                         return Entry0.second.size() < Entry1.second.size();
-                       })
-          ->second.size();
+      llvm::max_element(Entries, [](const auto &Entry0, const auto &Entry1) {
+        return Entry0.second.size() < Entry1.second.size();
+      })->second.size();
 
   std::error_code Ec;
   llvm::raw_fd_ostream Os(argv[2], Ec);

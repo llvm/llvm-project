@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestStructuredBinding(TestBase):
-    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIf(compiler="clang", compiler_version=["<", "14.0"])
     def test(self):
         self.build()

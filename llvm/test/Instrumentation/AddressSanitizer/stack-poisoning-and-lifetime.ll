@@ -100,8 +100,6 @@ entry:
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to ptr
   ; ENTRY-UAS-NEXT: store i8 2, ptr [[PTR]], align 1
 
-  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 650, ptr %xx)
-
   call void @Foo(ptr %xx)
   ; CHECK-NEXT: call void @Foo(ptr %xx)
 
@@ -109,16 +107,12 @@ entry:
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 4
   ; ENTRY-UAS-NEXT: call void @__asan_set_shadow_f8(i64 [[OFFSET]], i64 82)
 
-  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 650, ptr %xx)
-
 
   call void @llvm.lifetime.start.p0(i64 13, ptr %yy)
   ; 0005
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 102
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to ptr
   ; ENTRY-UAS-NEXT: store i16 1280, ptr [[PTR]], align 1
-
-  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 13, ptr %yy)
 
   call void @Foo(ptr %yy)
   ; CHECK-NEXT: call void @Foo(ptr %yy)
@@ -128,8 +122,6 @@ entry:
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 102
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to ptr
   ; ENTRY-UAS-NEXT: store i16 -1800, ptr [[PTR]], align 1
-
-  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 13, ptr %yy)
 
 
   call void @llvm.lifetime.start.p0(i64 40, ptr %zz)
@@ -141,8 +133,6 @@ entry:
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 110
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to ptr
   ; ENTRY-UAS-NEXT: store i8 0, ptr [[PTR]], align 1
-
-  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 40, ptr %zz)
 
   call void @Foo(ptr %zz)
   ; CHECK-NEXT: call void @Foo(ptr %zz)
@@ -156,8 +146,6 @@ entry:
   ; ENTRY-UAS-NEXT: [[OFFSET:%[0-9]+]] = add i64 [[SHADOW_BASE]], 110
   ; ENTRY-UAS-NEXT: [[PTR:%[0-9]+]] = inttoptr i64 [[OFFSET]] to ptr
   ; ENTRY-UAS-NEXT: store i8 -8, ptr [[PTR]], align 1
-
-  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 40, ptr %zz)
 
   ; CHECK: {{^[0-9]+}}:
 
@@ -208,40 +196,6 @@ entry:
   ; CHECK: {{^[0-9]+}}:
   ; CHECK: ret void
 }
-
-declare void @foo(ptr)
-define void @PR41481(i1 %b) sanitize_address {
-; CHECK-LABEL: @PR41481
-entry:
-  %p1 = alloca i32
-  %p2 = alloca i32
-  br label %bb1
-
-  ; Since we cannot account for all lifetime intrinsics in this function, we
-  ; might have missed a lifetime.start one and therefore shouldn't poison the
-  ; allocas at function entry.
-  ; ENTRY: store i64 -935356719533264399
-  ; ENTRY-UAS: store i64 -935356719533264399
-
-bb1:
-  %p = select i1 %b, ptr %p1, ptr %p2
-  %q = select i1 %b, ptr  %p1, ptr  %p2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %q)
-  call void @foo(ptr %p)
-  br i1 %b, label %bb2, label %bb3
-
-bb2:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %p1)
-  br label %end
-
-bb3:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %p2)
-  br label %end
-
-end:
-  ret void
-}
-
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)

@@ -85,6 +85,7 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
   }
   llvm::stable_sort(Data);
   ExecutionCount += FBD.ExecutionCount;
+  ExternEntryCount += FBD.ExternEntryCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
     auto NewElmt = EntryData.insert(EntryData.end(), *I);
@@ -269,6 +270,7 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
     if (FuncBranchData *FuncData = getBranchDataForNames(Function.getNames())) {
       setBranchData(Function, FuncData);
       Function.ExecutionCount = FuncData->ExecutionCount;
+      Function.ExternEntryCount = FuncData->ExternEntryCount;
       FuncData->Used = true;
     }
   }
@@ -419,6 +421,7 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
         BF.ExecutionCount = FBD->ExecutionCount;
+        BF.ExternEntryCount = FBD->ExternEntryCount;
         BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
@@ -449,6 +452,7 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     setBranchData(BF, NewBranchData);
     NewBranchData->Used = true;
     BF.ExecutionCount = NewBranchData->ExecutionCount;
+    BF.ExternEntryCount = NewBranchData->ExternEntryCount;
     BF.ProfileMatchRatio = 1.0f;
     break;
   }
@@ -1088,26 +1092,11 @@ bool DataReader::hasMemData() {
 
 std::error_code DataReader::parseInNoLBRMode() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToBasicSamples.find(Name);
-    if (I == NamesToBasicSamples.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
-          Name, FuncBasicSampleData(Name, FuncBasicSampleData::ContainerTy())));
-
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToBasicSamples.try_emplace(Name, Name).first;
   };
 
   auto GetOrCreateFuncMemEntry = [&](StringRef Name) {
-    auto I = NamesToMemEvents.find(Name);
-    if (I == NamesToMemEvents.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToMemEvents.insert(
-          std::make_pair(Name, FuncMemData(Name, FuncMemData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToMemEvents.try_emplace(Name, Name).first;
   };
 
   while (hasBranchData()) {
@@ -1151,26 +1140,11 @@ std::error_code DataReader::parseInNoLBRMode() {
 
 std::error_code DataReader::parse() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToBranches.find(Name);
-    if (I == NamesToBranches.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToBranches.insert(std::make_pair(
-          Name, FuncBranchData(Name, FuncBranchData::ContainerTy(),
-                               FuncBranchData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToBranches.try_emplace(Name, Name).first;
   };
 
   auto GetOrCreateFuncMemEntry = [&](StringRef Name) {
-    auto I = NamesToMemEvents.find(Name);
-    if (I == NamesToMemEvents.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToMemEvents.insert(
-          std::make_pair(Name, FuncMemData(Name, FuncMemData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToMemEvents.try_emplace(Name, Name).first;
   };
 
   Col = 0;
@@ -1220,6 +1194,8 @@ std::error_code DataReader::parse() {
     if (BI.To.IsSymbol && BI.To.Offset == 0) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.ExecutionCount += BI.Branches;
+      if (!BI.From.IsSymbol)
+        I->second.ExternEntryCount += BI.Branches;
     }
   }
 

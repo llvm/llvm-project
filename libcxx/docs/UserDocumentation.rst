@@ -72,6 +72,11 @@ when ``-fexperimental-library`` is passed:
 * ``std::chrono::tzdb`` and related time zone functionality
 * ``<syncstream>``
 
+Additionally, assertion semantics are an experimental feature that can be used
+to customize the behavior of Hardening (see :ref:`here <assertion-semantics>`).
+Assertion semantics mirror the evaluation semantics of C++26 Contracts but are
+not a standard feature.
+
 .. note::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
@@ -81,6 +86,8 @@ when ``-fexperimental-library`` is passed:
       the experimental feature is removed two releases after the non-experimental
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
+
+.. _libcxx-configuration-macros:
 
 Libc++ Configuration Macros
 ===========================
@@ -111,11 +118,6 @@ enable or disable extended libc++ behavior.
   not support the ``-fexperimental-library`` flag. When used, users also need to
   ensure that the appropriate experimental library (usually ``libc++experimental.a``)
   is linked into their program.
-
-**_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
-  This macro is used to enable -Wthread-safety annotations on libc++'s
-  ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
-  disabled and must be manually enabled by the user.
 
 **_LIBCPP_HARDENING_MODE**:
   This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.

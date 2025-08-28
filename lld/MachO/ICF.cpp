@@ -12,10 +12,8 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"

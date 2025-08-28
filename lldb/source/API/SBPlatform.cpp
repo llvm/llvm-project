@@ -13,7 +13,6 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBModuleSpec.h"
-#include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"

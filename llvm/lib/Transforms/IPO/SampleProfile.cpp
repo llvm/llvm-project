@@ -897,9 +897,7 @@ updateIDTMetaData(Instruction &Inst,
 
   llvm::sort(NewCallTargets,
              [](const InstrProfValueData &L, const InstrProfValueData &R) {
-               if (L.Count != R.Count)
-                 return L.Count > R.Count;
-               return L.Value > R.Value;
+               return std::tie(L.Count, L.Value) > std::tie(R.Count, R.Value);
              });
 
   uint32_t MaxMDCount =
@@ -2151,8 +2149,8 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
               std::optional<uint32_t> DwarfDiscriminator =
                   PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
                       Discriminator);
-              I.setDebugLoc(DIL->cloneWithDiscriminator(
-                  DwarfDiscriminator ? *DwarfDiscriminator : 0));
+              I.setDebugLoc(
+                  DIL->cloneWithDiscriminator(DwarfDiscriminator.value_or(0)));
             }
           }
       }

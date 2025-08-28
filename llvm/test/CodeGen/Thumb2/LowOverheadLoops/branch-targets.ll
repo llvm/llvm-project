@@ -406,7 +406,7 @@ for.cond.cleanup:
 ; CHECK-MID:   tB %bb.1
 ; CHECK-MID: bb.1.while.body:
 ; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
-; CHECk-MID:   tB %bb.2
+; CHECK-MID:   tB %bb.2
 ; CHECK-MID: bb.2.while.end:
 define void @check_negated_xor_wls(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
@@ -440,7 +440,7 @@ while.end:
 ; CHECK-MID:   tB %bb.1
 ; CHECK-MID: bb.1.while.body:
 ; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
-; CHECk-MID:   tB %bb.2
+; CHECK-MID:   tB %bb.2
 ; CHECK-MID: bb.2.while.end:
 define void @check_negated_cmp_wls(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
@@ -474,7 +474,7 @@ while.end:
 ; CHECK-MID:   tB %bb.1
 ; CHECK-MID: bb.1.while.body:
 ; CHECK-MID:   renamable $lr = t2LoopEndDec killed renamable $lr, %bb.1
-; CHECk-MID:   tB %bb.2
+; CHECK-MID:   tB %bb.2
 ; CHECK-MID: bb.2.while.end:
 define void @check_negated_reordered_wls(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:

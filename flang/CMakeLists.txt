@@ -140,6 +140,11 @@ if (FLANG_STANDALONE_BUILD)
   if (NOT DEFINED LLVM_MAIN_SRC_DIR)
     set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
   endif()
+
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -312,7 +317,7 @@ if (NOT ENABLE_LINKER_BUILD_ID)
   set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 endif()
 
-set(FLANG_DEFAULT_LINKER "" CACHE STRING
+set(FLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
@@ -416,7 +421,7 @@ endif()
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 
   if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing -fno-semantic-interposition")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-semantic-interposition")
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -Wstring-conversion \
           -Wcovered-switch-default")
@@ -490,6 +495,9 @@ endif()
 
 include(AddFlang)
 include(FlangCommon)
+include(GetClangResourceDir)
+
+get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
@@ -499,9 +507,10 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
 
+option(FLANG_INCLUDE_TOOLS "Generate build targets for the Flang tools." ON)
 option(FLANG_BUILD_TOOLS
   "Build the Flang tools. If OFF, just generate build targets." ON)
-if (FLANG_BUILD_TOOLS)
+if (FLANG_INCLUDE_TOOLS)
   add_subdirectory(tools)
 endif()
 
@@ -569,8 +578,6 @@ endif()
 
 # Put ISO_Fortran_binding.h into the include files of the build area now
 # so that we can run tests before installing
-include(GetClangResourceDir)
-get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h COPYONLY)

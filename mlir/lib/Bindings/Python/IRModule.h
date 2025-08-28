@@ -192,16 +192,6 @@ public:
   PyMlirContext(const PyMlirContext &) = delete;
   PyMlirContext(PyMlirContext &&) = delete;
 
-  /// For the case of a python __init__ (nanobind::init) method, pybind11 is
-  /// quite strict about needing to return a pointer that is not yet associated
-  /// to an nanobind::object. Since the forContext() method acts like a pool,
-  /// possibly returning a recycled context, it does not satisfy this need. The
-  /// usual way in python to accomplish such a thing is to override __new__, but
-  /// that is also not supported by pybind11. Instead, we use this entry
-  /// point which always constructs a fresh context (which cannot alias an
-  /// existing one because it is fresh).
-  static PyMlirContext *createNewContextForInit();
-
   /// Returns a context reference for the singleton PyMlirContext wrapper for
   /// the given context.
   static PyMlirContextRef forContext(MlirContext context);
@@ -599,18 +589,18 @@ class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit,
+             std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
              bool useNameLocAsPrefix, bool assumeVerified,
              nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
-  nanobind::object getAsm(bool binary,
-                          std::optional<int64_t> largeElementsLimit,
-                          bool enableDebugInfo, bool prettyDebugInfo,
-                          bool printGenericOpForm, bool useLocalScope,
-                          bool useNameLocAsPrefix, bool assumeVerified,
-                          bool skipRegions);
+  nanobind::object
+  getAsm(bool binary, std::optional<int64_t> largeElementsLimit,
+         std::optional<int64_t> largeResourceLimit, bool enableDebugInfo,
+         bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
+         bool useNameLocAsPrefix, bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,
@@ -623,6 +613,13 @@ public:
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);
+
+  /// Given an operation 'other' that is within the same parent block, return
+  /// whether the current operation is before 'other' in the operation list
+  /// of the parent block.
+  /// Note: This function has an average complexity of O(1), but worst case may
+  /// take O(N) where N is the number of operations within the parent block.
+  bool isBeforeInBlock(PyOperationBase &other);
 
   /// Verify the operation. Throws `MLIRError` if verification fails, and
   /// returns `true` otherwise.
@@ -715,8 +712,7 @@ public:
          llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, const nanobind::object &ip,
-         bool inferType);
+         PyLocation &location, const nanobind::object &ip, bool inferType);
 
   /// Creates an OpView suitable for this operation.
   nanobind::object createOpView();
@@ -774,7 +770,7 @@ public:
                nanobind::list operandList,
                std::optional<nanobind::dict> attributes,
                std::optional<std::vector<PyBlock *>> successors,
-               std::optional<int> regions, DefaultingPyLocation location,
+               std::optional<int> regions, PyLocation &location,
                const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
@@ -1220,7 +1216,7 @@ public:
   /// Note that PyAffineExpr instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
   /// is taken by calling this function.
-  static PyAffineExpr createFromCapsule(nanobind::object capsule);
+  static PyAffineExpr createFromCapsule(const nanobind::object &capsule);
 
   PyAffineExpr add(const PyAffineExpr &other) const;
   PyAffineExpr mul(const PyAffineExpr &other) const;
@@ -1247,7 +1243,7 @@ public:
   /// Note that PyAffineMap instances are uniqued, so the returned object
   /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
   /// is taken by calling this function.
-  static PyAffineMap createFromCapsule(nanobind::object capsule);
+  static PyAffineMap createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirAffineMap affineMap;
@@ -1267,7 +1263,7 @@ public:
   /// Creates a PyIntegerSet from the MlirAffineMap wrapped by a capsule.
   /// Note that PyIntegerSet instances may be uniqued, so the returned object
   /// may be a pre-existing object. Integer sets are owned by the context.
-  static PyIntegerSet createFromCapsule(nanobind::object capsule);
+  static PyIntegerSet createFromCapsule(const nanobind::object &capsule);
 
 private:
   MlirIntegerSet integerSet;

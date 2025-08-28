@@ -28,9 +28,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <optional>
 
@@ -126,11 +124,10 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   // moment; we do a check later and report an error with location info.
 
   // Get to the first load, store, or for op (that is not a copy nest itself).
-  auto curBegin =
-      std::find_if(block->begin(), block->end(), [&](Operation &op) {
-        return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
-               copyNests.count(&op) == 0;
-      });
+  auto curBegin = llvm::find_if(*block, [&](Operation &op) {
+    return isa<AffineLoadOp, AffineStoreOp, AffineForOp>(op) &&
+           copyNests.count(&op) == 0;
+  });
 
   // Create [begin, end) ranges.
   auto it = curBegin;
@@ -205,7 +202,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
 void AffineDataCopyGeneration::runOnOperation() {
   func::FuncOp f = getOperation();
   OpBuilder topBuilder(f.getBody());
-  zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
+  zeroIndex = arith::ConstantIndexOp::create(topBuilder, f.getLoc(), 0);
 
   // Nests that are copy-in's or copy-out's; the root AffineForOps of those
   // nests are stored herein.

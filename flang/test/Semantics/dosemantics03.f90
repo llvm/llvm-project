@@ -50,13 +50,13 @@ PROGRAM do_issue_458
   END DO
 
 ! REAL DO variable
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO rvar = 1, 10, 3
     PRINT *, "rvar is: ", rvar
   END DO
 
 ! DOUBLE PRECISISON DO variable
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO dvar = 1, 10, 3
     PRINT *, "dvar is: ", dvar
   END DO
@@ -69,14 +69,14 @@ PROGRAM do_issue_458
 
 ! Pointer to REAL DO variable
   ALLOCATE(prvar)
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO prvar = 1, 10, 3
     PRINT *, "prvar is: ", prvar
   END DO
 
 ! Pointer to DOUBLE PRECISION DO variable
   ALLOCATE(pdvar)
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO pdvar = 1, 10, 3
     PRINT *, "pdvar is: ", pdvar
   END DO
@@ -148,26 +148,26 @@ PROGRAM do_issue_458
   END DO
 
 ! Shared association REAL DO variable
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO realvarshare = 1, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Shared association DOUBLE PRECISION DO variable
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO dpvarshare = 1, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Initial expressions
 ! REAL initial expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = rvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION initial expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = dvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -178,13 +178,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL initial expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = prvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION initial expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = pdvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -221,13 +221,13 @@ PROGRAM do_issue_458
 
 ! Final expression
 ! REAL final expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, rvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION final expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, dvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -238,13 +238,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL final expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, prvar, 3
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION final expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = pdvar, 10, 3
     PRINT *, "ivar is: ", ivar
   END DO
@@ -263,13 +263,13 @@ PROGRAM do_issue_458
 
 ! Step expression
 ! REAL step expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, 10, rvar
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! DOUBLE PRECISION step expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, 10, dvar
     PRINT *, "ivar is: ", ivar
   END DO
@@ -280,13 +280,13 @@ PROGRAM do_issue_458
   END DO
 
 ! Pointer to REAL step expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, 10, prvar
     PRINT *, "ivar is: ", ivar
   END DO
 
 ! Pointer to DOUBLE PRECISION step expression
-!PORTABILITY: DO controls should be INTEGER
+!PORTABILITY: DO controls should be INTEGER [-Wreal-do-controls]
   DO ivar = 1, 10, pdvar
     PRINT *, "ivar is: ", ivar
   END DO

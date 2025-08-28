@@ -160,6 +160,10 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
 
+/// Produce a string containing comma-separated names of sanitizers and
+/// sanitizer groups in \p Sanitizers set.
+static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers);
+
 /// Return true if an execute-only target disallows data access to code
 /// sections.
 static bool isExecuteOnlyTarget(const llvm::Triple &Triple,
@@ -289,7 +293,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
           DiagnosedAlwaysOutViolations |= KindsToDiagnose;
         }
       }
@@ -305,7 +309,7 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
           SanitizerSet SetToDiagnose;
           SetToDiagnose.Mask |= KindsToDiagnose;
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getSpelling() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toStringWithGroups(SetToDiagnose);
           DiagnosedAlwaysInViolations |= KindsToDiagnose;
         }
       }
@@ -736,7 +740,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds &= Kinds;
 
-  // Parse -fno-sanitize-top-hot flags
+  // Parse -fno-fsanitize-skip-hot-cutoff flags
   SkipHotCutoffs = parseSanitizeSkipHotCutoffArgs(D, Args, DiagnoseErrors);
 
   // Parse -f(no-)?sanitize-annotate-debug-info flags
@@ -847,6 +851,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if (AllAddedKinds & SanitizerKind::KCFI) {
+    CfiICallGeneralizePointers =
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_generalize_pointers);
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
@@ -1153,9 +1159,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
-  LinkRuntimes =
-      Args.hasFlag(options::OPT_fsanitize_link_runtime,
-                   options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
+  LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
+                              options::OPT_fno_sanitize_link_runtime,
+                              !Args.hasArg(options::OPT_r));
 
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes = D.CCCIsCXX();
@@ -1198,6 +1204,19 @@ static std::string toString(const clang::SanitizerMaskCutoffs &Cutoffs) {
   llvm::SmallVector<std::string, 4> Res;
   serializeSanitizerMaskCutoffs(Cutoffs, Res);
   return llvm::join(Res, ",");
+}
+
+static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers) {
+  std::string Res;
+#define SANITIZER(NAME, ID)                                                    \
+  if (Sanitizers.has(SanitizerKind::ID)) {                                     \
+    if (!Res.empty())                                                          \
+      Res += ",";                                                              \
+    Res += NAME;                                                               \
+  }
+#define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID##Group)
+#include "clang/Basic/Sanitizers.def"
+  return Res;
 }
 
 static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
@@ -1364,6 +1383,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!AnnotateDebugInfo.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
                                          toString(AnnotateDebugInfo)));
+
+  Args.AddLastArg(CmdArgs, options::OPT_fsanitize_debug_trap_reasons_EQ);
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);

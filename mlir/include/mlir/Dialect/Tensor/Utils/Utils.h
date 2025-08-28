@@ -30,7 +30,7 @@ namespace tensor {
 // for _static_ dimensions.
 PadOp createPadHighOp(RankedTensorType resType, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder,
-                      SmallVector<Value> dynOutDims = {});
+                      ValueRange dynOutDims = {});
 
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.
@@ -42,6 +42,11 @@ SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
 FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
+
+/// Create tensor.collapse_shape to drop unit dimensions in `dropDims` in tensor
+/// `src`.
+CollapseShapeOp dropGivenUnitDims(OpBuilder &b, Location loc, Value src,
+                                  const llvm::SmallBitVector &dropDims);
 
 /// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
 /// source tensor or inserts the source tensor into a destination tensor with

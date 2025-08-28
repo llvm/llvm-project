@@ -17,8 +17,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -70,6 +70,13 @@ namespace {
 
 using LoopVector = SmallVector<Loop *, 8>;
 
+/// A list of direction vectors. Each entry represents a direction vector
+/// corresponding to one or more dependencies existing in the loop nest. The
+/// length of all direction vectors is equal and is N + 1, where N is the depth
+/// of the loop nest. The first N elements correspond to the dependency
+/// direction of each N loops. The last one indicates whether this entry is
+/// forward dependency ('<') or not ('*'). The term "forward" aligns with what
+/// is defined in LoopAccessAnalysis.
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
@@ -78,6 +85,7 @@ enum class RuleTy {
   PerLoopCacheAnalysis,
   PerInstrOrderCost,
   ForVectorization,
+  Ignore
 };
 
 } // end anonymous namespace
@@ -106,23 +114,51 @@ static cl::list<RuleTy> Profitabilities(
                clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
                           "Prioritize the IVs order of each instruction"),
                clEnumValN(RuleTy::ForVectorization, "vectorize",
-                          "Prioritize vectorization")));
+                          "Prioritize vectorization"),
+               clEnumValN(RuleTy::Ignore, "ignore",
+                          "Ignore profitability, force interchange (does not "
+                          "work with other options)")));
 
 #ifndef NDEBUG
-static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
+static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
   SmallSet<RuleTy, 4> Set;
-  for (RuleTy Rule : Rules)
+  for (RuleTy Rule : Rules) {
     if (!Set.insert(Rule).second)
       return false;
+    if (Rule == RuleTy::Ignore)
+      return false;
+  }
   return true;
 }
 
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
-    for (auto D : Row)
+    // Drop the last element because it is a flag indicating whether this is
+    // forward dependency or not, which doesn't affect the legality check.
+    for (char D : drop_end(Row))
       LLVM_DEBUG(dbgs() << D << " ");
     LLVM_DEBUG(dbgs() << "\n");
   }
+}
+
+/// Return true if \p Src appears before \p Dst in the same basic block.
+/// Precondition: \p Src and \Dst are distinct instructions within the same
+/// basic block.
+static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
+  assert(Src->getParent() == Dst->getParent() && Src != Dst &&
+         "Expected Src and Dst to be different instructions in the same BB");
+
+  bool FoundSrc = false;
+  for (const Instruction &I : *(Src->getParent())) {
+    if (&I == Src) {
+      FoundSrc = true;
+      continue;
+    }
+    if (&I == Dst)
+      return FoundSrc;
+  }
+
+  llvm_unreachable("Dst not found");
 }
 #endif
 
@@ -167,7 +203,10 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     return false;
   }
   ValueVector::iterator I, IE, J, JE;
-  StringSet<> Seen;
+
+  // Manage direction vectors that are already seen. Map each direction vector
+  // to an index of DepMatrix at which it is stored.
+  StringMap<unsigned> Seen;
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -209,13 +248,61 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
             Direction = '*';
           Dep.push_back(Direction);
         }
+
+        // If the Dependence object doesn't have any information, fill the
+        // dependency vector with '*'.
+        if (D->isConfused()) {
+          assert(Dep.empty() && "Expected empty dependency vector");
+          Dep.assign(Level, '*');
+        }
+
         while (Dep.size() != Level) {
           Dep.push_back('I');
         }
 
+        // Test whether the dependency is forward or not.
+        bool IsKnownForward = true;
+        if (Src->getParent() != Dst->getParent()) {
+          // In general, when Src and Dst are in different BBs, the execution
+          // order of them within a single iteration is not guaranteed. Treat
+          // conservatively as not-forward dependency in this case.
+          IsKnownForward = false;
+        } else {
+          // Src and Dst are in the same BB. If they are the different
+          // instructions, Src should appear before Dst in the BB as they are
+          // stored to MemInstr in that order.
+          assert((Src == Dst || inThisOrder(Src, Dst)) &&
+                 "Unexpected instructions");
+
+          // If the Dependence object is reversed (due to normalization), it
+          // represents the dependency from Dst to Src, meaning it is a backward
+          // dependency. Otherwise it should be a forward dependency.
+          bool IsReversed = D->getSrc() != Src;
+          if (IsReversed)
+            IsKnownForward = false;
+        }
+
+        // Initialize the last element. Assume forward dependencies only; it
+        // will be updated later if there is any non-forward dependency.
+        Dep.push_back('<');
+
+        // The last element should express the "summary" among one or more
+        // direction vectors whose first N elements are the same (where N is
+        // the depth of the loop nest). Hence we exclude the last element from
+        // the Seen map.
+        auto [Ite, Inserted] = Seen.try_emplace(
+            StringRef(Dep.data(), Dep.size() - 1), DepMatrix.size());
+
         // Make sure we only add unique entries to the dependency matrix.
-        if (Seen.insert(StringRef(Dep.data(), Dep.size())).second)
+        if (Inserted)
           DepMatrix.push_back(Dep);
+
+        // If we cannot prove that this dependency is forward, change the last
+        // element of the corresponding entry. Since a `[... *]` dependency
+        // includes a `[... <]` dependency, we do not need to keep both and
+        // change the existing entry instead.
+        if (!IsKnownForward)
+          DepMatrix[Ite->second].back() = '*';
       }
     }
   }
@@ -227,8 +314,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
-    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
+  for (auto &Row : DepMatrix)
+    std::swap(Row[ToIndx], Row[FromIndx]);
 }
 
 // Check if a direction vector is lexicographically positive. Return true if it
@@ -236,11 +323,9 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
-static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV,
-                                                       unsigned Begin,
-                                                       unsigned End) {
-  ArrayRef<char> DVRef(DV);
-  for (unsigned char Direction : DVRef.slice(Begin, End - Begin)) {
+static std::optional<bool>
+isLexicographicallyPositive(ArrayRef<char> DV, unsigned Begin, unsigned End) {
+  for (unsigned char Direction : DV.slice(Begin, End - Begin)) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
@@ -268,11 +353,12 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
       continue;
 
     // Check if the direction vector is lexicographically positive (or zero)
-    // for both before/after exchanged.
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    // for both before/after exchanged. Ignore the last element because it
+    // doesn't affect the legality.
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size() - 1) == false)
       return false;
   }
   return true;
@@ -301,18 +387,18 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
+static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
                                   OptimizationRemarkEmitter &ORE) {
   unsigned LoopNestDepth = LoopList.size();
   if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
     LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
                       << ", the supported range is [" << MinLoopNestDepth
                       << ", " << MaxLoopNestDepth << "].\n");
-    Loop **OuterLoop = LoopList.begin();
+    Loop *OuterLoop = LoopList.front();
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      (*OuterLoop)->getStartLoc(),
-                                      (*OuterLoop)->getHeader())
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
              << "Unsupported depth of loop nest, the supported range is ["
              << std::to_string(MinLoopNestDepth) << ", "
              << std::to_string(MaxLoopNestDepth) << "].\n";
@@ -369,8 +455,12 @@ public:
     return OuterInnerReductions;
   }
 
-  const SmallVectorImpl<PHINode *> &getInnerLoopInductions() const {
+  const ArrayRef<PHINode *> getInnerLoopInductions() const {
     return InnerLoopInductions;
+  }
+
+  ArrayRef<Instruction *> getHasNoWrapReductions() const {
+    return HasNoWrapReductions;
   }
 
 private:
@@ -399,6 +489,37 @@ private:
 
   /// Set of inner loop induction PHIs
   SmallVector<PHINode *, 8> InnerLoopInductions;
+
+  /// Hold instructions that have nuw/nsw flags and involved in reductions,
+  /// like integer addition/multiplication. Those flags must be dropped when
+  /// interchanging the loops.
+  SmallVector<Instruction *, 4> HasNoWrapReductions;
+};
+
+/// Manages information utilized by the profitability check for cache. The main
+/// purpose of this class is to delay the computation of CacheCost until it is
+/// actually needed.
+class CacheCostManager {
+  Loop *OutermostLoop;
+  LoopStandardAnalysisResults *AR;
+  DependenceInfo *DI;
+
+  /// CacheCost for \ref OutermostLoop. Once it is computed, it is cached. Note
+  /// that the result can be nullptr.
+  std::optional<std::unique_ptr<CacheCost>> CC;
+
+  /// Maps each loop to an index representing the optimal position within the
+  /// loop-nest, as determined by the cache cost analysis.
+  DenseMap<const Loop *, unsigned> CostMap;
+
+  void computeIfUnitinialized();
+
+public:
+  CacheCostManager(Loop *OutermostLoop, LoopStandardAnalysisResults *AR,
+                   DependenceInfo *DI)
+      : OutermostLoop(OutermostLoop), AR(AR), DI(DI) {}
+  CacheCost *getCacheCost();
+  const DenseMap<const Loop *, unsigned> &getCostMap();
 };
 
 /// LoopInterchangeProfitability checks if it is profitable to interchange the
@@ -412,15 +533,12 @@ public:
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix,
-                    const DenseMap<const Loop *, unsigned> &CostMap,
-                    std::unique_ptr<CacheCost> &CC);
+                    CharMatrix &DepMatrix, CacheCostManager &CCM);
 
 private:
   int getInstrOrderCost();
   std::optional<bool> isProfitablePerLoopCacheAnalysis(
-      const DenseMap<const Loop *, unsigned> &CostMap,
-      std::unique_ptr<CacheCost> &CC);
+      const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC);
   std::optional<bool> isProfitablePerInstrOrderCost();
   std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
                                                    unsigned OuterLoopId,
@@ -444,7 +562,7 @@ public:
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
-  bool transform();
+  bool transform(ArrayRef<Instruction *> DropNoWrapInsts);
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
                         BasicBlock *OrigInnerPreHeader,
                         BasicBlock *OrigOuterPreHeader);
@@ -471,15 +589,15 @@ struct LoopInterchange {
   LoopInfo *LI = nullptr;
   DependenceInfo *DI = nullptr;
   DominatorTree *DT = nullptr;
-  std::unique_ptr<CacheCost> CC = nullptr;
+  LoopStandardAnalysisResults *AR = nullptr;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
   LoopInterchange(ScalarEvolution *SE, LoopInfo *LI, DependenceInfo *DI,
-                  DominatorTree *DT, std::unique_ptr<CacheCost> &CC,
+                  DominatorTree *DT, LoopStandardAnalysisResults *AR,
                   OptimizationRemarkEmitter *ORE)
-      : SE(SE), LI(LI), DI(DI), DT(DT), CC(std::move(CC)), ORE(ORE) {}
+      : SE(SE), LI(LI), DI(DI), DT(DT), AR(AR), ORE(ORE) {}
 
   bool run(Loop *L) {
     if (L->getParentLoop())
@@ -534,21 +652,7 @@ struct LoopInterchange {
     }
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
-    // Obtain the loop vector returned from loop cache analysis beforehand,
-    // and put each <Loop, index> pair into a map for constant time query
-    // later. Indices in loop vector reprsent the optimal order of the
-    // corresponding loop, e.g., given a loopnest with depth N, index 0
-    // indicates the loop should be placed as the outermost loop and index N
-    // indicates the loop should be placed as the innermost loop.
-    //
-    // For the old pass manager CacheCost would be null.
-    DenseMap<const Loop *, unsigned> CostMap;
-    if (CC != nullptr) {
-      const auto &LoopCosts = CC->getLoopCosts();
-      for (unsigned i = 0; i < LoopCosts.size(); i++) {
-        CostMap[LoopCosts[i].first] = i;
-      }
-    }
+    CacheCostManager CCM(LoopList[0], AR, DI);
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
@@ -557,7 +661,7 @@ struct LoopInterchange {
       bool ChangedPerIter = false;
       for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
         bool Interchanged =
-            processLoop(LoopList, i, i - 1, DependencyMatrix, CostMap);
+            processLoop(LoopList, i, i - 1, DependencyMatrix, CCM);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -572,7 +676,7 @@ struct LoopInterchange {
   bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
-                   const DenseMap<const Loop *, unsigned> &CostMap) {
+                   CacheCostManager &CCM) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
@@ -585,7 +689,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CostMap, CC)) {
+                          DependencyMatrix, CCM)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -598,7 +702,7 @@ struct LoopInterchange {
     });
 
     LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LIL);
-    LIT.transform();
+    LIT.transform(LIL.getHasNoWrapReductions());
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
 
@@ -783,7 +887,9 @@ static Value *followLCSSA(Value *SV) {
 }
 
 // Check V's users to see if it is involved in a reduction in L.
-static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
+static PHINode *
+findInnerReductionPhi(Loop *L, Value *V,
+                      SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
   // Reduction variables cannot be constants.
   if (isa<Constant>(V))
     return nullptr;
@@ -797,7 +903,66 @@ static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
         // Detect floating point reduction only when it can be reordered.
         if (RD.getExactFPMathInst() != nullptr)
           return nullptr;
-        return PHI;
+
+        RecurKind RK = RD.getRecurrenceKind();
+        switch (RK) {
+        case RecurKind::Or:
+        case RecurKind::And:
+        case RecurKind::Xor:
+        case RecurKind::SMin:
+        case RecurKind::SMax:
+        case RecurKind::UMin:
+        case RecurKind::UMax:
+        case RecurKind::FAdd:
+        case RecurKind::FMul:
+        case RecurKind::FMin:
+        case RecurKind::FMax:
+        case RecurKind::FMinimum:
+        case RecurKind::FMaximum:
+        case RecurKind::FMinimumNum:
+        case RecurKind::FMaximumNum:
+        case RecurKind::FMulAdd:
+        case RecurKind::AnyOf:
+          return PHI;
+
+        // Change the order of integer addition/multiplication may change the
+        // semantics. Consider the following case:
+        //
+        //  int A[2][2] = {{ INT_MAX, INT_MAX }, { INT_MIN, INT_MIN }};
+        //  int sum = 0;
+        //  for (int i = 0; i < 2; i++)
+        //    for (int j = 0; j < 2; j++)
+        //      sum += A[j][i];
+        //
+        // If the above loops are exchanged, the addition will cause an
+        // overflow. To prevent this, we must drop the nuw/nsw flags from the
+        // addition/multiplication instructions when we actually exchanges the
+        // loops.
+        case RecurKind::Add:
+        case RecurKind::Mul: {
+          unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
+          SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
+
+          // Bail out when we fail to collect reduction instructions chain.
+          if (Ops.empty())
+            return nullptr;
+
+          for (Instruction *I : Ops) {
+            assert(I->getOpcode() == OpCode &&
+                   "Expected the instruction to be the reduction operation");
+            (void)OpCode;
+
+            // If the instruction has nuw/nsw flags, we must drop them when the
+            // transformation is actually performed.
+            if (I->hasNoSignedWrap() || I->hasNoUnsignedWrap())
+              HasNoWrapInsts.push_back(I);
+          }
+          return PHI;
+        }
+
+        default:
+          return nullptr;
+        }
       }
       return nullptr;
     }
@@ -829,7 +994,8 @@ bool LoopInterchangeLegality::findInductionAndReductions(
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(PHI.getIncomingValueForBlock(L->getLoopLatch()));
-        PHINode *InnerRedPhi = findInnerReductionPhi(InnerLoop, V);
+        PHINode *InnerRedPhi =
+            findInnerReductionPhi(InnerLoop, V, HasNoWrapReductions);
         if (!InnerRedPhi ||
             !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
           LLVM_DEBUG(
@@ -964,8 +1130,8 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
 static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
   for (PHINode &PHI : LoopNestExit->phis()) {
-    for (unsigned i = 0; i < PHI.getNumIncomingValues(); i++) {
-      Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
+    for (Value *Incoming : PHI.incoming_values()) {
+      Instruction *IncomingI = dyn_cast<Instruction>(Incoming);
       if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
         continue;
 
@@ -1118,21 +1284,49 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   return true;
 }
 
+void CacheCostManager::computeIfUnitinialized() {
+  if (CC.has_value())
+    return;
+
+  LLVM_DEBUG(dbgs() << "Compute CacheCost.\n");
+  CC = CacheCost::getCacheCost(*OutermostLoop, *AR, *DI);
+  // Obtain the loop vector returned from loop cache analysis beforehand,
+  // and put each <Loop, index> pair into a map for constant time query
+  // later. Indices in loop vector reprsent the optimal order of the
+  // corresponding loop, e.g., given a loopnest with depth N, index 0
+  // indicates the loop should be placed as the outermost loop and index N
+  // indicates the loop should be placed as the innermost loop.
+  //
+  // For the old pass manager CacheCost would be null.
+  if (*CC != nullptr)
+    for (const auto &[Idx, Cost] : enumerate((*CC)->getLoopCosts()))
+      CostMap[Cost.first] = Idx;
+}
+
+CacheCost *CacheCostManager::getCacheCost() {
+  computeIfUnitinialized();
+  return CC->get();
+}
+
+const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
+  computeIfUnitinialized();
+  return CostMap;
+}
+
 int LoopInterchangeProfitability::getInstrOrderCost() {
   unsigned GoodOrder, BadOrder;
   BadOrder = GoodOrder = 0;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
-        unsigned NumOp = GEP->getNumOperands();
         bool FoundInnerInduction = false;
         bool FoundOuterInduction = false;
-        for (unsigned i = 0; i < NumOp; ++i) {
+        for (Value *Op : GEP->operands()) {
           // Skip operands that are not SCEV-able.
-          if (!SE->isSCEVable(GEP->getOperand(i)->getType()))
+          if (!SE->isSCEVable(Op->getType()))
             continue;
 
-          const SCEV *OperandVal = SE->getSCEV(GEP->getOperand(i));
+          const SCEV *OperandVal = SE->getSCEV(Op);
           const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
           if (!AR)
             continue;
@@ -1174,8 +1368,7 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
 
 std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
-    const DenseMap<const Loop *, unsigned> &CostMap,
-    std::unique_ptr<CacheCost> &CC) {
+    const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC) {
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
@@ -1212,24 +1405,37 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 
 /// Return true if we can vectorize the loop specified by \p LoopId.
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
-  for (unsigned I = 0; I != DepMatrix.size(); I++) {
-    char Dir = DepMatrix[I][LoopId];
-    if (Dir != 'I' && Dir != '=')
-      return false;
+  for (const auto &Dep : DepMatrix) {
+    char Dir = Dep[LoopId];
+    char DepType = Dep.back();
+    assert((DepType == '<' || DepType == '*') &&
+           "Unexpected element in dependency vector");
+
+    // There are no loop-carried dependencies.
+    if (Dir == '=' || Dir == 'I')
+      continue;
+
+    // DepType being '<' means that this direction vector represents a forward
+    // dependency. In principle, a loop with '<' direction can be vectorized in
+    // this case.
+    if (Dir == '<' && DepType == '<')
+      continue;
+
+    // We cannot prove that the loop is vectorizable.
+    return false;
   }
   return true;
 }
 
 std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
     unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix) {
-  // If the outer loop is not loop independent it is not profitable to move
-  // this to inner position, since doing so would not enable inner loop
-  // parallelism.
+  // If the outer loop cannot be vectorized, it is not profitable to move this
+  // to inner position.
   if (!canVectorize(DepMatrix, OuterLoopId))
     return false;
 
-  // If inner loop has dependence and outer loop is loop independent then it is
-  // profitable to interchange to enable inner loop parallelism.
+  // If the inner loop cannot be vectorized but the outer loop can be, then it
+  // is profitable to interchange to enable inner loop parallelism.
   if (!canVectorize(DepMatrix, InnerLoopId))
     return true;
 
@@ -1243,9 +1449,14 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const DenseMap<const Loop *, unsigned> &CostMap,
-    std::unique_ptr<CacheCost> &CC) {
+    unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+
+  // Return true if interchange is forced and the cost-model ignored.
+  if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
+    return true;
+  assert(noDuplicateRulesAndIgnore(Profitabilities) &&
+         "Duplicate rules and option 'ignore' are not allowed");
+
   // isProfitable() is structured to avoid endless loop interchange. If the
   // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
   // decide the profitability then, profitability check will stop and return the
@@ -1254,19 +1465,24 @@ bool LoopInterchangeProfitability::isProfitable(
   // second highest priority rule (isProfitablePerInstrOrderCost by default).
   // Likewise, if it failed to analysis the profitability then only, the last
   // rule (isProfitableForVectorization by default) will decide.
-  assert(noDuplicateRules(Profitabilities) && "Detect duplicate rules");
   std::optional<bool> shouldInterchange;
   for (RuleTy RT : Profitabilities) {
     switch (RT) {
-    case RuleTy::PerLoopCacheAnalysis:
+    case RuleTy::PerLoopCacheAnalysis: {
+      CacheCost *CC = CCM.getCacheCost();
+      const DenseMap<const Loop *, unsigned> &CostMap = CCM.getCostMap();
       shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
       break;
+    }
     case RuleTy::PerInstrOrderCost:
       shouldInterchange = isProfitablePerInstrOrderCost();
       break;
     case RuleTy::ForVectorization:
       shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
+      break;
+    case RuleTy::Ignore:
+      llvm_unreachable("Option 'ignore' is not supported with other options");
       break;
     }
 
@@ -1387,7 +1603,8 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
-bool LoopInterchangeTransform::transform() {
+bool LoopInterchangeTransform::transform(
+    ArrayRef<Instruction *> DropNoWrapInsts) {
   bool Transformed = false;
 
   if (InnerLoop->getSubLoops().empty()) {
@@ -1488,6 +1705,13 @@ bool LoopInterchangeTransform::transform() {
     return false;
   }
 
+  // Finally, drop the nsw/nuw flags from the instructions for reduction
+  // calculations.
+  for (Instruction *Reduction : DropNoWrapInsts) {
+    Reduction->setHasNoSignedWrap(false);
+    Reduction->setHasNoUnsignedWrap(false);
+  }
+
   return true;
 }
 
@@ -1524,11 +1748,8 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,
                             std::vector<DominatorTree::UpdateType> &DTUpdates,
                             bool MustUpdateOnce = true) {
-  assert((!MustUpdateOnce ||
-          llvm::count_if(successors(BI),
-                         [OldBB](BasicBlock *BB) {
-                           return BB == OldBB;
-                         }) == 1) && "BI must jump to OldBB exactly once.");
+  assert((!MustUpdateOnce || llvm::count(successors(BI), OldBB) == 1) &&
+         "BI must jump to OldBB exactly once.");
   bool Changed = false;
   for (Use &Op : BI->operands())
     if (Op == OldBB) {
@@ -1841,10 +2062,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  std::unique_ptr<CacheCost> CC =
-      CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
+  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();

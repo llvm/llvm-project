@@ -303,7 +303,7 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr
 ; HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR12:[0-9]+]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr
-; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
+; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(3) %ptr to ptr
@@ -315,7 +315,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; HSA-LABEL: define {{[^@]+}}@use_private_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(5) [[PTR:%.*]]) #[[ATTR13:[0-9]+]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
-; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
+; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META1:![0-9]+]]
 ; HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
@@ -352,7 +352,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 ; HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4
+; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META2:![0-9]+]]
 ; HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(1) %ptr to ptr
@@ -364,7 +364,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
 ; HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
 ; HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
-; HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr [[STOF]], align 4
+; HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr [[STOF]], align 4, !noalias.addrspace [[META3:![0-9]+]]
 ; HSA-NEXT:    ret void
 ;
   %stof = addrspacecast ptr addrspace(4) %ptr to ptr
@@ -487,4 +487,9 @@ attributes #1 = { nounwind }
 ; HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ; HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+;.
+; HSA: [[META0]] = !{i32 1, i32 3, i32 4, i32 10}
+; HSA: [[META1]] = !{i32 1, i32 5, i32 6, i32 10}
+; HSA: [[META2]] = !{i32 2, i32 10}
+; HSA: [[META3]] = !{i32 1, i32 4, i32 5, i32 10}
 ;.

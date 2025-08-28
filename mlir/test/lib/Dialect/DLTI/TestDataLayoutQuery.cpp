@@ -48,6 +48,8 @@ struct TestDataLayoutQuery
       Attribute programMemorySpace = layout.getProgramMemorySpace();
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       uint64_t stackAlignment = layout.getStackAlignment();
+      Attribute functionPointerAlignment = layout.getFunctionPointerAlignment();
+      Attribute legalIntWidths = layout.getLegalIntWidths();
 
       auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
         if (!typeSize.isScalable())
@@ -90,7 +92,20 @@ struct TestDataLayoutQuery
                                     ? builder.getUI32IntegerAttr(0)
                                     : globalMemorySpace),
            builder.getNamedAttr("stack_alignment",
-                                builder.getIndexAttr(stackAlignment))});
+                                builder.getIndexAttr(stackAlignment)),
+           builder.getNamedAttr("function_pointer_alignment",
+                                functionPointerAlignment == Attribute()
+                                    ? FunctionPointerAlignmentAttr::get(
+                                          builder.getContext(), 0,
+                                          /*function_dependent=*/false)
+                                    : functionPointerAlignment),
+           builder.getNamedAttr("legal_int_widths",
+                                legalIntWidths == Attribute()
+                                    ? builder.getDenseI32ArrayAttr({})
+                                    : legalIntWidths)
+
+          });
+
     });
   }
 };

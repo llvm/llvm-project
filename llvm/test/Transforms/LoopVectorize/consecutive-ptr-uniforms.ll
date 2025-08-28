@@ -87,10 +87,10 @@ for.end:
 ; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
 ; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
 ; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]]
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 1
@@ -102,7 +102,7 @@ for.end:
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER-NOT:   getelementptr
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
+; INTER:       getelementptr inbounds %pair, ptr %p, i64 %index
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -145,10 +145,10 @@ for.end:
 ; CHECK:       %[[I1:.+]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK:       %[[I2:.+]] = add i64 [[OFFSET_IDX]], -2
 ; CHECK:       %[[I3:.+]] = add i64 [[OFFSET_IDX]], -3
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]]
+; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]]
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 1
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 1
@@ -161,7 +161,7 @@ for.end:
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER:       [[OFFSET_IDX:%.+]] = sub i64 %n, %index
 ; INTER-NOT:   getelementptr
-; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]], i32 0
+; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 [[OFFSET_IDX]]
 ; INTER:       getelementptr inbounds i8, ptr %[[G0]], i64 -24
 ; INTER-NOT:   getelementptr
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
@@ -200,14 +200,14 @@ for.end:
 ; INTER-NOT: LV: Found uniform instruction: %tmp0 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 0
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, {{.*}} ]
-; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
+; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index
 ; INTER:       %wide.vec = load <8 x i32>, ptr %[[G0]], align 8
-; INTER:       %[[I1:.+]] = or disjoint i64 %index, 1
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; INTER:       %[[I2:.+]] = or disjoint i64 %index, 2
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; INTER:       %[[I3:.+]] = or disjoint i64 %index, 3
-; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
+; INTER:       %[[G1:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G1]], i64 8
+; INTER:       %[[G2:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G2]], i64 16
+; INTER:       %[[G3:.+]] = getelementptr %pair, ptr %p, i64 %index
+; INTER:       getelementptr i8, ptr %[[G3]], i64 24
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @predicated_store(ptr %p, i32 %x, i64 %n) {

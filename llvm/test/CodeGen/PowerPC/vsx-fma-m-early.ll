@@ -69,14 +69,14 @@ declare <4 x i32> @llvm.ppc.vsx.xvcmpgtsp(<4 x float>, <4 x float>)
 ; CHECK64-NEXT:         bltlr   cr0
 ; CHECK64-NEXT: # %bb.1:                                # %for.body.preheader
 ; CHECK64-NEXT:         xxspltiw vs0, 1069066811
+; CHECK64-NEXT:         xxspltiw vs1, 1170469888
 ; CHECK64-NEXT:         mtctr r5
 ; CHECK64-NEXT:         li r5, 0
 ; CHECK64-NEXT:         {{.*}}align  5
 ; CHECK64-NEXT: [[L2_bar:.*]]:                               # %for.body
 ; CHECK64-NEXT:                                         # =>This Inner Loop Header: Depth=1
-; CHECK64-NEXT:         lxvx vs1, r4, r5
-; CHECK64-NEXT:         xxspltiw vs2, 1170469888
-; CHECK64-NEXT:         xvmaddasp vs2, vs1, vs0
+; CHECK64-NEXT:         lxvx vs2, r4, r5
+; CHECK64-NEXT:         xvmaddmsp vs2, vs0, vs1
 ; CHECK64-NEXT:         stxvx vs2, r3, r5
 ; CHECK64-NEXT:         addi r5, r5, 16
 ; CHECK64-NEXT:         bdnz [[L2_bar]]
@@ -139,17 +139,17 @@ declare <4 x i32> @llvm.ppc.vsx.xvcmpgtsp(<4 x float>, <4 x float>)
 ; CHECK32-NEXT:       blelr cr0
 ; CHECK32-NEXT: # %bb.1:                                # %for.body.preheader
 ; CHECK32-NEXT:       xxspltiw vs0, 1069066811
+; CHECK32-NEXT:       xxspltiw vs1, 1170469888
 ; CHECK32-NEXT:       li r6, 0
 ; CHECK32-NEXT:       li r7, 0
 ; CHECK32-NEXT:       .align  4
 ; CHECK32-NEXT: [[L2_foo:.*]]:                               # %for.body
 ; CHECK32-NEXT:                                         # =>This Inner Loop Header: Depth=1
 ; CHECK32-NEXT:       slwi r8, r7, 4
-; CHECK32-NEXT:       xxspltiw vs2, 1170469888
 ; CHECK32-NEXT:       addic r7, r7, 1
 ; CHECK32-NEXT:       addze r6, r6
-; CHECK32-NEXT:       lxvx vs1, r4, r8
-; CHECK32-NEXT:       xvmaddasp vs2, vs1, vs0
+; CHECK32-NEXT:       lxvx vs2, r4, r8
+; CHECK32-NEXT:       xvmaddmsp vs2, vs0, vs1
 ; CHECK32-NEXT:       stxvx vs2, r3, r8
 ; CHECK32-NEXT:       xor r8, r7, r5
 ; CHECK32-NEXT:       or. r8, r8, r6

@@ -313,10 +313,12 @@ ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
   }
 
   const CXXRecordDecl *DerivedRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl());
+      cast<CXXRecordDecl>(
+          cast<RecordType>(CanDerivedReturnType)->getOriginalDecl())
+          ->getDefinitionOrSelf();
 
-  const CXXRecordDecl *BaseRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
+  const CXXRecordDecl *BaseRD = cast<CXXRecordDecl>(
+      cast<RecordType>(CanBaseReturnType)->getOriginalDecl());
 
   return ComputeBaseOffset(Context, BaseRD, DerivedRD);
 }
@@ -1595,8 +1597,8 @@ void ItaniumVTableBuilder::AddMethods(
       NewVirtualFunctions.push_back(MD);
   }
 
-  std::stable_sort(
-      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+  llvm::stable_sort(
+      NewImplicitVirtualFunctions,
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
         if (A == B)
           return false;
