@@ -552,11 +552,6 @@ protected:
   virtual void printDebugTracesAtStart() {}
   virtual void printDebugTracesAtEnd() {}
 
-  /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
-  /// vector preheader and its predecessor, also connecting the new block to the
-  /// scalar preheader.
-  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
-
   /// The original loop.
   Loop *OrigLoop;
 
@@ -696,6 +691,11 @@ public:
   BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
+  /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
+  /// vector preheader and its predecessor, also connecting the new block to the
+  /// scalar preheader.
+  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
+
   // Create a check to see if the main vector loop should be executed
   Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
 
@@ -2251,7 +2251,8 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
   return TTI.enableMaskedInterleavedAccessVectorization();
 }
 
-void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
+void EpilogueVectorizerMainLoop::introduceCheckBlockInVPlan(
+    BasicBlock *CheckIRBB) {
   // Note: The block with the minimum trip-count check is already connected
   // during earlier VPlan construction.
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
