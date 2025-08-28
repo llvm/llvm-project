@@ -250,8 +250,13 @@ public:
         if (isSmall())
           return llvm::remove_if(vector_, P);
 
-      return llvm::remove_if(vector_,
-                             TestAndEraseFromSet<UnaryPredicate>(P, set_));
+      return llvm::remove_if(vector_, [&](const value_type &V) {
+        if (P(V)) {
+          set_.erase(V);
+          return true;
+        }
+        return false;
+      });
     }();
 
     if (I == vector_.end())
@@ -331,29 +336,6 @@ public:
   }
 
 private:
-  /// A wrapper predicate designed for use with std::remove_if.
-  ///
-  /// This predicate wraps a predicate suitable for use with std::remove_if to
-  /// call set_.erase(x) on each element which is slated for removal.
-  template <typename UnaryPredicate>
-  class TestAndEraseFromSet {
-    UnaryPredicate P;
-    set_type &set_;
-
-  public:
-    TestAndEraseFromSet(UnaryPredicate P, set_type &set_)
-        : P(std::move(P)), set_(set_) {}
-
-    template <typename ArgumentT>
-    bool operator()(const ArgumentT &Arg) {
-      if (P(Arg)) {
-        set_.erase(Arg);
-        return true;
-      }
-      return false;
-    }
-  };
-
   [[nodiscard]] static constexpr bool canBeSmall() { return N != 0; }
 
   [[nodiscard]] bool isSmall() const { return set_.empty(); }
