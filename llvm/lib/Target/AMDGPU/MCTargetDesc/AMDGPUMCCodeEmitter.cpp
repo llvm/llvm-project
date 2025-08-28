@@ -695,11 +695,8 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-    auto OpType = Desc.operands()[OpNo].OperandType;
-    MCFixupKind Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-                        OpType == AMDGPU::OPERAND_REG_IMM_INT64)
-                           ? FK_Data_8
-                           : FK_Data_4;
+    unsigned Size = AMDGPU::getOperandSize(Desc, OpNo);
+    MCFixupKind Kind = MCFixup::getDataKindForSize(Size);
     addFixup(Fixups, Offset, MO.getExpr(), Kind, PCRel);
   }
 
