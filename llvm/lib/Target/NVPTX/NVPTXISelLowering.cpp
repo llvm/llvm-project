@@ -987,7 +987,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
     AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
 
-  for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}) {
+  for (const auto &Op :
+       {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}) {
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setFP16OperationAction(Op, MVT::f16, Legal, Promote);
