@@ -15,8 +15,9 @@ define i32 @zext_i8_i32() {
 ; CHECK-LABEL: zext_i8_i32:
 ; CHECK:         .functype zext_i8_i32 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.load8_u globalI32
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.const 255
+; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i8, ptr addrspace(1) @globalI32
   %e = zext i8 %v to i32
@@ -27,8 +28,8 @@ define i32 @sext_i8_i32() {
 ; CHECK-LABEL: sext_i8_i32:
 ; CHECK:         .functype sext_i8_i32 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.load8_s globalI32
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.extend8_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i8, ptr addrspace(1) @globalI32
   %e = sext i8 %v to i32
@@ -39,8 +40,9 @@ define i32 @zext_i16_i32() {
 ; CHECK-LABEL: zext_i16_i32:
 ; CHECK:         .functype zext_i16_i32 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.load16_u globalI32
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.const 65535
+; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i16, ptr addrspace(1) @globalI32
   %e = zext i16 %v to i32
@@ -51,8 +53,8 @@ define i32 @sext_i16_i32() {
 ; CHECK-LABEL: sext_i16_i32:
 ; CHECK:         .functype sext_i16_i32 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.load16_s globalI32
+; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i32.extend16_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i16, ptr addrspace(1) @globalI32
   %e = sext i16 %v to i32
@@ -64,8 +66,9 @@ define i64 @zext_i8_i64() {
 ; CHECK-LABEL: zext_i8_i64:
 ; CHECK:         .functype zext_i8_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load8_u globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const 255
+; CHECK-NEXT:    i64.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i8, ptr addrspace(1) @globalI64
   %e = zext i8 %v to i64
@@ -76,8 +79,8 @@ define i64 @sext_i8_i64() {
 ; CHECK-LABEL: sext_i8_i64:
 ; CHECK:         .functype sext_i8_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load8_s globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.extend8_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i8, ptr addrspace(1) @globalI64
   %e = sext i8 %v to i64
@@ -88,8 +91,9 @@ define i64 @zext_i16_i64() {
 ; CHECK-LABEL: zext_i16_i64:
 ; CHECK:         .functype zext_i16_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load16_u globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const 65535
+; CHECK-NEXT:    i64.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i16, ptr addrspace(1) @globalI64
   %e = zext i16 %v to i64
@@ -100,8 +104,8 @@ define i64 @sext_i16_i64() {
 ; CHECK-LABEL: sext_i16_i64:
 ; CHECK:         .functype sext_i16_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load16_s globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.extend16_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i16, ptr addrspace(1) @globalI64
   %e = sext i16 %v to i64
@@ -112,8 +116,9 @@ define i64 @zext_i32_i64() {
 ; CHECK-LABEL: zext_i32_i64:
 ; CHECK:         .functype zext_i32_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load32_u globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.const 4294967295
+; CHECK-NEXT:    i64.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i32, ptr addrspace(1) @globalI64
   %e = zext i32 %v to i64
@@ -124,8 +129,8 @@ define i64 @sext_i32_i64() {
 ; CHECK-LABEL: sext_i32_i64:
 ; CHECK:         .functype sext_i32_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load32_s globalI64
+; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i64.extend32_s
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i32, ptr addrspace(1) @globalI64
   %e = sext i32 %v to i64
@@ -138,6 +143,7 @@ define i64 @load_i64_from_i32() {
 ; CHECK:         .functype load_i64_from_i32 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get globalI32
+; CHECK-NEXT:    i64.extend_i32_u
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i64, ptr addrspace(1) @globalI32
   ret i64 %v
@@ -148,6 +154,7 @@ define i32 @load_i32_from_i64() {
 ; CHECK:         .functype load_i32_from_i64 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get globalI64
+; CHECK-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i32, ptr addrspace(1) @globalI64
   ret i32 %v
@@ -157,8 +164,7 @@ define i8 @load_i8() {
 ; CHECK-LABEL: load_i8:
 ; CHECK:         .functype load_i8 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i32.load8_u globalI8
+; CHECK-NEXT:    global.get globalI8
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i8, ptr addrspace(1) @globalI8
   ret i8 %v
@@ -168,8 +174,10 @@ define i64 @load_i16_from_i8_zext_to_i64() {
 ; CHECK-LABEL: load_i16_from_i8_zext_to_i64:
 ; CHECK:         .functype load_i16_from_i8_zext_to_i64 () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    i64.load16_u globalI8
+; CHECK-NEXT:    global.get globalI8
+; CHECK-NEXT:    i64.extend_i32_u
+; CHECK-NEXT:    i64.const 65535
+; CHECK-NEXT:    i64.and
 ; CHECK-NEXT:    # fallthrough-return
   %v = load i16, ptr addrspace(1) @globalI8
   %e = zext i16 %v to i64
