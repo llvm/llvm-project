@@ -33,7 +33,6 @@ static_assert(LIBC_HAS_VECTOR_TYPE, "compiler does not support vector types");
 namespace internal {
 
 template <size_t Size> struct get_as_integer_type;
-
 template <> struct get_as_integer_type<1> {
   using type = uint8_t;
 };
@@ -46,7 +45,6 @@ template <> struct get_as_integer_type<4> {
 template <> struct get_as_integer_type<8> {
   using type = uint64_t;
 };
-
 template <class T>
 using get_as_integer_type_t = typename get_as_integer_type<sizeof(T)>::type;
 
@@ -75,21 +73,18 @@ using simd_mask = simd<bool, internal::native_vector_size<T>>;
 // Type trait helpers.
 template <typename T> struct simd_size : cpp::integral_constant<size_t, 1> {};
 template <typename T, unsigned N>
-struct simd_size<T [[clang::ext_vector_type(N)]]>
-    : cpp::integral_constant<size_t, N> {};
+struct simd_size<simd<T, N>> : cpp::integral_constant<size_t, N> {};
 template <class T> constexpr size_t simd_size_v = simd_size<T>::value;
 
 template <typename T> struct is_simd : cpp::integral_constant<bool, false> {};
 template <typename T, unsigned N>
-struct is_simd<T [[clang::ext_vector_type(N)]]>
-    : cpp::integral_constant<bool, true> {};
+struct is_simd<simd<T, N>> : cpp::integral_constant<bool, true> {};
 template <class T> constexpr bool is_simd_v = is_simd<T>::value;
 
 template <typename T>
 struct is_simd_mask : cpp::integral_constant<bool, false> {};
 template <unsigned N>
-struct is_simd_mask<bool [[clang::ext_vector_type(N)]]>
-    : cpp::integral_constant<bool, true> {};
+struct is_simd_mask<simd<bool, N>> : cpp::integral_constant<bool, true> {};
 template <class T> constexpr bool is_simd_mask_v = is_simd_mask<T>::value;
 
 template <typename T>
@@ -176,7 +171,7 @@ LIBC_INLINE enable_if_simd_t<T> load_unaligned(const void *ptr) {
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> load_aligned(const void *ptr) {
-  return *reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignof(T)));
+  return load_unaligned<T>(__builtin_assume_aligned(ptr, alignof(T)));
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> store_unaligned(T v, void *ptr) {
@@ -184,19 +179,19 @@ LIBC_INLINE enable_if_simd_t<T> store_unaligned(T v, void *ptr) {
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> store_aligned(T v, void *ptr) {
-  *reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))) = v;
+  store_unaligned<T>(v, __builtin_assume_aligned(ptr, alignof(T)));
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> masked_load(simd<bool, simd_size_v<T>> m,
                                             void *ptr) {
   return __builtin_masked_load(
-      m, reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
+      m, static_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> masked_store(simd<bool, simd_size_v<T>> m, T v,
                                              void *ptr) {
   __builtin_masked_store(
-      m, v, reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
+      m, v, static_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
 }
 
 // Construction helpers.
