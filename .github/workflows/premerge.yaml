@@ -72,7 +72,7 @@ jobs:
 
           if "$RUNNER_ARCH" = "ARM64"; then
             # XFAIL lldb test: https://github.com/llvm/llvm-project/issues/155895
-            export LIT_XFAIL=functionalities/gdb_remote_client/TestqOffsets.py"
+            export LIT_XFAIL="functionalities/gdb_remote_client/TestqOffsets.py"
           fi
 
           if ! [[ "${{ matrix.runs-on }}" =~ ^depot.* ]]; then
