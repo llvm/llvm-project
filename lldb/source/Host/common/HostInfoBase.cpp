@@ -178,8 +178,7 @@ FileSpec HostInfoBase::GetUserLLDBDir() {
   llvm::call_once(g_fields->m_lldb_user_lldb_dir_once, []() {
     if (!HostInfo::ComputeUserLLDBHomeDirectory(g_fields->m_lldb_user_lldb_dir))
       g_fields->m_lldb_user_lldb_dir = FileSpec();
-    Log *log = GetLog(LLDBLog::Host);
-    LLDB_LOG(log, "user lldb home dir -> `{0}`",
+    LLDB_LOG(GetLog(LLDBLog::Host), "user lldb home dir -> `{0}`",
              g_fields->m_lldb_user_lldb_dir);
   });
   return g_fields->m_lldb_user_lldb_dir;
