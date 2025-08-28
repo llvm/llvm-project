@@ -34,3 +34,30 @@ uint64_t pslli_h(uint64_t rs1, int64_t rs2) {
 uint64_t pslli_w(uint64_t rs1, int64_t rs2) {
   return __riscv_pslli_w(rs1, 1);
 }
+
+// RV64P-LABEL: @psll_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psll.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psll_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psll_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psll_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psll.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psll_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psll_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @psll_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.psll.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t psll_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_psll_ws(rs1, rs2);
+}
