@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx64 -mcpu=sm_30 | FileCheck %s
-; RUN: %if ptxas-isa-6.0 %{llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas %{llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 @function_pointer = addrspace(1) global ptr null
 
