@@ -921,7 +921,6 @@ private:
   /// checkDstSubscript to avoid duplicate code
   bool checkSubscript(const SCEV *Expr, const Loop *LoopNest,
                       SmallBitVector &Loops, bool IsSrc);
-
 }; // class DependenceInfo
 
 /// AnalysisPass to compute dependence information in a function

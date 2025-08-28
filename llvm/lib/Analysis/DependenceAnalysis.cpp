@@ -3396,53 +3396,6 @@ private:
   bool isLoopInvariant(const SCEV *Expr) const;
 };
 
-using MinMaxType = std::pair<const SCEV *, const SCEV *>;
-const MinMaxType Bottom = {nullptr, nullptr};
-
-/// A visitor that calculates the possible minimum and maximum values of SCEVs.
-/// This class assumes that the given SCEV is constant or monotonic.
-struct SCEVMinMaxCalculator
-    : public SCEVVisitor<SCEVMinMaxCalculator, MinMaxType> {
-  SCEVMinMaxCalculator(ScalarEvolution *SE, const Loop *OutermostLoop)
-      : SE(SE), OutermostLoop(OutermostLoop) {}
-
-  MinMaxType visitAddExpr(const SCEVAddExpr *Expr);
-  MinMaxType visitAddRecExpr(const SCEVAddRecExpr *Expr);
-  MinMaxType visitMulExpr(const SCEVMulExpr *Expr);
-  MinMaxType visitSignExtendExpr(const SCEVSignExtendExpr *Expr);
-
-  MinMaxType visitUnknown(const SCEVUnknown *Expr) {
-    return constantHelper(Expr);
-  }
-  MinMaxType visitConstant(const SCEVConstant *Expr) {
-    return constantHelper(Expr);
-  }
-  MinMaxType visitVScale(const SCEVVScale *Expr) {
-    return constantHelper(Expr);
-  }
-
-  MinMaxType visitZeroExtendExpr(const SCEVZeroExtendExpr *) { return Bottom; }
-  MinMaxType visitPtrToIntExpr(const SCEVPtrToIntExpr *) { return Bottom; }
-  MinMaxType visitTruncateExpr(const SCEVTruncateExpr *) { return Bottom; }
-  MinMaxType visitUDivExpr(const SCEVUDivExpr *) { return Bottom; }
-  MinMaxType visitSMaxExpr(const SCEVSMaxExpr *) { return Bottom; }
-  MinMaxType visitUMaxExpr(const SCEVUMaxExpr *) { return Bottom; }
-  MinMaxType visitSMinExpr(const SCEVSMinExpr *) { return Bottom; }
-  MinMaxType visitUMinExpr(const SCEVUMinExpr *) { return Bottom; }
-  MinMaxType visitSequentialUMinExpr(const SCEVSequentialUMinExpr *) {
-    return Bottom;
-  }
-  MinMaxType visitCouldNotCompute(const SCEVCouldNotCompute *) {
-    return Bottom;
-  }
-
-  MinMaxType constantHelper(const SCEV *C) { return MinMaxType(C, C); }
-
-private:
-  ScalarEvolution *SE;
-  const Loop *OutermostLoop;
-};
-
 } // anonymous namespace
 
 MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
@@ -3583,72 +3536,6 @@ SCEVSignedMonotonicityChecker::visitUnknown(const SCEVUnknown *Expr) {
   if (!isLoopInvariant(Expr))
     return unknownMonotonicity(Expr);
   return MonotonicityType::Invariant;
-}
-
-MinMaxType SCEVMinMaxCalculator::visitAddExpr(const SCEVAddExpr *Expr) {
-  if (!Expr->hasNoSignedWrap())
-    return Bottom;
-
-  const SCEV *Min = SE->getZero(Expr->getType());
-  const SCEV *Max = SE->getZero(Expr->getType());
-  for (const SCEV *Op : Expr->operands()) {
-    auto [OpMin, OpMax] = visit(Op);
-    if (!OpMin || !OpMax)
-      return Bottom;
-    Min = SE->getAddExpr(Min, OpMin, Expr->getNoWrapFlags());
-    Max = SE->getAddExpr(Max, OpMax, Expr->getNoWrapFlags());
-  }
-  return MinMaxType(Min, Max);
-}
-
-MinMaxType SCEVMinMaxCalculator::visitMulExpr(const SCEVMulExpr *Expr) {
-  // TODO: Impl
-  return Bottom;
-}
-
-MinMaxType SCEVMinMaxCalculator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-  assert(Expr->isAffine() && "Expected affine AddRecExpr");
-  const SCEV *Start = Expr->getStart();
-  const SCEV *Step = Expr->getStepRecurrence(*SE);
-
-  const SCEV *BTC = SE->getBackedgeTakenCount(Expr->getLoop());
-  if (!BTC || !SE->isLoopInvariant(BTC, OutermostLoop))
-    return Bottom;
-
-  auto [StartMin, StartMax] = visit(Start);
-  if (!StartMin || !StartMax)
-    return Bottom;
-  assert(SE->isLoopInvariant(Step, OutermostLoop) &&
-         "Expected step to be loop invariant");
-
-  const SCEVAddRecExpr *MinAddRec = dyn_cast<SCEVAddRecExpr>(SE->getAddRecExpr(
-      StartMin, Step, Expr->getLoop(), Expr->getNoWrapFlags()));
-  const SCEVAddRecExpr *MaxAddRec = dyn_cast<SCEVAddRecExpr>(SE->getAddRecExpr(
-      StartMax, Step, Expr->getLoop(), Expr->getNoWrapFlags()));
-
-  const SCEV *MinLast = MinAddRec->evaluateAtIteration(BTC, *SE);
-  const SCEV *MaxLast = MaxAddRec->evaluateAtIteration(BTC, *SE);
-
-  // If the step value is positive, the AddRec is monotonically increasing,
-  if (SE->isKnownPositive(Step))
-    return MinMaxType(StartMin, MaxLast);
-
-  // If the step value is negative, the AddRec is monotonically decreasing,
-  if (SE->isKnownNegative(Step))
-    return MinMaxType(MinLast, StartMax);
-
-  const SCEV *Min = SE->getSMinExpr(StartMin, MinLast);
-  const SCEV *Max = SE->getSMaxExpr(StartMax, MaxLast);
-  return MinMaxType(Min, Max);
-}
-
-MinMaxType
-SCEVMinMaxCalculator::visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-  auto [Min, Max] = visit(Expr->getOperand());
-  if (!Min || !Max)
-    return Bottom;
-  return MinMaxType(SE->getSignExtendExpr(Min, Expr->getType()),
-                    SE->getSignExtendExpr(Max, Expr->getType()));
 }
 
 /// Check if we can delinearize the subscripts. If the SCEVs representing the
@@ -3852,34 +3739,24 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       if (SrcMonotonicity == MonotonicityType::Unknown)
         return false;
 
+      if (!isKnownNonNegative(SrcSubscripts[I], SrcPtr))
+        return false;
+
+      if (!isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]))
+        return false;
+
       MonotonicityType DstMonotonicity =
           SCEVSignedMonotonicityChecker::checkMonotonicity(
               SE, DstSubscripts[I], OutermostLoop, DstPtr);
       if (DstMonotonicity == MonotonicityType::Unknown)
         return false;
 
-      auto [SrcMin, SrcMax] =
-          SCEVMinMaxCalculator(SE, OutermostLoop).visit(SrcSubscripts[I]);
-      if (!SrcMin || !SrcMax)
-        return false;
-      if (!SE->isKnownPositive(SrcMin) ||
-          !SE->isKnownPredicate(CmpInst::ICMP_SLT, SrcMax, Sizes[I - 1]))
+      if (!isKnownNonNegative(DstSubscripts[I], DstPtr))
         return false;
 
-      auto [DstMin, DstMax] =
-          SCEVMinMaxCalculator(SE, OutermostLoop).visit(DstSubscripts[I]);
-      if (!DstMin || !DstMax)
-        return false;
-      if (!SE->isKnownPositive(DstMin) ||
-          !SE->isKnownPredicate(CmpInst::ICMP_SLT, DstMax, Sizes[I - 1]))
+      if (!isKnownLessThan(DstSubscripts[I], Sizes[I - 1]))
         return false;
     }
-
-  // TODO: Maybe we must check the the address calculation against delinearized
-  // result is safe. That is, the following calculation doesn't wrap, where Sub
-  // is either SrcSubscripts or DstSubscripts and Sz is Sizes:
-  //
-  //   Sub[0] + Sub[1]*Sz[0] + ... + Sub[N-1]*Sz[N-2]*Sz[N-3]*...*Sz[0]
 
   return true;
 }
