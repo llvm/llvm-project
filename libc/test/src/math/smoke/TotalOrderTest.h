@@ -104,24 +104,46 @@ public:
   }
 
   void testNaNPayloads(TotalOrderFunc func) {
-    T qnan_0x42 = FPBits::quiet_nan(Sign::POS, 0x42).get_val();
-    T neg_qnan_0x42 = FPBits::quiet_nan(Sign::NEG, 0x42).get_val();
-    T snan_0x42 = FPBits::signaling_nan(Sign::POS, 0x42).get_val();
-    T neg_snan_0x42 = FPBits::signaling_nan(Sign::NEG, 0x42).get_val();
 
     EXPECT_TRUE(funcWrapper(func, aNaN, aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, sNaN));
-    EXPECT_TRUE(funcWrapper(func, aNaN, qnan_0x42));
-    EXPECT_FALSE(funcWrapper(func, sNaN, snan_0x42));
-    EXPECT_FALSE(funcWrapper(func, qnan_0x42, aNaN));
-    EXPECT_TRUE(funcWrapper(func, snan_0x42, sNaN));
 
     EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_aNaN));
     EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_sNaN));
-    EXPECT_FALSE(funcWrapper(func, neg_aNaN, neg_qnan_0x42));
-    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_0x42));
-    EXPECT_TRUE(funcWrapper(func, neg_qnan_0x42, neg_aNaN));
-    EXPECT_FALSE(funcWrapper(func, neg_snan_0x42, neg_sNaN));
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 5) {
+      T qnan_0x15 = FPBits::quiet_nan(Sign::POS, 0x15).get_val();
+      T neg_qnan_0x15 = FPBits::quiet_nan(Sign::NEG, 0x15).get_val();
+      T snan_0x15 = FPBits::signaling_nan(Sign::POS, 0x15).get_val();
+      T neg_snan_0x15 = FPBits::signaling_nan(Sign::NEG, 0x15).get_val();
+
+      EXPECT_TRUE(funcWrapper(func, aNaN, qnan_0x15));
+      EXPECT_FALSE(funcWrapper(func, sNaN, snan_0x15));
+      EXPECT_FALSE(funcWrapper(func, qnan_0x15, aNaN));
+      EXPECT_TRUE(funcWrapper(func, snan_0x15, sNaN));
+
+      EXPECT_FALSE(funcWrapper(func, neg_aNaN, neg_qnan_0x15));
+      EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_0x15));
+      EXPECT_TRUE(funcWrapper(func, neg_qnan_0x15, neg_aNaN));
+      EXPECT_FALSE(funcWrapper(func, neg_snan_0x15, neg_sNaN));
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 7) {
+      T qnan_0x42 = FPBits::quiet_nan(Sign::POS, 0x42).get_val();
+      T neg_qnan_0x42 = FPBits::quiet_nan(Sign::NEG, 0x42).get_val();
+      T snan_0x42 = FPBits::signaling_nan(Sign::POS, 0x42).get_val();
+      T neg_snan_0x42 = FPBits::signaling_nan(Sign::NEG, 0x42).get_val();
+
+      EXPECT_TRUE(funcWrapper(func, aNaN, qnan_0x42));
+      EXPECT_FALSE(funcWrapper(func, sNaN, snan_0x42));
+      EXPECT_FALSE(funcWrapper(func, qnan_0x42, aNaN));
+      EXPECT_TRUE(funcWrapper(func, snan_0x42, sNaN));
+
+      EXPECT_FALSE(funcWrapper(func, neg_aNaN, neg_qnan_0x42));
+      EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_0x42));
+      EXPECT_TRUE(funcWrapper(func, neg_qnan_0x42, neg_aNaN));
+      EXPECT_FALSE(funcWrapper(func, neg_snan_0x42, neg_sNaN));
+    }
   }
 };
 

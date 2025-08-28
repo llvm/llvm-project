@@ -293,6 +293,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.truncbf16
+  libc.src.math.totalorderbf16
+  libc.src.math.totalordermagbf16
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )
