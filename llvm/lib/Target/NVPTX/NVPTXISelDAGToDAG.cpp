@@ -2325,6 +2325,7 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   MemSDNode *AN = cast<MemSDNode>(N);
   SDLoc dl(N);
 
+  const SDValue Chain = N->getOperand(0);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SmallVector<SDValue, 5> Ops{Base, Offset};
   Ops.append(N->op_begin() + 2, N->op_end());
@@ -2332,6 +2333,7 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
       getI32Imm(getMemOrder(AN), dl),
       getI32Imm(getAtomicScope(AN), dl),
       getI32Imm(getAddrSpace(AN), dl),
+      Chain,
   });
 
   assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||

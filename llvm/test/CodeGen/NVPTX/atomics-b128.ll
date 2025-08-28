@@ -458,6 +458,7 @@ define i128 @test_cmpxchg_monotonic_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_monotonic_seq_cst_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_seq_cst_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_seq_cst_param_2];
 ; CHECK-NEXT:    {
@@ -524,6 +525,7 @@ define i128 @test_cmpxchg_acquire_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acquire_seq_cst_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_seq_cst_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_seq_cst_param_2];
 ; CHECK-NEXT:    {
@@ -590,6 +592,7 @@ define i128 @test_cmpxchg_release_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_release_seq_cst_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_seq_cst_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_seq_cst_param_2];
 ; CHECK-NEXT:    {
@@ -656,6 +659,7 @@ define i128 @test_cmpxchg_acq_rel_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acq_rel_seq_cst_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_seq_cst_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_seq_cst_param_2];
 ; CHECK-NEXT:    {
@@ -678,6 +682,7 @@ define i128 @test_cmpxchg_seq_cst_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_monotonic_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_monotonic_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_monotonic_param_2];
 ; CHECK-NEXT:    {
@@ -700,6 +705,7 @@ define i128 @test_cmpxchg_seq_cst_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_acquire_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_acquire_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_acquire_param_2];
 ; CHECK-NEXT:    {
@@ -722,6 +728,7 @@ define i128 @test_cmpxchg_seq_cst_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_seq_cst_param_0];
+; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_seq_cst_param_1];
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_seq_cst_param_2];
 ; CHECK-NEXT:    {
@@ -1000,4 +1007,27 @@ define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw umax ptr %ptr, i128 %val monotonic
   ret i128 %ret
+}
+
+
+@si128 = internal addrspace(3) global i128 0, align 16
+
+define void @test_atomicrmw_xchg_const() {
+; CHECK-LABEL: test_atomicrmw_xchg_const(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    // demoted variable
+; CHECK-NEXT:    .shared .align 16 .b8 si128[16];
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    mov.b64 %rd1, 0;
+; CHECK-NEXT:    mov.b64 %rd2, 23;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 amt, dst;
+; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd1};
+; CHECK-NEXT:    atom.seq_cst.sys.shared.exch.b128 dst, [si128], amt;
+; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:    ret;
+	%res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 seq_cst
+  ret void
 }
