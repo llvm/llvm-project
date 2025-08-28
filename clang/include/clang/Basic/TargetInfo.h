@@ -1214,11 +1214,15 @@ public:
 
     // Output operand bounds can be set by target.
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
-      setRequiresImmediate(Min, Max);
+      ImmRange.Min = Min;
+      ImmRange.Max = Max;
+      ImmRange.isConstrained = true;
     }
-    std::pair<unsigned, unsigned> getOutputOperandBounds() const {
-      return ImmRange.isConstrained ? std::make_pair(ImmRange.Min, ImmRange.Max)
-                                    : std::make_pair(0, 0);
+    std::optional<std::pair<unsigned, unsigned>>
+    getOutputOperandBounds() const {
+      return ImmRange.isConstrained
+                 ? std::make_pair(ImmRange.Min, ImmRange.Max)
+                 : std::optional<std::pair<unsigned, unsigned>>();
     }
   };
 

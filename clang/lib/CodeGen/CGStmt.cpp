@@ -2704,7 +2704,8 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const std::vector<unsigned> &OutputOperandBounds) {
+              const std::vector<std::optional<std::pair<unsigned, unsigned>>>
+                  &OutputOperandBounds) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2721,12 +2722,10 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     llvm::Value *Tmp = RegResults[i];
     llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
-    if ((i < OutputOperandBounds.size()) && OutputOperandBounds[i]) {
-      // Target must guarantee the Value `Tmp` here is lowered to a boolean
-      // value.
-      // Lowering 'Tmp' as - 'icmp ult %Tmp , CCUpperBound'.
-      unsigned UpperBound = OutputOperandBounds[i];
-      assert(UpperBound <= 4 && "Output operand out of range!");
+    if ((i < OutputOperandBounds.size()) &&
+        OutputOperandBounds[i].has_value()) {
+      const auto [LowerBound, UpperBound] = OutputOperandBounds[i].value();
+      assert(LowerBound == 0 && "Output operand lower bound is not zero.");
       llvm::Constant *UpperBoundConst =
           llvm::ConstantInt::get(Tmp->getType(), UpperBound);
       llvm::Value *IsBooleanValue =
@@ -2859,7 +2858,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  std::vector<unsigned> OutputOperandBounds;
+  std::vector<std::optional<std::pair<unsigned, unsigned>>> OutputOperandBounds;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2917,8 +2916,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      const auto [_, UpperBound] = Info.getOutputOperandBounds();
-      OutputOperandBounds.push_back(UpperBound);
+      OutputOperandBounds.emplace_back(Info.getOutputOperandBounds());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&
