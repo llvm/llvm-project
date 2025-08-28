@@ -74,10 +74,10 @@ private:
   /// otherwise
   bool isOneAddressSpace(SyncScope::ID SSID) const {
     return SSID == getSingleThreadOneAddressSpaceSSID() ||
-        SSID == getWavefrontOneAddressSpaceSSID() ||
-        SSID == getWorkgroupOneAddressSpaceSSID() ||
-        SSID == getAgentOneAddressSpaceSSID() ||
-        SSID == getSystemOneAddressSpaceSSID();
+           SSID == getWavefrontOneAddressSpaceSSID() ||
+           SSID == getWorkgroupOneAddressSpaceSSID() ||
+           SSID == getAgentOneAddressSpaceSSID() ||
+           SSID == getSystemOneAddressSpaceSSID();
   }
 
 public:
