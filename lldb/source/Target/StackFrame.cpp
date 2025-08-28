@@ -266,6 +266,7 @@ bool StackFrame::ChangePC(addr_t pc) {
 
 const char *StackFrame::Disassemble() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
   if (!m_disassembly.Empty())
     return m_disassembly.GetData();
 
@@ -440,10 +441,10 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
       const bool get_child_variables = true;
       const bool can_create = true;
       const bool stop_if_child_block_is_inlined_function = true;
-      frame_block->AppendBlockVariables(can_create, get_child_variables,
-                                        stop_if_child_block_is_inlined_function,
-                                        [](Variable *v) { return true; },
-                                        m_variable_list_sp.get());
+      frame_block->AppendBlockVariables(
+          can_create, get_child_variables,
+          stop_if_child_block_is_inlined_function,
+          [](Variable *v) { return true; }, m_variable_list_sp.get());
     }
   }
 
@@ -1227,10 +1228,12 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
     VariableList *var_list = GetVariableList(true, nullptr);
     if (var_list) {
       // Make sure the variable is a frame variable
-      const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
+      const uint32_t var_idx =
+          var_list->FindIndexForVariable(variable_sp.get());
       const uint32_t num_variables = var_list->GetSize();
       if (var_idx < num_variables) {
-        valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
+        valobj_sp =
+            m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
         if (!valobj_sp) {
           if (m_variable_list_value_objects.GetSize() < num_variables)
             m_variable_list_value_objects.Resize(num_variables);
@@ -1764,11 +1767,9 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
     if (clobbered_reg_matcher(operands[0])) {
       origin_operand = &operands[1];
-    }
-    else if (clobbered_reg_matcher(operands[1])) {
+    } else if (clobbered_reg_matcher(operands[1])) {
       origin_operand = &operands[0];
-    }
-    else {
+    } else {
       continue;
     }
 
@@ -1794,8 +1795,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
       if (!source_path) {
         continue;
       }
-      source_path =
-          GetValueForDereferincingOffset(frame, source_path, offset);
+      source_path = GetValueForDereferincingOffset(frame, source_path, offset);
     }
 
     if (source_path) {
@@ -1805,7 +1805,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   return ValueObjectSP();
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
                                                                int64_t offset) {
