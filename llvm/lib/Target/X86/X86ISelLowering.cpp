@@ -56247,7 +56247,13 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   SDValue Masked = BroadcastOp;
   if (N != 0) {
-    APInt Mask = APInt::getLowBitsSet(BroadcastOpVT.getSizeInBits(), Len);
+    unsigned BroadcastOpBitWidth = BroadcastOpVT.getSizeInBits();
+    unsigned NumDefinedElts = UndefElts.getBitWidth() - UndefElts.popcount();
+
+    if (NumDefinedElts > BroadcastOpBitWidth)
+      return SDValue();
+
+    APInt Mask = APInt::getLowBitsSet(BroadcastOpBitWidth, NumDefinedElts);
     SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
                                        DAG.getConstant(N, DL, BroadcastOpVT));
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
