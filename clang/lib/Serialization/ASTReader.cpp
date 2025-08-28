@@ -11979,7 +11979,6 @@ void OMPClauseReader::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseReader::VisitOMPMessageClause(OMPMessageClause *C) {
-  VisitOMPClauseWithPreInit(C);
   C->setMessageString(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }

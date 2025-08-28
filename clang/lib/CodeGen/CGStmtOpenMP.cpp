@@ -1608,11 +1608,6 @@ static void emitCommonOMPParallelDirective(
     const CodeGenBoundParametersTy &CodeGenBoundParameters) {
   const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
   llvm::Value *NumThreads = nullptr;
-  OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown;
-  // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is as
-  // if sev-level is fatal."
-  OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal;
-  clang::Expr *Message = nullptr;
   llvm::Function *OutlinedFn =
       CGF.CGM.getOpenMPRuntime().emitParallelOutlinedFunction(
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
@@ -1621,14 +1616,8 @@ static void emitCommonOMPParallelDirective(
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
     NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
                                     /*IgnoreResultAssign=*/true);
-    Modifier = NumThreadsClause->getModifier();
-    if (const auto *MessageClause = S.getSingleClause<OMPMessageClause>())
-      Message = MessageClause->getMessageString();
-    if (const auto *SeverityClause = S.getSingleClause<OMPSeverityClause>())
-      Severity = SeverityClause->getSeverityKind();
     CGF.CGM.getOpenMPRuntime().emitNumThreadsClause(
-        CGF, NumThreads, NumThreadsClause->getBeginLoc(), Modifier, Severity,
-        Message);
+        CGF, NumThreads, NumThreadsClause->getBeginLoc());
   }
   if (const auto *ProcBindClause = S.getSingleClause<OMPProcBindClause>()) {
     CodeGenFunction::RunCleanupsScope ProcBindScope(CGF);
@@ -1653,8 +1642,7 @@ static void emitCommonOMPParallelDirective(
   CodeGenBoundParameters(CGF, S, CapturedVars);
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitParallelCall(CGF, S.getBeginLoc(), OutlinedFn,
-                                              CapturedVars, IfCond, NumThreads,
-                                              Modifier, Severity, Message);
+                                              CapturedVars, IfCond, NumThreads);
 }
 
 static bool isAllocatableDecl(const VarDecl *VD) {
