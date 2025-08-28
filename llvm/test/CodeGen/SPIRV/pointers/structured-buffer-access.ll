@@ -28,28 +28,28 @@
 
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main
-; CHECK:       %43 = OpFunction %2 None %3 ; -- Begin function main
+; CHECK:       %42 = OpFunction %2 None %3 ; -- Begin function main
 ; CHECK-NEXT:    %1 = OpLabel
-; CHECK-NEXT:    %44 = OpVariable %28 Function %38
-; CHECK-NEXT:    %45 = OpVariable %27 Function %39
-; CHECK-NEXT:    %46 = OpCopyObject %19 %40
-; CHECK-NEXT:    %47 = OpCopyObject %16 %41
-; CHECK-NEXT:    %48 = OpLoad %4 %42
-; CHECK-NEXT:    %49 = OpAccessChain %13 %46 %29 %48
-; CHECK-NEXT:    %50 = OpInBoundsAccessChain %9 %49 %31
-; CHECK-NEXT:    %51 = OpLoad %8 %50 Aligned 1
-; CHECK-NEXT:    %52 = OpAccessChain %11 %47 %29 %48
-; CHECK-NEXT:    %53 = OpInBoundsAccessChain %9 %52 %29
-; CHECK-NEXT:    OpStore %53 %51 Aligned 1
-; CHECK-NEXT:    %54 = OpAccessChain %6 %49 %29
-; CHECK-NEXT:    %55 = OpLoad %5 %54 Aligned 1
-; CHECK-NEXT:    %56 = OpInBoundsAccessChain %6 %52 %31
-; CHECK-NEXT:    OpStore %56 %55 Aligned 1
+; CHECK-NEXT:    %43 = OpVariable %27 Function %37
+; CHECK-NEXT:    %44 = OpVariable %26 Function %38
+; CHECK-NEXT:    %45 = OpCopyObject %19 %39
+; CHECK-NEXT:    %46 = OpCopyObject %16 %40
+; CHECK-NEXT:    %47 = OpLoad %4 %41
+; CHECK-NEXT:    %48 = OpAccessChain %13 %45 %28 %47
+; CHECK-NEXT:    %49 = OpInBoundsAccessChain %9 %48 %30
+; CHECK-NEXT:    %50 = OpLoad %8 %49 Aligned 1
+; CHECK-NEXT:    %51 = OpAccessChain %11 %46 %28 %47
+; CHECK-NEXT:    %52 = OpInBoundsAccessChain %9 %51 %28
+; CHECK-NEXT:    OpStore %52 %50 Aligned 1
+; CHECK-NEXT:    %53 = OpAccessChain %6 %48 %28
+; CHECK-NEXT:    %54 = OpLoad %5 %53 Aligned 1
+; CHECK-NEXT:    %55 = OpInBoundsAccessChain %6 %51 %30
+; CHECK-NEXT:    OpStore %55 %54 Aligned 1
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:
-  %0 = tail call target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str)
-  %1 = tail call target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.2)
+  %0 = tail call target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str)
+  %1 = tail call target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.2)
   %2 = tail call i32 @llvm.spv.flattened.thread.id.in.group()
   %3 = tail call noundef align 1 dereferenceable(32) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) %0, i32 %2)
   %f.i = getelementptr inbounds nuw i8, ptr addrspace(11) %3, i64 16
@@ -64,9 +64,9 @@ entry:
 
 declare i32 @llvm.spv.flattened.thread.id.in.group()
 
-declare target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32, i32, i32, i32, i1, ptr)
+declare target("spirv.VulkanBuffer", [0 x %struct.S1], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S1s_12_0t(i32, i32, i32, i32, ptr)
 
-declare target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32, i32, i32, i32, i1, ptr)
+declare target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(i32, i32, i32, i32, ptr)
 
 declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.S2s_12_1t(target("spirv.VulkanBuffer", [0 x %struct.S2], 12, 1), i32)
 
