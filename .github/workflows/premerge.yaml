@@ -50,14 +50,6 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Setup sccache
-        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
-        if: startsWith(matrix.runs-on, 'depot')
-        with:
-          max-size: 8G
-          key: ${{ matrix.runs-on }}
-          variant: sccache
-
       - name: Build and Test
         run: |
           git config --global --add safe.directory '*'
@@ -77,6 +69,11 @@ jobs:
 
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
+
+          if "$RUNNER_ARCH" = "ARM64"; then
+            # XFAIL lldb test: https://github.com/llvm/llvm-project/issues/155895
+            export LIT_XFAIL=functionalities/gdb_remote_client/TestqOffsets.py"
+          fi
 
           if ! [[ "${{ matrix.runs-on }}" =~ ^depot.* ]]; then
             # This environment variable is passes into the container through the
