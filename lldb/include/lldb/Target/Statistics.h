@@ -10,6 +10,7 @@
 #define LLDB_TARGET_STATISTICS_H
 
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Stream.h"
@@ -153,9 +154,7 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
-  uint32_t dwo_file_count = 0;
-  uint32_t loaded_dwo_file_count = 0;
-  uint32_t dwo_error_count = 0;
+  SymbolFile::DWOStats dwo_stats;
 };
 
 struct ConstStringStats {
