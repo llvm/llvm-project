@@ -8,7 +8,7 @@
 
 #include <clc/internal/clc.h>
 
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #define __CLC_BODY <clc_half_divide.inc>
 
 #include <clc/math/gentype.inc>

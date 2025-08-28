@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/libc_errno.h"
 #include "src/math/atanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-#include <stdint.h>
 
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using LIBC_NAMESPACE::Sign;

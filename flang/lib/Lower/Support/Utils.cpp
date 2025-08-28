@@ -654,7 +654,7 @@ void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
@@ -846,7 +846,7 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps);
 
@@ -855,7 +855,7 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps);
 

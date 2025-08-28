@@ -212,6 +212,13 @@ public:
     return hasSVE() || isStreamingSVEAvailable();
   }
 
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions
+  /// available to SME2.
+  bool isNonStreamingSVEorSME2Available() const {
+    return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -343,7 +350,8 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;
@@ -448,12 +456,6 @@ public:
     if (isWindowsArm64EC())
       return "#__chkstk_arm64ec";
     return "__chkstk";
-  }
-
-  const char* getSecurityCheckCookieName() const {
-    if (isWindowsArm64EC())
-      return "#__security_check_cookie_arm64ec";
-    return "__security_check_cookie";
   }
 
   /// Choose a method of checking LR before performing a tail call.

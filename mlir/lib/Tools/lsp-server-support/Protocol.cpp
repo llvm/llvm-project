@@ -284,11 +284,11 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
       if (codeAction->getObject("codeActionLiteralSupport"))
         result.codeActionStructure = true;
     }
-    if (auto *window = textDocument->getObject("window")) {
-      if (std::optional<bool> workDoneProgressSupport =
-              window->getBoolean("workDoneProgress"))
-        result.workDoneProgress = *workDoneProgressSupport;
-    }
+  }
+  if (auto *window = o->getObject("window")) {
+    if (std::optional<bool> workDoneProgressSupport =
+            window->getBoolean("workDoneProgress"))
+      result.workDoneProgress = *workDoneProgressSupport;
   }
   return true;
 }

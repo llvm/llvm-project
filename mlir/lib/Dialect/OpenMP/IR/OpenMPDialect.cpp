@@ -14,7 +14,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,7 +24,6 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -35,7 +33,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -1733,8 +1730,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
       uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
@@ -3875,6 +3871,159 @@ LogicalResult AllocateDirOp::verify() {
                          << " must be power of 2";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAllocMemOp
+//===----------------------------------------------------------------------===//
+
+mlir::Type omp::TargetAllocMemOp::getAllocatedType() {
+  return getInTypeAttr().getValue();
+}
+
+/// operation ::= %res = (`omp.target_alloc_mem`) $device : devicetype,
+///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+///                      attr-dict-without-keyword
+static mlir::ParseResult parseTargetAllocMemOp(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
+
+  // Parse device number as a new operand
+  mlir::OpAsmParser::UnresolvedOperand deviceOperand;
+  mlir::Type deviceType;
+  if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
+    return mlir::failure();
+  if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
+    return mlir::failure();
+  if (parser.parseComma())
+    return mlir::failure();
+
+  mlir::Type intype;
+  if (parser.parseType(intype))
+    return mlir::failure();
+  result.addAttribute("in_type", mlir::TypeAttr::get(intype));
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
+  llvm::SmallVector<mlir::Type> typeVec;
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeVec) || parser.parseRParen())
+      return mlir::failure();
+    typeparamsSize = operands.size();
+    hasOperands = true;
+  }
+  std::int32_t shapeSize = 0;
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None))
+      return mlir::failure();
+    shapeSize = operands.size() - typeparamsSize;
+    auto idxTy = builder.getIndexType();
+    for (std::int32_t i = typeparamsSize, end = operands.size(); i != end; ++i)
+      typeVec.push_back(idxTy);
+    hasOperands = true;
+  }
+  if (hasOperands &&
+      parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
+                             result.operands))
+    return mlir::failure();
+
+  mlir::Type restype = builder.getIntegerType(64);
+  if (!restype) {
+    parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
+    return mlir::failure();
+  }
+  llvm::SmallVector<std::int32_t> segmentSizes{1, typeparamsSize, shapeSize};
+  result.addAttribute("operandSegmentSizes",
+                      builder.getDenseI32ArrayAttr(segmentSizes));
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.addTypeToList(restype, result.types))
+    return mlir::failure();
+  return mlir::success();
+}
+
+mlir::ParseResult omp::TargetAllocMemOp::parse(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  return parseTargetAllocMemOp(parser, result);
+}
+
+void omp::TargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printOperand(getDevice());
+  p << " : ";
+  p << getDevice().getType();
+  p << ", ";
+  p << getInType();
+  if (!getTypeparams().empty()) {
+    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
+  }
+  for (auto sh : getShape()) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"in_type", "operandSegmentSizes"});
+}
+
+llvm::LogicalResult omp::TargetAllocMemOp::verify() {
+  mlir::Type outType = getType();
+  if (!mlir::dyn_cast<IntegerType>(outType))
+    return emitOpError("must be a integer type");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WorkdistributeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WorkdistributeOp::verify() {
+  // Check that region exists and is not empty
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError("region cannot be empty");
+  // Verify single entry point.
+  Block &entryBlock = region.front();
+  if (entryBlock.empty())
+    return emitOpError("region must contain a structured block");
+  // Verify single exit point.
+  bool hasTerminator = false;
+  for (Block &block : region) {
+    if (isa<TerminatorOp>(block.back())) {
+      if (hasTerminator) {
+        return emitOpError("region must have exactly one terminator");
+      }
+      hasTerminator = true;
+    }
+  }
+  if (!hasTerminator) {
+    return emitOpError("region must be terminated with omp.terminator");
+  }
+  auto walkResult = region.walk([&](Operation *op) -> WalkResult {
+    // No implicit barrier at end
+    if (isa<BarrierOp>(op)) {
+      return emitOpError(
+          "explicit barriers are not allowed in workdistribute region");
+    }
+    // Check for invalid nested constructs
+    if (isa<ParallelOp>(op)) {
+      return emitOpError(
+          "nested parallel constructs not allowed in workdistribute");
+    }
+    if (isa<TeamsOp>(op)) {
+      return emitOpError(
+          "nested teams constructs not allowed in workdistribute");
+    }
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  Operation *parentOp = (*this)->getParentOp();
+  if (!llvm::dyn_cast<TeamsOp>(parentOp))
+    return emitOpError("workdistribute must be nested under teams");
   return success();
 }
 

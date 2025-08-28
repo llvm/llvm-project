@@ -70,14 +70,12 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 [[N]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP12]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP14]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP11]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP12]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       scalar.ph:
@@ -86,9 +84,9 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[J_021_US:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_US:%.*]], [[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[J_021_US]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[J_021_US]]
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[ARRAYIDX8_US]], align 4
+; CHECK-NEXT:    store i32 [[TMP14]], ptr [[ARRAYIDX8_US]], align 4
 ; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_021_US]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_US]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[INNER_LOOP_EXIT]], label [[INNER_LOOP]], !llvm.loop [[LOOP8:![0-9]+]]

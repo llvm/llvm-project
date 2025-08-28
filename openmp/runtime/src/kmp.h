@@ -4621,7 +4621,15 @@ static inline int __kmp_adjust_gtid_for_hidden_helpers(int gtid) {
   return adjusted_gtid;
 }
 
+#if ENABLE_LIBOMPTARGET
+// Pointers to callbacks registered by the offload library to be notified of
+// task progress.
+extern void (*kmp_target_sync_cb)(ident_t *loc_ref, int gtid,
+                                  void *current_task, void *event);
+#endif // ENABLE_LIBOMPTARGET
+
 // Support for error directive
+// See definition in offload/DeviceRTL DeviceTypes.h
 typedef enum kmp_severity_t {
   severity_warning = 1,
   severity_fatal = 2

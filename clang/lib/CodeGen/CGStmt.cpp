@@ -2676,6 +2676,9 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                                          llvm::ConstantAsMetadata::get(Loc)));
   }
 
+  // Make inline-asm calls Key for the debug info feature Key Instructions.
+  CGF.addInstToNewSourceAtom(&Result, nullptr);
+
   if (!NoConvergent && CGF.getLangOpts().assumeFunctionsAreConvergent())
     // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
     // convergent (meaning, they may call an intrinsically convergent op, such
@@ -2754,6 +2757,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
       }
     }
 
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     LValue Dest = ResultRegDests[i];
     // ResultTypeRequiresCast elements correspond to the first
     // ResultTypeRequiresCast.size() elements of RegResults.
@@ -2761,7 +2765,8 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
       unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
       if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        Builder.CreateStore(Tmp, A);
+        llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
+        CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
 
@@ -3274,7 +3279,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
-  QualType RecordTy = getContext().getRecordType(RD);
+  CanQualType RecordTy = getContext().getCanonicalTagType(RD);
 
   // Initialize the captured struct.
   LValue SlotLV =
@@ -3354,7 +3359,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
 
   // Initialize variable-length arrays.
   LValue Base = MakeNaturalAlignRawAddrLValue(
-      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
+      CapturedStmtInfo->getContextValue(), Ctx.getCanonicalTagType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =

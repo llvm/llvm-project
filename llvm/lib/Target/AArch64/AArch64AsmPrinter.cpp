@@ -176,6 +176,9 @@ public:
                              std::optional<AArch64PACKey::ID> PACKey,
                              uint64_t PACDisc, Register PACAddrDisc);
 
+  // Emit the sequence for PAC.
+  void emitPtrauthSign(const MachineInstr *MI);
+
   // Emit the sequence to compute the discriminator.
   //
   // The returned register is either unmodified AddrDisc or ScratchReg.
@@ -2175,6 +2178,37 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     OutStreamer->emitLabel(EndSym);
 }
 
+void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
+  Register Val = MI->getOperand(1).getReg();
+  auto Key = (AArch64PACKey::ID)MI->getOperand(2).getImm();
+  uint64_t Disc = MI->getOperand(3).getImm();
+  Register AddrDisc = MI->getOperand(4).getReg();
+  bool AddrDiscKilled = MI->getOperand(4).isKill();
+
+  // As long as at least one of Val and AddrDisc is in GPR64noip, a scratch
+  // register is available.
+  Register ScratchReg = Val == AArch64::X16 ? AArch64::X17 : AArch64::X16;
+  assert(ScratchReg != AddrDisc &&
+         "Neither X16 nor X17 is available as a scratch register");
+
+  // Compute pac discriminator
+  assert(isUInt<16>(Disc));
+  Register DiscReg = emitPtrauthDiscriminator(
+      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
+  bool IsZeroDisc = DiscReg == AArch64::XZR;
+  unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  //  paciza x16      ; if  IsZeroDisc
+  //  pacia x16, x17  ; if !IsZeroDisc
+  MCInst PACInst;
+  PACInst.setOpcode(Opc);
+  PACInst.addOperand(MCOperand::createReg(Val));
+  PACInst.addOperand(MCOperand::createReg(Val));
+  if (!IsZeroDisc)
+    PACInst.addOperand(MCOperand::createReg(DiscReg));
+  EmitToStreamer(*OutStreamer, PACInst);
+}
+
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   bool IsCall = MI->getOpcode() == AArch64::BLRA;
   unsigned BrTarget = MI->getOperand(0).getReg();
@@ -2195,13 +2229,24 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   if (BrTarget == AddrDisc)
     report_fatal_error("Branch target is signed with its own value");
 
-  // If we are printing BLRA pseudo instruction, then x16 and x17 are
-  // implicit-def'ed by the MI and AddrDisc is not used as any other input, so
-  // try to save one MOV by setting MayUseAddrAsScratch.
+  // If we are printing BLRA pseudo, try to save one MOV by making use of the
+  // fact that x16 and x17 are described as clobbered by the MI instruction and
+  // AddrDisc is not used as any other input.
+  //
+  // Back in the day, emitPtrauthDiscriminator was restricted to only returning
+  // either x16 or x17, meaning the returned register is always among the
+  // implicit-def'ed registers of BLRA pseudo. Now this property can be violated
+  // if isX16X17Safer predicate is false, thus manually check if AddrDisc is
+  // among x16 and x17 to prevent clobbering unexpected registers.
+  //
   // Unlike BLRA, BRA pseudo is used to perform computed goto, and thus not
   // declared as clobbering x16/x17.
+  //
+  // FIXME: Make use of `killed` flags and register masks instead.
+  bool AddrDiscIsImplicitDef =
+      IsCall && (AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17);
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
-                                              /*MayUseAddrAsScratch=*/IsCall);
+                                              AddrDiscIsImplicitDef);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -2828,7 +2873,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCInst TmpInst;
       TmpInst.setOpcode(AArch64::MOVIv16b_ns);
       TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-      TmpInst.addOperand(MCOperand::createImm(MI->getOperand(1).getImm()));
+      TmpInst.addOperand(MCOperand::createImm(0));
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -2890,6 +2935,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
     return;
 
+  case AArch64::PAC:
+    emitPtrauthSign(MI);
+    return;
+
   case AArch64::LOADauthptrstatic:
     LowerLOADauthptrstatic(*MI);
     return;
@@ -2930,8 +2979,15 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // See the comments in emitPtrauthBranch.
     if (Callee == AddrDisc)
       report_fatal_error("Call target is signed with its own value");
+
+    // After isX16X17Safer predicate was introduced, emitPtrauthDiscriminator is
+    // no longer restricted to only reusing AddrDisc when it is X16 or X17
+    // (which are implicit-def'ed by AUTH_TCRETURN pseudos), thus impose this
+    // restriction manually not to clobber an unexpected register.
+    bool AddrDiscIsImplicitDef =
+        AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
     Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
-                                                /*MayUseAddrAsScratch=*/true);
+                                                AddrDiscIsImplicitDef);
 
     const bool IsZero = DiscReg == AArch64::XZR;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},

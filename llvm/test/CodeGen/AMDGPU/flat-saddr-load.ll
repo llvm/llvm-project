@@ -95,12 +95,24 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_neg8388609(ptr inreg %sbase) {
 }
 
 define amdgpu_ps float @flat_load_saddr_i8_offset_0xFFFFFFFF(ptr inreg %sbase) {
-; GFX1250-LABEL: flat_load_saddr_i8_offset_0xFFFFFFFF:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0xff800000
-; GFX1250-NEXT:    flat_load_u8 v0, v0, s[2:3] offset:8388607
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-SDAG-LABEL: flat_load_saddr_i8_offset_0xFFFFFFFF:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_add_co_u32 v0, s0, 0xff800000, s2
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s3, s0
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:8388607
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-LABEL: flat_load_saddr_i8_offset_0xFFFFFFFF:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s2, -1
+; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s3, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 4294967295
   %load = load i8, ptr %gep0
   %zext = zext i8 %load to i32
@@ -329,7 +341,7 @@ define amdgpu_ps float @flat_load_saddr_i8_zext_vgpr_offset_8388608(ptr inreg %s
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], s[2:3], 0, v[0:1]
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800000, v0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
@@ -343,9 +355,8 @@ define amdgpu_ps float @flat_load_saddr_i8_zext_vgpr_offset_8388608(ptr inreg %s
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800000, v0
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -551,12 +562,21 @@ define amdgpu_ps float @flat_load_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voff
 
 ; Both 64-bit base and 32-bit offset are scalar
 define amdgpu_ps float @flat_load_saddr_i8_zext_uniform_offset(ptr inreg %sbase, i32 inreg %soffset) {
-; GFX1250-LABEL: flat_load_saddr_i8_zext_uniform_offset:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    flat_load_u8 v0, v0, s[2:3]
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-SDAG-LABEL: flat_load_saddr_i8_zext_uniform_offset:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3]
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-LABEL: flat_load_saddr_i8_zext_uniform_offset:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s2, s4
+; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s3, 0
+; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v0, s[0:1]
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %soffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %load = load i8, ptr %gep0
@@ -567,12 +587,21 @@ define amdgpu_ps float @flat_load_saddr_i8_zext_uniform_offset(ptr inreg %sbase,
 
 ; Both 64-bit base and 32-bit offset are scalar, with immediate offset.
 define amdgpu_ps float @flat_load_saddr_i8_zext_uniform_offset_immoffset(ptr inreg %sbase, i32 inreg %soffset) {
-; GFX1250-LABEL: flat_load_saddr_i8_zext_uniform_offset_immoffset:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    flat_load_u8 v0, v0, s[2:3] offset:-24
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-SDAG-LABEL: flat_load_saddr_i8_zext_uniform_offset_immoffset:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3] offset:-24
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-LABEL: flat_load_saddr_i8_zext_uniform_offset_immoffset:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s2, s4
+; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s3, 0
+; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v0, s[0:1] offset:-24
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %soffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -24
@@ -584,12 +613,21 @@ define amdgpu_ps float @flat_load_saddr_i8_zext_uniform_offset_immoffset(ptr inr
 
 ; Both components uniform, zext forced to LHS of addressing expression
 define amdgpu_ps float @flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr inreg %sbase, i32 inreg %soffset) {
-; GFX1250-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    flat_load_u8 v0, v0, s[2:3]
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-SDAG-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3]
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s2, s4
+; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s3, 0
+; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v0, s[0:1]
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %soffset to i64
   %sbase.as.int = ptrtoint ptr %sbase to i64
   %add = add i64 %zext.offset, %sbase.as.int
@@ -602,12 +640,21 @@ define amdgpu_ps float @flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add(ptr in
 
 ; Both components uniform, zext forced to LHS of addressing expression, with immediate offset
 define amdgpu_ps float @flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0(ptr inreg %sbase, i32 inreg %soffset) {
-; GFX1250-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    flat_load_u8 v0, v0, s[2:3] offset:128
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
+; GFX1250-SDAG-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3] offset:128
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX1250-GISEL-LABEL: flat_load_saddr_i8_zext_sgpr_ptrtoint_commute_add_imm_offset0:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s2, s4
+; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s3, 0
+; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v0, s[0:1] offset:128
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %soffset to i64
   %sbase.as.int = ptrtoint ptr %sbase to i64
   %add = add i64 %zext.offset, %sbase.as.int
@@ -625,7 +672,7 @@ define amdgpu_ps float @flat_load_i8_vgpr64_sgpr32(ptr %vbase, i32 inreg %soffse
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[2:3]
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
@@ -655,7 +702,7 @@ define amdgpu_ps float @flat_load_i8_vgpr64_sgpr32_offset_8388607(ptr %vbase, i3
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[2:3]
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1] offset:8388607
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
@@ -686,33 +733,13 @@ define amdgpu_ps float @flat_load_i8_vgpr64_sgpr32_offset_8388607(ptr %vbase, i3
 
 ; Cannot push the shift into 32-bits, and cannot match.
 define amdgpu_ps float @flat_load_saddr_f32_natural_addressing(ptr inreg %sbase, ptr %voffset.ptr) {
-; GFX1250-SDAG-LABEL: flat_load_saddr_f32_natural_addressing:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[2:3]
-; GFX1250-SDAG-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_saddr_f32_natural_addressing:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_saddr_f32_natural_addressing:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr %voffset.ptr
   %zext.offset = zext i32 %voffset to i64
   %gep = getelementptr inbounds float, ptr %sbase, i64 %zext.offset
@@ -743,8 +770,7 @@ define amdgpu_ps float @flat_load_f32_saddr_zext_vgpr_range(ptr inreg %sbase, pt
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3]
+; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr %voffset.ptr, !range !0, !noundef !{}
@@ -760,8 +786,7 @@ define amdgpu_ps float @flat_load_f32_saddr_zext_vgpr_range_imm_offset(ptr inreg
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] offset:400
+; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] offset:400 scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr %voffset.ptr, !range !0, !noundef !{}
@@ -774,33 +799,13 @@ define amdgpu_ps float @flat_load_f32_saddr_zext_vgpr_range_imm_offset(ptr inreg
 
 ; Range is 1 beyond the limit where we can move the shift into 32-bits.
 define amdgpu_ps float @flat_load_f32_saddr_zext_vgpr_range_too_large(ptr inreg %sbase, ptr %voffset.ptr) {
-; GFX1250-SDAG-LABEL: flat_load_f32_saddr_zext_vgpr_range_too_large:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[2:3]
-; GFX1250-SDAG-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_f32_saddr_zext_vgpr_range_too_large:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_f32_saddr_zext_vgpr_range_too_large:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr %voffset.ptr, !range !1, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep = getelementptr inbounds float, ptr %sbase, i64 %zext.offset
@@ -2130,11 +2135,10 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv(ptr inreg %arg) {
 ; GFX1250-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 0, 4
+; GFX1250-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 4, v[2:3]
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v4, v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x400, v2
@@ -2188,11 +2192,10 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 0, 4
+; GFX1250-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 4, v[2:3]
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v6, v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v4, v[4:5] scope:SCOPE_SYS
