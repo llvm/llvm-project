@@ -109,6 +109,23 @@ jmp f12.cfi
 f13:
 jmp f13.cfi
 
+// Jumptable alignment > entsize prevents it from being moved before last
+// function, but moving non-last functions into the jumptable should work.
+// CHECK: <f14>:
+// CHECK-NEXT: <f14.cfi>:
+// CHECK-NEXT: retq $0xe
+.section .text.jt5,"ax",@llvm_cfi_jump_table,8
+.balign 16
+f14:
+jmp f14.cfi
+.balign 8, 0xcc
+
+// CHECK: <f15>:
+// CHECK-NEXT: jmp {{.*}} <f15.cfi>
+f15:
+jmp f15.cfi
+.balign 8, 0xcc
+
 // CHECK: <f1>:
 // CHECK-NEXT: <f1.cfi>:
 // CHECK-NEXT: retq $0x1
@@ -179,6 +196,16 @@ ret $12
 .section .text.f13,"ax",@progbits
 f13.cfi:
 ret $13
+
+.section .text.f14,"ax",@progbits
+f14.cfi:
+ret $14
+
+.section .text.f15,"ax",@progbits
+.balign 64
+f15.cfi:
+ret $15
+.zero 16
 
 // CHECK: <.iplt>:
 // CHECK-NEXT: [[IPLT]]:
