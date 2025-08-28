@@ -751,7 +751,7 @@ struct VectorLoadOpConverter final
 
     auto memoryAccess = spirv::MemoryAccess::None;
     spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr = nullptr;
+    IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
       memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
@@ -820,7 +820,7 @@ struct VectorStoreOpConverter final
 
     auto memoryAccess = spirv::MemoryAccess::None;
     spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr = nullptr;
+    IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
       memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
