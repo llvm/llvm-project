@@ -1313,16 +1313,16 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
       llvm::make_range(VirtualBaseEnd, NonVirtualBaseEnd);
   auto MemberInits = llvm::make_range(NonVirtualBaseEnd, AllInits.end());
 
-  // Process virtual base initializers.
-  for (CXXCtorInitializer *Initializer : VirtualBaseInits) {
-    if (!ConstructVBases)
-      continue;
-    SaveAndRestore ThisRAII(CXXThisValue);
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(Initializer))
-      CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    EmitBaseInitializer(*this, ClassDecl, Initializer);
+  // Process virtual base initializers, if necessary.
+  if (ConstructVBases) {
+    for (CXXCtorInitializer *Initializer : VirtualBaseInits) {
+      SaveAndRestore ThisRAII(CXXThisValue);
+      if (CGM.getCodeGenOpts().StrictVTablePointers &&
+          CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+          isInitializerOfDynamicClass(Initializer))
+        CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
+      EmitBaseInitializer(*this, ClassDecl, Initializer);
+    }
   }
 
   if (BaseCtorContinueBB) {
