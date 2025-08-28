@@ -17,6 +17,10 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 
+#if defined(_WIN32)
+#include <fcntl.h>
+#endif
+
 using namespace lldb_protocol::mcp;
 
 using lldb_private::File;
