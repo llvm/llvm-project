@@ -276,10 +276,10 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
-  // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
-  // For 16-byte aggregates with 16-byte alignment, we use i128.
+  // We use a pair of i64 for 9-16 byte aggregate with 8 byte alignment.
+  // For 9-16 byte aggregates with 16 byte alignment, we use i128.
   llvm::Type *WideTy = llvm::Type::getIntNTy(getVMContext(), 128);
-  bool UseI128 = (Size == 128) && (Alignment == 128);
+  bool UseI128 = (Size > 64) && (Size <= 128) && (Alignment == 128);
 
   if (CB.InReg)
     return ABIArgInfo::getDirectInReg(UseI128 ? WideTy : CoerceTy);
