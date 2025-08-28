@@ -199,6 +199,12 @@ struct VPlanTransforms {
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
 
+  /// Replace the symbolic strides in \p Plan, with data from \p StridesMap,
+  /// with constants when possible.
+  static void
+  replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         const DenseMap<Value *, const SCEV *> &StridesMap);
+
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
   /// recipes meet the following conditions:
