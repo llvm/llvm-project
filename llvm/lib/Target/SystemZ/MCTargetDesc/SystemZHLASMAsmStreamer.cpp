@@ -69,8 +69,8 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
 
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
-  Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                Subsection);
+  MAI->printSwitchToSection(*Section, Subsection,
+                            getContext().getTargetTriple(), OS);
   MCStreamer::changeSection(Section, Subsection);
 }
 

@@ -43,7 +43,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @init_arry() #0 !dbg !21 {
 entry:
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #6, !dbg !26
+  call void @llvm.lifetime.start.p0(ptr %i) #6, !dbg !26
   call void @llvm.dbg.declare(metadata ptr %i, metadata !25, metadata !DIExpression()), !dbg !27
   store i32 0, ptr %i, align 4, !dbg !28, !tbaa !30
   br label %for.cond, !dbg !34
@@ -69,12 +69,12 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond, !dbg !47, !llvm.loop !48
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #6, !dbg !50
+  call void @llvm.lifetime.end.p0(ptr %i) #6, !dbg !50
   ret void, !dbg !50
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -83,7 +83,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare dso_local i32 @rand() #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() #0 !dbg !51 {
@@ -94,10 +94,10 @@ entry:
   %condition = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   call void @init_arry(), !dbg !62
-  call void @llvm.lifetime.start.p0(i64 4, ptr %val) #6, !dbg !63
+  call void @llvm.lifetime.start.p0(ptr %val) #6, !dbg !63
   call void @llvm.dbg.declare(metadata ptr %val, metadata !55, metadata !DIExpression()), !dbg !64
   store i32 0, ptr %val, align 4, !dbg !64, !tbaa !30
-  call void @llvm.lifetime.start.p0(i64 4, ptr %j) #6, !dbg !65
+  call void @llvm.lifetime.start.p0(ptr %j) #6, !dbg !65
   call void @llvm.dbg.declare(metadata ptr %j, metadata !56, metadata !DIExpression()), !dbg !66
   store i32 0, ptr %j, align 4, !dbg !67, !tbaa !30
   br label %for.cond, !dbg !68
@@ -108,7 +108,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !dbg !71
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 4, ptr %condition) #6, !dbg !72
+  call void @llvm.lifetime.start.p0(ptr %condition) #6, !dbg !72
   call void @llvm.dbg.declare(metadata ptr %condition, metadata !57, metadata !DIExpression()), !dbg !73
   %call = call i32 @rand() #6, !dbg !74
   %rem = srem i32 %call, 5, !dbg !75
@@ -145,7 +145,7 @@ sw.default:                                       ; preds = %for.body
   unreachable, !dbg !87
 
 sw.epilog:                                        ; preds = %sw.bb3, %sw.bb2, %sw.bb
-  call void @llvm.lifetime.end.p0(i64 4, ptr %condition) #6, !dbg !88
+  call void @llvm.lifetime.end.p0(ptr %condition) #6, !dbg !88
   br label %for.inc, !dbg !89
 
 for.inc:                                          ; preds = %sw.epilog
@@ -155,8 +155,8 @@ for.inc:                                          ; preds = %sw.epilog
   br label %for.cond, !dbg !91, !llvm.loop !92
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %j) #6, !dbg !94
-  call void @llvm.lifetime.end.p0(i64 4, ptr %val) #6, !dbg !94
+  call void @llvm.lifetime.end.p0(ptr %j) #6, !dbg !94
+  call void @llvm.lifetime.end.p0(ptr %val) #6, !dbg !94
   ret i32 0, !dbg !95
 }
 

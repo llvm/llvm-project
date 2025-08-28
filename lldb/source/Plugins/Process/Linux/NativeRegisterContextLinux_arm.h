@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 
@@ -74,9 +75,6 @@ public:
 
   bool WatchpointIsEnabled(uint32_t wp_index);
 
-  // Debug register type select
-  enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
-
 protected:
   Status DoReadRegisterValue(uint32_t offset, const char *reg_name,
                              uint32_t size, RegisterValue &value) override;
@@ -102,18 +100,10 @@ private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
   RegisterInfoPOSIX_arm::FPU m_fpr;
 
-  // Debug register info for hardware breakpoints and watchpoints management.
-  struct DREG {
-    lldb::addr_t address;  // Breakpoint/watchpoint address value.
-    lldb::addr_t hit_addr; // Address at which last watchpoint trigger exception
-                           // occurred.
-    lldb::addr_t real_addr; // Address value that should cause target to stop.
-    uint32_t control;       // Breakpoint/watchpoint control value.
-    uint32_t refcount;      // Serves as enable/disable and reference counter.
-  };
-
-  struct DREG m_hbr_regs[16]; // Arm native linux hardware breakpoints
-  struct DREG m_hwp_regs[16]; // Arm native linux hardware watchpoints
+  std::array<NativeRegisterContextDBReg::DREG, 16>
+      m_hbr_regs; // Arm native linux hardware breakpoints
+  std::array<NativeRegisterContextDBReg::DREG, 16>
+      m_hwp_regs; // Arm native linux hardware watchpoints
 
   uint32_t m_max_hwp_supported;
   uint32_t m_max_hbp_supported;
@@ -125,7 +115,8 @@ private:
 
   Status ReadHardwareDebugInfo();
 
-  Status WriteHardwareDebugRegs(int hwbType, int hwb_index);
+  Status WriteHardwareDebugRegs(NativeRegisterContextDBReg::DREGType hwbType,
+                                int hwb_index);
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 

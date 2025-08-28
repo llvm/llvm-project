@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional
+from typing import Optional, Callable, Any, List, Union
 import uuid
 
 import dap_server
@@ -59,24 +59,25 @@ class DAPTestCaseBase(TestBase):
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap_server.request_setBreakpoints(
-            Source(source_path), lines, data
+        return self.set_source_breakpoints_from_source(
+            Source(path=source_path), lines, data, wait_for_resolve
         )
-        if response is None or not response["success"]:
-            return []
-        breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
-        if wait_for_resolve:
-            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
-        return breakpoint_ids
 
     def set_source_breakpoints_assembly(
         self, source_reference, lines, data=None, wait_for_resolve=True
     ):
+        return self.set_source_breakpoints_from_source(
+            Source.build(source_reference=source_reference),
+            lines,
+            data,
+            wait_for_resolve,
+        )
+
+    def set_source_breakpoints_from_source(
+        self, source: Source, lines, data=None, wait_for_resolve=True
+    ):
         response = self.dap_server.request_setBreakpoints(
-            Source(source_reference=source_reference),
+            source,
             lines,
             data,
         )
@@ -122,11 +123,19 @@ class DAPTestCaseBase(TestBase):
             f"Expected to resolve all breakpoints. Unresolved breakpoint ids: {unresolved_breakpoints}",
         )
 
-    def waitUntil(self, condition_callback):
-        for _ in range(20):
-            if condition_callback():
+    def wait_until(
+        self,
+        predicate: Callable[[], bool],
+        delay: float = 0.5,
+        timeout: float = DEFAULT_TIMEOUT,
+    ) -> bool:
+        """Repeatedly run the predicate until either the predicate returns True
+        or a timeout has occurred."""
+        deadline = time.monotonic() + timeout
+        while deadline > time.monotonic():
+            if predicate():
                 return True
-            time.sleep(0.5)
+            time.sleep(delay)
         return False
 
     def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
@@ -139,12 +148,41 @@ class DAPTestCaseBase(TestBase):
         if key in self.dap_server.capabilities:
             self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
-    def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+    def verify_breakpoint_hit(
+        self, breakpoint_ids: List[Union[int, str]], timeout: float = DEFAULT_TIMEOUT
+    ):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
+        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        normalized_bp_ids = [str(b) for b in breakpoint_ids]
+        for stopped_event in stopped_events:
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" not in body:
+                    continue
+                if (
+                    body["reason"] != "breakpoint"
+                    and body["reason"] != "instruction breakpoint"
+                ):
+                    continue
+                if "hitBreakpointIds" not in body:
+                    continue
+                hit_breakpoint_ids = body["hitBreakpointIds"]
+                for bp in hit_breakpoint_ids:
+                    if str(bp) in normalized_bp_ids:
+                        return
+        self.assertTrue(
+            False,
+            f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
+        )
+
+    def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+        """Wait for the process we are debugging to stop, and verify we hit
+        all of the breakpoint locations in the "breakpoint_ids" array.
+        "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
         stopped_events = self.dap_server.wait_for_stopped(timeout)
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -156,22 +194,12 @@ class DAPTestCaseBase(TestBase):
                     and body["reason"] != "instruction breakpoint"
                 ):
                     continue
-                if "description" not in body:
+                if "hitBreakpointIds" not in body:
                     continue
-                # Descriptions for breakpoints will be in the form
-                # "breakpoint 1.1", so look for any description that matches
-                # ("breakpoint 1.") in the description field as verification
-                # that one of the breakpoint locations was hit. DAP doesn't
-                # allow breakpoints to have multiple locations, but LLDB does.
-                # So when looking at the description we just want to make sure
-                # the right breakpoint matches and not worry about the actual
-                # location.
-                description = body["description"]
-                for breakpoint_id in breakpoint_ids:
-                    match_desc = f"breakpoint {breakpoint_id}."
-                    if match_desc in description:
-                        return
-        self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
+                hit_bps = body["hitBreakpointIds"]
+                if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
+                    return
+        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 
     def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify the stop
@@ -193,7 +221,7 @@ class DAPTestCaseBase(TestBase):
                     return True
         return False
 
-    def verify_commands(self, flavor, output, commands):
+    def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
         prefix = "(lldb) "
@@ -206,10 +234,11 @@ class DAPTestCaseBase(TestBase):
                     found = True
                     break
             self.assertTrue(
-                found, "verify '%s' found in console output for '%s'" % (cmd, flavor)
+                found,
+                f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
 
-    def get_dict_value(self, d, key_path):
+    def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
         corresponding dictionary. This is handy for grabbing values from VS
@@ -278,28 +307,34 @@ class DAPTestCaseBase(TestBase):
                         return (source["path"], stackFrame["line"])
         return ("", 0)
 
-    def get_stdout(self, timeout=0.0):
-        return self.dap_server.get_output("stdout", timeout=timeout)
+    def get_stdout(self):
+        return self.dap_server.get_output("stdout")
 
-    def get_console(self, timeout=0.0):
-        return self.dap_server.get_output("console", timeout=timeout)
+    def get_console(self):
+        return self.dap_server.get_output("console")
 
-    def get_important(self, timeout=0.0):
-        return self.dap_server.get_output("important", timeout=timeout)
+    def get_important(self):
+        return self.dap_server.get_output("important")
 
-    def collect_stdout(self, timeout_secs, pattern=None):
+    def collect_stdout(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "stdout", timeout_secs=timeout_secs, pattern=pattern
+            "stdout", timeout=timeout, pattern=pattern
         )
 
-    def collect_console(self, timeout_secs, pattern=None):
+    def collect_console(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "console", timeout_secs=timeout_secs, pattern=pattern
+            "console", timeout=timeout, pattern=pattern
         )
 
-    def collect_important(self, timeout_secs, pattern=None):
+    def collect_important(
+        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
+    ) -> str:
         return self.dap_server.collect_output(
-            "important", timeout_secs=timeout_secs, pattern=pattern
+            "important", timeout=timeout, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):

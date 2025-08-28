@@ -229,7 +229,7 @@ define i32 @abs_of_neg(i32 %x) {
 
 define <4 x i32> @abs_of_neg_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_of_neg_vec(
-; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret <4 x i32> [[B]]
 ;
   %a = sub nsw <4 x i32> zeroinitializer, %x

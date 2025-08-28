@@ -2915,7 +2915,7 @@ createKmpTaskTRecordDecl(CodeGenModule &CGM, OpenMPDirectiveKind Kind,
   addFieldToRecordDecl(C, UD, KmpInt32Ty);
   addFieldToRecordDecl(C, UD, KmpRoutineEntryPointerQTy);
   UD->completeDefinition();
-  QualType KmpCmplrdataTy = C.getRecordType(UD);
+  CanQualType KmpCmplrdataTy = C.getCanonicalTagType(UD);
   RecordDecl *RD = C.buildImplicitRecord("kmp_task_t");
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, C.VoidPtrTy);
@@ -2950,7 +2950,7 @@ createKmpTaskTWithPrivatesRecordDecl(CodeGenModule &CGM, QualType KmpTaskTQTy,
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, KmpTaskTQTy);
   if (const RecordDecl *PrivateRD = createPrivatesRecordDecl(CGM, Privates))
-    addFieldToRecordDecl(C, RD, C.getRecordType(PrivateRD));
+    addFieldToRecordDecl(C, RD, C.getCanonicalTagType(PrivateRD));
   RD->completeDefinition();
   return RD;
 }
@@ -3582,7 +3582,7 @@ static void getKmpAffinityType(ASTContext &C, QualType &KmpTaskAffinityInfoTy) {
     addFieldToRecordDecl(C, KmpAffinityInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpAffinityInfoRD, FlagsTy);
     KmpAffinityInfoRD->completeDefinition();
-    KmpTaskAffinityInfoTy = C.getRecordType(KmpAffinityInfoRD);
+    KmpTaskAffinityInfoTy = C.getCanonicalTagType(KmpAffinityInfoRD);
   }
 }
 
@@ -3640,7 +3640,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build type kmp_task_t (if not built yet).
   if (isOpenMPTaskLoopDirective(D.getDirectiveKind())) {
     if (SavedKmpTaskloopTQTy.isNull()) {
-      SavedKmpTaskloopTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskloopTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskloopTQTy;
@@ -3650,7 +3650,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
             isOpenMPTargetDataManagementDirective(D.getDirectiveKind())) &&
            "Expected taskloop, task or target directive");
     if (SavedKmpTaskTQTy.isNull()) {
-      SavedKmpTaskTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskTQTy;
@@ -3659,7 +3659,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build particular struct kmp_task_t for the given task.
   const RecordDecl *KmpTaskTWithPrivatesQTyRD =
       createKmpTaskTWithPrivatesRecordDecl(CGM, KmpTaskTQTy, Privates);
-  QualType KmpTaskTWithPrivatesQTy = C.getRecordType(KmpTaskTWithPrivatesQTyRD);
+  CanQualType KmpTaskTWithPrivatesQTy =
+      C.getCanonicalTagType(KmpTaskTWithPrivatesQTyRD);
   QualType KmpTaskTWithPrivatesPtrQTy =
       C.getPointerType(KmpTaskTWithPrivatesQTy);
   llvm::Type *KmpTaskTWithPrivatesPtrTy = CGF.Builder.getPtrTy(0);
@@ -3914,7 +3915,10 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Fill the data in the resulting kmp_task_t record.
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
-  if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
+  if (!SharedsTy->getAsStructureType()
+           ->getOriginalDecl()
+           ->getDefinitionOrSelf()
+           ->field_empty()) {
     KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
@@ -3944,8 +3948,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
   auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
-  const RecordDecl *KmpCmplrdataUD =
-      (*FI)->getType()->getAsUnionType()->getDecl();
+  const RecordDecl *KmpCmplrdataUD = (*FI)
+                                         ->getType()
+                                         ->getAsUnionType()
+                                         ->getOriginalDecl()
+                                         ->getDefinitionOrSelf();
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
@@ -4015,7 +4022,7 @@ static void getDependTypes(ASTContext &C, QualType &KmpDependInfoTy,
     addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
     KmpDependInfoRD->completeDefinition();
-    KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
+    KmpDependInfoTy = C.getCanonicalTagType(KmpDependInfoRD);
   }
 }
 
@@ -5714,7 +5721,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   const FieldDecl *FlagsFD = addFieldToRecordDecl(
       C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false));
   RD->completeDefinition();
-  QualType RDType = C.getRecordType(RD);
+  CanQualType RDType = C.getCanonicalTagType(RD);
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
   QualType ArrayRDType =
@@ -7080,6 +7087,110 @@ private:
     return ConstLength.getSExtValue() != 1;
   }
 
+  /// A helper class to copy structures with overlapped elements, i.e. those
+  /// which have mappings of both "s" and "s.mem".  Consecutive elements that
+  /// are not explicitly copied have mapping nodes synthesized for them,
+  /// taking care to avoid generating zero-sized copies.
+  class CopyOverlappedEntryGaps {
+    CodeGenFunction &CGF;
+    MapCombinedInfoTy &CombinedInfo;
+    OpenMPOffloadMappingFlags Flags = OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    const ValueDecl *MapDecl = nullptr;
+    const Expr *MapExpr = nullptr;
+    Address BP = Address::invalid();
+    bool IsNonContiguous = false;
+    uint64_t DimSize = 0;
+    // These elements track the position as the struct is iterated over
+    // (in order of increasing element address).
+    const RecordDecl *LastParent = nullptr;
+    uint64_t Cursor = 0;
+    unsigned LastIndex = -1u;
+    Address LB = Address::invalid();
+
+  public:
+    CopyOverlappedEntryGaps(CodeGenFunction &CGF,
+                            MapCombinedInfoTy &CombinedInfo,
+                            OpenMPOffloadMappingFlags Flags,
+                            const ValueDecl *MapDecl, const Expr *MapExpr,
+                            Address BP, Address LB, bool IsNonContiguous,
+                            uint64_t DimSize)
+        : CGF(CGF), CombinedInfo(CombinedInfo), Flags(Flags), MapDecl(MapDecl),
+          MapExpr(MapExpr), BP(BP), IsNonContiguous(IsNonContiguous),
+          DimSize(DimSize), LB(LB) {}
+
+    void processField(
+        const OMPClauseMappableExprCommon::MappableComponent &MC,
+        const FieldDecl *FD,
+        llvm::function_ref<LValue(CodeGenFunction &, const MemberExpr *)>
+            EmitMemberExprBase) {
+      const RecordDecl *RD = FD->getParent();
+      const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
+      uint64_t FieldOffset = RL.getFieldOffset(FD->getFieldIndex());
+      uint64_t FieldSize =
+          CGF.getContext().getTypeSize(FD->getType().getCanonicalType());
+      Address ComponentLB = Address::invalid();
+
+      if (FD->getType()->isLValueReferenceType()) {
+        const auto *ME = cast<MemberExpr>(MC.getAssociatedExpression());
+        LValue BaseLVal = EmitMemberExprBase(CGF, ME);
+        ComponentLB =
+            CGF.EmitLValueForFieldInitialization(BaseLVal, FD).getAddress();
+      } else {
+        ComponentLB =
+            CGF.EmitOMPSharedLValue(MC.getAssociatedExpression()).getAddress();
+      }
+
+      if (!LastParent)
+        LastParent = RD;
+      if (FD->getParent() == LastParent) {
+        if (FD->getFieldIndex() != LastIndex + 1)
+          copyUntilField(FD, ComponentLB);
+      } else {
+        LastParent = FD->getParent();
+        if (((int64_t)FieldOffset - (int64_t)Cursor) > 0)
+          copyUntilField(FD, ComponentLB);
+      }
+      Cursor = FieldOffset + FieldSize;
+      LastIndex = FD->getFieldIndex();
+      LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
+    }
+
+    void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
+      llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size =
+          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copyUntilEnd(Address HB) {
+      if (LastParent) {
+        const ASTRecordLayout &RL =
+            CGF.getContext().getASTRecordLayout(LastParent);
+        if ((uint64_t)CGF.getContext().toBits(RL.getSize()) <= Cursor)
+          return;
+      }
+      llvm::Value *LBPtr = LB.emitRawPointer(CGF);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(
+          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
+          LBPtr);
+      copySizedChunk(LBPtr, Size);
+    }
+
+    void copySizedChunk(llvm::Value *Base, llvm::Value *Size) {
+      CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
+      CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
+      CombinedInfo.DevicePtrDecls.push_back(nullptr);
+      CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+      CombinedInfo.Pointers.push_back(Base);
+      CombinedInfo.Sizes.push_back(
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+      CombinedInfo.Types.push_back(Flags);
+      CombinedInfo.Mappers.push_back(nullptr);
+      CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
+    }
+  };
+
   /// Generate the base pointers, section pointers, sizes, map type bits, and
   /// user-defined mappers (all included in \a CombinedInfo) for the provided
   /// map type, map or motion modifiers, and expression components.
@@ -7383,7 +7494,32 @@ private:
     // dimension.
     uint64_t DimSize = 1;
 
-    bool IsNonContiguous = CombinedInfo.NonContigInfo.IsNonContiguous;
+    // Detects non-contiguous updates due to strided accesses.
+    // Sets the 'IsNonContiguous' flag so that the 'MapType' bits are set
+    // correctly when generating information to be passed to the runtime. The
+    // flag is set to true if any array section has a stride not equal to 1, or
+    // if the stride is not a constant expression (conservatively assumed
+    // non-contiguous).
+    bool IsNonContiguous =
+        CombinedInfo.NonContigInfo.IsNonContiguous ||
+        any_of(Components, [&](const auto &Component) {
+          const auto *OASE =
+              dyn_cast<ArraySectionExpr>(Component.getAssociatedExpression());
+          if (!OASE)
+            return false;
+
+          const Expr *StrideExpr = OASE->getStride();
+          if (!StrideExpr)
+            return false;
+
+          const auto Constant =
+              StrideExpr->getIntegerConstantExpr(CGF.getContext());
+          if (!Constant)
+            return false;
+
+          return !Constant->isOne();
+        });
+
     bool IsPrevMemberReference = false;
 
     bool IsPartialMapped =
@@ -7570,63 +7706,22 @@ private:
               getMapTypeBits(MapType, MapModifiers, MotionModifiers, IsImplicit,
                              /*AddPtrFlag=*/false,
                              /*AddIsTargetParamFlag=*/false, IsNonContiguous);
-          llvm::Value *Size = nullptr;
+          CopyOverlappedEntryGaps CopyGaps(CGF, CombinedInfo, Flags, MapDecl,
+                                           MapExpr, BP, LB, IsNonContiguous,
+                                           DimSize);
           // Do bitcopy of all non-overlapped structure elements.
           for (OMPClauseMappableExprCommon::MappableExprComponentListRef
                    Component : OverlappedElements) {
-            Address ComponentLB = Address::invalid();
             for (const OMPClauseMappableExprCommon::MappableComponent &MC :
                  Component) {
               if (const ValueDecl *VD = MC.getAssociatedDeclaration()) {
-                const auto *FD = dyn_cast<FieldDecl>(VD);
-                if (FD && FD->getType()->isLValueReferenceType()) {
-                  const auto *ME =
-                      cast<MemberExpr>(MC.getAssociatedExpression());
-                  LValue BaseLVal = EmitMemberExprBase(CGF, ME);
-                  ComponentLB =
-                      CGF.EmitLValueForFieldInitialization(BaseLVal, FD)
-                          .getAddress();
-                } else {
-                  ComponentLB =
-                      CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
-                          .getAddress();
+                if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+                  CopyGaps.processField(MC, FD, EmitMemberExprBase);
                 }
-                llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
-                llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-                Size = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr,
-                                                 LBPtr);
-                break;
               }
             }
-            assert(Size && "Failed to determine structure size");
-            CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-            CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-            CombinedInfo.DevicePtrDecls.push_back(nullptr);
-            CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-            CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-            CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-                Size, CGF.Int64Ty, /*isSigned=*/true));
-            CombinedInfo.Types.push_back(Flags);
-            CombinedInfo.Mappers.push_back(nullptr);
-            CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                      : 1);
-            LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
           }
-          CombinedInfo.Exprs.emplace_back(MapDecl, MapExpr);
-          CombinedInfo.BasePointers.push_back(BP.emitRawPointer(CGF));
-          CombinedInfo.DevicePtrDecls.push_back(nullptr);
-          CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-          CombinedInfo.Pointers.push_back(LB.emitRawPointer(CGF));
-          llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-          Size = CGF.Builder.CreatePtrDiff(
-              CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-              LBPtr);
-          CombinedInfo.Sizes.push_back(
-              CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
-          CombinedInfo.Types.push_back(Flags);
-          CombinedInfo.Mappers.push_back(nullptr);
-          CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize
-                                                                    : 1);
+          CopyGaps.copyUntilEnd(HB);
           break;
         }
         llvm::Value *Size = getExprTypeSize(I->getAssociatedExpression());
@@ -10640,7 +10735,7 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (ParamAttrs[Offset].Kind == Vector)
-        CDT = C.getPointerType(C.getRecordType(MD->getParent()));
+        CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
@@ -11222,7 +11317,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     addFieldToRecordDecl(C, RD, Int64Ty);
     addFieldToRecordDecl(C, RD, Int64Ty);
     RD->completeDefinition();
-    KmpDimTy = C.getRecordType(RD);
+    KmpDimTy = C.getCanonicalTagType(RD);
   } else {
     RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
   }
@@ -11718,7 +11813,7 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
     VDField = addFieldToRecordDecl(C, RD, VD->getType().getNonReferenceType());
     FiredField = addFieldToRecordDecl(C, RD, C.CharTy);
     RD->completeDefinition();
-    NewType = C.getRecordType(RD);
+    NewType = C.getCanonicalTagType(RD);
     Address Addr = CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
     BaseLVal = CGF.MakeAddrLValue(Addr, NewType, AlignmentSource::Decl);
     I->getSecond().try_emplace(VD, NewType, VDField, FiredField, BaseLVal);

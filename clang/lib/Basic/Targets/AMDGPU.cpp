@@ -251,7 +251,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
@@ -266,8 +266,11 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"})
-    ReadOnlyFeatures.insert(F);
+
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+    if (GPUKind != llvm::AMDGPU::GK_NONE)
+      ReadOnlyFeatures.insert(F);
+  }
   HalfArgsAndReturns = true;
 }
 

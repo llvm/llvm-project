@@ -1129,7 +1129,7 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   CollectCudaSymbolsHelper() : Base{*this} {}
   using Base::operator();
   semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
-    return {symbol};
+    return {symbol.GetUltimate()};
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
@@ -1693,17 +1693,17 @@ struct ArgumentExtractor
       // to int(kind=4) for example.
       return (*this)(x.template operand<0>());
     } else {
-      return std::make_pair(operation::OperationCode(x),
+      return std::make_pair(operation::OperationCode(x.derived()),
           OperationArgs(x, std::index_sequence_for<Os...>{}));
     }
   }
 
   template <typename T> Result operator()(const Designator<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename T> Result operator()(const Constant<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename... Rs>
@@ -1793,6 +1793,10 @@ std::string operation::ToString(operation::Operator op) {
   llvm_unreachable("Unhandler operator");
 }
 
+operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
+  return common::visit([](auto &&s) { return OperationCode(s); }, op.u);
+}
+
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
   Operator code{llvm::StringSwitch<Operator>(proc.GetName())
           .Case("associated", Operator::Associated)
@@ -1809,8 +1813,13 @@ operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
 }
 
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
-GetTopLevelOperation(const Expr<SomeType> &expr) {
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr) {
   return operation::ArgumentExtractor<true>{}(expr);
+}
+
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr) {
+  return operation::ArgumentExtractor<false>{}(expr);
 }
 
 namespace operation {
@@ -1936,6 +1945,33 @@ bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x) {
     return false;
   }
 }
+
+struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
+  using Base = evaluate::AnyTraverse<VariableFinder>;
+  using SomeExpr = Expr<SomeType>;
+  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
+
+  using Base::operator();
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+  template <typename T>
+  bool operator()(const evaluate::FunctionRef<T> &x) const {
+    return evaluate::AsGenericExpr(common::Clone(x)) == var;
+  }
+
+private:
+  const SomeExpr &var;
+};
+
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &sub, const Expr<SomeType> &super) {
+  return VariableFinder{sub}(super);
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

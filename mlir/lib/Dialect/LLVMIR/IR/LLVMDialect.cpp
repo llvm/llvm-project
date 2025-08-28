@@ -26,8 +26,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
 
 #include <numeric>
@@ -140,6 +139,38 @@ static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
       p.getContext(),
       parseOptionalLLVMKeyword<LLVM::Linkage>(p, LLVM::Linkage::External));
   return success();
+}
+
+static ArrayAttr getLLVMAlignParamForCompressExpand(OpBuilder &builder,
+                                                    bool isExpandLoad,
+                                                    uint64_t alignment = 1) {
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The pointer alignment defaults to 1.
+  if (alignment == 1) {
+    return nullptr;
+  }
+
+  auto emptyDictAttr = builder.getDictionaryAttr({});
+  auto alignmentAttr = builder.getI64IntegerAttr(alignment);
+  auto namedAttr =
+      builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+  SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+  auto alignDictAttr = builder.getDictionaryAttr(attrs);
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The align parameter attribute can be provided for [expandload]'s first
+  //   argument. The align parameter attribute can be provided for
+  //   [compressstore]'s second argument.
+  int pos = isExpandLoad ? 0 : 1;
+  return pos == 0 ? builder.getArrayAttr(
+                        {alignDictAttr, emptyDictAttr, emptyDictAttr})
+                  : builder.getArrayAttr(
+                        {emptyDictAttr, alignDictAttr, emptyDictAttr});
 }
 
 //===----------------------------------------------------------------------===//
@@ -2707,7 +2738,7 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
-    auto addrOp = dyn_cast<AddressOfOp>(returnOp.getArg().getDefiningOp());
+    auto addrOp = returnOp.getArg().getDefiningOp<AddressOfOp>();
     // FIXME: This is a best effort solution. The AliasOp body might be more
     // complex and in that case we bail out with success. To completely match
     // the LLVM IR logic it would be necessary to implement proper alias and
@@ -4064,28 +4095,9 @@ void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
-                           Value cond,
-                           ArrayRef<llvm::OperandBundleDefT<Value>> opBundles) {
-  SmallVector<ValueRange> opBundleOperands;
-  SmallVector<Attribute> opBundleTags;
-  opBundleOperands.reserve(opBundles.size());
-  opBundleTags.reserve(opBundles.size());
-
-  for (const llvm::OperandBundleDefT<Value> &bundle : opBundles) {
-    opBundleOperands.emplace_back(bundle.inputs());
-    opBundleTags.push_back(
-        StringAttr::get(builder.getContext(), bundle.getTag()));
-  }
-
-  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
-  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
-}
-
-void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
                            Value cond, llvm::StringRef tag, ValueRange args) {
-  llvm::OperandBundleDefT<Value> opBundle(
-      tag.str(), SmallVector<Value>(args.begin(), args.end()));
-  return build(builder, state, cond, opBundle);
+  return build(builder, state, cond, ArrayRef<ValueRange>(args),
+               builder.getStrArrayAttr(tag));
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
@@ -4134,6 +4146,32 @@ LogicalResult LLVM::masked_scatter::verify() {
     return emitOpError("expected operand #2 type to be ")
            << expectedPtrsVectorType;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// masked_expandload (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
+                                    mlir::TypeRange resTys, Value ptr,
+                                    Value mask, Value passthru,
+                                    uint64_t align) {
+  ArrayAttr argAttrs = getLLVMAlignParamForCompressExpand(builder, true, align);
+  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+// masked_compressstore (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_compressstore::build(OpBuilder &builder,
+                                       OperationState &state, Value value,
+                                       Value ptr, Value mask, uint64_t align) {
+  ArrayAttr argAttrs =
+      getLLVMAlignParamForCompressExpand(builder, false, align);
+  build(builder, state, value, ptr, mask, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//

@@ -60,7 +60,6 @@ write_lit_config("lit_site_cfg") {
     "CLANG_VENDOR_UTI=org.llvm.clang",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
-    "LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",

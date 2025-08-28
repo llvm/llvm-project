@@ -118,10 +118,11 @@ if config.flang_standalone_build:
                 "PATH", config.flang_llvm_tools_dir, append_path=True
             )
 
-# On MacOS, -isysroot is needed to build binaries.
+# On MacOS, some tests need -isysroot to build binaries.
 isysroot_flag = []
 if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
+config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
 # Check for DEFAULT_SYSROOT, because when it is set -isysroot has no effect.
 if config.default_sysroot:
@@ -171,7 +172,7 @@ tools = [
     ToolSubst(
         "%flang",
         command=FindTool("flang"),
-        extra_args=isysroot_flag + extra_intrinsics_search_args,
+        extra_args=extra_intrinsics_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
@@ -215,6 +216,11 @@ if config.flang_standalone_build:
     )
 else:
     llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
+
+llvm_config.use_clang(required=False)
+
+# Clang may need the include path for ISO_fortran_binding.h.
+config.substitutions.append(("%flang_include", config.flang_headers_dir))
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")

@@ -466,7 +466,7 @@ private:
 
     EmitCode(Abbrev);
 
-    unsigned i = 0, e = static_cast<unsigned>(Abbv->getNumOperandInfos());
+    unsigned i = 0, e = Abbv->getNumOperandInfos();
     if (Code) {
       assert(e && "Expected non-empty abbreviation");
       const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i++);
@@ -632,8 +632,7 @@ private:
   void EncodeAbbrev(const BitCodeAbbrev &Abbv) {
     EmitCode(bitc::DEFINE_ABBREV);
     EmitVBR(Abbv.getNumOperandInfos(), 5);
-    for (unsigned i = 0, e = static_cast<unsigned>(Abbv.getNumOperandInfos());
-         i != e; ++i) {
+    for (unsigned i = 0, e = Abbv.getNumOperandInfos(); i != e; ++i) {
       const BitCodeAbbrevOp &Op = Abbv.getOperandInfo(i);
       Emit(Op.isLiteral(), 1);
       if (Op.isLiteral()) {

@@ -29,7 +29,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 
 static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAs<RecordType>())
-    if (const RecordDecl *Decl = Record->getDecl())
+    if (const RecordDecl *Decl = Record->getOriginalDecl())
       return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
@@ -89,17 +89,6 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
   return LockGuardGroups;
 }
 
-static TemplateSpecializationTypeLoc
-getTemplateLockGuardTypeLoc(const TypeSourceInfo *SourceInfo) {
-  const TypeLoc Loc = SourceInfo->getTypeLoc();
-
-  const auto ElaboratedLoc = Loc.getAs<ElaboratedTypeLoc>();
-  if (!ElaboratedLoc)
-    return {};
-
-  return ElaboratedLoc.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-}
-
 // Find the exact source range of the 'lock_guard' token
 static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
   const TypeLoc LockGuardTypeLoc = SourceInfo->getTypeLoc();
@@ -110,7 +99,7 @@ static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 // Find the exact source range of the 'lock_guard' name token
 static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
   const TemplateSpecializationTypeLoc TemplateLoc =
-      getTemplateLockGuardTypeLoc(SourceInfo);
+      SourceInfo->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   if (!TemplateLoc)
     return {};
 
@@ -136,11 +125,11 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   const auto LockGuardClassDecl =
       namedDecl(hasName("lock_guard"), isInStdNamespace());
 
-  const auto LockGuardType = qualType(anyOf(
-      hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(LockGuardClassDecl))),
-      elaboratedType(namesType(hasUnqualifiedDesugaredType(
-          templateSpecializationType(hasDeclaration(LockGuardClassDecl)))))));
+  const auto LockGuardType =
+      qualType(anyOf(hasUnqualifiedDesugaredType(
+                         recordType(hasDeclaration(LockGuardClassDecl))),
+                     hasUnqualifiedDesugaredType(templateSpecializationType(
+                         hasDeclaration(LockGuardClassDecl)))));
 
   const auto LockVarDecl = varDecl(hasType(LockGuardType));
 
@@ -165,18 +154,16 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
     Finder->addMatcher(typedefDecl(unless(isExpansionInSystemHeader()),
-                                   hasUnderlyingType(LockGuardType))
+                                   hasType(hasUnderlyingType(LockGuardType)))
                            .bind("lock-guard-typedef"),
                        this);
 
     // Match 'using Lock = std::lock_guard<std::mutex>'
-    Finder->addMatcher(
-        typeAliasDecl(
-            unless(isExpansionInSystemHeader()),
-            hasType(elaboratedType(namesType(templateSpecializationType(
-                hasDeclaration(LockGuardClassDecl))))))
-            .bind("lock-guard-using-alias"),
-        this);
+    Finder->addMatcher(typeAliasDecl(unless(isExpansionInSystemHeader()),
+                                     hasType(templateSpecializationType(
+                                         hasDeclaration(LockGuardClassDecl))))
+                           .bind("lock-guard-using-alias"),
+                       this);
 
     // Match 'using std::lock_guard'
     Finder->addMatcher(
@@ -288,8 +275,8 @@ void UseScopedLockCheck::diagOnSourceInfo(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   const TypeLoc TL = LockGuardSourceInfo->getTypeLoc();
 
-  if (const auto ElaboratedTL = TL.getAs<ElaboratedTypeLoc>()) {
-    auto Diag = diag(ElaboratedTL.getBeginLoc(), UseScopedLockMessage);
+  if (const auto TTL = TL.getAs<TemplateSpecializationTypeLoc>()) {
+    auto Diag = diag(TTL.getBeginLoc(), UseScopedLockMessage);
 
     const SourceRange LockGuardRange =
         getLockGuardNameRange(LockGuardSourceInfo);

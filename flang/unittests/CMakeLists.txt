@@ -12,6 +12,9 @@ set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang/Tests")
 
 function(add_flang_unittest test_dirname)
   add_unittest(FlangUnitTests ${test_dirname} ${ARGN})
+  if (FLANG_PARALLEL_COMPILE_JOBS)
+    set_property(TARGET ${test_dirname} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)
+  endif ()
 endfunction()
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
@@ -35,6 +38,9 @@ function(add_flang_nongtest_unittest test_name)
 
   add_executable(${test_name}${suffix} "${test_filepath}")
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang/Tests/Unit")
+  if (FLANG_PARALLEL_COMPILE_JOBS)
+    set_property(TARGET ${test_name}${suffix} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)
+  endif ()
 
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(llvm_libs LLVM)
