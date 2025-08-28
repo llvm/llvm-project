@@ -14,9 +14,7 @@
 ;  - A header-local bitcast i32 -> <4 x i8> exists and feeds the vector add.
 ;  - The loopexit produces a bitcast <4 x i8> -> i32 for the backedge.
 
-target triple = "amdgcn-amd-amdhsa"
-
-define amdgpu_kernel void @lro_coerce_v4i8_phi(i8* nocapture %p, i32 %n) #0 {
+define amdgpu_kernel void @lro_coerce_v4i8_phi(ptr nocapture %p, i32 %n) {
 entry:
   br label %loop
 
@@ -53,8 +51,6 @@ loop:
 exit:
   ret void
 }
-
-attributes #0 = { "target-cpu"="gfx90a" }
 
 ; CHECK-LABEL: define amdgpu_kernel void @lro_coerce_v4i8_phi(
 ; CHECK: loop:
