@@ -5869,9 +5869,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::call_preallocated_setup: {
-    auto *NumArgs = dyn_cast<ConstantInt>(Call.getArgOperand(0));
-    Check(NumArgs != nullptr,
-          "llvm.call.preallocated.setup argument must be a constant");
+    auto *NumArgs = cast<ConstantInt>(Call.getArgOperand(0));
     bool FoundCall = false;
     for (User *U : Call.users()) {
       auto *UseCall = dyn_cast<CallBase>(U);
@@ -5879,9 +5877,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "Uses of llvm.call.preallocated.setup must be calls");
       Intrinsic::ID IID = UseCall->getIntrinsicID();
       if (IID == Intrinsic::call_preallocated_arg) {
-        auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
-        Check(AllocArgIndex != nullptr,
-              "llvm.call.preallocated.alloc arg index must be a constant");
+        auto *AllocArgIndex = cast<ConstantInt>(UseCall->getArgOperand(1));
         auto AllocArgIndexInt = AllocArgIndex->getValue();
         Check(AllocArgIndexInt.sge(0) &&
                   AllocArgIndexInt.slt(NumArgs->getValue()),
