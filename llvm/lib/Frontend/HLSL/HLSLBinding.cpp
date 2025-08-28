@@ -131,37 +131,6 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   return Info;
 }
 
-BoundRegs BindingInfoBuilder::calculateBoundRegs(
-    llvm::function_ref<void(const BindingInfoBuilder &Builder,
-                            const Binding &Overlapping)>
-        ReportOverlap) {
-  // sort all the collected bindings
-  llvm::stable_sort(Bindings);
-
-  // remove duplicates
-  Binding *NewEnd = llvm::unique(Bindings);
-  if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd, Bindings.end());
-
-  if (Bindings.size() < 2)
-    return BoundRegs(std::move(Bindings));
-
-  for (auto Curr = Bindings.begin() + 1, End = Bindings.end(); Curr != End;
-       ++Curr) {
-    const Binding *Prev = Curr - 1;
-    if (Curr->Space != Prev->Space || Curr->RC != Prev->RC)
-      continue;
-
-    if (std::max(Curr->LowerBound, Prev->LowerBound) <=
-        std::min(Curr->UpperBound, Prev->UpperBound)) {
-      ReportOverlap(*this, *Curr);
-      continue;
-    }
-  }
-
-  return BoundRegs(std::move(Bindings));
-}
-
 const Binding &
 BindingInfoBuilder::findOverlapping(const Binding &ReportedBinding) const {
   for (const Binding &Other : Bindings)
