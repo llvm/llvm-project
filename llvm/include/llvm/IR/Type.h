@@ -25,6 +25,7 @@
 #include <iterator>
 
 namespace llvm {
+
 class IntegerType;
 struct fltSemantics;
 class LLVMContext;

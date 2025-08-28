@@ -8,6 +8,7 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -270,8 +271,10 @@ static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
   }
 }
 
-static void phiNodeReplacement(IntrinsicInst *II) {
-  SmallVector<Instruction *> DeadInsts;
+static void phiNodeReplacement(IntrinsicInst *II,
+                               SmallVector<Instruction *> &PrevBBDeadInsts,
+                               SetVector<BasicBlock *> &DeadBB) {
+  SmallVector<Instruction *> CurrBBDeadInsts;
   for (User *U : II->users()) {
     auto *Phi = dyn_cast<PHINode>(U);
     if (!Phi)
@@ -280,23 +283,29 @@ static void phiNodeReplacement(IntrinsicInst *II) {
     IRBuilder<> Builder(Phi);
     SmallVector<Instruction *> UsesInBlock;
     collectBlockUseDef(Phi, UsesInBlock);
+    bool HasReturnUse = isa<ReturnInst>(UsesInBlock[UsesInBlock.size() - 1]);
 
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I < E; I++) {
       auto *CurrIncomingBB = Phi->getIncomingBlock(I);
       phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
+      if (HasReturnUse)
+        PrevBBDeadInsts.push_back(&CurrIncomingBB->back());
     }
 
-    DeadInsts.push_back(Phi);
+    CurrBBDeadInsts.push_back(Phi);
 
     for (Instruction *I : UsesInBlock) {
-      DeadInsts.push_back(I);
+      CurrBBDeadInsts.push_back(I);
+    }
+    if (HasReturnUse) {
+      BasicBlock *PhiBB = Phi->getParent();
+      DeadBB.insert(PhiBB);
     }
   }
-
   // Traverse the now-dead instructions in RPO and remove them.
-  for (Instruction *Dead : llvm::reverse(DeadInsts))
+  for (Instruction *Dead : llvm::reverse(CurrBBDeadInsts))
     Dead->eraseFromParent();
-  DeadInsts.clear();
+  CurrBBDeadInsts.clear();
 }
 
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
@@ -342,11 +351,13 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
-  for (BasicBlock &BB : F) {
+  SetVector<BasicBlock *> DeadBB;
+  SmallVector<Instruction *> PrevBBDeadInsts;
+  for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : make_early_inc_range(BB))
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
-          phiNodeReplacement(II);
+          phiNodeReplacement(II, PrevBBDeadInsts, DeadBB);
 
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
@@ -355,6 +366,12 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
   }
+  for (auto *Dead : PrevBBDeadInsts)
+    Dead->eraseFromParent();
+  PrevBBDeadInsts.clear();
+  for (auto *Dead : DeadBB)
+    Dead->eraseFromParent();
+  DeadBB.clear();
 
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);
