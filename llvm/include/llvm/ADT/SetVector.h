@@ -377,17 +377,7 @@ private:
 template <typename T, unsigned N>
 class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
-  SmallSetVector() = default;
-
-  /// Initialize a SmallSetVector with a range of elements
-  template<typename It>
-  SmallSetVector(It Start, It End) {
-    this->insert(Start, End);
-  }
-
-  template <typename Range>
-  SmallSetVector(llvm::from_range_t, Range &&R)
-      : SmallSetVector(adl_begin(R), adl_end(R)) {}
+  using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;
 };
 
 } // end namespace llvm
