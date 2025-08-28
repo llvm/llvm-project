@@ -131,8 +131,8 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   return Info;
 }
 
-const Binding &
-BindingInfoBuilder::findOverlapping(const Binding &ReportedBinding) const {
+const Binding &BindingInfoBuilder::findOverlapping(
+    const Binding &ReportedBinding) const {
   for (const Binding &Other : Bindings)
     if (ReportedBinding.LowerBound <= Other.UpperBound &&
         Other.LowerBound <= ReportedBinding.UpperBound)

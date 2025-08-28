@@ -113,17 +113,16 @@ struct Binding {
         Cookie(Cookie) {}
 
   bool isUnbounded() const { return UpperBound == ~0U; }
-
   bool operator==(const Binding &RHS) const {
     return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+            std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
                     RHS.Cookie);
   }
   bool operator!=(const Binding &RHS) const { return !(*this == RHS); }
 
   bool operator<(const Binding &RHS) const {
     return std::tie(RC, Space, LowerBound) <
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
+            std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
   }
 };
 class BoundRegs {
