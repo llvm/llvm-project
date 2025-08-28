@@ -27,7 +27,7 @@ end
 subroutine ichar_tests()
   integer, parameter :: a1 = ichar('B')
   !WARNING: Character in intrinsic function ichar should have length one [-Wportability]
-  integer, parameter :: a = ichar('B ')
+  integer, parameter :: a2 = ichar('B ')
   !ERROR: Character in intrinsic function ichar must have length one
   !ERROR: Must be a constant value
   integer, parameter :: a3 = ichar('')
