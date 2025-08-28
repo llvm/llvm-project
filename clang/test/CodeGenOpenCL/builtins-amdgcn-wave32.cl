@@ -24,6 +24,13 @@ void test_ballot_wave32_target_attr(global uint* out, int a, int b)
   *out = __builtin_amdgcn_ballot_w32(a == b);
 }
 
+// CHECK-LABEL: @test_inverse_ballot_wave32(
+// CHECK: call i1 @llvm.amdgcn.inverse.ballot.i32(i32 %{{.+}})
+void test_inverse_ballot_wave32(global bool* out, int a)
+{
+  *out = __builtin_amdgcn_inverse_ballot_w32(a);
+}
+
 // CHECK-LABEL: @test_read_exec(
 // CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 true)
 void test_read_exec(global uint* out) {

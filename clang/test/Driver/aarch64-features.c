@@ -45,7 +45,7 @@
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-OFF %s
 
 // RUN: %clang --target=aarch64-unknown-openbsd -rtlib=compiler-rt \
-// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-OFF %s
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s
 
 // RUN: %clang --target=aarch64-linux-gnu -rtlib=libgcc \
 // RUN: --gcc-toolchain=%S/Inputs/aarch64-linux-gnu-tree/gcc-10 \

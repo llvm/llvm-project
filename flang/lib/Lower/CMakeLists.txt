@@ -60,6 +60,7 @@ add_flang_library(FortranLower
   FortranParser
   FortranEvaluate
   FortranSemantics
+  FortranUtils
 
   LINK_COMPONENTS
   Support

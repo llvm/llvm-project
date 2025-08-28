@@ -367,6 +367,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // Retrieve properties from the plugin interface
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
+  case OL_DEVICE_INFO_PRODUCT_NAME:
   case OL_DEVICE_INFO_VENDOR:
   case OL_DEVICE_INFO_DRIVER_VERSION: {
     // String values
@@ -437,6 +438,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_TYPE:
     return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
   case OL_DEVICE_INFO_NAME:
+    return Info.writeString("Virtual Host Device");
+  case OL_DEVICE_INFO_PRODUCT_NAME:
     return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_VENDOR:
     return Info.writeString("Liboffload");

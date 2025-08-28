@@ -37,21 +37,12 @@ class NeverCanonical {}
 /// canonical types can ignore these nodes.
 class NeverCanonicalUnlessDependent {}
 
-/// A type node which never has component type structure.  Some code may be
-/// able to operate on leaf types faster than they can on non-leaf types.
-///
-/// For example, the function type `void (int)` is not a leaf type because it
-/// is structurally composed of component types (`void` and `int`).
-///
-/// A struct type is a leaf type because its field types are not part of its
-/// type-expression.
-///
-/// Nodes like `TypedefType` which are syntactically leaves but can desugar
-/// to types that may not be leaves should not declare this.
-class LeafType {}
+/// A type node which is always a canonical type, that is, types for which
+/// `T.getCanonicalType() == T` always holds.
+class AlwaysCanonical {}
 
 def Type : TypeNode<?, 1>;
-def BuiltinType : TypeNode<Type>, LeafType;
+def BuiltinType : TypeNode<Type>, AlwaysCanonical;
 def ComplexType : TypeNode<Type>;
 def PointerType : TypeNode<Type>;
 def BlockPointerType : TypeNode<Type>;
@@ -88,14 +79,14 @@ def TypeOfType : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def DecltypeType : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def UnaryTransformType : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def TagType : TypeNode<Type, 1>;
-def RecordType : TypeNode<TagType>, LeafType;
-def EnumType : TypeNode<TagType>, LeafType;
-def InjectedClassNameType : TypeNode<TagType>, AlwaysDependent, LeafType;
+def RecordType : TypeNode<TagType>;
+def EnumType : TypeNode<TagType>;
+def InjectedClassNameType : TypeNode<TagType>, AlwaysDependent;
 def AttributedType : TypeNode<Type>, NeverCanonical;
 def BTFTagAttributedType : TypeNode<Type>, NeverCanonical;
 def HLSLAttributedResourceType : TypeNode<Type>;
 def HLSLInlineSpirvType : TypeNode<Type>;
-def TemplateTypeParmType : TypeNode<Type>, AlwaysDependent, LeafType;
+def TemplateTypeParmType : TypeNode<Type>, AlwaysDependent;
 def SubstTemplateTypeParmType : TypeNode<Type>, NeverCanonical;
 def SubstPackType : TypeNode<Type, 1>;
 def SubstTemplateTypeParmPackType : TypeNode<SubstPackType>, AlwaysDependent;
@@ -110,7 +101,7 @@ def PackExpansionType : TypeNode<Type>, AlwaysDependent;
 def PackIndexingType  : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def ObjCTypeParamType : TypeNode<Type>, NeverCanonical;
 def ObjCObjectType : TypeNode<Type>;
-def ObjCInterfaceType : TypeNode<ObjCObjectType>, LeafType;
+def ObjCInterfaceType : TypeNode<ObjCObjectType>, AlwaysCanonical;
 def ObjCObjectPointerType : TypeNode<Type>;
 def BoundsAttributedType : TypeNode<Type, 1>;
 def CountAttributedType : TypeNode<BoundsAttributedType>, NeverCanonical;

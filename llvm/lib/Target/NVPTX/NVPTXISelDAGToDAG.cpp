@@ -170,6 +170,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case NVPTXISD::ATOMIC_CMP_SWAP_B128:
+  case NVPTXISD::ATOMIC_SWAP_B128:
+    selectAtomicSwap128(N);
+    return;
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
@@ -2336,4 +2340,29 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   }
   }
+}
+
+void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
+  MemSDNode *AN = cast<MemSDNode>(N);
+  SDLoc dl(N);
+
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  SmallVector<SDValue, 5> Ops{Base, Offset};
+  Ops.append(N->op_begin() + 2, N->op_end());
+  Ops.append({
+      getI32Imm(getMemOrder(AN), dl),
+      getI32Imm(getAtomicScope(AN), dl),
+      getI32Imm(getAddrSpace(AN), dl),
+  });
+
+  assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||
+         N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128);
+  unsigned Opcode = N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128
+                        ? NVPTX::ATOM_EXCH_B128
+                        : NVPTX::ATOM_CAS_B128;
+
+  auto *ATOM = CurDAG->getMachineNode(Opcode, dl, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
+
+  ReplaceNode(N, ATOM);
 }

@@ -22,11 +22,9 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-NEXT:    cbz w0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %use_b
 ; CHECK-NEXT:    fmov s1, #4.00000000
@@ -34,10 +32,8 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:    b .LBB1_5
 ; CHECK-NEXT:  .LBB1_2: // %use_c
 ; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -115,20 +111,18 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, x9
 ; CHECK-NEXT:    b.le .LBB2_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-NEXT:    cbz w0, .LBB2_5
 ; CHECK-NEXT:  // %bb.4: // %use_b
 ; CHECK-NEXT:    fmov s1, #4.00000000
@@ -136,10 +130,8 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    b .LBB2_8
 ; CHECK-NEXT:  .LBB2_5: // %use_c
 ; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0

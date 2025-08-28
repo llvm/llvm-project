@@ -574,6 +574,9 @@ public:
     const clang::CXXRecordDecl *vtableClass;
   };
 
+  using VisitedVirtualBasesSetTy =
+      llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>;
+
   using VPtrsVector = llvm::SmallVector<VPtr, 4>;
   VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
   void getVTablePointers(clang::BaseSubobject base,
@@ -581,7 +584,7 @@ public:
                          clang::CharUnits offsetFromNearestVBase,
                          bool baseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *vtableClass,
-                         VPtrsVector &vptrs);
+                         VisitedVirtualBasesSetTy &vbases, VPtrsVector &vptrs);
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);

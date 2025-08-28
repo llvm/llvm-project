@@ -1302,7 +1302,7 @@ def OpenACC_ReductionRecipeOp
 
   let description = [{
     Declares an OpenACC reduction recipe. The operation requires two
-    mandatory regions.
+    mandatory regions and one optional region.
 
       1. The initializer region specifies how to initialize the local reduction
          value. The region has a first argument that contains the value of the
@@ -1313,6 +1313,8 @@ def OpenACC_ReductionRecipeOp
          values of the reduction type into one. It has at least two arguments
          and it is expected to `acc.yield` the combined value. Extra arguments
          can be added to deal with dynamic arrays.
+      3. The optional destroy region specifies how to destruct the value when it
+         reaches its end of life. It takes the reduction value as argument.
 
     Example:
 
@@ -1329,6 +1331,10 @@ def OpenACC_ReductionRecipeOp
       // two values into one.
       %2 = arith.addi %0, %1 : i64
       acc.yield %2 : i64
+    } destroy {
+    ^bb0(%0: i64)
+      // destroy region contains a sequence of operations to destruct the
+      // created copy.
     }
 
     // The reduction symbol is then used in the corresponding operation.
@@ -1362,12 +1368,14 @@ def OpenACC_ReductionRecipeOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
 
   let regions = (region AnyRegion:$initRegion,
-                        AnyRegion:$combinerRegion);
+                        AnyRegion:$combinerRegion,
+                        AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
     $sym_name `:` $type attr-dict-with-keyword
     `reduction_operator` $reductionOperator
     `init` $initRegion `combiner` $combinerRegion
+    (`destroy` $destroyRegion^)?
   }];
 
   let hasRegionVerifier = 1;

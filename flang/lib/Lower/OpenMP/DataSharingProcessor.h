@@ -126,7 +126,8 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps);
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                 std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -167,7 +168,8 @@ public:
   // Step2 performs the copying for lastprivates and requires knowledge of the
   // MLIR operation to insert the last private update. Step2 adds
   // dealocation code as well.
-  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
+  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+                    std::optional<llvm::omp::Directive> dir = std::nullopt);
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
@@ -184,7 +186,8 @@ public:
   }
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       mlir::omp::PrivateClauseOps *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps,
+                       std::optional<llvm::omp::Directive> dir = std::nullopt);
 };
 
 } // namespace omp

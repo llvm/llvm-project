@@ -442,8 +442,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // assume that each recipe that has in-loop users starts an interval. We
   // record every time that an in-loop value is used, so we have a list of the
   // first and last occurrences of each recipe.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getVectorLoopRegion());
+      LoopRegion);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     if (!VPBB->getParent())
       break;
@@ -473,10 +474,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         Ends.insert(DefR);
       }
     }
-    if (VPBB == Plan.getVectorLoopRegion()->getExiting()) {
+    if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
         if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
           EndPoint[&R] = Idx2Recipe.size();
           Ends.insert(&R);

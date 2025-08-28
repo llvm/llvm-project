@@ -963,7 +963,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::string dialectNamespace, std::string typeData,
+        [](const std::string &dialectNamespace, const std::string &typeData,
            DefaultingPyMlirContext context) {
           MlirType type = mlirOpaqueTypeGet(context->get(),
                                             toMlirStringRef(dialectNamespace),

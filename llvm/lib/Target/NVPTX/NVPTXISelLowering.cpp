@@ -702,56 +702,65 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
-  // Turn FP extload into load/fpextend
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
-  // Turn FP truncstore into trunc + store.
-  // FIXME: vector types should also be expanded
-  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
-  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
-  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
-  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
-  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
-  setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
-  setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Expand);
+  // FP extload/truncstore is not legal in PTX. We need to expand all these.
+  for (auto FloatVTs :
+       {MVT::fp_valuetypes(), MVT::fp_fixedlen_vector_valuetypes()}) {
+    for (MVT ValVT : FloatVTs) {
+      for (MVT MemVT : FloatVTs) {
+        setLoadExtAction(ISD::EXTLOAD, ValVT, MemVT, Expand);
+        setTruncStoreAction(ValVT, MemVT, Expand);
+      }
+    }
+  }
+
+  // To improve CodeGen we'll legalize any-extend loads to zext loads. This is
+  // how they'll be lowered in ISel anyway, and by doing this a little earlier
+  // we allow for more DAG combine opportunities.
+  for (auto IntVTs :
+       {MVT::integer_valuetypes(), MVT::integer_fixedlen_vector_valuetypes()})
+    for (MVT ValVT : IntVTs)
+      for (MVT MemVT : IntVTs)
+        if (isTypeLegal(ValVT))
+          setLoadExtAction(ISD::EXTLOAD, ValVT, MemVT, Custom);
 
   // PTX does not support load / store predicate registers
-  setOperationAction(ISD::LOAD, MVT::i1, Custom);
-  setOperationAction(ISD::STORE, MVT::i1, Custom);
-
+  setOperationAction({ISD::LOAD, ISD::STORE}, MVT::i1, Custom);
   for (MVT VT : MVT::integer_valuetypes()) {
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}, VT, MVT::i1,
+                     Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
+
+  // Disable generations of extload/truncstore for v2i16/v2i8. The generic
+  // expansion for these nodes when they are unaligned is incorrect if the
+  // type is a vector.
+  //
+  // TODO: Fix the generic expansion for these nodes found in
+  //       TargetLowering::expandUnalignedLoad/Store.
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
+                   MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
+
+  // Register custom handling for illegal type loads/stores. We'll try to custom
+  // lower almost all illegal types and logic in the lowering will discard cases
+  // we can't handle.
+  setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::i128, MVT::f128}, Custom);
+  for (MVT VT : MVT::fixedlen_vector_valuetypes())
+    if (!isTypeLegal(VT) && VT.getStoreSizeInBits() <= 256)
+      setOperationAction({ISD::STORE, ISD::LOAD}, VT, Custom);
+
+  // Custom legalization for LDU intrinsics.
+  // TODO: The logic to lower these is not very robust and we should rewrite it.
+  //       Perhaps LDU should not be represented as an intrinsic at all.
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
+  for (MVT VT : MVT::fixedlen_vector_valuetypes())
+    if (IsPTXVectorType(VT))
+      setOperationAction(ISD::INTRINSIC_W_CHAIN, VT, Custom);
 
   setCondCodeAction({ISD::SETNE, ISD::SETEQ, ISD::SETUGE, ISD::SETULE,
                      ISD::SETUGT, ISD::SETULT, ISD::SETGT, ISD::SETLT,
                      ISD::SETGE, ISD::SETLE},
                     MVT::i1, Expand);
-
-  // expand extload of vector of integers.
-  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::v2i16,
-                   MVT::v2i8, Expand);
-  setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
 
   // This is legal in NVPTX
   setOperationAction(ISD::ConstantFP, MVT::f64, Legal);
@@ -767,23 +776,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // DEBUGTRAP can be lowered to PTX brkpt
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
-  // Register custom handling for vector loads/stores
-  for (MVT VT : MVT::fixedlen_vector_valuetypes())
-    if (IsPTXVectorType(VT))
-      setOperationAction({ISD::LOAD, ISD::STORE, ISD::INTRINSIC_W_CHAIN}, VT,
-                         Custom);
-
-  setOperationAction({ISD::LOAD, ISD::STORE, ISD::INTRINSIC_W_CHAIN},
-                     {MVT::i128, MVT::f128}, Custom);
-
   // Support varargs.
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VAARG, MVT::Other, Custom);
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
-
-  // Custom handling for i8 intrinsics
-  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
   setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
                      {MVT::i16, MVT::i32, MVT::i64}, Legal);
@@ -1039,7 +1036,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
-  // No FPOW or FREM in PTX.
+
+  // atom.b128 is legal in PTX but since we don't represent i128 as a legal
+  // type, we need to custom lower it.
+  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
+                     Custom);
 
   // Now deduce the information based on the above mentioned
   // actions
@@ -1047,7 +1048,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
-  setMaxAtomicSizeInBitsSupported(64);
+  setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands
@@ -1080,6 +1081,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case NVPTXISD::FIRST_NUMBER:
     break;
 
+    MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
     MAKE_CASE(NVPTXISD::RET_GLUE)
     MAKE_CASE(NVPTXISD::DeclareArrayParam)
     MAKE_CASE(NVPTXISD::DeclareScalarParam)
@@ -3092,39 +3095,14 @@ static void replaceLoadVector(SDNode *N, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &Results,
                               const NVPTXSubtarget &STI);
 
-SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
-  if (Op.getValueType() == MVT::i1)
-    return LowerLOADi1(Op, DAG);
-
-  EVT VT = Op.getValueType();
-
-  if (NVPTX::isPackedVectorTy(VT)) {
-    // v2f32/v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to
-    // handle unaligned loads and have to handle it here.
-    LoadSDNode *Load = cast<LoadSDNode>(Op);
-    EVT MemVT = Load->getMemoryVT();
-    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                        MemVT, *Load->getMemOperand())) {
-      SDValue Ops[2];
-      std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
-      return DAG.getMergeValues(Ops, SDLoc(Op));
-    }
-  }
-
-  return SDValue();
-}
-
 // v = ld i1* addr
 //   =>
 // v1 = ld i8* addr (-> i16)
 // v = trunc i16 to i1
-SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
-  SDNode *Node = Op.getNode();
-  LoadSDNode *LD = cast<LoadSDNode>(Node);
-  SDLoc dl(Node);
+static SDValue lowerLOADi1(LoadSDNode *LD, SelectionDAG &DAG) {
+  SDLoc dl(LD);
   assert(LD->getExtensionType() == ISD::NON_EXTLOAD);
-  assert(Node->getValueType(0) == MVT::i1 &&
-         "Custom lowering for i1 load only");
+  assert(LD->getValueType(0) == MVT::i1 && "Custom lowering for i1 load only");
   SDValue newLD = DAG.getExtLoad(ISD::ZEXTLOAD, dl, MVT::i16, LD->getChain(),
                                  LD->getBasePtr(), LD->getPointerInfo(),
                                  MVT::i8, LD->getAlign(),
@@ -3133,8 +3111,27 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
   // The legalizer (the caller) is expecting two values from the legalized
   // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()
   // in LegalizeDAG.cpp which also uses MergeValues.
-  SDValue Ops[] = { result, LD->getChain() };
-  return DAG.getMergeValues(Ops, dl);
+  return DAG.getMergeValues({result, LD->getChain()}, dl);
+}
+
+SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
+  LoadSDNode *LD = cast<LoadSDNode>(Op);
+
+  if (Op.getValueType() == MVT::i1)
+    return lowerLOADi1(LD, DAG);
+
+  // To improve CodeGen we'll legalize any-extend loads to zext loads. This is
+  // how they'll be lowered in ISel anyway, and by doing this a little earlier
+  // we allow for more DAG combine opportunities.
+  if (LD->getExtensionType() == ISD::EXTLOAD) {
+    assert(LD->getValueType(0).isInteger() && LD->getMemoryVT().isInteger() &&
+           "Unexpected fpext-load");
+    return DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(Op), Op.getValueType(),
+                          LD->getChain(), LD->getBasePtr(), LD->getMemoryVT(),
+                          LD->getMemOperand());
+  }
+
+  llvm_unreachable("Unexpected custom lowering for load");
 }
 
 SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
@@ -3143,17 +3140,6 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT == MVT::i1)
     return LowerSTOREi1(Op, DAG);
-
-  // v2f32/v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to
-  // handle unaligned stores and have to handle it here.
-  if (NVPTX::isPackedVectorTy(VT) &&
-      !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                      VT, *Store->getMemOperand()))
-    return expandUnalignedStore(Store, DAG);
-
-  // v2f16/v2bf16/v2i16 don't need special handling.
-  if (NVPTX::isPackedVectorTy(VT) && VT.is32BitVector())
-    return SDValue();
 
   // Lower store of any other vector type, including v2f32 as we want to break
   // it apart since this is not a widely-supported type.
@@ -4010,14 +3996,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
-    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    if (Intrinsic == Intrinsic::nvvm_ldu_global_i)
-      Info.memVT = getValueType(DL, I.getType());
-    else if(Intrinsic == Intrinsic::nvvm_ldu_global_p)
-      Info.memVT = getPointerTy(DL);
-    else
-      Info.memVT = getValueType(DL, I.getType());
+    Info.memVT = getValueType(I.getDataLayout(), I.getType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -6262,6 +6242,49 @@ static void replaceProxyReg(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Res);
 }
 
+static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
+                                 const NVPTXSubtarget &STI,
+                                 SmallVectorImpl<SDValue> &Results) {
+  assert(N->getValueType(0) == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  if (!STI.hasAtomSwap128()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "Support for b128 atomics introduced in PTX ISA version 8.3 and "
+        "requires target sm_90.",
+        dl.getDebugLoc()));
+
+    Results.push_back(DAG.getUNDEF(MVT::i128));
+    Results.push_back(AN->getOperand(0)); // Chain
+    return;
+  }
+
+  SmallVector<SDValue, 6> Ops;
+  Ops.push_back(AN->getOperand(0)); // Chain
+  Ops.push_back(AN->getOperand(1)); // Ptr
+  for (const auto &Op : AN->ops().drop_front(2)) {
+    // Low part
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Op,
+                              DAG.getIntPtrConstant(0, dl)));
+    // High part
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Op,
+                              DAG.getIntPtrConstant(1, dl)));
+  }
+  unsigned Opcode = N->getOpcode() == ISD::ATOMIC_SWAP
+                        ? NVPTXISD::ATOMIC_SWAP_B128
+                        : NVPTXISD::ATOMIC_CMP_SWAP_B128;
+  SDVTList Tys = DAG.getVTList(MVT::i64, MVT::i64, MVT::Other);
+  SDValue Result = DAG.getMemIntrinsicNode(Opcode, dl, Tys, Ops, MVT::i128,
+                                           AN->getMemOperand());
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128,
+                                {Result.getValue(0), Result.getValue(1)}));
+  Results.push_back(Result.getValue(2));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -6281,6 +6304,10 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case NVPTXISD::ProxyReg:
     replaceProxyReg(N, DAG, *this, Results);
+    return;
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_SWAP:
+    replaceAtomicSwap128(N, DAG, STI, Results);
     return;
   }
 }
@@ -6306,16 +6333,19 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
-  auto ITy = cast<llvm::IntegerType>(Ty);
+  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
   switch (AI->getOperation()) {
   default:
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::BinOp::Xchg:
+    if (BitWidth == 128)
+      return AtomicExpansionKind::None;
+    LLVM_FALLTHROUGH;
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:
-  case AtomicRMWInst::BinOp::Xchg:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
@@ -6324,6 +6354,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     case 64:
       if (STI.hasAtomBitwise64())
         return AtomicExpansionKind::None;
+      return AtomicExpansionKind::CmpXChg;
+    case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
@@ -6334,7 +6366,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
   case AtomicRMWInst::BinOp::UMin:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
@@ -6344,17 +6376,20 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       if (STI.hasAtomMinMax64())
         return AtomicExpansionKind::None;
       return AtomicExpansionKind::CmpXChg;
+    case 128:
+      return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
   case AtomicRMWInst::BinOp::UIncWrap:
   case AtomicRMWInst::BinOp::UDecWrap:
-    switch (ITy->getBitWidth()) {
+    switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
     case 8:
     case 16:
     case 64:
+    case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");

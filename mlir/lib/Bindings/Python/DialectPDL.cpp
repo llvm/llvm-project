@@ -8,8 +8,8 @@
 
 #include "mlir-c/Dialect/PDL.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace llvm;
@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectPDLSubmodule(const nanobind::module_ &m) {
+static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   //===-------------------------------------------------------------------===//
   // PDLType
   //===-------------------------------------------------------------------===//
@@ -32,7 +32,7 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
       mlir_type_subclass(m, "AttributeType", mlirTypeIsAPDLAttributeType);
   attributeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirPDLAttributeTypeGet(ctx));
       },
       "Get an instance of AttributeType in given context.", nb::arg("cls"),
@@ -46,7 +46,7 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
       mlir_type_subclass(m, "OperationType", mlirTypeIsAPDLOperationType);
   operationType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirPDLOperationTypeGet(ctx));
       },
       "Get an instance of OperationType in given context.", nb::arg("cls"),
@@ -59,7 +59,7 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto rangeType = mlir_type_subclass(m, "RangeType", mlirTypeIsAPDLRangeType);
   rangeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirType elementType) {
+      [](const nb::object &cls, MlirType elementType) {
         return cls(mlirPDLRangeTypeGet(elementType));
       },
       "Gets an instance of RangeType in the same context as the provided "
@@ -77,7 +77,7 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto typeType = mlir_type_subclass(m, "TypeType", mlirTypeIsAPDLTypeType);
   typeType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirPDLTypeTypeGet(ctx));
       },
       "Get an instance of TypeType in given context.", nb::arg("cls"),
@@ -90,7 +90,7 @@ void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   auto valueType = mlir_type_subclass(m, "ValueType", mlirTypeIsAPDLValueType);
   valueType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirPDLValueTypeGet(ctx));
       },
       "Get an instance of TypeType in given context.", nb::arg("cls"),

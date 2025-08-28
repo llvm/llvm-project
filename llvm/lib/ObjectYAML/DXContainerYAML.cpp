@@ -376,9 +376,9 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
   IO.mapRequired("Version", S.Version);
   IO.mapRequired("NumRootParameters", S.NumRootParameters);
-  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
+  IO.mapOptional("RootParametersOffset", S.RootParametersOffset, std::nullopt);
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
-  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+  IO.mapOptional("StaticSamplersOffset", S.StaticSamplersOffset, std::nullopt);
   IO.mapRequired("Parameters", S.Parameters.Locations, S);
   IO.mapOptional("Samplers", S.StaticSamplers);
 #define ROOT_SIGNATURE_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);

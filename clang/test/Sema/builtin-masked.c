@@ -5,12 +5,13 @@ typedef _Bool v8b __attribute__((ext_vector_type(8)));
 typedef _Bool v2b __attribute__((ext_vector_type(2)));
 typedef float v8f __attribute__((ext_vector_type(8)));
 
-void test_masked_load(v8i *pf, v8b mask, v2b mask2) {
+void test_masked_load(v8i *pf, v8b mask, v2b mask2, v2b thru) {
   (void)__builtin_masked_load(mask); // expected-error {{too few arguments to function call, expected 2, have 1}}
-  (void)__builtin_masked_load(mask, pf, pf); // expected-error {{too many arguments to function call, expected 2, have 3}}
+  (void)__builtin_masked_load(mask, pf, pf, pf); // expected-error {{too many arguments to function call, expected at most 3, have 4}}
   (void)__builtin_masked_load(mask2, pf); // expected-error {{all arguments to __builtin_masked_load must have the same number of elements}}
   (void)__builtin_masked_load(mask, mask); // expected-error {{2nd argument must be a pointer to vector}}
   (void)__builtin_masked_load(mask, (void *)0); // expected-error {{2nd argument must be a pointer to vector}}
+  (void)__builtin_masked_load(mask2, pf, thru); // expected-error {{3rd argument must be a 'v8i' (vector of 8 'int' values)}}
   (void)__builtin_masked_load(mask2, pf); // expected-error {{all arguments to __builtin_masked_load must have the same number of elements}}
 }
 

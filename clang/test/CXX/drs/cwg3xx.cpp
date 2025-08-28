@@ -1321,7 +1321,7 @@ namespace cwg381 { // cwg381: 2.7
   void f() {
     E e;
     e.B::a = 0;
-    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'cwg381::B':
+    /* expected-error@-1 {{ambiguous conversion from derived class 'E' to base class 'B':
     struct cwg381::E -> C -> B
     struct cwg381::E -> D -> B}} */
     F f;

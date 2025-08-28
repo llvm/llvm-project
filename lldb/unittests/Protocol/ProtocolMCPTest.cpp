@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ProtocolMCPTestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"
@@ -54,31 +55,16 @@ TEST(ProtocolMCPTest, Notification) {
   EXPECT_EQ(notification.params, deserialized_notification->params);
 }
 
-TEST(ProtocolMCPTest, ToolCapability) {
-  ToolCapability tool_capability;
-  tool_capability.listChanged = true;
+TEST(ProtocolMCPTest, ServerCapabilities) {
+  ServerCapabilities capabilities;
+  capabilities.supportsToolsList = true;
 
-  llvm::Expected<ToolCapability> deserialized_tool_capability =
-      roundtripJSON(tool_capability);
-  ASSERT_THAT_EXPECTED(deserialized_tool_capability, llvm::Succeeded());
-
-  EXPECT_EQ(tool_capability.listChanged,
-            deserialized_tool_capability->listChanged);
-}
-
-TEST(ProtocolMCPTest, Capabilities) {
-  ToolCapability tool_capability;
-  tool_capability.listChanged = true;
-
-  Capabilities capabilities;
-  capabilities.tools = tool_capability;
-
-  llvm::Expected<Capabilities> deserialized_capabilities =
+  llvm::Expected<ServerCapabilities> deserialized_capabilities =
       roundtripJSON(capabilities);
   ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
 
-  EXPECT_EQ(capabilities.tools.listChanged,
-            deserialized_capabilities->tools.listChanged);
+  EXPECT_EQ(capabilities.supportsToolsList,
+            deserialized_capabilities->supportsToolsList);
 }
 
 TEST(ProtocolMCPTest, TextContent) {
@@ -92,18 +78,18 @@ TEST(ProtocolMCPTest, TextContent) {
   EXPECT_EQ(text_content.text, deserialized_text_content->text);
 }
 
-TEST(ProtocolMCPTest, TextResult) {
+TEST(ProtocolMCPTest, CallToolResult) {
   TextContent text_content1;
   text_content1.text = "Text 1";
 
   TextContent text_content2;
   text_content2.text = "Text 2";
 
-  TextResult text_result;
+  CallToolResult text_result;
   text_result.content = {text_content1, text_content2};
   text_result.isError = true;
 
-  llvm::Expected<TextResult> deserialized_text_result =
+  llvm::Expected<CallToolResult> deserialized_text_result =
       roundtripJSON(text_result);
   ASSERT_THAT_EXPECTED(deserialized_text_result, llvm::Succeeded());
 
@@ -237,13 +223,13 @@ TEST(ProtocolMCPTest, ResourceWithoutOptionals) {
   EXPECT_TRUE(deserialized_resource->mimeType.empty());
 }
 
-TEST(ProtocolMCPTest, ResourceContents) {
-  ResourceContents contents;
+TEST(ProtocolMCPTest, TextResourceContents) {
+  TextResourceContents contents;
   contents.uri = "resource://example/content";
   contents.text = "This is the content of the resource";
   contents.mimeType = "text/plain";
 
-  llvm::Expected<ResourceContents> deserialized_contents =
+  llvm::Expected<TextResourceContents> deserialized_contents =
       roundtripJSON(contents);
   ASSERT_THAT_EXPECTED(deserialized_contents, llvm::Succeeded());
 
@@ -252,12 +238,12 @@ TEST(ProtocolMCPTest, ResourceContents) {
   EXPECT_EQ(contents.mimeType, deserialized_contents->mimeType);
 }
 
-TEST(ProtocolMCPTest, ResourceContentsWithoutMimeType) {
-  ResourceContents contents;
+TEST(ProtocolMCPTest, TextResourceContentsWithoutMimeType) {
+  TextResourceContents contents;
   contents.uri = "resource://example/content-no-mime";
   contents.text = "Content without mime type specified";
 
-  llvm::Expected<ResourceContents> deserialized_contents =
+  llvm::Expected<TextResourceContents> deserialized_contents =
       roundtripJSON(contents);
   ASSERT_THAT_EXPECTED(deserialized_contents, llvm::Succeeded());
 
@@ -266,21 +252,22 @@ TEST(ProtocolMCPTest, ResourceContentsWithoutMimeType) {
   EXPECT_TRUE(deserialized_contents->mimeType.empty());
 }
 
-TEST(ProtocolMCPTest, ResourceResult) {
-  ResourceContents contents1;
+TEST(ProtocolMCPTest, ReadResourceResult) {
+  TextResourceContents contents1;
   contents1.uri = "resource://example/content1";
   contents1.text = "First resource content";
   contents1.mimeType = "text/plain";
 
-  ResourceContents contents2;
+  TextResourceContents contents2;
   contents2.uri = "resource://example/content2";
   contents2.text = "Second resource content";
   contents2.mimeType = "application/json";
 
-  ResourceResult result;
+  ReadResourceResult result;
   result.contents = {contents1, contents2};
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ReadResourceResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   ASSERT_EQ(result.contents.size(), deserialized_result->contents.size());
@@ -296,10 +283,11 @@ TEST(ProtocolMCPTest, ResourceResult) {
             deserialized_result->contents[1].mimeType);
 }
 
-TEST(ProtocolMCPTest, ResourceResultEmpty) {
-  ResourceResult result;
+TEST(ProtocolMCPTest, ReadResourceResultEmpty) {
+  ReadResourceResult result;
 
-  llvm::Expected<ResourceResult> deserialized_result = roundtripJSON(result);
+  llvm::Expected<ReadResourceResult> deserialized_result =
+      roundtripJSON(result);
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   EXPECT_TRUE(deserialized_result->contents.empty());

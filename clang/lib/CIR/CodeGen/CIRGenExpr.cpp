@@ -1092,11 +1092,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    const auto *derivedClassTy =
-        e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl =
-        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    auto *derivedClassDecl = e->getSubExpr()->getType()->castAsCXXRecordDecl();
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1265,17 +1261,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Static:
   case SD_Thread: {
     CXXDestructorDecl *referenceTemporaryDtor = nullptr;
-    if (const clang::RecordType *rt = e->getType()
-                                          ->getBaseElementTypeUnsafe()
-                                          ->getAs<clang::RecordType>()) {
+    if (const auto *classDecl =
+            e->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+        classDecl && !classDecl->hasTrivialDestructor())
       // Get the destructor for the reference temporary.
-      if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
-              rt->getOriginalDecl()->getDefinitionOrSelf())) {
-        if (!classDecl->hasTrivialDestructor())
-          referenceTemporaryDtor =
-              classDecl->getDefinitionOrSelf()->getDestructor();
-      }
-    }
+      referenceTemporaryDtor = classDecl->getDestructor();
 
     if (!referenceTemporaryDtor)
       return;
@@ -1982,12 +1972,8 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
       delegating = true;
       break;
     case CXXConstructionKind::VirtualBase:
-      // This should just set 'forVirtualBase' to true and fall through, but
-      // virtual base class support is otherwise missing, so this needs to wait
-      // until it can be tested.
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: virtual base constructor");
-      return;
+      forVirtualBase = true;
+      [[fallthrough]];
     case CXXConstructionKind::NonVirtualBase:
       type = Ctor_Base;
       break;

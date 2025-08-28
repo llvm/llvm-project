@@ -1384,11 +1384,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
                                          toString(AnnotateDebugInfo)));
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fsanitize_debug_trap_reasons,
-                          options::OPT_fno_sanitize_debug_trap_reasons)) {
-    CmdArgs.push_back(Args.MakeArgString(A->getAsString(Args)));
-  }
+  Args.AddLastArg(CmdArgs, options::OPT_fsanitize_debug_trap_reasons_EQ);
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);

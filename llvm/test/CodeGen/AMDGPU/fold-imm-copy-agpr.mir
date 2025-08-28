@@ -91,8 +91,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_lit_copy_sub0_to_agpr_32
     ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329592, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:agpr_32 = COPY [[V_MOV_B]].sub0
-    ; GCN-NEXT: $agpr0 = COPY [[COPY]]
+    ; GCN-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[V_MOV_B]].sub0, implicit $exec
+    ; GCN-NEXT: $agpr0 = COPY [[V_ACCVGPR_WRITE_B32_e64_]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329592, implicit $exec
     %1:agpr_32 = COPY %0.sub0
@@ -108,8 +108,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_lit_copy_sub1_to_agpr_32
     ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329592, implicit $exec
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:agpr_32 = COPY [[V_MOV_B]].sub1
-    ; GCN-NEXT: $agpr0 = COPY [[COPY]]
+    ; GCN-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[V_MOV_B]].sub1, implicit $exec
+    ; GCN-NEXT: $agpr0 = COPY [[V_ACCVGPR_WRITE_B32_e64_]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 4290672329592, implicit $exec
     %1:agpr_32 = COPY %0.sub1
@@ -129,6 +129,332 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY [[V_MOV_B]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %1:av_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_0_copy_to_agpr_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_0_copy_to_agpr_32
+    ; GCN: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ACCVGPR_WRITE_B32_e64_]]
+    %0:sreg_32 = S_MOV_B32 0, implicit $exec
+    %1:agpr_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_neg16_copy_to_agpr_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_neg16_copy_to_agpr_32
+    ; GCN: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 -16, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ACCVGPR_WRITE_B32_e64_]]
+    %0:sreg_32 = S_MOV_B32 -16, implicit $exec
+    %1:agpr_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_65_copy_to_agpr_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_65_copy_to_agpr_32
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65, implicit $exec
+    ; GCN-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[S_MOV_B32_]], implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ACCVGPR_WRITE_B32_e64_]]
+    %0:sreg_32 = S_MOV_B32 65, implicit $exec
+    %1:agpr_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_0_copy_to_av_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_0_copy_to_av_32
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[AV_MOV_]]
+    %0:sreg_32 = S_MOV_B32 0, implicit $exec
+    %1:av_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_neg16_copy_to_av_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_neg16_copy_to_av_32
+    ; GCN: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO -16, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[AV_MOV_]]
+    %0:sreg_32 = S_MOV_B32 -16, implicit $exec
+    %1:av_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b32_imm_65_copy_to_av_32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b32_imm_65_copy_to_av_32
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65, implicit $exec
+    ; GCN-NEXT: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO [[S_MOV_B32_]], implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[AV_MOV_]]
+    %0:sreg_32 = S_MOV_B32 65, implicit $exec
+    %1:av_32 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_0_copy_to_areg_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_areg_64
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 0, implicit $exec
+    %1:areg_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_0_copy_to_areg_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_areg_64_align2
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 0, implicit $exec
+    %1:areg_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_neg16_copy_to_areg_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_areg_64
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 -16, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 -16, implicit $exec
+    %1:areg_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_neg16_copy_to_areg_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_areg_64_align2
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 -16, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 -16, implicit $exec
+    %1:areg_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_0_copy_to_av_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_av_64
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 0, implicit $exec
+    %1:av_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_0_copy_to_av_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_av_64_align2
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 0, implicit $exec
+    %1:av_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_neg16_copy_to_av_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_av_64
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 -16, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 -16, implicit $exec
+    %1:av_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_neg16_copy_to_av_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_av_64_align2
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 -16, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64 -16, implicit $exec
+    %1:av_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -42949672960, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744030759878656, implicit $exec
+    %1:areg_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64_align2
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -42949672960, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744030759878656, implicit $exec
+    %1:areg_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -21474836480, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744052234715136, implicit $exec
+    %1:areg_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64_align2
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -21474836480, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744052234715136, implicit $exec
+    %1:areg_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -42949672960, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744030759878656, implicit $exec
+    %1:av_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64_align2
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -42949672960, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 18446744030759878656, implicit $exec
+    %1:av_64_align2 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775784, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775784, implicit $exec
+    %1:av_64 = COPY %0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
+name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64_align2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64_align2
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775784, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775784, implicit $exec
     %1:av_64_align2 = COPY %0
     S_ENDPGM 0, implicit %1
 

@@ -84,7 +84,7 @@ let Command = "breakpoint modify" in {
     Desc<"Set the number of times this breakpoint is skipped before stopping.">;
   def breakpoint_modify_one_shot : Option<"one-shot", "o">, Group<1>,
     Arg<"Boolean">,
-    Desc<"The breakpoint is deleted the first time it stop causes a stop.">;
+    Desc<"The breakpoint is deleted the first time it causes a stop.">;
   def breakpoint_modify_thread_index : Option<"thread-index", "x">, Group<1>,
     Arg<"ThreadIndex">, Desc<"The breakpoint stops only for the thread whose "
     "index matches this argument.">;
@@ -366,6 +366,8 @@ let Command = "disassemble" in {
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
     Desc<"Force disassembly of large functions.">;
+  def disassemble_options_variable : Option<"variable", "v">,
+    Desc<"Enable variable disassembly annotations for this invocation.">;
 }
 
 let Command = "diagnostics dump" in {
@@ -741,18 +743,35 @@ let Command = "process launch" in {
 }
 
 let Command = "process attach" in {
-  def process_attach_continue : Option<"continue", "c">,
-    Desc<"Immediately continue the process once attached.">;
-  def process_attach_plugin : Option<"plugin", "P">, Arg<"Plugin">,
-    Desc<"Name of the process plugin you want to use.">;
-  def process_attach_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
-    Desc<"The process ID of an existing process to attach to.">;
-  def process_attach_name : Option<"name", "n">, Group<2>, Arg<"ProcessName">,
-    Desc<"The name of the process to attach to.">;
-  def process_attach_include_existing : Option<"include-existing", "i">,
-    Group<2>, Desc<"Include existing processes when doing attach -w.">;
-  def process_attach_waitfor : Option<"waitfor", "w">, Group<2>,
-    Desc<"Wait for the process with <process-name> to launch.">;
+  def process_attach_continue
+      : Option<"continue", "c">,
+        Desc<"Immediately ${ansi.underline}c${ansi.normal}ontinue the process "
+             "once attached.">;
+  def process_attach_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"Name of the process ${ansi.underline}p${ansi.normal}lugin you "
+             "want to use.">;
+  def process_attach_pid : Option<"pid", "p">,
+                           Group<1>,
+                           Arg<"Pid">,
+                           Desc<"The ${ansi.underline}p${ansi.normal}rocess ID "
+                                "of an existing process to attach to.">;
+  def process_attach_name : Option<"name", "n">,
+                            Group<2>,
+                            Arg<"ProcessName">,
+                            Desc<"The ${ansi.underline}n${ansi.normal}ame of "
+                                 "the process to attach to.">;
+  def process_attach_include_existing
+      : Option<"include-existing", "i">,
+        Group<2>,
+        Desc<"${ansi.underline}I${ansi.normal}nclude existing processes when "
+             "doing attach -w.">;
+  def process_attach_waitfor
+      : Option<"waitfor", "w">,
+        Group<2>,
+        Desc<"${ansi.underline}W${ansi.normal}ait for the process with "
+             "<process-name> to launch.">;
 }
 
 let Command = "process continue" in {

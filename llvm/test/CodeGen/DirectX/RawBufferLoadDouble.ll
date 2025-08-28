@@ -5,10 +5,10 @@ define void @loadf64(i32 %index) {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.Rawbuffer", double, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_f64_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.Rawbuffer", double, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: [[L0:%.*]] = call { double, i1 } @llvm.dx.resource.load.rawbuffer
@@ -38,10 +38,10 @@ define void @loadv2f64(i32 %index) {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.Rawbuffer", <2 x double>, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v2f64_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.Rawbuffer", <2 x double>, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v2f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: [[L0:%.*]] = call { <2 x double>, i1 } @llvm.dx.resource.load.rawbuffer
@@ -76,10 +76,10 @@ define void @loadf64WithCheckBit(i32 %index) {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.Rawbuffer", double, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_f64_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.Rawbuffer", double, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: [[L0:%.*]] = call { double, i1 } @llvm.dx.resource.load.rawbuffer
@@ -116,10 +116,10 @@ define void @loadv3f64(i32 %index) {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.Rawbuffer", <3 x double>, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v3f64_0_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = call target("dx.Rawbuffer", <3 x double>, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v3f64_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: [[L0:%.*]] = call { <3 x double>, i1 } @llvm.dx.resource.load.rawbuffer
@@ -172,10 +172,10 @@ define void @loadv4f64(i32 %index) {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.Rawbuffer", <4 x double>, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v4f64_0_0t(
-  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
   %buffer = call target("dx.Rawbuffer", <4 x double>, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.Rawbuffer_v4f64_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; check we don't modify the code in sm6.3 or later
   ; CHECK63: [[L0:%.*]] = call { <4 x double>, i1 } @llvm.dx.resource.load.rawbuffer

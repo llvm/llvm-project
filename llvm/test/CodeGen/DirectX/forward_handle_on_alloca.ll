@@ -14,7 +14,7 @@ define void @CSMain() local_unnamed_addr {
 ; CHECK-LABEL: define void @CSMain() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; FHCHECK-NEXT:    [[AGG_TMP_I1_SROA_0:%.*]] = alloca target("dx.RawBuffer", i32, 1, 0), align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 3, i32 1, i32 0, i1 false, ptr nonnull @name)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 3, i32 1, i32 0, ptr nonnull @name)
 ; CHECK-NEXT:    store target("dx.RawBuffer", i32, 1, 0) [[TMP0]], ptr @global, align 4
 ; FHCHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @global, align 4
 ; FHCHECK-NEXT:    store i32 [[TMP2]], ptr [[AGG_TMP_I1_SROA_0]], align 8
@@ -24,7 +24,7 @@ define void @CSMain() local_unnamed_addr {
 ;
 entry:
   %alloca = alloca target("dx.RawBuffer", i32, 1, 0), align 8
-  %handle  = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 3, i32 1, i32 0, i1 false, ptr nonnull @name)
+  %handle  = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 3, i32 1, i32 0, ptr nonnull @name)
   store target("dx.RawBuffer", i32, 1, 0) %handle , ptr @global, align 4
   %val  = load i32, ptr @global, align 4
   call void @llvm.lifetime.start.p0(ptr nonnull %alloca)

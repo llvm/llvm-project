@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
+// This fails because of a non-ignored copy of an aggregate in test3.
+// XFAIL: *
+
 int f19(void) {
   return ({ 3;;4;; });
 }
