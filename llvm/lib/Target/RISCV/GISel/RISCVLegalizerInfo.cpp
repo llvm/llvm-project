@@ -154,7 +154,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+  getActionDefinitionsBuilder(
+      {G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
