@@ -1879,7 +1879,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // be observed in the exit case (the trap). We could be smarter about
       // this, but for now lets pattern match common cases that directly trap.
       if (Unreachable == nullptr || InLoop == nullptr)
-        continue;
+        return Changed;
       if (llvm::any_of(*Unreachable, [](Instruction &I) {
             if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
               if (II->getIntrinsicID() != Intrinsic::trap &&
@@ -1890,7 +1890,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
             }
             return false;
           })) {
-        continue;
+        return Changed;
       }
     }
     Value *NewCond;
