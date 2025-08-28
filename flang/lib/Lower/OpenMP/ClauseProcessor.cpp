@@ -271,24 +271,16 @@ bool ClauseProcessor::processCancelDirectiveName(
   return true;
 }
 
-bool ClauseProcessor::processLoopNests(
-    mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopRelatedClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
-  int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
-                                               clauses, result, iv);
-  return numCollapse > 1;
-}
-
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopNestOperands &result,
+    mlir::omp::LoopRelatedClauseOps &loopResult,
+    mlir::omp::CollapseClauseOps &collapseResult,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
 
   int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
-                                               clauses, result, iv);
+                                               clauses, loopResult, iv);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  result.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
+  collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
   return numCollapse > 1;
 }
 
