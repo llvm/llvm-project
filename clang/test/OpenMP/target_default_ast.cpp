@@ -43,7 +43,7 @@ void foo() {
 void fun(){
 int a = 0;
     int x = 10;
-    #pragma omp target data default(firstprivate)  map(a)
+    #pragma omp target data default(firstprivate) map(a)
     {
   // DUMP: -OMPTargetDataDirective
   // DUMP-NEXT: -OMPDefaultClause
