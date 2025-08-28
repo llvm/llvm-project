@@ -63,11 +63,11 @@ public:
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
-    return create<cir::ConstantOp>(loc, cir::IntAttr::get(typ, val));
+    return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(typ, val));
   }
 
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
-    return create<cir::ConstantOp>(loc, attr);
+    return cir::ConstantOp::create(*this, loc, attr);
   }
 
   cir::ConstantOp getConstantInt(mlir::Location loc, mlir::Type ty,
@@ -119,7 +119,7 @@ public:
   }
 
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
-    return create<cir::ConstantOp>(loc, getCIRBoolAttr(state));
+    return cir::ConstantOp::create(*this, loc, getCIRBoolAttr(state));
   }
   cir::ConstantOp getFalse(mlir::Location loc) { return getBool(false, loc); }
   cir::ConstantOp getTrue(mlir::Location loc) { return getBool(true, loc); }
@@ -144,17 +144,20 @@ public:
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
                                   mlir::Value imag) {
     auto resultComplexTy = cir::ComplexType::get(real.getType());
-    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+    return cir::ComplexCreateOp::create(*this, loc, resultComplexTy, real,
+                                        imag);
   }
 
   mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
     auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+    return cir::ComplexRealOp::create(*this, loc, operandTy.getElementType(),
+                                      operand);
   }
 
   mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
     auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+    return cir::ComplexImagOp::create(*this, loc, operandTy.getElementType(),
+                                      operand);
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
@@ -171,7 +174,7 @@ public:
   }
 
   mlir::Value createNot(mlir::Value value) {
-    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
   }
 
@@ -180,7 +183,7 @@ public:
       mlir::Location loc,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
-    return create<cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
+    return cir::DoWhileOp::create(*this, loc, condBuilder, bodyBuilder);
   }
 
   /// Create a while operation.
@@ -188,7 +191,7 @@ public:
       mlir::Location loc,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
-    return create<cir::WhileOp>(loc, condBuilder, bodyBuilder);
+    return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder);
   }
 
   /// Create a for operation.
@@ -197,22 +200,23 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
-    return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+    return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder,
+                              stepBuilder);
   }
 
   /// Create a break operation.
   cir::BreakOp createBreak(mlir::Location loc) {
-    return create<cir::BreakOp>(loc);
+    return cir::BreakOp::create(*this, loc);
   }
 
   /// Create a continue operation.
   cir::ContinueOp createContinue(mlir::Location loc) {
-    return create<cir::ContinueOp>(loc);
+    return cir::ContinueOp::create(*this, loc);
   }
 
   mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
                             mlir::Value operand) {
-    return create<cir::UnaryOp>(loc, kind, operand);
+    return cir::UnaryOp::create(*this, loc, kind, operand);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -222,7 +226,7 @@ public:
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
                            mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
-    return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
+    return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
   }
 
   /// Get constant address of a global variable as an MLIR attribute.
@@ -235,8 +239,8 @@ public:
 
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
     assert(!cir::MissingFeatures::addressSpace());
-    return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
-                                    global.getSymName());
+    return cir::GetGlobalOp::create(
+        *this, loc, getPointerTo(global.getSymType()), global.getSymName());
   }
 
   mlir::Value createGetGlobal(cir::GlobalOp global) {
@@ -263,7 +267,7 @@ public:
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
                                    mlir::Value base, llvm::StringRef name,
                                    unsigned index) {
-    return create<cir::GetMemberOp>(loc, resultTy, base, name, index);
+    return cir::GetMemberOp::create(*this, loc, resultTy, base, name, index);
   }
 
   mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
@@ -276,7 +280,7 @@ public:
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
                                    mlir::Value stride) {
-    return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+    return cir::PtrStrideOp::create(*this, loc, base.getType(), base, stride);
   }
 
   //===--------------------------------------------------------------------===//
@@ -286,7 +290,7 @@ public:
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::Type returnType, mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
-    auto op = create<cir::CallOp>(loc, callee, returnType, operands);
+    auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
     return op;
   }
@@ -317,7 +321,7 @@ public:
                          mlir::Value src, mlir::Type newTy) {
     if (newTy == src.getType())
       return src;
-    return create<cir::CastOp>(loc, newTy, kind, src);
+    return cir::CastOp::create(*this, loc, newTy, kind, src);
   }
 
   mlir::Value createCast(cir::CastKind kind, mlir::Value src,
@@ -367,7 +371,7 @@ public:
 
   mlir::Value createBinop(mlir::Location loc, mlir::Value lhs,
                           cir::BinOpKind kind, mlir::Value rhs) {
-    return create<cir::BinOp>(loc, lhs.getType(), kind, lhs, rhs);
+    return cir::BinOp::create(*this, loc, lhs.getType(), kind, lhs, rhs);
   }
 
   mlir::Value createLowBitsSet(mlir::Location loc, unsigned size,
@@ -389,8 +393,8 @@ public:
                            mlir::Value trueValue, mlir::Value falseValue) {
     assert(trueValue.getType() == falseValue.getType() &&
            "trueValue and falseValue should have the same type");
-    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
-                                 falseValue);
+    return cir::SelectOp::create(*this, loc, trueValue.getType(), condition,
+                                 trueValue, falseValue);
   }
 
   mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
@@ -405,8 +409,8 @@ public:
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
-    auto op =
-        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Mul, lhs, rhs);
+    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Mul,
+                                 lhs, rhs);
     op.setNoUnsignedWrap(
         llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
     op.setNoSignedWrap(
@@ -424,8 +428,8 @@ public:
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::Saturated) {
-    auto op =
-        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Sub, lhs, rhs);
+    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Sub,
+                                 lhs, rhs);
     op.setNoUnsignedWrap(
         llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
     op.setNoSignedWrap(
@@ -446,8 +450,8 @@ public:
 
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
-    auto op =
-        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Add, lhs, rhs);
+    auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Add,
+                                 lhs, rhs);
     op.setNoUnsignedWrap(
         llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
     op.setNoSignedWrap(
@@ -468,7 +472,7 @@ public:
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
-    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+    return cir::CmpOp::create(*this, loc, getBoolTy(), kind, lhs, rhs);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
@@ -477,7 +481,8 @@ public:
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           bool isShiftLeft) {
-    return create<cir::ShiftOp>(loc, lhs.getType(), lhs, rhs, isShiftLeft);
+    return cir::ShiftOp::create(*this, loc, lhs.getType(), lhs, rhs,
+                                isShiftLeft);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs,
@@ -555,12 +560,12 @@ public:
 
   /// Create a loop condition.
   cir::ConditionOp createCondition(mlir::Value condition) {
-    return create<cir::ConditionOp>(condition.getLoc(), condition);
+    return cir::ConditionOp::create(*this, condition.getLoc(), condition);
   }
 
   /// Create a yield operation.
   cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
-    return create<cir::YieldOp>(loc, value);
+    return cir::YieldOp::create(*this, loc, value);
   }
 };
 

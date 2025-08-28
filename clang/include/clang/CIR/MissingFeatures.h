@@ -195,6 +195,7 @@ struct MissingFeatures {
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupsToDeactivate() { return false; }
+  static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
@@ -264,6 +265,7 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
+  static bool sourceLanguageCases() { return false; }
   static bool stackBase() { return false; }
   static bool stackSaveOp() { return false; }
   static bool targetCIRGenInfoArch() { return false; }
@@ -272,12 +274,12 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
-  static bool vtableInitializer() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
   static bool vaArgABILowering() { return false; }

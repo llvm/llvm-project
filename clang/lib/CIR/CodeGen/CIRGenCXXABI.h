@@ -37,6 +37,12 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
 
+  /// Emit the code to initialize hidden members required to handle virtual
+  /// inheritance, if needed by the ABI.
+  virtual void
+  initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
+                                            const CXXRecordDecl *rd) {}
+
   /// Emit a single constructor/destructor with the gen type from a C++
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
@@ -94,6 +100,10 @@ public:
   virtual bool
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                       CIRGenFunction::VPtr vptr) = 0;
+
+  /// Emits the VTable definitions required for the given record type.
+  virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
+                                     const CXXRecordDecl *rd) = 0;
 
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
