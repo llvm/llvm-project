@@ -1830,7 +1830,14 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
           return false;
         HasLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          if (findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
+          // The local could have leaked out of the function, so we need to
+          // consider atomic operations as effects.
+          // Because we need to preserve the relative order of volatile
+          // accesses, turn off this optimization if we see any of them.
+          // We could be smarter about volatile, and check whether the
+          // reordering is valid.
+          if (SI->isAtomic() || SI->isVolatile() ||
+              findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
             return false;
         } else {
           return false;
