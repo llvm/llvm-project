@@ -4629,6 +4629,7 @@ extern void (*kmp_target_sync_cb)(ident_t *loc_ref, int gtid,
 #endif // ENABLE_LIBOMPTARGET
 
 // Support for error directive
+// See definition in offload/DeviceRTL DeviceTypes.h
 typedef enum kmp_severity_t {
   severity_warning = 1,
   severity_fatal = 2
