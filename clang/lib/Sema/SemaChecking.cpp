@@ -15895,7 +15895,7 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
 /// See GitHub issue #155405.
 static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef,
                                            ArrayRef<Expr *> Args) {
-  assert(Args.size() > 0 && "Should have at least one argument.");
+  assert(!Args.empty() && "Should have at least one argument.");
 
   Expr *Arg0 = Args.front();
   QualType Ty0 = Arg0->getType();
