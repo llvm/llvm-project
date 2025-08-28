@@ -1060,8 +1060,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
-    if (Res == CUDA_SUCCESS)
+    if (Res == CUDA_SUCCESS) {
       Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
+      Info.add("Product Name", TmpChar, "", DeviceInfo::PRODUCT_NAME);
+    }
 
     Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
