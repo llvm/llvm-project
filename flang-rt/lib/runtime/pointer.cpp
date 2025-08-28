@@ -267,7 +267,8 @@ bool RTDEF(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr || target->ElementBytes() == 0) {
+  if (!target->raw().base_addr || target->ElementBytes() == 0
+      || target->Elements() == 0) {
     // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
     // targets that have zero sized storage sequence.
     return false;
