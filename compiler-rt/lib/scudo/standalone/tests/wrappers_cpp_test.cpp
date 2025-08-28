@@ -17,13 +17,6 @@
 #include <thread>
 #include <vector>
 
-// Android does not support checking for new/delete mismatches.
-#if SCUDO_ANDROID
-#define SKIP_MISMATCH_TESTS 1
-#else
-#define SKIP_MISMATCH_TESTS 0
-#endif
-
 void operator delete(void *, size_t) noexcept;
 void operator delete[](void *, size_t) noexcept;
 
@@ -143,10 +136,9 @@ public:
 // by Scudo. See the comment in the C counterpart of this file.
 
 TEST_F(ScudoWrappersCppDeathTest, New) {
-  if (getenv("SKIP_TYPE_MISMATCH") || SKIP_MISMATCH_TESTS) {
-    printf("Skipped type mismatch tests.\n");
-    return;
-  }
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
   testCxxNew<bool>();
   testCxxNew<uint8_t>();
   testCxxNew<uint16_t>();
