@@ -70,7 +70,7 @@ export void foo() {
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl17ByteAddressBufferC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK-DXIL: %[[HANDLE:.*]] = call target("dx.RawBuffer", i8, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
-// CHECK-DXIL-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
+// CHECK-DXIL-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::ByteAddressBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", i8, 0, 0) %[[HANDLE]], ptr %__handle, align 4
 
@@ -79,7 +79,7 @@ export void foo() {
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl19RWByteAddressBufferC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
 // CHECK: %[[HANDLE:.*]] = call target("dx.RawBuffer", i8, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i8_1_0t
-// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
+// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWByteAddressBuffer", ptr %this1, i32 0, i32 0
 // CHECK-NEXT: store target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], ptr %__handle, align 4
 

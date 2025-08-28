@@ -6,7 +6,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @store_float4(<4 x float> %data, i32 %index, i32 %elemindex) {
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -47,7 +47,7 @@ define void @store_float4(<4 x float> %data, i32 %index, i32 %elemindex) {
 define void @store_half4(<4 x half> %data, i32 %index) {
   %buffer = call target("dx.TypedBuffer", <4 x half>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f16_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -80,7 +80,7 @@ define void @store_half4(<4 x half> %data, i32 %index) {
 define void @store_double2(<2 x double> %data, i32 %index) {
   %buffer = call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(

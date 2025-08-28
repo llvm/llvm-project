@@ -138,12 +138,12 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_resource_handlefrombinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                               llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
   def int_spv_resource_handlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                               llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+                               llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;

@@ -26,14 +26,14 @@ define void @test_bindings() {
   ; RWBuffer<float4> Buf : register(u5, space3)
   %typed0 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-                  i32 3, i32 5, i32 1, i32 0, i1 false, ptr @BufA.str)
+                  i32 3, i32 5, i32 1, i32 0, ptr @BufA.str)
   ; CHECK: [[BUF0:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 5, i32 5, i32 3, i8 1 }, i32 5, i1 false) #[[#ATTR:]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF0]], %dx.types.ResourceProperties { i32 4106, i32 1033 }) #[[#ATTR]]
 
   ; RWBuffer<int> Buf : register(u7, space2)
   %typed1 = call target("dx.TypedBuffer", i32, 1, 0, 1)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_0t(
-          i32 2, i32 7, i32 1, i32 0, i1 false, ptr null)
+          i32 2, i32 7, i32 1, i32 0, ptr null)
   ; CHECK: [[BUF1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 7, i32 7, i32 2, i8 1 }, i32 7, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF1]], %dx.types.ResourceProperties { i32 4106, i32 260 }) #[[#ATTR]]
 
@@ -42,7 +42,7 @@ define void @test_bindings() {
   ; Note that the index below is 3 + 4 = 7
   %typed2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0_0t(
-          i32 5, i32 3, i32 24, i32 4, i1 false, ptr @BufB.str)
+          i32 5, i32 3, i32 24, i32 4, ptr @BufB.str)
   ; CHECK: [[BUF2:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 3, i32 26, i32 5, i8 0 }, i32 7, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF2]], %dx.types.ResourceProperties { i32 10, i32 1029 }) #[[#ATTR]]
 
@@ -50,14 +50,14 @@ define void @test_bindings() {
   ; StructuredBuffer<S> Buf : register(t2, space4)
   %struct0 = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
-          i32 4, i32 2, i32 1, i32 0, i1 true, ptr null)
-  ; CHECK: [[BUF3:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 2, i32 2, i32 4, i8 0 }, i32 2, i1 true) #[[#ATTR]]
+          i32 4, i32 2, i32 1, i32 0, ptr null)
+  ; CHECK: [[BUF3:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 2, i32 2, i32 4, i8 0 }, i32 2, i1 false) #[[#ATTR]]
   ; CHECK: = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF3]], %dx.types.ResourceProperties { i32 1036, i32 32 }) #[[#ATTR]]
 
   ; ByteAddressBuffer Buf : register(t8, space1)
   %byteaddr0 = call target("dx.RawBuffer", i8, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
-          i32 1, i32 8, i32 1, i32 0, i1 false, ptr null)
+          i32 1, i32 8, i32 1, i32 0, ptr null)
   ; CHECK: [[BUF4:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 8, i32 8, i32 1, i8 0 }, i32 8, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF4]], %dx.types.ResourceProperties { i32 11, i32 0 }) #[[#ATTR]]
 
@@ -66,14 +66,14 @@ define void @test_bindings() {
   %typed3_ix = call i32 @some_val()
   %typed3 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0t(
-          i32 0, i32 7, i32 -1, i32 %typed3_ix, i1 false, ptr null)
+          i32 0, i32 7, i32 -1, i32 %typed3_ix, ptr null)
   ; CHECK: %[[IX:.*]] = add i32 %typed3_ix, 7
   ; CHECK: [[BUF5:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 7, i32 -1, i32 0, i8 0 }, i32 %[[IX]], i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 }) #[[#ATTR]]
 
   ; cbuffer cb0 : register(b0) { int4 i; float4 f; }
   %cb0 = call target("dx.CBuffer", target("dx.Layout", {<4 x i32>, <4 x float>}, 32, 0, 16))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   ; CHECK: [[BUF6:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 0, i32 0, i8 2 }, i32 0, i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF6]], %dx.types.ResourceProperties { i32 13, i32 32 }) #[[#ATTR]]
 

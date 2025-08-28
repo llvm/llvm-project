@@ -35,54 +35,54 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @test() #0 {
   ; Buffer<half4> Zero : register(t0)
   %Zero_h = call target("dx.TypedBuffer", <4 x half>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @Zero.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @Zero.str)
  
   ; Buffer<float4> One : register(t1)
   %One_h = call target("dx.TypedBuffer", <2 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr @One.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr @One.str)
  
   ; Buffer<double> Two : register(t2);
   %Two_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false, ptr @Two.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr @Two.str)
 
   ; Buffer<int4> Three : register(t3);
   %Three_h = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 1)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false, ptr @Three.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, ptr @Three.str)
 
   ; ByteAddressBuffer Four : register(t4)
   %Four_h = call target("dx.RawBuffer", i8, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @Four.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr @Four.str)
 
   ; StructuredBuffer<int16_t> Five : register(t6);
   %Five_h = call target("dx.RawBuffer", i16, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, i1 false, ptr @Five.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, ptr @Five.str)
   
   ; Buffer<double> Six : register(t10, space2);
   %Six_h = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, i1 false, ptr @Six.str)
+            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, ptr @Six.str)
 
   ; Same buffer type as Six - should have the same type in metadata
   ; Buffer<double> Seven : register(t20, space5);
   %Seven_h = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, i1 false, ptr @Seven.str)
+            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, ptr @Seven.str)
 
   ; Buffer<float4> Array[100] : register(t4, space3);
   ; Buffer<float4> B1 = Array[30];
   ; Buffer<float4> B2 = Array[42];
   ; resource array accesses should produce one metadata entry   
   %Array_30_h = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, i1 false, ptr @Array.str)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, ptr @Array.str)
   %Array_42_h = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, i1 false, ptr @Array.str)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, ptr @Array.str)
 
   ; test unbounded resource array
   ; Buffer<double> Array2[] : register(t2, space4);
   ; Buffer<double> C1 = Array[10];
   ; Buffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, i1 false, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, i1 false, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
 
   ret void
 }

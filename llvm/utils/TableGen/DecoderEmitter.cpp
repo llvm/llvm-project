@@ -163,7 +163,7 @@ class InstructionEncoding {
 
   /// Mask of bits that should be considered unknown during decoding.
   /// This is the value of the `SoftFail` field.
-  APInt SoftFailBits;
+  APInt SoftFailMask;
 
   /// The name of the function to use for decoding. May be an empty string,
   /// meaning the decoder is generated.
@@ -197,7 +197,7 @@ public:
   const KnownBits &getInstBits() const { return InstBits; }
 
   /// Returns a mask of bits that should be considered unknown during decoding.
-  const APInt &getSoftFailBits() const { return SoftFailBits; }
+  const APInt &getSoftFailMask() const { return SoftFailMask; }
 
   /// Returns the known bits of this encoding that must match for
   /// successful decoding.
@@ -205,8 +205,8 @@ public:
     KnownBits EncodingBits = InstBits;
     // Mark all bits that are allowed to change according to SoftFail mask
     // as unknown.
-    EncodingBits.Zero &= ~SoftFailBits;
-    EncodingBits.One &= ~SoftFailBits;
+    EncodingBits.Zero &= ~SoftFailMask;
+    EncodingBits.One &= ~SoftFailMask;
     return EncodingBits;
   }
 
@@ -1243,32 +1243,13 @@ void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
 void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   const KnownBits &InstBits = Encoding.getInstBits();
-  const APInt &SFBits = Encoding.getSoftFailBits();
+  const APInt &SoftFailMask = Encoding.getSoftFailMask();
 
-  if (SFBits.isZero())
+  if (SoftFailMask.isZero())
     return;
 
-  unsigned EncodingWidth = InstBits.getBitWidth();
-  APInt PositiveMask(EncodingWidth, 0);
-  APInt NegativeMask(EncodingWidth, 0);
-  for (unsigned i = 0; i != EncodingWidth; ++i) {
-    if (!SFBits[i])
-      continue;
-
-    if (InstBits.Zero[i]) {
-      // The bit is meant to be false, so emit a check to see if it is true.
-      PositiveMask.setBit(i);
-    } else if (InstBits.One[i]) {
-      // The bit is meant to be true, so emit a check to see if it is false.
-      NegativeMask.setBit(i);
-    }
-  }
-
-  bool NeedPositiveMask = PositiveMask.getBoolValue();
-  bool NeedNegativeMask = NegativeMask.getBoolValue();
-
-  if (!NeedPositiveMask && !NeedNegativeMask)
-    return;
+  APInt PositiveMask = InstBits.Zero & SoftFailMask;
+  APInt NegativeMask = InstBits.One & SoftFailMask;
 
   TableInfo.Table.insertOpcode(MCD::OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
@@ -1737,7 +1718,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
 
 void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
   InstBits = KnownBits(VLI.size());
-  SoftFailBits = APInt(VLI.size(), 0);
+  SoftFailMask = APInt(VLI.size(), 0);
 
   // Parse Inst field.
   unsigned I = 0;
@@ -1806,7 +1787,7 @@ void InstructionEncoding::parseFixedLenEncoding(
   ArrayRef<const Init *> ActiveInstBits =
       RecordInstBits.getBits().take_front(BitWidth);
   InstBits = KnownBits(BitWidth);
-  SoftFailBits = APInt(BitWidth, 0);
+  SoftFailMask = APInt(BitWidth, 0);
 
   // Parse Inst field.
   for (auto [I, V] : enumerate(ActiveInstBits)) {
@@ -1848,7 +1829,7 @@ void InstructionEncoding::parseFixedLenEncoding(
                            "to be fully defined (0 or 1, not '?')",
                            I));
       }
-      SoftFailBits.setBit(I);
+      SoftFailMask.setBit(I);
     }
   }
 }

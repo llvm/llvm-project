@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s --check-prefixes=CHECK,CHECK32
 ; RUN: llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s --check-prefixes=CHECK,CHECK64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.0 && ptxas-ptr32 %{ llc < %s -O0 -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.0 %{ llc < %s -O0 -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 ; CHECK: .address_size [[BITS:32|64]]
 

@@ -699,8 +699,6 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLVkBindingAttr *VkBinding) {
   assert(VkBinding && "expect a nonnull binding attribute");
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Set = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getSet());
@@ -709,7 +707,7 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   llvm::Intrinsic::ID IntrinsicID =
       CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
 
-  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, NonUniform, Name};
+  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, Name};
   initializeBuffer(CGM, GV, IntrinsicID, Args);
 }
 
@@ -717,8 +715,6 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLResourceBindingAttr *RBA) {
   assert(RBA && "expect a nonnull binding attribute");
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
@@ -732,15 +728,13 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    SmallVector<Value *> Args{Space, RegSlot,    RangeSize,
-                              Index, NonUniform, Name};
+    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    SmallVector<Value *> Args{OrderID, Space,      RangeSize,
-                              Index,   NonUniform, Name};
+    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
 }

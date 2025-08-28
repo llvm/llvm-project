@@ -8,6 +8,7 @@
 #ifndef FORTRAN_EVALUATE_MATCH_H_
 #define FORTRAN_EVALUATE_MATCH_H_
 
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "llvm/ADT/STLExtras.h"
@@ -34,14 +35,28 @@ struct IsOperation<T, std::void_t<decltype(T::operands)>> {
 template <typename T>
 constexpr bool is_operation_v{detail::IsOperation<T>::value};
 
-template <typename T>
-const evaluate::Expr<T> &deparen(const evaluate::Expr<T> &x) {
-  if (auto *parens{std::get_if<evaluate::Parentheses<T>>(&x.u)}) {
+template <common::TypeCategory C, int K>
+const evaluate::Expr<Type<C, K>> &deparen(const evaluate::Expr<Type<C, K>> &x) {
+  if (auto *parens{std::get_if<Parentheses<Type<C, K>>>(&x.u)}) {
     return deparen(parens->template operand<0>());
   } else {
     return x;
   }
 }
+
+template <common::TypeCategory C>
+const evaluate::Expr<SomeKind<C>> &deparen(
+    const evaluate::Expr<SomeKind<C>> &x) {
+  return x;
+}
+
+// Some expressions (e.g. TypelessExpression) don't allow parentheses, while
+// those that do have Expr<Type> as the argument to the parentheses. This means
+// that there is no consistent return type that works for all expressions.
+// Delete this overload explicitly so an attempt to use it creates a clearer
+// error message.
+const evaluate::Expr<SomeType> &deparen(
+    const evaluate::Expr<SomeType> &) = delete;
 
 // Expr<T> matchers (patterns)
 //
