@@ -24,7 +24,7 @@ namespace llvm {
 /// When available, it can answer queries about what is at a given
 /// file location, as well as where in a file a given IR construct
 /// is.
-/// 
+///
 /// This information is optionally emitted by the LLParser while
 /// it reads LLVM textual IR.
 class AsmParserContext {

@@ -180,7 +180,7 @@ int LLLexer::getNextChar() {
   if (CurPtr == CurBuf.end())
     return EOF;
   // Increment line number if this is the first character after a newline
-  if (CurPtr > CurBuf.begin() && *(CurPtr-1) == '\n'){
+  if (CurPtr > CurBuf.begin() && *(CurPtr - 1) == '\n') {
     CurLineNum++;
     CurColNum = 0;
   } else
