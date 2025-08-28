@@ -1031,7 +1031,7 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
       return failure();
     auto oldCastOp = operand->get().getDefiningOp<vector::ShapeCastOp>();
 
-    unsigned int operandNumber = operand->getOperandNumber();
+    unsigned operandNumber = operand->getOperandNumber();
     VectorType sourceType = oldCastOp.getSourceVectorType();
     VectorType distributedResultType =
         cast<VectorType>(warpOp->getResultTypes()[operandNumber]);
@@ -2069,12 +2069,56 @@ private:
   DistributedReductionFn distributedReductionFn;
 };
 
-// This patterns distribute the `vector.multi_reduction` operation across
-// lanes in a warp. Currently only 2D to 1D reductions are supported and assumes
-// that source vector is distributed in column dimension (i.e. Each lane owns
-// complete column(s) of the source vector).
-// TODO: Add support for the case where source rows are distributed across
-// lanes. Requires `DistributionMapFn` to express the data distribution.
+/// This patterns distribute the `vector.multi_reduction` operation across
+/// lanes in a warp. Currently only 2D to 1D reductions are supported and
+/// assumes that source vector is distributed in column dimension (i.e. Each
+/// lane owns complete column(s) of the source vector).
+/// TODO: Add support for the case where source rows are distributed across
+/// lanes. Requires `DistributionMapFn` to express the data distribution.
+/// Example 1 (Col reduction):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
+///   %0 = "some_def"() : () -> (vector<16x32xf32>)
+///   %acc = "some_def"() : () -> (vector<32xf32>)
+///   %1 = vector.multi_reduction <add>, %0, %acc [0] : vector<16x32xf32> to
+///   vector<32xf32> gpu.yield %1 : vector<32xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r:2 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<16x1xf32>,
+/// vector<1xf32>) {
+///   %0 = "some_def"() : () -> (vector<16x32xf32>)
+///   %acc = "some_def"() : () -> (vector<32xf32>)
+///   gpu.yield %0, %acc : vector<16x32xf32>, vector<32xf32>
+/// }
+/// %c = arith.constant dense<0.0> : vector<1xf32>
+/// %1 = vector.shape_cast %r#0 : vector<16x1xf32> to vector<16xf32>
+/// %2 = vector.reduction <add>, %1, %r#1 : vector<16xf32> to f32
+/// %3 = vector.insert %2, %c[0] : f32 into vector<1xf32>
+/// ```
+/// Example 2 (Row reduction):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>) {
+///   %0 = "some_def"() : () -> (vector<2x32xf32>)
+///   %acc = "some_def"() : () -> (vector<2xf32>)
+///   %1 = vector.multi_reduction <add>, %0, %acc [1] : vector<2x32xf32> to
+///   vector<2xf32>
+///   gpu.yield %1 : vector<2xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xf32>) {
+///   %0 = "some_def"() : () -> (vector<2x32xf32>)
+///   %acc = "some_def"() : () -> (vector<2xf32>)
+///   %1 = arith.constant dense<0.0> : vector<2xf32>
+///   %2 = vector.extract %0[0] : vector<32xf32> from <vector<2x32xf32>>
+///   %3 = ("warp.reduction %2") : f32
+///   %4 = vector.insert %3, %1[0] : f32 into vector<2xf32>
+///   ... repeat for row 1
+///   gpu.yield %1 : vector<2xf32>
+/// }
 struct WarpOpMultiReduction : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
