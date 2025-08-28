@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80| FileCheck --check-prefixes=CHECK %s
-; RUN: %if ptxas-sm_90 && ptxas-isa-8.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80| %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80| %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: test_isspacep
 define i1 @test_isspacep_shared_cluster(ptr %p) {

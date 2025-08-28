@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck -allow-deprecated-dag-overlap %s
-; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define ptx_device i32 @test_tid_x() {

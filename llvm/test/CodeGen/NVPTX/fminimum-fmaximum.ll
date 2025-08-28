@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 | %ptxas-verify %}
-; RUN: %if ptxas-sm_80 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
 ; ---- minimum ----
 

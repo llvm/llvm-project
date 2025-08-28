@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=CHECK64
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | FileCheck %s --check-prefixes=CHECKPTX62
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
-; RUN: %if ptxas-sm_70 && ptxas-isa-6.2 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_70 -mattr=+ptx62 | %ptxas-verify -arch=sm_70 %}
 
 target triple = "nvptx64-nvidia-cuda"
 

@@ -2,13 +2,13 @@
 ; ## Full FP32x2 support enabled by default.
 ; RUN: llc < %s -mcpu=sm_80 -O0 -disable-post-ra -frame-pointer=all            \
 ; RUN: -verify-machineinstrs | FileCheck --check-prefixes=CHECK,CHECK-NOF32X2 %s
-; RUN: %if ptxas-sm_80 %{                                                       \
+; RUN: %if ptxas-12.7 %{                                                       \
 ; RUN:  llc < %s -mcpu=sm_80 -O0 -disable-post-ra -frame-pointer=all           \
 ; RUN:  -verify-machineinstrs | %ptxas-verify -arch=sm_80                      \
 ; RUN: %}
 ; RUN: llc < %s -mcpu=sm_100 -O0 -disable-post-ra -frame-pointer=all           \
 ; RUN: -verify-machineinstrs | FileCheck --check-prefixes=CHECK,CHECK-F32X2 %s
-; RUN: %if ptxas-sm_100 %{                                                       \
+; RUN: %if ptxas-12.7 %{                                                       \
 ; RUN:  llc < %s -mcpu=sm_100 -O0 -disable-post-ra -frame-pointer=all          \
 ; RUN:  -verify-machineinstrs | %ptxas-verify -arch=sm_100                     \
 ; RUN: %}

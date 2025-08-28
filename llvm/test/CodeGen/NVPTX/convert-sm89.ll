@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_89 -mattr=+ptx81 | FileCheck %s
-; RUN: %if ptxas-sm_89 && ptxas-isa-8.1 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_89 -mattr=+ptx81 | %ptxas-verify -arch=sm_89 %}
+; RUN: %if ptxas-12.1 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_89 -mattr=+ptx81 | %ptxas-verify -arch=sm_89 %}
 
 ; CHECK-LABEL: cvt_rn_e4m3x2_f32
 define i16 @cvt_rn_e4m3x2_f32(float %f1, float %f2) {

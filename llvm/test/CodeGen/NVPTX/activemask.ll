@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -O2 -mcpu=sm_52 -mattr=+ptx62 | FileCheck %s
-; RUN: %if ptxas-isa-6.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_52 -mattr=+ptx62 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_52 -mattr=+ptx62 | %ptxas-verify %}
 
 declare i32 @llvm.nvvm.activemask()
 

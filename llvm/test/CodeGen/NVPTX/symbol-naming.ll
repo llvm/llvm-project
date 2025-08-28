@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s
-; RUN: %if ptxas-isa-6.0 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
-; RUN: %if ptxas-isa-6.0 %{ llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 ; Verify that the NVPTX target removes invalid symbol names prior to emitting
 ; PTX.
