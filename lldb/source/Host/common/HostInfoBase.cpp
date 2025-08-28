@@ -61,6 +61,10 @@ struct HostInfoBaseFields {
   FileSpec m_lldb_clang_resource_dir;
   llvm::once_flag m_lldb_system_plugin_dir_once;
   FileSpec m_lldb_system_plugin_dir;
+  llvm::once_flag m_lldb_user_home_dir_once;
+  FileSpec m_lldb_user_home_dir;
+  llvm::once_flag m_lldb_user_lldb_dir_once;
+  FileSpec m_lldb_user_lldb_dir;
   llvm::once_flag m_lldb_user_plugin_dir_once;
   FileSpec m_lldb_user_plugin_dir;
   llvm::once_flag m_lldb_process_tmp_dir_once;
@@ -159,6 +163,27 @@ FileSpec HostInfoBase::GetSystemPluginDir() {
              g_fields->m_lldb_system_plugin_dir);
   });
   return g_fields->m_lldb_system_plugin_dir;
+}
+
+FileSpec HostInfoBase::GetUserHomeDir() {
+  llvm::call_once(g_fields->m_lldb_user_home_dir_once, []() {
+    if (!HostInfo::ComputeUserHomeDirectory(g_fields->m_lldb_user_home_dir))
+      g_fields->m_lldb_user_home_dir = FileSpec();
+    Log *log = GetLog(LLDBLog::Host);
+    LLDB_LOG(log, "user home dir -> `{0}`", g_fields->m_lldb_user_home_dir);
+  });
+  return g_fields->m_lldb_user_home_dir;
+}
+
+FileSpec HostInfoBase::GetUserLLDBDir() {
+  llvm::call_once(g_fields->m_lldb_user_lldb_dir_once, []() {
+    if (!HostInfo::ComputeUserLLDBHomeDirectory(g_fields->m_lldb_user_lldb_dir))
+      g_fields->m_lldb_user_lldb_dir = FileSpec();
+    Log *log = GetLog(LLDBLog::Host);
+    LLDB_LOG(log, "user lldb home dir -> `{0}`",
+             g_fields->m_lldb_user_lldb_dir);
+  });
+  return g_fields->m_lldb_user_lldb_dir;
 }
 
 FileSpec HostInfoBase::GetUserPluginDir() {

@@ -52,6 +52,7 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/ErrorMessages.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -1993,23 +1994,23 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // Those will be collected by the on-exit-callback.
   });
 
-  helper.DispatchOnExit([&cmd_obj, &parsed_command_args, &result,
-                         detailed_command_telemetry, command_id](
-                            lldb_private::telemetry::CommandInfo *info) {
-    // TODO: this is logging the time the command-handler finishes.
-    // But we may want a finer-grain durations too?
-    // (ie., the execute_time recorded below?)
-    info->command_id = command_id;
-    llvm::StringRef command_name =
-        cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-    info->command_name = command_name.str();
-    info->ret_status = result.GetStatus();
-    if (std::string error_str = result.GetErrorString(); !error_str.empty())
-      info->error_data = std::move(error_str);
+  helper.DispatchOnExit(
+      [&cmd_obj, &parsed_command_args, &result, detailed_command_telemetry,
+       command_id](lldb_private::telemetry::CommandInfo *info) {
+        // TODO: this is logging the time the command-handler finishes.
+        // But we may want a finer-grain durations too?
+        // (ie., the execute_time recorded below?)
+        info->command_id = command_id;
+        llvm::StringRef command_name =
+            cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
+        info->command_name = command_name.str();
+        info->ret_status = result.GetStatus();
+        if (std::string error_str = result.GetErrorString(); !error_str.empty())
+          info->error_data = std::move(error_str);
 
-    if (detailed_command_telemetry)
-      info->args = parsed_command_args;
-  });
+        if (detailed_command_telemetry)
+          info->args = parsed_command_args;
+      });
 
   Log *log = GetLog(LLDBLog::Commands);
   LLDB_LOGF(log, "Processing command: %s", command_line);
@@ -2502,22 +2503,18 @@ int CommandInterpreter::GetOptionArgumentPosition(const char *in_string) {
   return position;
 }
 
-static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
-                            llvm::StringRef suffix = {}) {
+static void GetHomeInitFile(FileSpec &init_file, llvm::StringRef suffix = {}) {
   std::string init_file_name = ".lldbinit";
   if (!suffix.empty()) {
     init_file_name.append("-");
     init_file_name.append(suffix.str());
   }
 
-  FileSystem::Instance().GetHomeDirectory(init_file);
-  llvm::sys::path::append(init_file, init_file_name);
-
-  FileSystem::Instance().Resolve(init_file);
+  init_file =
+      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
 }
 
-static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
-                                LanguageType language) {
+static void GetHomeREPLInitFile(FileSpec &init_file, LanguageType language) {
   if (language == eLanguageTypeUnknown) {
     LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
     if (auto main_repl_language = repl_languages.GetSingularLanguage())
@@ -2531,9 +2528,9 @@ static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
        llvm::Twine(Language::GetNameForLanguageType(language)) +
        llvm::Twine("-repl"))
           .str();
-  FileSystem::Instance().GetHomeDirectory(init_file);
-  llvm::sys::path::append(init_file, init_file_name);
-  FileSystem::Instance().Resolve(init_file);
+
+  init_file =
+      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
 }
 
 static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {
@@ -2588,10 +2585,10 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
     SourceInitFile(FileSpec(init_file.str()), result);
     break;
   case eLoadCWDlldbinitWarn: {
-    llvm::SmallString<128> home_init_file;
+    FileSpec home_init_file;
     GetHomeInitFile(home_init_file);
     if (llvm::sys::path::parent_path(init_file) ==
-        llvm::sys::path::parent_path(home_init_file)) {
+        llvm::sys::path::parent_path(home_init_file.GetPath())) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError(InitFileWarning);
@@ -2611,24 +2608,24 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     return;
   }
 
-  llvm::SmallString<128> init_file;
+  FileSpec init_file;
 
   if (is_repl)
     GetHomeREPLInitFile(init_file, GetDebugger().GetREPLLanguage());
 
-  if (init_file.empty())
+  if (init_file.GetPath().empty())
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
     llvm::StringRef program_name =
         HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
-    llvm::SmallString<128> program_init_file;
+    FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
       init_file = program_init_file;
   }
 
-  SourceInitFile(FileSpec(init_file.str()), result);
+  SourceInitFile(init_file, result);
 }
 
 void CommandInterpreter::SourceInitFileGlobal(CommandReturnObject &result) {

@@ -11,6 +11,7 @@
 #include "Tool.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -106,22 +107,25 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 
   auto listening_uris = m_listener->GetListeningConnectionURI();
   if (listening_uris.empty())
-    return createStringError("Failed to list listening connections");
+    return createStringError("failed to get listening connections");
   std::string address =
       llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
-  llvm::SmallString<128> user_home_dir;
-  FileSystem::Instance().GetHomeDirectory(user_home_dir);
-  FileSpec mcp_registry_dir = FileSpec(user_home_dir.c_str());
-  mcp_registry_dir.AppendPathComponent(".lldb");
-  mcp_registry_dir.AppendPathComponent("mcp");
+  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
 
-  Status error(llvm::sys::fs::create_directory(mcp_registry_dir.GetPath()));
+  Status error(llvm::sys::fs::create_directory(user_lldb_dir.GetPath()));
   if (error.Fail())
     return error.takeError();
 
-  m_mcp_registry_entry_path = mcp_registry_dir.CopyByAppendingPathComponent(
-      formatv("lldb-{0}.json", getpid()).str());
+  m_mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
+      formatv("lldb-mcp-{0}.json", getpid()).str());
+
+  ServerInfo info;
+  info.connection_uri = listening_uris[0];
+  info.pid = getpid();
+
+  std::string buf = formatv("{0}", toJSON(info)).str();
+  size_t num_bytes = buf.size();
 
   const File::OpenOptions flags = File::eOpenOptionWriteOnly |
                                   File::eOpenOptionCanCreate |
@@ -131,13 +135,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
                                   lldb::eFilePermissionsFileDefault, false);
   if (!file)
     return file.takeError();
-
-  ServerMetadata metadata;
-  metadata.connection_uri = listening_uris[0];
-  metadata.pid = getpid();
-
-  std::string buf = formatv("{0}", toJSON(metadata)).str();
-  size_t num_bytes = buf.size();
   if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
     return error;
 

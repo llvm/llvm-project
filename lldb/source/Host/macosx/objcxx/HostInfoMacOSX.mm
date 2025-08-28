@@ -39,7 +39,7 @@
 #include <Foundation/Foundation.h>
 #include <mach-o/dyld.h>
 #if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
-  MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
+    MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
 #if __has_include(<mach-o/dyld_introspection.h>)
 #include <mach-o/dyld_introspection.h>
 #define SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS
@@ -78,8 +78,8 @@ std::optional<std::string> HostInfoMacOSX::GetOSBuildString() {
 static void ParseOSVersion(llvm::VersionTuple &version, NSString *Key) {
   @autoreleasepool {
     NSDictionary *version_info =
-      [NSDictionary dictionaryWithContentsOfFile:
-       @"/System/Library/CoreServices/SystemVersion.plist"];
+        [NSDictionary dictionaryWithContentsOfFile:
+                          @"/System/Library/CoreServices/SystemVersion.plist"];
     NSString *version_value = [version_info objectForKey: Key];
     const char *version_str = [version_value UTF8String];
     version.tryParse(version_str);
@@ -224,10 +224,24 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   return true;
 }
 
-bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
+bool HostInfoMacOSX::ComputeUserHomeDirectory(FileSpec &file_spec) {
+  FileSpec temp_file("~");
   FileSystem::Instance().Resolve(temp_file);
   file_spec.SetDirectory(temp_file.GetPathAsConstString());
+  return true;
+}
+
+bool HostInfoMacOSX::ComputeUserLLDBHomeDirectory(FileSpec &file_spec) {
+  FileSpec home_dir_spec = GetUserHomeDir();
+  home_dir_spec.AppendPathComponent(".lldb");
+  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
+  return true;
+}
+
+bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
+  FileSpec home_dir_spec = GetUserHomeDir();
+  home_dir_spec.AppendPathComponent("Library/Application Support/LLDB/PlugIns");
+  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
   return true;
 }
 

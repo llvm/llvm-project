@@ -21,15 +21,14 @@
 
 namespace lldb_protocol::mcp {
 
-/// Metadata about this instance of lldb's MCP server for lldb-mcp to use to
+/// Information about this instance of lldb's MCP server for lldb-mcp to use to
 /// coordinate connecting an lldb-mcp client.
-struct ServerMetadata {
+struct ServerInfo {
   std::string connection_uri;
   lldb::pid_t pid;
 };
-llvm::json::Value toJSON(const ServerMetadata &SM);
-bool fromJSON(const llvm::json::Value &V, ServerMetadata &SM,
-              llvm::json::Path P);
+llvm::json::Value toJSON(const ServerInfo &SM);
+bool fromJSON(const llvm::json::Value &V, ServerInfo &SM, llvm::json::Path P);
 
 class Server : public Transport::MessageHandler {
 public:
