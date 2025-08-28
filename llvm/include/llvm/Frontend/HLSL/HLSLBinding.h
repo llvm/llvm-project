@@ -99,6 +99,7 @@ public:
 
   friend class BindingInfoBuilder;
 };
+
 struct Binding {
   dxil::ResourceClass RC;
   uint32_t Space;
