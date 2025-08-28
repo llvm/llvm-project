@@ -37,7 +37,12 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     container:
       image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
-      options: --privileged
+      # --privileged is needed to run the lldb tests that disable aslr.
+      # --env-host is needed to copy over the environment variables for
+      # configuring sccache.
+      options: >-
+         --privileged
+         --env SCCACHE*
     defaults:
       run:
         # The run step defaults to using sh as the shell when running in a
