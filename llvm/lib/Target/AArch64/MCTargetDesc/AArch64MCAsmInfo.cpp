@@ -124,7 +124,7 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
   Res.setSpecifier(Expr.getSpecifier());
-  return true;
+  return !Res.getSubSym();
 }
 
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
