@@ -660,6 +660,18 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
   MachineBasicBlock *MBB = MI.getParent();
 
+  bool IsFloatVector = (
+      // SSE float moves
+      Instruction.MoveOpc == X86::MOVAPSrr || // 128-bit single precision
+      Instruction.MoveOpc == X86::MOVAPDrr || // 128-bit double precision
+      // AVX float moves
+      Instruction.MoveOpc == X86::VMOVAPSrr || // VEX 128-bit single
+      Instruction.MoveOpc == X86::VMOVAPDrr || // VEX 128-bit double
+      // AVX 256-bit float moves
+      Instruction.MoveOpc == X86::VMOVAPSYrr || // VEX 256-bit single
+      Instruction.MoveOpc == X86::VMOVAPDYrr    // VEX 256-bit double
+  );
+
   // Operand layout matches the TableGen definition:
   // (outs VR128:$dst, VR128:$tmpx, GR32:$tmpg),
   // (ins  VR128:$t, VR128:$f, i8imm:$cond)
@@ -689,8 +701,14 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       .addReg(SubReg)
       .setMIFlags(MachineInstr::MIFlag::NoMerge);
 
-  // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-  BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+  if (IsFloatVector) {
+    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
+    // %eax)
+    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
+  } else {
+    // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
+    BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+  }
 
   // Broadcast to TmpX (vector mask)
   BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
