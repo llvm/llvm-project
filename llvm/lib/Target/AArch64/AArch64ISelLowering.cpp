@@ -2585,6 +2585,30 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = Known.intersectWith(Known2);
     break;
   }
+  case AArch64ISD::CSNEG:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::CSINV: {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    KnownBits KnownOp1 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+
+    // The result is either:
+    // CSINC: KnownOp0 or KnownOp1 + 1
+    // CSINV: KnownOp0 or ~KnownOp1
+    // CSNEG: KnownOp0 or KnownOp1 * -1
+    if (Op.getOpcode() == AArch64ISD::CSINC)
+      KnownOp1 = KnownBits::add(
+          KnownOp1,
+          KnownBits::makeConstant(APInt(Op.getScalarValueSizeInBits(), 1)));
+    else if (Op.getOpcode() == AArch64ISD::CSINV)
+      std::swap(KnownOp1.Zero, KnownOp1.One);
+    else if (Op.getOpcode() == AArch64ISD::CSNEG)
+      KnownOp1 =
+          KnownBits::mul(KnownOp1, KnownBits::makeConstant(APInt::getAllOnes(
+                                       Op.getScalarValueSizeInBits())));
+
+    Known = KnownOp0.intersectWith(KnownOp1);
+    break;
+  }
   case AArch64ISD::BICi: {
     // Compute the bit cleared value.
     APInt Mask =
