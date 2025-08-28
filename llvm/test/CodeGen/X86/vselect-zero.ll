@@ -56,7 +56,8 @@ define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %x) {
 ;
 ; AVX512-LABEL: test2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqps %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; AVX512-NEXT:    knotw %k0, %k1
 ; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %cond = fcmp oeq <4 x float> %a, %b

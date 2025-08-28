@@ -18,7 +18,7 @@ define <8 x i7> @vsadd_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vmin.vx v8, v8, a1, v0.t
-; CHECK-NEXT:    li a0, 192
+; CHECK-NEXT:    li a0, -64
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.sadd.sat.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
