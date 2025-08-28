@@ -113,6 +113,7 @@ struct Binding {
           Cookie(Cookie) {}
 
     bool isUnbounded() const { return UpperBound == ~0U; }
+
     bool operator==(const Binding &RHS) const {
       return std::tie(RC, Space, LowerBound, UpperBound, Cookie) ==
              std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound,
