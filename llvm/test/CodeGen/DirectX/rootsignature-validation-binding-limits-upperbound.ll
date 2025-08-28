@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
 ; This is a valid code, it checks the limits of a binding space
-; CHECK-NOT: error: .*
+; CHECK-NOT: error:
 
 %__cblayout_CB = type <{ float }>
 
