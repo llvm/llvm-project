@@ -997,7 +997,8 @@ void StructurizeCFG::simplifyHoistedPhis() {
         continue;
 
       OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-      Phi->setIncomingValue(i, OtherV);
+      if (DT->dominates(OtherV, Phi))
+        Phi->setIncomingValue(i, OtherV);
     }
   }
 }
