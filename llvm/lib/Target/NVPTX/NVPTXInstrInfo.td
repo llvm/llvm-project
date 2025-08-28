@@ -914,6 +914,8 @@ defm MIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum>;
 defm MAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum>;
 defm MIN_NAN : FMINIMUMMAXIMUM<"min", /* NaN */ true, fminimum>;
 defm MAX_NAN : FMINIMUMMAXIMUM<"max", /* NaN */ true, fmaximum>;
+defm MINIMUMNUM : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminimumnum>;
+defm MAXIMUMNUM : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaximumnum>;
 
 def nvptx_fminnum3 : SDNode<"NVPTXISD::FMINNUM3", SDTFPTernaryOp,
                             [SDNPCommutative]>;
