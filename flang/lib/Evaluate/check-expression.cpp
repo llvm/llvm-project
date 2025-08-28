@@ -415,7 +415,7 @@ public:
   template <int KIND>
   bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
     if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
-      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+      context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
       return true;
@@ -426,7 +426,7 @@ public:
   template <int KIND>
   bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
     if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
-      context_.messages().Say(common::UsageWarning::RealConstantWidening,
+      context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
       return true;
@@ -504,11 +504,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
         symbol.owner().context().IsEnabled(
             common::LanguageFeature::LogicalIntegerAssignment)) {
       converted = DataConstantConversionExtension(context, symTS->type(), x);
-      if (converted &&
-          symbol.owner().context().ShouldWarn(
-              common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.messages().Say(
-            common::LanguageFeature::LogicalIntegerAssignment,
+      if (converted) {
+        context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -663,10 +660,8 @@ public:
         // host-associated dummy argument, and that doesn't seem like a
         // good idea.
         if (!inInquiry_ && hasHostAssociation &&
-            ultimate.attrs().test(semantics::Attr::INTENT_OUT) &&
-            context_.languageFeatures().ShouldWarn(
-                common::UsageWarning::HostAssociatedIntentOutInSpecExpr)) {
-          context_.messages().Say(
+            ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
+          context_.Warn(common::UsageWarning::HostAssociatedIntentOutInSpecExpr,
               "specification expression refers to host-associated INTENT(OUT) dummy argument '%s'"_port_en_US,
               ultimate.name());
         }
@@ -677,13 +672,9 @@ public:
     } else if (isInitialized &&
         context_.languageFeatures().IsEnabled(
             common::LanguageFeature::SavedLocalInSpecExpr)) {
-      if (!scope_.IsModuleFile() &&
-          context_.languageFeatures().ShouldWarn(
-              common::LanguageFeature::SavedLocalInSpecExpr)) {
-        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
-            "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
-            ultimate.name());
-      }
+      context_.Warn(common::LanguageFeature::SavedLocalInSpecExpr,
+          "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
+          ultimate.name());
       return std::nullopt;
     } else if (const auto *object{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {

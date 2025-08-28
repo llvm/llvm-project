@@ -604,126 +604,6 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
   return false;
 }
 
-namespace {
-class NodeAllocator {
-  llvm::BumpPtrAllocator Alloc;
-
-public:
-  void reset() { Alloc.Reset(); }
-
-  template <typename T, typename... Args> T *makeNode(Args &&...args) {
-    return new (Alloc.Allocate(sizeof(T), alignof(T)))
-        T(std::forward<Args>(args)...);
-  }
-
-  void *allocateNodeArray(size_t sz) {
-    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
-                          alignof(llvm::itanium_demangle::Node *));
-  }
-};
-
-template <typename Derived>
-class ManglingSubstitutor
-    : public llvm::itanium_demangle::AbstractManglingParser<Derived,
-                                                            NodeAllocator> {
-  using Base =
-      llvm::itanium_demangle::AbstractManglingParser<Derived, NodeAllocator>;
-
-public:
-  ManglingSubstitutor() : Base(nullptr, nullptr) {}
-
-  template <typename... Ts>
-  ConstString substitute(llvm::StringRef Mangled, Ts &&...Vals) {
-    this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
-    return substituteImpl(Mangled);
-  }
-
-protected:
-  void reset(llvm::StringRef Mangled) {
-    Base::reset(Mangled.begin(), Mangled.end());
-    Written = Mangled.begin();
-    Result.clear();
-    Substituted = false;
-  }
-
-  ConstString substituteImpl(llvm::StringRef Mangled) {
-    Log *log = GetLog(LLDBLog::Language);
-    if (this->parse() == nullptr) {
-      LLDB_LOG(log, "Failed to substitute mangling in {0}", Mangled);
-      return ConstString();
-    }
-    if (!Substituted)
-      return ConstString();
-
-    // Append any trailing unmodified input.
-    appendUnchangedInput();
-    LLDB_LOG(log, "Substituted mangling {0} -> {1}", Mangled, Result);
-    return ConstString(Result);
-  }
-
-  void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
-    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
-      return;
-
-    // We found a match. Append unmodified input up to this point.
-    appendUnchangedInput();
-
-    // And then perform the replacement.
-    Result += To;
-    Written += From.size();
-    Substituted = true;
-  }
-
-private:
-  /// Input character until which we have constructed the respective output
-  /// already.
-  const char *Written = "";
-
-  llvm::SmallString<128> Result;
-
-  /// Whether we have performed any substitutions.
-  bool Substituted = false;
-
-  const char *currentParserPos() const { return this->First; }
-
-  void appendUnchangedInput() {
-    Result +=
-        llvm::StringRef(Written, std::distance(Written, currentParserPos()));
-    Written = currentParserPos();
-  }
-};
-
-/// Given a mangled function `Mangled`, replace all the primitive function type
-/// arguments of `Search` with type `Replace`.
-class TypeSubstitutor : public ManglingSubstitutor<TypeSubstitutor> {
-  llvm::StringRef Search;
-  llvm::StringRef Replace;
-
-public:
-  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
-             llvm::StringRef Replace) {
-    ManglingSubstitutor::reset(Mangled);
-    this->Search = Search;
-    this->Replace = Replace;
-  }
-
-  llvm::itanium_demangle::Node *parseType() {
-    trySubstitute(Search, Replace);
-    return ManglingSubstitutor::parseType();
-  }
-};
-
-class CtorDtorSubstitutor : public ManglingSubstitutor<CtorDtorSubstitutor> {
-public:
-  llvm::itanium_demangle::Node *
-  parseCtorDtorName(llvm::itanium_demangle::Node *&SoFar, NameState *State) {
-    trySubstitute("C1", "C2");
-    trySubstitute("D1", "D2");
-    return ManglingSubstitutor::parseCtorDtorName(SoFar, State);
-  }
-};
-} // namespace
-
 std::vector<ConstString> CPlusPlusLanguage::GenerateAlternateFunctionManglings(
     const ConstString mangled_name) const {
   std::vector<ConstString> alternates;
@@ -751,29 +631,49 @@ std::vector<ConstString> CPlusPlusLanguage::GenerateAlternateFunctionManglings(
     alternates.push_back(ConstString(fixed_scratch));
   }
 
-  TypeSubstitutor TS;
+  auto *log = GetLog(LLDBLog::Language);
+
   // `char` is implementation defined as either `signed` or `unsigned`.  As a
   // result a char parameter has 3 possible manglings: 'c'-char, 'a'-signed
   // char, 'h'-unsigned char.  If we're looking for symbols with a signed char
   // parameter, try finding matches which have the general case 'c'.
-  if (ConstString char_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "a", "c"))
-    alternates.push_back(char_fixup);
+  if (auto char_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "a", "c")) {
+    // LLDB_LOG(log, "Substituted mangling {0} -> {1}", Mangled, Result);
+    if (*char_fixup_or_err)
+      alternates.push_back(*char_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(log, char_fixup_or_err.takeError(),
+                   "Failed to substitute 'char' type mangling: {0}");
 
   // long long parameter mangling 'x', may actually just be a long 'l' argument
-  if (ConstString long_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "x", "l"))
-    alternates.push_back(long_fixup);
+  if (auto long_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "x", "l")) {
+    if (*long_fixup_or_err)
+      alternates.push_back(*long_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(log, long_fixup_or_err.takeError(),
+                   "Failed to substitute 'long long' type mangling: {0}");
 
   // unsigned long long parameter mangling 'y', may actually just be unsigned
   // long 'm' argument
-  if (ConstString ulong_fixup =
-          TS.substitute(mangled_name.GetStringRef(), "y", "m"))
-    alternates.push_back(ulong_fixup);
+  if (auto ulong_fixup_or_err =
+          SubstituteType_ItaniumMangle(mangled_name.GetStringRef(), "y", "m")) {
+    if (*ulong_fixup_or_err)
+      alternates.push_back(*ulong_fixup_or_err);
+  } else
+    LLDB_LOG_ERROR(
+        log, ulong_fixup_or_err.takeError(),
+        "Failed to substitute 'unsigned long long' type mangling: {0}");
 
-  if (ConstString ctor_fixup =
-          CtorDtorSubstitutor().substitute(mangled_name.GetStringRef()))
-    alternates.push_back(ctor_fixup);
+  if (auto ctor_fixup_or_err = SubstituteStructorAliases_ItaniumMangle(
+          mangled_name.GetStringRef())) {
+    if (*ctor_fixup_or_err) {
+      alternates.push_back(*ctor_fixup_or_err);
+    }
+  } else
+    LLDB_LOG_ERROR(log, ctor_fixup_or_err.takeError(),
+                   "Failed to substitute structor alias manglings: {0}");
 
   return alternates;
 }
@@ -2440,6 +2340,160 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   default:
     return false;
   }
+}
+
+namespace {
+class NodeAllocator {
+  llvm::BumpPtrAllocator Alloc;
+
+public:
+  void reset() { Alloc.Reset(); }
+
+  template <typename T, typename... Args> T *makeNode(Args &&...args) {
+    return new (Alloc.Allocate(sizeof(T), alignof(T)))
+        T(std::forward<Args>(args)...);
+  }
+
+  void *allocateNodeArray(size_t sz) {
+    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
+                          alignof(llvm::itanium_demangle::Node *));
+  }
+};
+
+template <typename Derived>
+class ManglingSubstitutor
+    : public llvm::itanium_demangle::AbstractManglingParser<Derived,
+                                                            NodeAllocator> {
+  using Base =
+      llvm::itanium_demangle::AbstractManglingParser<Derived, NodeAllocator>;
+
+public:
+  ManglingSubstitutor() : Base(nullptr, nullptr) {}
+
+  template <typename... Ts>
+  llvm::Expected<ConstString> substitute(llvm::StringRef Mangled,
+                                         Ts &&...Vals) {
+    this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
+    return substituteImpl(Mangled);
+  }
+
+protected:
+  void reset(llvm::StringRef Mangled) {
+    Base::reset(Mangled.begin(), Mangled.end());
+    Written = Mangled.begin();
+    Result.clear();
+    Substituted = false;
+  }
+
+  llvm::Expected<ConstString> substituteImpl(llvm::StringRef Mangled) {
+    if (this->parse() == nullptr)
+      return llvm::createStringError(
+          llvm::formatv("Failed to substitute mangling in '{0}'", Mangled));
+
+    if (!Substituted)
+      return ConstString();
+
+    // Append any trailing unmodified input.
+    appendUnchangedInput();
+    return ConstString(Result);
+  }
+
+  void trySubstitute(llvm::StringRef From, llvm::StringRef To) {
+    if (!llvm::StringRef(currentParserPos(), this->numLeft()).starts_with(From))
+      return;
+
+    // We found a match. Append unmodified input up to this point.
+    appendUnchangedInput();
+
+    // And then perform the replacement.
+    Result += To;
+    Written += From.size();
+    Substituted = true;
+  }
+
+private:
+  /// Input character until which we have constructed the respective output
+  /// already.
+  const char *Written = "";
+
+  llvm::SmallString<128> Result;
+
+  /// Whether we have performed any substitutions.
+  bool Substituted = false;
+
+  const char *currentParserPos() const { return this->First; }
+
+  void appendUnchangedInput() {
+    Result +=
+        llvm::StringRef(Written, std::distance(Written, currentParserPos()));
+    Written = currentParserPos();
+  }
+};
+
+/// Given a mangled function `Mangled`, replace all the primitive function type
+/// arguments of `Search` with type `Replace`.
+class TypeSubstitutor : public ManglingSubstitutor<TypeSubstitutor> {
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+
+public:
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    ManglingSubstitutor::reset(Mangled);
+    this->Search = Search;
+    this->Replace = Replace;
+  }
+
+  llvm::itanium_demangle::Node *parseType() {
+    trySubstitute(Search, Replace);
+    return ManglingSubstitutor::parseType();
+  }
+};
+
+class CtorDtorSubstitutor : public ManglingSubstitutor<CtorDtorSubstitutor> {
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+
+public:
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    ManglingSubstitutor::reset(Mangled);
+    this->Search = Search;
+    this->Replace = Replace;
+  }
+
+  void reset(llvm::StringRef Mangled) { ManglingSubstitutor::reset(Mangled); }
+
+  llvm::itanium_demangle::Node *
+  parseCtorDtorName(llvm::itanium_demangle::Node *&SoFar, NameState *State) {
+    if (!Search.empty() && !Replace.empty()) {
+      trySubstitute(Search, Replace);
+    } else {
+      trySubstitute("D1", "D2");
+      trySubstitute("C1", "C2");
+    }
+    return ManglingSubstitutor::parseCtorDtorName(SoFar, State);
+  }
+};
+} // namespace
+
+llvm::Expected<ConstString>
+CPlusPlusLanguage::SubstituteType_ItaniumMangle(llvm::StringRef mangled_name,
+                                                llvm::StringRef subst_from,
+                                                llvm::StringRef subst_to) {
+  return TypeSubstitutor().substitute(mangled_name, subst_from, subst_to);
+}
+
+llvm::Expected<ConstString> CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(
+    llvm::StringRef mangled_name, llvm::StringRef subst_from,
+    llvm::StringRef subst_to) {
+  return CtorDtorSubstitutor().substitute(mangled_name, subst_from, subst_to);
+}
+
+llvm::Expected<ConstString>
+CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+    llvm::StringRef mangled_name) {
+  return CtorDtorSubstitutor().substitute(mangled_name);
 }
 
 #define LLDB_PROPERTIES_language_cplusplus
