@@ -123,3 +123,12 @@ program test
   call s4(index3)
   call s4(index4) ! ok
 end
+
+subroutine ichar_tests()
+  integer, parameter :: a1 = ichar('B')
+  !Without -Wportability, the warning isn't emitted and the parameter is constant.
+  integer, parameter :: a2 = ichar('B ')
+  !ERROR: Character in intrinsic function ichar must have length one
+  !ERROR: Must be a constant value
+  integer, parameter :: a3 = ichar('')
+end subroutine

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | FileCheck %s
-; RUN: %if ptxas-isa-6.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx64 | %ptxas-verify %}
 
 define i32 @a() { ret i32 0 }
 @b = internal alias i32 (), ptr @a

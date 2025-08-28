@@ -4,7 +4,7 @@
 # RUN:           --check-prefixes=PTX86LDMATRIX-DAG,PTX86STMATRIX-DAG
 # RUN: llc < %t-ptx86-sm_100a.ll -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 \
 # RUN:           | FileCheck %t-ptx86-sm_100a.ll
-# RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{                                                  \
+# RUN: %if ptxas-12.7 %{                                                  \
 # RUN: llc < %t-ptx86-sm_100a.ll -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 \
 # RUN:           | %ptxas-verify -arch=sm_100a                              \
 # RUN: %}

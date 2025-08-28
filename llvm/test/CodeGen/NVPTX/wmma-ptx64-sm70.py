@@ -6,7 +6,7 @@
 # RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx64-sm_70.ll -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx64 \
 # RUN:           | FileCheck %t-ptx64-sm_70.ll
-# RUN: %if ptxas-sm_70 && ptxas-isa-6.4 %{                                                  \
+# RUN: %if ptxas-10.1 %{                                                  \
 # RUN: llc < %t-ptx64-sm_70.ll -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx64 \
 # RUN:           | %ptxas-verify -arch=sm_70                              \
 # RUN: %}

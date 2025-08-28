@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90a -mattr=+ptx80| FileCheck --check-prefixes=CHECK %s
-; RUN: %if ptxas-sm_90a && ptxas-isa-8.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90a -mattr=+ptx80| %ptxas-verify -arch=sm_90a %}
+; RUN: %if ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90a -mattr=+ptx80| %ptxas-verify -arch=sm_90a %}
 
 declare void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 %reg_count)
 declare void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 %reg_count)

@@ -96,9 +96,6 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
   }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
-    preprocessor_.Define("_CUDA", "1");
-  }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
   prescanner.Prescan(range);
