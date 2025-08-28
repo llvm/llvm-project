@@ -21,20 +21,135 @@
 #define LLVM_IR_VERIFIER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Printable.h"
 #include <utility>
 
 namespace llvm {
 
 class APInt;
+class Attribute;
+class AttributeList;
+class AttributeSet;
+class CallBase;
+class Comdat;
+class DataLayout;
 class Function;
 class FunctionPass;
 class Instruction;
-class MDNode;
+class LLVMContext;
 class Module;
+class Triple;
+class VerifierSupport;
 class raw_ostream;
-struct VerifierSupport;
+
+/// Base class for IR verifier plugins.
+///
+/// To add a plugin, derive from this class and then instantiate it once.
+class VerifierPlugin {
+public:
+  VerifierPlugin();
+  virtual ~VerifierPlugin();
+
+  /// Called when the verifier finds a call (or invoke) to an intrinsic it
+  /// doesn't understand.
+  ///
+  /// If the plugin recognizes the intrinsic, it should report any verifier
+  /// errors via the given helper object.
+  virtual void verifyIntrinsicCall(CallBase &Call, VerifierSupport &VS) const;
+};
+
+class VerifierSupport {
+public:
+  raw_ostream *OS;
+  const Module &M;
+  ModuleSlotTracker MST;
+  const Triple &TT;
+  const DataLayout &DL;
+  LLVMContext &Context;
+
+  /// Track the brokenness of the module while recursively visiting.
+  bool Broken = false;
+  /// Broken debug info can be "recovered" from by stripping the debug info.
+  bool BrokenDebugInfo = false;
+  /// Whether to treat broken debug info as an error.
+  bool TreatBrokenDebugInfoAsError = true;
+
+  explicit VerifierSupport(raw_ostream *OS, const Module &M);
+
+private:
+  LLVM_ABI void Write(const Module *M);
+  LLVM_ABI void Write(const Value *V);
+  LLVM_ABI void Write(const Value &V);
+  LLVM_ABI void Write(const DbgRecord *DR);
+  LLVM_ABI void Write(DbgVariableRecord::LocationType Type);
+  LLVM_ABI void Write(const Metadata *MD);
+
+  template <class T> void Write(const MDTupleTypedArrayWrapper<T> &MD) {
+    Write(MD.get());
+  }
+
+  LLVM_ABI void Write(const NamedMDNode *NMD);
+  LLVM_ABI void Write(Type *T);
+  LLVM_ABI void Write(const Comdat *C);
+  LLVM_ABI void Write(const APInt *AI);
+  LLVM_ABI void Write(const unsigned i) { *OS << i << '\n'; }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  LLVM_ABI void Write(const Attribute *A);
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  LLVM_ABI void Write(const AttributeSet *AS);
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  LLVM_ABI void Write(const AttributeList *AL);
+  LLVM_ABI void Write(Printable P) { *OS << P << '\n'; }
+
+  template <typename T> void Write(ArrayRef<T> Vs) {
+    for (const T &V : Vs)
+      Write(V);
+  }
+
+  template <typename T1, typename... Ts>
+  void WriteTs(const T1 &V1, const Ts &...Vs) {
+    Write(V1);
+    WriteTs(Vs...);
+  }
+
+  template <typename... Ts> void WriteTs() {}
+
+public:
+  /// A check failed, so printout out the condition and the message.
+  ///
+  /// This provides a nice place to put a breakpoint if you want to see why
+  /// something is not correct.
+  LLVM_ABI void CheckFailed(const Twine &Message);
+
+  /// A check failed (with values to print).
+  ///
+  /// This calls the Message-only version so that the above is easier to set a
+  /// breakpoint on.
+  template <typename T1, typename... Ts>
+  void CheckFailed(const Twine &Message, const T1 &V1, const Ts &...Vs) {
+    CheckFailed(Message);
+    if (OS)
+      WriteTs(V1, Vs...);
+  }
+
+  /// A debug info check failed.
+  LLVM_ABI void DebugInfoCheckFailed(const Twine &Message);
+
+  /// A debug info check failed (with values to print).
+  template <typename T1, typename... Ts>
+  void DebugInfoCheckFailed(const Twine &Message, const T1 &V1,
+                            const Ts &...Vs) {
+    DebugInfoCheckFailed(Message);
+    if (OS)
+      WriteTs(V1, Vs...);
+  }
+};
 
 /// Verify that the TBAA Metadatas are valid.
 class TBAAVerifier {

@@ -115,6 +115,8 @@ void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+void initializeAArch64Verifier();
 } // end namespace llvm
 
 #endif
