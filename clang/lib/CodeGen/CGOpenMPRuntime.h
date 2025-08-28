@@ -777,22 +777,11 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
-  /// \param NumThreadsModifier The modifier of the num_threads clause, if
-  /// any, ignored otherwise.
-  /// \param Severity The severity corresponding to the num_threads clause, if
-  /// any, ignored otherwise.
-  /// \param Message The message string corresponding to the num_threads clause,
-  /// if any, or nullptr.
   ///
-  virtual void
-  emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                   llvm::Function *OutlinedFn,
-                   ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
-                   llvm::Value *NumThreads,
-                   OpenMPNumThreadsClauseModifier NumThreadsModifier =
-                       OMPC_NUMTHREADS_unknown,
-                   OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-                   const Expr *Message = nullptr);
+  virtual void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                llvm::Function *OutlinedFn,
+                                ArrayRef<llvm::Value *> CapturedVars,
+                                const Expr *IfCond, llvm::Value *NumThreads);
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1048,28 +1037,13 @@ public:
                                    Address IL, Address LB,
                                    Address UB, Address ST);
 
-  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const Expr *Message);
-  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const OMPMessageClause *MessageClause);
-
-  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity);
-  virtual llvm::Value *
-  emitSeverityClause(const OMPSeverityClause *SeverityClause);
-
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
-  /// If the modifier 'strict' is given:
-  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
-  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
-  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  virtual void emitNumThreadsClause(
-      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
-      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
-      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr);
+  virtual void emitNumThreadsClause(CodeGenFunction &CGF,
+                                    llvm::Value *NumThreads,
+                                    SourceLocation Loc);
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -1763,21 +1737,11 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
-  /// \param NumThreadsModifier The modifier of the num_threads clause, if
-  /// any, ignored otherwise.
-  /// \param Severity The severity corresponding to the num_threads clause, if
-  /// any, ignored otherwise.
-  /// \param Message The message string corresponding to the num_threads clause,
-  /// if any, or nullptr.
   ///
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond, llvm::Value *NumThreads,
-                        OpenMPNumThreadsClauseModifier NumThreadsModifier =
-                            OMPC_NUMTHREADS_unknown,
-                        OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-                        const Expr *Message = nullptr) override;
+                        const Expr *IfCond, llvm::Value *NumThreads) override;
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1947,16 +1911,9 @@ public:
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
-  /// If the modifier 'strict' is given:
-  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
-  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
-  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  void emitNumThreadsClause(
-      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
-      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
-      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
-      const Expr *Message = nullptr) override;
+  void emitNumThreadsClause(CodeGenFunction &CGF, llvm::Value *NumThreads,
+                            SourceLocation Loc) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
