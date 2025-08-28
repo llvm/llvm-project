@@ -708,6 +708,10 @@ struct WarpOpConstant : public WarpDistributionPattern {
 /// Sink out step op feeding into a warp op yield.
 /// Vector step op is treated similar to arith.constant, apart from
 /// the result that represents a sequence [0, vec_size).
+/// Due to the to vec_size == warp_size limitation,
+/// we can simply wrap the lane id into a vector (i.e., broadcast).
+/// Supporting vec_size != warp_size may involve preserving the step
+/// result and using additional arith ops (the exact details are TBD).
 /// ```
 /// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xindex>) {
 ///   ...
@@ -740,13 +744,9 @@ struct WarpOpStep final : public WarpDistributionPattern {
     VectorType newVecTy =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     rewriter.setInsertionPointAfter(warpOp);
-    auto loc = warpOp.getLoc();
-    Value stepResult =
-        vector::StepOp::create(rewriter, warpOp.getLoc(), newVecTy);
-    Value laneId = vector::BroadcastOp::create(rewriter, warpOp.getLoc(),
-                                               newVecTy, warpOp.getLaneid());
-    stepResult = rewriter.create<arith::AddIOp>(loc, stepResult, laneId);
-    rewriter.replaceAllUsesWith(warpOp.getResult(operandIdx), stepResult);
+    Value laneIdVec = vector::BroadcastOp::create(rewriter, warpOp.getLoc(),
+                                                  newVecTy, warpOp.getLaneid());
+    rewriter.replaceAllUsesWith(warpOp.getResult(operandIdx), laneIdVec);
     return success();
   }
 };
