@@ -551,37 +551,13 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
   assert(Ctx);
   auto &OS = llvm::errs();
-  const ASTContext &ASTCtx = Ctx->getASTContext();
 
-  switch (Kind) {
-  case Empty:
+  if (empty()) {
     OS << "Empty\n";
-    break;
-  case RValue:
-    OS << "RValue: ";
-    std::get<APValue>(Value).dump(OS, ASTCtx);
-    break;
-  case LValue: {
-    assert(Source);
-    QualType SourceType;
-    if (const auto *D = dyn_cast<const Decl *>(Source)) {
-      if (const auto *VD = dyn_cast<ValueDecl>(D))
-        SourceType = VD->getType();
-    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
-      SourceType = E->getType();
-    }
-
-    OS << "LValue: ";
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
-    OS << "\n";
-    break;
-  }
-  case Invalid:
+  } else if (isInvalid()) {
     OS << "Invalid\n";
-    break;
-  case Valid:
-    OS << "Valid\n";
-    break;
+  } else {
+    OS << "Value: ";
+    Value.dump(OS, Ctx->getASTContext());
   }
 }

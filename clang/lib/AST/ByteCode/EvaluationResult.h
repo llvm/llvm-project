@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 #define LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 
-#include "Pointer.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -20,6 +19,9 @@ namespace clang {
 namespace interp {
 class EvalEmitter;
 class Context;
+class Pointer;
+class SourceInfo;
+class InterpState;
 
 /// Defines the result of an evaluation.
 ///
@@ -32,8 +34,6 @@ class EvaluationResult final {
 public:
   enum ResultKind {
     Empty,   // Initial state.
-    LValue,  // Result is an lvalue/pointer.
-    RValue,  // Result is an rvalue.
     Invalid, // Result is invalid.
     Valid,   // Result is valid and empty.
   };
@@ -42,7 +42,7 @@ public:
 
 private:
   const Context *Ctx = nullptr;
-  std::variant<std::monostate, Pointer, APValue> Value;
+  APValue Value;
   ResultKind Kind = Empty;
   DeclTy Source = nullptr; // Currently only needed for dump().
 
@@ -55,10 +55,8 @@ private:
   void setSource(DeclTy D) { Source = D; }
 
   void takeValue(APValue &&V) {
-    // V could still be an LValue.
     assert(empty());
     Value = std::move(V);
-    Kind = RValue;
   }
   void setInvalid() {
     // We are NOT asserting empty() here, since setting it to invalid
@@ -75,18 +73,15 @@ public:
 
   bool empty() const { return Kind == Empty; }
   bool isInvalid() const { return Kind == Invalid; }
-  bool isLValue() const { return Kind == LValue; }
-  bool isRValue() const { return Kind == RValue; }
-  bool isPointer() const { return std::holds_alternative<Pointer>(Value); }
 
-  /// Returns an APValue for the evaluation result. The returned
-  /// APValue might be an LValue or RValue.
-  APValue toAPValue() const;
+  /// Returns an APValue for the evaluation result.
+  APValue toAPValue() const {
+    assert(!empty());
+    assert(!isInvalid());
+    return Value;
+  }
 
-  /// If the result is an LValue, convert that to an RValue
-  /// and return it. This may fail, e.g. if the result is an
-  /// LValue and we can't read from it.
-  std::optional<APValue> toRValue() const;
+  APValue stealAPValue() { return std::move(Value); }
 
   /// Check that all subobjects of the given pointer have been initialized.
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
