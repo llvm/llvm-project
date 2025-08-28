@@ -21,7 +21,7 @@ entry:
   %useless = icmp ne i32 %arg, 0
   br label %loop
 
-loop:                                       ; preds = %cleanup424, %entry
+loop:                                       ; preds = %loop, %entry
   br label %loop
 
 dead_bb:                                       ; No predecessors!
