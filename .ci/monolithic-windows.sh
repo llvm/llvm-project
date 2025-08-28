@@ -22,6 +22,7 @@ runtimes_targets="${4}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+pip install "nanobind @ git+https://github.com/wjakob/nanobind"
 
 export CC=cl
 export CXX=cl
