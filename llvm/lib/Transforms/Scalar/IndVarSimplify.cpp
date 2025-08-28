@@ -1871,7 +1871,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       for (BasicBlock *Succ : BI->successors()) {
         if (isa<UnreachableInst>(Succ->getTerminator()))
           Unreachable = Succ;
-        if (L->contains(Succ))
+        else if (L->contains(Succ))
           InLoop = Succ;
       }
       // Exit BB which have one branch back into the loop and another one to
