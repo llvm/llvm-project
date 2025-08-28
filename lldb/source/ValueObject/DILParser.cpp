@@ -93,6 +93,8 @@ ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
 //  unary_operator:
 //    "&"
 //    "*"
+//    "+"
+//    "-"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
   if (CurToken().IsOneOf(
