@@ -16573,24 +16573,24 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
 
   // Eliminate setcc by using carryout from add/sub instruction
 
-  // X = ADD i64 Y, Z          Xlo = UADDO       i32 Ylo, Zlo
-  // setcc X ult Y     ->      XHi = UADDO_CARRY i32 Yhi, Zhi
+  // LHS = ADD i64 RHS, Z          LHSlo = UADDO       i32 RHSlo, Zlo
+  // setcc LHS ult RHS     ->      LHSHi = UADDO_CARRY i32 RHShi, Zhi
   // similarly for subtraction
 
-  // X = ADD i64 Y, 1          Xlo = UADDO       i32 Ylo, 1
-  // setcc X eq 0      ->      XHi = UADDO_CARRY i32 Yhi, 0
+  // LHS = ADD i64 Y, 1            LHSlo = UADDO       i32 Ylo, 1
+  // setcc LHS eq 0        ->      LHSHi = UADDO_CARRY i32 Yhi, 0
 
   // Don't split a 64-bit add/sub into two 32-bit add/sub instructions for
   // non-divergent operations.  This can result in lo/hi 32-bit operations
   // being done in SGPR and VGPR with additional operations being needed
   // to move operands and/or generate the intermediate carry.
   if (VT == MVT::i64 && N->isDivergent() &&
-      ((((LHS.getOpcode() == ISD::ADD && CC == ISD::SETULT) ||
-         (LHS.getOpcode() == ISD::SUB && CC == ISD::SETUGT)) &&
-        LHS.getOperand(0) == RHS) ||
-       (LHS.getOpcode() == ISD::ADD && CC == ISD::SETEQ && CRHS &&
-        CRHS->isZero() && dyn_cast<ConstantSDNode>(LHS.getOperand(1)) &&
-        dyn_cast<ConstantSDNode>(LHS.getOperand(1))->isOne()))) {
+      ((CC == ISD::SETULT &&
+        sd_match(LHS, m_Add(m_Specific(RHS), m_Value()))) ||
+       (CC == ISD::SETUGT &&
+        sd_match(LHS, m_Sub(m_Specific(RHS), m_Value()))) ||
+       (CC == ISD::SETEQ && CRHS && CRHS->isZero() &&
+        sd_match(LHS, m_Add(m_Value(), m_One()))))) {
     EVT TargetType = MVT::i32;
     EVT CarryVT = MVT::i1;
     bool IsAdd = LHS.getOpcode() == ISD::ADD;
