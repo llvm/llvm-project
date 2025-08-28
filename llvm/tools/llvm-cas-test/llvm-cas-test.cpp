@@ -235,11 +235,18 @@ static int runOneTest(const char *Argv0) {
       auto WP = sys::Wait(P, Timeout, /*ErrMsg=*/&ErrMsg);
       if (WP.ReturnCode == 0)
         return false;
-      if ((Conf.Settings & CheckTermination) && WP.ReturnCode == -2 &&
-          StringRef(ErrMsg).starts_with("Child timed out")) {
-        if (Verbose)
-          llvm::errs() << "subprocess killed successfully\n";
-        return false;
+      if (Timeout) {
+        if (WP.ReturnCode == -2 &&
+            StringRef(ErrMsg).starts_with("Child timed out")) {
+          if (Verbose)
+            llvm::errs() << "subprocess killed successfully\n";
+          return false;
+        }
+        if (WP.ReturnCode == -1 &&
+            StringRef(ErrMsg).ends_with("No child processes")) {
+          // The child process ended in the window between check and kill.
+          return false;
+        }
       }
       llvm::errs() << "subprocess failed with error code (" << WP.ReturnCode
                    << "): " << ErrMsg << "\n";
