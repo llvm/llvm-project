@@ -157,11 +157,11 @@ static DecodeStatus decodeRegisterClassImpl(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->createRegOperand(RegClassID, Imm));
 }
 
+using RegClassDecoder = decltype(&decodeRegisterClassImpl<0>);
+
 #define DECODE_OPERAND_REG_8(RegClass)                                         \
-  static const constexpr auto Decode##RegClass##RegisterClass =                \
-      [](auto... args) {                                                       \
-        return decodeRegisterClassImpl<AMDGPU::RegClass##RegClassID>(args...); \
-      };
+  static const constexpr RegClassDecoder Decode##RegClass##RegisterClass =     \
+      decodeRegisterClassImpl<AMDGPU::RegClass##RegClassID>;
 
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
   static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
