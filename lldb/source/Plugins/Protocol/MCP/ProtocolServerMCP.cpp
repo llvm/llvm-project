@@ -67,7 +67,7 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   LLDB_LOG(log, "New MCP client connected: {0}", client_name);
 
   lldb::IOObjectSP io_sp = std::move(socket);
-  auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
+  auto transport_up = std::make_unique<lldb_protocol::mcp::MCPTransport>(
       io_sp, io_sp, std::move(client_name), [&](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
       });

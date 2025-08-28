@@ -21,7 +21,6 @@
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Protocol/MCP/Tool.h"
-#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -37,12 +36,12 @@ using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 
 namespace {
-class TestMCPTransport final : public lldb_protocol::mcp::Transport {
+class TestMCPTransport final : public MCPTransport {
 public:
   TestMCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
-      : lldb_protocol::mcp::Transport(in, out, "unittest") {}
+      : lldb_protocol::mcp::MCPTransport(in, out, "unittest") {}
 
-  using Transport::Write;
+  using MCPTransport::Write;
 
   void Log(llvm::StringRef message) override {
     log_messages.emplace_back(message);
