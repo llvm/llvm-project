@@ -144,7 +144,7 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
       load_addr, swift::remote::RemoteAddress::DefaultAddressSpace);
 }
 
-static std::unique_ptr<swift::SwiftObjectFileFormat>
+std::unique_ptr<swift::SwiftObjectFileFormat>
 GetSwiftObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
   std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
   switch (obj_format_type) {
@@ -156,6 +156,9 @@ GetSwiftObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
     break;
   case llvm::Triple::COFF:
     obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
+    break;
+  case llvm::Triple::Wasm:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatWasm>();
     break;
   default:
     LLDB_LOG(GetLog(LLDBLog::Types), "Could not determine swift reflection "
