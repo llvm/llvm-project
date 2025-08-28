@@ -54,8 +54,9 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // Num instructions left to schedule.
   unsigned NumLeft;
 
-  // True if latency scheduling is enabled.
-  bool ShouldReduceLatency;
+  // True if the region has many instructions in def-use sequences and would
+  // likely benefit from latency reduction.
+  bool HasDataSequences;
 
   // True if MI is also using the register it defines.
   std::vector<bool> IsRedefining;

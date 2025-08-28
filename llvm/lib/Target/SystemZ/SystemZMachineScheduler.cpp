@@ -214,11 +214,11 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   if (!MI->getNumOperands() || MI->isCopy())
     return 0;
 
-  const MachineOperand &DefMO = MI->getOperand(0);
-  assert(!isPhysRegDef(DefMO) && "Did not expect physreg def!");
+  const MachineOperand &MO0 = MI->getOperand(0);
+  assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
   bool IsLoad =
-      isRegDef(DefMO) && !DefMO.isDead() && !IsRedefining[SU->NodeNum];
-  bool IsStore = (!isRegDef(DefMO) || DefMO.isDead());
+      isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
+  bool IsStore = (!isRegDef(MO0) || MO0.isDead());
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
@@ -252,10 +252,10 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     // Find the interesting properties.
     // Prioritize FP: Ignore GPR/Addr kills with an FP def.
     UsesLivePrio = IsLoad && !PrioKill &&
-                   (isPrioVirtReg(DefMO.getReg(), &DAG->MRI) || !GPRKill);
+                   (isPrioVirtReg(MO0.getReg(), &DAG->MRI) || !GPRKill);
     UsesLiveAll = !PrioKill && !GPRKill;
     StoreKill = (PrioKill || (!HasPrioUse && GPRKill));
-  } else {
+  } else if (MO0.isReg() && MO0.getReg().isVirtual()) {
     int PrioPressureChange = 0;
     int GPRPressureChange = 0;
     const PressureDiff &PDiff = DAG->getPressureDiff(SU);
@@ -267,22 +267,21 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
       else if (PC.getPSet() == GPRPressureSet)
         GPRPressureChange += PC.getUnitInc();
     }
+    const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
+    int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
     if (IsLoad) {
-      const TargetRegisterClass *RC = DAG->MRI.getRegClass(DefMO.getReg());
-      int DefWeight = -int(TRI->getRegClassWeight(RC).RegWeight);
-      bool PrioDefNoKill = PrioPressureChange == DefWeight;
-      bool GPRDefNoKill = GPRPressureChange == DefWeight;
+      bool PrioDefNoKill = PrioPressureChange == -RegWeight;
+      bool GPRDefNoKill = GPRPressureChange == -RegWeight;
       UsesLivePrio =
-          (PrioDefNoKill || (PrioPressureChange == 0 && GPRDefNoKill));
-      UsesLiveAll = (PrioDefNoKill && GPRPressureChange == 0) ||
-                    (PrioPressureChange == 0 && GPRDefNoKill);
+          (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
+      UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
+                    (!PrioPressureChange && GPRDefNoKill);
     }
-    if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
-      Register SrcReg = MI->getOperand(0).getReg();
-      bool SrcKill = !DAG->getBotRPTracker().isRegLive(SrcReg);
+    else if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
+      bool SrcKill = !DAG->getBotRPTracker().isRegLive(MO0.getReg());
       StoreKill =
-          SrcKill && (PrioPressureChange > 0 ||
-                      (PrioPressureChange == 0 && GPRPressureChange > 0));
+          SrcKill && (PrioPressureChange == RegWeight ||
+                      (!PrioPressureChange && GPRPressureChange == RegWeight));
     }
   }
 
@@ -342,8 +341,10 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     if (tryLess(TryCandScore, CandScore, TryCand, Cand, LivenessReduce))
       return TryCand.Reason != NoCand;
 
-    // Don't extend the scheduled latency.
-    if (ShouldReduceLatency &&
+    // Don't extend the scheduled latency in regions with many nodes in
+    // simple data sequences, or for (single block loop) regions that are
+    // acyclically (within a single loop iteration) latency limited.
+    if ((HasDataSequences || Rem.IsAcyclicLatencyLimited) &&
         TryCand.SU->getHeight() != Cand.SU->getHeight() &&
         (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
          Zone->getScheduledLatency())) {
@@ -392,63 +393,6 @@ void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
 void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   GenericScheduler::initialize(dag);
 
-  const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
-  if (TinyRegion) {
-    // A tiny region with long latency instructions is better handled using
-    // normal heuristics, except in regions that have COPYs of a physreg both
-    // ways and/or have a compare-0 likely to be eliminated.
-    const SUnit *CmpZeroSU = nullptr;
-    const SUnit *CmpSrcSU = nullptr;
-    Register CmpSrcReg = 0;
-    bool OtherCCClob = false;
-    unsigned MaxLat = 0;
-    std::set<Register> PRegs;
-    bool CopysPRegDep = false;
-    for (unsigned Idx = DAG->SUnits.size() - 1; Idx + 1 != 0; --Idx) {
-      const SUnit *SU = &DAG->SUnits[Idx];
-      const MachineInstr *MI = SU->getInstr();
-
-      // Check for a (likely) eliminable compare-0.
-      if (TII->isCompareZero(*MI)) {
-        CmpZeroSU = SU;
-        CmpSrcReg = TII->getCompareSourceReg(*MI);
-        continue;
-      }
-      if (MI->getNumOperands()) {
-        const MachineOperand &DefMO = MI->getOperand(0);
-        // Doing this instead of SU data preds happens to also handle the
-        // case where CmpSrcReg is redefined.
-        if (isVirtRegDef(DefMO) && DefMO.getReg() == CmpSrcReg &&
-            MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
-          CmpSrcSU = SU;
-      }
-      if (SU != CmpZeroSU && SU != CmpSrcSU &&
-          MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
-        OtherCCClob = true;
-
-      // Check for long latency instructions.
-      MaxLat = std::max(MaxLat, unsigned(SU->Latency));
-
-      // Check for COPYs of pregs both in and out of the region.
-      if (MI->isCopy()) {
-        Register DstReg = MI->getOperand(0).getReg();
-        Register SrcReg = MI->getOperand(1).getReg();
-        if (DstReg.isPhysical() && DAG->MRI.isAllocatable(DstReg) &&
-            SrcReg.isVirtual())
-          PRegs.insert(DstReg);
-        else if (SrcReg.isPhysical() && DAG->MRI.isAllocatable(SrcReg) &&
-                 DstReg.isVirtual()) {
-          if (!PRegs.insert(SrcReg).second)
-            CopysPRegDep = true;
-        }
-      }
-    }
-    bool CmpElimRegion = CmpZeroSU && CmpSrcSU && OtherCCClob;
-
-    if (DAG->SUnits.size() > 6 && MaxLat >= 6 && !CopysPRegDep &&
-        !CmpElimRegion)
-      TinyRegion = false;
-  }
   LLVM_DEBUG(dbgs() << "Region is" << (TinyRegion ? "" : " not") << " tiny.\n");
   if (TinyRegion)
     return;
@@ -456,15 +400,46 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   NumLeft = DAG->SUnits.size();
   RemLat = ~0U;
 
-  // It seems to work best to include the latencies in this heuristic (as
-  // opposed to something like a "unit SU height" with all latencies counted
-  // as 1).
+  // Enable latency reduction for a region that has a considerable amount of
+  // data sequences so that they become interlaved. These are SUs that only
+  // have one data predecessor / successor edge(s) to their adjacent
+  // SU(s). Disable if region has many SUs relative to the overall height.
   unsigned DAGHeight = 0;
   for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
     DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
-  ShouldReduceLatency = DAG->SUnits.size() < 3 * std::max(DAGHeight, 1u);
-  LLVM_DEBUG(if (ShouldReduceLatency) dbgs() << "Latency scheduling enabled.\n";
-             else dbgs() << "Latency scheduling disabled.\n";);
+  if ((HasDataSequences = DAG->SUnits.size() < 3 * std::max(DAGHeight, 1u))) {
+    unsigned CurrSequence = 0, NumSeqNodes = 0;
+    auto countSequence = [&CurrSequence, &NumSeqNodes]() {
+      NumSeqNodes += CurrSequence >= 2 ? CurrSequence : 0;
+      CurrSequence = 0;
+    };
+    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+      const SUnit *SU = &DAG->SUnits[Idx];
+      bool InDataSequence = true;
+      unsigned NumPreds = 0;
+      for (const SDep &Pred : SU->Preds)
+        if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
+            Pred.getSUnit()->NodeNum != Idx - 1)
+          InDataSequence = false;
+      unsigned NumSuccs = 0;
+      for (const SDep &Succ : SU->Succs)
+        if (Succ.getSUnit() != &DAG->ExitSU &&
+            (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
+          InDataSequence = false;
+      if (!InDataSequence || !NumPreds)
+        countSequence();
+      if (InDataSequence)
+        CurrSequence++;
+    }
+    countSequence();
+    if (NumSeqNodes >= DAG->SUnits.size() / 4)
+      LLVM_DEBUG(dbgs() << "Number of nodes in def-use sequences: "
+                        << NumSeqNodes << ". ";);
+    else
+      HasDataSequences = false;
+  }
+  LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
+                    << "enabled for data sequences.\n";);
 
   // If MI uses the register it defines, record it one time here.
   IsRedefining = std::vector<bool>(DAG->SUnits.size(), false);
