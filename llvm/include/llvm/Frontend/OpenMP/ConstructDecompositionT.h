@@ -708,6 +708,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
                      tomp::clause::MapT<TypeTy, IdTy, ExprTy>{
                          {/*MapType=*/MapType::Tofrom,
                           /*MapTypeModifier=*/std::nullopt,
+                          /*RefModifier=*/std::nullopt,
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                           /*LocatorList=*/std::move(tofrom)}});
       dirTarget->clauses.push_back(map);
@@ -969,8 +970,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_map,
           tomp::clause::MapT<TypeTy, IdTy, ExprTy>{
               {/*MapType=*/MapType::Tofrom, /*MapTypeModifier=*/std::nullopt,
-               /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-               /*LocatorList=*/std::move(tofrom)}});
+               /*RefModifier=*/std::nullopt, /*Mapper=*/std::nullopt,
+               /*Iterator=*/std::nullopt, /*LocatorList=*/std::move(tofrom)}});
 
       dirTarget->clauses.push_back(map);
       applied = true;

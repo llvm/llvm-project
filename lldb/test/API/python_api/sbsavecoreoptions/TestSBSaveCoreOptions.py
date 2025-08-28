@@ -164,3 +164,46 @@ class SBSaveCoreOptionsAPICase(TestBase):
         options.SetStyle(lldb.eSaveCoreCustomOnly)
         total = options.GetCurrentSizeInBytes(error)
         self.assertTrue(error.Fail(), error.GetCString())
+
+    def test_get_memory_regions_to_save(self):
+        """
+        Tests the matrix of responses for GetMemoryRegionsToSave
+        """
+
+        options = lldb.SBSaveCoreOptions()
+
+        # Not specifying plugin or process should return an empty list.
+        memory_list = options.GetMemoryRegionsToSave()
+        self.assertEqual(0, memory_list.GetSize())
+
+        # No style returns an empty list
+        process = self.get_basic_process()
+        options.SetProcess(process)
+        memory_list = options.GetMemoryRegionsToSave()
+        self.assertEqual(0, memory_list.GetSize())
+        options.Clear()
+
+        # No Process returns an empty list
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        memory_list = options.GetMemoryRegionsToSave()
+        self.assertEqual(0, memory_list.GetSize())
+        options.Clear()
+
+        # Validate we get back the single region we populate
+        options.SetStyle(lldb.eSaveCoreCustomOnly)
+        process = self.get_basic_process()
+        options.SetProcess(process)
+        memory_range = lldb.SBMemoryRegionInfo()
+
+        # Add the memory range of 0x1000-0x1100
+        process.GetMemoryRegionInfo(0x1000, memory_range)
+        options.AddMemoryRegionToSave(memory_range)
+        memory_list = options.GetMemoryRegionsToSave()
+        self.assertEqual(1, memory_list.GetSize())
+        read_region = lldb.SBMemoryRegionInfo()
+        memory_list.GetMemoryRegionAtIndex(0, read_region)
+
+        # Permissions from Process getLLDBRegion aren't matching up with
+        # the live process permissions, so we're just checking the range for now.
+        self.assertEqual(memory_range.GetRegionBase(), read_region.GetRegionBase())
+        self.assertEqual(memory_range.GetRegionEnd(), read_region.GetRegionEnd())

@@ -152,6 +152,25 @@ entry:
 ; CHECK-NEXT:   retq
 ; CHECK-NEXT:   .seh_endproc
 
+define dso_local void @large_aligned_alloc() align 16 {
+  %1 = alloca [128 x i8], align 64
+  ret void
+}
+; CHECK-LABEL:  large_aligned_alloc:
+; CHECK:        .seh_unwindversion 2
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_stackalloc 176
+; CHECK:        .seh_setframe %rbp, 128
+; CHECK:        .seh_endprologue
+; CHECK-NOT:    .seh_endproc
+; CHECK:        .seh_startepilogue
+; CHECK-NEXT:   leaq    48(%rbp), %rsp
+; CHECK-NEXT:   .seh_unwindv2start
+; CHECK-NEXT:   popq    %rbp
+; CHECK-NEXT:   .seh_endepilogue
+; CHECK-NEXT:   retq
+; CHECK-NEXT:   .seh_endproc
+
 declare void @a() local_unnamed_addr
 declare i32 @b() local_unnamed_addr
 declare i32 @c(i32) local_unnamed_addr

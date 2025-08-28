@@ -320,11 +320,13 @@ TEST_F(IR2VecTestFixture, GetInstVecMap) {
   EXPECT_TRUE(InstMap.count(AddInst));
   EXPECT_TRUE(InstMap.count(RetInst));
 
-  EXPECT_EQ(InstMap.at(AddInst).size(), 2u);
-  EXPECT_EQ(InstMap.at(RetInst).size(), 2u);
+  const auto &AddEmb = InstMap.at(AddInst);
+  const auto &RetEmb = InstMap.at(RetInst);
+  EXPECT_EQ(AddEmb.size(), 2u);
+  EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_TRUE(InstMap.at(AddInst).approximatelyEquals(Embedding(2, 27.6)));
-  EXPECT_TRUE(InstMap.at(RetInst).approximatelyEquals(Embedding(2, 16.8)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 27.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 17.0)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVecMap) {
@@ -337,9 +339,9 @@ TEST_F(IR2VecTestFixture, GetBBVecMap) {
   EXPECT_TRUE(BBMap.count(BB));
   EXPECT_EQ(BBMap.at(BB).size(), 2u);
 
-  // BB vector should be sum of add and ret: {27.6, 27.6} + {16.8, 16.8} =
-  // {44.4, 44.4}
-  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 44.4)));
+  // BB vector should be sum of add and ret: {27.9, 27.9} + {17.0, 17.0} =
+  // {44.9, 44.9}
+  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 44.9)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector) {
@@ -349,7 +351,7 @@ TEST_F(IR2VecTestFixture, GetBBVector) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 44.4)));
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 44.9)));
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector) {
@@ -360,13 +362,13 @@ TEST_F(IR2VecTestFixture, GetFunctionVector) {
 
   EXPECT_EQ(FuncVec.size(), 2u);
 
-  // Function vector should match BB vector (only one BB): {44.4, 44.4}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 44.4)));
+  // Function vector should match BB vector (only one BB): {44.9, 44.9}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 44.9)));
 }
 
-static constexpr unsigned MaxOpcodes = 67;
-static constexpr unsigned MaxTypeIDs = 21;
-static constexpr unsigned MaxOperands = 4;
+static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
+static constexpr unsigned MaxTypeIDs = Vocabulary::MaxTypeIDs;
+static constexpr unsigned MaxOperands = Vocabulary::MaxOperandKinds;
 
 TEST(IR2VecVocabularyTest, DummyVocabTest) {
   for (unsigned Dim = 1; Dim <= 10; ++Dim) {
@@ -395,6 +397,69 @@ TEST(IR2VecVocabularyTest, DummyVocabTest) {
       EXPECT_TRUE(Entry.approximatelyEquals(ExpectedVocab[CurPos++], 0.01));
   }
 }
+
+TEST(IR2VecVocabularyTest, NumericIDMap) {
+  // Test getNumericID for opcodes
+  EXPECT_EQ(Vocabulary::getNumericID(1u), 0u);
+  EXPECT_EQ(Vocabulary::getNumericID(13u), 12u);
+  EXPECT_EQ(Vocabulary::getNumericID(MaxOpcodes), MaxOpcodes - 1);
+
+  // Test getNumericID for Type IDs
+  EXPECT_EQ(Vocabulary::getNumericID(Type::VoidTyID),
+            MaxOpcodes + static_cast<unsigned>(Type::VoidTyID));
+  EXPECT_EQ(Vocabulary::getNumericID(Type::HalfTyID),
+            MaxOpcodes + static_cast<unsigned>(Type::HalfTyID));
+  EXPECT_EQ(Vocabulary::getNumericID(Type::FloatTyID),
+            MaxOpcodes + static_cast<unsigned>(Type::FloatTyID));
+  EXPECT_EQ(Vocabulary::getNumericID(Type::IntegerTyID),
+            MaxOpcodes + static_cast<unsigned>(Type::IntegerTyID));
+  EXPECT_EQ(Vocabulary::getNumericID(Type::PointerTyID),
+            MaxOpcodes + static_cast<unsigned>(Type::PointerTyID));
+
+  // Test getNumericID for Value operands
+  LLVMContext Ctx;
+  Module M("TestM", Ctx);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "testFunc", M);
+
+  // Test Function operand
+  EXPECT_EQ(Vocabulary::getNumericID(F),
+            MaxOpcodes + MaxTypeIDs + 0u); // Function = 0
+
+  // Test Constant operand
+  Constant *C = ConstantInt::get(Type::getInt32Ty(Ctx), 42);
+  EXPECT_EQ(Vocabulary::getNumericID(C),
+            MaxOpcodes + MaxTypeIDs + 2u); // Constant = 2
+
+  // Test Pointer operand
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  AllocaInst *PtrVal = new AllocaInst(Type::getInt32Ty(Ctx), 0, "ptr", BB);
+  EXPECT_EQ(Vocabulary::getNumericID(PtrVal),
+            MaxOpcodes + MaxTypeIDs + 1u); // Pointer = 1
+
+  // Test Variable operand (function argument)
+  Argument *Arg = F->getArg(0);
+  EXPECT_EQ(Vocabulary::getNumericID(Arg),
+            MaxOpcodes + MaxTypeIDs + 3u); // Variable = 3
+}
+
+#if GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+TEST(IR2VecVocabularyTest, NumericIDMapInvalidInputs) {
+  // Test invalid opcode IDs
+  EXPECT_DEATH(Vocabulary::getNumericID(0u), "Invalid opcode");
+  EXPECT_DEATH(Vocabulary::getNumericID(MaxOpcodes + 1), "Invalid opcode");
+
+  // Test invalid type IDs
+  EXPECT_DEATH(Vocabulary::getNumericID(static_cast<Type::TypeID>(MaxTypeIDs)),
+               "Invalid type ID");
+  EXPECT_DEATH(
+      Vocabulary::getNumericID(static_cast<Type::TypeID>(MaxTypeIDs + 10)),
+      "Invalid type ID");
+}
+#endif // NDEBUG
+#endif // GTEST_HAS_DEATH_TEST
 
 TEST(IR2VecVocabularyTest, StringKeyGeneration) {
   EXPECT_EQ(Vocabulary::getStringKey(0), "Ret");

@@ -103,15 +103,15 @@ handler2:
 ; X64: $ip2state$try_in_catch:
 ; X64-NEXT: .long   .Lfunc_begin0@IMGREL
 ; X64-NEXT: .long   -1
-; X64-NEXT: .long   .Ltmp0@IMGREL+1
+; X64-NEXT: .long   .Ltmp0@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp1@IMGREL+1
+; X64-NEXT: .long   .Ltmp1@IMGREL
 ; X64-NEXT: .long   -1
 ; X64-NEXT: .long   "?catch$2@?0?try_in_catch@4HA"@IMGREL
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   .Ltmp2@IMGREL+1
+; X64-NEXT: .long   .Ltmp2@IMGREL
 ; X64-NEXT: .long   2
-; X64-NEXT: .long   .Ltmp3@IMGREL+1
+; X64-NEXT: .long   .Ltmp3@IMGREL
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   "?catch$4@?0?try_in_catch@4HA"@IMGREL
 ; X64-NEXT: .long   3

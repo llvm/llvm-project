@@ -1864,11 +1864,13 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc &&
-        Sym->isExternal() && !cast<MCSymbolMachO>(Sym)->isAltEntry())
-      return Error(StartTokLoc, "non-private labels cannot appear between "
-                                ".cfi_startproc / .cfi_endproc pairs") &&
-             Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    if (MAI.isMachO() && CFIStartProcLoc) {
+      auto *SymM = static_cast<MCSymbolMachO *>(Sym);
+      if (SymM->isExternal() && !SymM->isAltEntry())
+        return Error(StartTokLoc, "non-private labels cannot appear between "
+                                  ".cfi_startproc / .cfi_endproc pairs") &&
+               Error(*CFIStartProcLoc, "previous .cfi_startproc was here");
+    }
 
     if (discardLTOSymbol(IDVal))
       return false;
@@ -3404,17 +3406,16 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   const MCSection *Section = getStreamer().getCurrentSectionOnly();
   assert(Section && "must have section to emit alignment");
 
-  if (HasFillExpr && FillExpr != 0 && Section->isVirtualSection()) {
+  if (HasFillExpr && FillExpr != 0 && Section->isBssSection()) {
     ReturnVal |=
-        Warning(FillExprLoc, "ignoring non-zero fill value in " +
-                                 Section->getVirtualSectionKind() +
-                                 " section '" + Section->getName() + "'");
+        Warning(FillExprLoc, "ignoring non-zero fill value in BSS section '" +
+                                 Section->getName() + "'");
     FillExpr = 0;
   }
 
   // Check whether we should use optimal code alignment for this .align
   // directive.
-  if (Section->useCodeAlign() && !HasFillExpr) {
+  if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
     getStreamer().emitCodeAlignment(
         Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
   } else {
@@ -4094,27 +4095,30 @@ bool AsmParser::parseDirectiveCVFPOData() {
 }
 
 /// parseDirectiveCFISections
-/// ::= .cfi_sections section [, section]
+/// ::= .cfi_sections section [, section][, section]
 bool AsmParser::parseDirectiveCFISections() {
   StringRef Name;
   bool EH = false;
   bool Debug = false;
+  bool SFrame = false;
 
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     for (;;) {
       if (parseIdentifier(Name))
-        return TokError("expected .eh_frame or .debug_frame");
+        return TokError("expected .eh_frame, .debug_frame, or .sframe");
       if (Name == ".eh_frame")
         EH = true;
       else if (Name == ".debug_frame")
         Debug = true;
+      else if (Name == ".sframe")
+        SFrame = true;
       if (parseOptionalToken(AsmToken::EndOfStatement))
         break;
       if (parseComma())
         return true;
     }
   }
-  getStreamer().emitCFISections(EH, Debug);
+  getStreamer().emitCFISections(EH, Debug, SFrame);
   return false;
 }
 
@@ -6271,7 +6275,8 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   // used as a symbol, or it is an absolute symbol).
   Sym = Parser.getContext().lookupSymbol(Name);
   if (Sym) {
-    if (!Sym->isUnset() && (!allow_redef || !Sym->isRedefinable()))
+    if ((Sym->isVariable() || Sym->isDefined()) &&
+        (!allow_redef || !Sym->isRedefinable()))
       return Parser.Error(EqualLoc, "redefinition of '" + Name + "'");
     // If the symbol is redefinable, clone it and update the symbol table
     // to the new symbol. Existing references to the original symbol remain

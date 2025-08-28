@@ -77,7 +77,7 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
                       clonedOp->result_end());
   }
   // Add return operation
-  builder.create<func::ReturnOp>(loc, clonedVals);
+  func::ReturnOp::create(builder, loc, clonedVals);
 
   // Remove unused function arguments
   size_t currentIndex = 0;

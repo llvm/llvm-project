@@ -210,7 +210,7 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
 
   auto insertJump = [&](Location loc, Block *source, Block *dest, auto args) {
     rewriter.setInsertionPointToEnd(source);
-    rewriter.create<cf::BranchOp>(loc, dest, args);
+    cf::BranchOp::create(rewriter, loc, dest, args);
   };
 
   for (auto condBranch : worklist) {
@@ -253,7 +253,7 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
     for (OpOperand &operand : terminator->getOpOperands()) {
       if (isValidSMETileVectorType(operand.get().getType())) {
         auto copy =
-            rewriter.create<CopyTileOp>(terminator->getLoc(), operand.get());
+            CopyTileOp::create(rewriter, terminator->getLoc(), operand.get());
         rewriter.modifyOpInPlace(terminator, [&] { operand.assign(copy); });
       }
     }

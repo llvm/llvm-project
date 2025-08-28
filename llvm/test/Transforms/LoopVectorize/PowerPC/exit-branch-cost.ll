@@ -51,7 +51,6 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD_10:%.*]] = add <2 x i64> [[STEP_ADD_9]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_11:%.*]] = add <2 x i64> [[STEP_ADD_10]], splat (i64 2)
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 6
@@ -63,7 +62,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 18
 ; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 20
 ; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 22
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <2 x i8>, ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD27:%.*]] = load <2 x i8>, ptr [[TMP14]], align 1
@@ -163,8 +162,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[VEC_IND27:%.*]] = phi <2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT28:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI29:%.*]] = phi <2 x i64> [ [[TMP57]], %[[VEC_EPILOG_PH]] ], [ [[TMP58:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP30:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX38]]
-; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr i8, ptr [[NEXT_GEP30]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD32:%.*]] = load <2 x i8>, ptr [[TMP60]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD32:%.*]] = load <2 x i8>, ptr [[NEXT_GEP30]], align 1
 ; CHECK-NEXT:    [[TMP61:%.*]] = zext <2 x i8> [[WIDE_LOAD32]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP62:%.*]] = shl <2 x i64> [[VEC_IND27]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP63:%.*]] = shl <2 x i64> [[TMP61]], [[TMP62]]

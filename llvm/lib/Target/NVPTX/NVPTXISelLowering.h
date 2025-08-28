@@ -38,7 +38,7 @@ enum NodeType : unsigned {
   /// This node represents a PTX call instruction. It's operands are as follows:
   ///
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
-  ///      NumParams, Callee, Proto, InGlue)
+  ///      NumParams, Callee, Proto)
   CALL,
 
   MoveParam,
@@ -64,6 +64,11 @@ enum NodeType : unsigned {
   UNPACK_VECTOR,
 
   FCOPYSIGN,
+  FMAXNUM3,
+  FMINNUM3,
+  FMAXIMUM3,
+  FMINIMUM3,
+
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
   STACKSAVE,
@@ -84,13 +89,7 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LoadParam,
-  LoadParamV2,
-  LoadParamV4,
-  StoreParam,
-  StoreParamV2,
-  StoreParamV4,
-  LAST_MEMORY_OPCODE = StoreParamV4,
+  LAST_MEMORY_OPCODE = StoreV8,
 };
 }
 
@@ -207,8 +206,7 @@ public:
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
-  bool usePrecSqrtF32(const MachineFunction &MF,
-                      const SDNode *N = nullptr) const;
+  bool usePrecSqrtF32(const SDNode *N = nullptr) const;
 
   // Get whether we should use instructions that flush floating-point denormals
   // to sign-preserving zero.
@@ -221,7 +219,6 @@ public:
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
   bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
-  bool allowUnsafeFPMath(const MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT) const override {
@@ -275,6 +272,11 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth = 0) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
@@ -287,6 +289,7 @@ private:
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
@@ -306,8 +309,6 @@ private:
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const;

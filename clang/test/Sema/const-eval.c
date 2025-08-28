@@ -41,9 +41,6 @@ struct s {
 };
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
-// expected-error@-1 {{not an integer constant expression}} \
-// expected-note@-1 {{dereferencing a null pointer is not allowed in a constant expression}}
-
 
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
 
@@ -153,3 +150,7 @@ struct PR35214_X {
 int PR35214_x;
 int PR35214_y = ((struct PR35214_X *)&PR35214_x)->arr[1]; // expected-error {{not a compile-time constant}}
 int *PR35214_z = &((struct PR35214_X *)&PR35214_x)->arr[1]; // ok, &PR35214_x + 2
+
+
+int * GH149500_p = &(*(int *)0x400);
+static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);

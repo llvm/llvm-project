@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both -triple i686 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both              %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both                   %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both -triple i686      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both                   %s
 
 /// Used to crash.
 struct Empty {};
@@ -1660,11 +1660,9 @@ namespace NullptrCast {
   constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
-                         // ref-note {{dereferencing a null pointer}} \
-                         // expected-note {{cannot access base class of null pointer}}
+                         // both-note {{dereferencing a null pointer}}
   constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
-                             // ref-note {{dereferencing a null pointer}} \
-                             // expected-note {{cannot access derived class of null pointer}}
+                             // both-note {{dereferencing a null pointer}}
   constexpr bool test() {
     auto a = (A*)(B*)nullptr;
 

@@ -6,14 +6,6 @@ define <4 x i16> @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> zeroinitializer, <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <16 x i16> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> poison, i16 [[TMP25]], i64 0
-; CHECK-NEXT:    [[TMP28:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i16> [[TMP26]], i16 [[TMP28]], i64 1
-; CHECK-NEXT:    [[TMP31:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i16> [[TMP29]], i16 [[TMP31]], i64 2
-; CHECK-NEXT:    [[TMP34:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> zeroinitializer)
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i16> [[TMP32]], i16 [[TMP34]], i64 3
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = or <16 x i16> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <16 x i16> [[RDX_OP]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP36]])
@@ -28,8 +20,7 @@ define <4 x i16> @test() {
 ; CHECK-NEXT:    [[TMP46:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP45]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i16> [[TMP44]], i16 [[TMP46]], i64 3
 ; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> [[TMP47]], zeroinitializer
-; CHECK-NEXT:    [[OP_RDX11:%.*]] = or <4 x i16> [[OP_RDX9]], [[TMP35]]
-; CHECK-NEXT:    ret <4 x i16> [[OP_RDX11]]
+; CHECK-NEXT:    ret <4 x i16> [[OP_RDX9]]
 ;
 entry:
   %subi = add <4 x i16> zeroinitializer, zeroinitializer

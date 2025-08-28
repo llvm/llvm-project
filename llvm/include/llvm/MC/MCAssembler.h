@@ -36,8 +36,6 @@ class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCFragment;
 class MCFixup;
-class MCLEBFragment;
-class MCPseudoProbeAddrFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
@@ -101,8 +99,7 @@ private:
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
   bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
-                     uint64_t &Value, bool RecordReloc,
-                     MutableArrayRef<char> Contents) const;
+                     uint64_t &Value, bool RecordReloc, uint8_t *Data) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -115,15 +112,11 @@ private:
 
   /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);
-  bool relaxInstruction(MCFragment &F);
-  bool relaxLEB(MCFragment &F);
-  bool relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
-  bool relaxDwarfLineAddr(MCFragment &F);
-  bool relaxDwarfCallFrameFragment(MCFragment &F);
-  bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
-  bool relaxCVDefRange(MCCVDefRangeFragment &DF);
-  bool relaxFill(MCFillFragment &F);
-  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
+  void relaxInstruction(MCFragment &F);
+  void relaxLEB(MCFragment &F);
+  void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  void relaxDwarfLineAddr(MCFragment &F);
+  void relaxDwarfCallFrameFragment(MCFragment &F);
 
 public:
   /// Construct a new assembler instance.
@@ -212,7 +205,7 @@ public:
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
-  void addRelocDirective(RelocDirective RD);
+  LLVM_ABI void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

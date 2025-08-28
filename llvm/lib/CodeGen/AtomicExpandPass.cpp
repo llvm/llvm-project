@@ -84,7 +84,7 @@ private:
   bool expandAtomicLoadToCmpXchg(LoadInst *LI);
   StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
   bool tryExpandAtomicStore(StoreInst *SI);
-  void expandAtomicStore(StoreInst *SI);
+  void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -537,6 +537,9 @@ bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     LI->setAtomic(AtomicOrdering::NotAtomic);
     return true;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicLoad(LI);
+    return true;
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicLoad");
   }
@@ -546,8 +549,11 @@ bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
   switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
+    TLI->emitExpandAtomicStore(SI);
+    return true;
   case TargetLoweringBase::AtomicExpansionKind::Expand:
-    expandAtomicStore(SI);
+    expandAtomicStoreToXChg(SI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     SI->setAtomic(AtomicOrdering::NotAtomic);
@@ -620,7 +626,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   return NewSI;
 }
 
-void AtomicExpandImpl::expandAtomicStore(StoreInst *SI) {
+void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
   // This function is only called on atomic stores that are too large to be
   // atomic if implemented as a native store. So we replace them by an
   // atomic swap, that can be implemented for example as a ldrex/strex on ARM
@@ -741,7 +747,7 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicRMW(AI);
     return true;
   default:
@@ -1695,7 +1701,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicCmpXchgInst(CI);
-  case TargetLoweringBase::AtomicExpansionKind::Expand: {
+  case TargetLoweringBase::AtomicExpansionKind::CustomExpand: {
     TLI->emitExpandAtomicCmpXchg(CI);
     return true;
   }
@@ -1915,7 +1921,6 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   // TODO: the "order" argument type is "int", not int32. So
   // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
-  ConstantInt *SizeVal64 = ConstantInt::get(Type::getInt64Ty(Ctx), Size);
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
   Constant *OrderingVal =
       ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
@@ -2012,7 +2017,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (CASExpected) {
     AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
     AllocaCASExpected->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaCASExpected);
     Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
     Args.push_back(AllocaCASExpected);
   }
@@ -2026,7 +2031,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
       AllocaValue->setAlignment(AllocaAlignment);
-      Builder.CreateLifetimeStart(AllocaValue, SizeVal64);
+      Builder.CreateLifetimeStart(AllocaValue);
       Builder.CreateAlignedStore(ValueOperand, AllocaValue, AllocaAlignment);
       Args.push_back(AllocaValue);
     }
@@ -2036,7 +2041,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (!CASExpected && HasResult && !UseSizedLibcall) {
     AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
     AllocaResult->setAlignment(AllocaAlignment);
-    Builder.CreateLifetimeStart(AllocaResult, SizeVal64);
+    Builder.CreateLifetimeStart(AllocaResult);
     Args.push_back(AllocaResult);
   }
 
@@ -2069,7 +2074,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   // And then, extract the results...
   if (ValueOperand && !UseSizedLibcall)
-    Builder.CreateLifetimeEnd(AllocaValue, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaValue);
 
   if (CASExpected) {
     // The final result from the CAS is {load of 'expected' alloca, bool result
@@ -2078,7 +2083,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Value *V = PoisonValue::get(FinalResultTy);
     Value *ExpectedOut = Builder.CreateAlignedLoad(
         CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
-    Builder.CreateLifetimeEnd(AllocaCASExpected, SizeVal64);
+    Builder.CreateLifetimeEnd(AllocaCASExpected);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
     I->replaceAllUsesWith(V);
@@ -2089,7 +2094,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
-      Builder.CreateLifetimeEnd(AllocaResult, SizeVal64);
+      Builder.CreateLifetimeEnd(AllocaResult);
     }
     I->replaceAllUsesWith(V);
   }

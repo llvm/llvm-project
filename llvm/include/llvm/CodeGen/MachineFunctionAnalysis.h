@@ -46,6 +46,11 @@ public:
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
+class FreeMachineFunctionPass : public PassInfoMixin<FreeMachineFunctionPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MachineFunctionAnalysis
