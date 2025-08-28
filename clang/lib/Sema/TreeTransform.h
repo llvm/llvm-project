@@ -11152,8 +11152,7 @@ TreeTransform<Derived>::TransformOMPMessageClause(OMPMessageClause *C) {
   if (E.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPMessageClause(
-      C->getMessageString(), C->getBeginLoc(), C->getLParenLoc(),
-      C->getEndLoc());
+      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
