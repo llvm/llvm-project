@@ -23,6 +23,10 @@ RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
+
+  const llvm::Triple &target_triple =
+      m_register_info_up->GetTargetArchitecture().GetTriple();
+  m_fpr = getRegset(notes, target_triple, ARM_VFP_Desc);
 }
 
 RegisterContextCorePOSIX_arm::~RegisterContextCorePOSIX_arm() = default;
@@ -51,6 +55,23 @@ bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
       return true;
     }
   }
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  if (reg == LLDB_INVALID_REGNUM)
+    return false;
+
+  if (IsFPR(reg)) {
+    assert(offset >= GetGPRSize());
+    offset -= GetGPRSize();
+    if (m_fpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size)) {
+      Status error;
+      value.SetFromMemoryData(*reg_info, m_fpr.GetDataStart() + offset,
+                              reg_info->byte_size, lldb::eByteOrderLittle,
+                              error);
+      return error.Success();
+    }
+  }
+
   return false;
 }
 
