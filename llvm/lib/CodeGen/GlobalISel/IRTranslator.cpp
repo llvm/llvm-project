@@ -2046,9 +2046,10 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
                                             MachineIRBuilder &MIRBuilder) {
 
   unsigned Op = getSimpleIntrinsicOpcode(ID);
+  LLVM_DEBUG(dbgs() << "[BFLOAT] translateSimpleIntrinsic is called for ID:" << ID << '\n');
 
   // Is this a simple intrinsic?
-  if (Op == Intrinsic::not_intrinsic)
+  if (Op == Intrinsic::not_intrinsic){}
     return false;
 
   // Yes. Let's translate it.
@@ -2768,8 +2769,6 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  // if (containsBF16Type(U))
-  //   return false;
 
   const CallInst &CI = cast<CallInst>(U);
   const Function *F = CI.getCalledFunction();
@@ -4105,8 +4104,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
-    R << "u "
-      << ore::NV("Prototype", F.getnable to lower function:FunctionType());
+    R << "unable to lower function: "
+      << ore::NV("Prototype", F.getFunctionType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;
   }
@@ -4118,7 +4117,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       continue; // Don't handle zero sized types.
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
-    LLVM_DEBUG(dbgs() << "[BFLOAT] Created vreg in IRTranslator: " << VRegs);
+    // LLVM_DEBUG(dbgs() << "[BFLOAT] Created vreg in IRTranslator: " << VRegs);
 
     if (Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
