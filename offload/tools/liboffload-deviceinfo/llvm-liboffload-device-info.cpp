@@ -155,9 +155,10 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 
   std::vector<char> Name;
   size_t NameSize;
-  OFFLOAD_ERR(olGetDeviceInfoSize(D, OL_DEVICE_INFO_NAME, &NameSize))
+  OFFLOAD_ERR(olGetDeviceInfoSize(D, OL_DEVICE_INFO_PRODUCT_NAME, &NameSize))
   Name.resize(NameSize);
-  OFFLOAD_ERR(olGetDeviceInfo(D, OL_DEVICE_INFO_NAME, NameSize, Name.data()));
+  OFFLOAD_ERR(
+      olGetDeviceInfo(D, OL_DEVICE_INFO_PRODUCT_NAME, NameSize, Name.data()));
   S << "[" << Name.data() << "]\n";
 
   OFFLOAD_ERR(printPlatformValue<const char *>(
@@ -169,6 +170,8 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
   OFFLOAD_ERR(printPlatformValue<ol_platform_backend_t>(
       S, Platform, OL_PLATFORM_INFO_BACKEND, "Platform Backend"));
 
+  OFFLOAD_ERR(
+      printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_NAME, "Name"));
   OFFLOAD_ERR(
       printDeviceValue<ol_device_type_t>(S, D, OL_DEVICE_INFO_TYPE, "Type"));
   OFFLOAD_ERR(printDeviceValue<const char *>(
