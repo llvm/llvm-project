@@ -190,12 +190,12 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
   // to ensure dst ends up in the physreg we were originally copying to.
   RewriteRegs.insert(MFMAHintReg);
 
-  // We've found av = COPY (MFMA), and need to verify that we can trivially
-  // rewrite src2 to use the new AGPR. If we can't trivially replace it,
-  // we're going to induce as many copies as we would have emitted in the
-  // first place, as well as need to assign another register, and need to
-  // figure out where to put them. The live range splitting is smarter than
-  // anything we're doing here, so trust it did something reasonable.
+  // We've found av = COPY (MFMA) (or MFMA (v = COPY av)) and need to verify
+  // that we can trivially rewrite src2 to use the new AGPR. If we can't
+  // trivially replace it, we're going to induce as many copies as we would have
+  // emitted in the first place, as well as need to assign another register, and
+  // need to figure out where to put them. The live range splitting is smarter
+  // than anything we're doing here, so trust it did something reasonable.
   //
   // Note recomputeRegClassExceptRewritable will consider the constraints of
   // this MFMA's src2 as well as the src2/dst of any transitive MFMA users.
