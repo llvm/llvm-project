@@ -153,12 +153,13 @@ namespace RISCVVType {
 //
 // Bits | Name       | Description
 // -----+------------+------------------------------------------------
+// 8    | altfmt     | Alternative format for bf16
 // 7    | vma        | Vector mask agnostic
 // 6    | vta        | Vector tail agnostic
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting
 // 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
 unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic) {
+                     bool MaskAgnostic, bool AltFmt) {
   assert(isValidSEW(SEW) && "Invalid SEW");
   unsigned VLMulBits = static_cast<unsigned>(VLMul);
   unsigned VSEWBits = encodeSEW(SEW);
@@ -167,6 +168,8 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
     VTypeI |= 0x40;
   if (MaskAgnostic)
     VTypeI |= 0x80;
+  if (AltFmt)
+    VTypeI |= 0x100;
 
   return VTypeI;
 }
@@ -199,6 +202,10 @@ std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul) {
 void printVType(unsigned VType, raw_ostream &OS) {
   unsigned Sew = getSEW(VType);
   OS << "e" << Sew;
+
+  bool AltFmt = RISCVVType::isAltFmt(VType);
+  if (AltFmt)
+    OS << "alt";
 
   unsigned LMul;
   bool Fractional;
