@@ -8,7 +8,7 @@
 // RUN: not %dexter_base test --binary %t %dexter_regression_test_debugger_args \
 // RUN:     -v -- %s | FileCheck %s --match-full-lines --strict-whitespace
 //
-// CHECK:parser error:{{.*}}err_paren.cpp(22): Unbalanced parenthesis starting here
+// CHECK:parser error:{{.*}}err_paren.cpp(19): Unbalanced parenthesis starting here
 // CHECK:// {{Dex}}ExpectWatchValue(
 // CHECK:                      ^
 

@@ -8,7 +8,7 @@
 // RUN: not %dexter_base test --binary %t %dexter_regression_test_debugger_args \
 // RUN:     -v -- %s | FileCheck %s --match-full-lines --strict-whitespace
 //
-// CHECK:parser error:{{.*}}err_type_mline.cpp(22): expected at least two args
+// CHECK:parser error:{{.*}}err_type_mline.cpp(19): expected at least two args
 // CHECK:{{Dex}}ExpectWatchValue(
 // CHECK:                   ^
 
