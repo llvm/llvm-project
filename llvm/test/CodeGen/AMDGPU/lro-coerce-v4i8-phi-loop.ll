@@ -37,10 +37,10 @@ loop:
   %i3 = trunc i32 %i3i to i8
 
   ; Pack them into <4 x i8>.
-  %v01 = insertelement <4 x i8> undef, i8 %i0, i32 0
-  %v02 = insertelement <4 x i8> %v01,  i8 %i1, i32 1
-  %v03 = insertelement <4 x i8> %v02,  i8 %i2, i32 2
-  %v   = insertelement <4 x i8> %v03,  i8 %i3, i32 3
+  %v01 = insertelement <4 x i8> zeroinitializer, i8 %i0, i32 0
+  %v02 = insertelement <4 x i8> %v01, i8 %i1, i32 1
+  %v03 = insertelement <4 x i8> %v02, i8 %i2, i32 2
+  %v   = insertelement <4 x i8> %v03, i8 %i3, i32 3
 
   ; Byte-wise add in the same block as the PHI (this must make coercion profitable).
   %acc.next = add <4 x i8> %acc, %v
