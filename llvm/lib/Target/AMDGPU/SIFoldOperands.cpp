@@ -868,6 +868,8 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       // Make sure to get the 32-bit version of the commuted opcode.
       unsigned MaybeCommutedOpc = MI->getOpcode();
       Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
+      if (TII->pseudoToMCOpcode(Op32) == -1)
+        return false;
     }
 
     appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, /*Commuted=*/true,

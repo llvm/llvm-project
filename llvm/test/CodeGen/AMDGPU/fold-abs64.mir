@@ -14,7 +14,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: fn
     ; CHECK: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 undef [[DEF]].sub0, target-flags(amdgpu-abs64) @sym, 0, implicit $exec
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 target-flags(amdgpu-abs64) @sym
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 undef [[DEF]].sub0, undef [[S_MOV_B64_]].sub0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:vreg_64 = IMPLICIT_DEF
     %1:sreg_64 = S_MOV_B64 target-flags(amdgpu-abs64) @sym
