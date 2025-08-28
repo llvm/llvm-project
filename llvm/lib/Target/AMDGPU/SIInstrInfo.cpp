@@ -4767,13 +4767,9 @@ bool SIInstrInfo::physRegUsesConstantBus(const MachineOperand &RegOp) const {
   // SGPRs use the constant bus
 
   // FIXME: implicit registers that are not part of the MCInstrDesc's implicit
-  // physical register operands should also count.
+  // physical register operands should also count, except for exec.
   if (RegOp.isImplicit())
     return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::M0;
-
-  // Normal exec read does not count.
-  if ((Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO) && RegOp.isImplicit())
-    return false;
 
   // SGPRs use the constant bus
   return AMDGPU::SReg_32RegClass.contains(Reg) ||
