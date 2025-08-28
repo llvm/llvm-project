@@ -26,6 +26,10 @@ public:
   LLVM_ABI std::optional<uint64_t>
   getConstantProfileCount(const Constant *C) const;
 
+  LLVM_ABI std::optional<StringRef>
+  getDataHotnessBasedOnProfileCount(const Constant *C,
+                                    const ProfileSummaryInfo *PSI) const;
+
 public:
   StaticDataProfileInfo() = default;
 

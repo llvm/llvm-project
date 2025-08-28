@@ -90,17 +90,24 @@ target triple = "x86_64-unknown-linux-gnu"
 ; UNIQ-NEXT:   .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,6
 ; AGG-NEXT:    .section	.data.rel.ro.unlikely.,"aw",@progbits
 
-; Currently static-data-splitter only analyzes access from code.
-; @bss2 and @data3 are indirectly accessed by code through @hot_relro_array
-; and @cold_relro_array. A follow-up item is to analyze indirect access via data
-; and prune the unlikely list.
-; For @bss2
-; COMMON:      .type bss2,@object
-; SYM-NEXT:    .section	.bss.unlikely.bss2,"aw",@nobits
-; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,7
-; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
 
-; For @data3
+; @bss2 and @data3 are indirectly accessed via @hot_relro_array and
+; @cold_relro_array, and actually hot due to accesses via @hot_relro_array.
+; Under the hood, the static data splitter pass analyzes accesses from code but
+; won't aggressively propgate the hotness of @hot_relro_array into the array
+; elements -- instead, this pass reconciles the hotness information from both
+; global variable section prefix and PGO counters.
+
+; @bss2 has a section prefix 'hot' in the IR. StaticDataProfileInfo reconciles
+; it into a hot prefix.
+; COMMON:      .type bss2,@object
+; SYM-NEXT:    .section	.bss.hot.bss2,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,7
+; AGG-NEXT:    .section	.bss.hot.,"aw",@nobits
+
+; @data3 doesn't have data access profile coverage and thereby doesn't have a
+; section prefix. PGO counter analysis categorizes it as cold, so it will have
+; section name `.data.unlikely`.
 ; COMMON:      .type data3,@object
 ; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
 ; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,8
@@ -133,7 +140,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @cold_data = internal global i32 4
 @cold_data_custom_foo_section = internal global i32 100, section "foo"
 @cold_relro_array = internal constant [2 x ptr] [ptr @data3, ptr @bss2]
-@bss2 = internal global i32 0
+@bss2 = internal global i32 0, !section_prefix !17
 @data3 = internal global i32 3
 @data_with_unknown_hotness = private global i32 5
 @hot_data_custom_bar_section = internal global i32 101 #0
@@ -227,3 +234,4 @@ attributes #0 = {"data-section"="bar"}
 !14 = !{!"function_entry_count", i64 100000}
 !15 = !{!"function_entry_count", i64 1}
 !16 = !{!"branch_weights", i32 1, i32 99999}
+!17 = !{!"section_prefix", !"hot"}
