@@ -99,6 +99,7 @@
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 #define _mm256_mpsadbw_epu8(X, Y, M) \
   ((__m256i)__builtin_ia32_mpsadbw256((__v32qi)(__m256i)(X), \
+                                      (__v32qi)(__m256i)(Y), (int)(M)))
 
 /// Computes the absolute value of each signed byte in the 256-bit integer
 ///    vector \a __a and returns each value in the corresponding byte of
@@ -111,9 +112,10 @@
 /// \param __a
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_abs_epi8(__m256i __a) {
-  return (__m256i)__builtin_elementwise_abs((__v32qs)__a);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_abs_epi8(__m256i __a)
+{
+    return (__m256i)__builtin_elementwise_abs((__v32qs)__a);
 }
 
 /// Computes the absolute value of each signed 16-bit element in the 256-bit
@@ -127,9 +129,10 @@ _mm256_abs_epi8(__m256i __a) {
 /// \param __a
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_abs_epi16(__m256i __a) {
-  return (__m256i)__builtin_elementwise_abs((__v16hi)__a);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_abs_epi16(__m256i __a)
+{
+    return (__m256i)__builtin_elementwise_abs((__v16hi)__a);
 }
 
 /// Computes the absolute value of each signed 32-bit element in the 256-bit
@@ -143,9 +146,10 @@ _mm256_abs_epi16(__m256i __a) {
 /// \param __a
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_abs_epi32(__m256i __a) {
-  return (__m256i)__builtin_elementwise_abs((__v8si)__a);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_abs_epi32(__m256i __a)
+{
+    return (__m256i)__builtin_elementwise_abs((__v8si)__a);
 }
 
 /// Converts the elements of two 256-bit vectors of [16 x i16] to 8-bit
@@ -174,7 +178,8 @@ _mm256_abs_epi32(__m256i __a) {
 ///    result[255:192].
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packs_epi16(__m256i __a, __m256i __b) {
+_mm256_packs_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_packsswb256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -205,7 +210,8 @@ _mm256_packs_epi16(__m256i __a, __m256i __b) {
 ///    result[255:192].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packs_epi32(__m256i __a, __m256i __b) {
+_mm256_packs_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_packssdw256((__v8si)__a, (__v8si)__b);
 }
 
@@ -235,7 +241,8 @@ _mm256_packs_epi32(__m256i __a, __m256i __b) {
 ///    result[255:192].
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packus_epi16(__m256i __a, __m256i __b) {
+_mm256_packus_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_packuswb256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -266,8 +273,9 @@ _mm256_packus_epi16(__m256i __a, __m256i __b) {
 ///    result[255:192].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packus_epi32(__m256i __V1, __m256i __V2) {
-  return (__m256i)__builtin_ia32_packusdw256((__v8si)__V1, (__v8si)__V2);
+_mm256_packus_epi32(__m256i __V1, __m256i __V2)
+{
+  return (__m256i) __builtin_ia32_packusdw256((__v8si)__V1, (__v8si)__V2);
 }
 
 /// Adds 8-bit integers from corresponding bytes of two 256-bit integer
@@ -283,8 +291,9 @@ _mm256_packus_epi32(__m256i __V1, __m256i __V2) {
 /// \param __b
 ///    A 256-bit integer vector containing one of the source operands.
 /// \returns A 256-bit integer vector containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_add_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v32qu)__a + (__v32qu)__b);
 }
 
@@ -301,8 +310,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_add_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v16hu)__a + (__v16hu)__b);
 }
 
@@ -319,8 +329,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_add_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v8su)__a + (__v8su)__b);
 }
 
@@ -337,8 +348,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi32(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [4 x i64] containing one of the source operands.
 /// \returns A 256-bit vector of [4 x i64] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_add_epi64(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_add_epi64(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4du)__a + (__v4du)__b);
 }
 
@@ -436,8 +448,8 @@ _mm256_adds_epu16(__m256i __a, __m256i __b) {
 /// \param n
 ///    An immediate value specifying the number of bytes to shift.
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_alignr_epi8(a, b, n)                                            \
-  ((__m256i)__builtin_ia32_palignr256((__v32qi)(__m256i)(a),                   \
+#define _mm256_alignr_epi8(a, b, n) \
+  ((__m256i)__builtin_ia32_palignr256((__v32qi)(__m256i)(a), \
                                       (__v32qi)(__m256i)(b), (n)))
 
 /// Computes the bitwise AND of the 256-bit integer vectors in \a __a and
@@ -453,7 +465,8 @@ _mm256_adds_epu16(__m256i __a, __m256i __b) {
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_and_si256(__m256i __a, __m256i __b) {
+_mm256_and_si256(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4du)__a & (__v4du)__b);
 }
 
@@ -470,7 +483,8 @@ _mm256_and_si256(__m256i __a, __m256i __b) {
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_andnot_si256(__m256i __a, __m256i __b) {
+_mm256_andnot_si256(__m256i __a, __m256i __b)
+{
   return (__m256i)(~(__v4du)__a & (__v4du)__b);
 }
 
@@ -494,8 +508,9 @@ _mm256_andnot_si256(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_avg_epu8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_avg_epu8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pavgb256((__v32qi)__a, (__v32qi)__b);
 }
 
@@ -519,8 +534,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_avg_epu8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_avg_epu16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_avg_epu16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pavgw256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -554,9 +570,10 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_avg_epu16(__m256i __a,
 ///    \a __V2.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M) {
+_mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
+{
   return (__m256i)__builtin_ia32_pblendvb256((__v32qi)__V1, (__v32qi)__V2,
-                                             (__v32qi)__M);
+                                              (__v32qi)__M);
 }
 
 /// Merges 16-bit integer values from either of the two 256-bit vectors
@@ -596,8 +613,8 @@ _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M) {
 ///    \a M[0] determines the source for elements 0 and 8, \a M[1] for
 ///    elements 1 and 9, and so forth.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-#define _mm256_blend_epi16(V1, V2, M)                                          \
-  ((__m256i)__builtin_ia32_pblendw256((__v16hi)(__m256i)(V1),                  \
+#define _mm256_blend_epi16(V1, V2, M) \
+  ((__m256i)__builtin_ia32_pblendw256((__v16hi)(__m256i)(V1), \
                                       (__v16hi)(__m256i)(V2), (int)(M)))
 
 /// Compares corresponding bytes in the 256-bit integer vectors in \a __a and
@@ -621,7 +638,8 @@ _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M) {
 ///    A 256-bit integer vector containing one of the inputs.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpeq_epi8(__m256i __a, __m256i __b) {
+_mm256_cmpeq_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v32qi)__a == (__v32qi)__b);
 }
 
@@ -646,7 +664,8 @@ _mm256_cmpeq_epi8(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the inputs.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpeq_epi16(__m256i __a, __m256i __b) {
+_mm256_cmpeq_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v16hi)__a == (__v16hi)__b);
 }
 
@@ -671,7 +690,8 @@ _mm256_cmpeq_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [8 x i32] containing one of the inputs.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpeq_epi32(__m256i __a, __m256i __b) {
+_mm256_cmpeq_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v8si)__a == (__v8si)__b);
 }
 
@@ -696,7 +716,8 @@ _mm256_cmpeq_epi32(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [4 x i64] containing one of the inputs.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpeq_epi64(__m256i __a, __m256i __b) {
+_mm256_cmpeq_epi64(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4di)__a == (__v4di)__b);
 }
 
@@ -721,7 +742,8 @@ _mm256_cmpeq_epi64(__m256i __a, __m256i __b) {
 ///    A 256-bit integer vector containing one of the inputs.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpgt_epi8(__m256i __a, __m256i __b) {
+_mm256_cmpgt_epi8(__m256i __a, __m256i __b)
+{
   /* This function always performs a signed comparison, but __v32qi is a char
      which may be signed or unsigned, so use __v32qs. */
   return (__m256i)((__v32qs)__a > (__v32qs)__b);
@@ -748,7 +770,8 @@ _mm256_cmpgt_epi8(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the inputs.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpgt_epi16(__m256i __a, __m256i __b) {
+_mm256_cmpgt_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v16hi)__a > (__v16hi)__b);
 }
 
@@ -773,7 +796,8 @@ _mm256_cmpgt_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [8 x i32] containing one of the inputs.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpgt_epi32(__m256i __a, __m256i __b) {
+_mm256_cmpgt_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v8si)__a > (__v8si)__b);
 }
 
@@ -798,7 +822,8 @@ _mm256_cmpgt_epi32(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [4 x i64] containing one of the inputs.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_cmpgt_epi64(__m256i __a, __m256i __b) {
+_mm256_cmpgt_epi64(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4di)__a > (__v4di)__b);
 }
 
@@ -832,9 +857,10 @@ _mm256_cmpgt_epi64(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hadd_epi16(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_phaddw256((__v16hi)__a, (__v16hi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_hadd_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phaddw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Horizontally adds the adjacent pairs of 32-bit integers from two 256-bit
@@ -863,9 +889,10 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hadd_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hadd_epi32(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_phaddd256((__v8si)__a, (__v8si)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_hadd_epi32(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phaddd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Horizontally adds the adjacent pairs of 16-bit integers from two 256-bit
@@ -898,8 +925,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hadd_epi32(__m256i __a,
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the sums.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_hadds_epi16(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_ia32_phaddsw256((__v16hi)__a, (__v16hi)__b);
+_mm256_hadds_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phaddsw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Horizontally subtracts adjacent pairs of 16-bit integers from two 256-bit
@@ -932,9 +960,10 @@ _mm256_hadds_epi16(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hsub_epi16(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_phsubw256((__v16hi)__a, (__v16hi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_hsub_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phsubw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Horizontally subtracts adjacent pairs of 32-bit integers from two 256-bit
@@ -963,9 +992,10 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hsub_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hsub_epi32(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_phsubd256((__v8si)__a, (__v8si)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_hsub_epi32(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phsubd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Horizontally subtracts adjacent pairs of 16-bit integers from two 256-bit
@@ -999,8 +1029,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_hsub_epi32(__m256i __a,
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the differences.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_hsubs_epi16(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_ia32_phsubsw256((__v16hi)__a, (__v16hi)__b);
+_mm256_hsubs_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_phsubsw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Multiplies each unsigned byte from the 256-bit integer vector in \a __a
@@ -1028,8 +1059,9 @@ _mm256_hsubs_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maddubs_epi16(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_ia32_pmaddubsw256((__v32qi)__a, (__v32qi)__b);
+_mm256_maddubs_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_pmaddubsw256((__v32qi)__a, (__v32qi)__b);
 }
 
 /// Multiplies corresponding 16-bit elements of two 256-bit vectors of
@@ -1058,8 +1090,9 @@ _mm256_maddubs_epi16(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_madd_epi16(__m256i __a,
-                                                                  __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_madd_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pmaddwd256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1076,8 +1109,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_madd_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v32qs)__a, (__v32qs)__b);
 }
 
@@ -1094,8 +1128,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1112,8 +1147,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v8si)__a, (__v8si)__b);
 }
 
@@ -1130,8 +1166,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epi32(__m256i __a,
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epu8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -1148,8 +1185,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epu16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -1166,8 +1204,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_max_epu32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_max((__v8su)__a, (__v8su)__b);
 }
 
@@ -1184,8 +1223,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_max_epu32(__m256i __a,
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v32qs)__a, (__v32qs)__b);
 }
 
@@ -1202,8 +1242,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1220,8 +1261,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v8si)__a, (__v8si)__b);
 }
 
@@ -1238,8 +1280,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epi32(__m256i __a,
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epu8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -1256,8 +1299,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epu16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -1274,8 +1318,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_min_epu32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_elementwise_min((__v8su)__a, (__v8su)__b);
 }
 
@@ -1296,7 +1341,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_min_epu32(__m256i __a,
 /// \param __a
 ///    A 256-bit integer vector containing the source bytes.
 /// \returns The 32-bit integer mask.
-static __inline__ int __DEFAULT_FN_ATTRS256 _mm256_movemask_epi8(__m256i __a) {
+static __inline__ int __DEFAULT_FN_ATTRS256
+_mm256_movemask_epi8(__m256i __a)
+{
   return __builtin_ia32_pmovmskb256((__v32qi)__a);
 }
 
@@ -1324,7 +1371,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi8_epi16(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
-  return (__m256i) __builtin_convertvector((__v16qs)__V, __v16hi);
+  return (__m256i)__builtin_convertvector((__v16qs)__V, __v16hi);
 }
 
 /// Sign-extends bytes from the lower half of the 128-bit integer vector in
@@ -1351,10 +1398,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi8_epi32(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3, 4, 5, 6,
-                              7),
-      __v8si);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
 }
 
 /// Sign-extends the first four bytes from the 128-bit integer vector in
@@ -1380,8 +1424,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi8_epi64(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3), __v4di);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3), __v4di);
 }
 
 /// Sign-extends 16-bit elements from the 128-bit vector of [8 x i16] in
@@ -1406,7 +1449,7 @@ _mm256_cvtepi8_epi64(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi16_epi32(__m128i __V) {
-  return (__m256i) __builtin_convertvector((__v8hi)__V, __v8si);
+  return (__m256i)__builtin_convertvector((__v8hi)__V, __v8si);
 }
 
 /// Sign-extends 16-bit elements from the lower half of the 128-bit vector of
@@ -1430,8 +1473,7 @@ _mm256_cvtepi16_epi32(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi16_epi64(__m128i __V) {
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v8hi)__V, (__v8hi)__V, 0, 1, 2, 3), __v4di);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hi)__V, (__v8hi)__V, 0, 1, 2, 3), __v4di);
 }
 
 /// Sign-extends 32-bit elements from the 128-bit vector of [4 x i32] in
@@ -1455,7 +1497,7 @@ _mm256_cvtepi16_epi64(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepi32_epi64(__m128i __V) {
-  return (__m256i) __builtin_convertvector((__v4si)__V, __v4di);
+  return (__m256i)__builtin_convertvector((__v4si)__V, __v4di);
 }
 
 /// Zero-extends bytes from the 128-bit integer vector in \a __V and returns
@@ -1480,7 +1522,7 @@ _mm256_cvtepi32_epi64(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu8_epi16(__m128i __V) {
-  return (__m256i) __builtin_convertvector((__v16qu)__V, __v16hi);
+  return (__m256i)__builtin_convertvector((__v16qu)__V, __v16hi);
 }
 
 /// Zero-extends bytes from the lower half of the 128-bit integer vector in
@@ -1505,10 +1547,7 @@ _mm256_cvtepu8_epi16(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu8_epi32(__m128i __V) {
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3, 4, 5, 6,
-                              7),
-      __v8si);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
 }
 
 /// Zero-extends the first four bytes from the 128-bit integer vector in
@@ -1532,8 +1571,7 @@ _mm256_cvtepu8_epi32(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu8_epi64(__m128i __V) {
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3), __v4di);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3), __v4di);
 }
 
 /// Zero-extends 16-bit elements from the 128-bit vector of [8 x i16] in
@@ -1558,7 +1596,7 @@ _mm256_cvtepu8_epi64(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu16_epi32(__m128i __V) {
-  return (__m256i) __builtin_convertvector((__v8hu)__V, __v8si);
+  return (__m256i)__builtin_convertvector((__v8hu)__V, __v8si);
 }
 
 /// Zero-extends 16-bit elements from the lower half of the 128-bit vector of
@@ -1582,8 +1620,7 @@ _mm256_cvtepu16_epi32(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu16_epi64(__m128i __V) {
-  return (__m256i) __builtin_convertvector(
-      __builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1, 2, 3), __v4di);
+  return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1, 2, 3), __v4di);
 }
 
 /// Zero-extends 32-bit elements from the 128-bit vector of [4 x i32] in
@@ -1607,7 +1644,7 @@ _mm256_cvtepu16_epi64(__m128i __V) {
 ///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu32_epi64(__m128i __V) {
-  return (__m256i) __builtin_convertvector((__v4su)__V, __v4di);
+  return (__m256i)__builtin_convertvector((__v4su)__V, __v4di);
 }
 
 /// Multiplies signed 32-bit integers from even-numbered elements of two
@@ -1657,7 +1694,8 @@ _mm256_mul_epi32(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the rounded products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mulhrs_epi16(__m256i __a, __m256i __b) {
+_mm256_mulhrs_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pmulhrsw256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1675,7 +1713,8 @@ _mm256_mulhrs_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mulhi_epu16(__m256i __a, __m256i __b) {
+_mm256_mulhi_epu16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pmulhuw256((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -1693,7 +1732,8 @@ _mm256_mulhi_epu16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mulhi_epi16(__m256i __a, __m256i __b) {
+_mm256_mulhi_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pmulhw256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -1711,7 +1751,8 @@ _mm256_mulhi_epi16(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the products.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mullo_epi16(__m256i __a, __m256i __b) {
+_mm256_mullo_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v16hu)__a * (__v16hu)__b);
 }
 
@@ -1728,8 +1769,9 @@ _mm256_mullo_epi16(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing one of the source operands.
 /// \returns A 256-bit vector of [8 x i32] containing the products.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mullo_epi32(__m256i __a, __m256i __b) {
+static __inline__  __m256i __DEFAULT_FN_ATTRS256
+_mm256_mullo_epi32 (__m256i __a, __m256i __b)
+{
   return (__m256i)((__v8su)__a * (__v8su)__b);
 }
 
@@ -1771,7 +1813,8 @@ _mm256_mul_epu32(__m256i __a, __m256i __b) {
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_or_si256(__m256i __a, __m256i __b) {
+_mm256_or_si256(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4du)__a | (__v4du)__b);
 }
 
@@ -1814,8 +1857,9 @@ _mm256_or_si256(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sad_epu8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sad_epu8(__m256i __a, __m256i __b)
+{
   return __builtin_ia32_psadbw256((__v32qi)__a, (__v32qi)__b);
 }
 
@@ -1853,7 +1897,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sad_epu8(__m256i __a,
 ///    to copy to the result byte.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_shuffle_epi8(__m256i __a, __m256i __b) {
+_mm256_shuffle_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_pshufb256((__v32qi)__a, (__v32qi)__b);
 }
 
@@ -1887,7 +1932,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b) {
 ///    result, \a imm[3:2] specifies the index for elements 1 and 5, and so
 ///    forth.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-#define _mm256_shuffle_epi32(a, imm)                                           \
+#define _mm256_shuffle_epi32(a, imm) \
   ((__m256i)__builtin_ia32_pshufd256((__v8si)(__m256i)(a), (int)(imm)))
 
 /// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] in \a a
@@ -1923,7 +1968,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b) {
 ///    result, \a imm[3:2] specifies the index for elements 5 and 9, and so
 ///    forth. Indexes are offset by 4 (so 0 means index 4, and so forth).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-#define _mm256_shufflehi_epi16(a, imm)                                         \
+#define _mm256_shufflehi_epi16(a, imm) \
   ((__m256i)__builtin_ia32_pshufhw256((__v16hi)(__m256i)(a), (int)(imm)))
 
 /// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] \a a
@@ -1960,7 +2005,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b) {
 ///    result, \a imm[3:2] specifies the index for elements 1 and 9, and so
 ///    forth.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-#define _mm256_shufflelo_epi16(a, imm)                                         \
+#define _mm256_shufflelo_epi16(a, imm) \
   ((__m256i)__builtin_ia32_pshuflw256((__v16hi)(__m256i)(a), (int)(imm)))
 
 /// Sets each byte of the result to the corresponding byte of the 256-bit
@@ -1978,9 +2023,10 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector].
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi8(__m256i __a,
-                                                                 __m256i __b) {
-  return (__m256i)__builtin_ia32_psignb256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sign_epi8(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_psignb256((__v32qi)__a, (__v32qi)__b);
 }
 
 /// Sets each element of the result to the corresponding element of the
@@ -1998,9 +2044,10 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi16(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_psignw256((__v16hi)__a, (__v16hi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sign_epi16(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_psignw256((__v16hi)__a, (__v16hi)__b);
 }
 
 /// Sets each element of the result to the corresponding element of the
@@ -2018,9 +2065,10 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi32(__m256i __a,
-                                                                  __m256i __b) {
-  return (__m256i)__builtin_ia32_psignd256((__v8si)__a, (__v8si)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sign_epi32(__m256i __a, __m256i __b)
+{
+    return (__m256i)__builtin_ia32_psignd256((__v8si)__a, (__v8si)__b);
 }
 
 /// Shifts each 128-bit half of the 256-bit integer vector \a a left by
@@ -2040,9 +2088,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi32(__m256i __a,
 /// \param imm
 ///     An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_slli_si256(a, imm)                                              \
-  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a),          \
-                                                (int)(imm)))
+#define _mm256_slli_si256(a, imm) \
+  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
 
 /// Shifts each 128-bit half of the 256-bit integer vector \a a left by
 ///    \a imm bytes, shifting in zero bytes, and returns the result. If \a imm
@@ -2061,9 +2108,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi32(__m256i __a,
 /// \param imm
 ///    An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_bslli_epi128(a, imm)                                            \
-  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a),          \
-                                                (int)(imm)))
+#define _mm256_bslli_epi128(a, imm) \
+  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
 
 /// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
 ///    left by \a __count bits, shifting in zero bits, and returns the result.
@@ -2078,8 +2124,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sign_epi32(__m256i __a,
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi16(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_slli_epi16(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_psllwi256((__v16hi)__a, __count);
 }
 
@@ -2099,7 +2146,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi16(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi16(__m256i __a, __m128i __count) {
+_mm256_sll_epi16(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_psllw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2116,8 +2164,9 @@ _mm256_sll_epi16(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi32(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_slli_epi32(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_pslldi256((__v8si)__a, __count);
 }
 
@@ -2137,7 +2186,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi32(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi32(__m256i __a, __m128i __count) {
+_mm256_sll_epi32(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_pslld256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2154,8 +2204,9 @@ _mm256_sll_epi32(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi64(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_slli_epi64(__m256i __a, int __count)
+{
   return __builtin_ia32_psllqi256((__v4di)__a, __count);
 }
 
@@ -2175,7 +2226,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_slli_epi64(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sll_epi64(__m256i __a, __m128i __count) {
+_mm256_sll_epi64(__m256i __a, __m128i __count)
+{
   return __builtin_ia32_psllq256((__v4di)__a, __count);
 }
 
@@ -2193,8 +2245,9 @@ _mm256_sll_epi64(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srai_epi16(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_srai_epi16(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_psrawi256((__v16hi)__a, __count);
 }
 
@@ -2215,7 +2268,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srai_epi16(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sra_epi16(__m256i __a, __m128i __count) {
+_mm256_sra_epi16(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_psraw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2233,8 +2287,9 @@ _mm256_sra_epi16(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srai_epi32(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_srai_epi32(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_psradi256((__v8si)__a, __count);
 }
 
@@ -2255,7 +2310,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srai_epi32(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sra_epi32(__m256i __a, __m128i __count) {
+_mm256_sra_epi32(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_psrad256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2276,7 +2332,7 @@ _mm256_sra_epi32(__m256i __a, __m128i __count) {
 /// \param imm
 ///    An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_srli_si256(a, imm)                                              \
+#define _mm256_srli_si256(a, imm) \
   ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
 
 /// Shifts each 128-bit half of the 256-bit integer vector in \a a right by
@@ -2296,7 +2352,7 @@ _mm256_sra_epi32(__m256i __a, __m128i __count) {
 /// \param imm
 ///     An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_bsrli_epi128(a, imm)                                            \
+#define _mm256_bsrli_epi128(a, imm) \
   ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
 
 /// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
@@ -2312,8 +2368,9 @@ _mm256_sra_epi32(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi16(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_srli_epi16(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_psrlwi256((__v16hi)__a, __count);
 }
 
@@ -2333,7 +2390,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi16(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi16(__m256i __a, __m128i __count) {
+_mm256_srl_epi16(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_psrlw256((__v16hi)__a, (__v8hi)__count);
 }
 
@@ -2350,8 +2408,9 @@ _mm256_srl_epi16(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi32(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_srli_epi32(__m256i __a, int __count)
+{
   return (__m256i)__builtin_ia32_psrldi256((__v8si)__a, __count);
 }
 
@@ -2371,7 +2430,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi32(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi32(__m256i __a, __m128i __count) {
+_mm256_srl_epi32(__m256i __a, __m128i __count)
+{
   return (__m256i)__builtin_ia32_psrld256((__v8si)__a, (__v4si)__count);
 }
 
@@ -2388,8 +2448,9 @@ _mm256_srl_epi32(__m256i __a, __m128i __count) {
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi64(__m256i __a,
-                                                                  int __count) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_srli_epi64(__m256i __a, int __count)
+{
   return __builtin_ia32_psrlqi256((__v4di)__a, __count);
 }
 
@@ -2409,7 +2470,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_srli_epi64(__m256i __a,
 ///    shift count (in bits). The upper element is ignored.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srl_epi64(__m256i __a, __m128i __count) {
+_mm256_srl_epi64(__m256i __a, __m128i __count)
+{
   return __builtin_ia32_psrlq256((__v4di)__a, __count);
 }
 
@@ -2434,8 +2496,9 @@ _mm256_srl_epi64(__m256i __a, __m128i __count) {
 /// \param __b
 ///    A 256-bit integer vector containing the subtrahends.
 /// \returns A 256-bit integer vector containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi8(__m256i __a,
-                                                                __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sub_epi8(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v32qu)__a - (__v32qu)__b);
 }
 
@@ -2460,8 +2523,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi8(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing the subtrahends.
 /// \returns A 256-bit vector of [16 x i16] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi16(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sub_epi16(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v16hu)__a - (__v16hu)__b);
 }
 
@@ -2485,8 +2549,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi16(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [8 x i32] containing the subtrahends.
 /// \returns A 256-bit vector of [8 x i32] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi32(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sub_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v8su)__a - (__v8su)__b);
 }
 
@@ -2510,8 +2575,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi32(__m256i __a,
 /// \param __b
 ///    A 256-bit vector of [4 x i64] containing the subtrahends.
 /// \returns A 256-bit vector of [4 x i64] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_sub_epi64(__m256i __a,
-                                                                 __m256i __b) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
+_mm256_sub_epi64(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4du)__a - (__v4du)__b);
 }
 
@@ -2646,11 +2712,7 @@ _mm256_subs_epu16(__m256i __a, __m256i __b) {
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpackhi_epi8(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector(
-      (__v32qi)__a, (__v32qi)__b, 8, 32 + 8, 9, 32 + 9, 10, 32 + 10, 11,
-      32 + 11, 12, 32 + 12, 13, 32 + 13, 14, 32 + 14, 15, 32 + 15, 24, 32 + 24,
-      25, 32 + 25, 26, 32 + 26, 27, 32 + 27, 28, 32 + 28, 29, 32 + 29, 30,
-      32 + 30, 31, 32 + 31);
+  return (__m256i)__builtin_shufflevector((__v32qi)__a, (__v32qi)__b, 8, 32+8, 9, 32+9, 10, 32+10, 11, 32+11, 12, 32+12, 13, 32+13, 14, 32+14, 15, 32+15, 24, 32+24, 25, 32+25, 26, 32+26, 27, 32+27, 28, 32+28, 29, 32+29, 30, 32+30, 31, 32+31);
 }
 
 /// Unpacks and interleaves 16-bit integers from parts of the 256-bit vectors
@@ -2684,9 +2746,7 @@ _mm256_unpackhi_epi8(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpackhi_epi16(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector(
-      (__v16hi)__a, (__v16hi)__b, 4, 16 + 4, 5, 16 + 5, 6, 16 + 6, 7, 16 + 7,
-      12, 16 + 12, 13, 16 + 13, 14, 16 + 14, 15, 16 + 15);
+  return (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)__b, 4, 16+4, 5, 16+5, 6, 16+6, 7, 16+7, 12, 16+12, 13, 16+13, 14, 16+14, 15, 16+15);
 }
 
 /// Unpacks and interleaves 32-bit integers from parts of the 256-bit vectors
@@ -2719,8 +2779,7 @@ _mm256_unpackhi_epi16(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpackhi_epi32(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 2, 8 + 2, 3,
-                                          8 + 3, 6, 8 + 6, 7, 8 + 7);
+  return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 2, 8+2, 3, 8+3, 6, 8+6, 7, 8+7);
 }
 
 /// Unpacks and interleaves 64-bit integers from parts of the 256-bit vectors
@@ -2749,8 +2808,7 @@ _mm256_unpackhi_epi32(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpackhi_epi64(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 1, 4 + 1, 3,
-                                          4 + 3);
+  return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 1, 4+1, 3, 4+3);
 }
 
 /// Unpacks and interleaves 8-bit integers from parts of the 256-bit integer
@@ -2783,10 +2841,7 @@ _mm256_unpackhi_epi64(__m256i __a, __m256i __b) {
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpacklo_epi8(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector(
-      (__v32qi)__a, (__v32qi)__b, 0, 32 + 0, 1, 32 + 1, 2, 32 + 2, 3, 32 + 3, 4,
-      32 + 4, 5, 32 + 5, 6, 32 + 6, 7, 32 + 7, 16, 32 + 16, 17, 32 + 17, 18,
-      32 + 18, 19, 32 + 19, 20, 32 + 20, 21, 32 + 21, 22, 32 + 22, 23, 32 + 23);
+  return (__m256i)__builtin_shufflevector((__v32qi)__a, (__v32qi)__b, 0, 32+0, 1, 32+1, 2, 32+2, 3, 32+3, 4, 32+4, 5, 32+5, 6, 32+6, 7, 32+7, 16, 32+16, 17, 32+17, 18, 32+18, 19, 32+19, 20, 32+20, 21, 32+21, 22, 32+22, 23, 32+23);
 }
 
 /// Unpacks and interleaves 16-bit integers from parts of the 256-bit vectors
@@ -2820,9 +2875,7 @@ _mm256_unpacklo_epi8(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpacklo_epi16(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector(
-      (__v16hi)__a, (__v16hi)__b, 0, 16 + 0, 1, 16 + 1, 2, 16 + 2, 3, 16 + 3, 8,
-      16 + 8, 9, 16 + 9, 10, 16 + 10, 11, 16 + 11);
+  return (__m256i)__builtin_shufflevector((__v16hi)__a, (__v16hi)__b, 0, 16+0, 1, 16+1, 2, 16+2, 3, 16+3, 8, 16+8, 9, 16+9, 10, 16+10, 11, 16+11);
 }
 
 /// Unpacks and interleaves 32-bit integers from parts of the 256-bit vectors
@@ -2855,8 +2908,7 @@ _mm256_unpacklo_epi16(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpacklo_epi32(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 0, 8 + 0, 1,
-                                          8 + 1, 4, 8 + 4, 5, 8 + 5);
+  return (__m256i)__builtin_shufflevector((__v8si)__a, (__v8si)__b, 0, 8+0, 1, 8+1, 4, 8+4, 5, 8+5);
 }
 
 /// Unpacks and interleaves 64-bit integers from parts of the 256-bit vectors
@@ -2885,8 +2937,7 @@ _mm256_unpacklo_epi32(__m256i __a, __m256i __b) {
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_unpacklo_epi64(__m256i __a, __m256i __b) {
-  return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 0, 4 + 0, 2,
-                                          4 + 2);
+  return (__m256i)__builtin_shufflevector((__v4di)__a, (__v4di)__b, 0, 4+0, 2, 4+2);
 }
 
 /// Computes the bitwise XOR of the 256-bit integer vectors in \a __a and
@@ -2902,7 +2953,8 @@ _mm256_unpacklo_epi64(__m256i __a, __m256i __b) {
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_xor_si256(__m256i __a, __m256i __b) {
+_mm256_xor_si256(__m256i __a, __m256i __b)
+{
   return (__m256i)((__v4du)__a ^ (__v4du)__b);
 }
 
@@ -2918,7 +2970,8 @@ _mm256_xor_si256(__m256i __a, __m256i __b) {
 ///    A pointer to the 32-byte aligned memory containing the vector to load.
 /// \returns A 256-bit integer vector loaded from memory.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_stream_load_si256(const void *__V) {
+_mm256_stream_load_si256(const void *__V)
+{
   typedef __v4di __v4di_aligned __attribute__((aligned(32)));
   return (__m256i)__builtin_nontemporal_load((const __v4di_aligned *)__V);
 }
@@ -2968,8 +3021,7 @@ _mm_broadcastsd_pd(__m128d __a) {
 /// \returns A 256-bit vector of [8 x float] containing the result.
 static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_broadcastss_ps(__m128 __X) {
-  return (__m256)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0,
-                                         0, 0, 0, 0);
+  return (__m256)__builtin_shufflevector((__v4sf)__X, (__v4sf)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the 64-bit floating-point value from the low element of the
@@ -3038,8 +3090,8 @@ _mm256_broadcastsi128_si256(__m128i __X) {
 ///    corresponds to the index of a copied value. When a mask bit is 0, the
 ///    element is copied from \a V1; otherwise, it is copied from \a V2.
 /// \returns A 128-bit vector of [4 x i32] containing the result.
-#define _mm_blend_epi32(V1, V2, M)                                             \
-  ((__m128i)__builtin_ia32_pblendd128((__v4si)(__m128i)(V1),                   \
+#define _mm_blend_epi32(V1, V2, M) \
+  ((__m128i)__builtin_ia32_pblendd128((__v4si)(__m128i)(V1), \
                                       (__v4si)(__m128i)(V2), (int)(M)))
 
 /// Merges 32-bit integer elements from either of the two 256-bit vectors of
@@ -3075,8 +3127,8 @@ _mm256_broadcastsi128_si256(__m128i __X) {
 ///    corresponds to the index of a copied value. When a mask bit is 0, the
 ///    element is copied from \a V1; otherwise, it is is copied from \a V2.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-#define _mm256_blend_epi32(V1, V2, M)                                          \
-  ((__m256i)__builtin_ia32_pblendd256((__v8si)(__m256i)(V1),                   \
+#define _mm256_blend_epi32(V1, V2, M) \
+  ((__m256i)__builtin_ia32_pblendd256((__v8si)(__m256i)(V1), \
                                       (__v8si)(__m256i)(V2), (int)(M)))
 
 /// Broadcasts the low byte from the 128-bit integer vector in \a __X to all
@@ -3091,9 +3143,7 @@ _mm256_broadcastsi128_si256(__m128i __X) {
 /// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_broadcastb_epi8(__m128i __X) {
-  return (__m256i)__builtin_shufflevector(
-      (__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  return (__m256i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the low element from the 128-bit vector of [8 x i16] in \a __X
@@ -3108,8 +3158,7 @@ _mm256_broadcastb_epi8(__m128i __X) {
 /// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_broadcastw_epi16(__m128i __X) {
-  return (__m256i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0,
-                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  return (__m256i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the low element from the 128-bit vector of [4 x i32] in \a __X
@@ -3124,8 +3173,7 @@ _mm256_broadcastw_epi16(__m128i __X) {
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_broadcastd_epi32(__m128i __X) {
-  return (__m256i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0,
-                                          0, 0, 0, 0);
+  return (__m256i)__builtin_shufflevector((__v4si)__X, (__v4si)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the low element from the 128-bit vector of [2 x i64] in \a __X
@@ -3155,9 +3203,7 @@ _mm256_broadcastq_epi64(__m128i __X) {
 /// \returns A 128-bit integer vector containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_broadcastb_epi8(__m128i __X) {
-  return (__m128i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0,
-                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                          0);
+  return (__m128i)__builtin_shufflevector((__v16qi)__X, (__v16qi)__X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the low element from the 128-bit vector of [8 x i16] in
@@ -3172,8 +3218,7 @@ _mm_broadcastb_epi8(__m128i __X) {
 /// \returns A 128-bit vector of [8 x i16] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_broadcastw_epi16(__m128i __X) {
-  return (__m128i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0,
-                                          0, 0, 0, 0);
+  return (__m128i)__builtin_shufflevector((__v8hi)__X, (__v8hi)__X, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /// Broadcasts the low element from the 128-bit vector of [4 x i32] in \a __X
@@ -3229,7 +3274,8 @@ _mm_broadcastq_epi64(__m128i __X) {
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
+_mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
+{
   return (__m256i)__builtin_ia32_permvarsi256((__v8si)__a, (__v8si)__b);
 }
 
@@ -3260,7 +3306,7 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
 ///    \a M[1:0] specifies the index in \a a for element 0 of the result,
 ///    \a M[3:2] specifies the index for element 1, and so forth.
 /// \returns A 256-bit vector of [4 x double] containing the result.
-#define _mm256_permute4x64_pd(V, M)                                            \
+#define _mm256_permute4x64_pd(V, M) \
   ((__m256d)__builtin_ia32_permdf256((__v4df)(__m256d)(V), (int)(M)))
 
 /// Sets the result's 256-bit vector of [8 x float] to copies of elements of
@@ -3286,7 +3332,8 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b) {
 ///    \a __a.
 /// \returns A 256-bit vector of [8 x float] containing the result.
 static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
+_mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
+{
   return (__m256)__builtin_ia32_permvarsf256((__v8sf)__a, (__v8si)__b);
 }
 
@@ -3317,7 +3364,7 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 ///    \a M[1:0] specifies the index in \a a for element 0 of the result,
 ///    \a M[3:2] specifies the index for element 1, and so forth.
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-#define _mm256_permute4x64_epi64(V, M)                                         \
+#define _mm256_permute4x64_epi64(V, M) \
   ((__m256i)__builtin_ia32_permdi256((__v4di)(__m256i)(V), (int)(M)))
 
 /// Sets each half of the 256-bit result either to zero or to one of the
@@ -3363,7 +3410,7 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 ///    2: the lower half of \a V2 \n
 ///    3: the upper half of \a V2
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_permute2x128_si256(V1, V2, M)                                   \
+#define _mm256_permute2x128_si256(V1, V2, M) \
   ((__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (int)(M)))
 
 /// Extracts half of the 256-bit vector \a V to the 128-bit result. If bit 0
@@ -3383,7 +3430,7 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 /// \param M
 ///    An immediate value specifying which half of \a V to extract.
 /// \returns A 128-bit integer vector containing the result.
-#define _mm256_extracti128_si256(V, M)                                         \
+#define _mm256_extracti128_si256(V, M) \
   ((__m128i)__builtin_ia32_extract128i256((__v4di)(__m256i)(V), (int)(M)))
 
 /// Copies the 256-bit vector \a V1 to the result, then overwrites half of the
@@ -3406,8 +3453,8 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 /// \param M
 ///    An immediate value specifying where to put \a V2 in the result.
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_inserti128_si256(V1, V2, M)                                     \
-  ((__m256i)__builtin_ia32_insert128i256((__v4di)(__m256i)(V1),                \
+#define _mm256_inserti128_si256(V1, V2, M) \
+  ((__m256i)__builtin_ia32_insert128i256((__v4di)(__m256i)(V1), \
                                          (__v2di)(__m128i)(V2), (int)(M)))
 
 /// Conditionally loads eight 32-bit integer elements from memory \a __X, if
@@ -3437,7 +3484,8 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b) {
 /// \returns A 256-bit vector of [8 x i32] containing the loaded or zeroed
 ///    elements.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskload_epi32(int const *__X, __m256i __M) {
+_mm256_maskload_epi32(int const *__X, __m256i __M)
+{
   return (__m256i)__builtin_ia32_maskloadd256((const __v8si *)__X, (__v8si)__M);
 }
 
@@ -3468,7 +3516,8 @@ _mm256_maskload_epi32(int const *__X, __m256i __M) {
 /// \returns A 256-bit vector of [4 x i64] containing the loaded or zeroed
 ///    elements.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskload_epi64(long long const *__X, __m256i __M) {
+_mm256_maskload_epi64(long long const *__X, __m256i __M)
+{
   return (__m256i)__builtin_ia32_maskloadq256((const __v4di *)__X, (__v4di)__M);
 }
 
@@ -3499,7 +3548,8 @@ _mm256_maskload_epi64(long long const *__X, __m256i __M) {
 /// \returns A 128-bit vector of [4 x i32] containing the loaded or zeroed
 ///    elements.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskload_epi32(int const *__X, __m128i __M) {
+_mm_maskload_epi32(int const *__X, __m128i __M)
+{
   return (__m128i)__builtin_ia32_maskloadd((const __v4si *)__X, (__v4si)__M);
 }
 
@@ -3530,7 +3580,8 @@ _mm_maskload_epi32(int const *__X, __m128i __M) {
 /// \returns A 128-bit vector of [2 x i64] containing the loaded or zeroed
 ///    elements.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskload_epi64(long long const *__X, __m128i __M) {
+_mm_maskload_epi64(long long const *__X, __m128i __M)
+{
   return (__m128i)__builtin_ia32_maskloadq((const __v2di *)__X, (__v2di)__M);
 }
 
@@ -3559,7 +3610,8 @@ _mm_maskload_epi64(long long const *__X, __m128i __M) {
 /// \param __Y
 ///    A 256-bit vector of [8 x i32] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_maskstore_epi32(int *__X, __m256i __M, __m256i __Y) {
+_mm256_maskstore_epi32(int *__X, __m256i __M, __m256i __Y)
+{
   __builtin_ia32_maskstored256((__v8si *)__X, (__v8si)__M, (__v8si)__Y);
 }
 
@@ -3588,7 +3640,8 @@ _mm256_maskstore_epi32(int *__X, __m256i __M, __m256i __Y) {
 /// \param __Y
 ///    A 256-bit vector of [4 x i64] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_maskstore_epi64(long long *__X, __m256i __M, __m256i __Y) {
+_mm256_maskstore_epi64(long long *__X, __m256i __M, __m256i __Y)
+{
   __builtin_ia32_maskstoreq256((__v4di *)__X, (__v4di)__M, (__v4di)__Y);
 }
 
@@ -3616,9 +3669,9 @@ _mm256_maskstore_epi64(long long *__X, __m256i __M, __m256i __Y) {
 ///    A 128-bit vector of [4 x i32] containing the mask bits.
 /// \param __Y
 ///    A 128-bit vector of [4 x i32] containing the values to store.
-static __inline__ void __DEFAULT_FN_ATTRS128 _mm_maskstore_epi32(int *__X,
-                                                                 __m128i __M,
-                                                                 __m128i __Y) {
+static __inline__ void __DEFAULT_FN_ATTRS128
+_mm_maskstore_epi32(int *__X, __m128i __M, __m128i __Y)
+{
   __builtin_ia32_maskstored((__v4si *)__X, (__v4si)__M, (__v4si)__Y);
 }
 
@@ -3646,10 +3699,10 @@ static __inline__ void __DEFAULT_FN_ATTRS128 _mm_maskstore_epi32(int *__X,
 ///    A 128-bit vector of [2 x i64] containing the mask bits.
 /// \param __Y
 ///    A 128-bit vector of [2 x i64] containing the values to store.
-static __inline__ void __DEFAULT_FN_ATTRS128 _mm_maskstore_epi64(long long *__X,
-                                                                 __m128i __M,
-                                                                 __m128i __Y) {
-  __builtin_ia32_maskstoreq((__v2di *)__X, (__v2di)__M, (__v2di)__Y);
+static __inline__ void __DEFAULT_FN_ATTRS128
+_mm_maskstore_epi64(long long *__X, __m128i __M, __m128i __Y)
+{
+  __builtin_ia32_maskstoreq(( __v2di *)__X, (__v2di)__M, (__v2di)__Y);
 }
 
 /// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __X
@@ -3669,7 +3722,8 @@ static __inline__ void __DEFAULT_FN_ATTRS128 _mm_maskstore_epi64(long long *__X,
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_sllv_epi32(__m256i __X, __m256i __Y) {
+_mm256_sllv_epi32(__m256i __X, __m256i __Y)
+{
   return (__m256i)__builtin_ia32_psllv8si((__v8si)__X, (__v8si)__Y);
 }
 
@@ -3690,7 +3744,8 @@ _mm256_sllv_epi32(__m256i __X, __m256i __Y) {
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_sllv_epi32(__m128i __X, __m128i __Y) {
+_mm_sllv_epi32(__m128i __X, __m128i __Y)
+{
   return (__m128i)__builtin_ia32_psllv4si((__v4si)__X, (__v4si)__Y);
 }
 
@@ -3711,7 +3766,8 @@ _mm_sllv_epi32(__m128i __X, __m128i __Y) {
 ///    bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_sllv_epi64(__m256i __X, __m256i __Y) {
+_mm256_sllv_epi64(__m256i __X, __m256i __Y)
+{
   return (__m256i)__builtin_ia32_psllv4di((__v4di)__X, (__v4di)__Y);
 }
 
@@ -3732,7 +3788,8 @@ _mm256_sllv_epi64(__m256i __X, __m256i __Y) {
 ///    bits).
 /// \returns A 128-bit vector of [2 x i64] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_sllv_epi64(__m128i __X, __m128i __Y) {
+_mm_sllv_epi64(__m128i __X, __m128i __Y)
+{
   return (__m128i)__builtin_ia32_psllv2di((__v2di)__X, (__v2di)__Y);
 }
 
@@ -3754,7 +3811,8 @@ _mm_sllv_epi64(__m128i __X, __m128i __Y) {
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_srav_epi32(__m256i __X, __m256i __Y) {
+_mm256_srav_epi32(__m256i __X, __m256i __Y)
+{
   return (__m256i)__builtin_ia32_psrav8si((__v8si)__X, (__v8si)__Y);
 }
 
@@ -3776,7 +3834,8 @@ _mm256_srav_epi32(__m256i __X, __m256i __Y) {
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_srav_epi32(__m128i __X, __m128i __Y) {
+_mm_srav_epi32(__m128i __X, __m128i __Y)
+{
   return (__m128i)__builtin_ia32_psrav4si((__v4si)__X, (__v4si)__Y);
 }
 
@@ -3797,7 +3856,8 @@ _mm_srav_epi32(__m128i __X, __m128i __Y) {
 ///    bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_srlv_epi32(__m256i __X, __m256i __Y) {
+_mm256_srlv_epi32(__m256i __X, __m256i __Y)
+{
   return (__m256i)__builtin_ia32_psrlv8si((__v8si)__X, (__v8si)__Y);
 }
 
@@ -3818,7 +3878,8 @@ _mm256_srlv_epi32(__m256i __X, __m256i __Y) {
 ///    bits).
 /// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_srlv_epi32(__m128i __X, __m128i __Y) {
+_mm_srlv_epi32(__m128i __X, __m128i __Y)
+{
   return (__m128i)__builtin_ia32_psrlv4si((__v4si)__X, (__v4si)__Y);
 }
 
@@ -3839,7 +3900,8 @@ _mm_srlv_epi32(__m128i __X, __m128i __Y) {
 ///    bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_srlv_epi64(__m256i __X, __m256i __Y) {
+_mm256_srlv_epi64(__m256i __X, __m256i __Y)
+{
   return (__m256i)__builtin_ia32_psrlv4di((__v4di)__X, (__v4di)__Y);
 }
 
@@ -3860,7 +3922,8 @@ _mm256_srlv_epi64(__m256i __X, __m256i __Y) {
 ///    bits).
 /// \returns A 128-bit vector of [2 x i64] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_srlv_epi64(__m128i __X, __m128i __Y) {
+_mm_srlv_epi64(__m128i __X, __m128i __Y)
+{
   return (__m128i)__builtin_ia32_psrlv2di((__v2di)__X, (__v2di)__Y);
 }
 
@@ -3907,10 +3970,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x double] containing the gathered values.
-#define _mm_mask_i32gather_pd(a, m, i, mask, s)                                \
-  ((__m128d)__builtin_ia32_gatherd_pd(                                         \
-      (__v2df)(__m128i)(a), (double const *)(m), (__v4si)(__m128i)(i),         \
-      (__v2df)(__m128d)(mask), (s)))
+#define _mm_mask_i32gather_pd(a, m, i, mask, s) \
+  ((__m128d)__builtin_ia32_gatherd_pd((__v2df)(__m128i)(a), \
+                                      (double const *)(m), \
+                                      (__v4si)(__m128i)(i), \
+                                      (__v2df)(__m128d)(mask), (s)))
 
 /// Conditionally gathers four 64-bit floating-point values, either from the
 ///    256-bit vector of [4 x double] in \a a, or from memory \a m using scaled
@@ -3954,10 +4018,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x double] containing the gathered values.
-#define _mm256_mask_i32gather_pd(a, m, i, mask, s)                             \
-  ((__m256d)__builtin_ia32_gatherd_pd256(                                      \
-      (__v4df)(__m256d)(a), (double const *)(m), (__v4si)(__m128i)(i),         \
-      (__v4df)(__m256d)(mask), (s)))
+#define _mm256_mask_i32gather_pd(a, m, i, mask, s) \
+  ((__m256d)__builtin_ia32_gatherd_pd256((__v4df)(__m256d)(a), \
+                                         (double const *)(m), \
+                                         (__v4si)(__m128i)(i), \
+                                         (__v4df)(__m256d)(mask), (s)))
 
 /// Conditionally gathers two 64-bit floating-point values, either from the
 ///    128-bit vector of [2 x double] in \a a, or from memory \a m using scaled
@@ -4001,10 +4066,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x double] containing the gathered values.
-#define _mm_mask_i64gather_pd(a, m, i, mask, s)                                \
-  ((__m128d)__builtin_ia32_gatherq_pd(                                         \
-      (__v2df)(__m128d)(a), (double const *)(m), (__v2di)(__m128i)(i),         \
-      (__v2df)(__m128d)(mask), (s)))
+#define _mm_mask_i64gather_pd(a, m, i, mask, s) \
+  ((__m128d)__builtin_ia32_gatherq_pd((__v2df)(__m128d)(a), \
+                                      (double const *)(m), \
+                                      (__v2di)(__m128i)(i), \
+                                      (__v2df)(__m128d)(mask), (s)))
 
 /// Conditionally gathers four 64-bit floating-point values, either from the
 ///    256-bit vector of [4 x double] in \a a, or from memory \a m using scaled
@@ -4048,10 +4114,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x double] containing the gathered values.
-#define _mm256_mask_i64gather_pd(a, m, i, mask, s)                             \
-  ((__m256d)__builtin_ia32_gatherq_pd256(                                      \
-      (__v4df)(__m256d)(a), (double const *)(m), (__v4di)(__m256i)(i),         \
-      (__v4df)(__m256d)(mask), (s)))
+#define _mm256_mask_i64gather_pd(a, m, i, mask, s) \
+  ((__m256d)__builtin_ia32_gatherq_pd256((__v4df)(__m256d)(a), \
+                                         (double const *)(m), \
+                                         (__v4di)(__m256i)(i), \
+                                         (__v4df)(__m256d)(mask), (s)))
 
 /// Conditionally gathers four 32-bit floating-point values, either from the
 ///    128-bit vector of [4 x float] in \a a, or from memory \a m using scaled
@@ -4095,9 +4162,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm_mask_i32gather_ps(a, m, i, mask, s)                                \
-  ((__m128)__builtin_ia32_gatherd_ps((__v4sf)(__m128)(a), (float const *)(m),  \
-                                     (__v4si)(__m128i)(i),                     \
+#define _mm_mask_i32gather_ps(a, m, i, mask, s) \
+  ((__m128)__builtin_ia32_gatherd_ps((__v4sf)(__m128)(a), \
+                                     (float const *)(m), \
+                                     (__v4si)(__m128i)(i), \
                                      (__v4sf)(__m128)(mask), (s)))
 
 /// Conditionally gathers eight 32-bit floating-point values, either from the
@@ -4142,10 +4210,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [8 x float] containing the gathered values.
-#define _mm256_mask_i32gather_ps(a, m, i, mask, s)                             \
-  ((__m256)__builtin_ia32_gatherd_ps256(                                       \
-      (__v8sf)(__m256)(a), (float const *)(m), (__v8si)(__m256i)(i),           \
-      (__v8sf)(__m256)(mask), (s)))
+#define _mm256_mask_i32gather_ps(a, m, i, mask, s) \
+  ((__m256)__builtin_ia32_gatherd_ps256((__v8sf)(__m256)(a), \
+                                        (float const *)(m), \
+                                        (__v8si)(__m256i)(i), \
+                                        (__v8sf)(__m256)(mask), (s)))
 
 /// Conditionally gathers two 32-bit floating-point values, either from the
 ///    128-bit vector of [4 x float] in \a a, or from memory \a m using scaled
@@ -4192,9 +4261,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm_mask_i64gather_ps(a, m, i, mask, s)                                \
-  ((__m128)__builtin_ia32_gatherq_ps((__v4sf)(__m128)(a), (float const *)(m),  \
-                                     (__v2di)(__m128i)(i),                     \
+#define _mm_mask_i64gather_ps(a, m, i, mask, s) \
+  ((__m128)__builtin_ia32_gatherq_ps((__v4sf)(__m128)(a), \
+                                     (float const *)(m), \
+                                     (__v2di)(__m128i)(i), \
                                      (__v4sf)(__m128)(mask), (s)))
 
 /// Conditionally gathers four 32-bit floating-point values, either from the
@@ -4239,10 +4309,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm256_mask_i64gather_ps(a, m, i, mask, s)                             \
-  ((__m128)__builtin_ia32_gatherq_ps256(                                       \
-      (__v4sf)(__m128)(a), (float const *)(m), (__v4di)(__m256i)(i),           \
-      (__v4sf)(__m128)(mask), (s)))
+#define _mm256_mask_i64gather_ps(a, m, i, mask, s) \
+  ((__m128)__builtin_ia32_gatherq_ps256((__v4sf)(__m128)(a), \
+                                        (float const *)(m), \
+                                        (__v4di)(__m256i)(i), \
+                                        (__v4sf)(__m128)(mask), (s)))
 
 /// Conditionally gathers four 32-bit integer values, either from the
 ///    128-bit vector of [4 x i32] in \a a, or from memory \a m using scaled
@@ -4286,9 +4357,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm_mask_i32gather_epi32(a, m, i, mask, s)                             \
-  ((__m128i)__builtin_ia32_gatherd_d((__v4si)(__m128i)(a), (int const *)(m),   \
-                                     (__v4si)(__m128i)(i),                     \
+#define _mm_mask_i32gather_epi32(a, m, i, mask, s) \
+  ((__m128i)__builtin_ia32_gatherd_d((__v4si)(__m128i)(a), \
+                                     (int const *)(m), \
+                                     (__v4si)(__m128i)(i), \
                                      (__v4si)(__m128i)(mask), (s)))
 
 /// Conditionally gathers eight 32-bit integer values, either from the
@@ -4333,10 +4405,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [8 x i32] containing the gathered values.
-#define _mm256_mask_i32gather_epi32(a, m, i, mask, s)                          \
-  ((__m256i)__builtin_ia32_gatherd_d256(                                       \
-      (__v8si)(__m256i)(a), (int const *)(m), (__v8si)(__m256i)(i),            \
-      (__v8si)(__m256i)(mask), (s)))
+#define _mm256_mask_i32gather_epi32(a, m, i, mask, s) \
+  ((__m256i)__builtin_ia32_gatherd_d256((__v8si)(__m256i)(a), \
+                                        (int const *)(m), \
+                                        (__v8si)(__m256i)(i), \
+                                        (__v8si)(__m256i)(mask), (s)))
 
 /// Conditionally gathers two 32-bit integer values, either from the
 ///    128-bit vector of [4 x i32] in \a a, or from memory \a m using scaled
@@ -4383,9 +4456,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm_mask_i64gather_epi32(a, m, i, mask, s)                             \
-  ((__m128i)__builtin_ia32_gatherq_d((__v4si)(__m128i)(a), (int const *)(m),   \
-                                     (__v2di)(__m128i)(i),                     \
+#define _mm_mask_i64gather_epi32(a, m, i, mask, s) \
+  ((__m128i)__builtin_ia32_gatherq_d((__v4si)(__m128i)(a), \
+                                     (int const *)(m), \
+                                     (__v2di)(__m128i)(i), \
                                      (__v4si)(__m128i)(mask), (s)))
 
 /// Conditionally gathers four 32-bit integer values, either from the
@@ -4430,10 +4504,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm256_mask_i64gather_epi32(a, m, i, mask, s)                          \
-  ((__m128i)__builtin_ia32_gatherq_d256(                                       \
-      (__v4si)(__m128i)(a), (int const *)(m), (__v4di)(__m256i)(i),            \
-      (__v4si)(__m128i)(mask), (s)))
+#define _mm256_mask_i64gather_epi32(a, m, i, mask, s) \
+  ((__m128i)__builtin_ia32_gatherq_d256((__v4si)(__m128i)(a), \
+                                        (int const *)(m), \
+                                        (__v4di)(__m256i)(i), \
+                                        (__v4si)(__m128i)(mask), (s)))
 
 /// Conditionally gathers two 64-bit integer values, either from the
 ///    128-bit vector of [2 x i64] in \a a, or from memory \a m using scaled
@@ -4478,10 +4553,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x i64] containing the gathered values.
-#define _mm_mask_i32gather_epi64(a, m, i, mask, s)                             \
-  ((__m128i)__builtin_ia32_gatherd_q(                                          \
-      (__v2di)(__m128i)(a), (long long const *)(m), (__v4si)(__m128i)(i),      \
-      (__v2di)(__m128i)(mask), (s)))
+#define _mm_mask_i32gather_epi64(a, m, i, mask, s) \
+  ((__m128i)__builtin_ia32_gatherd_q((__v2di)(__m128i)(a), \
+                                     (long long const *)(m), \
+                                     (__v4si)(__m128i)(i), \
+                                     (__v2di)(__m128i)(mask), (s)))
 
 /// Conditionally gathers four 64-bit integer values, either from the
 ///    256-bit vector of [4 x i64] in \a a, or from memory \a m using scaled
@@ -4525,10 +4601,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x i64] containing the gathered values.
-#define _mm256_mask_i32gather_epi64(a, m, i, mask, s)                          \
-  ((__m256i)__builtin_ia32_gatherd_q256(                                       \
-      (__v4di)(__m256i)(a), (long long const *)(m), (__v4si)(__m128i)(i),      \
-      (__v4di)(__m256i)(mask), (s)))
+#define _mm256_mask_i32gather_epi64(a, m, i, mask, s) \
+  ((__m256i)__builtin_ia32_gatherd_q256((__v4di)(__m256i)(a), \
+                                        (long long const *)(m), \
+                                        (__v4si)(__m128i)(i), \
+                                        (__v4di)(__m256i)(mask), (s)))
 
 /// Conditionally gathers two 64-bit integer values, either from the
 ///    128-bit vector of [2 x i64] in \a a, or from memory \a m using scaled
@@ -4572,10 +4649,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x i64] containing the gathered values.
-#define _mm_mask_i64gather_epi64(a, m, i, mask, s)                             \
-  ((__m128i)__builtin_ia32_gatherq_q(                                          \
-      (__v2di)(__m128i)(a), (long long const *)(m), (__v2di)(__m128i)(i),      \
-      (__v2di)(__m128i)(mask), (s)))
+#define _mm_mask_i64gather_epi64(a, m, i, mask, s) \
+  ((__m128i)__builtin_ia32_gatherq_q((__v2di)(__m128i)(a), \
+                                     (long long const *)(m), \
+                                     (__v2di)(__m128i)(i), \
+                                     (__v2di)(__m128i)(mask), (s)))
 
 /// Conditionally gathers four 64-bit integer values, either from the
 ///    256-bit vector of [4 x i64] in \a a, or from memory \a m using scaled
@@ -4619,10 +4697,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x i64] containing the gathered values.
-#define _mm256_mask_i64gather_epi64(a, m, i, mask, s)                          \
-  ((__m256i)__builtin_ia32_gatherq_q256(                                       \
-      (__v4di)(__m256i)(a), (long long const *)(m), (__v4di)(__m256i)(i),      \
-      (__v4di)(__m256i)(mask), (s)))
+#define _mm256_mask_i64gather_epi64(a, m, i, mask, s) \
+  ((__m256i)__builtin_ia32_gatherq_q256((__v4di)(__m256i)(a), \
+                                        (long long const *)(m), \
+                                        (__v4di)(__m256i)(i), \
+                                        (__v4di)(__m256i)(mask), (s)))
 
 /// Gathers two 64-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [4 x i32] in \a i.
@@ -4652,10 +4731,13 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x double] containing the gathered values.
-#define _mm_i32gather_pd(m, i, s)                                              \
-  ((__m128d)__builtin_ia32_gatherd_pd(                                         \
-      (__v2df)_mm_undefined_pd(), (double const *)(m), (__v4si)(__m128i)(i),   \
-      (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), _mm_setzero_pd()), (s)))
+#define _mm_i32gather_pd(m, i, s) \
+  ((__m128d)__builtin_ia32_gatherd_pd((__v2df)_mm_undefined_pd(), \
+                                      (double const *)(m), \
+                                      (__v4si)(__m128i)(i), \
+                                      (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), \
+                                                           _mm_setzero_pd()), \
+                                      (s)))
 
 /// Gathers four 64-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [4 x i32] in \a i.
@@ -4684,13 +4766,14 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x double] containing the gathered values.
-#define _mm256_i32gather_pd(m, i, s)                                           \
-  ((__m256d)__builtin_ia32_gatherd_pd256(                                      \
-      (__v4df)_mm256_undefined_pd(), (double const *)(m),                      \
-      (__v4si)(__m128i)(i),                                                    \
-      (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(),          \
-                            _CMP_EQ_OQ),                                       \
-      (s)))
+#define _mm256_i32gather_pd(m, i, s) \
+  ((__m256d)__builtin_ia32_gatherd_pd256((__v4df)_mm256_undefined_pd(), \
+                                         (double const *)(m), \
+                                         (__v4si)(__m128i)(i), \
+                                         (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), \
+                                                               _mm256_setzero_pd(), \
+                                                               _CMP_EQ_OQ), \
+                                         (s)))
 
 /// Gathers two 64-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [2 x i64] in \a i.
@@ -4719,10 +4802,13 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x double] containing the gathered values.
-#define _mm_i64gather_pd(m, i, s)                                              \
-  ((__m128d)__builtin_ia32_gatherq_pd(                                         \
-      (__v2df)_mm_undefined_pd(), (double const *)(m), (__v2di)(__m128i)(i),   \
-      (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), _mm_setzero_pd()), (s)))
+#define _mm_i64gather_pd(m, i, s) \
+  ((__m128d)__builtin_ia32_gatherq_pd((__v2df)_mm_undefined_pd(), \
+                                      (double const *)(m), \
+                                      (__v2di)(__m128i)(i), \
+                                      (__v2df)_mm_cmpeq_pd(_mm_setzero_pd(), \
+                                                           _mm_setzero_pd()), \
+                                      (s)))
 
 /// Gathers four 64-bit floating-point values from memory \a m using scaled
 ///    indexes from the 256-bit vector of [4 x i64] in \a i.
@@ -4751,13 +4837,14 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x double] containing the gathered values.
-#define _mm256_i64gather_pd(m, i, s)                                           \
-  ((__m256d)__builtin_ia32_gatherq_pd256(                                      \
-      (__v4df)_mm256_undefined_pd(), (double const *)(m),                      \
-      (__v4di)(__m256i)(i),                                                    \
-      (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(),          \
-                            _CMP_EQ_OQ),                                       \
-      (s)))
+#define _mm256_i64gather_pd(m, i, s) \
+  ((__m256d)__builtin_ia32_gatherq_pd256((__v4df)_mm256_undefined_pd(), \
+                                         (double const *)(m), \
+                                         (__v4di)(__m256i)(i), \
+                                         (__v4df)_mm256_cmp_pd(_mm256_setzero_pd(), \
+                                                               _mm256_setzero_pd(), \
+                                                               _CMP_EQ_OQ), \
+                                         (s)))
 
 /// Gathers four 32-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [4 x i32] in \a i.
@@ -4786,10 +4873,13 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm_i32gather_ps(m, i, s)                                              \
-  ((__m128)__builtin_ia32_gatherd_ps(                                          \
-      (__v4sf)_mm_undefined_ps(), (float const *)(m), (__v4si)(__m128i)(i),    \
-      (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), _mm_setzero_ps()), (s)))
+#define _mm_i32gather_ps(m, i, s) \
+  ((__m128)__builtin_ia32_gatherd_ps((__v4sf)_mm_undefined_ps(), \
+                                     (float const *)(m), \
+                                     (__v4si)(__m128i)(i), \
+                                     (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                          _mm_setzero_ps()), \
+                                     (s)))
 
 /// Gathers eight 32-bit floating-point values from memory \a m using scaled
 ///    indexes from the 256-bit vector of [8 x i32] in \a i.
@@ -4818,12 +4908,14 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [8 x float] containing the gathered values.
-#define _mm256_i32gather_ps(m, i, s)                                           \
-  ((__m256)__builtin_ia32_gatherd_ps256(                                       \
-      (__v8sf)_mm256_undefined_ps(), (float const *)(m), (__v8si)(__m256i)(i), \
-      (__v8sf)_mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(),          \
-                            _CMP_EQ_OQ),                                       \
-      (s)))
+#define _mm256_i32gather_ps(m, i, s) \
+  ((__m256)__builtin_ia32_gatherd_ps256((__v8sf)_mm256_undefined_ps(), \
+                                        (float const *)(m), \
+                                        (__v8si)(__m256i)(i), \
+                                        (__v8sf)_mm256_cmp_ps(_mm256_setzero_ps(), \
+                                                              _mm256_setzero_ps(), \
+                                                              _CMP_EQ_OQ), \
+                                        (s)))
 
 /// Gathers two 32-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [2 x i64] in \a i. The upper two
@@ -4854,10 +4946,13 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm_i64gather_ps(m, i, s)                                              \
-  ((__m128)__builtin_ia32_gatherq_ps(                                          \
-      (__v4sf)_mm_undefined_ps(), (float const *)(m), (__v2di)(__m128i)(i),    \
-      (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), _mm_setzero_ps()), (s)))
+#define _mm_i64gather_ps(m, i, s) \
+  ((__m128)__builtin_ia32_gatherq_ps((__v4sf)_mm_undefined_ps(), \
+                                     (float const *)(m), \
+                                     (__v2di)(__m128i)(i), \
+                                     (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                          _mm_setzero_ps()), \
+                                     (s)))
 
 /// Gathers four 32-bit floating-point values from memory \a m using scaled
 ///    indexes from the 256-bit vector of [4 x i64] in \a i.
@@ -4886,10 +4981,13 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x float] containing the gathered values.
-#define _mm256_i64gather_ps(m, i, s)                                           \
-  ((__m128)__builtin_ia32_gatherq_ps256(                                       \
-      (__v4sf)_mm_undefined_ps(), (float const *)(m), (__v4di)(__m256i)(i),    \
-      (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), _mm_setzero_ps()), (s)))
+#define _mm256_i64gather_ps(m, i, s) \
+  ((__m128)__builtin_ia32_gatherq_ps256((__v4sf)_mm_undefined_ps(), \
+                                        (float const *)(m), \
+                                        (__v4di)(__m256i)(i), \
+                                        (__v4sf)_mm_cmpeq_ps(_mm_setzero_ps(), \
+                                                             _mm_setzero_ps()), \
+                                        (s)))
 
 /// Gathers four 32-bit floating-point values from memory \a m using scaled
 ///    indexes from the 128-bit vector of [4 x i32] in \a i.
@@ -4918,9 +5016,9 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm_i32gather_epi32(m, i, s)                                           \
-  ((__m128i)__builtin_ia32_gatherd_d((__v4si)_mm_undefined_si128(),            \
-                                     (int const *)(m), (__v4si)(__m128i)(i),   \
+#define _mm_i32gather_epi32(m, i, s) \
+  ((__m128i)__builtin_ia32_gatherd_d((__v4si)_mm_undefined_si128(), \
+                                     (int const *)(m), (__v4si)(__m128i)(i), \
                                      (__v4si)_mm_set1_epi32(-1), (s)))
 
 /// Gathers eight 32-bit floating-point values from memory \a m using scaled
@@ -4950,10 +5048,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [8 x i32] containing the gathered values.
-#define _mm256_i32gather_epi32(m, i, s)                                        \
-  ((__m256i)__builtin_ia32_gatherd_d256(                                       \
-      (__v8si)_mm256_undefined_si256(), (int const *)(m),                      \
-      (__v8si)(__m256i)(i), (__v8si)_mm256_set1_epi32(-1), (s)))
+#define _mm256_i32gather_epi32(m, i, s) \
+  ((__m256i)__builtin_ia32_gatherd_d256((__v8si)_mm256_undefined_si256(), \
+                                        (int const *)(m), (__v8si)(__m256i)(i), \
+                                        (__v8si)_mm256_set1_epi32(-1), (s)))
 
 /// Gathers two 32-bit integer values from memory \a m using scaled indexes
 ///    from the 128-bit vector of [2 x i64] in \a i. The upper two elements
@@ -4984,9 +5082,9 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm_i64gather_epi32(m, i, s)                                           \
-  ((__m128i)__builtin_ia32_gatherq_d((__v4si)_mm_undefined_si128(),            \
-                                     (int const *)(m), (__v2di)(__m128i)(i),   \
+#define _mm_i64gather_epi32(m, i, s) \
+  ((__m128i)__builtin_ia32_gatherq_d((__v4si)_mm_undefined_si128(), \
+                                     (int const *)(m), (__v2di)(__m128i)(i), \
                                      (__v4si)_mm_set1_epi32(-1), (s)))
 
 /// Gathers four 32-bit integer values from memory \a m using scaled indexes
@@ -5016,10 +5114,10 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [4 x i32] containing the gathered values.
-#define _mm256_i64gather_epi32(m, i, s)                                        \
-  ((__m128i)__builtin_ia32_gatherq_d256(                                       \
-      (__v4si)_mm_undefined_si128(), (int const *)(m), (__v4di)(__m256i)(i),   \
-      (__v4si)_mm_set1_epi32(-1), (s)))
+#define _mm256_i64gather_epi32(m, i, s) \
+  ((__m128i)__builtin_ia32_gatherq_d256((__v4si)_mm_undefined_si128(), \
+                                        (int const *)(m), (__v4di)(__m256i)(i), \
+                                        (__v4si)_mm_set1_epi32(-1), (s)))
 
 /// Gathers two 64-bit integer values from memory \a m using scaled indexes
 ///    from the 128-bit vector of [4 x i32] in \a i.
@@ -5049,10 +5147,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x i64] containing the gathered values.
-#define _mm_i32gather_epi64(m, i, s)                                           \
-  ((__m128i)__builtin_ia32_gatherd_q(                                          \
-      (__v2di)_mm_undefined_si128(), (long long const *)(m),                   \
-      (__v4si)(__m128i)(i), (__v2di)_mm_set1_epi64x(-1), (s)))
+#define _mm_i32gather_epi64(m, i, s) \
+  ((__m128i)__builtin_ia32_gatherd_q((__v2di)_mm_undefined_si128(), \
+                                     (long long const *)(m), \
+                                     (__v4si)(__m128i)(i), \
+                                     (__v2di)_mm_set1_epi64x(-1), (s)))
 
 /// Gathers four 64-bit integer values from memory \a m using scaled indexes
 ///    from the 128-bit vector of [4 x i32] in \a i.
@@ -5081,10 +5180,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x i64] containing the gathered values.
-#define _mm256_i32gather_epi64(m, i, s)                                        \
-  ((__m256i)__builtin_ia32_gatherd_q256(                                       \
-      (__v4di)_mm256_undefined_si256(), (long long const *)(m),                \
-      (__v4si)(__m128i)(i), (__v4di)_mm256_set1_epi64x(-1), (s)))
+#define _mm256_i32gather_epi64(m, i, s) \
+  ((__m256i)__builtin_ia32_gatherd_q256((__v4di)_mm256_undefined_si256(), \
+                                        (long long const *)(m), \
+                                        (__v4si)(__m128i)(i), \
+                                        (__v4di)_mm256_set1_epi64x(-1), (s)))
 
 /// Gathers two 64-bit integer values from memory \a m using scaled indexes
 ///    from the 128-bit vector of [2 x i64] in \a i.
@@ -5113,10 +5213,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 128-bit vector of [2 x i64] containing the gathered values.
-#define _mm_i64gather_epi64(m, i, s)                                           \
-  ((__m128i)__builtin_ia32_gatherq_q(                                          \
-      (__v2di)_mm_undefined_si128(), (long long const *)(m),                   \
-      (__v2di)(__m128i)(i), (__v2di)_mm_set1_epi64x(-1), (s)))
+#define _mm_i64gather_epi64(m, i, s) \
+  ((__m128i)__builtin_ia32_gatherq_q((__v2di)_mm_undefined_si128(), \
+                                     (long long const *)(m), \
+                                     (__v2di)(__m128i)(i), \
+                                     (__v2di)_mm_set1_epi64x(-1), (s)))
 
 /// Gathers four 64-bit integer values from memory \a m using scaled indexes
 ///    from the 256-bit vector of [4 x i64] in \a i.
@@ -5145,10 +5246,11 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y) {
 ///    A literal constant scale factor for the indexes in \a i. Must be
 ///    1, 2, 4, or 8.
 /// \returns A 256-bit vector of [4 x i64] containing the gathered values.
-#define _mm256_i64gather_epi64(m, i, s)                                        \
-  ((__m256i)__builtin_ia32_gatherq_q256(                                       \
-      (__v4di)_mm256_undefined_si256(), (long long const *)(m),                \
-      (__v4di)(__m256i)(i), (__v4di)_mm256_set1_epi64x(-1), (s)))
+#define _mm256_i64gather_epi64(m, i, s) \
+  ((__m256i)__builtin_ia32_gatherq_q256((__v4di)_mm256_undefined_si256(), \
+                                        (long long const *)(m), \
+                                        (__v4di)(__m256i)(i), \
+                                        (__v4di)_mm256_set1_epi64x(-1), (s)))
 
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS128
