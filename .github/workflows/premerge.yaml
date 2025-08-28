@@ -75,21 +75,21 @@ jobs:
             export LIT_XFAIL="functionalities/gdb_remote_client/TestqOffsets.py"
           fi
 
-          if ! [[ "${{ matrix.runs-on }}" =~ ^depot.* ]]; then
+          if ! [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
             # why we do not hardcode it.
             export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET
             export SCCACHE_GCS_RW_MODE=READ_WRITE
-
-            # Set the idle timeout to zero to ensure sccache runs for the
-            # entire duration of the job. Otherwise it might stop if we run
-            # several test suites in a row and discard statistics that we want
-            # to save in the end.
-            export SCCACHE_IDLE_TIMEOUT=0
-            mkdir artifacts
-            SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
           fi
+
+          # Set the idle timeout to zero to ensure sccache runs for the
+          # entire duration of the job. Otherwise it might stop if we run
+          # several test suites in a row and discard statistics that we want
+          # to save in the end.
+          export SCCACHE_IDLE_TIMEOUT=0
+          mkdir artifacts
+          SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts

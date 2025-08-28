@@ -18,14 +18,14 @@ BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 
 rm -rf "${BUILD_DIR}"
 
-#sccache --zero-stats
+sccache --zero-stats
 
 function at-exit {
   retcode=$?
 
   mkdir -p artifacts
-  #sccache --show-stats
-  #sccache --show-stats >> artifacts/sccache_stats.txt
+  sccache --show-stats
+  sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
   cp "${MONOREPO_ROOT}"/*.log artifacts/ || :
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
