@@ -402,6 +402,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EmitMetadataForEVLLoops(
+    "emit-metadata-for-evl-loops", cl::init(false), cl::Hidden,
+    cl::desc("Emit metadata for EVL-vectorized loops."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -7358,7 +7362,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
               return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
             return false;
           });
-      if (IsEVLVectorized) {
+      if (EmitMetadataForEVLLoops && IsEVLVectorized) {
         LLVMContext &Context = L->getHeader()->getContext();
         MDNode *LoopID = L->getLoopID();
         auto *IsEVLVectorizedMD = MDNode::get(
