@@ -146,17 +146,22 @@ static DecodeStatus decodeDpp8FI(MCInst &Inst, unsigned Val, uint64_t Addr,
     return addOperand(Inst, DAsm->DecoderName(Imm));                           \
   }
 
-// Decoder for registers, decode directly using RegClassID. Imm(8-bit) is
-// number of register. Used by VGPR only and AGPR only operands.
+// Decoder for registers, decode directly using RegClassID. Imm(8-bit) is number
+// of register. Used by VGPR only and AGPR only operands.
+template <unsigned RegClassID>
+static DecodeStatus decodeRegisterClassImpl(MCInst &Inst, unsigned Imm,
+                                            uint64_t /*Addr*/,
+                                            const MCDisassembler *Decoder) {
+  assert(Imm < (1 << 8) && "8-bit encoding");
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->createRegOperand(RegClassID, Imm));
+}
+
+using RegClassDecoder = decltype(&decodeRegisterClassImpl<0>);
+
 #define DECODE_OPERAND_REG_8(RegClass)                                         \
-  static DecodeStatus Decode##RegClass##RegisterClass(                         \
-      MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,                           \
-      const MCDisassembler *Decoder) {                                         \
-    assert(Imm < (1 << 8) && "8-bit encoding");                                \
-    auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
-    return addOperand(                                                         \
-        Inst, DAsm->createRegOperand(AMDGPU::RegClass##RegClassID, Imm));      \
-  }
+  static const constexpr RegClassDecoder Decode##RegClass##RegisterClass =     \
+      decodeRegisterClassImpl<AMDGPU::RegClass##RegClassID>;
 
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
   static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
