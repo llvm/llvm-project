@@ -14,6 +14,7 @@ import os
 import logging
 import multiprocessing.pool
 import pathlib
+import platform
 import glob
 
 from google.cloud import storage
@@ -22,8 +23,9 @@ GCS_PARALLELISM = 100
 
 
 def _maybe_upload_timing_file(bucket, timing_file_path):
+    blob_prefix = f"lit_timing_{platform.system().lower()}/"
     if os.path.exists(timing_file_path):
-        timing_file_blob = bucket.blob("lit_timing/" + timing_file_path)
+        timing_file_blob = bucket.blob(blob_prefix + timing_file_path)
         timing_file_blob.upload_from_filename(timing_file_path)
 
 
