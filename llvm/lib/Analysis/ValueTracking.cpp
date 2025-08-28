@@ -9132,11 +9132,6 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
   for (unsigned I = 0; I != 2; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
         Operation && Operation->getNumOperands() >= 2) {
-      Value *LHS = Operation->getOperand(0);
-      Value *RHS = Operation->getOperand(1);
-      if (LHS != PN && RHS != PN)
-        continue;
-
       Value *LR;
       if (match(Operation, m_PtrAdd(m_Specific(PN), m_Value(LR)))) {
         Inst = Operation;
@@ -9144,6 +9139,12 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
         OtherOp = LR;
         return true;
       }
+
+      Value *LHS = Operation->getOperand(0);
+      Value *RHS = Operation->getOperand(1);
+      if (LHS != PN && RHS != PN)
+        continue;
+
       Inst = Operation;
       Init = PN->getIncomingValue(!I);
       OtherOp = (LHS == PN) ? RHS : LHS;
