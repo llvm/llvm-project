@@ -29,14 +29,14 @@ subroutine s2(inArg, inoutArg, outArg, optArg)
 
   outArg = 3
   block
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)
   end block
  contains
   subroutine s2inner
-    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg'
+    !PORTABILITY: specification expression refers to host-associated INTENT(OUT) dummy argument 'outarg' [-Whost-associated-intent-out-in-spec-expr]
     real a(outArg)
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optarg'
     real b(optArg)

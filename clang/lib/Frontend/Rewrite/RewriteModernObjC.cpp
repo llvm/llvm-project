@@ -852,7 +852,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
     IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
   if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
-    RecordDecl *RD = IvarT->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *RD = IvarT->castAsCanonical<RecordType>()->getOriginalDecl();
     RD = RD->getDefinition();
     if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
       // decltype(((Foo_IMPL*)0)->bar) *
@@ -7453,7 +7453,8 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
         IvarT = GetGroupRecordTypeForObjCIvarBitfield(D);
 
       if (!IvarT->getAs<TypedefType>() && IvarT->isRecordType()) {
-        RecordDecl *RD = IvarT->castAs<RecordType>()->getOriginalDecl();
+        RecordDecl *RD =
+            IvarT->castAsCanonical<RecordType>()->getOriginalDecl();
         RD = RD->getDefinition();
         if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
           // decltype(((Foo_IMPL*)0)->bar) *

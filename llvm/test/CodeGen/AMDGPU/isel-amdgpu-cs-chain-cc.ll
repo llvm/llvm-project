@@ -377,8 +377,6 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX11-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-  ; DAGISEL-GFX11-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
@@ -424,8 +422,6 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX10-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY13]], %subreg.sub0, [[COPY12]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-  ; DAGISEL-GFX10-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0

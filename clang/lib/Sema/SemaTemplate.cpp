@@ -2859,14 +2859,14 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     }
 
     // Retrieve the parent of an enumeration type.
-    if (const EnumType *EnumT = T->getAs<EnumType>()) {
+    if (const EnumType *EnumT = T->getAsCanonical<EnumType>()) {
       // FIXME: Forward-declared enums require a TSK_ExplicitSpecialization
       // check here.
       EnumDecl *Enum = EnumT->getOriginalDecl();
 
       // Get to the parent type.
       if (TypeDecl *Parent = dyn_cast<TypeDecl>(Enum->getParent()))
-        T = Context.getTypeDeclType(Parent);
+        T = Context.getCanonicalTypeDeclType(Parent);
       else
         T = QualType();
       continue;
@@ -3313,7 +3313,7 @@ static bool isInVkNamespace(const RecordType *RT) {
 static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
                                               QualType OperandArg,
                                               SourceLocation Loc) {
-  if (auto *RT = OperandArg->getAs<RecordType>()) {
+  if (auto *RT = OperandArg->getAsCanonical<RecordType>()) {
     bool Literal = false;
     SourceLocation LiteralLoc;
     if (isInVkNamespace(RT) && RT->getOriginalDecl()->getName() == "Literal") {
@@ -3323,7 +3323,7 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
 
       const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
       QualType ConstantType = LiteralArgs[0].getAsType();
-      RT = ConstantType->getAs<RecordType>();
+      RT = ConstantType->getAsCanonical<RecordType>();
       Literal = true;
       LiteralLoc = SpecDecl->getSourceRange().getBegin();
     }
@@ -4132,7 +4132,7 @@ static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
   case TemplateArgument::Type: {
     QualType Type = Arg.getAsType();
     const TemplateTypeParmType *TPT =
-        Arg.getAsType()->getAs<TemplateTypeParmType>();
+        Arg.getAsType()->getAsCanonical<TemplateTypeParmType>();
     return TPT && !Type.hasQualifiers() &&
            TPT->getDepth() == Depth && TPT->getIndex() == Index;
   }

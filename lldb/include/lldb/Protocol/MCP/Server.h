@@ -9,43 +9,20 @@
 #ifndef LLDB_PROTOCOL_MCP_SERVER_H
 #define LLDB_PROTOCOL_MCP_SERVER_H
 
-#include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
-#include <mutex>
 
 namespace lldb_protocol::mcp {
 
-class MCPTransport
-    : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
-public:
-  using LogCallback = std::function<void(llvm::StringRef message)>;
-
-  MCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-               std::string client_name, LogCallback log_callback = {})
-      : JSONRPCTransport(in, out), m_client_name(std::move(client_name)),
-        m_log_callback(log_callback) {}
-  virtual ~MCPTransport() = default;
-
-  void Log(llvm::StringRef message) override {
-    if (m_log_callback)
-      m_log_callback(llvm::formatv("{0}: {1}", m_client_name, message).str());
-  }
-
-private:
-  std::string m_client_name;
-  LogCallback m_log_callback;
-};
-
-class Server : public MCPTransport::MessageHandler {
+class Server : public Transport::MessageHandler {
 public:
   Server(std::string name, std::string version,
-         std::unique_ptr<MCPTransport> transport_up,
-         lldb_private::MainLoop &loop);
+         std::unique_ptr<Transport> transport_up, lldb_private::MainLoop &loop);
   ~Server() = default;
 
   using NotificationHandler = std::function<void(const Notification &)>;
@@ -92,7 +69,7 @@ private:
   const std::string m_name;
   const std::string m_version;
 
-  std::unique_ptr<MCPTransport> m_transport_up;
+  std::unique_ptr<Transport> m_transport_up;
   lldb_private::MainLoop &m_loop;
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;

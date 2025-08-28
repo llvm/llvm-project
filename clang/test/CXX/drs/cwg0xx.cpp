@@ -244,7 +244,7 @@ namespace cwg16 { // cwg16: 2.8
       // expected-error@#cwg16-A-f-call {{'A' is a private member of 'cwg16::A'}}
       //   expected-note@#cwg16-B {{constrained by implicitly private inheritance here}}
       //   expected-note@#cwg16-A {{member is declared here}}
-      // expected-error@#cwg16-A-f-call {{cannot cast 'cwg16::C' to its private base class 'cwg16::A'}}
+      // expected-error@#cwg16-A-f-call {{cannot cast 'cwg16::C' to its private base class 'A'}}
       //   expected-note@#cwg16-B {{implicitly declared private here}}
     }
   };
@@ -838,7 +838,7 @@ namespace cwg52 { // cwg52: 2.8
   // expected-error@#cwg52-k {{'A' is a private member of 'cwg52::A'}}
   //   expected-note@#cwg52-B {{constrained by private inheritance here}}
   //   expected-note@#cwg52-A {{member is declared here}}
-  // expected-error@#cwg52-k {{cannot cast 'struct B' to its private base class 'cwg52::A'}}
+  // expected-error@#cwg52-k {{cannot cast 'struct B' to its private base class 'A'}}
   //   expected-note@#cwg52-B {{declared private here}}
 } // namespace cwg52
 

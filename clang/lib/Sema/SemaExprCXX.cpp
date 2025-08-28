@@ -1973,8 +1973,8 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
 static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
                                          TypeAwareAllocationMode PassType,
                                          QualType allocType) {
-  const RecordType *record =
-    allocType->getBaseElementTypeUnsafe()->getAs<RecordType>();
+  const auto *record =
+      allocType->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>();
   if (!record) return false;
 
   // Try to find an operator delete[] in class scope.
@@ -5519,8 +5519,8 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
   //         the same or one is a base class of the other:
   QualType FTy = From->getType();
   QualType TTy = To->getType();
-  const RecordType *FRec = FTy->getAs<RecordType>();
-  const RecordType *TRec = TTy->getAs<RecordType>();
+  const RecordType *FRec = FTy->getAsCanonical<RecordType>();
+  const RecordType *TRec = TTy->getAsCanonical<RecordType>();
   bool FDerivedFromT = FRec && TRec && FRec != TRec &&
                        Self.IsDerivedFrom(QuestionLoc, FTy, TTy);
   if (FRec && TRec && (FRec == TRec || FDerivedFromT ||

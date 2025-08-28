@@ -4767,6 +4767,48 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
   EXPECT_TRUE(H->Type);
 }
 
+TEST(Hover, HoverMacroContentsLimit) {
+  const char *const Code =
+      R"cpp(
+          #define C(A) A##A // Concatenate
+          #define E(A) C(A) // Expand
+          #define Z0032 00000000000000000000000000000000
+          #define Z0064 E(Z0032)
+          #define Z0128 E(Z0064)
+          #define Z0256 E(Z0128)
+          #define Z0512 E(Z0256)
+          #define Z1024 E(Z0512)
+          #define Z2048 E(Z1024)
+          #define Z4096 E(Z2048) // 4096 zeroes
+          int main() { return [[^Z4096]]; }
+      )cpp";
+
+  struct {
+    uint32_t MacroContentsLimit;
+    const std::string ExpectedDefinition;
+  } Cases[] = {
+      // With a limit of 2048, the macro expansion should get dropped.
+      {2048, "#define Z4096 E(Z2048)"},
+      // With a limit of 8192, the macro expansion should be fully expanded.
+      {8192, std::string("#define Z4096 E(Z2048)\n\n") +
+                 std::string("// Expands to\n") + std::string(4096, '0')},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Code);
+
+    Annotations T(Code);
+    TestTU TU = TestTU::withCode(T.code());
+    auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.MacroContentsLimit = Case.MacroContentsLimit;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_EQ(H->Definition, Case.ExpectedDefinition);
+  }
+};
+
 TEST(Hover, FunctionParameters) {
   struct {
     const char *const Code;

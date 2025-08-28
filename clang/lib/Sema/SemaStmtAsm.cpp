@@ -885,18 +885,19 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
   for (StringRef NextMember : Members) {
     const RecordType *RT = nullptr;
     if (VarDecl *VD = dyn_cast<VarDecl>(FoundDecl))
-      RT = VD->getType()->getAs<RecordType>();
+      RT = VD->getType()->getAsCanonical<RecordType>();
     else if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(FoundDecl)) {
       MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
       // MS InlineAsm often uses struct pointer aliases as a base
       QualType QT = TD->getUnderlyingType();
       if (const auto *PT = QT->getAs<PointerType>())
         QT = PT->getPointeeType();
-      RT = QT->getAs<RecordType>();
+      RT = QT->getAsCanonical<RecordType>();
     } else if (TypeDecl *TD = dyn_cast<TypeDecl>(FoundDecl))
-      RT = Context.getTypeDeclType(TD)->getAs<RecordType>();
+      RT = QualType(Context.getCanonicalTypeDeclType(TD))
+               ->getAsCanonical<RecordType>();
     else if (FieldDecl *TD = dyn_cast<FieldDecl>(FoundDecl))
-      RT = TD->getType()->getAs<RecordType>();
+      RT = TD->getType()->getAsCanonical<RecordType>();
     if (!RT)
       return true;
 

@@ -931,7 +931,8 @@ void USRGenerator::VisitType(QualType T) {
         VisitObjCProtocolDecl(Prot);
       return;
     }
-    if (const TemplateTypeParmType *TTP = T->getAs<TemplateTypeParmType>()) {
+    if (const TemplateTypeParmType *TTP =
+            T->getAsCanonical<TemplateTypeParmType>()) {
       Out << 't' << TTP->getDepth() << '.' << TTP->getIndex();
       return;
     }

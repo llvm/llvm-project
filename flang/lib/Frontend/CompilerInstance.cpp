@@ -253,18 +253,15 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
                                            const TargetOptions &targetOpts,
                                            const llvm::Triple triple) {
   llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  // Get the set of implicit target features
-  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
+  llvm::StringMap<bool> FeaturesMap;
 
   // Add target features specified by the user
   for (auto &userFeature : targetOpts.featuresAsWritten) {
     std::string userKeyString = userFeature.substr(1);
-    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
+    FeaturesMap[userKeyString] = (userFeature[0] == '+');
   }
 
-  auto HasError =
-      llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap);
+  auto HasError = llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, FeaturesMap);
   if (HasError.first) {
     unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                             "Unsupported feature ID: %0");
@@ -273,9 +270,9 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
   }
 
   llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
+  for (auto &FeatureItem : FeaturesMap) {
+    featuresVec.push_back((llvm::Twine(FeatureItem.second ? "+" : "-") +
+                           FeatureItem.first().str())
                               .str());
   }
   llvm::sort(featuresVec);

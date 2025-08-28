@@ -141,14 +141,27 @@ Non-comprehensive list of changes in this release
 
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
-- Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for
-  trapping into the generated debug info. This feature allows debuggers (e.g. LLDB) to display
-  the reason for trapping if the trap is reached. The string is currently encoded in the debug
-  info as an artificial frame that claims to be inlined at the trap location. The function used
-  for the artificial frame is an artificial function whose name encodes the reason for trapping.
-  The encoding used is currently the same as ``__builtin_verbose_trap`` but might change in the future.
-  This feature is enabled by default but can be disabled by compiling with
-  ``-fno-sanitize-annotate-debug-info-traps``.
+- Trapping UBSan (e.g. ``-fsanitize=undefined -fsanitize-trap=undefined``) now
+  emits a string describing the reason for trapping into the generated debug
+  info. This feature allows debuggers (e.g. LLDB) to display the reason for
+  trapping if the trap is reached. The string is currently encoded in the debug
+  info as an artificial frame that claims to be inlined at the trap location.
+  The function used for the artificial frame is an artificial function whose
+  name encodes the reason for trapping. The encoding used is currently the same
+  as ``__builtin_verbose_trap`` but might change in the future. This feature is
+  enabled by default but can be disabled by compiling with
+  ``-fno-sanitize-debug-trap-reasons``. The feature has a ``basic`` and
+  ``detailed`` mode (the default). The ``basic`` mode emits a hard-coded string
+  per trap kind (e.g. ``Integer addition overflowed``) and the ``detailed`` mode
+  emits a more descriptive string describing each individual trap (e.g. ``signed
+  integer addition overflow in 'a + b'``). The ``detailed`` mode produces larger
+  debug info than ``basic`` but is more helpful for debugging. The
+  ``-fsanitize-debug-trap-reasons=`` flag can be used to switch between the
+  different modes or disable the feature entirely. Note due to trap merging in
+  optimized builds (i.e. in each function all traps of the same kind get merged
+  into the same trap instruction) the trap reasons might be removed. To prevent
+  this build without optimizations (i.e. use `-O0` or use the `optnone` function
+  attribute) or use the `fno-sanitize-merge=` flag in optimized builds.
 
 - ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
   now be used in constant expressions.
@@ -185,7 +198,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
-- New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+- New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
+
 
 Lanai Support
 ^^^^^^^^^^^^^^

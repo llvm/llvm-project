@@ -674,14 +674,12 @@ define i32 @or_shl_fshl_simplify(i32 %x, i32 %y, i32 %s) {
 ; CHECK-GI-LABEL: or_shl_fshl_simplify:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsr w10, w0, #1
-; CHECK-GI-NEXT:    lsl w11, w1, w2
+; CHECK-GI-NEXT:    lsr w9, w0, #1
+; CHECK-GI-NEXT:    and w10, w2, #0x1f
 ; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w9, w1, w9
-; CHECK-GI-NEXT:    lsr w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w9, w11
-; CHECK-GI-NEXT:    orr w0, w9, w8
+; CHECK-GI-NEXT:    lsl w10, w1, w10
+; CHECK-GI-NEXT:    lsr w8, w9, w8
+; CHECK-GI-NEXT:    orr w0, w10, w8
 ; CHECK-GI-NEXT:    ret
   %shy = shl i32 %y, %s
   %fun = call i32 @llvm.fshl.i32(i32 %y, i32 %x, i32 %s)
@@ -702,14 +700,12 @@ define i32 @or_lshr_fshr_simplify(i32 %x, i32 %y, i32 %s) {
 ; CHECK-GI-LABEL: or_lshr_fshr_simplify:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsl w10, w0, #1
-; CHECK-GI-NEXT:    lsr w11, w1, w2
+; CHECK-GI-NEXT:    lsl w9, w0, #1
+; CHECK-GI-NEXT:    and w10, w2, #0x1f
 ; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsr w9, w1, w9
-; CHECK-GI-NEXT:    lsl w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w11, w9
-; CHECK-GI-NEXT:    orr w0, w9, w8
+; CHECK-GI-NEXT:    lsl w8, w9, w8
+; CHECK-GI-NEXT:    lsr w9, w1, w10
+; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %shy = lshr i32 %y, %s
   %fun = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %s)

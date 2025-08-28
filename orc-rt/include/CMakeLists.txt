@@ -12,6 +12,7 @@ set(ORC_RT_HEADERS
     orc-rt/RTTI.h
     orc-rt/WrapperFunctionResult.h
     orc-rt/SimplePackedSerialization.h
+    orc-rt/bind.h
     orc-rt/bit.h
     orc-rt/move_only_function.h
     orc-rt/span.h

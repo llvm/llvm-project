@@ -4,11 +4,7 @@ RUN: link_fdata %p/Inputs/jump_table_icp.s %t.o %t.fdata --nmtool llvm-nm
 RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-## This test has commands that rely on shell capabilities that won't execute
-## correctly on Windows e.g. subshell execution
-REQUIRES: shell
-
-RUN: (llvm-bolt %t.exe --data %t.fdata -o %t --relocs \
+RUN: llvm-bolt %t.exe --data %t.fdata -o %t --relocs \
 RUN:   --reorder-blocks=cache --split-functions --split-all-cold \
 RUN:   --use-gnu-stack --dyno-stats --indirect-call-promotion=jump-tables \
 RUN:   --print-icp -v=0 \
@@ -16,8 +12,8 @@ RUN:   --enable-bat --print-cache-metrics \
 RUN:   --icp-jt-remaining-percent-threshold=10 \
 RUN:   --icp-jt-total-percent-threshold=2 \
 RUN:   --indirect-call-promotion-topn=1 \
-RUN:   --icp-jump-tables-targets --align-functions-max-bytes=7 2>&1 && \
-RUN:   llvm-objdump -d %t --print-imm-hex) | FileCheck %s
+RUN:   --icp-jump-tables-targets --align-functions-max-bytes=7 | FileCheck %s
+RUN: llvm-objdump -d %t --print-imm-hex | FileCheck --check-prefix CHECK-ASM %s
 
 BOLT-INFO: ICP total indirect callsites = 0
 BOLT-INFO: ICP total jump table callsites = 2
@@ -107,14 +103,14 @@ CHECK-NEXT:   Exec Count : 140
 CHECK:   Predecessors: .Ltmp{{.*}}, .LFT{{.*}}
 CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 98)
 
-CHECK:     <_Z3inci>:
-CHECK:        	movq    0x{{.*}}(,%rax,8), %rax
-CHECK-NEXT:    cmpq    $0x{{.*}}, %rax
-CHECK-NEXT:    je {{.*}} <_Z3inci+0x{{.*}}>
-CHECK-NEXT:   	jmpq   *%rax
+CHECK-ASM:     <_Z3inci>:
+CHECK-ASM:        	movq    0x{{.*}}(,%rax,8), %rax
+CHECK-ASM-NEXT:    cmpq    $0x{{.*}}, %rax
+CHECK-ASM-NEXT:    je {{.*}} <_Z3inci+0x{{.*}}>
+CHECK-ASM-NEXT:   	jmpq   *%rax
 
-CHECK:     <_Z7inc_dupi>:
-CHECK:        	movq    0x{{.*}}(,%rax,8), %rax
-CHECK-NEXT:    cmpq $0x{{.*}}, %rax
-CHECK-NEXT:    je {{.*}} <_Z7inc_dupi+0x{{.*}}>
-CHECK-NEXT:   	jmpq   *%rax
+CHECK-ASM:     <_Z7inc_dupi>:
+CHECK-ASM:        	movq    0x{{.*}}(,%rax,8), %rax
+CHECK-ASM-NEXT:    cmpq $0x{{.*}}, %rax
+CHECK-ASM-NEXT:    je {{.*}} <_Z7inc_dupi+0x{{.*}}>
+CHECK-ASM-NEXT:   	jmpq   *%rax

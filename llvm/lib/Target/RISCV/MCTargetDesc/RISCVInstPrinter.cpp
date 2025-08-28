@@ -216,9 +216,12 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // or non-zero in bits 8 and above.
+  // altfmt=1 without zvfbfa extension, or non-zero in bits 9 and above.
   if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
-      RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
+      RISCVVType::getSEW(Imm) > 64 ||
+      (RISCVVType::isAltFmt(Imm) &&
+       !STI.hasFeature(RISCV::FeatureStdExtZvfbfa)) ||
+      (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }

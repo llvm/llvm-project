@@ -119,6 +119,7 @@ Changes to the RISC-V Backend
   and data using mapping symbols such as `$x` and `$d`. Switching architectures
   using `$x` with an architecture string suffix is not yet supported.
 * Ssctr and Smctr extensions are no longer experimental.
+* Add support for Zvfbfa (Additional BF16 vector compute support)
 
 Changes to the WebAssembly Backend
 ----------------------------------

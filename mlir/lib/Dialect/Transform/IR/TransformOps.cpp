@@ -37,16 +37,13 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
-
 #define DEBUG_TYPE_MATCHER "transform-matcher"
-#define DBGS_MATCHER() (llvm::dbgs() << "[" DEBUG_TYPE_MATCHER "] ")
-#define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
 
 using namespace mlir;
 
@@ -182,8 +179,7 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
       DiagnosedSilenceableFailure result =
           state.applyTransform(cast<TransformOpInterface>(transform));
       if (result.isSilenceableFailure()) {
-        LLVM_DEBUG(DBGS() << "alternative failed: " << result.getMessage()
-                          << "\n");
+        LDBG() << "alternative failed: " << result.getMessage();
         failed = true;
         break;
       }
@@ -1155,12 +1151,10 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
   std::optional<DiagnosedSilenceableFailure> maybeFailure;
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(1, DEBUG_TYPE_MATCHER)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       // Try matching.
       SmallVector<SmallVector<MappedValue>> mappings;
@@ -1172,8 +1166,8 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
-        DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                     << " failed: " << diag.getMessage());
+        LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+                                    << " failed: " << diag.getMessage();
         return WalkResult::advance();
       }
 
@@ -1304,12 +1298,10 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
       if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
-      DEBUG_MATCHER({
-        DBGS_MATCHER() << "matching ";
-        op->print(llvm::dbgs(),
-                  OpPrintingFlags().assumeVerified().skipRegions());
-        llvm::dbgs() << " @" << op << "\n";
-      });
+      LDBG(1, DEBUG_TYPE_MATCHER)
+          << "matching "
+          << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
+          << " @" << op;
 
       firstMatchArgument.clear();
       firstMatchArgument.push_back(op);
@@ -1322,8 +1314,8 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
-                                       << " failed: " << diag.getMessage());
+          LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+                                      << " failed: " << diag.getMessage();
           continue;
         }
 
@@ -2173,10 +2165,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp success\n"; });
+    LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp success";
     return DiagnosedSilenceableFailure::success();
   }
-  DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp failure\n"; });
+  LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp failure";
   return emitSilenceableError() << "operation is not empty";
 }
 

@@ -290,11 +290,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
   } else if (source && moldType) {
     if (const auto *boz{std::get_if<BOZLiteralConstant>(&source->u)}) {
       // TRANSFER(BOZ, MOLD=integer or real) extension
-      if (context.languageFeatures().ShouldWarn(
-              common::LanguageFeature::TransferBOZ)) {
-        context.messages().Say(common::LanguageFeature::TransferBOZ,
-            "TRANSFER(BOZ literal) is not standard"_port_en_US);
-      }
+      context.Warn(common::LanguageFeature::TransferBOZ,
+          "TRANSFER(BOZ literal) is not standard"_port_en_US);
       return Fold(context, ConvertToType(*moldType, Expr<SomeType>{*boz}));
     }
   }

@@ -1,7 +1,7 @@
 # Test the --dump-dot-func option with multiple functions 
 # (includes tests for both mangled/unmangled names)
 
-RUN: %clang++ %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
+RUN: %clangxx %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
 
 # Test 1: --dump-dot-func with specific function name (mangled)
 RUN: llvm-bolt %t.exe -o %t.bolt1 --dump-dot-func=_Z3addii -v=1 2>&1 | FileCheck %s --check-prefix=ADD

@@ -5,7 +5,7 @@
 ; RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -global-isel=1 < %s 2>&1 | FileCheck  -check-prefix=GISEL-ERR %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -global-isel=0 < %s 2>&1 | FileCheck  -check-prefix=SDAG-ERR %s
 
-; GISEL-ERR: LLVM ERROR: cannot select: {{.*}}  = G_INTRINSIC intrinsic(@llvm.amdgcn.inverse.ballot)
+; GISEL-ERR: LLVM ERROR: cannot select: {{.*}}  = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.inverse.ballot)
 ; SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.inverse.ballot
 
 declare i1 @llvm.amdgcn.inverse.ballot(i32)

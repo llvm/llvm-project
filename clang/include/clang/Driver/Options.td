@@ -2612,16 +2612,27 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
-defm sanitize_debug_trap_reasons
-    : BoolFOption<
-          "sanitize-debug-trap-reasons",
-          CodeGenOpts<"SanitizeDebugTrapReasons">, DefaultTrue,
-          PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                  "Annotate trap blocks in debug info with UBSan trap reasons">,
-          NegFlag<SetFalse, [], [ClangOption, CC1Option],
-                  "Do not annotate trap blocks in debug info with UBSan trap "
-                  "reasons">>;
-
+def fsanitize_debug_trap_reasons_EQ
+  : Joined<["-"], "fsanitize-debug-trap-reasons=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Set how trap reasons are emitted. "
+      "`none` - Not emitted. This gives the smallest debug info; "
+      "`basic` - Emit a fixed trap message per check type. This increases the "
+      "debug info size but not as much as `detailed`; "
+      "`detailed` - Emit a more detailed trap message. This increases the "
+      "debug info size the most. Default is `detailed`.">,
+    Values<"none,basic,detailed">,
+    NormalizedValuesScope<"CodeGenOptions::SanitizeDebugTrapReasonKind">,
+    NormalizedValues<["None", "Basic", "Detailed"]>,
+    MarshallingInfoEnum<CodeGenOpts<"SanitizeDebugTrapReasons">, "Detailed">;
+def fsanitize_debug_trap_reasons
+    : Flag<["-"], "fsanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["detailed"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=detailed">;
+def fno_sanitize_debug_trap_reasons
+    : Flag<["-"], "fno-sanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["none"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=none">;
 defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   CodeGenOpts<"SanitizeMinimalRuntime">, DefaultFalse,
   PosFlag<SetTrue>,

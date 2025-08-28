@@ -6730,7 +6730,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
         Register Reg = S.getReg();
         auto CIter = CrossIterationNeeds.find(Reg.id());
         if (CIter != CrossIterationNeeds.end()) {
-          auto Stg2 = SMS.stageScheduled(const_cast<SUnit *>(S.getSUnit()));
+          auto Stg2 = SMS.stageScheduled(S.getSUnit());
           assert(Stg2 <= Stg && "Data dependence upon earlier stage");
           if (Stg - Stg2 < MAX_STAGES)
             CIter->second.set(Stg - Stg2);

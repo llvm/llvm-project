@@ -4835,28 +4835,14 @@ struct OpenMPDeclarativeAssumes {
   CharBlock source;
 };
 
-struct OmpAssumeDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OmpEndAssumeDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpEndAssumeDirective, Verbatim);
-  CharBlock source;
-};
-
-// Ref: [5.2: 213-216]
+// Ref: [5.1:86-89], [5.2:215], [6.0:369]
 //
-// assume-construct ->
-//   ASSUME absent-clause | contains-clause | holds_clause | no-openmp-clause
-//          no-openmp-routines-clause | no-parallelism-clause
-//       block
+// assume-directive ->                              // since 5.1
+//   ASSUME assumption-clause...
+//     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct);
-  std::tuple<OmpAssumeDirective, Block, std::optional<OmpEndAssumeDirective>> t;
-  CharBlock source;
+struct OpenMPAssumeConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS

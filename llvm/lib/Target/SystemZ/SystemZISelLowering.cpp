@@ -6725,6 +6725,14 @@ SDValue SystemZTargetLowering::lowerFSHL(SDValue Op, SelectionDAG &DAG) const {
     if ((ShiftAmt & 7) == 0 || Subtarget.hasVectorEnhancements2()) {
       SDValue Op0 = DAG.getBitcast(MVT::v16i8, Op.getOperand(0));
       SDValue Op1 = DAG.getBitcast(MVT::v16i8, Op.getOperand(1));
+      if (ShiftAmt > 120) {
+        // For N in 121..128, fshl N == fshr (128 - N), and for 1 <= N < 8
+        // SHR_DOUBLE_BIT emits fewer instructions.
+        SDValue Val =
+            DAG.getNode(SystemZISD::SHR_DOUBLE_BIT, DL, MVT::v16i8, Op0, Op1,
+                        DAG.getTargetConstant(128 - ShiftAmt, DL, MVT::i32));
+        return DAG.getBitcast(MVT::i128, Val);
+      }
       SmallVector<int, 16> Mask(16);
       for (unsigned Elt = 0; Elt < 16; Elt++)
         Mask[Elt] = (ShiftAmt >> 3) + Elt;
@@ -6748,13 +6756,21 @@ SDValue SystemZTargetLowering::lowerFSHR(SDValue Op, SelectionDAG &DAG) const {
   // i128 FSHR with a constant amount that is a multiple of 8 can be
   // implemented via VECTOR_SHUFFLE.  If we have the vector-enhancements-2
   // facility, FSHR with a constant amount less than 8 can be implemented
-  // via SHL_DOUBLE_BIT, and FSHR with other constant amounts by a
+  // via SHR_DOUBLE_BIT, and FSHR with other constant amounts by a
   // combination of the two.
   if (auto *ShiftAmtNode = dyn_cast<ConstantSDNode>(Op.getOperand(2))) {
     uint64_t ShiftAmt = ShiftAmtNode->getZExtValue() & 127;
     if ((ShiftAmt & 7) == 0 || Subtarget.hasVectorEnhancements2()) {
       SDValue Op0 = DAG.getBitcast(MVT::v16i8, Op.getOperand(0));
       SDValue Op1 = DAG.getBitcast(MVT::v16i8, Op.getOperand(1));
+      if (ShiftAmt > 120) {
+        // For N in 121..128, fshr N == fshl (128 - N), and for 1 <= N < 8
+        // SHL_DOUBLE_BIT emits fewer instructions.
+        SDValue Val =
+            DAG.getNode(SystemZISD::SHL_DOUBLE_BIT, DL, MVT::v16i8, Op0, Op1,
+                        DAG.getTargetConstant(128 - ShiftAmt, DL, MVT::i32));
+        return DAG.getBitcast(MVT::i128, Val);
+      }
       SmallVector<int, 16> Mask(16);
       for (unsigned Elt = 0; Elt < 16; Elt++)
         Mask[Elt] = 16 - (ShiftAmt >> 3) + Elt;

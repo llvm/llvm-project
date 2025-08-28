@@ -66,7 +66,7 @@ RESOURCE<float> Buffer;
 
 // Default constructor
 
-// CHECK: CXXConstructorDecl {{.*}} hlsl::[[RESOURCE]]<element_type> 'void ()' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void ()' inline
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -80,7 +80,7 @@ RESOURCE<float> Buffer;
 
 // Constructor from binding
 
-// CHECK: CXXConstructorDecl {{.*}} hlsl::[[RESOURCE]]<element_type> 'void (unsigned int, unsigned int, int, unsigned int, const char *)' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, unsigned int, int, unsigned int, const char *)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
@@ -104,7 +104,7 @@ RESOURCE<float> Buffer;
 
 // Constructor from implicit binding
 
-// CHECK: CXXConstructorDecl {{.*}} hlsl::[[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int, const char *)' inline
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int, const char *)' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
 // CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'

@@ -2984,21 +2984,20 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
   if (TPIDR2.Uses > 0) {
+    // Note: This case just needs to do `SVL << 48`. It is not implemented as we
+    // generally don't support big-endian SVE/SME.
+    if (!Subtarget->isLittleEndian())
+      reportFatalInternalError(
+          "TPIDR2 block initialization is not supported on big-endian targets");
+
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    // Store the buffer pointer to the TPIDR2 stack object.
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
+    // Store buffer pointer and num_za_save_slices.
+    // Bytes 10-15 are implicitly zeroed.
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STPXi))
         .addReg(MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(1).getReg())
         .addFrameIndex(TPIDR2.FrameIndex)
         .addImm(0);
-    // Set the reserved bytes (10-15) to zero
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
-        .addReg(AArch64::WZR)
-        .addFrameIndex(TPIDR2.FrameIndex)
-        .addImm(5);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
-        .addReg(AArch64::WZR)
-        .addFrameIndex(TPIDR2.FrameIndex)
-        .addImm(3);
   } else
     MFI.RemoveStackObject(TPIDR2.FrameIndex);
 
@@ -8313,9 +8312,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                              {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
         MFI.CreateVariableSizedObject(Align(16), nullptr);
       }
+      SDValue NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                            DAG.getConstant(1, DL, MVT::i32));
       Chain = DAG.getNode(
           AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
-          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
+          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0),
+           /*Num save slices*/ NumZaSaveSlices});
     } else if (Attrs.hasAgnosticZAInterface()) {
       // Call __arm_sme_state_size().
       SDValue BufferSize =
@@ -9165,19 +9167,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
   bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
-    const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-    MachinePointerInfo MPI =
-        MachinePointerInfo::getStack(MF, TPIDR2.FrameIndex);
+    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
         TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-    SDValue NumZaSaveSlicesAddr =
-        DAG.getNode(ISD::ADD, DL, TPIDR2ObjAddr.getValueType(), TPIDR2ObjAddr,
-                    DAG.getConstant(8, DL, TPIDR2ObjAddr.getValueType()));
-    SDValue NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                          DAG.getConstant(1, DL, MVT::i32));
-    Chain = DAG.getTruncStore(Chain, DL, NumZaSaveSlices, NumZaSaveSlicesAddr,
-                              MPI, MVT::i16);
     Chain = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),

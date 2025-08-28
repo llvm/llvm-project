@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -21,6 +20,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/Support/DebugLog.h"
+
 #include <numeric>
 
 namespace mlir {
@@ -29,6 +30,8 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+
+#define DEBUG_TYPE "vector-to-amx"
 
 namespace {
 
@@ -49,8 +52,10 @@ static bool verifyAmxShape(VectorType vec) {
   // 3D shape indicates VNNI packed layout.
   if (vec.getRank() == 3) {
     int64_t vnniFactor = 32 / elemBitWidth;
-    if (shape.back() != vnniFactor)
+    if (shape.back() != vnniFactor) {
+      LDBG() << "invalid VNNI packing factor";
       return false;
+    }
     cols *= vnniFactor;
   }
 
@@ -60,7 +65,7 @@ static bool verifyAmxShape(VectorType vec) {
   return rows <= maxRows && (cols * elemBitWidth) <= maxBitsPerRow;
 }
 
-/// Checks if contraction operands are in AMX-compatible packed VNNI layout.
+/// Check if contraction operands are in AMX-compatible packed VNNI layout.
 static LogicalResult isAmxVnniLayout(PatternRewriter &rewriter,
                                      vector::ContractionOp contractOp) {
   VectorType accType = dyn_cast<VectorType>(contractOp.getAcc().getType());
@@ -172,9 +177,9 @@ static LogicalResult validateOperands(PatternRewriter &rewriter,
   return success();
 }
 
-/// Collapses the two innermost dimensions together.
-static Value collapseLastDim(PatternRewriter &rewriter,
-                             TypedValue<MemRefType> memref) {
+/// Collapse the two innermost dimensions together.
+static TypedValue<MemRefType> collapseLastDim(PatternRewriter &rewriter,
+                                              TypedValue<MemRefType> memref) {
   int64_t rank = memref.getType().getRank();
   SmallVector<ReassociationIndices> reassocIndices;
   for (auto i : llvm::seq<int64_t>(0, rank - 2))
@@ -184,21 +189,148 @@ static Value collapseLastDim(PatternRewriter &rewriter,
                                          reassocIndices);
 }
 
-/// Loads vector values to an AMX tile.
+/// Attempt to create an AMX tile load/store operation equivalent to the given
+/// vector transfer `xfer` op.
+/// This approach allows to skip longer route through registers and a temporary
+/// buffer otherwise required to move data to/from an AMX tile.
+static Operation *
+loadStoreFromTransfer(PatternRewriter &rewriter,
+                      VectorTransferOpInterface xferOp, bool isPacked,
+                      TypedValue<amx::TileType> tileToStore = nullptr) {
+  if (!xferOp || !isa<vector::TransferReadOp, vector::TransferWriteOp>(xferOp))
+    return nullptr;
+  if (xferOp.hasOutOfBoundsDim() ||
+      !xferOp.getPermutationMap().isMinorIdentity())
+    return nullptr;
+
+  // Extra checks in case of a write op.
+  // Stores must not be packed.
+  if (isa<vector::TransferWriteOp>(xferOp) &&
+      (!tileToStore || isPacked ||
+       tileToStore.getType().getShape() != xferOp.getVectorType().getShape()))
+    return nullptr;
+
+  // Check for a memref source buffer.
+  // AMX data transfer requires at least 2D shape to correctly
+  // infer stride between rows.
+  Value base = xferOp.getBase();
+  auto memTy = dyn_cast<MemRefType>(base.getType());
+  int64_t memRank = memTy.getRank();
+  if (!memTy || memRank < 2)
+    return nullptr;
+
+  // Check that the source buffer has enough contiguous elements to load whole
+  // AMX tile row.
+  //
+  // To ensure correctness, the validation is conservative and expects the
+  // buffer's innermost dimensions to be statically known, equal to or larger
+  // than the vector row length, and equal to the VNNI dimension if applicable.
+  //
+  // This check could be relaxed to accept more arbitrarily shaped buffers as
+  // long as there are enough contiguous elements to load a whole row.
+  if (!memTy.areTrailingDimsContiguous(isPacked ? 2 : 1))
+    return nullptr;
+  VectorType vecTy = xferOp.getVectorType();
+  ArrayRef<int64_t> vecShape = vecTy.getShape();
+  ArrayRef<int64_t> memShape = memTy.getShape();
+  if (memShape.back() == ShapedType::kDynamic ||
+      memShape.back() < vecShape.back())
+    return nullptr;
+  if (isPacked &&
+      (memShape.back() != vecShape.back() ||
+       memShape[memShape.size() - 2] == ShapedType::kDynamic ||
+       memShape[memShape.size() - 2] < vecShape[vecShape.size() - 2]))
+    return nullptr;
+
+  // Load values directly from the buffer to an AMX tile.
+  PatternRewriter::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(xferOp);
+  Location loc = xferOp.getLoc();
+
+  // Create a subview of the source buffer based on the transfer op to resolve
+  // offsets.
+  SmallVector<OpFoldResult> strides(memRank, rewriter.getIndexAttr(1));
+  int64_t vecRank = vecTy.getRank();
+  assert(memRank >= vecRank &&
+         "Expects buffer to be the same or greater rank than vector");
+  SmallVector<int64_t> shape(memRank - vecRank, 1);
+  shape.append(vecShape.begin(), vecShape.end());
+  TypedValue<MemRefType> src =
+      memref::SubViewOp::create(
+          rewriter, loc, base, getAsOpFoldResult(xferOp.getIndices()),
+          getAsOpFoldResult(rewriter.getI64ArrayAttr(shape)), strides)
+          .getResult();
+
+  // Collapse the VNNI dimension in case of packing.
+  if (isPacked)
+    src = collapseLastDim(rewriter, src);
+  int64_t rows = vecShape[0];
+  int64_t cols = std::accumulate(vecShape.begin() + 1, vecShape.end(), 1,
+                                 std::multiplies<int64_t>());
+  auto tileType = amx::TileType::get({rows, cols}, vecTy.getElementType());
+
+  Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<Value> tileIndicides(src.getType().getRank(), zeroIndex);
+
+  Operation *amxTileOp = nullptr;
+  if (isa<vector::TransferReadOp>(xferOp)) {
+    amxTileOp =
+        amx::TileLoadOp::create(rewriter, loc, tileType, src, tileIndicides);
+  } else if (isa<vector::TransferWriteOp>(xferOp)) {
+    amxTileOp = amx::TileStoreOp::create(rewriter, loc, src, tileIndicides,
+                                         tileToStore);
+  } else {
+    llvm_unreachable("unsupported vector transfer op");
+  }
+
+  return amxTileOp;
+}
+
+/// Attempt to create an AMX tile load operation equivalent to the given
+/// vector transfer `readOp`.
+/// Returns loaded AMX tile if successful.
+static FailureOr<TypedValue<amx::TileType>>
+loadFromTransfer(PatternRewriter &rewriter, vector::TransferReadOp readOp,
+                 bool isPacked) {
+  amx::TileLoadOp loadOp = dyn_cast_if_present<amx::TileLoadOp>(
+      loadStoreFromTransfer(rewriter, readOp, isPacked));
+  if (!loadOp)
+    return failure();
+  return loadOp.getRes();
+}
+
+/// Attempt to create an AMX tile store operation equivalent to the given
+/// vector transfer `writeOp`.
+static LogicalResult storeFromTransfer(PatternRewriter &rewriter,
+                                       vector::TransferWriteOp writeOp,
+                                       TypedValue<amx::TileType> tileToStore) {
+  return success(loadStoreFromTransfer(rewriter, writeOp, /*isPacked=*/false,
+                                       tileToStore));
+}
+
+/// Load vector values to an AMX tile.
 static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
                                           TypedValue<VectorType> vec) {
   Location loc = vec.getLoc();
-  Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
+
+  VectorType vecTy = vec.getType();
+  bool isPacked = vecTy.getRank() == 3;
+
+  // Try to load tile directly from vector producer's buffer.
+  auto readOp = vec.getDefiningOp<vector::TransferReadOp>();
+  FailureOr<TypedValue<amx::TileType>> tile =
+      loadFromTransfer(rewriter, readOp, isPacked);
+  if (succeeded(tile))
+    return *tile;
 
   // Transfer the vector to a tile through an intermediate buffer.
-  VectorType vecTy = vec.getType();
   Value buf = memref::AllocaOp::create(
       rewriter, loc, MemRefType::get(vecTy.getShape(), vecTy.getElementType()));
+  Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
   SmallVector<Value> indices(vecTy.getRank(), zeroIndex);
   vector::TransferWriteOp::create(rewriter, loc, vec, buf, indices);
 
   // Collapse the VNNI dimension in case of packing.
-  bool isPacked = vecTy.getRank() == 3;
   if (isPacked)
     buf = collapseLastDim(rewriter, cast<TypedValue<MemRefType>>(buf));
 
@@ -212,17 +344,17 @@ static TypedValue<amx::TileType> loadTile(PatternRewriter &rewriter,
                                  {zeroIndex, zeroIndex});
 }
 
-/// Stores an AMX tile in a vector.
+/// Store an AMX tile in a vector.
 static TypedValue<VectorType> storeTile(PatternRewriter &rewriter,
                                         TypedValue<amx::TileType> tile) {
   Location loc = tile.getLoc();
-  Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
 
   // Transfer the tile to a vector through an intermediate buffer.
   amx::TileType tileTy = tile.getType();
   Value buf = memref::AllocaOp::create(
       rewriter, loc,
       MemRefType::get(tileTy.getShape(), tileTy.getElementType()));
+  Value zeroIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
   SmallVector<Value> indices(2, zeroIndex);
   amx::TileStoreOp::create(rewriter, loc, buf, indices, tile);
 
@@ -258,8 +390,22 @@ struct ContractionToAMX : public OpRewritePattern<vector::ContractionOp> {
                                         lhsTile, rhsTile, accTile);
     }
 
-    Value res = storeTile(rewriter, tileMul);
-    rewriter.replaceOp(contractOp, res);
+    // If the contraction result is only written back to memory, try to replace
+    // the vector op with an AMX store directly.
+    Value res = contractOp.getResult();
+    if (res.hasOneUse()) {
+      auto writeOp = dyn_cast<vector::TransferWriteOp>(*res.getUsers().begin());
+      LogicalResult storeRes = storeFromTransfer(rewriter, writeOp, tileMul);
+      if (succeeded(storeRes)) {
+        rewriter.eraseOp(writeOp);
+        rewriter.eraseOp(contractOp);
+        return success();
+      }
+    }
+
+    // Load the result back into a vector.
+    Value newResult = storeTile(rewriter, tileMul);
+    rewriter.replaceOp(contractOp, newResult);
 
     return success();
   }

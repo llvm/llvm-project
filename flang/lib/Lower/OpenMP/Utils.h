@@ -114,16 +114,6 @@ struct OmpMapParentAndMemberData {
                                    semantics::SemanticsContext &semaCtx);
 };
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr,
-                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::ArrayAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false,
-                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
-
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,

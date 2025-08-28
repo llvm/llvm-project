@@ -200,3 +200,25 @@ program openacc_parallel_validity
   !$acc end parallel
 
 end program openacc_parallel_validity
+
+subroutine acc_parallel_default_none
+  integer :: i, l
+  real :: a(10,10)
+  l = 10  
+  !$acc parallel default(none)
+  !$acc loop
+  !ERROR: The DEFAULT(NONE) clause requires that 'l' must be listed in a data-mapping clause
+  do i = 1, l
+    !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+    a(1,i) = 1
+  end do
+  !$acc end parallel
+
+  !$acc data copy(a)
+  !$acc parallel loop firstprivate(l) default(none)
+  do i = 1, l
+    a(1,i) = 1
+  end do
+  !$acc end parallel
+  !$acc end data
+end subroutine acc_parallel_default_none

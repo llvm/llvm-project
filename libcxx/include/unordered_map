@@ -1172,14 +1172,13 @@ public:
 #  if _LIBCPP_STD_VER >= 17
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args) {
-    return __table_.__emplace_unique_key_args(
-        __k, piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple(std::forward<_Args>(__args)...));
+    return __table_.__emplace_unique(
+        piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args) {
-    return __table_.__emplace_unique_key_args(
-        __k,
+    return __table_.__emplace_unique(
         piecewise_construct,
         std::forward_as_tuple(std::move(__k)),
         std::forward_as_tuple(std::forward<_Args>(__args)...));
@@ -1197,7 +1196,7 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) {
-    pair<iterator, bool> __res = __table_.__emplace_unique_key_args(__k, __k, std::forward<_Vp>(__v));
+    pair<iterator, bool> __res = __table_.__emplace_unique(__k, std::forward<_Vp>(__v));
     if (!__res.second) {
       __res.first->second = std::forward<_Vp>(__v);
     }
@@ -1206,7 +1205,7 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v) {
-    pair<iterator, bool> __res = __table_.__emplace_unique_key_args(__k, std::move(__k), std::forward<_Vp>(__v));
+    pair<iterator, bool> __res = __table_.__emplace_unique(std::move(__k), std::forward<_Vp>(__v));
     if (!__res.second) {
       __res.first->second = std::forward<_Vp>(__v);
     }
@@ -1612,16 +1611,13 @@ inline void unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterato
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k) {
-  return __table_
-      .__emplace_unique_key_args(__k, piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
+  return __table_.__emplace_unique(piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
       .first->second;
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](key_type&& __k) {
-  return __table_
-      .__emplace_unique_key_args(
-          __k, piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
+  return __table_.__emplace_unique(piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
       .first->second;
 }
 #  else // _LIBCPP_CXX03_LANG

@@ -2155,7 +2155,7 @@ let Predicates = [HasPAuth] in {
                             i64imm:$Disc, GPR64:$AddrDisc),
                        [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
-    let hasSideEffects = 0;
+    let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 32;

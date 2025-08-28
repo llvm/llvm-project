@@ -167,6 +167,7 @@ endif()
 
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
+add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
 if(NOT WIN32)
   add_definitions(-U_GLIBCXX_ASSERTIONS)
 endif()

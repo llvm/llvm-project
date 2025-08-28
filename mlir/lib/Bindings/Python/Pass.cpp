@@ -39,7 +39,7 @@ public:
     return nb::steal<nb::object>(mlirPythonPassManagerToCapsule(get()));
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirPassManager rawPm = mlirPythonCapsuleToPassManager(capsule.ptr());
     if (mlirPassManagerIsNull(rawPm))
       throw nb::python_error();

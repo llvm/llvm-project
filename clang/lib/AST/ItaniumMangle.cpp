@@ -4726,7 +4726,7 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
 
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
   // Ignore member expressions involving anonymous unions.
-  while (const auto *RT = Base->getType()->getAs<RecordType>()) {
+  while (const auto *RT = Base->getType()->getAsCanonical<RecordType>()) {
     if (!RT->getOriginalDecl()->isAnonymousStructOrUnion())
       break;
     const auto *ME = dyn_cast<MemberExpr>(Base);
@@ -7031,7 +7031,7 @@ bool CXXNameMangler::isSpecializedAs(QualType S, llvm::StringRef Name,
   if (S.isNull())
     return false;
 
-  const RecordType *RT = S->getAs<RecordType>();
+  const RecordType *RT = S->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 

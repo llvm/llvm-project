@@ -38,7 +38,7 @@ private:
   Error validateSize(uint32_t Computed);
 
   void writeHeader(raw_ostream &OS);
-  void writeParts(raw_ostream &OS);
+  Error writeParts(raw_ostream &OS);
 };
 } // namespace
 
@@ -107,7 +107,7 @@ void DXContainerWriter::writeHeader(raw_ostream &OS) {
            Offsets.size() * sizeof(uint32_t));
 }
 
-void DXContainerWriter::writeParts(raw_ostream &OS) {
+Error DXContainerWriter::writeParts(raw_ostream &OS) {
   uint32_t RollingOffset =
       sizeof(dxbc::Header) + (ObjectFile.Header.PartCount * sizeof(uint32_t));
   for (auto I : llvm::zip(ObjectFile.Parts, *ObjectFile.Header.PartOffsets)) {
@@ -269,9 +269,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Flags = P.RootSignature->getEncodedFlags();
       RS.Version = P.RootSignature->Version;
-      RS.RootParameterOffset = P.RootSignature->RootParametersOffset;
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
@@ -323,8 +321,10 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Range.RegisterSpace = R.RegisterSpace;
             Range.OffsetInDescriptorsFromTableStart =
                 R.OffsetInDescriptorsFromTableStart;
+
             if (RS.Version > 1)
               Range.Flags = R.getEncodedFlags();
+
             Table.Ranges.push_back(Range);
           }
           RS.ParametersContainer.addParameter(Type, Visibility, Table);
@@ -352,6 +352,27 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         RS.StaticSamplers.push_back(NewSampler);
       }
 
+      // Handling of offsets
+      RS.RootParameterOffset = RS.computeRootParametersOffset();
+      if (P.RootSignature->RootParametersOffset &&
+          P.RootSignature->RootParametersOffset.value() !=
+              RS.RootParameterOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified RootParametersOffset does not match required value: %d.",
+            RS.RootParameterOffset);
+      }
+
+      RS.StaticSamplersOffset = RS.computeStaticSamplersOffset();
+      if (P.RootSignature->StaticSamplersOffset &&
+          P.RootSignature->StaticSamplersOffset.value() !=
+              RS.StaticSamplersOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified StaticSamplersOffset does not match computed value: %d.",
+            RS.StaticSamplersOffset);
+      }
+
       RS.write(OS);
       break;
     }
@@ -361,14 +382,15 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       OS.write_zeros(PartSize - BytesWritten);
     RollingOffset += PartSize;
   }
+
+  return Error::success();
 }
 
 Error DXContainerWriter::write(raw_ostream &OS) {
   if (Error Err = computePartOffsets())
     return Err;
   writeHeader(OS);
-  writeParts(OS);
-  return Error::success();
+  return writeParts(OS);
 }
 
 namespace llvm {

@@ -263,7 +263,8 @@ template <> struct MappingTraits<memprof::YamlDataAccessProfData> {
 
 template <> struct MappingTraits<memprof::AllMemProfData> {
   static void mapping(IO &Io, memprof::AllMemProfData &Data) {
-    Io.mapRequired("HeapProfileRecords", Data.HeapProfileRecords);
+    if (!Io.outputting() || !Data.HeapProfileRecords.empty())
+      Io.mapOptional("HeapProfileRecords", Data.HeapProfileRecords);
     // Map data access profiles if reading input, or if writing output &&
     // the struct is populated.
     if (!Io.outputting() || !Data.YamlifiedDataAccessProfiles.isEmpty())

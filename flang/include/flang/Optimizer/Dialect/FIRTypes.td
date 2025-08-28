@@ -610,9 +610,10 @@ def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     "any composite">;
 
 // Reference types
-def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate,
-    fir_LLVMPointerType.predicate]>, "any reference">;
+def AnyReferenceLike
+    : Type<Or<[fir_ReferenceType.predicate, fir_HeapType.predicate,
+               fir_PointerType.predicate, fir_LLVMPointerType.predicate]>,
+           "any reference">;
 
 def FuncType : TypeConstraint<FunctionType.predicate, "function type">;
 

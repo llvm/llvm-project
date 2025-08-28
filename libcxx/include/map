@@ -1055,7 +1055,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
-    return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...);
+    return __tree_.__emplace_hint_unique(__p.__i_, std::forward<_Args>(__args)...).first;
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
@@ -1065,7 +1065,7 @@ public:
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __pos, _Pp&& __p) {
-    return __tree_.__emplace_hint_unique(__pos.__i_, std::forward<_Pp>(__p));
+    return __tree_.__emplace_hint_unique(__pos.__i_, std::forward<_Pp>(__p)).first;
   }
 
 #  endif // _LIBCPP_CXX03_LANG
@@ -1073,7 +1073,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__emplace_unique(__v); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__emplace_hint_unique(__p.__i_, __v);
+    return __tree_.__emplace_hint_unique(__p.__i_, __v).first;
   }
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1082,7 +1082,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__emplace_hint_unique(__p.__i_, std::move(__v));
+    return __tree_.__emplace_hint_unique(__p.__i_, std::move(__v)).first;
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
@@ -1108,17 +1108,13 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args) {
-    return __tree_.__emplace_unique_key_args(
-        __k,
-        std::piecewise_construct,
-        std::forward_as_tuple(__k),
-        std::forward_as_tuple(std::forward<_Args>(__args)...));
+    return __tree_.__emplace_unique(
+        std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args) {
-    return __tree_.__emplace_unique_key_args(
-        __k,
+    return __tree_.__emplace_unique(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(__k)),
         std::forward_as_tuple(std::forward<_Args>(__args)...));
@@ -1127,9 +1123,8 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args) {
     return __tree_
-        .__emplace_hint_unique_key_args(
+        .__emplace_hint_unique(
             __h.__i_,
-            __k,
             std::piecewise_construct,
             std::forward_as_tuple(__k),
             std::forward_as_tuple(std::forward<_Args>(__args)...))
@@ -1139,9 +1134,8 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args) {
     return __tree_
-        .__emplace_hint_unique_key_args(
+        .__emplace_hint_unique(
             __h.__i_,
-            __k,
             std::piecewise_construct,
             std::forward_as_tuple(std::move(__k)),
             std::forward_as_tuple(std::forward<_Args>(__args)...))
@@ -1170,7 +1164,7 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v) {
-    auto [__r, __inserted] = __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, __k, std::forward<_Vp>(__v));
+    auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, __k, std::forward<_Vp>(__v));
 
     if (!__inserted)
       __r->second = std::forward<_Vp>(__v);
@@ -1180,8 +1174,7 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v) {
-    auto [__r, __inserted] =
-        __tree_.__emplace_hint_unique_key_args(__h.__i_, __k, std::move(__k), std::forward<_Vp>(__v));
+    auto [__r, __inserted] = __tree_.__emplace_hint_unique(__h.__i_, std::move(__k), std::forward<_Vp>(__v));
 
     if (!__inserted)
       __r->second = std::forward<_Vp>(__v);
@@ -1398,20 +1391,15 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
-  return __tree_
-      .__emplace_unique_key_args(__k, std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
+  return __tree_.__emplace_unique(std::piecewise_construct, std::forward_as_tuple(__k), std::forward_as_tuple())
       .first->second;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](key_type&& __k) {
-  // TODO investigate this clang-tidy warning.
-  // NOLINTBEGIN(bugprone-use-after-move)
   return __tree_
-      .__emplace_unique_key_args(
-          __k, std::piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
+      .__emplace_unique(std::piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
       .first->second;
-  // NOLINTEND(bugprone-use-after-move)
 }
 
 #  else // _LIBCPP_CXX03_LANG

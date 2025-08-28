@@ -556,12 +556,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    mov w20, w0
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    stur x9, [x29, #-80]
-; CHECK-NEXT:    sub x9, x29, #80
-; CHECK-NEXT:    sturh wzr, [x29, #-70]
-; CHECK-NEXT:    stur wzr, [x29, #-68]
-; CHECK-NEXT:    sturh w8, [x29, #-72]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    sub x10, x29, #80
+; CHECK-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl other
 ; CHECK-NEXT:    smstart sm

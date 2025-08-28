@@ -95,6 +95,7 @@ public:
   void printCOFFExports() override;
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
+  void printCOFFPseudoReloc() override;
   void printCOFFDebugDirectory() override;
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
@@ -1997,6 +1998,264 @@ void COFFDumper::printCOFFBaseReloc() {
     DictScope Import(W, "Entry");
     W.printString("Type", getBaseRelocTypeName(Type));
     W.printHex("Address", RVA);
+  }
+}
+
+void COFFDumper::printCOFFPseudoReloc() {
+  ListScope D(W, "PseudoReloc");
+
+  // Pseudo-relocations are only meaningful with PE image files.
+  if (!Obj->getDOSHeader())
+    return;
+
+  const StringRef RelocBeginName = Obj->getArch() == Triple::x86
+                                       ? "___RUNTIME_PSEUDO_RELOC_LIST__"
+                                       : "__RUNTIME_PSEUDO_RELOC_LIST__";
+  const StringRef RelocEndName = Obj->getArch() == Triple::x86
+                                     ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
+                                     : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
+
+  const uint32_t Count = Obj->getNumberOfSymbols();
+  // Skip if no symbol was found (maybe stripped).
+  if (Count == 0)
+    return;
+
+  struct SymbolEntry {
+    uint32_t RVA;
+    COFFSymbolRef Symbol;
+    const coff_section *Section;
+    StringRef SymbolName;
+  };
+  SmallVector<SymbolEntry> RVASymbolMap;
+  COFFSymbolRef RelocBegin, RelocEnd;
+  for (uint32_t i = 0; i < Count; ++i) {
+    COFFSymbolRef Sym;
+    if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i)) {
+      Sym = *SymOrErr;
+    } else {
+      reportUniqueWarning(SymOrErr.takeError());
+      continue;
+    }
+
+    i += Sym.getNumberOfAuxSymbols();
+
+    if (Sym.getSectionNumber() <= 0)
+      continue;
+
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym)) {
+      Name = *NameOrErr;
+    } else {
+      reportUniqueWarning(NameOrErr.takeError());
+      continue;
+    }
+
+    if (Name == RelocBeginName)
+      RelocBegin = Sym;
+    else if (Name == RelocEndName)
+      RelocEnd = Sym;
+
+    const coff_section *Sec = nullptr;
+    if (Expected<const coff_section *> SecOrErr =
+            Obj->getSection(Sym.getSectionNumber())) {
+      Sec = *SecOrErr;
+    } else {
+      reportUniqueWarning(SecOrErr.takeError());
+      continue;
+    }
+
+    RVASymbolMap.push_back(
+        {Sec->VirtualAddress + Sym.getValue(), Sym, Sec, Name});
+  }
+
+  if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
+    reportUniqueWarning(createStringError(
+        "the marker symbols for runtime pseudo-relocation were not found"));
+    return;
+  }
+
+  const coff_section *Section = nullptr;
+  if (Expected<const coff_section *> SecOrErr =
+          Obj->getSection(RelocBegin.getSectionNumber())) {
+    Section = *SecOrErr;
+  } else {
+    reportUniqueWarning(SecOrErr.takeError());
+    return;
+  }
+
+  if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber()) {
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must "
+        "point to the same section where the begin marker points to: "
+        "expected %d, but got %d",
+        RelocBegin.getSectionNumber(), RelocEnd.getSectionNumber()));
+    return;
+  }
+
+  // Skip if the relocation list is empty.
+  if (RelocBegin.getValue() == RelocEnd.getValue())
+    return;
+
+  if (RelocEnd.getValue() < RelocBegin.getValue()) {
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must point "
+        "to a higher address than where the begin marker points to: "
+        "expected >=0x%x, but got 0x%x",
+        RelocBegin.getValue(), RelocEnd.getValue()));
+    return;
+  }
+
+  ArrayRef<uint8_t> Data;
+  if (auto E = Obj->getSectionContents(Section, Data)) {
+    reportUniqueWarning(std::move(E));
+    return;
+  }
+
+  if (const uint32_t Begin = RelocBegin.getValue(), End = RelocEnd.getValue();
+      Begin >= Data.size() || End > Data.size()) {
+    reportUniqueWarning(
+        createStringError("the marker symbol of runtime pseudo-relocation "
+                          "points past the end of the section 0x%x: got 0x%x",
+                          Data.size(), Begin >= Data.size() ? Begin : End));
+    return;
+  }
+
+  const ArrayRef<uint8_t> RawRelocs =
+      Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
+  struct alignas(4) PseudoRelocationHeader {
+    PseudoRelocationHeader(uint32_t Signature)
+        : Zero1(0), Zero2(0), Signature(Signature) {}
+    support::ulittle32_t Zero1;
+    support::ulittle32_t Zero2;
+    support::ulittle32_t Signature;
+  };
+  const PseudoRelocationHeader HeaderV2(1);
+  if (RawRelocs.size() < sizeof(HeaderV2) ||
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
+    reportUniqueWarning(
+        createStringError("invalid runtime pseudo-relocation records"));
+    return;
+  }
+
+  struct alignas(4) PseudoRelocationRecord {
+    support::ulittle32_t Symbol;
+    support::ulittle32_t Target;
+    support::ulittle32_t BitSize;
+  };
+  ArrayRef<PseudoRelocationRecord> RelocRecords(
+      reinterpret_cast<const PseudoRelocationRecord *>(
+          RawRelocs.data() + sizeof(PseudoRelocationHeader)),
+      (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
+          sizeof(PseudoRelocationRecord));
+
+  struct CachingImportedSymbolLookup {
+    struct SizedImportDirectoryEntry {
+      uint32_t StartRVA;
+      uint32_t EndRVA;
+      ImportDirectoryEntryRef EntryRef;
+    };
+
+    CachingImportedSymbolLookup(const COFFObjectFile *Obj) : Obj(Obj) {
+      for (auto D : Obj->import_directories()) {
+        auto &Entry = ImportDirectories.emplace_back();
+        Entry.EntryRef = D;
+        Entry.EndRVA = 0;
+        if (auto E = D.getImportAddressTableRVA(Entry.StartRVA))
+          reportError(std::move(E), Obj->getFileName());
+      }
+      if (ImportDirectories.empty())
+        return;
+      llvm::sort(ImportDirectories, [](const auto &x, const auto &y) {
+        return x.StartRVA < y.StartRVA;
+      });
+    }
+
+    Expected<StringRef> find(COFFDumper *Self, uint32_t EntryRVA) {
+      static constexpr char Msg[] =
+          "the address referenced by pseudo-relocation is not a valid import "
+          "entry: 0x%x";
+      if (auto Ite = ImportedSymbols.find(EntryRVA);
+          Ite != ImportedSymbols.end())
+        return Ite->second;
+
+      auto Ite = llvm::upper_bound(
+          ImportDirectories, EntryRVA,
+          [](uint32_t RVA, const auto &D) { return RVA < D.StartRVA; });
+      if (Ite == ImportDirectories.begin())
+        return createStringError(Msg, EntryRVA);
+
+      --Ite;
+      uint32_t RVA = Ite->StartRVA;
+      if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
+        return createStringError(Msg, EntryRVA);
+      // Search with linear iteration to care if padding or garbage exist
+      // between ImportDirectoryEntry.
+      for (auto S : Ite->EntryRef.imported_symbols()) {
+        if (RVA == EntryRVA) {
+          StringRef &NameDst = ImportedSymbols[RVA];
+          if (auto E = S.getSymbolName(NameDst)) {
+            Self->reportUniqueWarning(std::move(E));
+            NameDst = "(no symbol)";
+          }
+          return NameDst;
+        }
+        RVA += Obj->is64() ? 8 : 4;
+        if (EntryRVA < RVA)
+          return createStringError(Msg, EntryRVA);
+      }
+      Ite->EndRVA = RVA;
+
+      return createStringError(Msg, EntryRVA);
+    }
+
+  private:
+    const COFFObjectFile *Obj;
+    SmallVector<SizedImportDirectoryEntry> ImportDirectories;
+    DenseMap<uint32_t, StringRef> ImportedSymbols;
+  };
+  CachingImportedSymbolLookup ImportedSymbols(Obj);
+  llvm::stable_sort(RVASymbolMap,
+                    [](const auto &x, const auto &y) { return x.RVA < y.RVA; });
+  RVASymbolMap.erase(
+      llvm::unique(RVASymbolMap,
+                   [](const auto &x, const auto &y) { return x.RVA == y.RVA; }),
+      RVASymbolMap.end());
+
+  for (const auto &Reloc : RelocRecords) {
+    DictScope Entry(W, "Entry");
+
+    W.printHex("Symbol", Reloc.Symbol);
+    if (Expected<StringRef> SymOrErr =
+            ImportedSymbols.find(this, Reloc.Symbol)) {
+      W.printString("SymbolName", *SymOrErr);
+    } else {
+      reportUniqueWarning(SymOrErr.takeError());
+      W.printString("SymbolName", "(missing)");
+    }
+
+    W.printHex("Target", Reloc.Target);
+    if (auto Ite = llvm::upper_bound(
+            RVASymbolMap, Reloc.Target.value(),
+            [](uint32_t RVA, const auto &Sym) { return RVA < Sym.RVA; });
+        Ite == RVASymbolMap.begin()) {
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    } else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->RVA;
+               Offset == 0) {
+      W.printString("TargetSymbol", Ite->SymbolName);
+    } else if (Offset < Ite->Section->VirtualSize) {
+      W.printSymbolOffset("TargetSymbol", Ite->SymbolName, Offset);
+    } else if (++Ite == RVASymbolMap.end()) {
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    } else if (Expected<StringRef> NameOrErr =
+                   Obj->getSectionName(Ite->Section)) {
+      W.printSymbolOffset("TargetSymbol", *NameOrErr,
+                          Reloc.Target - Ite->Section->VirtualAddress);
+    } else {
+      reportUniqueWarning(NameOrErr.takeError());
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    }
+
+    W.printNumber("BitWidth", Reloc.BitSize);
   }
 }
 

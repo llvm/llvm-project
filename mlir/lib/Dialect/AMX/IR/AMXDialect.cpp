@@ -271,7 +271,9 @@ Type amx::TileType::parse(AsmParser &parser) {
   if (parser.parseGreater())
     return nullptr;
 
-  return TileType::get(shape, elementType);
+  return TileType::getChecked(
+      [&] { return parser.emitError(parser.getNameLoc()); }, shape,
+      elementType);
 }
 
 void amx::TileType::print(AsmPrinter &os) const {

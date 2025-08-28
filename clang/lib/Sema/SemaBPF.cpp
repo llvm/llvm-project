@@ -56,14 +56,9 @@ static bool isValidPreserveTypeInfoArg(Expr *Arg) {
     return true;
 
   // Record type or Enum type.
-  const Type *Ty = ArgType->getUnqualifiedDesugaredType();
-  if (const auto *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RT = ArgType->getAsCanonical<TagType>())
     if (!RT->getOriginalDecl()->getDeclName().isEmpty())
       return true;
-  } else if (const auto *ET = Ty->getAs<EnumType>()) {
-    if (!ET->getOriginalDecl()->getDeclName().isEmpty())
-      return true;
-  }
 
   return false;
 }
