@@ -207,7 +207,6 @@ define void @global_atomic_xchg_i32_ret_av_av_no_agprs(ptr addrspace(1) %ptr) #0
 ; CHECK-LABEL: global_atomic_xchg_i32_ret_av_av_no_agprs:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
 ; CHECK-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
 ; CHECK-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
@@ -224,6 +223,7 @@ define void @global_atomic_xchg_i32_ret_av_av_no_agprs(ptr addrspace(1) %ptr) #0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
 ; CHECK-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
 ; CHECK-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:31]
