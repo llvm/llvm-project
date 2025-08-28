@@ -8,6 +8,7 @@
 
 #include "MethodHidingCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include <stack>
 
 using namespace clang::ast_matchers;
@@ -39,14 +40,6 @@ bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
   for (unsigned int It = 0; It < Lhs.getNumParams(); ++It)
     if (!sameBasicType(Lhs.getParamDecl(It), Rhs.getParamDecl(It)))
       return false;
-  // Templates are not handled yet
-  if (Lhs.isTemplated() || Rhs.isTemplated())
-    return false;
-  if (Lhs.isTemplateInstantiation() || Rhs.isTemplateInstantiation())
-    return false;
-  if (Lhs.isFunctionTemplateSpecialization() ||
-      Rhs.isFunctionTemplateSpecialization())
-    return false;
   return true;
 }
 
@@ -97,9 +90,11 @@ void MethodHidingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           unless(anyOf(isOutOfLine(), isStaticStorageClass(), isImplicit(),
-                       cxxConstructorDecl(), isOverride(),
+                       cxxConstructorDecl(), isOverride(), isPrivate(),
                        // isFinal(), //included with isOverride,
-                       isPrivate())),
+                       // Templates are not handled yet
+                       ast_matchers::isTemplateInstantiation(),
+                       ast_matchers::isExplicitTemplateSpecialization())),
           ofClass(cxxRecordDecl(
                       isDerivedFrom(cxxRecordDecl(unless(isInStdNamespace()))))
                       .bind("derived_class")),
