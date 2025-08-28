@@ -237,8 +237,8 @@ static bool isAddressLdStPair(const MachineInstr *FirstMI,
 }
 
 /// Compare and conditional select.
-static bool isCCSelectPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
+static bool isCmpCSelPair(const MachineInstr *FirstMI,
+                          const MachineInstr &SecondMI) {
   // 32 bits
   if (SecondMI.getOpcode() == AArch64::CSELWr) {
     // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -272,6 +272,40 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
         return !AArch64InstrInfo::hasExtendedReg(*FirstMI);
       case AArch64::SUBSXrr:
       case AArch64::SUBSXri:
+        return true;
+      }
+  }
+
+  return false;
+}
+
+/// Compare and cset.
+static bool isCmpCSetPair(const MachineInstr *FirstMI,
+                          const MachineInstr &SecondMI) {
+  if ((SecondMI.getOpcode() == AArch64::CSINCWr &&
+       SecondMI.getOperand(1).getReg() == AArch64::WZR &&
+       SecondMI.getOperand(2).getReg() == AArch64::WZR) ||
+      (SecondMI.getOpcode() == AArch64::CSINCXr &&
+       SecondMI.getOperand(1).getReg() == AArch64::XZR &&
+       SecondMI.getOperand(2).getReg() == AArch64::XZR)) {
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (FirstMI == nullptr)
+      return true;
+
+    if (FirstMI->definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+        FirstMI->definesRegister(AArch64::XZR, /*TRI=*/nullptr))
+      switch (FirstMI->getOpcode()) {
+      case AArch64::SUBSWrs:
+      case AArch64::SUBSXrs:
+        return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
+      case AArch64::SUBSWrx:
+      case AArch64::SUBSXrx:
+      case AArch64::SUBSXrx64:
+        return !AArch64InstrInfo::hasExtendedReg(*FirstMI);
+      case AArch64::SUBSWri:
+      case AArch64::SUBSWrr:
+      case AArch64::SUBSXri:
+      case AArch64::SUBSXrr:
         return true;
       }
   }
@@ -465,7 +499,9 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     return true;
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseCCSelect() && isCCSelectPair(FirstMI, SecondMI))
+  if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI))
+    return true;
+  if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI))
     return true;

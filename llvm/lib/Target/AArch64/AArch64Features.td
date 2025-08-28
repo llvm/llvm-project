@@ -732,9 +732,13 @@ def FeatureFuseArithmeticLogic : SubtargetFeature<
     "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
     "CPU fuses arithmetic and logic operations">;
 
-def FeatureFuseCCSelect : SubtargetFeature<
-    "fuse-csel", "HasFuseCCSelect", "true",
-    "CPU fuses conditional select operations">;
+def FeatureFuseCmpCSel : SubtargetFeature<
+    "fuse-csel", "HasFuseCmpCSel", "true",
+    "CPU can fuse CMP and CSEL operations">;
+
+def FeatureFuseCmpCSet : SubtargetFeature<
+    "fuse-cset", "HasFuseCmpCSet", "true",
+    "CPU can fuse CMP and CSET operations">;
 
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",

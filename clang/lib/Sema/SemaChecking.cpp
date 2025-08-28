@@ -286,6 +286,9 @@ static bool BuiltinFunctionStart(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 1))
     return true;
 
+  if (TheCall->getArg(0)->containsErrors())
+    return true;
+
   ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
   if (Arg.isInvalid())
     return true;
