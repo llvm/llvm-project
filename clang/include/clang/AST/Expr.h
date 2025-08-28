@@ -5113,9 +5113,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
