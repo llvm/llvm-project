@@ -34,7 +34,7 @@ struct AArch64BuildAttrSubsections {
   uint32_t AndFeatures = 0;
 };
 
-AArch64BuildAttrSubsections
+LLVM_ABI AArch64BuildAttrSubsections
 extractBuildAttributesSubsections(const llvm::AArch64AttributeParser &);
 } // namespace llvm
 

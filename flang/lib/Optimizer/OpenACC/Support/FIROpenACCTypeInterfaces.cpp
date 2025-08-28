@@ -591,7 +591,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
           hlfir::AssignOp::create(firBuilder, loc, initVal,
                                   declareOp.getBase());
         } else {
-          for (auto ext : seqTy.getShape()) {
+          // Generate loop nest from slowest to fastest running dimension
+          for (auto ext : llvm::reverse(seqTy.getShape())) {
             auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
             auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
             auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);
@@ -614,6 +615,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
       retVal = getDeclareOpForType(unwrappedTy).getBase();
+      mlir::Value allocatedScalar =
+          fir::AllocMemOp::create(builder, loc, innerTy);
+      mlir::Value firClass =
+          fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
+      fir::StoreOp::create(builder, loc, firClass, retVal);
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
       auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);

@@ -226,6 +226,7 @@ void SPIRVPassConfig::addIRPasses() {
 }
 
 void SPIRVPassConfig::addISelPrepare() {
+  addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));

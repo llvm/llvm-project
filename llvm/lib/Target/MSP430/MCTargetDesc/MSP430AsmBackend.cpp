@@ -36,8 +36,7 @@ public:
   ~MSP430AsmBackend() override = default;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -105,9 +104,8 @@ uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
 }
 
 void MSP430AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) {
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   Value = adjustFixupValue(Fixup, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
@@ -117,15 +115,14 @@ void MSP430AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
-
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 

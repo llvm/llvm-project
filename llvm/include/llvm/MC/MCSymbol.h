@@ -41,26 +41,11 @@ class raw_ostream;
 /// it is a reference to an external entity, it has a null section.
 class MCSymbol {
 protected:
-  /// The kind of the symbol.  If it is any value other than unset then this
-  /// class is actually one of the appropriate subclasses of MCSymbol.
-  enum SymbolKind {
-    SymbolKindUnset,
-    SymbolKindCOFF,
-    SymbolKindELF,
-    SymbolKindGOFF,
-    SymbolKindMachO,
-    SymbolKindWasm,
-    SymbolKindXCOFF,
-  };
-
-  /// A symbol can contain an Offset, or Value, or be Common, but never more
-  /// than one of these.
-  enum Contents : uint8_t {
-    SymContentsUnset,
-    SymContentsOffset,
-    SymContentsVariable,
-    SymContentsCommon,
-    SymContentsTargetCommon, // Index stores the section index
+  // A symbol can be regular, equated to an expression, or a common symbol.
+  enum Kind : uint8_t {
+    Regular,
+    Equated,
+    Common,
   };
 
   // Special sentinel value for the absolute pseudo fragment.
@@ -78,6 +63,10 @@ protected:
   /// If this is a fragment, then it gives the fragment this symbol's value is
   /// relative to, if any.
   mutable MCFragment *Fragment = nullptr;
+
+  /// The symbol kind. Use an unsigned bitfield to achieve better bitpacking
+  /// with MSVC.
+  unsigned kind : 2;
 
   /// True if this symbol is named.  A named symbol will have a pointer to the
   /// name allocated in the bytes immediately prior to the MCSymbol.
@@ -103,19 +92,11 @@ protected:
   /// This symbol is weak external.
   mutable unsigned IsWeakExternal : 1;
 
-  /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
-  /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 3;
-
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
 
   /// Used to detect cyclic dependency like `a = a + 1` and `a = b; b = a`.
   unsigned IsResolving : 1;
-
-  /// This is actually a Contents enumerator, but is unsigned to avoid sign
-  /// extension and achieve better bitpacking with MSVC.
-  unsigned SymbolContents : 3;
 
   /// The alignment of the symbol if it is 'common'.
   ///
@@ -162,11 +143,11 @@ protected:
     uint64_t AlignmentPadding;
   };
 
-  MCSymbol(SymbolKind Kind, const MCSymbolTableEntry *Name, bool isTemporary)
-      : IsTemporary(isTemporary), IsRedefinable(false), IsRegistered(false),
-        IsExternal(false), IsPrivateExtern(false), IsWeakExternal(false),
-        Kind(Kind), IsUsedInReloc(false), IsResolving(0),
-        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
+  MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
+      : kind(Kind::Regular), IsTemporary(isTemporary), IsRedefinable(false),
+        IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
+        IsWeakExternal(false), IsUsedInReloc(false), IsResolving(0),
+        CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
@@ -230,11 +211,11 @@ public:
   /// Prepare this symbol to be redefined.
   void redefineIfPossible() {
     if (IsRedefinable) {
-      if (SymbolContents == SymContentsVariable) {
+      if (kind == Kind::Equated) {
         Value = nullptr;
-        SymbolContents = SymContentsUnset;
+        kind = Kind::Regular;
       }
-      setUndefined();
+      Fragment = nullptr;
       IsRedefinable = false;
     }
   }
@@ -278,29 +259,12 @@ public:
     Fragment = F;
   }
 
-  /// Mark the symbol as undefined.
-  void setUndefined() { Fragment = nullptr; }
-
-  bool isELF() const { return Kind == SymbolKindELF; }
-
-  bool isCOFF() const { return Kind == SymbolKindCOFF; }
-
-  bool isGOFF() const { return Kind == SymbolKindGOFF; }
-
-  bool isMachO() const { return Kind == SymbolKindMachO; }
-
-  bool isWasm() const { return Kind == SymbolKindWasm; }
-
-  bool isXCOFF() const { return Kind == SymbolKindXCOFF; }
-
   /// @}
   /// \name Variable Symbols
   /// @{
 
   /// isVariable - Check if this is a variable symbol.
-  bool isVariable() const {
-    return SymbolContents == SymContentsVariable;
-  }
+  bool isVariable() const { return kind == Equated; }
 
   /// Get the expression of the variable symbol.
   const MCExpr *getVariableValue() const {
@@ -322,20 +286,15 @@ public:
     Index = Value;
   }
 
-  bool isUnset() const { return SymbolContents == SymContentsUnset; }
-
   uint64_t getOffset() const {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(kind == Kind::Regular &&
            "Cannot get offset for a common/variable symbol");
     return Offset;
   }
   void setOffset(uint64_t Value) {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(kind == Kind::Regular &&
            "Cannot set offset for a common/variable symbol");
     Offset = Value;
-    SymbolContents = SymContentsOffset;
   }
 
   /// Return the size of a 'common' symbol.
@@ -349,10 +308,10 @@ public:
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
   /// \param Target - Is the symbol a target-specific common-like symbol.
-  void setCommon(uint64_t Size, Align Alignment, bool Target = false) {
+  void setCommon(uint64_t Size, Align Alignment) {
     assert(getOffset() == 0);
     CommonSize = Size;
-    SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
+    kind = Kind::Common;
 
     unsigned Log2Align = encode(Alignment);
     assert(Log2Align < (1U << NumCommonAlignmentBits) &&
@@ -370,29 +329,19 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, Align Alignment, bool Target = false) {
+  bool declareCommon(uint64_t Size, Align Alignment) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Alignment ||
-          isTargetCommon() != Target)
+      if (CommonSize != Size || getCommonAlignment() != Alignment)
         return true;
     } else
-      setCommon(Size, Alignment, Target);
+      setCommon(Size, Alignment);
     return false;
   }
 
   /// Is this a 'common' symbol.
-  bool isCommon() const {
-    return SymbolContents == SymContentsCommon ||
-           SymbolContents == SymContentsTargetCommon;
-  }
-
-  /// Is this a target-specific common-like symbol.
-  bool isTargetCommon() const {
-    return SymbolContents == SymContentsTargetCommon;
-  }
+  bool isCommon() const { return kind == Kind::Common; }
 
   MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
@@ -402,10 +351,6 @@ public:
     Fragment = getVariableValue()->findAssociatedFragment();
     return Fragment;
   }
-
-  // For ELF, use MCSymbolELF::setBinding instead.
-  bool isExternal() const { return IsExternal; }
-  void setExternal(bool Value) const { IsExternal = Value; }
 
   // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }

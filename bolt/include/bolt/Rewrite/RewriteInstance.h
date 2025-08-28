@@ -241,7 +241,7 @@ private:
 
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
-  void adjustFunctionBoundaries();
+  void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();

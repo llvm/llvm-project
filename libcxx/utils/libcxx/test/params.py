@@ -455,5 +455,24 @@ DEFAULT_PARAMETERS = [
         help="Whether to test the main or C++03-specific headers. Only changes behaviour when std=c++03.",
         actions=lambda enabled: [] if not enabled else [AddFlag("-D_LIBCPP_USE_FROZEN_CXX03_HEADERS"), AddFeature("FROZEN-CXX03-HEADERS-FIXME")],
     ),
+    Parameter(
+        name='assertion_semantic',
+        choices=["ignore", "observe", "quick_enforce", "enforce", "undefined"],
+        type=str,
+        default="undefined",
+        help="Whether to override the assertion semantic used by hardening. This is only meaningful when running the "
+        "tests against libc++ with hardening enabled. By default, no assertion semantic is specified explicitly, so "
+        "the default one will be used (depending on the hardening mode).",
+        actions=lambda assertion_semantic: filter(
+            None,
+            [
+                AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE")        if assertion_semantic == "ignore" else None,
+                AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE")       if assertion_semantic == "observe" else None,
+                AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE") if assertion_semantic == "quick_enforce" else None,
+                AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE")       if assertion_semantic == "enforce" else None,
+                AddFeature("libcpp-assertion-semantic={}".format(assertion_semantic))                   if assertion_semantic != "undefined" else None,
+            ],
+        ),
+    ),
 ]
 # fmt: on

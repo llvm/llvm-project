@@ -40,3 +40,10 @@ define void @test_optsize() optsize {
 
 ; CHECK-LABEL: test_optsize
 ; CHECK-NEXT: .p2align 2
+
+define void @test_minsize() minsize {
+  ret void
+}
+
+; CHECK-LABEL: test_minsize
+; CHECK-NEXT: .p2align 2
