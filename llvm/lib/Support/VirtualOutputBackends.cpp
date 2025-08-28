@@ -1,13 +1,18 @@
-//===- VirtualOutputBackends.cpp - Virtual output backends ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file implements vfs::OutputBackend.
-//
+///
+/// \file
+/// This file implements the VirtualOutputBackend types, including:
+/// * NullOutputBackend: Outputs to NullOutputBackend are discarded.
+/// * FilteringOutputBackend: Filter paths from output.
+/// * MirroringOutputBackend: Mirror the output into two different backend.
+/// * OnDiskOutputBackend: Write output files to disk.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualOutputBackends.h"
@@ -18,6 +23,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/VirtualOutputConfig.h"
+#include "llvm/Support/VirtualOutputError.h"
 
 using namespace llvm;
 using namespace llvm::vfs;

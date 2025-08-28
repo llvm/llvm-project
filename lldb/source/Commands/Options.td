@@ -84,7 +84,7 @@ let Command = "breakpoint modify" in {
     Desc<"Set the number of times this breakpoint is skipped before stopping.">;
   def breakpoint_modify_one_shot : Option<"one-shot", "o">, Group<1>,
     Arg<"Boolean">,
-    Desc<"The breakpoint is deleted the first time it stop causes a stop.">;
+    Desc<"The breakpoint is deleted the first time it causes a stop.">;
   def breakpoint_modify_thread_index : Option<"thread-index", "x">, Group<1>,
     Arg<"ThreadIndex">, Desc<"The breakpoint stops only for the thread whose "
     "index matches this argument.">;

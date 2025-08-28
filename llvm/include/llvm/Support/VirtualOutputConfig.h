@@ -1,26 +1,26 @@
-//===- VirtualOutputConfig.h - Virtual output configuration -----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the OutputConfig class.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_VIRTUALOUTPUTCONFIG_H
 #define LLVM_SUPPORT_VIRTUALOUTPUTCONFIG_H
-
-#include "llvm/Support/Compiler.h"
-#include <initializer_list>
 
 namespace llvm {
 
 class raw_ostream;
 
-namespace sys {
-namespace fs {
+namespace sys::fs {
 enum OpenFlags : unsigned;
-} // end namespace fs
-} // end namespace sys
+} // end namespace sys::fs
 
 namespace vfs {
 

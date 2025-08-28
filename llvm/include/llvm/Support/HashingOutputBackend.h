@@ -1,9 +1,16 @@
-//===- HashingOutputBackends.h - Hashing output backends --------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declarations of the HashingOutputBackend class, which
+/// is the VirtualOutputBackend that is only producing the hash for the output
+/// files.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_HASHINGOUTPUTBACKEND_H
@@ -71,10 +78,14 @@ protected:
 
 public:
   /// Iterator for all the output file names.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   auto outputFiles() const { return OutputHashes.keys(); }
 
   /// Get hash value for the output files in hex representation.
   /// Return None if the requested path is not generated.
+  ///
+  /// Not thread safe. Should be queried after all outputs are written.
   std::optional<std::string> getHashValueForFile(StringRef Path) {
     auto F = OutputHashes.find(Path);
     if (F == OutputHashes.end())
