@@ -43,45 +43,10 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
   return std::vector<std::unique_ptr<View>>();
 }
 
-class CustomInstrument : public Instrument {
-  std::optional<unsigned> Latency;
-
-public:
-  static const llvm::StringRef DESC_NAME;
-  explicit CustomInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
-    // Skip spaces and tabs.
-    unsigned Position = Data.find_first_not_of(" \t");
-    if (Position >= Data.size())
-      // We reached the end of the comment. Bail out.
-      return;
-    Data = Data.drop_front(Position);
-    auto [Name, Value] = Data.split(':');
-    if (Name.upper() == "LATENCY") {
-      Position = Value.find_first_not_of(" \t");
-      if (Position >= Value.size())
-        return;
-      auto Stripped = Value.drop_front(Position);
-      unsigned L = 0;
-      if (!Stripped.getAsInteger(10, L))
-        Latency = L;
-    }
-  }
-
-  bool canCustomize() const override { return bool(Latency); }
-
-  void customize(InstrDesc &ID) const override {
-    if (Latency) {
-      for (auto &W : ID.Writes)
-        W.Latency = *Latency;
-      ID.MaxLatency = *Latency;
-    }
-  }
-};
-
-const llvm::StringRef CustomInstrument::DESC_NAME = "CUSTOMIZE";
+static const llvm::StringRef CustomInstrumentName = "CUSTOMIZE";
 
 bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
-  if (EnableDefaults && Type == CustomInstrument::DESC_NAME)
+  if (EnableDefaults && Type == CustomInstrumentName)
     return true;
   if (TargetIM)
     return TargetIM->supportsInstrumentType(Type);
@@ -107,12 +72,10 @@ void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
 
 UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
                                                      llvm::StringRef Data) {
-  if (!EnableDefaults)
-    return std::make_unique<Instrument>(Desc, Data);
-  if (Desc == CustomInstrument::DESC_NAME)
-    return std::make_unique<CustomInstrument>(Data);
   if (TargetIM && TargetIM->supportsInstrumentType(Desc))
     return TargetIM->createInstrument(Desc, Data);
+  if (!EnableDefaults)
+    return std::make_unique<Instrument>(Desc, Data);
   return std::make_unique<Instrument>(Desc, Data);
 }
 

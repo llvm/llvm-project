@@ -123,15 +123,40 @@ class Instrument {
   /// The instrumentation data
   const StringRef Data;
 
+  std::optional<unsigned> Latency;
+
 public:
-  Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {}
+  Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {
+    // Skip spaces and tabs.
+    unsigned Position = Data.find_first_not_of(" \t");
+    if (Position >= Data.size())
+      // We reached the end of the comment. Bail out.
+      return;
+    Data = Data.drop_front(Position);
+    auto [Name, Value] = Data.split(':');
+    if (Name.upper() == "LATENCY") {
+      Position = Value.find_first_not_of(" \t");
+      if (Position >= Value.size())
+        return;
+      auto Stripped = Value.drop_front(Position);
+      unsigned L = 0;
+      if (!Stripped.getAsInteger(10, L))
+        Latency = L;
+    }
+  }
 
   Instrument() : Instrument("", "") {}
 
   virtual ~Instrument() = default;
 
-  virtual bool canCustomize() const { return false; }
-  virtual void customize(InstrDesc &) const {}
+  virtual bool canCustomize() const { return bool(Latency); }
+  virtual void customize(InstrDesc &ID) const {
+    if (Latency) {
+      for (auto &W : ID.Writes)
+        W.Latency = *Latency;
+      ID.MaxLatency = *Latency;
+    }
+  }
 
   StringRef getDesc() const { return Desc; }
   StringRef getData() const { return Data; }
