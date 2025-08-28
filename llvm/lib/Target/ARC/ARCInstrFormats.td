@@ -12,7 +12,6 @@
 
 class Encoding64 {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
 }
 
 // Address operands

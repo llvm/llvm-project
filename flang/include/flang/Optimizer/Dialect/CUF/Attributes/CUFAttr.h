@@ -106,6 +106,9 @@ getProcAttribute(mlir::MLIRContext *mlirContext,
   return {};
 }
 
+/// Returns the data attribute if the operation has one.
+cuf::DataAttributeAttr getDataAttr(mlir::Operation *op);
+
 /// Returns true if the operation has a data attribute with the given value.
 bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value);
 

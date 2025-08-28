@@ -56,8 +56,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
     SmallVector<size_t> &indices) const {
   SmallVector<Type> types(warpOp.getResultTypes().begin(),
                           warpOp.getResultTypes().end());
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = warpOp.getTerminator();
   SmallVector<Value> yieldValues(yield.getOperands().begin(),
                                  yield.getOperands().end());
   llvm::SmallDenseMap<Value, unsigned> indexLookup;
@@ -89,8 +88,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
 OpOperand *WarpDistributionPattern::getWarpResult(
     WarpExecuteOnLane0Op warpOp,
     llvm::function_ref<bool(Operation *)> fn) const {
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = warpOp.getTerminator();
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
     Value yieldValues = yieldOperand.get();
     Operation *definedOp = yieldValues.getDefiningOp();
