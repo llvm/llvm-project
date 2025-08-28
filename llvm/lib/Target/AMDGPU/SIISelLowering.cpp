@@ -16593,7 +16593,6 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         dyn_cast<ConstantSDNode>(LHS.getOperand(1))->isOne()))) {
     EVT TargetType = MVT::i32;
     EVT CarryVT = MVT::i1;
-    const SDValue One = DAG.getConstant(1, SL, TargetType);
     bool IsAdd = LHS.getOpcode() == ISD::ADD;
 
     SDValue Op0 = LHS.getOperand(0);
@@ -16602,8 +16601,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op0);
     SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op1);
 
-    SDValue Op0Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, TargetType, Op0, One);
-    SDValue Op1Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, SL, TargetType, Op1, One);
+    SDValue Op0Hi = getHiHalf64(Op0, DAG);
+    SDValue Op1Hi = getHiHalf64(Op1, DAG);
 
     SDValue NodeLo =
         DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
