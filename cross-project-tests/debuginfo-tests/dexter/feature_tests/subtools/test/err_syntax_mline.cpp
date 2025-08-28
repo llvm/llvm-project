@@ -8,7 +8,7 @@
 //       as the test should finish before lldb would be invoked.
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_base test --binary %t --debugger "lldb" \
+// RUN: not %dexter_base test --binary %t %dexter_regression_test_debugger_args \
 // RUN:     -v -- %s | FileCheck %s --match-full-lines --strict-whitespace
 //
 // CHECK:parser error:{{.*}}err_syntax_mline.cpp(24): invalid syntax
