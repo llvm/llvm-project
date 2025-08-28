@@ -3124,8 +3124,8 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
-// Helper function to check if a name is a recognized smart pointer name
-static bool isSmartPtrName(StringRef Name) {
+// Helper function to check if a name is a recognized smart owning pointer name
+static bool isSmartOwningPtrName(StringRef Name) {
   return Name == "unique_ptr" || Name == "shared_ptr";
 }
 
@@ -3134,7 +3134,8 @@ static bool isSmartPtrName(StringRef Name) {
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
 
-  // First try TemplateSpecializationType (for std smart pointers)
+  // First try TemplateSpecializationType (for both std and custom smart
+  // pointers)
   if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
     if (!TD)
@@ -3144,25 +3145,17 @@ static bool isSmartOwningPtrType(QualType QT) {
     if (!ND)
       return false;
 
-    // Check if it's in std namespace
-    if (!isWithinStdNamespace(ND))
-      return false;
-
-    return isSmartPtrName(ND->getName());
-  }
-
-  // Also try RecordType (for custom smart pointer implementations)
-  if (const auto *RD = QT->getAsCXXRecordDecl()) {
-    // Accept any custom unique_ptr or shared_ptr implementation
-    return isSmartPtrName(RD->getName());
+    // Accept both std and custom smart pointer implementations for broader
+    // coverage
+    return isSmartOwningPtrName(ND->getName());
   }
 
   return false;
 }
 
-/// Check if a record type has smart pointer fields (directly or in base
+/// Check if a record type has smart owning pointer fields (directly or in base
 /// classes).
-static bool hasSmartPtrField(const CXXRecordDecl *CRD) {
+static bool hasSmartOwningPtrField(const CXXRecordDecl *CRD) {
   // Check direct fields
   if (llvm::any_of(CRD->fields(), [](const FieldDecl *FD) {
         return isSmartOwningPtrType(FD->getType());
@@ -3172,7 +3165,7 @@ static bool hasSmartPtrField(const CXXRecordDecl *CRD) {
   // Check fields from base classes
   for (const CXXBaseSpecifier &Base : CRD->bases()) {
     if (const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {
-      if (hasSmartPtrField(BaseDecl))
+      if (hasSmartOwningPtrField(BaseDecl))
         return true;
     }
   }
@@ -3193,14 +3186,14 @@ static bool isRvalueByValueRecord(const Expr *AE) {
              InitListExpr, ImplicitCastExpr, CXXBindTemporaryExpr>(AE);
 }
 
-/// Check if an expression is an rvalue record with smart pointer fields passed
-/// by value.
-static bool isRvalueByValueRecordWithSmartPtr(const Expr *AE) {
+/// Check if an expression is an rvalue record with smart owning pointer fields
+/// passed by value.
+static bool isRvalueByValueRecordWithSmartOwningPtr(const Expr *AE) {
   if (!isRvalueByValueRecord(AE))
     return false;
 
   const auto *CRD = AE->getType()->getAsCXXRecordDecl();
-  return CRD && hasSmartPtrField(CRD);
+  return CRD && hasSmartOwningPtrField(CRD);
 }
 
 /// Check if a CXXRecordDecl has a name matching recognized smart pointer names.
@@ -3208,18 +3201,14 @@ static bool isSmartOwningPtrRecord(const CXXRecordDecl *RD) {
   if (!RD)
     return false;
 
-  // Check the record name directly
-  if (isSmartPtrName(RD->getName())) {
-    // Accept both std and custom smart pointer implementations
-    return true;
-  }
-
-  return false;
+  // Check the record name directly and accept both std and custom smart pointer
+  // implementations for broader coverage
+  return isSmartOwningPtrName(RD->getName());
 }
 
-/// Check if a call is a constructor of a smart pointer class that accepts
-/// pointer parameters.
-static bool isSmartPtrCall(const CallEvent &Call) {
+/// Check if a call is a constructor of a smart owning pointer class that
+/// accepts pointer parameters.
+static bool isSmartOwningPtrCall(const CallEvent &Call) {
   // Only check for smart pointer constructor calls
   const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Call.getDecl());
   if (!CD)
@@ -3310,7 +3299,7 @@ ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
     const CallEvent &Call, CheckerContext &C, ProgramStateRef State) const {
 
   // Handle direct smart pointer constructor calls first
-  if (isSmartPtrCall(Call)) {
+  if (isSmartOwningPtrCall(Call)) {
     return handleSmartPointerConstructorArguments(Call, State);
   }
 
@@ -3322,18 +3311,12 @@ ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
       continue;
     AE = AE->IgnoreParenImpCasts();
 
-    if (!isRvalueByValueRecordWithSmartPtr(AE))
+    if (!isRvalueByValueRecordWithSmartOwningPtr(AE))
       continue;
 
     // Find a region for the argument.
     SVal ArgVal = Call.getArgSVal(I);
     const MemRegion *ArgRegion = ArgVal.getAsRegion();
-    if (!ArgRegion) {
-      // Skip this argument to prevent overly broad escaping that would
-      // suppress legitimate leak detection
-      continue;
-    }
-
     // Collect direct smart owning pointer field regions
     collectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
                                       SmartPtrFieldRoots);
