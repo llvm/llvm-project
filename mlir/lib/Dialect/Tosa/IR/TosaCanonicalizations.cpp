@@ -122,8 +122,9 @@ struct PoolPadFoldAdaptor<tosa::MaxPool2dOp> {
       const APFloat lowestVal =
           APFloat::getLargest(padConstVal.getSemantics(), true);
       return padConstVal == lowestVal;
-    } else if (auto padConstIntAttr =
-                   mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
+    }
+    if (auto padConstIntAttr =
+            mlir::dyn_cast<DenseIntElementsAttr>(padConstAttr)) {
       const APInt padConstVal = *padConstIntAttr.begin();
       const unsigned int bitWidth = padConstVal.getBitWidth();
       const APInt lowestVal =
@@ -1120,13 +1121,14 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsTy == resultTy) {
-    if (isSplatZero(resultETy, lhsAttr))
+    if (isSplatZero(resultETy, lhsAttr) && resultTy.hasStaticShape())
+      // constant values can only be resized if resulting type is static
       return lhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, lhsAttr, shift))
       return rhs;
   }
   if (lhsTy == resultTy) {
-    if (isSplatZero(resultETy, rhsAttr))
+    if (isSplatZero(resultETy, rhsAttr) && resultTy.hasStaticShape())
       return rhsAttr.resizeSplat(resultTy);
     if (isSplatOne(resultETy, rhsAttr, shift))
       return lhs;

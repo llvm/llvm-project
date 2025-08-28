@@ -85,7 +85,9 @@ Example:
 
   CRTP<int> AlsoCompileTimeError;
 
-Limitations:
+
+Limitations
+-----------
 
 * The check is not supported below C++11
 

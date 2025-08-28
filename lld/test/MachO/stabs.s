@@ -63,9 +63,18 @@
 # RUN: dsymutil -s  %t/test-rel | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-PATH-NO-SLASH
 # RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o %t/test-rel-dot
 # RUN: dsymutil -s  %t/test-rel-dot | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT
-## Set HOME to %t (for ~ to expand to)
-# RUN: cd %t && env HOME=%t ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "~" -o %t/test-rel-tilde
-# RUN: dsymutil -s  %t/test-rel-tilde | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-PATH
+# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o %t/test-rel-dot
+# RUN: dsymutil -s  %t/test-rel-dot | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT-EXPLICIT
+
+## Check that symlinks are not expanded when -oso_prefix . is used.
+# RUN: mkdir -p %t/private/var/folders/tmp && ln -s private/var %t/var
+# RUN: cp %t/test.o %t/foo.o %t/no-debug.o %t/private/var/folders/tmp
+# RUN: env TZ=GMT touch -t "197001010000.16" %t/private/var/folders/tmp/test.o
+# RUN: env TZ=GMT touch -t "197001010000.32" %t/private/var/folders/tmp/foo.o
+# RUN: cd %t/var/folders/tmp && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o test-rel-symlink
+# RUN: dsymutil -s  %t/private/var/folders/tmp/test-rel-symlink | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT
+# RUN: cd %t/var/folders/tmp && ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o test-rel-symlink
+# RUN: dsymutil -s  %t/private/var/folders/tmp/test-rel-symlink | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT-EXPLICIT
 
 ## Check that we don't emit DWARF or stabs when -S is used
 # RUN: %lld -lSystem test.o foo.o no-debug.o -S -o %t/test-no-debug
@@ -91,6 +100,7 @@
 # REL-PATH:   (N_OSO        ) 03                         0001   [[#%.16x,TEST_TIME]] '/test.o'
 # REL-PATH-NO-SLASH:  (N_OSO        ) 03                 0001   [[#%.16x,TEST_TIME]] 'test.o'
 # REL-DOT:    (N_OSO        ) 03                         0001   [[#%.16x,TEST_TIME]] 'test.o'
+# REL-DOT-EXPLICIT:    (N_OSO        ) 03                0001   [[#%.16x,TEST_TIME]] './test.o'
 # CHECK-NEXT: (N_STSYM      ) [[#%.2d,MORE_DATA_ID + 1]] 0000   [[#%.16x,STATIC:]] '_static_var'
 # CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,MAIN:]]   '_main'
 # CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000006{{$}}

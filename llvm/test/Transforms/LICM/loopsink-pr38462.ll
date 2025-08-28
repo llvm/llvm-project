@@ -37,7 +37,7 @@ __except:
   catchret from %1 to label %__except3
 
 __except3:
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.start.p0(ptr nonnull %s)
   %call.i = call zeroext i1 @g(ptr nonnull %s)
   br i1 %call.i, label %if.then.i, label %exit
 
@@ -46,7 +46,7 @@ if.then.i:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.end.p0(ptr nonnull %s)
   br label %__try.cont
 
 __try.cont:
@@ -58,8 +58,8 @@ __try.cont:
 declare i32 @__C_specific_handler(...)
 declare i32 @f()
 declare zeroext i1 @g(ptr)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 !1 = !{!"function_entry_count", i64 1}
 

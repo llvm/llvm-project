@@ -21,7 +21,7 @@ namespace llvm {
 namespace MachO {
 
 Architecture getArchitectureFromCpuType(uint32_t CPUType, uint32_t CPUSubType) {
-#define ARCHINFO(Arch, Type, Subtype, NumBits)                                 \
+#define ARCHINFO(Arch, Name, Type, Subtype, NumBits)                           \
   if (CPUType == (Type) &&                                                     \
       (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) == (Subtype))                    \
     return AK_##Arch;
@@ -33,7 +33,7 @@ Architecture getArchitectureFromCpuType(uint32_t CPUType, uint32_t CPUSubType) {
 
 Architecture getArchitectureFromName(StringRef Name) {
   return StringSwitch<Architecture>(Name)
-#define ARCHINFO(Arch, Type, Subtype, NumBits) .Case(#Arch, AK_##Arch)
+#define ARCHINFO(Arch, Name, Type, Subtype, NumBits) .Case(#Name, AK_##Arch)
 #include "llvm/TextAPI/Architecture.def"
 #undef ARCHINFO
       .Default(AK_unknown);
@@ -41,9 +41,9 @@ Architecture getArchitectureFromName(StringRef Name) {
 
 StringRef getArchitectureName(Architecture Arch) {
   switch (Arch) {
-#define ARCHINFO(Arch, Type, Subtype, NumBits)                                 \
+#define ARCHINFO(Arch, Name, Type, Subtype, NumBits)                           \
   case AK_##Arch:                                                              \
-    return #Arch;
+    return #Name;
 #include "llvm/TextAPI/Architecture.def"
 #undef ARCHINFO
   case AK_unknown:
@@ -57,7 +57,7 @@ StringRef getArchitectureName(Architecture Arch) {
 
 std::pair<uint32_t, uint32_t> getCPUTypeFromArchitecture(Architecture Arch) {
   switch (Arch) {
-#define ARCHINFO(Arch, Type, Subtype, NumBits)                                 \
+#define ARCHINFO(Arch, Name, Type, Subtype, NumBits)                           \
   case AK_##Arch:                                                              \
     return std::make_pair(Type, Subtype);
 #include "llvm/TextAPI/Architecture.def"
@@ -77,7 +77,7 @@ Architecture mapToArchitecture(const Triple &Target) {
 
 bool is64Bit(Architecture Arch) {
   switch (Arch) {
-#define ARCHINFO(Arch, Type, Subtype, NumBits)                                 \
+#define ARCHINFO(Arch, Name, Type, Subtype, NumBits)                           \
   case AK_##Arch:                                                              \
     return NumBits == 64;
 #include "llvm/TextAPI/Architecture.def"

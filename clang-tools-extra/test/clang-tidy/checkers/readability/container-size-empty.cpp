@@ -895,3 +895,59 @@ namespace PR94454 {
   int operator""_ci() { return 0; }
   auto eq = 0_ci == 0;
 }
+
+namespace GH152387 {
+
+class foo : public std::string{
+  void doit() {
+    if (!size()) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+      // CHECK-FIXES: if (empty()) {
+    }
+  }
+};
+
+}
+
+class ReportInContainerNonEmptyMethod {
+public:
+  int size() const;
+  bool empty() const;
+
+  void doit() {
+    if (!size()) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+      // CHECK-FIXES: if (empty())
+    }
+  }
+};
+
+template <typename T>
+class ReportInTemplateContainerNonEmptyMethod {
+public:
+  int size() const;
+  bool empty() const;
+
+  void doit() {
+    if (!size()) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+      // CHECK-FIXES: if (empty()) {
+    }
+  }
+};
+
+
+
+class ReportInContainerNonEmptyMethodCompare {
+public:
+  bool operator==(const ReportInContainerNonEmptyMethodCompare& other) const;
+  int size() const;
+  bool empty() const;
+
+  void doit() {
+    if (*this == ReportInContainerNonEmptyMethodCompare()) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object
+      // CHECK-FIXES: if (this->empty()) {
+    }
+  }
+};

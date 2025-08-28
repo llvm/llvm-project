@@ -43,8 +43,8 @@ _CLC_OVERLOAD _CLC_DEF double __clc_sqrt(double x) {
   return (x == __builtin_inf() || (x == 0.0)) ? v01 : v23;
 }
 
-#define __DOUBLE_ONLY
-#define FUNCTION __clc_sqrt
+#define __CLC_DOUBLE_ONLY
+#define __CLC_FUNCTION __clc_sqrt
 #define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
 #include <clc/math/gentype.inc>
 
