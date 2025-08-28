@@ -2200,6 +2200,63 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
   }
 };
 
+/// Drops an unused result from an elementwise `linalg.generic` by
+/// reclassifying its tied `outs` operand as an extra input operand.
+struct DropRedundantResultsFromGenericOps
+    : public OpRewritePattern<linalg::GenericOp> {
+  using OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(linalg::GenericOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!linalg::isElementwise(op) || op.getNumResults() < 2U)
+      return failure();
+
+    // Given that the op has no reductions, there is no need to preserve an
+    // unused result: transform it into an input instead.
+    auto maybeUnusedRes = llvm::find_if(
+        op.getResults(), [](OpResult res) { return res.use_empty(); });
+    if (maybeUnusedRes == op.getResults().end())
+      return failure();
+
+    OpResult unusedRes = *maybeUnusedRes;
+    const unsigned resIdx = unusedRes.getResultNumber();
+    auto resTypes = llvm::to_vector(op.getResultTypes());
+    resTypes.erase(resTypes.begin() + resIdx);
+    SmallVector<Value> resValues = llvm::to_vector_of<Value>(op.getResults());
+    resValues.erase(resValues.begin() + resIdx);
+    const int64_t numInputs = op.getNumDpsInputs();
+    OpOperand *resOperand = op.getTiedOpOperand(unusedRes);
+    AffineMap map = op.getIndexingMapMatchingResult(unusedRes);
+    const unsigned operandIdx = resOperand->getOperandNumber();
+    
+    // Remove the output operand and add it as an input operand with the same
+    // map.
+    SmallVector<Value> outs(op.getOutputs());
+    outs.erase(outs.begin() + resIdx);
+    SmallVector<Value> ins(op.getInputs());
+    ins.insert(ins.begin() + numInputs, resOperand->get());
+    SmallVector<AffineMap> maps = op.getIndexingMapsArray();
+    maps.erase(maps.begin() + operandIdx);
+    maps.insert(maps.begin() + numInputs, map);
+    rewriter.setInsertionPoint(op);
+
+    auto newGenericOp = rewriter.create<linalg::GenericOp>(
+        op.getLoc(), TypeRange(resTypes), ins, outs, maps,
+        op.getIteratorTypesArray());
+
+    op->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+    op.getBody()->getTerminator()->eraseOperands(resIdx);
+    newGenericOp.getRegion().takeBody(op.getBodyRegion());
+
+    // Replace the remaining results of the old op with the results of the new
+    // op.
+    rewriter.replaceAllUsesWith(resValues, newGenericOp.getResults());
+    
+    // Remove the old op.
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Fold linalg.fill into linalg.generic
 struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
@@ -2262,6 +2319,7 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
                RemoveOutsDependency>(context);
   // Add the patterns that clean up dead operands and results.
   populateEraseUnusedOperandsAndResultsPatterns(patterns);
+  patterns.add<DropRedundantResultsFromGenericOps>(context);
 }
 
 void mlir::linalg::populateCollapseDimensions(
