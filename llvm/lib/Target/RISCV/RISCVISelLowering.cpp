@@ -9287,12 +9287,18 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      // Use SHL/ADDI to avoid having to materialize a constant in register
-      // TODO: Handle the inverse case when the condition can be cheaply flipped
+      // Use SHL/ADDI (and possible XORI) to avoid having to materialize
+      // a constant in register
       if ((TrueVal - FalseVal).isPowerOf2() && FalseVal.isSignedIntN(12)) {
         SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
         return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+      }
+      if ((FalseVal - TrueVal).isPowerOf2() && TrueVal.isSignedIntN(12)) {
+        SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
+        CondV = DAG.getLogicalNOT(DL, CondV, CondV->getValueType(0));
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::ADD, DL, VT, TrueV, BitDiff);
       }
 
       auto getCost = [&](const APInt &Delta, const APInt &Addend) {
