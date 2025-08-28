@@ -357,10 +357,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
   // modules, the dots here are just another character that can appear in a
   // module name.
-  std::string ModuleName = ModuleNameLoc::stringFromModuleIdPath(Path);
+  std::string ModuleName = ModuleLoader::getFlatNameFromPath(Path);
   if (IsPartition) {
     ModuleName += ":";
-    ModuleName += ModuleNameLoc::stringFromModuleIdPath(Partition);
+    ModuleName += ModuleLoader::getFlatNameFromPath(Partition);
   }
   // If a module name was explicitly specified on the command line, it must be
   // correct.
@@ -581,12 +581,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // otherwise, the name of the importing named module.
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
     ModuleName += ":";
-    ModuleName += ModuleNameLoc::stringFromModuleIdPath(Path);
+    ModuleName += ModuleLoader::getFlatNameFromPath(Path);
     ModuleNameLoc =
         IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   } else if (getLangOpts().CPlusPlusModules) {
-    ModuleName = ModuleNameLoc::stringFromModuleIdPath(Path);
+    ModuleName = ModuleLoader::getFlatNameFromPath(Path);
     ModuleNameLoc =
         IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);

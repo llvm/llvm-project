@@ -83,7 +83,6 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
-class ModuleNameLoc;
 class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
@@ -592,11 +591,23 @@ private:
         reset();
     }
 
-    void handleModuleName(ModuleNameLoc *Path);
+    void handleIdentifier(IdentifierInfo *Identifier) {
+      if (isModuleCandidate() && Identifier)
+        Name += Identifier->getName().str();
+      else if (!isNamedModule())
+        reset();
+    }
 
     void handleColon() {
       if (isModuleCandidate())
         Name += ":";
+      else if (!isNamedModule())
+        reset();
+    }
+
+    void handlePeriod() {
+      if (isModuleCandidate())
+        Name += ".";
       else if (!isNamedModule())
         reset();
     }
@@ -1791,6 +1802,7 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                             SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
                              bool AllowMacroExpansion = true);
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
@@ -1814,7 +1826,10 @@ public:
   }
 
   bool LexAfterModuleImport(Token &Result);
-  void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
+  void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
+                             bool StopUntilEOD = false);
+  bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
+                                           bool StopUntilEOD = false);
 
   void makeModuleVisible(Module *M, SourceLocation Loc,
                          bool IncludeExports = true);
@@ -2430,20 +2445,27 @@ public:
   /// If \p EnableMacros is true, then we consider macros that expand to zero
   /// tokens as being ok.
   ///
+  /// If \p ExtraToks not null, the extra tokens will be saved in this
+  /// container.
+  ///
   /// \return The location of the end of the directive (the terminating
   /// newline).
-  SourceLocation CheckEndOfDirective(StringRef DirType,
-                                     bool EnableMacros = false);
+  SourceLocation
+  CheckEndOfDirective(StringRef DirType, bool EnableMacros = false,
+                      SmallVectorImpl<Token> *ExtraToks = nullptr);
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
-  SourceRange DiscardUntilEndOfDirective() {
+  SourceRange
+  DiscardUntilEndOfDirective(SmallVectorImpl<Token> *DiscardedToks = nullptr) {
     Token Tmp;
-    return DiscardUntilEndOfDirective(Tmp);
+    return DiscardUntilEndOfDirective(Tmp, DiscardedToks);
   }
 
   /// Same as above except retains the token that was found.
-  SourceRange DiscardUntilEndOfDirective(Token &Tok);
+  SourceRange
+  DiscardUntilEndOfDirective(Token &Tok,
+                             SmallVectorImpl<Token> *DiscardedToks = nullptr);
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -3180,54 +3202,6 @@ public:
 struct EmbedAnnotationData {
   StringRef BinaryData;
   StringRef FileName;
-};
-
-/// Represents module name annotation data.
-///
-///     module-name:
-///           module-name-qualifier[opt] identifier
-///
-///     partition-name: [C++20]
-///           : module-name-qualifier[opt] identifier
-///
-///     module-name-qualifier
-///           module-name-qualifier[opt] identifier .
-class ModuleNameLoc final
-    : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
-  friend TrailingObjects;
-  unsigned NumIdentifierLocs;
-
-  unsigned numTrailingObjects(OverloadToken<IdentifierLoc>) const {
-    return getNumIdentifierLocs();
-  }
-
-  ModuleNameLoc(ModuleIdPath Path) : NumIdentifierLocs(Path.size()) {
-    (void)llvm::copy(Path, getTrailingObjectsNonStrict<IdentifierLoc>());
-  }
-
-public:
-  static std::string stringFromModuleIdPath(ModuleIdPath Path);
-  static ModuleNameLoc *Create(Preprocessor &PP, ModuleIdPath Path);
-  static Token CreateAnnotToken(Preprocessor &PP, ModuleIdPath Path);
-  unsigned getNumIdentifierLocs() const { return NumIdentifierLocs; }
-  ModuleIdPath getModuleIdPath() const {
-    return {getTrailingObjectsNonStrict<IdentifierLoc>(),
-            getNumIdentifierLocs()};
-  }
-
-  SourceLocation getBeginLoc() const {
-    return getModuleIdPath().front().getLoc();
-  }
-  SourceLocation getEndLoc() const {
-    auto &Last = getModuleIdPath().back();
-    return Last.getLoc().getLocWithOffset(
-        Last.getIdentifierInfo()->getLength());
-  }
-  SourceRange getRange() const { return {getBeginLoc(), getEndLoc()}; }
-
-  std::string str() const;
-  void print(llvm::raw_ostream &OS) const;
-  void dump() const { print(llvm::errs()); }
 };
 
 /// Registry of pragma handlers added by plugins

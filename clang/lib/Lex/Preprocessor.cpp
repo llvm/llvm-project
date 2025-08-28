@@ -891,13 +891,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   return true;
 }
 
-void Preprocessor::ModuleDeclSeq::handleModuleName(ModuleNameLoc *Path) {
-  if (isModuleCandidate() && Path)
-    Name += Path->str();
-  else if (!isNamedModule())
-    reset();
-}
-
 void Preprocessor::Lex(Token &Result) {
   ++LexLevel;
 
@@ -961,6 +954,9 @@ void Preprocessor::Lex(Token &Result) {
     case tok::colon:
       ModuleDeclState.handleColon();
       break;
+    case tok::period:
+      ModuleDeclState.handlePeriod();
+      break;
     case tok::kw_import:
       if (StdCXXImportSeqState.atTopLevel()) {
         TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
@@ -975,9 +971,8 @@ void Preprocessor::Lex(Token &Result) {
         ModuleDeclState.handleModule();
       }
       break;
-    case tok::annot_module_name:
-      ModuleDeclState.handleModuleName(
-          Result.getAnnotationValueAs<ModuleNameLoc *>());
+    case tok::identifier:
+      ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
       if (ModuleDeclState.isModuleCandidate())
         break;
       [[fallthrough]];
@@ -1120,28 +1115,11 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   return false;
 }
 
-ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
-  assert(!Path.empty() && "expect at least one identifier in a module name");
-  void *Mem = PP.getPreprocessorAllocator().Allocate(
-      totalSizeToAlloc<IdentifierLoc>(Path.size()), alignof(ModuleNameLoc));
-  return new (Mem) ModuleNameLoc(Path);
-}
-
-Token ModuleNameLoc::CreateAnnotToken(Preprocessor &PP, ModuleIdPath Path) {
-  auto *NameLoc = Create(PP, Path);
-  Token ModuleNameTok;
-  ModuleNameTok.startToken();
-  ModuleNameTok.setKind(tok::annot_module_name);
-  ModuleNameTok.setAnnotationRange(NameLoc->getRange());
-  ModuleNameTok.setAnnotationValue(static_cast<void *>(NameLoc));
-  return ModuleNameTok;
-}
-
 // We represent the primary and partition names as 'Paths' which are sections
 // of the hierarchical access path for a clang module.  However for C++20
 // the periods in a name are just another character, and we will need to
 // flatten them into a string.
-std::string ModuleNameLoc::stringFromModuleIdPath(ModuleIdPath Path) {
+std::string ModuleLoader::getFlatNameFromPath(ModuleIdPath Path) {
   std::string Name;
   if (Path.empty())
     return Name;
@@ -1155,31 +1133,22 @@ std::string ModuleNameLoc::stringFromModuleIdPath(ModuleIdPath Path) {
   return Name;
 }
 
-std::string ModuleNameLoc::str() const {
-  return stringFromModuleIdPath(getModuleIdPath());
-}
-
-void ModuleNameLoc::print(llvm::raw_ostream &OS) const { OS << str(); }
-
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                                         SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
                                          bool AllowMacroExpansion) {
   auto ConsumeToken = [&]() {
-    return AllowMacroExpansion ? Lex(Tok) : LexUnexpandedToken(Tok);
+    if (AllowMacroExpansion)
+      Lex(Tok);
+    else
+      LexUnexpandedToken(Tok);
+    Suffix.push_back(Tok);
   };
 
+  Suffix.push_back(Tok);
   while (true) {
-    if (Tok.isNot(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        CurLexer->cutOffLexing();
-        Tok.setKind(tok::eof);
-        this->getCodeCompletionHandler()->CodeCompleteModuleImport(UseLoc,
-                                                                   Path);
-      }
-      Diag(Tok.getLocation(), diag::err_pp_expected_module_name)
-          << Path.empty();
+    if (Tok.isNot(tok::identifier))
       return true;
-    }
 
     // Record this part of the module path.
     Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
@@ -1255,8 +1224,16 @@ bool Preprocessor::HandleModuleContextualKeyword(
   return false;
 }
 
+bool Preprocessor::CollectPPImportSuffixAndEnterStream(
+    SmallVectorImpl<Token> &Toks, bool StopUntilEOD) {
+  CollectPPImportSuffix(Toks);
+  EnterModuleSuffixTokenStream(Toks);
+  return false;
+}
+
 /// Collect the tokens of a C++20 pp-import-suffix.
-void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
+void Preprocessor::CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
+                                         bool StopUntilEOD) {
   // FIXME: For error recovery, consider recognizing attribute syntax here
   // and terminating / diagnosing a missing semicolon if we find anything
   // else? (Can we leave that to the parser?)
@@ -1266,6 +1243,9 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
 
     switch (Toks.back().getKind()) {
     case tok::semi:
+      if (!StopUntilEOD)
+        return;
+      [[fallthrough]];
     case tok::eod:
     case tok::eof:
       return;
@@ -1312,18 +1292,15 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   SmallVector<Token, 32> Suffix;
   SmallVector<IdentifierLoc, 2> Path;
   Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Path))
-    return false;
-
-  Suffix.push_back(ModuleNameLoc::CreateAnnotToken(*this, Path));
-  Suffix.push_back(Result);
+  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
+    return CollectPPImportSuffixAndEnterStream(Suffix);
 
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
   SourceLocation SemiLoc = Suffix.back().getLocation();
   if (Suffix.back().isNot(tok::semi)) {
     if (Result.isNot(tok::eof))
-      CollectPpImportSuffix(Suffix);
+      CollectPPImportSuffix(Suffix);
     if (Suffix.back().isNot(tok::semi)) {
       // This is not an import after all.
       EnterModuleSuffixTokenStream(Suffix);

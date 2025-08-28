@@ -146,7 +146,6 @@ class MangleNumberingContext;
 typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
-class ModuleNameLoc;
 struct NormalizedConstraint;
 class ObjCInterfaceDecl;
 class ObjCMethodDecl;
