@@ -41,18 +41,18 @@ class LLVM_GSL_POINTER function_ref<Ret(Params...)> {
   Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
   intptr_t callable;
 
-  template<typename Callable>
-  static Ret callback_fn(intptr_t callable, Params ...params) {
+  template <typename Callable>
+  static constexpr Ret callback_fn(intptr_t callable, Params... params) {
     return (*reinterpret_cast<Callable*>(callable))(
         std::forward<Params>(params)...);
   }
 
 public:
-  function_ref() = default;
-  function_ref(std::nullptr_t) {}
+  constexpr function_ref() = default;
+  constexpr function_ref(std::nullptr_t) {}
 
   template <typename Callable>
-  function_ref(
+  constexpr function_ref(
       Callable &&callable LLVM_LIFETIME_BOUND,
       // This is not the copy-constructor.
       std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
@@ -65,13 +65,13 @@ public:
       : callback(callback_fn<std::remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
-  Ret operator()(Params ...params) const {
+  constexpr Ret operator()(Params... params) const {
     return callback(callable, std::forward<Params>(params)...);
   }
 
-  explicit operator bool() const { return callback; }
+  explicit constexpr operator bool() const { return callback; }
 
-  bool operator==(const function_ref<Ret(Params...)> &Other) const {
+  constexpr bool operator==(const function_ref<Ret(Params...)> &Other) const {
     return callable == Other.callable;
   }
 };
