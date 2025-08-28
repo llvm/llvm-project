@@ -671,7 +671,8 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; CHECK-SD-FP16-LABEL: test_signed_i16_f16:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs h0, h0
-; CHECK-SD-FP16-NEXT:    fmov w0, s0
+; CHECK-SD-FP16-NEXT:    fmov w8, s0
+; CHECK-SD-FP16-NEXT:    sxth w0, w8
 ; CHECK-SD-FP16-NEXT:    ret
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_i16_f16:

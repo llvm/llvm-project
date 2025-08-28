@@ -4912,11 +4912,14 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return SDValue();
 
   if (SrcVT == MVT::f16 && SatVT == MVT::i16 && DstVT == MVT::i32) {
-    SDValue CVTf32;
-    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT)
-      CVTf32 = DAG.getNode(AArch64ISD::FCVTZS_HALF, DL, MVT::f32, SrcVal);
-    else
-      CVTf32 = DAG.getNode(AArch64ISD::FCVTZU_HALF, DL, MVT::f32, SrcVal);
+    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+      SDValue CVTf32 =
+          DAG.getNode(AArch64ISD::FCVTZS_HALF, DL, MVT::f32, SrcVal);
+      SDValue Bitcast = DAG.getBitcast(DstVT, CVTf32);
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, DstVT, Bitcast,
+                         DAG.getValueType(SatVT));
+    }
+    SDValue CVTf32 = DAG.getNode(AArch64ISD::FCVTZU_HALF, DL, MVT::f32, SrcVal);
     return DAG.getBitcast(DstVT, CVTf32);
   }
 

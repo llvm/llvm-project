@@ -6542,16 +6542,14 @@ defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
 
-// f16 -> s16 conversions leave the bit pattern in a f32
-class F16ToS16ScalarPat<SDNode cvt_isd, BaseSIMDTwoScalar instr>
+// f16 -> i16 conversions leave the bit pattern in a f32
+class F16ToI16ScalarPat<SDNode cvt_isd, BaseSIMDTwoScalar instr>
     : Pat<(f32 (cvt_isd (f16 FPR16:$Rn))),
-    (EXTRACT_SUBREG
-     (v8f16 (SUBREG_TO_REG (i64 0), (instr FPR16:$Rn), hsub)),
-     ssub)>;
+     (f32 (SUBREG_TO_REG (i64 0), (instr FPR16:$Rn), hsub))>;
 
 let Predicates = [HasFullFP16] in {
-def : F16ToS16ScalarPat<AArch64fcvtzs_half, FCVTZSv1f16>;
-def : F16ToS16ScalarPat<AArch64fcvtzu_half, FCVTZUv1f16>;
+def : F16ToI16ScalarPat<AArch64fcvtzs_half, FCVTZSv1f16>;
+def : F16ToI16ScalarPat<AArch64fcvtzu_half, FCVTZUv1f16>;
 }
 
 // Round FP64 to BF16.
