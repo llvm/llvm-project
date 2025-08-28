@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
 
-  auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
+  auto transport_up = std::make_unique<lldb_protocol::mcp::MCPTransport>(
       input, output, std::string(client_name),
       [&](llvm::StringRef message) { llvm::errs() << message << '\n'; });
 
