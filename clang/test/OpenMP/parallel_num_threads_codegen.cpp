@@ -2,9 +2,18 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
+// RUN: %clang_cc1 -DOMP60 -verify -fopenmp -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefixes=CHECK,OMP60 %s
+
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
+// RUN: %clang_cc1 -DOMP60 -verify -fopenmp-simd -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -32,6 +41,14 @@ int tmain() {
   foo();
 #pragma omp parallel num_threads(T(23))
   foo();
+#ifdef OMP60
+  char str[] = "msg";
+  const char *str1 = "msg1";
+#pragma omp parallel num_threads(strict: C) severity(fatal) message(str)
+  foo();
+#pragma omp parallel num_threads(strict: T(23)) severity(warning) message(str1)
+  foo();
+#endif
   return 0;
 }
 
@@ -42,6 +59,14 @@ int main() {
   foo();
 #pragma omp parallel num_threads(a)
   foo();
+#ifdef OMP60
+  char str[] = "msg";
+  const char *str1 = "msg1";
+#pragma omp parallel num_threads(strict: 2) severity(fatal) message(str)
+  foo();
+#pragma omp parallel num_threads(strict: a) severity(warning) message(str1)
+  foo();
+#endif
   return a + tmain<char, 5>() + tmain<S, 1>();
 }
 
@@ -58,6 +83,13 @@ int main() {
 // CHECK:       [[RES:%.+]] = sext i8 [[A_VAL]] to i32
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES]])
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       call void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 2, i32 2, ptr [[ARRDECAY]])
+// OMP60:       call void (ptr, i32, ptr, ...) @__kmpc_fork_call(
+// OMP60:       [[A_VAL1:%.+]] = load i8, ptr [[A_ADDR]]
+// OMP60:       [[RES1:%.+]] = sext i8 [[A_VAL1]] to i32
+// OMP60:       call void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES1]], i32 1, ptr [[STR2:%.+]])
+// OMP60:       call void (ptr, i32, ptr, ...) @__kmpc_fork_call(
 // CHECK:       invoke{{.*}} [[INT_TY:i[0-9]+]] [[TMAIN_CHAR_5:@.+]]()
 // CHECK:       invoke{{.*}} [[INT_TY]] [[TMAIN_S_1:@.+]]()
 // CHECK:       call {{.*}} [[S_TY_DESTR:@.+]](ptr {{[^,]*}} [[S_ADDR]])
@@ -70,6 +102,11 @@ int main() {
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23)
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 5, i32 2, ptr [[ARRDECAY]])
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23, i32 1, ptr [[STR1:%.+]])
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       ret [[INT_TY]] 0
 // CHECK-NEXT:  }
 
@@ -83,6 +120,15 @@ int main() {
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES]])
 // CHECK:       {{(invoke|call)}} {{.*}} [[S_TY_DESTR]](ptr {{[^,]*}} [[S_TEMP]])
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 1, i32 2, ptr [[ARRDECAY]])
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       {{(invoke|call)}} {{.*}} [[S_TY_CONSTR]](ptr {{[^,]*}} [[S_TEMP:%.+]], [[INTPTR_T_TY]] noundef [[INTPTR_T_TY_ATTR]]23)
+// OMP60:       [[S_CHAR_OP1:%.+]] = invoke{{.*}} i8 [[S_TY_CHAR_OP]](ptr {{[^,]*}} [[S_TEMP]])
+// OMP60:       [[RES1:%.+]] = sext {{.*}}i8 [[S_CHAR_OP1]] to i32
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES1]], i32 1, ptr [[STR1:%.+]])
+// OMP60:       {{(invoke|call)}} {{.*}} [[S_TY_DESTR]](ptr {{[^,]*}} [[S_TEMP]])
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       ret [[INT_TY]] 0
 // CHECK:       }
 

@@ -450,6 +450,25 @@ class DAPTestCaseBase(TestBase):
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
 
+    def _build_error_message(self, base_message, response):
+        """Build a detailed error message from a DAP response.
+        Extracts error information from various possible locations in the response structure.
+        """
+        error_msg = base_message
+        if response:
+            if "message" in response:
+                error_msg += " (%s)" % response["message"]
+            elif "body" in response and "error" in response["body"]:
+                if "format" in response["body"]["error"]:
+                    error_msg += " (%s)" % response["body"]["error"]["format"]
+                else:
+                    error_msg += " (error in body)"
+            else:
+                error_msg += " (no error details available)"
+        else:
+            error_msg += " (no response)"
+        return error_msg
+
     def attach(
         self,
         *,
@@ -477,9 +496,8 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"], "attach failed (%s)" % (response["message"])
-            )
+            error_msg = self._build_error_message("attach failed", response)
+            self.assertTrue(response and response["success"], error_msg)
 
     def launch(
         self,
@@ -508,10 +526,8 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"],
-                "launch failed (%s)" % (response["body"]["error"]["format"]),
-            )
+            error_msg = self._build_error_message("launch failed", response)
+            self.assertTrue(response and response["success"], error_msg)
 
     def build_and_launch(
         self,
