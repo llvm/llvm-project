@@ -128,7 +128,8 @@ _mm256_abs_epi8(__m256i __a) {
 /// \param __a
 ///    A 256-bit vector of [16 x i16].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR _mm256_abs_epi16(__m256i __a) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_abs_epi16(__m256i __a) {
   return (__m256i)__builtin_elementwise_abs((__v16hi)__a);
 }
 
@@ -143,7 +144,8 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR _mm256_abs_epi16(__m25
 /// \param __a
 ///    A 256-bit vector of [8 x i32].
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR _mm256_abs_epi32(__m256i __a) {
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_abs_epi32(__m256i __a) {
   return (__m256i)__builtin_elementwise_abs((__v8si)__a);
 }
 
