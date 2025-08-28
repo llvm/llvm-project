@@ -4012,7 +4012,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     auto *Tok = Line.Last->Previous;
     while (Tok->isNot(tok::r_brace))
       Tok = Tok->Previous;
-    if (auto *LBrace = Tok->MatchingParen; LBrace) {
+    if (auto *LBrace = Tok->MatchingParen; LBrace && LBrace->is(TT_Unknown)) {
       assert(LBrace->is(tok::l_brace));
       Tok->setBlockKind(BK_Block);
       LBrace->setBlockKind(BK_Block);
