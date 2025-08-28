@@ -380,6 +380,7 @@
 ; GCN-O1-NEXT:        Live Register Matrix
 ; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        GCN NSA Reassign
+; GCN-O1-NEXT:        AMDGPU Eliminate AGPR-to-VGPR Copy
 ; GCN-O1-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
@@ -694,6 +695,7 @@
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
+; GCN-O1-OPTS-NEXT:        AMDGPU Eliminate AGPR-to-VGPR Copy
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
@@ -1014,6 +1016,7 @@
 ; GCN-O2-NEXT:        Live Register Matrix
 ; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        GCN NSA Reassign
+; GCN-O2-NEXT:        AMDGPU Eliminate AGPR-to-VGPR Copy
 ; GCN-O2-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
@@ -1347,6 +1350,7 @@
 ; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        GCN NSA Reassign
+; GCN-O3-NEXT:        AMDGPU Eliminate AGPR-to-VGPR Copy
 ; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load

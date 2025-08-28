@@ -141,6 +141,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",
+    "AMDGPUEliminateAGPRToVGPRCopy.cpp",
     "AMDGPUExportClustering.cpp",
     "AMDGPUExportKernelRuntimeHandles.cpp",
     "AMDGPUFrameLowering.cpp",
