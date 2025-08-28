@@ -2064,10 +2064,10 @@ private:
     // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
     // default unlike the staging flag) once the implementation of this is more
     // complete.
-    bool useDelayedPriv =
-        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    bool useDelayedPriv = enableDelayedPrivatization && doConcurrentLoopOp;
     llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
-    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+        mightHaveReadHostSym;
 
     for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {

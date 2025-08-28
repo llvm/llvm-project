@@ -9,40 +9,45 @@
 #ifndef LLDB_PROTOCOL_MCP_SERVER_H
 #define LLDB_PROTOCOL_MCP_SERVER_H
 
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
-#include <mutex>
 
 namespace lldb_protocol::mcp {
 
-class Server {
+class Server : public Transport::MessageHandler {
 public:
-  Server(std::string name, std::string version);
-  virtual ~Server() = default;
+  Server(std::string name, std::string version,
+         std::unique_ptr<Transport> transport_up, lldb_private::MainLoop &loop);
+  ~Server() = default;
+
+  using NotificationHandler = std::function<void(const Notification &)>;
 
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
+  void AddNotificationHandler(llvm::StringRef method,
+                              NotificationHandler handler);
+
+  llvm::Error Run();
 
 protected:
-  virtual Capabilities GetCapabilities() = 0;
+  ServerCapabilities GetCapabilities();
 
   using RequestHandler =
       std::function<llvm::Expected<Response>(const Request &)>;
-  using NotificationHandler = std::function<void(const Notification &)>;
 
   void AddRequestHandlers();
 
   void AddRequestHandler(llvm::StringRef method, RequestHandler handler);
-  void AddNotificationHandler(llvm::StringRef method,
-                              NotificationHandler handler);
 
   llvm::Expected<std::optional<Message>> HandleData(llvm::StringRef data);
 
-  llvm::Expected<Response> Handle(Request request);
-  void Handle(Notification notification);
+  llvm::Expected<Response> Handle(const Request &request);
+  void Handle(const Notification &notification);
 
   llvm::Expected<Response> InitializeHandler(const Request &);
 
@@ -52,11 +57,20 @@ protected:
   llvm::Expected<Response> ResourcesListHandler(const Request &);
   llvm::Expected<Response> ResourcesReadHandler(const Request &);
 
-  std::mutex m_mutex;
+  void Received(const Request &) override;
+  void Received(const Response &) override;
+  void Received(const Notification &) override;
+  void OnError(llvm::Error) override;
+  void OnClosed() override;
+
+  void TerminateLoop();
 
 private:
   const std::string m_name;
   const std::string m_version;
+
+  std::unique_ptr<Transport> m_transport_up;
+  lldb_private::MainLoop &m_loop;
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;
   std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;

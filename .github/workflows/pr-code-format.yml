@@ -70,8 +70,6 @@ jobs:
       - name: Run code formatter
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          START_REV: ${{ github.event.pull_request.base.sha }}
-          END_REV: ${{ github.event.pull_request.head.sha }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |

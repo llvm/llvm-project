@@ -17,7 +17,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -1837,11 +1836,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          getValue(CPA->getDiscriminator()));
     }
 
-    if (isa<ConstantPointerNull>(C)) {
-      unsigned AS = V->getType()->getPointerAddressSpace();
-      return DAG.getConstant(0, getCurSDLoc(),
-                             TLI.getPointerTy(DAG.getDataLayout(), AS));
-    }
+    if (isa<ConstantPointerNull>(C))
+      return DAG.getConstant(0, getCurSDLoc(), VT);
 
     if (match(C, m_VScale()))
       return DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1));
@@ -3576,7 +3572,7 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
   MachineBasicBlock *IndirectBrMBB = FuncInfo.MBB;
 
   // Update machine-CFG edges with unique successors.
-  SmallSet<BasicBlock*, 32> Done;
+  SmallPtrSet<BasicBlock *, 32> Done;
   for (unsigned i = 0, e = I.getNumSuccessors(); i != e; ++i) {
     BasicBlock *BB = I.getSuccessor(i);
     bool Inserted = Done.insert(BB).second;
@@ -8460,8 +8456,11 @@ void SelectionDAGBuilder::visitVPLoad(
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
@@ -8512,9 +8511,11 @@ void SelectionDAGBuilder::visitVPGather(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
   bool UniformBase =
       getUniformBase(PtrOperand, Base, Index, Scale, this, VPIntrin.getParent(),
@@ -8550,8 +8551,11 @@ void SelectionDAGBuilder::visitVPStore(
     Alignment = DAG.getEVTAlign(VT);
   SDValue Ptr = OpValues[1];
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
                       OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
@@ -8573,9 +8577,11 @@ void SelectionDAGBuilder::visitVPScatter(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
   SDValue Base, Index, Scale;
   bool UniformBase =
       getUniformBase(PtrOperand, Base, Index, Scale, this, VPIntrin.getParent(),
@@ -8613,9 +8619,12 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,
@@ -8636,9 +8645,12 @@ void SelectionDAGBuilder::visitVPStridedStore(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
@@ -10998,11 +11010,17 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   SmallVector<Type *, 4> RetOrigTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
-  ComputeValueTypes(DL, CLI.RetTy, RetOrigTys, &Offsets);
+  ComputeValueTypes(DL, CLI.OrigRetTy, RetOrigTys, &Offsets);
 
   SmallVector<EVT, 4> RetVTs;
-  for (Type *Ty : RetOrigTys)
-    RetVTs.push_back(getValueType(DL, Ty));
+  if (CLI.RetTy != CLI.OrigRetTy) {
+    assert(RetOrigTys.size() == 1 &&
+           "Only supported for non-aggregate returns");
+    RetVTs.push_back(getValueType(DL, CLI.RetTy));
+  } else {
+    for (Type *Ty : RetOrigTys)
+      RetVTs.push_back(getValueType(DL, Ty));
+  }
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
@@ -11053,7 +11071,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.getArgs()[0].IndirectType = CLI.RetTy;
-    CLI.RetTy = Type::getVoidTy(Context);
+    CLI.RetTy = CLI.OrigRetTy = Type::getVoidTy(Context);
 
     // sret demotion isn't compatible with tail-calls, since the sret argument
     // points into the callers stack frame.
@@ -11110,17 +11128,23 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Outs.clear();
   CLI.OutVals.clear();
   for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    SmallVector<Type *, 4> ArgTys;
-    ComputeValueTypes(DL, Args[i].Ty, ArgTys);
+    SmallVector<Type *, 4> OrigArgTys;
+    ComputeValueTypes(DL, Args[i].OrigTy, OrigArgTys);
     // FIXME: Split arguments if CLI.IsPostTypeLegalization
     Type *FinalType = Args[i].Ty;
     if (Args[i].IsByVal)
       FinalType = Args[i].IndirectType;
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg, DL);
-    for (unsigned Value = 0, NumValues = ArgTys.size(); Value != NumValues;
+    for (unsigned Value = 0, NumValues = OrigArgTys.size(); Value != NumValues;
          ++Value) {
-      Type *ArgTy = ArgTys[Value];
+      Type *OrigArgTy = OrigArgTys[Value];
+      Type *ArgTy = OrigArgTy;
+      if (Args[i].Ty != Args[i].OrigTy) {
+        assert(Value == 0 && "Only supported for non-aggregate arguments");
+        ArgTy = Args[i].Ty;
+      }
+
       EVT VT = getValueType(DL, ArgTy);
       SDValue Op = SDValue(Args[i].Node.getNode(),
                            Args[i].Node.getResNo() + Value);
@@ -11254,7 +11278,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT, ArgTy, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, OrigArgTy, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();

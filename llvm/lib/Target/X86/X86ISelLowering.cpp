@@ -23185,43 +23185,51 @@ static SDValue LowerVectorAllEqual(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
 // Check whether an AND/OR'd reduction tree is PTEST-able, or if we can fallback
 // to CMP(MOVMSK(PCMPEQB(X,Y))).
-static SDValue MatchVectorAllEqualTest(SDValue LHS, SDValue RHS,
+static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
                                        ISD::CondCode CC, const SDLoc &DL,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG,
                                        X86::CondCode &X86CC) {
-  assert((CC == ISD::SETEQ || CC == ISD::SETNE) && "Unsupported ISD::CondCode");
+  SDValue Op = OrigLHS;
 
-  bool CmpNull = isNullConstant(RHS);
-  bool CmpAllOnes = isAllOnesConstant(RHS);
-  if (!CmpNull && !CmpAllOnes)
-    return SDValue();
+  bool CmpNull;
+  APInt Mask;
+  if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+    CmpNull = isNullConstant(OrigRHS);
+    if (!CmpNull && !isAllOnesConstant(OrigRHS))
+      return SDValue();
 
-  SDValue Op = LHS;
-  if (!Subtarget.hasSSE2() || !Op->hasOneUse())
-    return SDValue();
+    if (!Subtarget.hasSSE2() || !Op->hasOneUse())
+      return SDValue();
 
-  // Check whether we're masking/truncating an OR-reduction result, in which
-  // case track the masked bits.
-  // TODO: Add CmpAllOnes support.
-  APInt Mask = APInt::getAllOnes(Op.getScalarValueSizeInBits());
-  if (CmpNull) {
-    switch (Op.getOpcode()) {
-    case ISD::TRUNCATE: {
-      SDValue Src = Op.getOperand(0);
-      Mask = APInt::getLowBitsSet(Src.getScalarValueSizeInBits(),
-                                  Op.getScalarValueSizeInBits());
-      Op = Src;
-      break;
-    }
-    case ISD::AND: {
-      if (auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-        Mask = Cst->getAPIntValue();
-        Op = Op.getOperand(0);
+    // Check whether we're masking/truncating an OR-reduction result, in which
+    // case track the masked bits.
+    // TODO: Add CmpAllOnes support.
+    Mask = APInt::getAllOnes(Op.getScalarValueSizeInBits());
+    if (CmpNull) {
+      switch (Op.getOpcode()) {
+      case ISD::TRUNCATE: {
+        SDValue Src = Op.getOperand(0);
+        Mask = APInt::getLowBitsSet(Src.getScalarValueSizeInBits(),
+                                    Op.getScalarValueSizeInBits());
+        Op = Src;
+        break;
       }
-      break;
+      case ISD::AND: {
+        if (auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+          Mask = Cst->getAPIntValue();
+          Op = Op.getOperand(0);
+        }
+        break;
+      }
+      }
     }
-    }
+  } else if (CC == ISD::SETGT && isAllOnesConstant(OrigRHS)) {
+    CC = ISD::SETEQ;
+    CmpNull = true;
+    Mask = APInt::getSignMask(Op.getScalarValueSizeInBits());
+  } else {
+    return SDValue();
   }
 
   ISD::NodeType LogicOp = CmpNull ? ISD::OR : ISD::AND;
@@ -44195,8 +44203,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
       // Conversions.
       // TODO: Add more CVT opcodes when we have test coverage.
-    case X86ISD::CVTTP2SI:
     case X86ISD::CVTTP2UI: {
+      if (!Subtarget.hasVLX())
+        break;
+      [[fallthrough]];
+    }
+    case X86ISD::CVTTP2SI: {
       if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::f16 &&
           !Subtarget.hasVLX())
         break;
@@ -44945,6 +44957,24 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     Known.Zero.setLowBits(Known2.countMinTrailingZeros());
     return false;
   }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    KnownBits KnownOp0, KnownOp1;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
+    //  operand 2).
+    APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
+    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, KnownOp0,
+                             TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
+                             TLO, Depth + 1))
+      return true;
+    // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
+    break;
+  }
   }
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
@@ -45120,6 +45150,14 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE bit logic.
+  case X86ISD::FAND:
+  case X86ISD::FOR:
+  case X86ISD::FXOR:
+  case X86ISD::FANDN:
+  case X86ISD::ANDNP:
+  case X86ISD::VPTERNLOG:
+    return false;
   // SSE vector insert/extracts use modulo indices.
   case X86ISD::PINSRB:
   case X86ISD::PINSRW:
@@ -45151,6 +45189,14 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::CMPP:
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:
+    return false;
+  // SSE signbit extraction.
+  case X86ISD::MOVMSK:
+    return false;
+  // GFNI instructions.
+  case X86ISD::GF2P8AFFINEINVQB:
+  case X86ISD::GF2P8AFFINEQB:
+  case X86ISD::GF2P8MULB:
     return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
@@ -56267,14 +56313,16 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
                                                     Subtarget))
       return V;
+  }
 
-    if (VT == MVT::i1) {
-      X86::CondCode X86CC;
-      if (SDValue V =
-              MatchVectorAllEqualTest(LHS, RHS, CC, DL, Subtarget, DAG, X86CC))
-        return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
-    }
+  if (VT == MVT::i1) {
+    X86::CondCode X86CC;
+    if (SDValue V =
+            MatchVectorAllEqualTest(LHS, RHS, CC, DL, Subtarget, DAG, X86CC))
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, getSETCC(X86CC, V, DL, DAG));
+  }
 
+  if (CC == ISD::SETNE || CC == ISD::SETEQ) {
     if (OpVT.isScalarInteger()) {
       // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
       // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
@@ -60051,6 +60099,19 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify VPMADD52L/VPMADD52H operations.
+static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumEltBits = VT.getScalarSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
+                               DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -60688,6 +60749,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI, Subtarget);
   case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD:    return combineVPMADD(N, DAG, DCI);
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H:    return combineVPMADD52LH(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);

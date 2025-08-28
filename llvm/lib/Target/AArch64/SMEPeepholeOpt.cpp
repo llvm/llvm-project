@@ -128,13 +128,6 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 
   bool Changed = false;
   MachineInstr *Prev = nullptr;
-  SmallVector<MachineInstr *, 4> ToBeRemoved;
-
-  // Convenience function to reset the matching of a sequence.
-  auto Reset = [&]() {
-    Prev = nullptr;
-    ToBeRemoved.clear();
-  };
 
   // Walk through instructions in the block trying to find pairs of smstart
   // and smstop nodes that cancel each other out. We only permit a limited
@@ -156,14 +149,10 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
         // that we marked for deletion in between.
         Prev->eraseFromParent();
         MI.eraseFromParent();
-        for (MachineInstr *TBR : ToBeRemoved)
-          TBR->eraseFromParent();
-        ToBeRemoved.clear();
         Prev = nullptr;
         Changed = true;
         NumSMChangesRemoved += 2;
       } else {
-        Reset();
         Prev = &MI;
       }
       continue;
@@ -179,7 +168,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
     // of streaming mode. If not, the algorithm should reset.
     switch (MI.getOpcode()) {
     default:
-      Reset();
+      Prev = nullptr;
       break;
     case AArch64::COALESCER_BARRIER_FPR16:
     case AArch64::COALESCER_BARRIER_FPR32:
@@ -193,19 +182,13 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
       // concrete example/test-case.
       if (isSVERegOp(TRI, MRI, MI.getOperand(0)) ||
           isSVERegOp(TRI, MRI, MI.getOperand(1)))
-        Reset();
+        Prev = nullptr;
       break;
     case AArch64::ADJCALLSTACKDOWN:
     case AArch64::ADJCALLSTACKUP:
     case AArch64::ANDXri:
     case AArch64::ADDXri:
       // We permit these as they don't generate SVE/NEON instructions.
-      break;
-    case AArch64::VGRestorePseudo:
-    case AArch64::VGSavePseudo:
-      // When the smstart/smstop are removed, we should also remove
-      // the pseudos that save/restore the VG value for CFI info.
-      ToBeRemoved.push_back(&MI);
       break;
     case AArch64::MSRpstatesvcrImm1:
     case AArch64::MSRpstatePseudo:

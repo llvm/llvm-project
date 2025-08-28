@@ -1165,6 +1165,7 @@ R"(All available -march extensions for RISC-V
     xsfvqmaccqoq         1.0
     xsifivecdiscarddlone 1.0
     xsifivecflushdlone   1.0
+    xsmtvdot             1.0
     xtheadba             1.0
     xtheadbb             1.0
     xtheadbs             1.0
@@ -1180,11 +1181,12 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.14
+    p                    0.15
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zalasr               0.1
     zvbc32e              0.7
+    zvfbfa               0.1
     zvkgs                0.7
     zvqdotq              0.0
     svukte               0.3

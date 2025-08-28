@@ -14,7 +14,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCCCState.h"
 #include "PPCCallingConv.h"
 #include "PPCFrameLowering.h"
 #include "PPCInstrInfo.h"
@@ -30,7 +29,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -158,8 +156,6 @@ STATISTIC(NumDynamicAllocaProbed, "Number of dynamic stack allocation probed");
 static bool isNByteElemShuffleMask(ShuffleVectorSDNode *, unsigned, int);
 
 static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
-
-static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
 // A faster local-[exec|dynamic] TLS access sequence (enabled with the
 // -maix-small-local-[exec|dynamic]-tls option) can be produced for TLS
@@ -4330,17 +4326,13 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  PPCCCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
   // Reserve space for the linkage area on the stack.
   unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   CCInfo.AllocateStack(LinkageSize, PtrAlign);
-  if (useSoftFloat())
-    CCInfo.PreAnalyzeFormalArguments(Ins);
-
   CCInfo.AnalyzeFormalArguments(Ins, CC_PPC32_SVR4);
-  CCInfo.clearWasPPCF128();
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -6062,13 +6054,11 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
 
   // Assign locations to all of the outgoing arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  PPCCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   // Reserve space for the linkage area on the stack.
   CCInfo.AllocateStack(Subtarget.getFrameLowering()->getLinkageSize(),
                        PtrAlign);
-  if (useSoftFloat())
-    CCInfo.PreAnalyzeCallOperands(Outs);
 
   if (IsVarArg) {
     // Handle fixed and variable vector arguments differently.
@@ -6101,7 +6091,6 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     // All arguments are treated the same.
     CCInfo.AnalyzeCallOperands(Outs, CC_PPC32_SVR4);
   }
-  CCInfo.clearWasPPCF128();
 
   // Assign locations to all of the outgoing aggregate by value arguments.
   SmallVector<CCValAssign, 16> ByValArgLocs;
@@ -8513,10 +8502,11 @@ void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
 
   // Result is a load from the stack slot.  If loading 4 bytes, make sure to
   // add in a bias on big endian.
-  if (Op.getValueType() == MVT::i32 && !i32Stack) {
+  if (Op.getValueType() == MVT::i32 && !i32Stack &&
+      !Subtarget.isLittleEndian()) {
     FIPtr = DAG.getNode(ISD::ADD, dl, FIPtr.getValueType(), FIPtr,
                         DAG.getConstant(4, dl, FIPtr.getValueType()));
-    MPI = MPI.getWithOffset(Subtarget.isLittleEndian() ? 0 : 4);
+    MPI = MPI.getWithOffset(4);
   }
 
   RLI.Chain = Chain;
@@ -11284,6 +11274,24 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
+  case Intrinsic::ppc_mma_build_dmr: {
+    SmallVector<SDValue, 8> Pairs;
+    SmallVector<SDValue, 8> Chains;
+    for (int i = 1; i < 9; i += 2) {
+      SDValue Hi = Op.getOperand(i);
+      SDValue Lo = Op.getOperand(i + 1);
+      if (Hi->getOpcode() == ISD::LOAD)
+        Chains.push_back(Hi.getValue(1));
+      if (Lo->getOpcode() == ISD::LOAD)
+        Chains.push_back(Lo.getValue(1));
+      Pairs.push_back(
+          DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1, {Hi, Lo}));
+    }
+    SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+    SDValue Value = DMFInsert1024(Pairs, SDLoc(Op), DAG);
+    return DAG.getMergeValues({Value, TF}, dl);
+  }
+
   case Intrinsic::ppc_mma_dmxxextfdmr512: {
     assert(Subtarget.isISAFuture() && "dmxxextfdmr512 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
@@ -11619,6 +11627,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getScalarIntVT(), Val),
             Op.getOperand(0)),
         0);
+  }
+  case Intrinsic::ppc_mma_disassemble_dmr: {
+    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+                        Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   default:
     break;
@@ -12107,6 +12119,24 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
 
   return DAG.getMergeValues({DmrPValue, TF}, dl);
+}
+
+SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
+                                         const SDLoc &dl,
+                                         SelectionDAG &DAG) const {
+  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Pairs[0],
+                                Pairs[1]),
+             0);
+  SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
+  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
+                                Pairs[2], Pairs[3]),
+             0);
+  SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
+  SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
+
+  return SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1,
+                                    {RC, Lo, LoSub, Hi, HiSub}),
+                 0);
 }
 
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
@@ -14814,9 +14844,9 @@ static bool findConsecutiveLoad(LoadSDNode *LD, SelectionDAG &DAG) {
   SDValue Chain = LD->getChain();
   EVT VT = LD->getMemoryVT();
 
-  SmallSet<SDNode *, 16> LoadRoots;
+  SmallPtrSet<SDNode *, 16> LoadRoots;
   SmallVector<SDNode *, 8> Queue(1, Chain.getNode());
-  SmallSet<SDNode *, 16> Visited;
+  SmallPtrSet<SDNode *, 16> Visited;
 
   // First, search up the chain, branching to follow all token-factor operands.
   // If we find a consecutive load, then we're done, otherwise, record all
@@ -18661,24 +18691,6 @@ bool PPCTargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (M.getStackProtectorGuard() == "tls" || Subtarget.isTargetLinux())
     return true;
   return TargetLowering::useLoadStackGuardNode(M);
-}
-
-// Override to disable global variable loading on Linux and insert AIX canary
-// word declaration.
-void PPCTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (Subtarget.isAIXABI()) {
-    M.getOrInsertGlobal(AIXSSPCanaryWordName,
-                        PointerType::getUnqual(M.getContext()));
-    return;
-  }
-  if (!Subtarget.isTargetLinux())
-    return TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *PPCTargetLowering::getSDagStackGuard(const Module &M) const {
-  if (Subtarget.isAIXABI())
-    return M.getGlobalVariable(AIXSSPCanaryWordName);
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,

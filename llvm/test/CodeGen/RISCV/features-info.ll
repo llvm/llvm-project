@@ -55,6 +55,7 @@
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
+; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
 ; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
@@ -217,6 +218,7 @@
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).
 ; CHECK-NEXT:   xsifivecdiscarddlone             - 'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction).
 ; CHECK-NEXT:   xsifivecflushdlone               - 'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction).
+; CHECK-NEXT:   xsmtvdot                         - 'XSMTVDot' (SpacemiT Vector Dot Product Extension).
 ; CHECK-NEXT:   xtheadba                         - 'XTHeadBa' (T-Head address calculation instructions).
 ; CHECK-NEXT:   xtheadbb                         - 'XTHeadBb' (T-Head basic bit-manipulation instructions).
 ; CHECK-NEXT:   xtheadbs                         - 'XTHeadBs' (T-Head single-bit instructions).

@@ -194,6 +194,7 @@
 // CHECK-NEXT:     xsfvqmaccqoq         1.0       'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))
 // CHECK-NEXT:     xsifivecdiscarddlone 1.0       'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)
 // CHECK-NEXT:     xsifivecflushdlone   1.0       'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)
+// CHECK-NEXT:     xsmtvdot             1.0       'XSMTVDot' (SpacemiT Vector Dot Product Extension)
 // CHECK-NEXT:     xtheadba             1.0       'XTHeadBa' (T-Head address calculation instructions)
 // CHECK-NEXT:     xtheadbb             1.0       'XTHeadBb' (T-Head basic bit-manipulation instructions)
 // CHECK-NEXT:     xtheadbs             1.0       'XTHeadBs' (T-Head single-bit instructions)
@@ -209,11 +210,12 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.14      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.15      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
+// CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
 // CHECK-NEXT:     zvqdotq              0.0       'Zvqdotq' (Vector quad widening 4D Dot Product)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)

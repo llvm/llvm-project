@@ -1187,6 +1187,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
+  constexpr unsigned latestFinalized = 60;
   // By default OpenMP is set to the most recent fully supported version
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
@@ -1209,12 +1210,26 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
     };
 
+    auto reportFutureVersion = [&](llvm::StringRef value) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "The specification for OpenMP version %0 is still under development; "
+          "the syntax and semantics of new features may be subject to change");
+      std::string buffer;
+      llvm::raw_string_ostream versions(buffer);
+      llvm::interleaveComma(ompVersions, versions);
+
+      diags.Report(diagID) << value;
+    };
+
     llvm::StringRef value = arg->getValue();
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
 
-        if (version > newestFullySupported)
+        if (version > latestFinalized)
+          reportFutureVersion(value);
+        else if (version > newestFullySupported)
           diags.Report(clang::diag::warn_openmp_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
