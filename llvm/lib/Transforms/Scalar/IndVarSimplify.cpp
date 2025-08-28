@@ -1834,8 +1834,11 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
           // consider atomic operations as effects.
           // Because we need to preserve the relative order of volatile
           // accesses, turn off this optimization if we see any of them.
+          // TODO:
           // We could be smarter about volatile, and check whether the
           // reordering is valid.
+          // We also could be smarter about atomic, and check whether the
+          // local has leaked.
           if (SI->isAtomic() || SI->isVolatile() ||
               findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
             return false;
