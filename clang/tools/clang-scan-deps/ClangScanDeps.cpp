@@ -346,13 +346,22 @@ handleMakeDependencyToolResult(const std::string &Input,
 }
 
 template <typename Container>
-static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
-  return [&JOS, Strings = std::forward<Container>(Strings)] {
-    for (StringRef Str : Strings)
+static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings,
+                          bool Paths = false) {
+  return [&JOS, Strings = std::forward<Container>(Strings), Paths] {
+    for (StringRef Str : Strings) {
       // Not reporting SDKSettings.json so that test checks can remain (mostly)
       // platform-agnostic.
-      if (!Str.ends_with("SDKSettings.json"))
+      if (Str.ends_with("SDKSettings.json"))
+        continue;
+      if (Paths) {
+        llvm::SmallString<261> Path{Str};
+        llvm::sys::path::make_preferred(Path);
+        JOS.value(Path.str());
+      } else {
         JOS.value(Str);
+      }
+    }
   };
 }
 
@@ -535,8 +544,11 @@ public:
                                        toJSONStrings(JOS, Cmd.Arguments));
                     JOS.attribute("executable", StringRef(Cmd.Executable));
                     JOS.attributeArray("file-deps",
-                                       toJSONStrings(JOS, I.FileDeps));
-                    JOS.attribute("input-file", StringRef(I.FileName));
+                                       toJSONStrings(JOS, I.FileDeps,
+                                                     /*Paths*/ true));
+                    llvm::SmallString<261> InputFile = StringRef(I.FileName);
+                    llvm::sys::path::make_preferred(InputFile);
+                    JOS.attribute("input-file", InputFile.str());
                     if (EmitVisibleModules)
                       JOS.attributeArray("visible-clang-modules",
                                          toJSONSorted(JOS, I.VisibleModules));
@@ -558,8 +570,11 @@ public:
                                      toJSONStrings(JOS, I.DriverCommandLine));
                   JOS.attribute("executable", "clang");
                   JOS.attributeArray("file-deps",
-                                     toJSONStrings(JOS, I.FileDeps));
-                  JOS.attribute("input-file", StringRef(I.FileName));
+                                     toJSONStrings(JOS, I.FileDeps,
+                                                   /*Paths*/ true));
+                  llvm::SmallString<261> InputFile = StringRef(I.FileName);
+                  llvm::sys::path::make_preferred(InputFile);
+                  JOS.attribute("input-file", InputFile.str());
                   if (EmitVisibleModules)
                     JOS.attributeArray("visible-clang-modules",
                                        toJSONSorted(JOS, I.VisibleModules));
