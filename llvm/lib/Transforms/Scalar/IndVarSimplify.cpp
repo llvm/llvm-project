@@ -53,6 +53,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1816,11 +1817,20 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // suggestions on how to improve this?  I can obviously bail out for outer
   // loops, but that seems less than ideal.  MemorySSA can find memory writes,
   // is that enough for *all* side effects?
+  bool HasLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
-      if (I.mayHaveSideEffects())
-        return false;
+      if (I.mayHaveSideEffects()) {
+        HasLocalSideEffects = true;
+        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+          if (findAllocaForValue(SI->getPointerOperand(), false) == nullptr) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
@@ -1840,6 +1850,33 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    if (HasLocalSideEffects) {
+      BasicBlock *Unreachable = nullptr;
+      BasicBlock *InLoop = nullptr;
+      for (BasicBlock *Succ : BI->successors()) {
+        if (isa<UnreachableInst>(Succ->getTerminator()))
+          Unreachable = Succ;
+        if (L->contains(Succ))
+          InLoop = Succ;
+      }
+      // Exit BB which have one branch back into the loop and another one to
+      // a trap can still be optimized, because local side effects cannot
+      // be observed in the exit case (the trap).
+      if (Unreachable == nullptr || InLoop == nullptr)
+        continue;
+      if (llvm::any_of(*Unreachable, [](Instruction &I) {
+            if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+              if (II->getIntrinsicID() != Intrinsic::trap &&
+                  II->getIntrinsicID() != Intrinsic::ubsantrap)
+                return true;
+            } else if (!isa<UnreachableInst>(I)) {
+              return true;
+            }
+            return false;
+          })) {
+        continue;
+      }
+    }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
       NewCond = L->contains(BI->getSuccessor(0)) ?
