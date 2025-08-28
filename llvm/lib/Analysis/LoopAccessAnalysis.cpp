@@ -194,7 +194,10 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
                                      ScalarEvolution &SE) {
-  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B))
+  const SCEV *X;
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B) &&
+      (!match(A, m_scev_Add(m_SCEV(X), m_SCEV())) ||
+       X != SE.getNegativeSCEV(B)))
     return nullptr;
   return SE.getAddExpr(A, B);
 }
@@ -238,8 +241,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
         StartPtrV, {Attribute::Dereferenceable}, *AC,
         L->getLoopPredecessor()->getTerminator(), DT);
     if (DerefRK) {
-      DerefBytesSCEV = SE.getUMaxExpr(
-          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+      DerefBytesSCEV =
+          SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
     }
   }
 
