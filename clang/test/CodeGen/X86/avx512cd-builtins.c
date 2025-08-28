@@ -44,8 +44,8 @@ __m512i test_mm512_maskz_conflict_epi32(__mmask16 __U, __m512i __A) {
 __m512i test_mm512_lzcnt_epi32(__m512i __A) {
   // CHECK-LABEL: test_mm512_lzcnt_epi32
   // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 true)
-  // CHECK: icmp eq <16 x i32> %{{.*}}, zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <16 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <16 x i1> [[ISZERO]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_lzcnt_epi32(__A); 
 }
 
@@ -55,8 +55,8 @@ TEST_CONSTEXPR(match_v16si(_mm512_lzcnt_epi32((__m512i)(__v16si){0, 0, 0, 0, 0, 
 __m512i test_mm512_mask_lzcnt_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_lzcnt_epi32
   // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 true)
-  // CHECK: icmp eq <16 x i32> %{{.*}}, zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <16 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <16 x i1> [[ISZERO]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_lzcnt_epi32(__W,__U,__A); 
 }
@@ -66,8 +66,8 @@ TEST_CONSTEXPR(match_v16si(_mm512_mask_lzcnt_epi32(_mm512_set1_epi32(32), /*1010
 __m512i test_mm512_maskz_lzcnt_epi32(__mmask16 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_lzcnt_epi32
   // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 true)
-  // CHECK: icmp eq <16 x i32> %{{.*}}, zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <16 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <16 x i1> [[ISZERO]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_lzcnt_epi32(__U,__A); 
 }
@@ -77,8 +77,8 @@ TEST_CONSTEXPR(match_v16si(_mm512_maskz_lzcnt_epi32(/*1010 1100 1010 1101=*/0xac
 __m512i test_mm512_lzcnt_epi64(__m512i __A) {
   // CHECK-LABEL: test_mm512_lzcnt_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 true)
-  // CHECK: icmp eq <8 x i64> %{{.*}}, zeroinitializer
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_lzcnt_epi64(__A); 
 }
 
@@ -88,8 +88,8 @@ TEST_CONSTEXPR(match_v8di(_mm512_lzcnt_epi64((__m512i)(__v8di){0, 0, 0, 0, 0, 0,
 __m512i test_mm512_mask_lzcnt_epi64(__m512i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_mask_lzcnt_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 true)
-  // CHECK: icmp eq <8 x i64> %{{.*}}, zeroinitializer
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_lzcnt_epi64(__W,__U,__A); 
 }
@@ -99,8 +99,8 @@ TEST_CONSTEXPR(match_v8di(_mm512_mask_lzcnt_epi64(_mm512_set1_epi64((long long) 
 __m512i test_mm512_maskz_lzcnt_epi64(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: test_mm512_maskz_lzcnt_epi64
   // CHECK: call {{.*}}<8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 true)
-  // CHECK: icmp eq <8 x i64> %{{.*}}, zeroinitializer
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_lzcnt_epi64(__U,__A); 
 }
