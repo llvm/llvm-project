@@ -126,6 +126,7 @@ struct Binding {
            std::tie(RHS.RC, RHS.Space, RHS.LowerBound);
   }
 };
+
 class BoundRegs {
   SmallVector<Binding> Bindings;
 
