@@ -843,33 +843,28 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         source = "main.cpp"
 
-        # Set breakpoint at test_indexedVariables call to get multiple frames
         bp_line = line_number(source, "// breakpoint 3")
         self.set_source_breakpoints(source, [bp_line])
         self.continue_to_next_stop()
 
-        # Get stack frames
         frames = self.get_stackFrames()
         self.assertGreaterEqual(len(frames), 2, "Need at least 2 frames")
 
-        # Track all variable references for uniqueness check
         all_refs = set()
 
-        # Check first 2-3 frames
         for i in range(min(3, len(frames))):
-            frame_id = frames[i]['id']
+            frame_id = frames[i]["id"]
             scopes = self.dap_server.request_scopes(frame_id)["body"]["scopes"]
 
             for scope in scopes:
-                ref = scope['variablesReference']
-                if ref != 0:  # 0 means no variables
-                    # Ensure this reference hasn't been used before
-                    self.assertNotIn(ref, all_refs,
-                        f"Variable reference {ref} was reused!")
+                ref = scope["variablesReference"]
+                if ref != 0:
+                    self.assertNotIn(
+                        ref, all_refs, f"Variable reference {ref} was reused!"
+                    )
                     all_refs.add(ref)
 
-        # Verify we collected references and they're still accessible
         self.assertGreater(len(all_refs), 0, "Should have found variable references")
         for ref in all_refs:
             response = self.dap_server.request_variables(ref)
-            self.assertTrue(response['success'], f"Failed to access reference {ref}")
+            self.assertTrue(response["success"], f"Failed to access reference {ref}")
