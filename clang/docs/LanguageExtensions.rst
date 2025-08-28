@@ -4257,8 +4257,6 @@ function, because doing so violates bounds safety conventions.
 function's (i.e. the one calling the builtin) stack space and the region of the
 stack that may be modified by called functions. The semantics match those of GCC's builtin of the same name.
 
-**Note:** Support for this builtin is currently limited to the following architectures: x86_64, x86.
-
 **Syntax**:
 
 .. code-block:: c++
