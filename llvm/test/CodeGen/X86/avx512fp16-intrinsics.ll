@@ -1365,14 +1365,15 @@ define <32 x half> @test_mm512_castph256_ph512_freeze(<16 x half> %a0) nounwind 
 define <8 x half> @PR153570(ptr %p) {
 ; CHECK-LABEL: PR153570:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = [2.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmulsh {rn-sae}, %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vmovsh %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm1, (%rdi)
 ; CHECK-NEXT:    retq
-  %r = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, <8 x half> <half 0xH4000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, <8 x half> zeroinitializer, i8 0, i32 8)
+  %r = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <8 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, i8 0, i32 8)
   store <8 x half> %r, ptr %p, align 16
-  %r1 = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, <8 x half> <half 0xH4000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000, half 0xH0000>, <8 x half> zeroinitializer, i8 1, i32 8)
+  %r1 = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <8 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, i8 1, i32 8)
   ret <8 x half> %r1
 }
