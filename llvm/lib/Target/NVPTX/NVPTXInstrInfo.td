@@ -104,6 +104,7 @@ def hasAtomAddF64 : Predicate<"Subtarget->hasAtomAddF64()">;
 def hasAtomScope : Predicate<"Subtarget->hasAtomScope()">;
 def hasAtomBitwise64 : Predicate<"Subtarget->hasAtomBitwise64()">;
 def hasAtomMinMax64 : Predicate<"Subtarget->hasAtomMinMax64()">;
+def hasAtomSwap128 : Predicate<"Subtarget->hasAtomSwap128()">;
 def hasClusters : Predicate<"Subtarget->hasClusters()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;

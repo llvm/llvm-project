@@ -1990,19 +1990,23 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
 
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
     def _rr : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.RC:$b, t.RC:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.Imm:$b, t.RC:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.RC:$b, t.Imm:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
 
     def _ii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c),
+      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str>;
   }
 
@@ -2199,6 +2203,37 @@ defm INT_PTX_SATOM_MAX  : ATOM2_minmax_impl<"max">;
 defm INT_PTX_SATOM_MIN  : ATOM2_minmax_impl<"min">;
 defm INT_PTX_SATOM_OR   : ATOM2_bitwise_impl<"or">;
 defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
+
+// atom.*.b128
+
+let mayLoad = true, mayStore = true, hasSideEffects = true,
+    Predicates = [hasAtomSwap128] in {
+  def ATOM_CAS_B128 :
+    NVPTXInst<
+        (outs B64:$dst0, B64:$dst1),
+        (ins ADDR:$addr, B64:$cmp0, B64:$cmp1, B64:$swap0, B64:$swap1,
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        "{{\n\t"
+        ".reg .b128 cmp, swap, dst;\n\t"
+        "mov.b128 cmp, {$cmp0, $cmp1};\n\t"
+        "mov.b128 swap, {$swap0, $swap1};\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.cas.b128 dst, [$addr], cmp, swap;\n\t"
+        "mov.b128 {$dst0, $dst1}, dst;\n\t"
+        "}}">;
+
+  def ATOM_EXCH_B128 :
+    NVPTXInst<
+        (outs B64:$dst0, B64:$dst1),
+        (ins ADDR:$addr, B64:$amt0, B64:$amt1,
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        "{{\n\t"
+        ".reg .b128 amt, dst;\n\t"
+        "mov.b128 amt, {$amt0, $amt1};\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch.b128 dst, [$addr], amt;\n\t"
+        "mov.b128 {$dst0, $dst1}, dst;\n\t"
+        "}}">;
+}
+
 
 //-----------------------------------
 // Support for ldu on sm_20 or later

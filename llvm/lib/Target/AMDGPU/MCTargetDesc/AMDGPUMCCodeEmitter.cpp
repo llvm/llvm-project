@@ -253,7 +253,7 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
       STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
-  // The rest part needs to align with AMDGPUInstPrinter::printImmediate64.
+  // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
   if (IsFP) {
     return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Val) ? 254

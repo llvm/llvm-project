@@ -170,9 +170,12 @@ static bool runIPSCCP(
     if (F.isDeclaration())
       continue;
     // Skip the dead functions marked by FunctionSpecializer, avoiding removing
-    // blocks in dead functions.
-    if (IsFuncSpecEnabled && Specializer.isDeadFunction(&F))
+    // blocks in dead functions. Set MadeChanges if there is any dead function
+    // that will be removed later.
+    if (IsFuncSpecEnabled && Specializer.isDeadFunction(&F)) {
+      MadeChanges = true;
       continue;
+    }
 
     SmallVector<BasicBlock *, 512> BlocksToErase;
 

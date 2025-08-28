@@ -169,7 +169,7 @@ public:
 
   virtual bool IsAuthenticated() = 0;
 
-  bool CanSetBreakpoint ();
+  bool CanSetBreakpoint();
 
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
@@ -282,7 +282,7 @@ std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
 
 std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
-}
+} // namespace OperandMatchers
 
 class InstructionList {
 public:
@@ -316,20 +316,19 @@ public:
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
-  ///     instruction). If false, find the instruction index of any 
+  ///     instruction). If false, find the instruction index of any
   ///     branch in the list.
-  ///     
+  ///
   /// @param[out] found_calls
-  ///     If non-null, this will be set to true if any calls were found in 
+  ///     If non-null, this will be set to true if any calls were found in
   ///     extending the range.
-  ///    
+  ///
   /// @return
   ///     The instruction index of the first branch that is at or past
-  ///     \a start. Returns UINT32_MAX if no matching branches are 
+  ///     \a start. Returns UINT32_MAX if no matching branches are
   ///     found.
   //------------------------------------------------------------------
-  uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           bool ignore_calls,
+  uint32_t GetIndexOfNextBranchInstruction(uint32_t start, bool ignore_calls,
                                            bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
@@ -399,6 +398,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
+    eOptionVariableAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {

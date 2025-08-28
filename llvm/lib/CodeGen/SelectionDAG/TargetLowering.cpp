@@ -1858,8 +1858,7 @@ bool TargetLowering::SimplifyDemandedBits(
         Op->dropFlags(SDNodeFlags::NoWrap);
         return true;
       }
-      Known.Zero <<= ShAmt;
-      Known.One <<= ShAmt;
+      Known <<= ShAmt;
       // low bits known zero.
       Known.Zero.setLowBits(ShAmt);
 
@@ -2042,8 +2041,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
       // High bits known zero.
       Known.Zero.setHighBits(ShAmt);
 
@@ -2153,8 +2151,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
@@ -2225,10 +2222,8 @@ bool TargetLowering::SimplifyDemandedBits(
                                Depth + 1))
         return true;
 
-      Known2.One <<= (IsFSHL ? Amt : (BitWidth - Amt));
-      Known2.Zero <<= (IsFSHL ? Amt : (BitWidth - Amt));
-      Known.One.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
-      Known.Zero.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known2 <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known >>= (IsFSHL ? (BitWidth - Amt) : Amt);
       Known = Known.unionWith(Known2);
 
       // Attempt to avoid multi-use ops if we don't need anything from them.

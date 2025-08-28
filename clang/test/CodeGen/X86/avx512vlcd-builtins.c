@@ -5,6 +5,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m128i test_mm_broadcastmb_epi64(__m128i a,__m128i b) {
   // CHECK-LABEL: test_mm_broadcastmb_epi64
@@ -136,80 +137,132 @@ __m256i test_mm256_maskz_conflict_epi32(__mmask8 __U, __m256i __A) {
 
 __m128i test_mm_lzcnt_epi32(__m128i __A) {
   // CHECK-LABEL: test_mm_lzcnt_epi32
-  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 false)
+  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_lzcnt_epi32(__A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_lzcnt_epi32((__m128i)(__v4si){8, 16, 32, 64}), 28, 27, 26, 25));
+TEST_CONSTEXPR(match_v4si(_mm_lzcnt_epi32((__m128i)(__v4si){0, 0, 0, 0}), 32, 32, 32, 32));
+
 __m128i test_mm_mask_lzcnt_epi32(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_lzcnt_epi32
-  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 false)
+  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_mask_lzcnt_epi32(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_mask_lzcnt_epi32(_mm_set1_epi32(32), /*0000 0101=*/0x5, (__m128i)(__v4si){8, 16, 32, 64}), 28, 32, 26, 32));
+
 __m128i test_mm_maskz_lzcnt_epi32(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_lzcnt_epi32
-  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 false)
+  // CHECK: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_lzcnt_epi32(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_maskz_lzcnt_epi32(/*0000 0101=*/0x5, (__m128i)(__v4si){8, 16, 32, 64}), 28, 0, 26, 0));
+
 __m256i test_mm256_lzcnt_epi32(__m256i __A) {
   // CHECK-LABEL: test_mm256_lzcnt_epi32
-  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 false)
+  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_lzcnt_epi32(__A); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_lzcnt_epi32((__m256i)(__v8si){1, 2, 4, 8, 16, 32, 64, 128}), 31, 30, 29, 28, 27, 26, 25, 24));
+TEST_CONSTEXPR(match_v8si(_mm256_lzcnt_epi32((__m256i)(__v8si){0, 0, 0, 0, 0, 0, 0, 0}), 32, 32, 32, 32, 32, 32, 32, 32));
+
 __m256i test_mm256_mask_lzcnt_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_lzcnt_epi32
-  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 false)
+  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_lzcnt_epi32(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_mask_lzcnt_epi32(_mm256_set1_epi32(32), /*0101 0101=*/0x55, (__m256i)(__v8si){1, 2, 4, 8, 16, 32, 64, 128}), 31, 32, 29, 32, 27, 32, 25, 32));
+
 __m256i test_mm256_maskz_lzcnt_epi32(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_lzcnt_epi32
-  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 false)
+  // CHECK: call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <8 x i32> %{{.*}}, zeroinitializer
+  // CHECK: select <8 x i1> [[ISZERO]], <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_lzcnt_epi32(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_lzcnt_epi32(/*0101 0101=*/0x55, (__m256i)(__v8si){1, 2, 4, 8, 16, 32, 64, 128}), 31, 0, 29, 0, 27, 0, 25, 0));
+
 __m128i test_mm_lzcnt_epi64(__m128i __A) {
   // CHECK-LABEL: test_mm_lzcnt_epi64
-  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <2 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <2 x i1> [[ISZERO]], <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_lzcnt_epi64(__A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_lzcnt_epi64((__m128i)(__v2di){1, 2}), 63, 62));
+TEST_CONSTEXPR(match_v2di(_mm_lzcnt_epi64((__m128i)(__v2di){0, 0}), 64, 64));
+
 __m128i test_mm_mask_lzcnt_epi64(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_lzcnt_epi64
-  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <2 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <2 x i1> [[ISZERO]], <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_lzcnt_epi64(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_mask_lzcnt_epi64(_mm_set1_epi64x((long long)64), /*0000 0010=*/0x2, (__m128i)(__v2di){1, 2}), 64, 62));
+
 __m128i test_mm_maskz_lzcnt_epi64(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_lzcnt_epi64
-  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <2 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <2 x i1> [[ISZERO]], <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_lzcnt_epi64(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_maskz_lzcnt_epi64(/*0000 0010=*/0x2, (__m128i)(__v2di){1, 2}), 0, 62));
+
 __m256i test_mm256_lzcnt_epi64(__m256i __A) {
   // CHECK-LABEL: test_mm256_lzcnt_epi64
-  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_lzcnt_epi64(__A); 
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_lzcnt_epi64((__m256i)(__v4di){1, 2, 4, 8}), 63, 62, 61, 60));
+TEST_CONSTEXPR(match_v4di(_mm256_lzcnt_epi64((__m256i)(__v4di){0, 0, 0, 0}), 64, 64, 64, 64));
+
 __m256i test_mm256_mask_lzcnt_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_lzcnt_epi64
-  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_lzcnt_epi64(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_mask_lzcnt_epi64(_mm256_set1_epi64x((long long) 64), /*0000 0110=*/0x6, (__m256i)(__v4di){1, 2, 4, 8}), 64, 62, 61, 64));
+
 __m256i test_mm256_maskz_lzcnt_epi64(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_lzcnt_epi64
-  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 false)
+  // CHECK: call {{.*}}<4 x i64> @llvm.ctlz.v4i64(<4 x i64> %{{.*}}, i1 true)
+  // CHECK: [[ISZERO:%.+]] = icmp eq <4 x i64> %{{.*}}, zeroinitializer
+  // CHECK: select <4 x i1> [[ISZERO]], <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_lzcnt_epi64(__U, __A); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_lzcnt_epi64(/*0000 0011*/0x3, (__m256i)(__v4di){1, 2, 4, 8}), 63, 62, 0, 0));
