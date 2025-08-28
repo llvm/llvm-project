@@ -165,9 +165,16 @@ public:
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  void emitNumThreadsClause(CodeGenFunction &CGF, llvm::Value *NumThreads,
-                            SourceLocation Loc) override;
+  void emitNumThreadsClause(
+      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
+      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+      const Expr *Message = nullptr) override;
 
   /// This function ought to emit, in the general case, a call to
   // the openmp runtime kmpc_push_num_teams. In NVPTX backend it is not needed
@@ -229,12 +236,21 @@ public:
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
-  /// any,
-  ///                   or nullptr.
+  /// any, or nullptr.
+  /// \param NumThreadsModifier The modifier of the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Severity The severity corresponding to the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Message The message string corresponding to the num_threads clause,
+  /// if any, or nullptr.
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond, llvm::Value *NumThreads) override;
+                        const Expr *IfCond, llvm::Value *NumThreads,
+                        OpenMPNumThreadsClauseModifier NumThreadsModifier =
+                            OMPC_NUMTHREADS_unknown,
+                        OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+                        const Expr *Message = nullptr) override;
 
   /// Emit an implicit/explicit barrier for OpenMP threads.
   /// \param Kind Directive for which this implicit barrier call must be
