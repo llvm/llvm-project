@@ -4503,8 +4503,8 @@ void SymbolFileDWARF::GetCompileOptions(
   }
 }
 
-SymbolFile::DWOStats SymbolFileDWARF::GetDwoStats() {
-  SymbolFile::DWOStats stats;
+DWOStats SymbolFileDWARF::GetDwoStats() {
+  DWOStats stats;
 
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();

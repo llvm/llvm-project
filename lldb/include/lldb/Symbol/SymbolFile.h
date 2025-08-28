@@ -488,19 +488,6 @@ public:
     return false;
   };
 
-  /// Holds statistics about DWO (Debug With Object) files.
-  struct DWOStats {
-    uint32_t loaded_dwo_file_count = 0;
-    uint32_t dwo_file_count = 0;
-    uint32_t dwo_error_count = 0;
-
-    DWOStats operator+(const DWOStats &rhs) const {
-      return DWOStats{loaded_dwo_file_count + rhs.loaded_dwo_file_count,
-                      dwo_file_count + rhs.dwo_file_count,
-                      dwo_error_count + rhs.dwo_error_count};
-    }
-  };
-
   /// Retrieves statistics about DWO files associated with this symbol file.
   /// This function returns a DWOStats struct containing:
   ///   - The number of successfully loaded/parsed DWO files.

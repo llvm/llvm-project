@@ -325,7 +325,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
-  SymbolFile::DWOStats total_dwo_stats;
+  DWOStats total_dwo_stats;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -357,9 +357,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
-      SymbolFile::DWOStats current_dwo_stats = sym_file->GetDwoStats();
-      module_stat.dwo_stats += current_dwo_stats;
-      total_dwo_stats += current_dwo_stats;
+      DWOStats current_dwo_stats = sym_file->GetDwoStats();
+      module_stat.dwo_stats = module_stat.dwo_stats + current_dwo_stats;
+      total_dwo_stats = total_dwo_stats + current_dwo_stats;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
