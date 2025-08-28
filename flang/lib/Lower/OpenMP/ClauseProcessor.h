@@ -63,12 +63,9 @@ public:
       mlir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::LoopNestOperands &result,
+                  mlir::omp::LoopRelatedClauseOps &loopResult,
+                  mlir::omp::CollapseClauseOps &collapseResult,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
-  bool
-  processLoopNests(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                   mlir::omp::LoopRelatedClauseOps &result,
-                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
