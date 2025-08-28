@@ -46,8 +46,6 @@ constexpr unsigned kMaxTMATensorDimension = 5;
 /// to be traversed along each of the kMaxTMATensorDimension (tensorRank)
 /// dimensions, must be non-zero and less than or equal to 256.
 constexpr unsigned kMaxTMADimension = 256;
-/// Last dimension of 2D+ TMA must be 128 bytes
-constexpr unsigned kMaxTMALastdimByte = 128;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
