@@ -2392,11 +2392,11 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = false;
 
   else if (MI.isInlineAsm()) {
-    std::string Text = MI.getOperand(0).getSymbolName();
+    StringRef Text = MI.getOperand(0).getSymbolName();
     if (Text.find("SGMASK:") != std::string::npos) {
       Text = Text.substr(Text.find("SGMASK:") + strlen("SGMASK:"));
       Text = Text.substr(0, Text.find_first_of(" \t\r\n"));
-      unsigned long InlineAsmMask = std::stoul(Text, nullptr, 0);
+      unsigned long InlineAsmMask = std::stoul(Text.str(), nullptr, 0);
       Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
     }
   }
