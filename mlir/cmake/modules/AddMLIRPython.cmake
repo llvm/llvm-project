@@ -99,7 +99,7 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
-function(generate_type_stubs module_name depends_target output_dir)
+function(generate_type_stubs module_name depends_target mlir_depends_target output_dir)
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
@@ -108,11 +108,12 @@ function(generate_type_stubs module_name depends_target output_dir)
       message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
   endif()
 
+  set(_module "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${module_name}")
   set(NB_STUBGEN_CMD
       "${Python_EXECUTABLE}"
       "${NB_STUBGEN}"
       --module
-      "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${module_name}"
+      "${_module}"
       -i
       "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.."
       --recursive
@@ -125,8 +126,8 @@ function(generate_type_stubs module_name depends_target output_dir)
     OUTPUT ${NB_STUBGEN_OUTPUT}
     COMMAND ${NB_STUBGEN_CMD}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    DEPENDS ${depends_target})
-  set(_name "MLIRPythonModuleStubs_${module_name}")
+    DEPENDS "${mlir_depends_target}" "${depends_target}")
+  set(_name "MLIRPythonModuleStubs_${_module}")
   add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
 endfunction()
@@ -278,9 +279,11 @@ function(add_mlir_python_modules name)
       generate_type_stubs(
         ${_module_name}
         ${_extension_target}
+        "${modules_target}.extension._mlir.dso"
         "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
       )
-      declare_mlir_python_sources("_${_module_name}_type_stub_gen"
+      declare_mlir_python_sources(
+        "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen"
         ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
         ADD_TO_PARENT "${sources_target}"
         SOURCES_GLOB "_mlir_libs/${_module_name}/**/*.pyi"
