@@ -823,22 +823,22 @@ private:
 
   template <template <class, class, class> class _Layout>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_layouts(__split_buffer<_Tp, allocator_type&, _Layout>& __v) {
-    auto __begin    = __begin_;
-    auto __sentinel = __end_;
-    auto __cap      = __cap_;
+  __swap_layouts(__split_buffer<_Tp, allocator_type&, _Layout>& __sb) {
+    auto __vector_begin    = __begin_;
+    auto __vector_sentinel = __end_;
+    auto __vector_cap      = __cap_;
 
-    auto __v_begin    = __v.begin();
-    auto __v_sentinel = __v.__sentinel();
-    auto __v_cap      = __v.__raw_capacity();
+    auto __sb_begin    = __sb.begin();
+    auto __sb_sentinel = __sb.__raw_sentinel();
+    auto __sb_cap      = __sb.__raw_capacity();
 
     // TODO: replace with __set_valid_range and __set_capacity when vector supports it.
-    __begin_ = __v_begin;
-    __end_   = __v_sentinel;
-    __cap_   = __v_cap;
+    __begin_ = __sb_begin;
+    __end_   = __sb_sentinel;
+    __cap_   = __sb_cap;
 
-    __v.__set_valid_range(__begin, __sentinel);
-    __v.__set_capacity(__cap);
+    __sb.__set_valid_range(__vector_begin, __vector_sentinel);
+    __sb.__set_capacity(__vector_cap);
   }
 };
 

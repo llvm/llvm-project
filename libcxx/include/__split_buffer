@@ -62,6 +62,7 @@ protected:
   using const_pointer                  = typename __alloc_traits::const_pointer;
   using iterator                       = pointer;
   using const_iterator                 = const_pointer;
+  using __sentinel_type                = pointer;
 
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout() = default;
@@ -70,9 +71,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_pointer_layout(const allocator_type& __alloc)
       : __alloc_(__alloc) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __data() _NOEXCEPT { return __data_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __front_cap() _NOEXCEPT { return __front_cap_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __data() const _NOEXCEPT { return __data_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT { return __front_cap_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -89,7 +90,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT { return __begin_ == __end_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type capacity() const _NOEXCEPT {
-    return static_cast<size_type>(__cap_ - __data_);
+    return static_cast<size_type>(__back_cap_ - __front_cap_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __get_allocator() _NOEXCEPT { return __alloc_; }
@@ -100,11 +101,11 @@ public:
 
   // Returns the sentinel object directly. Should be used in conjunction with automatic type deduction,
   // not explicit types.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __sentinel() const _NOEXCEPT { return __end_; }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __raw_capacity() const _NOEXCEPT { return __cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT { return __end_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT { return __back_cap_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_data(pointer __new_first) _NOEXCEPT {
-    __data_ = __new_first;
+    __front_cap_ = __new_first;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
@@ -129,19 +130,19 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __new_capacity) _NOEXCEPT {
-    __cap_ = __data_ + __new_capacity;
+    __back_cap_ = __front_cap_ + __new_capacity;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __new_capacity) _NOEXCEPT {
-    __cap_ = __new_capacity;
+    __back_cap_ = __new_capacity;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __front_spare() const _NOEXCEPT {
-    return static_cast<size_type>(__begin_ - __data_);
+    return static_cast<size_type>(__begin_ - __front_cap_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __back_spare() const _NOEXCEPT {
-    return static_cast<size_type>(__cap_ - __end_);
+    return static_cast<size_type>(__back_cap_ - __end_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT { return *(__end_ - 1); }
@@ -150,9 +151,9 @@ public:
 
   template <class _OtherLayout>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(_OtherLayout& __other) _NOEXCEPT {
-    std::swap(__data_, __other.__data_);
+    std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
-    std::swap(__cap_, __other.__cap_);
+    std::swap(__back_cap_, __other.__back_cap_);
     std::swap(__end_, __other.__end_);
   }
 
@@ -162,26 +163,26 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __data_  = nullptr;
+    __front_cap_  = nullptr;
     __begin_ = nullptr;
     __end_   = nullptr;
-    __cap_   = nullptr;
+    __back_cap_   = nullptr;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_pointer_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __data_  = __other.__data_;
+    __front_cap_  = __other.__front_cap_;
     __begin_ = __other.__begin_;
-    __cap_   = __other.__cap_;
     __end_   = __other.__end_;
+    __back_cap_   = __other.__back_cap_;
   }
 
 private:
-  pointer __data_  = nullptr;
+  pointer __front_cap_  = nullptr;
   pointer __begin_ = nullptr;
   pointer __end_   = nullptr;
-  _LIBCPP_COMPRESSED_PAIR(pointer, __cap_ = nullptr, allocator_type, __alloc_);
+  _LIBCPP_COMPRESSED_PAIR(pointer, __back_cap_ = nullptr, allocator_type, __alloc_);
 
   template <class, class, class>
   friend class __split_buffer_pointer_layout;
@@ -202,6 +203,7 @@ protected:
   using const_pointer                  = typename __alloc_traits::const_pointer;
   using iterator                       = pointer;
   using const_iterator                 = const_pointer;
+  using __sentinel_type                = size_type;
 
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_size_layout() = default;
@@ -209,9 +211,9 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_size_layout(const allocator_type& __alloc)
       : __alloc_(__alloc) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __data() _NOEXCEPT { return __data_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __front_cap() _NOEXCEPT { return __front_cap_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __data() const _NOEXCEPT { return __data_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT { return __front_cap_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -235,11 +237,11 @@ public:
 
   // Returns the sentinel object directly. Should be used in conjunction with automatic type deduction,
   // not explicit types.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __sentinel() const _NOEXCEPT { return __size_; }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __raw_capacity() const _NOEXCEPT { return __cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT { return __size_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT { return __cap_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_data(pointer __new_first) _NOEXCEPT {
-    __data_ = __new_first;
+    __front_cap_ = __new_first;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
@@ -278,7 +280,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __front_spare() const _NOEXCEPT {
-    return static_cast<size_type>(__begin_ - __data_);
+    return static_cast<size_type>(__begin_ - __front_cap_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __back_spare() const _NOEXCEPT {
@@ -295,7 +297,7 @@ public:
 
   template <class _Data2>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(_Data2& __other) _NOEXCEPT {
-    std::swap(__data_, __other.__data_);
+    std::swap(__front_cap_, __other.__data_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
     std::swap(__size_, __other.__size_);
@@ -307,7 +309,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __data_  = nullptr;
+    __front_cap_  = nullptr;
     __begin_ = nullptr;
     __size_  = 0;
     __cap_   = 0;
@@ -316,14 +318,14 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_size_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __data_  = __other.__data_;
+    __front_cap_  = __other.__front_cap_;
     __begin_ = __other.__begin_;
     __cap_   = __other.__cap_;
     __size_  = __other.__size_;
   }
 
 private:
-  pointer __data_   = nullptr;
+  pointer __front_cap_   = nullptr;
   pointer __begin_  = nullptr;
   size_type __size_ = 0;
   size_type __cap_  = 0;
@@ -333,18 +335,99 @@ private:
   friend class __split_buffer_size_layout;
 };
 
-// __split_buffer allocates a contiguous chunk of memory and stores objects in the range [__begin_, __end_).
-// It has uninitialized memory in the ranges  [__data_, __begin_) and [__end_, __cap_). That allows
-// it to grow both in the front and back without having to move the data.
-
+// `__split_buffer` is a contiguous array data structure. It may hold spare capacity at both ends of
+// the sequence. This allows for a `__split_buffer` to grow from both the front and the back without
+// relocating its contents until it runs out of room. This characteristic sets it apart from
+// `std::vector`, which only holds spare capacity at its end. As such, `__split_buffer` is useful
+// for implementing both `std::vector` and `std::deque`.
+//
+// The sequence is stored as a contiguous chunk of memory delimited by the following "pointers" (`o` denotes
+// uninitialized memory and `x` denotes a valid object):
+//
+//     |oooooooooooooooooooxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxoooooooooooooooooooooooo|
+//      ^                  ^                                    ^                       ^
+//  __front_cap_        __begin_                              __end_               __back_cap_
+//
+// The range [__front_cap_, __begin_) contains uninitialized memory. It is referred to as the "front spare capacity".
+// The range [__begin_, __end_) contains valid objects. It is referred to as the "valid range".
+// The range [__end_, __back_cap_) contains uninitialized memory. It is referred to as the "back spare capacity".
+//
+// The layout of `__split_buffer` is determined by the `_Layout` template template parameter. This
+// `_Layout` allows the above pointers to be stored as different representations, such as integer
+// offsets. A layout class template must provide the following interface:
+//
+//    template<class _Tp, class _Allocator, class _Layout>
+//    class __layout {
+//    protected:
+//      using value_type                     = _Tp;
+//      using allocator_type                 = _Allocator;
+//      using __alloc_rr                     = __libcpp_remove_reference_t<allocator_type>;
+//      using __alloc_traits                 = allocator_traits<__alloc_rr>;
+//      using reference                      = value_type&;
+//      using const_reference                = const value_type&;
+//      using size_type                      = typename __alloc_traits::size_type;
+//      using difference_type                = typename __alloc_traits::difference_type;
+//      using pointer                        = typename __alloc_traits::pointer;
+//      using const_pointer                  = typename __alloc_traits::const_pointer;
+//      using iterator                       = pointer;
+//      using const_iterator                 = const_pointer;
+//      using __sentinel_type                = /* type that represents the layout's sentinel */;
+//
+//    public:
+//      __layout() = default;
+//      explicit __layout(const allocator_type&);
+//
+//      pointer __front_cap();
+//      const_pointer __front_cap() const;
+//
+//      pointer begin();
+//      const_pointer begin() const;
+//
+//      pointer end();
+//      pointer end() const;
+//
+//      size_type size() const;
+//      bool empty() const;
+//      size_type capacity() const;
+//
+//      allocator_type& __get_allocator();
+//      allocator_type const& __get_allocator() const;
+//
+//      __sentinel_type __raw_sentinel() const;
+//      __sentinel_type __raw_capacity() const;
+//
+//      void __set_data(pointer);
+//      void __set_valid_range(pointer __begin, pointer __end);
+//      void __set_valid_range(pointer __begin, size_type __size);
+//      void __set_sentinel(pointer __end);
+//      void __set_sentinel(size_type __size);
+//
+//      void __set_capacity(size_type __capacity);
+//      void __set_capacity(pointer __capacity);
+//
+//      size_type __front_spare() const;
+//      size_type __back_spare() const;
+//
+//      reference back();
+//      const_reference back() const;
+//
+//      template<class _OtherLayout>
+//      void __swap_without_allocator(_OtherLayout&);
+//      void swap(__layout&);
+//
+//      void __reset();
+//      void __copy_without_alloc(__layout const&);
+//    };
+//
 template <class _Tp,
           class _Allocator                             = allocator<_Tp>,
           template <class, class, class> class _Layout = __split_buffer_pointer_layout>
 struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
   using __base_type _LIBCPP_NODEBUG = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
+
   using __base_type::__back_spare;
   using __base_type::__copy_without_alloc;
-  using __base_type::__data;
+  using __base_type::__front_cap;
   using __base_type::__front_spare;
   using __base_type::__get_allocator;
   using __base_type::__reset;
@@ -459,7 +542,7 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
       _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__alloc_rr>);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const {
-    if (__data() == nullptr) {
+    if (__front_cap() == nullptr) {
       if (begin() != nullptr)
         return false;
 
@@ -471,7 +554,7 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
 
       return true;
     } else {
-      if (begin() < __data())
+      if (begin() < __front_cap())
         return false;
 
       if (capacity() < size())
@@ -509,7 +592,7 @@ private:
   };
 };
 
-//  Default constructs __n objects starting at `__begin_ + size()`
+//  Default constructs __n objects starting at `end()`
 //  throws if construction throws
 //  Precondition:  __n > 0
 //  Precondition:  size() + __n <= capacity()
@@ -522,7 +605,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::__c
   }
 }
 
-//  Copy constructs __n objects starting at `__begin_ + size()` from __x
+//  Copy constructs __n objects starting at `end()` from __x
 //  throws if construction throws
 //  Precondition:  __n > 0
 //  Precondition:  size() + __n <= capacity()
@@ -615,7 +698,7 @@ __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(size_type __cap, size_t
     __cap = __allocation.count;
   }
 
-  pointer __begin = __data() + __start;
+  pointer __begin = __front_cap() + __start;
   __set_valid_range(__begin, __begin);
   __set_capacity(__cap);
 }
@@ -623,8 +706,8 @@ __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(size_type __cap, size_t
 template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __split_buffer<_Tp, _Allocator, _Layout>::~__split_buffer() {
   clear();
-  if (__data())
-    __alloc_traits::deallocate(__get_allocator(), __data(), capacity());
+  if (__front_cap())
+    __alloc_traits::deallocate(__get_allocator(), __front_cap(), capacity());
 }
 
 template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
@@ -639,14 +722,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
     : __base_type(__a) {
   if (__a == __c.__get_allocator()) {
-    __set_data(__c.__data());
+    __set_data(__c.__front_cap());
     __set_valid_range(__c.begin(), __c.end());
     __set_capacity(__c.capacity());
     __c.__reset();
   } else {
     auto __allocation = std::__allocate_at_least(__get_allocator(), __c.size());
     __set_data(__allocation.ptr);
-    __set_valid_range(__data(), __data());
+    __set_valid_range(__front_cap(), __front_cap());
     __set_capacity(__allocation.count);
     typedef move_iterator<iterator> _Ip;
     __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
