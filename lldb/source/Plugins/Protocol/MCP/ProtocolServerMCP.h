@@ -18,8 +18,7 @@
 
 namespace lldb_private::mcp {
 
-class ProtocolServerMCP : public ProtocolServer,
-                          public lldb_protocol::mcp::Server {
+class ProtocolServerMCP : public ProtocolServer {
 public:
   ProtocolServerMCP();
   virtual ~ProtocolServerMCP() override;
@@ -39,26 +38,24 @@ public:
 
   Socket *GetSocket() const override { return m_listener.get(); }
 
+protected:
+  // This adds tools and resource providers that
+  // are specific to this server. Overridable by the unit tests.
+  virtual void Extend(lldb_protocol::mcp::Server &server) const;
+
 private:
   void AcceptCallback(std::unique_ptr<Socket> socket);
 
-  lldb_protocol::mcp::Capabilities GetCapabilities() override;
-
   bool m_running = false;
 
-  MainLoop m_loop;
+  lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
+  std::mutex m_mutex;
 
   std::unique_ptr<Socket> m_listener;
-  std::vector<MainLoopBase::ReadHandleUP> m_listen_handlers;
 
-  struct Client {
-    lldb::IOObjectSP io_sp;
-    MainLoopBase::ReadHandleUP read_handle_up;
-    std::string buffer;
-  };
-  llvm::Error ReadCallback(Client &client);
-  std::vector<std::unique_ptr<Client>> m_clients;
+  std::vector<MainLoopBase::ReadHandleUP> m_listen_handlers;
+  std::vector<std::unique_ptr<lldb_protocol::mcp::Server>> m_instances;
 };
 } // namespace lldb_private::mcp
 

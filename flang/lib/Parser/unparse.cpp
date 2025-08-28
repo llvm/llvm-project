@@ -2250,6 +2250,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDynGroupprivateClause &x) {
+    using Modifier = OmpDynGroupprivateClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<ScalarIntExpr>(x.t));
+  }
   void Unparse(const OmpEnterClause &x) {
     using Modifier = OmpEnterClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2575,35 +2580,11 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+  void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpAssumeDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP ASSUME");
-    Walk(" ", std::get<OmpClauseList>(x.t).v);
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpEndAssumeDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END ASSUME\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpCriticalDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP CRITICAL");
-    Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OmpEndCriticalDirective &x) {
-    BeginOpenMP();
-    Word("!$OMP END CRITICAL");
-    Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Put("\n");
-    EndOpenMP();
+  void Unparse(const OpenMPAssumeConstruct &x) {
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
@@ -2716,6 +2697,13 @@ public:
   void Unparse(const OpenMPDispatchConstruct &x) { //
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
+  void Unparse(const OpenMPGroupprivate &x) {
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2776,7 +2764,7 @@ public:
     Walk(std::get<std::list<OpenMPConstruct>>(x.t), "");
     BeginOpenMP();
     Word("!$OMP END ");
-    Walk(std::get<OmpEndSectionsDirective>(x.t));
+    Walk(std::get<std::optional<OmpEndSectionsDirective>>(x.t));
     Put("\n");
     EndOpenMP();
   }
@@ -2941,6 +2929,7 @@ public:
   WALK_NESTED_ENUM(OmpTaskDependenceType, Value) // OMP task-dependence-type
   WALK_NESTED_ENUM(OmpScheduleClause, Kind) // OMP schedule-kind
   WALK_NESTED_ENUM(OmpSeverityClause, Severity) // OMP severity
+  WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
   WALK_NESTED_ENUM(
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type

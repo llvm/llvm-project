@@ -947,12 +947,12 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *
-  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
-                       OpenACCDirectiveKind DirectiveKind,
-                       SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+  OpenACCClause *CheckReductionClause(
+      ArrayRef<const OpenACCClause *> ExistingClauses,
+      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
+      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
+      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+      SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

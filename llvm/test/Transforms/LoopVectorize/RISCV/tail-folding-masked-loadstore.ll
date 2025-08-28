@@ -27,8 +27,8 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP10]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP21]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[TMP9]], [[TMP21]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[EXIT:%.*]]
 ; IF-EVL:       scalar.ph:
@@ -55,7 +55,7 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP-LABEL: @masked_loadstore(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
+; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:

@@ -506,11 +506,13 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
 OpenACCReductionClause *OpenACCReductionClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
     OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
+    ArrayRef<OpenACCReductionRecipe> Recipes,
     SourceLocation EndLoc) {
   void *Mem = C.Allocate(
-      OpenACCReductionClause::totalSizeToAlloc<Expr *>(VarList.size()));
-  return new (Mem)
-      OpenACCReductionClause(BeginLoc, LParenLoc, Operator, VarList, EndLoc);
+      OpenACCReductionClause::totalSizeToAlloc<Expr *, OpenACCReductionRecipe>(
+          VarList.size(), Recipes.size()));
+  return new (Mem) OpenACCReductionClause(BeginLoc, LParenLoc, Operator,
+                                          VarList, Recipes, EndLoc);
 }
 
 OpenACCAutoClause *OpenACCAutoClause::Create(const ASTContext &C,

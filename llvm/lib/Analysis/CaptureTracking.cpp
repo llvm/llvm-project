@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -405,7 +404,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
-  SmallSet<const Use *, 20> Visited;
+  SmallPtrSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     for (const Use &U : V->uses()) {

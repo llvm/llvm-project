@@ -9,6 +9,7 @@
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -219,7 +220,7 @@ public:
 
     removeResourceGlobals(CI);
 
-    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(5));
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(4));
 
     CI->replaceAllUsesWith(Replacement);
     CI->eraseFromParent();
@@ -232,6 +233,7 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -248,10 +250,13 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
+      // FIXME: The last argument is a NonUniform flag which needs to be set
+      // based on resource analysis.
+      // https://github.com/llvm/llvm-project/issues/155701
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          CI->getArgOperand(4)};
+          ConstantInt::get(Int1Ty, false)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
@@ -266,6 +271,7 @@ public:
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -294,7 +300,11 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
+      // FIXME: The last argument is a NonUniform flag which needs to be set
+      // based on resource analysis.
+      // https://github.com/llvm/llvm-project/issues/155701
+      Constant *NonUniform = ConstantInt::get(Int1Ty, false);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniform};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -918,6 +928,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
+  PA.preserve<RootSignatureAnalysis>();
   return PA;
 }
 
@@ -945,6 +956,7 @@ public:
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

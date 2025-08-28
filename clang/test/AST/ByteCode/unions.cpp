@@ -966,3 +966,15 @@ namespace AddressComparison {
   static_assert(&U2.a[0] != &U2.b[1]);
   static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
 }
+
+#if __cplusplus >= 202002L
+namespace UnionMemberOnePastEnd {
+  constexpr bool b() {
+    union  {
+      int p;
+    };
+    return &p == (&p + 1);
+  }
+  static_assert(!b());
+}
+#endif

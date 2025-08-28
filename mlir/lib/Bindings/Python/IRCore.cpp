@@ -196,7 +196,7 @@ operations.
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
-nb::object classmethod(Func f, Args... args) {
+static nb::object classmethod(Func f, Args... args) {
   nb::object cf = nb::cpp_function(f, args...);
   return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
 }
@@ -729,24 +729,24 @@ size_t PyMlirContext::clearLiveOperations() {
 }
 
 void PyMlirContext::clearOperation(MlirOperation op) {
-  PyOperation *py_op;
+  PyOperation *pyOp;
   {
     nb::ft_lock_guard lock(liveOperationsMutex);
     auto it = liveOperations.find(op.ptr);
     if (it == liveOperations.end()) {
       return;
     }
-    py_op = it->second.second;
+    pyOp = it->second.second;
     liveOperations.erase(it);
   }
-  py_op->setInvalid();
+  pyOp->setInvalid();
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
-  typedef struct {
+  using callBackData = struct {
     PyOperation &rootOp;
     bool rootSeen;
-  } callBackData;
+  };
   callBackData data{op.getOperation(), false};
   // Mark all ops below the op that the passmanager will be rooted
   // at (but not op itself - note the preorder) as invalid.
@@ -2105,7 +2105,7 @@ nb::object PyOpView::buildGeneric(
   // Delegate to create.
   return PyOperation::create(name,
                              /*results=*/std::move(resultTypes),
-                             /*operands=*/std::move(operands),
+                             /*operands=*/operands,
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp,
@@ -2810,7 +2810,7 @@ private:
 
 // bpo-42262 added Py_XNewRef()
 #if !defined(Py_XNewRef)
-PyObject *_Py_XNewRef(PyObject *obj) {
+[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
   Py_XINCREF(obj);
   return obj;
 }
@@ -2819,7 +2819,7 @@ PyObject *_Py_XNewRef(PyObject *obj) {
 
 // bpo-42262 added Py_NewRef()
 #if !defined(Py_NewRef)
-PyObject *_Py_NewRef(PyObject *obj) {
+[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
   Py_INCREF(obj);
   return obj;
 }

@@ -32,6 +32,9 @@ Tags:
   SwiftEscapable: false
 - Name: EscapableType
   SwiftEscapable: true
+- Name: NoncopyableWithDestroyType
+  SwiftCopyable: false
+  SwiftDestroyOp: NCDDestroy
 
 Functions:
   - Name: functionReturningFrt__

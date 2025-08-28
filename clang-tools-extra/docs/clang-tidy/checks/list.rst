@@ -201,6 +201,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
    :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
+   :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access <cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines/pro-bounds-pointer-arithmetic>`,
    :doc:`cppcoreguidelines-pro-type-const-cast <cppcoreguidelines/pro-type-const-cast>`,
@@ -271,6 +272,7 @@ Clang-Tidy Checks
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
+   :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,

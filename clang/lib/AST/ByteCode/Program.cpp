@@ -101,7 +101,7 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
       }
     }
   }
-  Ptr.initialize();
+  Ptr.initializeAllElements();
 
   return GlobalIndex;
 }
@@ -164,8 +164,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
     const auto *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
-    if (const auto *RT = QT->getAs<ReferenceType>())
-      QT = RT->getPointeeType();
+    if (QT->isPointerOrReferenceType())
+      QT = QT->getPointeeType();
   }
   assert(!QT.isNull());
 
@@ -213,19 +213,31 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  if (auto Idx =
-          createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init)) {
-    for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
-      unsigned &PIdx = GlobalIndices[P];
-      if (P != VD) {
-        if (Globals[PIdx]->block()->isExtern())
-          Globals[PIdx] = Globals[*Idx];
+  std::optional<unsigned> Idx =
+      createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init);
+  if (!Idx)
+    return std::nullopt;
+
+  Global *NewGlobal = Globals[*Idx];
+  for (const Decl *Redecl : VD->redecls()) {
+    unsigned &PIdx = GlobalIndices[Redecl];
+    if (Redecl != VD) {
+      if (Block *RedeclBlock = Globals[PIdx]->block();
+          RedeclBlock->isExtern()) {
+        Globals[PIdx] = NewGlobal;
+        // All pointers pointing to the previous extern decl now point to the
+        // new decl.
+        for (Pointer *Ptr = RedeclBlock->Pointers; Ptr; Ptr = Ptr->BS.Next) {
+          RedeclBlock->removePointer(Ptr);
+          Ptr->BS.Pointee = NewGlobal->block();
+          NewGlobal->block()->addPointer(Ptr);
+        }
       }
-      PIdx = *Idx;
     }
-    return *Idx;
+    PIdx = *Idx;
   }
-  return std::nullopt;
+
+  return *Idx;
 }
 
 std::optional<unsigned> Program::createGlobal(const Expr *E) {
@@ -264,7 +276,7 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
       Ctx.getEvalID(), getCurrentDecl(), Desc, IsStatic, IsExtern, IsWeak);
   G->block()->invokeCtor();
 
-  // Initialize InlineDescriptor fields.
+  // Initialize GlobalInlineDescriptor fields.
   auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
   if (!Init)
     GD->InitState = GlobalInitState::NoInitializer;
@@ -320,10 +332,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         continue;
 
       // In error cases, the base might not be a RecordType.
-      const auto *RT = Spec.getType()->getAs<RecordType>();
-      if (!RT)
+      const auto *BD = Spec.getType()->getAsCXXRecordDecl();
+      if (!BD)
         return nullptr;
-      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -336,11 +347,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
-      const auto *RT = Spec.getType()->getAs<RecordType>();
-      if (!RT)
-        return nullptr;
-
-      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const auto *BD = Spec.getType()->castAsCXXRecordDecl();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -396,9 +403,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       const Expr *Init) {
 
   // Classes and structures.
-  if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (const auto *Record =
-            getOrCreateRecord(RT->getOriginalDecl()->getDefinitionOrSelf()))
+  if (const auto *RD = Ty->getAsRecordDecl()) {
+    if (const auto *Record = getOrCreateRecord(RD))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);

@@ -30,10 +30,10 @@ add_llvm_tool(llvm-jitlink
   EXPORT_SYMBOLS
   )
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Haiku")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Haiku")
   target_link_libraries(llvm-jitlink PRIVATE network)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
   target_link_libraries(llvm-jitlink PRIVATE socket)
 endif()

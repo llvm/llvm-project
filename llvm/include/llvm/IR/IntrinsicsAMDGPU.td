@@ -2434,9 +2434,13 @@ def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Inverse of ballot: return the bit corresponding to the current lane from the
+// given mask.
+//
+// This is only defined for dynamically uniform masks and therefore convergent.
 def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
-            [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Lowers to S_BITREPLICATE_B64_B32.
 // The argument must be uniform; otherwise, the result is undefined.
@@ -2689,6 +2693,18 @@ def int_amdgcn_cs_chain:
             ],
             [IntrConvergent, IntrNoReturn, ImmArg<ArgIndex<4>>]>;
 
+// Run a function with all the lanes enabled. Only direct calls are allowed. The
+// first argument is the callee, which must have the `amdgpu_gfx_whole_wave`
+// calling convention and must not be variadic. The remaining arguments to the
+// callee are taken from the arguments passed to the intrinsic. Lanes that are
+// inactive at the point of the call will receive poison. The return value is
+// the return value of the callee for the active lanes (there is no return
+// value in the inactive ones).
+def int_amdgcn_call_whole_wave:
+  Intrinsic<[llvm_any_ty],    // The return type of the callee.
+            [llvm_anyptr_ty,  // The callee.
+             llvm_vararg_ty], // The arguments to the callee.
+            [IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics

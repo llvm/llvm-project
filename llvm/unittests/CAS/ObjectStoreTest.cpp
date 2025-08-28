@@ -317,10 +317,10 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 
   DefaultThreadPool Threads;
   for (unsigned I = 0; I < BlobCount; ++I) {
-    Threads.async(Consumer, I, &Read1);
-    Threads.async(Consumer, I, &Read2);
     Threads.async(Producer, I, &Write1);
     Threads.async(Producer, I, &Write2);
+    Threads.async(Consumer, I, &Read1);
+    Threads.async(Consumer, I, &Read2);
   }
 
   Threads.wait();

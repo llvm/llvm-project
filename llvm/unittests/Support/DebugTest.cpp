@@ -50,4 +50,46 @@ TEST(DebugTest, CommaInDebugBlock) {
   });
   EXPECT_EQ("ZYX", os1.str());
 }
+
+TEST(DebugTest, DebugWithType) {
+  llvm::DebugFlag = true;
+
+  // Check if the DEBUG_WITH_TYPE macro is enabled for the given type.
+  auto CheckDebugWithType = [](const char *Type) {
+    bool Visited = false;
+    DEBUG_WITH_TYPE(Type, { Visited = true; });
+    return Visited;
+  };
+
+  {
+    static const char *DT[] = {"A", "B"};
+    setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+    EXPECT_TRUE(CheckDebugWithType("A"));
+    EXPECT_TRUE(CheckDebugWithType("B"));
+    EXPECT_FALSE(CheckDebugWithType("C"));
+  }
+  {
+    static const char *DT[] = {"A:"};
+    setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+    EXPECT_FALSE(CheckDebugWithType("A"));
+    EXPECT_TRUE(CheckDebugWithType("B"));
+    EXPECT_TRUE(CheckDebugWithType("C"));
+  }
+  {
+    static const char *DT[] = {"A:", "B"};
+    setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+    EXPECT_FALSE(CheckDebugWithType("A"));
+    EXPECT_TRUE(CheckDebugWithType("B"));
+    EXPECT_FALSE(CheckDebugWithType("C"));
+  }
+  {
+    static const char *DT[] = {"A:3", "B:", "C"};
+    setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+    EXPECT_TRUE(CheckDebugWithType("A"));
+    EXPECT_FALSE(isCurrentDebugType("A", 4));
+    EXPECT_FALSE(CheckDebugWithType("B"));
+    EXPECT_TRUE(isCurrentDebugType("C", 10));
+    EXPECT_FALSE(CheckDebugWithType("D"));
+  }
+}
 #endif

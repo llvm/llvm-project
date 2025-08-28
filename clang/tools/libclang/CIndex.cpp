@@ -1728,7 +1728,7 @@ bool CursorVisitor::VisitUsingTypeLoc(UsingTypeLoc TL) {
   if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
     return true;
 
-  auto *underlyingDecl = TL.getTypePtr()->desugar()->getAsTagDecl();
+  auto *underlyingDecl = TL.getTypePtr()->getAsTagDecl();
   if (underlyingDecl) {
     return Visit(MakeCursorTypeRef(underlyingDecl, TL.getNameLoc(), TU));
   }
@@ -1900,6 +1900,7 @@ DEFAULT_TYPELOC_IMPL(Record, TagType)
 DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
+DEFAULT_TYPELOC_IMPL(SubstBuiltinTemplatePack, Type)
 DEFAULT_TYPELOC_IMPL(Auto, Type)
 DEFAULT_TYPELOC_IMPL(BitInt, Type)
 DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
@@ -2928,6 +2929,10 @@ void OpenACCClauseEnqueue::VisitDeviceTypeClause(
 void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
+  for (const OpenACCReductionRecipe &R : C.getRecipes()) {
+    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+    Visitor.AddDecl(R.RecipeDecl);
+  }
 }
 void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(

@@ -90,6 +90,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::OldStyleParameter);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
+  disable_.set(LanguageFeature::Coarray);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);

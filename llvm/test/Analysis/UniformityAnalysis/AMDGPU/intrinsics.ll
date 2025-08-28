@@ -854,6 +854,15 @@ define amdgpu_cs_chain void @dead(ptr addrspace(1) %out) {
   ret void
 }
 
+; CHECK: DIVERGENT:   %v = call i32 (ptr, ...) @llvm.amdgcn.call.whole.wave.i32.p0(ptr @wwf, i32 15)
+define amdgpu_cs void @call_whole_wave(ptr addrspace(1) %out) {
+  %v = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave.i32.p0(ptr @wwf, i32 15)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+declare amdgpu_gfx_whole_wave i32 @wwf(i1, i32) #0
+
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #1
 declare i32 @llvm.amdgcn.permlane16.i32(i32, i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.permlanex16.i32(i32, i32, i32, i32, i1, i1) #1
@@ -931,6 +940,7 @@ declare <8 x half> @llvm.amdgcn.ds.load.tr16.b128.v8f16(ptr addrspace(3))
 declare <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16(ptr addrspace(3))
 
 declare i32 @llvm.amdgcn.dead.i32()
+declare i32 @llvm.amdgcn.call.whole.wave.i32.p0(ptr, ...) #0
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }

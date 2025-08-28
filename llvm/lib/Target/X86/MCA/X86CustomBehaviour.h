@@ -28,6 +28,11 @@ class X86InstrPostProcess : public InstrPostProcess {
   /// as load and store barriers.
   void setMemBarriers(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
 
+  /// Called within X86InstrPostPorcess to remove some rsp read operands
+  /// on stack instructions to better simulate the stack engine. We currently
+  /// do not model features of the stack engine like sync uops.
+  void useStackEngine(std::unique_ptr<Instruction> &Inst, const MCInst &MCI);
+
 public:
   X86InstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
       : InstrPostProcess(STI, MCII) {}

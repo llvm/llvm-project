@@ -181,7 +181,7 @@ struct ExtractionZone {
   bool requiresHoisting(const SourceManager &SM,
                         const HeuristicResolver *Resolver) const {
     // First find all the declarations that happened inside extraction zone.
-    llvm::SmallSet<const Decl *, 1> DeclsInExtZone;
+    llvm::SmallPtrSet<const Decl *, 1> DeclsInExtZone;
     for (auto *RootStmt : RootStmts) {
       findExplicitReferences(
           RootStmt,

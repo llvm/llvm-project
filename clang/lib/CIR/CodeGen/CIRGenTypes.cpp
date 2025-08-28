@@ -155,13 +155,14 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
-    if (crd->getNumBases() > 0) {
-      assert(!cir::MissingFeatures::cxxSupport());
-      cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                                 "isSafeToConvert: CXXRecordDecl with bases");
-      return false;
-    }
+  if (const CXXRecordDecl *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    for (const clang::CXXBaseSpecifier &i : crd->bases())
+      if (!isSafeToConvert(i.getType()
+                               ->castAs<RecordType>()
+                               ->getOriginalDecl()
+                               ->getDefinitionOrSelf(),
+                           cgt, alreadyChecked))
+        return false;
   }
 
   // If this type would require laying out members that are currently being laid
@@ -184,9 +185,8 @@ isSafeToConvert(QualType qt, CIRGenTypes &cgt,
     qt = at->getValueType();
 
   // If this is a record, check it.
-  if (const auto *rt = qt->getAs<RecordType>())
-    return isSafeToConvert(rt->getOriginalDecl()->getDefinitionOrSelf(), cgt,
-                           alreadyChecked);
+  if (const auto *rd = qt->getAsRecordDecl())
+    return isSafeToConvert(rd, cgt, alreadyChecked);
 
   // If this is an array, check the elements, which are embedded inline.
   if (const auto *at = cgt.getASTContext().getAsArrayType(qt))
@@ -246,10 +246,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
     for (const auto &base : cxxRecordDecl->bases()) {
       if (base.isVirtual())
         continue;
-      convertRecordDeclType(base.getType()
-                                ->castAs<RecordType>()
-                                ->getOriginalDecl()
-                                ->getDefinitionOrSelf());
+      convertRecordDeclType(base.getType()->castAsRecordDecl());
     }
   }
 
@@ -465,8 +462,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    const EnumDecl *ed =
-        cast<EnumType>(ty)->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *ed = ty->castAsEnumDecl();
     if (auto integerType = ed->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -570,10 +566,8 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
         return true;
   }
 
-  if (const RecordType *rt = t->getAs<RecordType>()) {
-    const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
-  }
 
   if (t->getAs<MemberPointerType>()) {
     cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",

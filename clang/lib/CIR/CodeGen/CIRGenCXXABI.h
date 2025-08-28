@@ -37,6 +37,12 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
 
+  /// Emit the code to initialize hidden members required to handle virtual
+  /// inheritance, if needed by the ABI.
+  virtual void
+  initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
+                                            const CXXRecordDecl *rd) {}
+
   /// Emit a single constructor/destructor with the gen type from a C++
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
@@ -63,6 +69,16 @@ public:
   /// parameter.
   virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
 
+  /// Perform ABI-specific "this" argument adjustment required prior to
+  /// a call of a virtual function.
+  /// The "VirtualCall" argument is true iff the call itself is virtual.
+  virtual Address adjustThisArgumentForVirtualFunctionCall(CIRGenFunction &cgf,
+                                                           clang::GlobalDecl gd,
+                                                           Address thisPtr,
+                                                           bool virtualCall) {
+    return thisPtr;
+  }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
@@ -85,6 +101,10 @@ public:
   isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                       CIRGenFunction::VPtr vptr) = 0;
 
+  /// Emits the VTable definitions required for the given record type.
+  virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
+                                     const CXXRecordDecl *rd) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.
@@ -99,6 +119,13 @@ public:
   /// used for the vptr at the given offset in RD.
   virtual cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *rd,
                                         CharUnits vptrOffset) = 0;
+
+  /// Build a virtual function pointer in the ABI-specific way.
+  virtual CIRGenCallee getVirtualFunctionPointer(CIRGenFunction &cgf,
+                                                 clang::GlobalDecl gd,
+                                                 Address thisAddr,
+                                                 mlir::Type ty,
+                                                 SourceLocation loc) = 0;
 
   /// Get the address point of the vtable for the given base subobject.
   virtual mlir::Value

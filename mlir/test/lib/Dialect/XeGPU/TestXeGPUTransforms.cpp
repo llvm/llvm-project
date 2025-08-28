@@ -82,7 +82,7 @@ struct TestXeGPUUnrollingPatterns
 
             if (auto layout = tdescTy.getLayoutAttr()) {
               auto inst_data = layout.getInstData();
-              if (inst_data && layout.isSgLayout())
+              if (inst_data && layout.isForSubgroup())
                 return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
                                             inst_data.asArrayRef().end());
             }
@@ -156,8 +156,8 @@ struct TestXeGPUUnrollingPatterns
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 // Test pattern for distributing vector::StepOp from workgroup to subgroup.
-// Validates LayoutTrait interfaces for offset computation abstraction between
-// LayoutAttr and SliceAttr.
+// Validates DistributeLayoutAttr interfaces for offset computation
+// abstraction between LayoutAttr and SliceAttr.
 class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   using OpConversionPattern<vector::StepOp>::OpConversionPattern;
 
@@ -228,7 +228,7 @@ struct TestXeGPULayoutInterface
     auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
                                mlir::ValueRange inputs,
                                mlir::Location loc) -> mlir::Value {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     };
     typeConverter.addSourceMaterialization(materializeCast);
@@ -239,7 +239,7 @@ struct TestXeGPULayoutInterface
 
     ConversionTarget target(*ctx);
     auto isLegal = [&](xegpu::SliceAttr layout) -> bool {
-      return !layout || !layout.isWgLayout();
+      return !layout || !layout.isForWorkgroup();
     };
 
     target.addDynamicallyLegalOp<vector::StepOp>(

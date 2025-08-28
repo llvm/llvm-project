@@ -1876,7 +1876,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,

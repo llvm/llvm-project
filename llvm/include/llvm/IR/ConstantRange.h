@@ -381,6 +381,7 @@ public:
   /// strictly smaller than the current type.  The returned range will
   /// correspond to the possible range of values if the source range had been
   /// truncated to the specified type with wrap type \p NoWrapKind.
+  /// Note that the result of trunc nuw is exact.
   LLVM_ABI ConstantRange truncate(uint32_t BitWidth,
                                   unsigned NoWrapKind = 0) const;
 

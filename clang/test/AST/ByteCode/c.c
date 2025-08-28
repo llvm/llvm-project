@@ -173,6 +173,10 @@ _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
 
+void nonComplexToComplexCast(void) {
+  _Complex double z = *(_Complex double *)&(struct { double r, i; }){0.0, 1.0};
+}
+
 int t1 = sizeof(int);
 void test4(void) {
   t1 = sizeof(int);
@@ -328,4 +332,33 @@ void foo3 (void)
 {
  void* x = 0;
  void* y = &*x;
+}
+
+static void *FooTable[1] = {
+    [0] = (void *[1]) { // 1
+        [0] = (void *[1]) { // 2
+            [0] = (void *[1]) {} // pedantic-warning {{use of an empty initializer}}
+        },
+    }
+};
+
+int strcmp(const char *, const char *); // all-note {{passing argument to parameter here}}
+#define S "\x01\x02\x03\x04\x05\x06\x07\x08"
+const char _str[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
+
+
+const int compared2 = strcmp(strcmp, _str); // all-warning {{incompatible pointer types}} \
+                                            // all-error {{initializer element is not a compile-time constant}}
+
+int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
+int x;
+{
+  return x;
+}
+
+void bar() { // pedantic-warning {{a function declaration without a prototype}}
+  int x;
+  x = foo(); // all-warning {{too few arguments}}
 }

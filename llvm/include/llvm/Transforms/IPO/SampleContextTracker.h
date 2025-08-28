@@ -187,8 +187,8 @@ public:
 
 #ifndef NDEBUG
   // Get a context string from root to current node.
-  std::string getContextString(const FunctionSamples &FSamples) const;
-  std::string getContextString(ContextTrieNode *Node) const;
+  LLVM_ABI std::string getContextString(const FunctionSamples &FSamples) const;
+  LLVM_ABI std::string getContextString(ContextTrieNode *Node) const;
 #endif
   // Dump the internal context profile trie.
   LLVM_ABI void dump();

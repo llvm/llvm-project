@@ -253,7 +253,7 @@ define void @pr43371() optsize {
 ;
 ; CHECK-LABEL: define void @pr43371(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -275,12 +275,11 @@ define void @pr43371() optsize {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY29:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP28]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[FOR_BODY29]]:
-; CHECK-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; CHECK-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; CHECK-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; CHECK-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
@@ -291,7 +290,7 @@ define void @pr43371() optsize {
 ;
 ; PGSO-LABEL: define void @pr43371(
 ; PGSO-SAME: ) #[[ATTR0]] {
-; PGSO-NEXT:  [[ENTRY:.*]]:
+; PGSO-NEXT:  [[ENTRY:.*:]]
 ; PGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PGSO:       [[VECTOR_PH]]:
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -313,12 +312,11 @@ define void @pr43371() optsize {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; PGSO:       [[FOR_COND_CLEANUP28]]:
 ; PGSO-NEXT:    unreachable
 ; PGSO:       [[FOR_BODY29]]:
-; PGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; PGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; PGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; PGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; PGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
@@ -329,7 +327,7 @@ define void @pr43371() optsize {
 ;
 ; NPGSO-LABEL: define void @pr43371(
 ; NPGSO-SAME: ) #[[ATTR0]] {
-; NPGSO-NEXT:  [[ENTRY:.*]]:
+; NPGSO-NEXT:  [[ENTRY:.*:]]
 ; NPGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NPGSO:       [[VECTOR_PH]]:
 ; NPGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -351,12 +349,11 @@ define void @pr43371() optsize {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; NPGSO:       [[FOR_COND_CLEANUP28]]:
 ; NPGSO-NEXT:    unreachable
 ; NPGSO:       [[FOR_BODY29]]:
-; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; NPGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; NPGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; NPGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
@@ -390,7 +387,7 @@ define void @pr43371_pgso() !prof !14 {
 ;
 ; CHECK-LABEL: define void @pr43371_pgso(
 ; CHECK-SAME: ) !prof [[PROF14]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -412,12 +409,11 @@ define void @pr43371_pgso() !prof !14 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY29:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP28]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[FOR_BODY29]]:
-; CHECK-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; CHECK-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; CHECK-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; CHECK-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
@@ -428,7 +424,7 @@ define void @pr43371_pgso() !prof !14 {
 ;
 ; PGSO-LABEL: define void @pr43371_pgso(
 ; PGSO-SAME: ) !prof [[PROF14]] {
-; PGSO-NEXT:  [[ENTRY:.*]]:
+; PGSO-NEXT:  [[ENTRY:.*:]]
 ; PGSO-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PGSO:       [[VECTOR_PH]]:
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -450,12 +446,11 @@ define void @pr43371_pgso() !prof !14 {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; PGSO:       [[FOR_COND_CLEANUP28]]:
 ; PGSO-NEXT:    unreachable
 ; PGSO:       [[FOR_BODY29]]:
-; PGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
+; PGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
 ; PGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
 ; PGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
 ; PGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]

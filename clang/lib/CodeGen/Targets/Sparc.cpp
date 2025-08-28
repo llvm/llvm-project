@@ -237,8 +237,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
         /*ByVal=*/false);
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Integer types smaller than a register are extended.
   if (Size < 64 && Ty->isIntegerType())
@@ -303,6 +303,7 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
+  case ABIArgInfo::TargetSpecific:
     llvm_unreachable("Unsupported ABI kind for va_arg");
 
   case ABIArgInfo::Extend: {

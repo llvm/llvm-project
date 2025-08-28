@@ -1298,16 +1298,10 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_writelane_b32 v5, s37, 3
 ; GCN-NEXT:    v_mov_b32_e32 v4, v3
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v3, v4
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill

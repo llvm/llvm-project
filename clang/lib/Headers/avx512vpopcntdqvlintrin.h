@@ -16,6 +16,17 @@
 #define __AVX512VPOPCNTDQVLINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __min_vector_width__(128))) constexpr
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
+                 __min_vector_width__(256))) constexpr
+#else
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
@@ -24,17 +35,9 @@
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
                  __min_vector_width__(256)))
-
-#if defined(__cplusplus) && (__cplusplus >= 201103L)
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
-#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
-#else
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
-#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
 #endif
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_popcnt_epi64(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_popcnt_epi64(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v2du)__A);
 }
 
@@ -49,8 +52,7 @@ _mm_maskz_popcnt_epi64(__mmask8 __U, __m128i __A) {
   return _mm_mask_popcnt_epi64((__m128i)_mm_setzero_si128(), __U, __A);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
-_mm_popcnt_epi32(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_popcnt_epi32(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v4su)__A);
 }
 
@@ -65,7 +67,7 @@ _mm_maskz_popcnt_epi32(__mmask8 __U, __m128i __A) {
   return _mm_mask_popcnt_epi32((__m128i)_mm_setzero_si128(), __U, __A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi64(__m256i __A) {
   return (__m256i)__builtin_elementwise_popcount((__v4du)__A);
 }
@@ -81,7 +83,7 @@ _mm256_maskz_popcnt_epi64(__mmask8 __U, __m256i __A) {
   return _mm256_mask_popcnt_epi64((__m256i)_mm256_setzero_si256(), __U, __A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi32(__m256i __A) {
   return (__m256i)__builtin_elementwise_popcount((__v8su)__A);
 }
@@ -99,7 +101,5 @@ _mm256_maskz_popcnt_epi32(__mmask8 __U, __m256i __A) {
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
-#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
-#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 
 #endif

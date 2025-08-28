@@ -585,13 +585,13 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+dotprod") {
       DotProd = true;
     } else if (Feature == "+mve") {
       MVE |= MVE_INT;
     } else if (Feature == "+mve.fp") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
       HW_FP |= HW_FP_SP | HW_FP_HP;
@@ -1014,11 +1014,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
   // Armv8.2-A FP16 vector intrinsic
-  if ((FPU & NeonFPU) && HasLegalHalfType)
+  if ((FPU & NeonFPU) && HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
   // Armv8.2-A FP16 scalar intrinsics
-  if (HasLegalHalfType)
+  if (HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
   // Armv8.2-A dot product intrinsics

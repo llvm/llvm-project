@@ -224,6 +224,11 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for AArch64"),
                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableNewSMEABILowering("aarch64-new-sme-abi",
+                            cl::desc("Enable new lowering for the SME ABI"),
+                            cl::init(false), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -263,6 +268,7 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeKCFIPass(PR);
   initializeSMEABIPass(PR);
+  initializeMachineSMEABIPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -367,7 +373,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
           computeDefaultCPU(TT, CPU), FS, Options,
           getEffectiveRelocModel(TT, RM),
           getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
+      UseNewSMEABILowering(EnableNewSMEABILowering) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -668,10 +675,12 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
   }
 
-  // Expand any functions marked with SME attributes which require special
-  // changes for the calling convention or that require the lazy-saving
-  // mechanism specified in the SME ABI.
-  addPass(createSMEABIPass());
+  if (!EnableNewSMEABILowering) {
+    // Expand any functions marked with SME attributes which require special
+    // changes for the calling convention or that require the lazy-saving
+    // mechanism specified in the SME ABI.
+    addPass(createSMEABIPass());
+  }
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows()) {
@@ -782,6 +791,9 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  if (EnableNewSMEABILowering && TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createMachineSMEABIPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
 
@@ -812,6 +824,9 @@ bool AArch64PassConfig::addILPOpts() {
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
+  if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass());
+
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableDeadRegisterElimination)

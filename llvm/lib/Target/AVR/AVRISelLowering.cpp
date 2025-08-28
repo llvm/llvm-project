@@ -505,10 +505,9 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (SDValue const &Value : Op->op_values()) {
-    Entry.Node = Value;
-    Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Value, Value.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = IsSigned;
     Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);

@@ -490,6 +490,16 @@ private:
       return;
     }
 
+    // Preserve characters' dynamic length.
+    if (lenParams.empty() && box.isCharacter() &&
+        !box.hasNonDeferredLenParams()) {
+      auto charTy = mlir::dyn_cast<fir::CharacterType>(box.getEleTy());
+      if (charTy && charTy.hasDynamicLen()) {
+        fir::ExtendedValue exv{box};
+        lenParams.push_back(fir::factory::readCharLen(builder, loc, exv));
+      }
+    }
+
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);

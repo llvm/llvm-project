@@ -335,7 +335,7 @@ void CommandInterpreter::Initialize() {
     AddAlias("ni", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-in");
+  cmd_obj_sp = GetCommandSPExact("_regexp-step");
   if (cmd_obj_sp) {
     AddAlias("s", cmd_obj_sp);
     AddAlias("step", cmd_obj_sp);
@@ -944,6 +944,27 @@ void CommandInterpreter::LoadCommandDictionary() {
       CommandObjectSP jump_regex_cmd_sp(jump_regex_cmd_up.release());
       m_command_dict[std::string(jump_regex_cmd_sp->GetCommandName())] =
           jump_regex_cmd_sp;
+    }
+  }
+
+  std::shared_ptr<CommandObjectRegexCommand> step_regex_cmd_sp(
+      new CommandObjectRegexCommand(
+          *this, "_regexp-step",
+          "Single step, optionally to a specific function.",
+          "\n"
+          "_regexp-step                 // Single step\n"
+          "_regexp-step <function-name> // Step into the named function\n",
+          0, false));
+  if (step_regex_cmd_sp) {
+    if (step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*$",
+                                           "thread step-in") &&
+        step_regex_cmd_sp->AddRegexCommand("^[[:space:]]*(-.+)$",
+                                           "thread step-in %1") &&
+        step_regex_cmd_sp->AddRegexCommand(
+            "^[[:space:]]*(.+)[[:space:]]*$",
+            "thread step-in --end-linenumber block --step-in-target %1")) {
+      m_command_dict[std::string(step_regex_cmd_sp->GetCommandName())] =
+          step_regex_cmd_sp;
     }
   }
 }

@@ -126,6 +126,9 @@ clang-format is turned off or back on.
   // clang-format on
   void formatted_code_again;
 
+In addition, the ``OneLineFormatOffRegex`` option gives you a concise way to
+disable formatting for all of the lines that match the regular expression.
+
 
 Configuring Style in Code
 =========================
@@ -6483,13 +6486,51 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`
-  If ``true``, spaces will be inserted into ``{}``.
+  This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
 
-  .. code-block:: c++
+.. _SpaceInEmptyBraces:
 
-     true:                                false:
-     void f() { }                   vs.   void f() {}
-     while (true) { }                     while (true) {}
+**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 22` :ref:`¶ <SpaceInEmptyBraces>`
+  Specifies when to insert a space in empty braces.
+
+  .. note::
+
+   This option doesn't apply to initializer braces if
+   ``Cpp11BracedListStyle`` is set to ``true``.
+
+  Possible values:
+
+  * ``SIEB_Always`` (in configuration: ``Always``)
+    Always insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{ };
+
+  * ``SIEB_Block`` (in configuration: ``Block``)
+    Only insert a space in empty blocks.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{};
+
+  * ``SIEB_Never`` (in configuration: ``Never``)
+    Never insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() {}
+       class Unit {};
+       auto a = [] {};
+       int x{};
+
+
 
 .. _SpaceInEmptyParentheses:
 

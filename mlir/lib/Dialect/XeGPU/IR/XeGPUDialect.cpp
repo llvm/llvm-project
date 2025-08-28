@@ -67,7 +67,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
        StaticTileOffsetRange(sizePerWg, distUnit)) {
     SmallVector<Value> base =
         llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
-          return builder.create<arith::ConstantIndexOp>(loc, d);
+          return arith::ConstantIndexOp::create(builder, loc, d);
         });
 
     SmallVector<Value> adds = llvm::map_to_vector(
@@ -80,7 +80,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
         llvm::zip_equal(adds, sizePerWg), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
-              builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+              arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
 
     offsets.push_back(mods);
@@ -91,7 +91,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
 // Checks if the given shape can be evenly distributed based on the layout
 // and data factors provided by the LayoutAttr.
 bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
-                                         xegpu::LayoutAttr attr) {
+                                         xegpu::DistributeLayoutAttr attr) {
   assert(attr && "Layout attribute is missing.");
 
   // Checks whether the given shape can be evenly distributed using the
@@ -104,52 +104,51 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   // smaller than `layout[i] * data[i]`, allowing multiple compute units to
   // share the data.
   auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
-                           DenseI32ArrayAttr layout, DenseI32ArrayAttr data,
+                           SmallVector<int64_t> layout,
+                           SmallVector<int64_t> data,
                            bool rr = true) -> optional<SmallVector<int64_t>> {
     llvm::SmallVector<int64_t> newShape(shape);
-    if (layout) {
-      auto vec = llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      if (vec.size() != shape.size())
+    if (layout.size()) {
+      if (layout.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(shape, vec);
+      auto ratio = computeShapeRatio(shape, layout);
       if (!ratio.has_value())
         return std::nullopt;
       newShape = ratio.value();
     }
 
-    if (data) {
-      auto vec = llvm::to_vector_of<int64_t>(data.asArrayRef());
-      if (vec.size() != shape.size())
+    if (data.size()) {
+      if (data.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(newShape, vec);
+      auto ratio = computeShapeRatio(newShape, data);
       if (!ratio.has_value() && rr)
-        ratio = computeShapeRatio(vec, newShape);
+        ratio = computeShapeRatio(data, newShape);
       if (!ratio.has_value())
         return std::nullopt;
 
       // if data is not null, we always return it for next phase.
-      newShape = vec;
+      newShape = data;
     }
     return newShape;
   };
 
   // check the sgLayout and sgData
   auto maybeSgShape =
-      tryDistribute(shape, attr.getSgLayout(), attr.getSgData());
+      tryDistribute(shape, attr.getSgLayoutAsInt(), attr.getSgDataAsInt());
   if (!maybeSgShape)
     return false;
   auto sgShape = maybeSgShape.value();
 
   // check InstData, it neither have layout nor need round-robin
   auto maybeInstShape =
-      tryDistribute(sgShape, nullptr, attr.getInstData(), false);
+      tryDistribute(sgShape, {}, attr.getInstDataAsInt(), false);
   if (!maybeInstShape)
     return false;
   auto instShape = maybeInstShape.value();
 
   // check LaneLayout and LaneData
-  auto maybeLaneShape =
-      tryDistribute(instShape, attr.getLaneLayout(), attr.getLaneData(), false);
+  auto maybeLaneShape = tryDistribute(instShape, attr.getLaneLayoutAsInt(),
+                                      attr.getLaneDataAsInt(), false);
   return maybeLaneShape.has_value();
 }
 
@@ -271,7 +270,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
                                   Value linearId) {
   // delinearizeSubgroupId is only available for
   // workgroup-level layout attribute
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
   // TODO: handle order attribute
@@ -283,29 +282,30 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   if (!hasDefaultOrder())
     return mlir::emitError(loc, "order attribute is currently not supported.");
 
-  auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
+  auto dims = llvm::map_to_vector(getSgLayoutAsInt(), [&](int64_t d) -> Value {
     return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
   });
 
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
 
-/// Implements LayoutTrait::getOffsets to generate instructions for
-/// computing multi-dimensional offsets when distributed by LayoutAttr.
+/// Implements DistributeLayoutAttr::getOffsets to generate
+/// instructions for computing multi-dimensional offsets when distributed by
+/// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                        ArrayRef<int64_t> shape) {
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
@@ -322,7 +322,7 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 //===----------------------------------------------------------------------===//
 LogicalResult
 SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
-                  xegpu::LayoutTrait parent, DenseI64ArrayAttr dims) {
+                  xegpu::DistributeLayoutAttr parent, DenseI64ArrayAttr dims) {
   if (!parent || !dims)
     return emitError() << "expected parent layout and dims attribute";
 
@@ -340,7 +340,7 @@ SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 }
 
 SliceAttr SliceAttr::flatten() const {
-  xegpu::LayoutTrait parent = getParent();
+  xegpu::DistributeLayoutAttr parent = getParent();
   SmallVector<DenseI64ArrayAttr> slicedDims({getDims()});
 
   while (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(parent)) {
@@ -375,23 +375,24 @@ SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   return parent.delinearizeSubgroupId(builder, loc, linearId);
 }
 
-/// Implements LayoutTrait::getOffsets to generate instructions for
-/// computing multi-dimensional offsets when distributed by SliceAttr.
+/// Implements DistributeLayoutAttr::getOffsets to generate
+/// instructions for computing multi-dimensional offsets when distributed by
+/// SliceAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                       ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isWgLayout())
+  if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
@@ -427,7 +428,7 @@ RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 
-mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
+mlir::Type TensorDescType::parse(AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
   mlir::FailureOr<mlir::Attribute> encoding;
@@ -477,7 +478,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
       layout.value_or(mlir::Attribute()));
 }
 
-void TensorDescType::print(::mlir::AsmPrinter &printer) const {
+void TensorDescType::print(AsmPrinter &printer) const {
   printer << "<";
 
   auto shape = getShape();
@@ -522,10 +523,10 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
   return Base::get(context, shape, elementType, attr, layout);
 }
 
-LogicalResult TensorDescType::verify(
-    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
-    mlir::Attribute encoding, mlir::Attribute layout) {
+LogicalResult
+TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                       llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
+                       mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
 
   if (rank == 0)
@@ -589,6 +590,119 @@ LogicalResult TensorDescType::verify(
     }
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MemDescType
+//===----------------------------------------------------------------------===//
+mlir::Type MemDescType::parse(AsmParser &parser) {
+  llvm::SmallVector<int64_t> shape;
+  mlir::Type elementType;
+  mlir::FailureOr<MemLayoutAttr> layout;
+
+  // Parse literal '<'
+  if (parser.parseLess())
+    return {};
+
+  auto shapeLoc = parser.getCurrentLocation();
+  if (mlir::failed(parser.parseDimensionList(shape, false, true))) {
+    parser.emitError(shapeLoc, "failed to parse parameter 'shape'");
+    return {};
+  }
+
+  auto elemTypeLoc = parser.getCurrentLocation();
+  if (mlir::failed(parser.parseType(elementType))) {
+    parser.emitError(elemTypeLoc, "failed to parse parameter 'elementType'");
+    return {};
+  }
+
+  // parse optional attributes
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    MemLayoutAttr attr;
+    ParseResult res = parser.parseAttribute(attr);
+    if (mlir::failed(res))
+      return {};
+    layout = attr;
+  }
+
+  // Parse literal '>'
+  if (parser.parseGreater())
+    return {};
+
+  MLIRContext *ctxt = parser.getContext();
+  return MemDescType::getChecked(
+      [&]() { return parser.emitError(parser.getNameLoc()); }, ctxt, shape,
+      elementType, layout.value_or(MemLayoutAttr()));
+}
+
+void MemDescType::print(AsmPrinter &printer) const {
+  printer << "<";
+
+  printer.printDimensionList(getShape());
+  printer << 'x';
+  printer << getElementType();
+
+  if (auto layout = getMemLayout())
+    printer << ", " << layout;
+
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MemDescType
+//===----------------------------------------------------------------------===//
+
+Attribute MemLayoutAttr::parse(AsmParser &parser, Type type) {
+
+  auto context = parser.getContext();
+  llvm::SMLoc loc = parser.getCurrentLocation();
+
+  llvm::SmallDenseSet<StringRef> seenKeys;
+  SmallVector<NamedAttribute> attributes;
+
+  auto parseElt = [&]() -> ParseResult {
+    StringRef nameId;
+    if (failed(parser.parseKeyword(&nameId)))
+      return parser.emitError(loc, "expected valid attribute name");
+
+    if (!seenKeys.insert(nameId).second)
+      return parser.emitError(loc, "duplicate key '")
+             << nameId << " in mem layout attribute";
+
+    if (failed(parser.parseEqual()))
+      return failure();
+
+    Attribute attr;
+    if (failed(parser.parseAttribute(attr)))
+      return failure();
+    attributes.emplace_back(nameId, attr);
+    return success();
+  };
+
+  // Parse literal '<'
+  if (parser.parseLess())
+    return {};
+
+  if (failed(parser.parseCommaSeparatedList(parseElt)))
+    return {};
+
+  // Parse literal '>'
+  if (parser.parseGreater())
+    return {};
+
+  return parser.getChecked<MemLayoutAttr>(
+      loc, context, DictionaryAttr::get(context, attributes));
+}
+
+void MemLayoutAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  ArrayRef<NamedAttribute> attrs = getAttrs().getValue();
+  for (size_t i = 0; i < attrs.size(); i++) {
+    printer << attrs[i].getName().str() << " = " << attrs[i].getValue();
+    if (i < attrs.size() - 1)
+      printer << ", ";
+  }
+  printer << ">";
 }
 
 } // namespace xegpu

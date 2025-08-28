@@ -46,6 +46,8 @@ def non_configurable_patterns():
     vector.ApplyLowerOuterProductPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_gather
     vector.ApplyLowerGatherPatternsOp()
+    # CHECK: transform.apply_patterns.vector.unroll_from_elements
+    vector.ApplyUnrollFromElementsPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_scan
     vector.ApplyLowerScanPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_shape_cast

@@ -5,21 +5,21 @@
 @.str = private unnamed_addr constant [7 x i8] c"buffer\00", align 1
 
 define void @main() "hlsl.shader"="pixel"  {
-; CHECK:         %25 = OpFunction %2 None %3 ; -- Begin function main
+; CHECK:         %24 = OpFunction %2 None %3 ; -- Begin function main
 ; CHECK-NEXT:     %1 = OpLabel
-; CHECK-NEXT:    %26 = OpVariable %14 Function %23
-; CHECK-NEXT:    %27 = OpLoad %7 %24
-; CHECK-NEXT:    %28 = OpImageRead %5 %27 %16
-; CHECK-NEXT:    %29 = OpCompositeExtract %4 %28 0
-; CHECK-NEXT:    %30 = OpCompositeExtract %4 %28 1
-; CHECK-NEXT:    %31 = OpFAdd %4 %30 %29
-; CHECK-NEXT:    %32 = OpCompositeInsert %5 %31 %28 0
-; CHECK-NEXT:    %33 = OpLoad %7 %24
-; CHECK-NEXT:          OpImageWrite %33 %16 %32
+; CHECK-NEXT:    %25 = OpVariable %13 Function %22
+; CHECK-NEXT:    %26 = OpLoad %7 %23
+; CHECK-NEXT:    %27 = OpImageRead %5 %26 %15
+; CHECK-NEXT:    %28 = OpCompositeExtract %4 %27 0
+; CHECK-NEXT:    %29 = OpCompositeExtract %4 %27 1
+; CHECK-NEXT:    %30 = OpFAdd %4 %29 %28
+; CHECK-NEXT:    %31 = OpCompositeInsert %5 %30 %27 0
+; CHECK-NEXT:    %32 = OpLoad %7 %23
+; CHECK-NEXT:          OpImageWrite %32 %15 %31
 ; CHECK-NEXT:          OpReturn
 ; CHECK-NEXT:          OpFunctionEnd
 entry:
-  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %1 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %0, i32 0)
   %2 = load <4 x float>, ptr addrspace(11) %1, align 16
   %3 = extractelement <4 x float> %2, i64 0
@@ -31,7 +31,7 @@ entry:
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, i1, ptr) #0
+declare target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, ptr) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0), i32) #0

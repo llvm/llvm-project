@@ -254,7 +254,6 @@ bool llvm::applyDebugifyMetadata(
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
-    DIB.finalizeSubprogram(SP);
   }
   DIB.finalize();
 
@@ -705,6 +704,15 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   bool ResultForInsts = checkInstructions(
       DILocsBefore, DILocsAfter, InstToDelete, NameOfWrappedPass,
       FileNameFromCU, ShouldWriteIntoJSON, Bugs);
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  // If we are tracking DebugLoc coverage, replace each empty DebugLoc with an
+  // annotated location now so that it does not show up in future passes even if
+  // it is propagated to other instructions.
+  for (auto &L : DILocsAfter)
+    if (!L.second)
+      const_cast<Instruction *>(L.first)->setDebugLoc(DebugLoc::getUnknown());
+#endif
 
   bool ResultForVars = checkVars(DIVarsBefore, DIVarsAfter, NameOfWrappedPass,
                                  FileNameFromCU, ShouldWriteIntoJSON, Bugs);

@@ -111,6 +111,7 @@ private:
 
 public:
   static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
+  static unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
