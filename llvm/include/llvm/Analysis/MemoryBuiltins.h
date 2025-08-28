@@ -181,6 +181,13 @@ LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size,
                             const DataLayout &DL, const TargetLibraryInfo *TLI,
                             ObjectSizeOpts Opts = {});
 
+/// Like getObjectSize(), but only supports base objects (like allocas,
+/// global variables and allocator calls). Requires ExactSizeFromOffset mode.
+LLVM_ABI std::optional<TypeSize> getBaseObjectSize(const Value *Ptr,
+                                                   const DataLayout &DL,
+                                                   const TargetLibraryInfo *TLI,
+                                                   ObjectSizeOpts Opts = {});
+
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will
 /// not return null, and may return conservative values governed by the second
