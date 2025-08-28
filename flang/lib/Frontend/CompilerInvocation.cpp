@@ -1566,6 +1566,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
                                     fortranOptions.predefinitions);
   }
 
+  if (frontendOptions.features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA)) {
+    fortranOptions.predefinitions.emplace_back("_CUDA", "1");
+  }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
   if (targetTriple.isPPC()) {
     // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
