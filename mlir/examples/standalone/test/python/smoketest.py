@@ -25,6 +25,8 @@ with Context():
     # CHECK: standalone.foo %[[C]] : i32
     print(str(module))
 
+from mlir_standalone.dialects import quant
+
 try:
     from mlir_standalone.dialects import quant
 except ImportError as e:
