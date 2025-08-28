@@ -59,6 +59,24 @@ uint32_t psll_hs(uint32_t rs1, uint32_t rs2) {
   return __riscv_psll_hs(rs1, rs2);
 }
 
+// RV32P-LABEL: @padd_bs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.padd.bs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t padd_bs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_padd_bs(rs1, rs2);
+}
+
+// RV32P-LABEL: @padd_hs(
+// RV32P-NEXT:  entry:
+// RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.padd.hs.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])
+// RV32P-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t padd_hs(uint32_t rs1, uint32_t rs2) {
+  return __riscv_padd_hs(rs1, rs2);
+}
+
 // RV32P-LABEL: @sadd(
 // RV32P-NEXT:  entry:
 // RV32P-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.sadd.i32(i32 [[RS1:%.*]], i32 [[RS2:%.*]])

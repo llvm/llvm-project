@@ -81,3 +81,30 @@ uint64_t psll_hs(uint64_t rs1, uint64_t rs2) {
 uint64_t psll_ws(uint64_t rs1, uint64_t rs2) {
   return __riscv_psll_ws(rs1, rs2);
 }
+
+// RV64P-LABEL: @padd_bs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.padd.bs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t padd_bs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_padd_bs(rs1, rs2);
+}
+
+// RV64P-LABEL: @padd_hs(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.padd.hs.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t padd_hs(uint64_t rs1, uint64_t rs2) {
+  return __riscv_padd_hs(rs1, rs2);
+}
+
+// RV64P-LABEL: @padd_ws(
+// RV64P-NEXT:  entry:
+// RV64P-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.padd.ws.i64(i64 [[RS1:%.*]], i64 [[RS2:%.*]])
+// RV64P-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t padd_ws(uint64_t rs1, uint64_t rs2) {
+  return __riscv_padd_ws(rs1, rs2);
+}
