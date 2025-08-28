@@ -2666,23 +2666,23 @@ public:
     // Generate optimal instruction sequences based on exact size.
     switch (Size) {
     case 1:
-      AddLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9);
       break;
     case 2:
-      AddLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9);
       break;
     case 4:
-      AddLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W3);
+      AddLoadStorePair(AArch64::LDRWui, AArch64::STRWui, AArch64::W9);
       break;
     case 8:
-      AddLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X3);
+      AddLoadStorePair(AArch64::LDRXui, AArch64::STRXui, AArch64::X9);
       break;
     case 16:
-      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16);
       break;
     case 32:
-      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q0, 0);
-      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q1, 1);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q16, 0);
+      AddLoadStorePair(AArch64::LDRQui, AArch64::STRQui, AArch64::Q17, 1);
       break;
 
     default:
@@ -2693,11 +2693,11 @@ public:
 
         const std::array<std::tuple<uint64_t, unsigned, unsigned, unsigned>, 5>
             LoadStoreOps = {
-                {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q0},
-                 {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X3},
-                 {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W3},
-                 {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W3},
-                 {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3}}};
+                {{16, AArch64::LDRQui, AArch64::STRQui, AArch64::Q16},
+                 {8, AArch64::LDRXui, AArch64::STRXui, AArch64::X9},
+                 {4, AArch64::LDRWui, AArch64::STRWui, AArch64::W9},
+                 {2, AArch64::LDRHHui, AArch64::STRHHui, AArch64::W9},
+                 {1, AArch64::LDRBBui, AArch64::STRBBui, AArch64::W9}}};
 
         for (const auto &[OpSize, LoadOp, StoreOp, TempReg] : LoadStoreOps)
           while (Remaining >= OpSize) {
