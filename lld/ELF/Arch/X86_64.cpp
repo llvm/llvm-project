@@ -376,6 +376,13 @@ void X86_64::relaxCFIJumpTables() const {
       // because the last entry controls which output section the jump table is
       // placed into, which affects move eligibility for other sections.
       auto *lastSec = [&]() -> InputSection * {
+        // If the jump table section is more aligned than the entry size, skip
+        // this because there's no guarantee that we'll be able to emit a
+        // padding section that places the last entry at a correctly aligned
+        // address.
+        if (sec->addralign > sec->entsize)
+          return nullptr;
+
         Relocation *lastReloc = sec->relocs().end();
         while (lastReloc != sec->relocs().begin() &&
                (lastReloc - 1)->offset >= sec->size - sec->entsize)
