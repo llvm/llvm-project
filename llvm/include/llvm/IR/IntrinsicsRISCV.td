@@ -1913,6 +1913,9 @@ let TargetPrefix = "riscv" in {
   defm psll_bs : RVPBinaryIntrinsics;
   defm psll_hs : RVPBinaryIntrinsics;
   defm psll_ws : RVPBinaryIntrinsics;
+  defm padd_bs : RVPBinaryIntrinsics;
+  defm padd_hs : RVPBinaryIntrinsics;
+  defm padd_ws : RVPBinaryIntrinsics;
   defm sadd    : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics

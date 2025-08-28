@@ -68,6 +68,28 @@ define i32 @psll_hs(i32 %a, i32 %b) {
   ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.padd.bs.i32.i32(i32, i32)
+
+define i32 @padd_bs(i32 %a, i32 %b) {
+; RV32P-LABEL: padd_bs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    padd.bs a0, a0, a1
+; RV32P-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.padd.bs.i32.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.padd.hs.i32.i32(i32, i32)
+
+define i32 @padd_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: padd_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    padd.hs a0, a0, a1
+; RV32P-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.padd.hs.i32.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {
