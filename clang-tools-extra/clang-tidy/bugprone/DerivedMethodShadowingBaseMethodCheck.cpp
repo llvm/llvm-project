@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MethodHidingCheck.h"
+#include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <stack>
@@ -83,10 +83,12 @@ AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
 
 } // namespace
 
-MethodHidingCheck::MethodHidingCheck(StringRef Name, ClangTidyContext *Context)
+DerivedMethodShadowingBaseMethodCheck::DerivedMethodShadowingBaseMethodCheck(
+    StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
-void MethodHidingCheck::registerMatchers(MatchFinder *Finder) {
+void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           unless(anyOf(isOutOfLine(), isStaticStorageClass(), isImplicit(),
@@ -103,7 +105,8 @@ void MethodHidingCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void MethodHidingCheck::check(const MatchFinder::MatchResult &Result) {
+void DerivedMethodShadowingBaseMethodCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *ShadowingMethod =
       Result.Nodes.getNodeAs<CXXMethodDecl>("shadowing_method");
   const auto *DerivedClass =

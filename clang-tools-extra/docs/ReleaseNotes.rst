@@ -135,8 +135,8 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
-- New :doc:`bugprone-method-hiding
-  <clang-tidy/checks/bugprone/method-hiding>` check.
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
   Finds derived class methods that shadow a (non-virtual) base class method.
 

@@ -91,6 +91,7 @@ Clang-Tidy Checks
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
+   :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
@@ -110,7 +111,6 @@ Clang-Tidy Checks
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
-   :doc:`bugprone-method-hiding <bugprone/method-hiding>`
    :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,
    :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
@@ -250,12 +250,12 @@ Clang-Tidy Checks
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
-   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"

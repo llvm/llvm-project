@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_METHODHIDINGCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_METHODHIDINGCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DERIVEDMETHODSHADOWINGBASEMETHODCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DERIVEDMETHODSHADOWINGBASEMETHODCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,10 +19,11 @@ namespace clang::tidy::bugprone {
 /// This anti-pattern is a Liskov violation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/method-hiding.html
-class MethodHidingCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/derived-method-shadowing-base-method.html
+class DerivedMethodShadowingBaseMethodCheck : public ClangTidyCheck {
 public:
-  MethodHidingCheck(StringRef Name, ClangTidyContext *Context);
+  DerivedMethodShadowingBaseMethodCheck(StringRef Name,
+                                        ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -35,4 +36,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_METHODHIDINGCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DERIVEDMETHODSHADOWINGBASEMETHODCHECK_H

@@ -31,7 +31,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   IncorrectEnableIfCheck.cpp
   IncorrectEnableSharedFromThisCheck.cpp
   InvalidEnumDefaultInitializationCheck.cpp
-  MethodHidingCheck.cpp
+  DerivedMethodShadowingBaseMethodCheck.cpp
   UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp

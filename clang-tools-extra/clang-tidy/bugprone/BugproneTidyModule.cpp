@@ -23,6 +23,7 @@
 #include "CopyConstructorInitCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
@@ -42,7 +43,6 @@
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
-#include "MethodHidingCheck.h"
 #include "MisleadingSetterOfReferenceCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MisplacedPointerArithmeticInAllocCheck.h"
@@ -154,7 +154,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
-    CheckFactories.registerCheck<MethodHidingCheck>("bugprone-method-hiding");
+    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
+        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
