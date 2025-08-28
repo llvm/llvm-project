@@ -852,8 +852,7 @@ cond.end:
 ; computeKnownBits doesn't lose this.
 define i32 @abs_range_metadata(i32 %x) {
 ; CHECK-LABEL: @abs_range_metadata(
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[A]], 15
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false), !range !1
