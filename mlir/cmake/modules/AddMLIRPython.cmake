@@ -99,6 +99,38 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
+function(generate_type_stubs module_name depends_target output_dir)
+  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
+  elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
+      set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  else()
+      message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
+  endif()
+
+  set(NB_STUBGEN_CMD
+      "${Python_EXECUTABLE}"
+      "${NB_STUBGEN}"
+      --module
+      "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${module_name}"
+      -i
+      "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.."
+      --recursive
+      --include-private
+      --output-dir
+      "${output_dir}")
+
+  set(NB_STUBGEN_OUTPUT "${output_dir}/${module_name}.pyi")
+  add_custom_command(
+    OUTPUT ${NB_STUBGEN_OUTPUT}
+    COMMAND ${NB_STUBGEN_CMD}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    DEPENDS ${depends_target})
+  set(_name "MLIRPythonModuleStubs_${module_name}")
+  add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
+  set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
+endfunction()
+
 # Function: declare_mlir_python_extension
 # Declares a buildable python extension from C++ source files. The built
 # module is considered a python source file and included as everything else.
@@ -243,6 +275,17 @@ function(add_mlir_python_modules name)
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
+      generate_type_stubs(
+        ${_module_name}
+        ${_extension_target}
+        "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
+      )
+      declare_mlir_python_sources("_${_module_name}_type_stub_gen"
+        ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+        ADD_TO_PARENT "${sources_target}"
+        SOURCES_GLOB "_mlir_libs/${_module_name}/**/*.pyi"
+      )
+      add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()
