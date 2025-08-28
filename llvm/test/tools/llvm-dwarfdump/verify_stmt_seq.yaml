@@ -4,13 +4,24 @@
 
 # RUN: yaml2obj %s -o verify_stmt_seq.o
 # RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID --implicit-check-not=error:
+# RUN: llvm-dwarfdump -debug-line -verbose -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_DEBUG_LINE
 
 
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x0000002e, 0x000000fd)
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00000000)
 
+# 0xd3 would be a valid offset, if the line table wan't ill formed with two rows having the same PC (0x8c).
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000d3 does not point to a valid sequence offset in the line table
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x000000d3)
+
+# CHECK_DEBUG_LINE:      0x000000d3: 05 DW_LNS_set_column (85)
+# CHECK_DEBUG_LINE-NEXT: 0x000000d5: 0a DW_LNS_set_prologue_end
+# CHECK_DEBUG_LINE-NEXT: 0x000000d6: 00 DW_LNE_set_address (0x000000000000008c)
+# CHECK_DEBUG_LINE-NEXT: 0x000000e1: 03 DW_LNS_advance_line (30)
+# CHECK_DEBUG_LINE-NEXT: 0x000000e3: 01 DW_LNS_copy
+# CHECK_DEBUG_LINE-NEXT:             0x000000000000008c     30     85      1   0             0       0  is_stmt prologue_end
+# CHECK_DEBUG_LINE-NEXT: 0x000000e4: 00 DW_LNE_end_sequence
+# CHECK_DEBUG_LINE-NEXT:             0x000000000000008c     30     85      1   0             0       0  is_stmt end_sequence
 
 # CHECK_INVALID: error: DIE has invalid DW_AT_LLVM_stmt_sequence encoding
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_data4]  (0x000000a7)
