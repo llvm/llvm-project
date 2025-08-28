@@ -423,14 +423,19 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask));
     DPPInst.addImm(CombBCZ ? 1 : 0);
 
-    for (AMDGPU::OpName Op :
-         {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
-      int OpIdx = AMDGPU::getNamedOperandIdx(DPPOp, Op);
+    constexpr AMDGPU::OpName Srcs[] = {
+        AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
+
+    // FIXME: isOperandLegal expects to operate on an completely built
+    // instruction. We should have better legality APIs to check if the
+    // candidate operands will be legal without building the instruction first.
+    for (auto [I, OpName] : enumerate(Srcs)) {
+      int OpIdx = AMDGPU::getNamedOperandIdx(DPPOp, OpName);
       if (OpIdx == -1)
         break;
 
       if (!TII->isOperandLegal(*DPPInst, OpIdx)) {
-        LLVM_DEBUG(dbgs() << "  failed: src operand is illegal\n");
+        LLVM_DEBUG(dbgs() << "  failed: src" << I << " operand is illegal\n");
         Fail = true;
         break;
       }
