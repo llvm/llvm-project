@@ -2748,6 +2748,12 @@ public:
     return Insts;
   }
 
+  void createBTI(MCInst &Inst, bool CouldCall, bool CouldJump) const override {
+    Inst.setOpcode(AArch64::HINT);
+    unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
+    Inst.addOperand(MCOperand::createImm(HintNum));
+  }
+
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
                                          MCPhysReg RegName,
                                          int64_t Addend = 0) const override {

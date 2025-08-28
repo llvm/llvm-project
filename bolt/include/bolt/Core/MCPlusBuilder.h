@@ -1863,6 +1863,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Create a BTI landing pad instruction.
+  virtual void createBTI(MCInst &Inst, bool CouldCall, bool CouldJump) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
