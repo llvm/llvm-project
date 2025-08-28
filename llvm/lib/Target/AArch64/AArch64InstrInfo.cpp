@@ -5318,15 +5318,49 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::FPR64RegClass.contains(SrcReg)) {
-    BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::dsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::dsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::FPR32RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::ssub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
                                                      &AArch64::FPR64RegClass);
@@ -5348,8 +5382,24 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR16RegClass.contains(DestReg) &&
       AArch64::FPR16RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
                                                      &AArch64::FPR64RegClass);
@@ -5375,8 +5425,24 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR8RegClass.contains(DestReg) &&
       AArch64::FPR8RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
                                                      &AArch64::FPR64RegClass);
