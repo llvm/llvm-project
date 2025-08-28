@@ -261,7 +261,7 @@ public:
   }
 
   /// Check if the SetVector contains the given key.
-  bool contains(const key_type &key) const {
+  [[nodiscard]] bool contains(const key_type &key) const {
     if constexpr (canBeSmall())
       if (isSmall())
         return is_contained(vector_, key);
@@ -271,12 +271,8 @@ public:
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
-  size_type count(const key_type &key) const {
-    if constexpr (canBeSmall())
-      if (isSmall())
-        return is_contained(vector_, key);
-
-    return set_.count(key);
+  [[nodiscard]] size_type count(const key_type &key) const {
+    return contains(key) ? 1 : 0;
   }
 
   /// Completely clear the SetVector
