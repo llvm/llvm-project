@@ -156,8 +156,8 @@ class DebuginfodServer {
 public:
   HTTPServer Server;
   DebuginfodServer(DebuginfodLog &Log, DebuginfodCollection &Collection);
-  static Expected<DebuginfodServer>
-  create(DebuginfodLog &Log, DebuginfodCollection &Collection);
+  static Expected<DebuginfodServer> create(DebuginfodLog &Log,
+                                           DebuginfodCollection &Collection);
 
 private:
   DebuginfodServer() = default;
