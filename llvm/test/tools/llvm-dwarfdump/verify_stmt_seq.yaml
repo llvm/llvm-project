@@ -9,6 +9,9 @@
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x0000002e, 0x000000fd)
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00000000)
 
+# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000d3 does not point to a valid sequence offset in the line table
+# CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x000000d3)
+
 # CHECK_INVALID: error: DIE has invalid DW_AT_LLVM_stmt_sequence encoding
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_data4]  (0x000000a7)
 
@@ -22,7 +25,7 @@
 # CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of bounds occurred 1 time(s).
 # CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of line table bounds occurred 1 time(s).
 # CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence encoding occurred 1 time(s).
-# CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence offset occurred 1 time(s).
+# CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence offset occurred 2 time(s).
 
 --- !mach-o
 IsLittleEndian: true
