@@ -231,16 +231,18 @@ static int runOneTest(const char *Argv0) {
       Timeout = 1;
 
     auto HasError = any_of(Subprocesses, [&](auto &P) {
-      auto WP = sys::Wait(P, Timeout);
+      std::string ErrMsg;
+      auto WP = sys::Wait(P, Timeout, /*ErrMsg=*/&ErrMsg);
       if (WP.ReturnCode == 0)
         return false;
-      if ((Conf.Settings & CheckTermination) && WP.ReturnCode == -2) {
+      if ((Conf.Settings & CheckTermination) && WP.ReturnCode == -2 &&
+          StringRef(ErrMsg).starts_with("Child timed out")) {
         if (Verbose)
           llvm::errs() << "subprocess killed successfully\n";
         return false;
       }
       llvm::errs() << "subprocess failed with error code (" << WP.ReturnCode
-                   << ")\n";
+                   << "): " << ErrMsg << "\n";
       return true;
     });
     if (HasError) {
