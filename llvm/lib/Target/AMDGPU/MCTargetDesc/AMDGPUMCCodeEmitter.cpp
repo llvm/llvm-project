@@ -272,10 +272,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-      return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-              OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
-                 ? 254
-                 : 255;
+      return AMDGPU::getOperandSize(OpInfo) == 8 ? 254 : 255;
   } else {
     assert(!MO.isDFPImm());
 
