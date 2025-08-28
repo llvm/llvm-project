@@ -294,79 +294,141 @@ tools.extend(
 )
 
 
-# Find (major, minor) version of ptxas
 def ptxas_version(ptxas):
-    ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
-    ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
-    ptxas_cmd.wait()
-    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
-    if match:
-        return (int(match.group(1)), int(match.group(2)))
-    print("couldn't determine ptxas version")
-    return None
+    output = subprocess.check_output([ptxas, "--version"], text=True)
+    match = re.search(r"release (\d+)\.(\d+)", output)
+    if not match:
+        raise RuntimeError("Couldn't determine ptxas version")
+    return int(match.group(1)), int(match.group(2))
 
 
-# Enable %ptxas and %ptxas-verify tools.
-# %ptxas-verify defaults to sm_60 architecture. It can be overriden
-# by specifying required one, for instance: %ptxas-verify -arch=sm_80.
+def ptxas_isa_versions(ptxas):
+    result = subprocess.run(
+        [ptxas, "--list-version"],
+        capture_output=True,
+        text=True,
+    )
+    versions = []
+    for line in result.stdout.splitlines():
+        match = re.match(r"(\d+)\.(\d+)", line)
+        if match:
+            versions.append((int(match.group(1)), int(match.group(2))))
+    return versions
+
+
+def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
+    supported_isa_versions = ptxas_isa_versions(ptxas)
+    if supported_isa_versions:
+        return supported_isa_versions
+    if major_version >= 13:
+        raise RuntimeError(f"ptxas {ptxas} does not support ISA version listing")
+
+    cuda_version_to_isa_version = {
+        (12, 9): [(8, 8)],
+        (12, 8): [(8, 7)],
+        (12, 7): [(8, 6)],
+        (12, 6): [(8, 5)],
+        (12, 5): [(8, 5)],
+        (12, 4): [(8, 4)],
+        (12, 3): [(8, 3)],
+        (12, 2): [(8, 2)],
+        (12, 1): [(8, 1)],
+        (12, 0): [(8, 0)],
+        (11, 8): [(7, 8)],
+        (11, 7): [(7, 7)],
+        (11, 6): [(7, 6)],
+        (11, 5): [(7, 5)],
+        (11, 4): [(7, 4)],
+        (11, 3): [(7, 3)],
+        (11, 2): [(7, 2)],
+        (11, 1): [(7, 1)],
+        (11, 0): [(7, 0)],
+        (10, 2): [(6, 5)],
+        (10, 1): [(6, 4)],
+        (10, 0): [(6, 3)],
+        (9, 2): [(6, 2)],
+        (9, 1): [(6, 1)],
+        (9, 0): [(6, 0)],
+        (8, 0): [(5, 0)],
+        (7, 5): [(4, 3)],
+        (7, 0): [(4, 2)],
+        (6, 5): [(4, 1)],
+        (6, 0): [(4, 0)],
+        (5, 5): [(3, 2)],
+        (5, 0): [(3, 1)],
+        (4, 1): [(3, 0)],
+        (4, 0): [(2, 3)],
+        (3, 2): [(2, 2)],
+        (3, 1): [(2, 1)],
+        (3, 0): [(2, 0), (1, 5)],
+        (2, 2): [(1, 4)],
+        (2, 1): [(1, 3)],
+        (2, 0): [(1, 2)],
+        (1, 1): [(1, 1)],
+        (1, 0): [(1, 0)],
+    }
+
+    supported_isa_versions = []
+    for (major, minor), isa_versions in cuda_version_to_isa_version.items():
+        if (major, minor) <= (major_version, minor_version):
+            for isa_version in isa_versions:
+                supported_isa_versions.append(isa_version)
+    return supported_isa_versions
+
+
+def ptxas_supported_sms(ptxas_executable):
+    result = subprocess.run(
+        [ptxas_executable, "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", result.stdout, re.DOTALL)
+    allowed_values = gpu_arch_section.group(1)
+    supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
+
+    if not supported_sms:
+        raise RuntimeError("No SM architecture values found in ptxas help output")
+    return supported_sms
+
+
+def ptxas_supports_address_size_32(ptxas_executable):
+    result = subprocess.run(
+        [ptxas_executable, "-m 32"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if "is not defined for option 'machine'" in result.stderr:
+        return False
+    if "Missing .version directive at start of file" in result.stderr:
+        return True
+    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
+
+
 def enable_ptxas(ptxas_executable):
-    version = ptxas_version(ptxas_executable)
-    if version:
-        # ptxas is supposed to be backward compatible with previous
-        # versions, so add a feature for every known version prior to
-        # the current one.
-        ptxas_known_versions = [
-            (9, 0),
-            (9, 1),
-            (9, 2),
-            (10, 0),
-            (10, 1),
-            (10, 2),
-            (11, 0),
-            (11, 1),
-            (11, 2),
-            (11, 3),
-            (11, 4),
-            (11, 5),
-            (11, 6),
-            (11, 7),
-            (11, 8),
-            (12, 0),
-            (12, 1),
-            (12, 2),
-            (12, 3),
-            (12, 4),
-            (12, 5),
-            (12, 6),
-            (12, 8),
-        ]
-
-        def version_int(ver):
-            return ver[0] * 100 + ver[1]
-
-        # ignore ptxas if its version is below the minimum supported
-        # version
-        min_version = ptxas_known_versions[0]
-        if version_int(version) < version_int(min_version):
-            print(
-                "Warning: ptxas version {}.{} is not supported".format(
-                    version[0], version[1]
-                )
-            )
-            return
-
-        for known_version in ptxas_known_versions:
-            if version_int(known_version) <= version_int(version):
-                major, minor = known_version
-                config.available_features.add("ptxas-{}.{}".format(major, minor))
-
     config.available_features.add("ptxas")
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", "{} -arch=sm_60 -c -".format(ptxas_executable)),
+            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
         ]
     )
+
+    major_version, minor_version = ptxas_version(ptxas_executable)
+    config.available_features.add(f"ptxas-{major_version}.{minor_version}")
+
+    for major, minor in ptxas_supported_isa_versions(
+        ptxas_executable, major_version, minor_version
+    ):
+        config.available_features.add(f"ptxas-isa-{major}.{minor}")
+
+    for sm in ptxas_supported_sms(ptxas_executable):
+        config.available_features.add(f"ptxas-sm_{sm}")
+
+    if ptxas_supports_address_size_32(ptxas_executable):
+        config.available_features.add("ptxas-ptr32")
 
 
 ptxas_executable = (

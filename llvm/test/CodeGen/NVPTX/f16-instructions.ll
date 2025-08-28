@@ -3,7 +3,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -mattr=+ptx60                                                 \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16-NOFTZ %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 && ptxas-isa-6.0 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -mattr=+ptx60                                                 \
@@ -14,7 +14,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16-FTZ %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 && ptxas-isa-6.0 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -denormal-fp-math-f32=preserve-sign -mattr=+ptx60             \
@@ -25,7 +25,7 @@
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:          -verify-machineinstrs -mattr=+ptx60                         \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math   \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
@@ -34,7 +34,7 @@
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                               \
+; RUN: %if ptxas-sm_52 %{                                                               \
 ; RUN:   llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
 ; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs         \
 ; RUN:   | %ptxas-verify -arch=sm_52                                              \
