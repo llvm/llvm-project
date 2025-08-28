@@ -24,6 +24,10 @@
 #include "llvm/Support/Memory.h"
 
 namespace lldb_private {
+
+std::unique_ptr<swift::SwiftObjectFileFormat>
+GetSwiftObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type);
+
 class LLDBMemoryReader;
 class MemoryReaderLocalBufferHolder {
 public:
