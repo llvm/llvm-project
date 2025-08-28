@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 #define LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 
-#include "FunctionPointer.h"
 #include "Pointer.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
@@ -43,7 +42,7 @@ public:
 
 private:
   const Context *Ctx = nullptr;
-  std::variant<std::monostate, Pointer, FunctionPointer, APValue> Value;
+  std::variant<std::monostate, Pointer, APValue> Value;
   ResultKind Kind = Empty;
   DeclTy Source = nullptr; // Currently only needed for dump().
 
@@ -60,11 +59,6 @@ private:
     assert(empty());
     Value = std::move(V);
     Kind = RValue;
-  }
-  void setFunctionPointer(const FunctionPointer &P) {
-    assert(empty());
-    Value = P;
-    Kind = LValue;
   }
   void setInvalid() {
     // We are NOT asserting empty() here, since setting it to invalid
