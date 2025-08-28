@@ -2599,20 +2599,17 @@ public:
   }
 
   InstructionListType createInlineMemcpy(bool ReturnEnd) const override {
-    // Fallback
     return createInlineMemcpy(ReturnEnd, std::nullopt);
   }
 
   std::optional<uint64_t>
   extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
-    if (Inst.getOpcode() == AArch64::MOVZXi && Inst.getNumOperands() >= 3) {
-      if (Inst.getOperand(0).isReg() &&
-          Inst.getOperand(0).getReg() == TargetReg &&
-          Inst.getOperand(1).isImm() && Inst.getOperand(2).isImm() &&
-          Inst.getOperand(2).getImm() == 0) {
-        return Inst.getOperand(1).getImm();
-      }
-    }
+    if (Inst.getOpcode() == AArch64::MOVZXi && Inst.getNumOperands() >= 3 &&
+        Inst.getOperand(0).isReg() &&
+        Inst.getOperand(0).getReg() == TargetReg &&
+        Inst.getOperand(1).isImm() && Inst.getOperand(2).isImm() &&
+        Inst.getOperand(2).getImm() == 0)
+      return Inst.getOperand(1).getImm();
     return std::nullopt;
   }
 
@@ -2622,7 +2619,6 @@ public:
     InstructionListType Code;
     uint64_t Size = *KnownSize;
 
-    // Generate the optimized memcpy sequence.
     generateSizeSpecificMemcpy(Code, Size);
 
     // If _memcpy8, adjust X0 to return dest+size instead of dest.
@@ -2701,13 +2697,11 @@ public:
           Remaining -= 2;
           Offset += 2;
         }
-        if (Remaining == 1) {
+        if (Remaining == 1)
           addLoadStorePair(AArch64::LDRBBui, AArch64::STRBBui, AArch64::W3,
                            Offset);
-        }
-      } else {
+      } else
         Code.clear();
-      }
       break;
     }
     return Code;

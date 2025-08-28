@@ -1872,6 +1872,7 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         if (BC.isAArch64()) {
           BitVector WrittenRegs(BC.MRI->getNumRegs());
           MCPhysReg SizeReg = BC.MIB->getIntArgRegister(2);
+          std::optional<uint64_t> ExtractedSize;
 
           // Look backwards for size-setting instruction.
           for (auto InstIt = BB.begin(); InstIt != II; ++InstIt) {
@@ -1879,12 +1880,10 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
             WrittenRegs.reset();
             BC.MIB->getWrittenRegs(Inst, WrittenRegs);
 
-            if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg]) {
-              if (std::optional<uint64_t> ExtractedSize =
-                      BC.MIB->extractMoveImmediate(Inst, SizeReg)) {
-                KnownSize = *ExtractedSize;
-                break;
-              }
+            if (SizeReg != BC.MIB->getNoRegister() && WrittenRegs[SizeReg] &&
+                (ExtractedSize = BC.MIB->extractMoveImmediate(Inst, SizeReg))) {
+              KnownSize = *ExtractedSize;
+              break;
             }
           }
         }
