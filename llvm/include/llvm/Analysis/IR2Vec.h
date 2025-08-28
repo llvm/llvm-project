@@ -54,14 +54,19 @@ class IR2VecVocabAnalysis;
 /// of the IR entities. Flow-aware embeddings build on top of symbolic
 /// embeddings and additionally capture the flow information in the IR.
 /// IR2VecKind is used to specify the type of embeddings to generate.
-/// Currently, only Symbolic embeddings are supported.
-enum class IR2VecKind { Symbolic };
+/// Note: Implementation of FlowAware embeddings is not same as the one
+/// described in the paper. The current implementation is a simplified version
+/// that captures the flow information (SSA-based use-defs) without tracing
+/// through memory level use-defs in the embedding computation described in the
+/// paper.
+enum class IR2VecKind { Symbolic, FlowAware };
 
 namespace ir2vec {
 
 LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
+LLVM_ABI extern cl::opt<IR2VecKind> IR2VecEmbeddingKind;
 
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.
@@ -257,9 +262,8 @@ protected:
   LLVM_ABI Embedder(const Function &F, const Vocabulary &Vocab);
 
   /// Helper function to compute embeddings. It generates embeddings for all
-  /// the instructions and basic blocks in the function F. Logic of computing
-  /// the embeddings is specific to the kind of embeddings being computed.
-  virtual void computeEmbeddings() const = 0;
+  /// the instructions and basic blocks in the function F.
+  void computeEmbeddings() const;
 
   /// Helper function to compute the embedding for a given basic block.
   /// Specific to the kind of embeddings being computed.
@@ -296,14 +300,23 @@ public:
 /// representations obtained from the Vocabulary.
 class LLVM_ABI SymbolicEmbedder : public Embedder {
 private:
-  void computeEmbeddings() const override;
   void computeEmbeddings(const BasicBlock &BB) const override;
 
 public:
   SymbolicEmbedder(const Function &F, const Vocabulary &Vocab)
-      : Embedder(F, Vocab) {
-    FuncVector = Embedding(Dimension, 0);
-  }
+      : Embedder(F, Vocab) {}
+};
+
+/// Class for computing the Flow-aware embeddings of IR2Vec.
+/// Flow-aware embeddings build on the vocabulary, just like Symbolic
+/// embeddings, and additionally capture the flow information in the IR.
+class LLVM_ABI FlowAwareEmbedder : public Embedder {
+private:
+  void computeEmbeddings(const BasicBlock &BB) const override;
+
+public:
+  FlowAwareEmbedder(const Function &F, const Vocabulary &Vocab)
+      : Embedder(F, Vocab) {}
 };
 
 } // namespace ir2vec
