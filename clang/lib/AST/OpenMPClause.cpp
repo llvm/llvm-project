@@ -1202,8 +1202,12 @@ OMPClauseMappableExprCommon::findAttachPtrExpr(
   // stripping away one component at a time, until we reach a pointer Expr
   // (that is not a binary operator). The first such pointer should be the
   // attach base-pointer for the component list.
-  for (size_t I = 1; I < Components.size(); ++I) {
-    const Expr *CurExpr = Components[I].getAssociatedExpression();
+  for (auto [I, Component] : llvm::enumerate(Components)) {
+    // Skip past the first component.
+    if (I == 0)
+      continue;
+
+    const Expr *CurExpr = Component.getAssociatedExpression();
     if (!CurExpr)
       break;
 

@@ -7209,8 +7209,8 @@ private:
   /// The component-depth of `nullptr` (i.e. no attach-ptr) is `std::nullopt`.
   /// TODO: Not urgent, but we should ideally use the number of pointer
   /// dereferences in an expr as an indicator of its complexity, instead of the
-  /// component-depth. That would be needed for us to treat `p[1]`, `*(p + 10)`,
-  /// `*(p + 5 + 5)` together.
+  /// component-depth. That would be needed for us to treat `p[10]`,
+  /// `*(p + 10)`, `*(p + 5 + 5)` together.
   mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
       AttachPtrComponentDepthMap = {{nullptr, std::nullopt}};
 
