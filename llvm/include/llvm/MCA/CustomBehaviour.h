@@ -180,7 +180,7 @@ protected:
 public:
   InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                     bool EnableDefaults = false,
-                    const Target* TheTarget = nullptr);
+                    const Target *TheTarget = nullptr);
 
   virtual ~InstrumentManager() = default;
 

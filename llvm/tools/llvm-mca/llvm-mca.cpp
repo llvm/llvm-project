@@ -509,10 +509,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::unique_ptr<mca::InstrumentManager> IM = 
-      std::make_unique<mca::InstrumentManager>(*STI, *MCII, !DisableInstrumentManager,
-                                               DisableInstrumentManager ? nullptr :
-                                               TheTarget);
+  std::unique_ptr<mca::InstrumentManager> IM =
+      std::make_unique<mca::InstrumentManager>(
+          *STI, *MCII, !DisableInstrumentManager,
+          DisableInstrumentManager ? nullptr : TheTarget);
 
   // Parse the input and create InstrumentRegion that llvm-mca
   // can use to improve analysis.
