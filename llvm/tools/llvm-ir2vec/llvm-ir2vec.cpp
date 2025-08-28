@@ -25,9 +25,11 @@
 /// 3. Embedding Generation (embeddings):
 ///    Generates IR2Vec embeddings using a trained vocabulary.
 ///    Usage: llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json
-///    --level=func input.bc -o embeddings.txt Levels: --level=inst
-///    (instructions), --level=bb (basic blocks), --level=func (functions)
-///    (See IR2Vec.cpp for more embedding generation options)
+///    --ir2vec-kind=<kind> --level=<level> input.bc -o embeddings.txt
+///    Kind: --ir2vec-kind=symbolic (default), --ir2vec-kind=flow-aware
+///    Levels: --level=inst (instructions), --level=bb (basic blocks),
+///    --level=func (functions) (See IR2Vec.cpp for more embedding generation
+///    options)
 ///
 //===----------------------------------------------------------------------===//
 
@@ -243,7 +245,7 @@ public:
 
     // Create embedder for this function
     assert(Vocab->isValid() && "Vocabulary is not valid");
-    auto Emb = Embedder::create(IR2VecKind::Symbolic, F, *Vocab);
+    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
     if (!Emb) {
       OS << "Error: Failed to create embedder for function " << F.getName()
          << "\n";
