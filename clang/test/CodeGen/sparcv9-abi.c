@@ -25,11 +25,20 @@ long double f_ld(long double x) { return x; }
 struct empty {};
 struct emptyarr { struct empty a[10]; };
 
+// 16-byte structs with 16-byte alignment gets passed as if i128.
+struct align16 { _Alignas(16) int x; };
+
 // CHECK-LABEL: define{{.*}} i64 @f_empty(i64 %x.coerce)
 struct empty f_empty(struct empty x) { return x; }
 
 // CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 %x.coerce)
 struct empty f_emptyarr(struct emptyarr x) { return x.a[0]; }
+
+// CHECK-LABEL: define{{.*}} void @f_aligncaller(i128 %a.coerce)
+void f_aligncallee(int pad, struct align16 a);
+void f_aligncaller(struct align16 a) {
+    f_aligncallee(0, a);
+}
 
 // CHECK-LABEL: define{{.*}} i64 @f_emptyvar(i32 noundef zeroext %count, ...)
 long f_emptyvar(unsigned count, ...) {

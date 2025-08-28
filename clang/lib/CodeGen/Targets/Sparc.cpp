@@ -228,6 +228,7 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
     return ABIArgInfo::getIgnore();
 
   uint64_t Size = getContext().getTypeSize(Ty);
+  unsigned Alignment = getContext().getTypeAlign(Ty);
 
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
@@ -275,10 +276,14 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
+  // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
+  // For 16-byte aggregates with 16-byte alignment, we use i128.
+  llvm::Type *WideTy = llvm::Type::getIntNTy(getVMContext(), 128);
+  bool UseI128 = (Size == 128) && (Alignment == 128);
+
   if (CB.InReg)
-    return ABIArgInfo::getDirectInReg(CoerceTy);
-  else
-    return ABIArgInfo::getDirect(CoerceTy);
+    return ABIArgInfo::getDirectInReg(UseI128 ? WideTy : CoerceTy);
+  return ABIArgInfo::getDirect(UseI128 ? WideTy : CoerceTy);
 }
 
 RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
