@@ -5051,6 +5051,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  totalorderbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderbf16_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   totalordermag_test
   SUITE
     libc-math-smoke-tests
@@ -5108,6 +5121,19 @@ add_fp_unittest(
     TotalOrderMagTest.h
   DEPENDS
     libc.src.math.totalordermagf128
+)
+
+add_fp_unittest(
+  totalordermagbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagbf16_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
