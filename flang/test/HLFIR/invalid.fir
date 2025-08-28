@@ -1659,3 +1659,28 @@ func.func @bad_eoshift11(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: !hlfir.
   %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
   return
 }
+
+// -----
+
+func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
+  %c0 = arith.constant 0 : index
+  %addr = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %addr : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %var = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  // expected-error@+1 {{negative integer literal not valid for unsigned integer type}}
+  %decl:2 = hlfir.declare %var storage (%addr[-1]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  return
+}
+
+// -----
+
+"func.func"() <{function_type = (!fir.ref<!fir.array<8xi8>>) -> (), sym_name = "fir_declare_bad_storage_offset"}> ({
+^bb0(%arg0: !fir.ref<!fir.array<8xi8>>):
+  %0 = "arith.constant"() <{value = 0 : index}> : () -> index
+  %1 = "fir.address_of"() <{symbol = @block_}> : () -> !fir.ref<!fir.array<8xi8>>
+  %2 = "fir.convert"(%1) : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = "fir.coordinate_of"(%2, %0) <{baseType = !fir.ref<!fir.array<?xi8>>}> : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// expected-error@+1 {{storage offset specified without the storage reference}}
+  %4:2 = "hlfir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  "func.return"() : () -> ()
+}) : () -> ()
