@@ -10,7 +10,6 @@
 #define LLDB_TARGET_STATISTICS_H
 
 #include "lldb/DataFormatters/TypeSummary.h"
-#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Stream.h"
