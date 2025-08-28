@@ -34,21 +34,21 @@
 define void @CSMain() local_unnamed_addr {
 ; CHECK-LABEL: define void @CSMain() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALLRAWBUFFERBINDING:%.*]] = tail call target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D:%.*]], 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, i1 false, ptr nonnull @d.str)
+; CHECK-NEXT:    [[CALLRAWBUFFERBINDING:%.*]] = tail call target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D:%.*]], 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, ptr nonnull @d.str)
 ; CHECK-NEXT:    store target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D]], 16, 0, 4, 8, 12)) [[CALLRAWBUFFERBINDING]], ptr @d.cb, align 4
 ; CHECK-NEXT:    [[LOADE:%.*]] = load i32, ptr addrspace(2) @e, align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[LOADE]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[IF_ELSE_I:.*]], label %[[IF_THEN_I:.*]]
 ; CHECK:       [[IF_THEN_I]]:
-; CHECK-NEXT:    [[IFSTMTCALLRAWBUFFERBINDING:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+; CHECK-NEXT:    [[IFSTMTCALLRAWBUFFERBINDING:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { half, i1 } @llvm.dx.resource.load.rawbuffer.f16.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[IFSTMTCALLRAWBUFFERBINDING]], i32 [[LOADE]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { half, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f16_1_0t.f16(target("dx.RawBuffer", half, 1, 0) [[TMP0]], i32 [[LOADE]], i32 0, half [[TMP2]])
 ; CHECK-NEXT:    br label %[[_Z6CSMAINV_EXIT:.*]]
 ; CHECK:       [[IF_ELSE_I]]:
-; CHECK-NEXT:    [[CALL2NDRAWBUFFERBINDING:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+; CHECK-NEXT:    [[CALL2NDRAWBUFFERBINDING:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call { half, i1 } @llvm.dx.resource.load.rawbuffer.f16.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[CALL2NDRAWBUFFERBINDING]], i32 [[LOADE]], i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { half, i1 } [[TMP4]], 0
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f16_1_0t.f16(target("dx.RawBuffer", half, 1, 0) [[TMP3]], i32 [[LOADE]], i32 0, half [[TMP5]])
@@ -57,25 +57,25 @@ define void @CSMain() local_unnamed_addr {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %callRawBufferBinding = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, i1 false, ptr nonnull @d.str)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) %callRawBufferBinding, ptr @d.cb, align 4
+  %callCBufferBinding = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, ptr nonnull @d.str)
+  store target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) %callCBufferBinding, ptr @d.cb, align 4
   %loadE = load i32, ptr addrspace(2) @e, align 4
   %tobool.not.i = icmp eq i32 %loadE, 0
   br i1 %tobool.not.i, label %if.else.i, label %if.then.i
 
 if.then.i:                                        ; preds = %entry
-  %ifStmtcallRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %ifStmtcallRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %ifStmtCallResourceGEP = tail call noundef nonnull align 2 dereferenceable(2) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %ifStmtcallRawBufferBinding, i32 %loadE)
   br label %_Z6CSMainv.exit
 
 if.else.i:                                        ; preds = %entry
-  %call2ndRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %call2ndRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %elseStmtCallResourceGEP = tail call noundef nonnull align 2 dereferenceable(2) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %call2ndRawBufferBinding, i32 %loadE)
   br label %_Z6CSMainv.exit
 
 _Z6CSMainv.exit:                                  ; preds = %if.else.i, %if.then.i
   %.sink1 = phi ptr [ %ifStmtCallResourceGEP, %if.then.i ], [ %elseStmtCallResourceGEP, %if.else.i ]
-  %call3rdRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %call3rdRawBufferBinding = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %sinkCallResourceGEP = tail call noundef nonnull align 2 dereferenceable(2) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %call3rdRawBufferBinding, i32 %loadE)
   %loadSink = load half, ptr %.sink1, align 2
   store half %loadSink, ptr %sinkCallResourceGEP, align 2
@@ -85,16 +85,16 @@ _Z6CSMainv.exit:                                  ; preds = %if.else.i, %if.then
 define void @Main() local_unnamed_addr  {
 ; CHECK-LABEL: define void @Main() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALLRAWBUFFERBINDING1:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-; CHECK-NEXT:    [[CALLRAWBUFFERBINDING0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-; CHECK-NEXT:    [[CALLRAWBUFFERBINDING:%.*]] = tail call target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D:%.*]], 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, i1 false, ptr nonnull @d.str)
+; CHECK-NEXT:    [[CALLRAWBUFFERBINDING1:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+; CHECK-NEXT:    [[CALLRAWBUFFERBINDING0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str)
+; CHECK-NEXT:    [[CALLRAWBUFFERBINDING:%.*]] = tail call target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D:%.*]], 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, ptr nonnull @d.str)
 ; CHECK-NEXT:    store target("dx.CBuffer", target("dx.Layout", [[__CBLAYOUT_D]], 16, 0, 4, 8, 12)) [[CALLRAWBUFFERBINDING]], ptr @d.cb, align 4
 ; CHECK-NEXT:    [[LOADE:%.*]] = load i32, ptr addrspace(2) @e, align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[LOADE]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT_I]], label %[[IF_ELSE_I:.*]], label %[[IF_THEN_I:.*]]
 ; CHECK:       [[IF_THEN_I]]:
 ; CHECK-NEXT:    [[IFSTMTLOADE:%.*]] = load i32, ptr addrspace(2) @e, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { half, i1 } @llvm.dx.resource.load.rawbuffer.f16.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[CALLRAWBUFFERBINDING0]], i32 [[LOADE]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { half, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f16_1_0t.f16(target("dx.RawBuffer", half, 1, 0) [[TMP0]], i32 [[IFSTMTLOADE]], i32 0, half [[TMP2]])
@@ -104,14 +104,14 @@ define void @Main() local_unnamed_addr  {
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[ELSESTMTLOADE]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[IF_THEN2_I:.*]], label %[[IF_ELSE6_I:.*]]
 ; CHECK:       [[IF_THEN2_I]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call { half, i1 } @llvm.dx.resource.load.rawbuffer.f16.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[CALLRAWBUFFERBINDING0]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { half, i1 } [[TMP4]], 0
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f16_1_0t.f16(target("dx.RawBuffer", half, 1, 0) [[TMP3]], i32 0, i32 0, half [[TMP5]])
 ; CHECK-NEXT:    br label %[[_Z6MAINV_EXIT]]
 ; CHECK:       [[IF_ELSE6_I]]:
 ; CHECK-NEXT:    [[ELSESTMTLOADE2:%.*]] = load i32, ptr addrspace(2) @e, align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call { half, i1 } @llvm.dx.resource.load.rawbuffer.f16.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) [[CALLRAWBUFFERBINDING1]], i32 [[ELSESTMTLOADE2]], i32 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { half, i1 } [[TMP7]], 0
 ; CHECK-NEXT:    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f16_1_0t.f16(target("dx.RawBuffer", half, 1, 0) [[TMP6]], i32 [[ELSESTMTLOADE]], i32 0, half [[TMP8]])
@@ -120,10 +120,10 @@ define void @Main() local_unnamed_addr  {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %callRawBufferBinding1 = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-  %callRawBufferBinding0 = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
-  %callRawBufferBinding = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, i1 false, ptr nonnull @d.str)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) %callRawBufferBinding, ptr @d.cb, align 4
+  %callRawBufferBinding1 = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %callRawBufferBinding0 = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %callCBufferBinding = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_ds_16_0_4_8_12tt(i32 3, i32 0, i32 1, i32 0, ptr nonnull @d.str)
+  store target("dx.CBuffer", target("dx.Layout", %__cblayout_d, 16, 0, 4, 8, 12)) %callCBufferBinding, ptr @d.cb, align 4
   %loadE = load i32, ptr addrspace(2) @e, align 4
   %tobool.not.i = icmp eq i32 %loadE, 0
   br i1 %tobool.not.i, label %if.else.i, label %if.then.i
@@ -150,7 +150,7 @@ if.else6.i:                                       ; preds = %if.else.i
 _Z6Mainv.exit:                                    ; preds = %if.else6.i, %if.then2.i, %if.then.i
   %.sink2 = phi i32 [ %ifStmtLoadE, %if.then.i ], [ 0, %if.then2.i ], [ %elseStmtLoadE, %if.else6.i ]
   %.sink.in = phi ptr [ %ifStmtCallResourceGEP, %if.then.i ], [ %elseifStmtCallResourceGEP, %if.then2.i ], [ %elseStmtCallResourceGEP, %if.else6.i ]
-  %callRawBufferBindingSink = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %callRawBufferBindingSink = tail call target("dx.RawBuffer", half, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f16_1_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %.sink = load half, ptr %.sink.in, align 2
   %i11 = tail call noundef nonnull align 2 dereferenceable(2) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f16_1_0t(target("dx.RawBuffer", half, 1, 0) %callRawBufferBindingSink, i32 %.sink2)
   store half %.sink, ptr %i11, align 2
