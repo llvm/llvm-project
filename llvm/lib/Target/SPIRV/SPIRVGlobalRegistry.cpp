@@ -1741,7 +1741,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVFloatType(
   default:
     llvm_unreachable("Bit width is of unexpected size.");
   }
-  
+
   return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeFloat, LLVMTy);
 }
 

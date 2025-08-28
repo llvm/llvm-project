@@ -540,7 +540,6 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
                             MF.getRegInfo());
-        LLVM_DEBUG(dbgs() << "[BFLOAT] SPIRVPreLegalizer is lowering spv_assign_ptr_type to" << MI << '\n');
         ToErase.push_back(&MI);
       } else if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
         Register Reg = MI.getOperand(1).getReg();
@@ -551,7 +550,6 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
             Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
-        LLVM_DEBUG(dbgs() << "[BFLOAT] SPIRVPreLegalizer is lowering spv_assign_type to" << MI << '\n');
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();

@@ -2046,10 +2046,9 @@ bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
                                             MachineIRBuilder &MIRBuilder) {
 
   unsigned Op = getSimpleIntrinsicOpcode(ID);
-  LLVM_DEBUG(dbgs() << "[BFLOAT] translateSimpleIntrinsic is called for ID:" << ID << '\n');
 
   // Is this a simple intrinsic?
-  if (Op == Intrinsic::not_intrinsic){}
+  if (Op == Intrinsic::not_intrinsic)
     return false;
 
   // Yes. Let's translate it.
@@ -2196,8 +2195,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   if (translateSimpleIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  LLVM_DEBUG(dbgs() << "[BFLOAT] IRTranslator translateKnownIntrinsic for CI: " << CI << '\n');
-  LLVM_DEBUG(dbgs() << "[BFLOAT] IRTranslator translateKnownIntrinsic for ID: " << ID << '\n');
   switch (ID) {
   default:
     break;
@@ -2879,7 +2876,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
   MIB->copyIRFlags(CI);
   if (containsBF16Type(U)) {
-    dbgs() << "[BFLOAT] Flagged at IRTranslator: " << *MIB.getInstr() << "\n";
     MIB.getInstr()->setFlag(MachineInstr::MIFlag::BFloat16);
   }
   
@@ -4117,7 +4113,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       continue; // Don't handle zero sized types.
     ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
     VRegArgs.push_back(VRegs);
-    // LLVM_DEBUG(dbgs() << "[BFLOAT] Created vreg in IRTranslator: " << VRegs);
 
     if (Arg.hasSwiftErrorAttr()) {
       assert(VRegs.size() == 1 && "Too many vregs for Swift error");
@@ -4165,10 +4160,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
         // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
-        LLVM_DEBUG(dbgs() << "[BFLOAT] Inst at IRTranslator: " << Inst << "\n");
 
         if (translate(Inst)) {
-          LLVM_DEBUG(dbgs() << "[BFLOAT] Inst at IRTranslator after translate(Inst): " << Inst << "\n");
           continue;
         }
 
