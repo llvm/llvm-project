@@ -13,10 +13,10 @@ define i128 @f1(i128 %a, i128 %b, i128 %c) {
 ; CHECK-NEXT:    vl %v1, 0(%r3), 3
 ; CHECK-NEXT:    larl %r1, .LCPI0_0
 ; CHECK-NEXT:    vl %v2, 0(%r1), 3
-; CHECK-NEXT:    vl %v3, 0(%r5), 3
 ; CHECK-NEXT:    vaq %v0, %v1, %v0
+; CHECK-NEXT:    vl %v1, 0(%r5), 3
 ; CHECK-NEXT:    vperm %v0, %v0, %v0, %v2
-; CHECK-NEXT:    vaq %v0, %v0, %v3
+; CHECK-NEXT:    vaq %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %in = add i128 %a, %b

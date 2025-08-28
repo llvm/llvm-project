@@ -8,11 +8,11 @@
 
 // -------------------------- Pre RA scheduling ----------------------------- //
 //
-// SystemZPreRASchedStrategy keeps track of currently live registers and first
-// tries to reduce live ranges by scheduling e.g. a load of a live register
-// immediately (bottom-up). It also aims to preserve the scheduled latency.
-// Small regions (up to 10 instructions) are mostly left alone as the input
-// order is usually then preferred.
+// SystemZPreRASchedStrategy tries to reduce register pressure by applying
+// OOO heuristics and then also in certain regions reduces latency. Tiny
+// regions are mostly left alone as the input order is usually then preferred
+// (due to copys involving physregs and comparison elimination
+// opportunities).
 //
 // -------------------------- Post RA scheduling ---------------------------- //
 //
@@ -36,36 +36,30 @@ namespace llvm {
 
 /// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
-  // The FP/Vector registers are prioritized during scheduling.
-  std::set<unsigned> PrioRegClasses;
-  void initializePrioRegClasses(const TargetRegisterInfo *TRI);
-  bool isPrioVirtReg(Register Reg, const MachineRegisterInfo *MRI) const {
-    return (Reg.isVirtual() &&
-            PrioRegClasses.count(MRI->getRegClass(Reg)->getID()));
-  }
-
-  unsigned PrioPressureSet;
-  unsigned GPRPressureSet;
-  void initializePressureSets(const TargetRegisterInfo *TRI);
-
-  // A TinyRegion has up to 10 instructions and is scheduled differently.
+  // A TinyRegion has up to 10 instructions and is scheduled less
+  // aggressively. Reordering these are more likely to disrupt copy /
+  // comparison elimination while the potential benefit is less than in
+  // bigger regions.
   bool TinyRegion;
 
   // Num instructions left to schedule.
   unsigned NumLeft;
 
+  // True if there are many more SUs than the overall height of the DAG.
+  bool IsWideDAG;
+
   // True if the region has many instructions in def-use sequences and would
   // likely benefit from latency reduction.
   bool HasDataSequences;
 
-  // True if MI is also using the register it defines.
-  std::vector<bool> IsRedefining;
+  // Return true if the scheduled latency should be minimized.
+  bool shouldReduceLatency(SchedBoundary *Zone) const;
 
-  // Only call computeRemLatency() once per scheduled node.
+  // Only call computeRemLatency() once before each scheduled node.
   mutable unsigned RemLat;
   unsigned getRemLat(SchedBoundary *Zone) const;
 
-  // A large group of stores at the bottom is spread upwards.
+  // Make sure a large group of stores do not all end up at the bottom.
   std::set<const SUnit *> StoresGroup;
   bool FirstStoreInGroupScheduled;
   void initializeStoresGroup();
@@ -83,11 +77,7 @@ protected:
 
 public:
   SystemZPreRASchedStrategy(const MachineSchedContext *C)
-      : GenericScheduler(C) {
-    const TargetRegisterInfo *TRI = C->MF->getRegInfo().getTargetRegisterInfo();
-    initializePrioRegClasses(TRI);
-    initializePressureSets(TRI);
-  }
+      : GenericScheduler(C) {}
 
   void initPolicy(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End,

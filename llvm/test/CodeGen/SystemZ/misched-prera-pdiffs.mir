@@ -17,9 +17,6 @@
 #
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      Region is not tiny.
-# CHECK-NEXT: Latency scheduling enabled.
-# CHECK-NEXT: No StoresGroup.
 # CHECK:      SU(0):   %0:gr64bit = LGHI 0
 # CHECK:        Pressure Diff      : GRX32Bit -2
 # CHECK:      SU(1):   STG %0:gr64bit, $noreg, 0, $noreg
