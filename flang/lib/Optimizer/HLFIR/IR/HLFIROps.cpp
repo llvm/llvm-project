@@ -855,6 +855,32 @@ void hlfir::CmpCharOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// CharTrimOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CharTrimOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value chr) {
+  fir::CharacterType::LenType len;
+  if (auto cstLen = getCharacterLengthIfStatic(chr.getType()))
+    len = *cstLen;
+  else
+    len = fir::CharacterType::unknownLen();
+  unsigned kind = getCharacterKind(chr.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, len),
+      /*polymorphic=*/false);
+  build(builder, result, resultType, chr);
+}
+
+void hlfir::CharTrimOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // NumericalReductionOp
 //===----------------------------------------------------------------------===//
 
