@@ -38,12 +38,6 @@ define i32 @neg_abs32(i32 %x) {
 ; CHECKT1-NEXT:    eors r0, r1
 ; CHECKT1-NEXT:    subs r0, r1, r0
 ; CHECKT1-NEXT:    bx lr
-;
-; CHECKT2-LABEL: neg_abs32:
-; CHECKT2:       @ %bb.0:
-; CHECKT2-NEXT:    eor.w r1, r0, r0, asr #31
-; CHECKT2-NEXT:    rsb r0, r1, r0, asr #31
-; CHECKT2-NEXT:    bx lr
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   %neg = sub nsw i32 0, %abs
   ret i32 %neg
@@ -144,13 +138,6 @@ define i32 @abs32(i32 %x) {
 ; CHECKT1-NEXT:    eors r0, r1
 ; CHECKT1-NEXT:    subs r0, r0, r1
 ; CHECKT1-NEXT:    bx lr
-;
-; CHECKT2-LABEL: abs32:
-; CHECKT2:       @ %bb.0:
-; CHECKT2-NEXT:    cmp r0, #0
-; CHECKT2-NEXT:    it mi
-; CHECKT2-NEXT:    rsbmi r0, r0, #0
-; CHECKT2-NEXT:    bx lr
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs
 }
@@ -158,18 +145,11 @@ define i32 @abs32(i32 %x) {
 define i16 @abs16(i16 %x) {
 ; CHECKT1-LABEL: abs16:
 ; CHECKT1:       @ %bb.0:
-; CHECKT1-NEXT:    sxth r1, r0
-; CHECKT1-NEXT:    asrs r1, r1, #15
+; CHECKT1-NEXT:    sxth r0, r0
+; CHECKT1-NEXT:    asrs r1, r0, #31
 ; CHECKT1-NEXT:    eors r0, r1
 ; CHECKT1-NEXT:    subs r0, r0, r1
 ; CHECKT1-NEXT:    bx lr
-;
-; CHECKT2-LABEL: abs16:
-; CHECKT2:       @ %bb.0:
-; CHECKT2-NEXT:    sxth r1, r0
-; CHECKT2-NEXT:    eor.w r0, r0, r1, asr #15
-; CHECKT2-NEXT:    sub.w r0, r0, r1, asr #15
-; CHECKT2-NEXT:    bx lr
   %abs = tail call i16 @llvm.abs.i16(i16 %x, i1 true)
   ret i16 %abs
 }

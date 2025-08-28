@@ -888,6 +888,9 @@ class VectorType;
     SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABD(SDValue Op, SelectionDAG &DAG) const;
     void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
                            SmallVectorImpl<SDValue> &Results) const;
     SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,

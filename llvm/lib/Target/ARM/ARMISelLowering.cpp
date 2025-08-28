@@ -647,6 +647,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
+  setOperationAction(ISD::ABS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -5619,6 +5623,78 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
+}
+
+// Generate SUBS and CSEL for integer abs.
+SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  // Thumb1-only sequence:
+  // asrs r1, r0, #31; eors r0, r1; subs r0, r0, r1
+  if (Subtarget->isThumb1Only()) {
+    SDValue X = Op.getOperand(0);
+    SDValue ShiftAmt = DAG.getConstant(31, DL, MVT::i32);
+    SDValue S = DAG.getNode(ISD::SRA, DL, MVT::i32, X, ShiftAmt);
+    SDValue T = DAG.getNode(ISD::XOR, DL, MVT::i32, X, S);
+    return DAG.getNode(ISD::SUB, DL, MVT::i32, T, S);
+  }
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), Op.getOperand(0));
+  // Generate SUBS & CSEL.
+  SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
+                            DAG.getConstant(0, DL, MVT::i32));
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
+                     DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
+}
+
+// Generate SUBS and CNEG for absolute difference.
+SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // Thumb1-only custom sequences for i32
+  if (Subtarget->isThumb1Only()) {
+    if (Op.getOpcode() == ISD::ABDS) {
+      // subs r0, r0, r1; asrs r1, r0, #31; eors r0, r1; subs r0, r0, r1
+      SDValue D = DAG.getNode(ISD::SUB, DL, MVT::i32, LHS, RHS);
+      SDValue ShiftAmt = DAG.getConstant(31, DL, MVT::i32);
+      SDValue S = DAG.getNode(ISD::SRA, DL, MVT::i32, D, ShiftAmt);
+      SDValue T = DAG.getNode(ISD::XOR, DL, MVT::i32, D, S);
+      return DAG.getNode(ISD::SUB, DL, MVT::i32, T, S);
+    } else {
+      // abdu: subs; sbcs r1,r1,r1(mask from borrow); eors; subs
+      // First subtraction: LHS - RHS
+      SDValue Sub1WithFlags = DAG.getNode(
+          ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+      SDValue Sub1Result = Sub1WithFlags.getValue(0);
+      SDValue Flags1 = Sub1WithFlags.getValue(1);
+
+      SDValue Sbc1 = DAG.getNode(
+          ARMISD::SUBE, DL, DAG.getVTList(MVT::i32, FlagsVT), RHS, RHS, Flags1);
+
+      SDValue Xor =
+          DAG.getNode(ISD::XOR, DL, MVT::i32, Sub1Result, Sbc1.getValue(0));
+
+      return DAG.getNode(ISD::SUB, DL, MVT::i32, Xor, Sbc1.getValue(0));
+    }
+  }
+
+  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp =
+      DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), Cmp.getValue(0));
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  ARMCC::CondCodes CC = (Op.getOpcode() == ISD::ABDS) ? ARMCC::MI : ARMCC::LO;
+
+  // CSEL: if a > b, select a-b, otherwise b-a
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Cmp.getValue(0), Neg,
+                     DAG.getConstant(CC, DL, MVT::i32), Cmp.getValue(1));
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -10670,6 +10746,11 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU:
+    return LowerABD(Op, DAG);
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:

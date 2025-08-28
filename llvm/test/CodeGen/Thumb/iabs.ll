@@ -4,8 +4,8 @@
 define i8 @test_i8(i8 %a) nounwind {
 ; CHECK-LABEL: test_i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxtb r1, r0
-; CHECK-NEXT:    asrs r1, r1, #7
+; CHECK-NEXT:    sxtb r0, r0
+; CHECK-NEXT:    asrs r1, r0, #31
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
@@ -18,8 +18,8 @@ define i8 @test_i8(i8 %a) nounwind {
 define i16 @test_i16(i16 %a) nounwind {
 ; CHECK-LABEL: test_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sxth r1, r0
-; CHECK-NEXT:    asrs r1, r1, #15
+; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    asrs r1, r0, #31
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr

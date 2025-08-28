@@ -698,6 +698,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i64, Custom);
   }
 
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i64, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, Custom);
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -7200,6 +7205,40 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      getCondCode(DAG, AArch64CC::PL), Cmp.getValue(1));
 }
 
+// Generate SUBS and CNEG for absolute difference.
+SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+
+  if (VT.isVector()) {
+    if (Op.getOpcode() == ISD::ABDS)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
+    else
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+  }
+
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp =
+      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                            Cmp.getValue(0));
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  AArch64CC::CondCode CC =
+      (Op.getOpcode() == ISD::ABDS) ? AArch64CC::PL : AArch64CC::HS;
+
+  // CSEL: if a > b, select a-b, otherwise b-a
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Cmp.getValue(0), Neg,
+                     getCondCode(DAG, CC), Cmp.getValue(1));
+}
+
 static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -7649,9 +7688,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
     return LowerABS(Op, DAG);
   case ISD::ABDS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+    return LowerABD(Op, DAG);
   case ISD::AVGFLOORS:
     return LowerAVG(Op, DAG, AArch64ISD::HADDS_PRED);
   case ISD::AVGFLOORU:
