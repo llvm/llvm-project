@@ -23,4 +23,5 @@ add_mlir_conversion_library(MLIRXeGPUToXeVM
   MLIRXeGPUDialect
   MLIRPass
   MLIRTransforms
+  MLIRSCFTransforms
 )
