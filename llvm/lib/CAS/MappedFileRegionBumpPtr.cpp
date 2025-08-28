@@ -224,7 +224,6 @@ void MappedFileRegionBumpPtr::destroyImpl() {
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       size_t Size = size();
       size_t Capacity = capacity();
-      assert(Size < Capacity);
       // sync to file system to make sure all contents are up-to-date.
       (void)Region.sync();
       Region.unmap();
