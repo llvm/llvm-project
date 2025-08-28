@@ -655,7 +655,8 @@ void privatizeSymbol(
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
-    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
+    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -676,6 +677,13 @@ void privatizeSymbol(
   bool emitCopyRegion =
       symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
       symToPrivatize->test(semantics::Symbol::Flag::LocalityLocalInit);
+  // A symbol attached to the simd directive can have the firstprivate flag set
+  // on it when it is also used in a non-firstprivate privatization clause.
+  // For instance: $omp do simd lastprivate(a) firstprivate(a)
+  // We cannot apply the firstprivate privatizer to simd, so make sure we do
+  // not emit the copy region when dealing with the SIMD directive.
+  if (dir && dir == llvm::omp::Directive::OMPD_simd)
+    emitCopyRegion = false;
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -848,7 +856,8 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    mlir::omp::PrivateClauseOps *clauseOps);
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -857,6 +866,7 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    fir::LocalitySpecifierOperands *clauseOps);
+    fir::LocalitySpecifierOperands *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 } // end namespace Fortran::lower
