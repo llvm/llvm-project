@@ -17812,7 +17812,7 @@ static TargetLowering::AtomicExpansionKind
 getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
   // For GAS, lower to flat atomic.
   return STI.hasGloballyAddressableScratch()
-             ? TargetLowering::AtomicExpansionKind::Expand
+             ? TargetLowering::AtomicExpansionKind::CustomExpand
              : TargetLowering::AtomicExpansionKind::NotAtomic;
 }
 
