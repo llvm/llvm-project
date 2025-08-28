@@ -8456,15 +8456,6 @@ static bool addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
 
-    // TODO: Support ExtractLane of last-active-lane with first-order
-    // recurrences.
-
-    if (any_of(FOR->users(), [FOR](VPUser *U) {
-          return match(U, m_VPInstruction<VPInstruction::ExtractLane>(
-                              m_VPValue(), m_Specific(FOR)));
-        }))
-      return false;
-
     // This is the second phase of vectorizing first-order recurrences, creating
     // extract for users outside the loop. An overview of the transformation is
     // described below. Suppose we have the following loop with some use after
@@ -8537,6 +8528,35 @@ static bool addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range) {
     // the VPIRInstruction modeling the phi.
     for (VPUser *U : FOR->users()) {
       using namespace llvm::VPlanPatternMatch;
+      if (match(U, m_VPInstruction<VPInstruction::ExtractLane>(
+                       m_Sub(m_VPInstruction<VPInstruction::FirstActiveLane>(
+                                 m_VPValue()),
+                             m_VPValue()),
+                       m_Specific(FOR)))) {
+
+        VPBuilder MiddleBuilder(cast<VPInstruction>(U));
+        VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
+        VPValue *PenultimateLastIter = MiddleBuilder.createNaryOp(
+            VPInstruction::ExtractLane,
+            {MiddleBuilder.createNaryOp(
+                 Instruction::Sub,
+                 {LastActiveLane,
+                  Plan.getOrAddLiveIn(ConstantInt::get(
+                      IntegerType::get(Plan.getContext(), 64), 1))}),
+             FOR->getBackedgeValue()});
+
+        VPValue *LastPrevIter = MiddleBuilder.createNaryOp(
+            VPInstruction::ExtractLastElement, {FOR});
+        VPValue *Cmp = MiddleBuilder.createICmp(
+            CmpInst::ICMP_EQ, LastActiveLane,
+            Plan.getOrAddLiveIn(
+                ConstantInt::get(IntegerType::get(Plan.getContext(), 64), 0)));
+        VPValue *Sel =
+            MiddleBuilder.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
+        cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
+        continue;
+      }
+
       if (!match(U, m_ExtractLastElement(m_Specific(FOR))))
         continue;
 
