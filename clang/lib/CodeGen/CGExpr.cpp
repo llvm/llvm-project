@@ -4304,7 +4304,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
-    ArrayRef<llvm::Value *> DynamicArgs) {
+    ArrayRef<llvm::Value *> DynamicArgs, const TrapReason *TR) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
@@ -4343,7 +4343,7 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge, TR);
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -4655,11 +4655,9 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge,
-                                    /*TO_UPSTREAM(BoundsSafety) ON*/
+                                    bool NoMerge, const TrapReason *TR,
                                     StringRef Annotation,
                                     StringRef BoundsSafetyTrapMessage) {
-                                    /*TO_UPSTREAM(BoundsSafety) OFF*/
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4670,22 +4668,34 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-
-  /*TO_UPSTREAM(BoundsSafety) ON*/
-  if (CheckHandlerID == SanitizerHandler::BoundsSafety && getDebugInfo()) {
-    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, GetBoundsSafetyTrapMessagePrefix(), BoundsSafetyTrapMessage);
-  }
-  /*TO_UPSTREAM(BoundsSafety) OFF*/
-  else {
-    llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
-
-    if (getDebugInfo() && !TrapMessage.empty() &&
-        CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
-      TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-          TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+  llvm::StringRef TrapMessage;
+  llvm::StringRef TrapCategory;
+  auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+  if (TR && !TR->isEmpty() &&
+      DebugTrapReasonKind ==
+          CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed) {
+    TrapMessage = TR->getMessage();
+    TrapCategory = TR->getCategory();
+  } else {
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // FIXME: Move to using `TrapReason` (rdar://158623471).
+    if (CheckHandlerID == SanitizerHandler::BoundsSafety) {
+      TrapMessage = BoundsSafetyTrapMessage;
+      TrapCategory = GetBoundsSafetyTrapMessagePrefix();
+    } else {
+      TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+      TrapCategory = "Undefined Behavior Sanitizer";
     }
   }
+
+  if (getDebugInfo() && !(TrapMessage.empty() && TrapCategory.empty()) &&
+      DebugTrapReasonKind !=
+          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
+      TrapLocation) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, TrapCategory, TrapMessage);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
@@ -4784,7 +4794,8 @@ void CodeGenFunction::EmitBoundsSafetyTrapCheck(llvm::Value *Checked,
   // We still need to pass `OptRemark` because not all emitted instructions
   // can be covered by BoundsSafetyOptRemarkScope. This is because EmitTrapCheck
   // caches basic blocks that contain instructions that need annotating.
-  EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety, false,
+  EmitTrapCheck(Checked, SanitizerHandler::BoundsSafety, /*NoMerge=*/false,
+                /*TR=*/nullptr,
                 GetBoundsSafetyOptRemarkString(OptRemark),
                 GetBoundsSafetyTrapMessageSuffix(kind, TrapCtx));
 }
