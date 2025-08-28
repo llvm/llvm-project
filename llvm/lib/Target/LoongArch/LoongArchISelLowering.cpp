@@ -7187,6 +7187,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::PreserveMost:
     break;
   case CallingConv::GHC:
     if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||
@@ -7948,7 +7949,7 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     if (Size < 32 && (AI->getOperation() == AtomicRMWInst::And ||
                       AI->getOperation() == AtomicRMWInst::Or ||
                       AI->getOperation() == AtomicRMWInst::Xor))
-      return AtomicExpansionKind::Expand;
+      return AtomicExpansionKind::CustomExpand;
     if (AI->getOperation() == AtomicRMWInst::Nand || Size < 32)
       return AtomicExpansionKind::CmpXChg;
   }
