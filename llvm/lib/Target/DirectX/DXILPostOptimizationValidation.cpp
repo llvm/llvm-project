@@ -118,10 +118,8 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
-static void
-reportOverlappingRegisters(Module &M,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R1,
-                           const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
+static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
+                                       const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
 
   raw_svector_ostream OS(Message);
@@ -130,6 +128,17 @@ reportOverlappingRegisters(Module &M,
      << "]) overlaps with resource " << getResourceClassName(R2.RC)
      << " (space=" << R2.Space << ", registers=[" << R2.LowerBound << ", "
      << R2.UpperBound << "])";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static void
+reportRegNotBound(Module &M, ResourceClass Class,
+                  const llvm::dxil::ResourceInfo::ResourceBinding &Unbound) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << getResourceClassName(Class) << " register " << Unbound.LowerBound
+     << " in space " << Unbound.Space
+     << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -157,7 +166,9 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
 
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
-                                  dxil::ModuleMetadataInfo &MMI) {
+                                  dxil::ModuleMetadataInfo &MMI,
+                                  DXILResourceMap &DRM,
+                                  DXILResourceTypeMap &DRTM) {
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
@@ -216,11 +227,19 @@ static void validateRootSignature(Module &M,
 
   Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
-           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-        const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+           const llvm::hlsl::Binding &ReportedBinding) {
+        const llvm::hlsl::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+  const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
+  for (const ResourceInfo &RI : DRM) {
+    const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
+    ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
+    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
+                           Binding.LowerBound + Binding.Size - 1))
+      reportRegNotBound(M, RC, Binding);
+  }
 }
 
 static mcdxbc::RootSignatureDesc *
@@ -234,7 +253,8 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
 static void reportErrors(Module &M, DXILResourceMap &DRM,
                          DXILResourceBindingInfo &DRBI,
                          RootSignatureBindingInfo &RSBI,
-                         dxil::ModuleMetadataInfo &MMI) {
+                         dxil::ModuleMetadataInfo &MMI,
+                         DXILResourceTypeMap &DRTM) {
   if (DRM.hasInvalidCounterDirection())
     reportInvalidDirection(M, DRM);
 
@@ -245,7 +265,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI))
-    validateRootSignature(M, *RSD, MMI);
+    validateRootSignature(M, *RSD, MMI, DRM, DRTM);
 }
 
 PreservedAnalyses
@@ -254,8 +274,9 @@ DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceBindingInfo &DRBI = MAM.getResult<DXILResourceBindingAnalysis>(M);
   RootSignatureBindingInfo &RSBI = MAM.getResult<RootSignatureAnalysis>(M);
   ModuleMetadataInfo &MMI = MAM.getResult<DXILMetadataAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  reportErrors(M, DRM, DRBI, RSBI, MMI);
+  reportErrors(M, DRM, DRBI, RSBI, MMI, DRTM);
   return PreservedAnalyses::all();
 }
 
@@ -271,8 +292,10 @@ public:
         getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
     dxil::ModuleMetadataInfo &MMI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    reportErrors(M, DRM, DRBI, RSBI, MMI);
+    reportErrors(M, DRM, DRBI, RSBI, MMI, DRTM);
     return false;
   }
   StringRef getPassName() const override {
@@ -286,6 +309,7 @@ public:
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
@@ -303,6 +327,7 @@ INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_END(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
                     "DXIL Post Optimization Validation", false, false)
 
