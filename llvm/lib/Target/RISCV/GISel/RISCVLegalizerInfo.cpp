@@ -488,6 +488,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU}).customFor({s8, s16, s32, s64});
+
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
@@ -1337,6 +1339,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
+  case TargetOpcode::G_ABDS:
+    return Helper.lowerAbsDiffToMinMax(MI);
   // TODO: G_FCONSTANT
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
