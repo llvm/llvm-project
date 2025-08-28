@@ -1112,6 +1112,7 @@ def OMP_Target : Directive<[Spelling<"target">]> {
     VersionedClause<OMPC_OMPX_Attribute>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_UsesAllocators, 50>,
+    VersionedClause<OMPC_Default, 60>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_DefaultMap>,
@@ -1130,6 +1131,7 @@ def OMP_TargetData : Directive<[Spelling<"target data", 1, 52>,
   let allowedOnceClauses = [
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Default, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
@@ -2474,6 +2476,7 @@ def OMP_TargetTeamsDistributeSimd
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Shared>,
     VersionedClause<OMPC_UsesAllocators, 50>,
+    VersionedClause<OMPC_Default, 60>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
