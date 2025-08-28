@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "RequestHandler.h"
+#include "Variables.h"
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
@@ -29,10 +30,9 @@ namespace lldb_dap {
 ///
 /// \return
 ///     A `protocol::Scope`
-Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
+Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
                   int64_t namedVariables, bool expensive) {
   Scope scope;
-  scope.name = name;
 
   // TODO: Support "arguments" and "return value" scope.
   // At the moment lldb-dap includes the arguments and return_value  into the
@@ -41,10 +41,21 @@ Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
   // if we add the arguments above the local scope as the locals scope will not
   // be expanded if we enter a function with arguments. It becomes more
   // annoying when the scope has arguments, return_value and locals.
-  if (name == "Locals")
+  switch (kind) {
+  case ScopeKind::Locals:
     scope.presentationHint = Scope::eScopePresentationHintLocals;
-  else if (name == "Registers")
+    scope.name = "Locals";
+    break;
+  case ScopeKind::Globals:
+    scope.name = "Globals";
+    break;
+  case ScopeKind::Registers:
     scope.presentationHint = Scope::eScopePresentationHintRegisters;
+    scope.name = "Registers";
+    break;
+  default:
+    llvm_unreachable("Unhandled ScopeKind");
+  }
 
   scope.variablesReference = variablesReference;
   scope.namedVariables = namedVariables;
@@ -84,18 +95,18 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
   std::vector<Scope> scopes = {};
 
   int64_t variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope("Locals", variable_reference,
+  scopes.push_back(CreateScope(ScopeKind::Locals, variable_reference,
                                dap.variables.locals.GetSize(), false));
 
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Locals, frame_id);
 
   variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope("Globals", variable_reference,
+  scopes.push_back(CreateScope(ScopeKind::Globals, variable_reference,
                                dap.variables.globals.GetSize(), false));
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Globals, frame_id);
 
   variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope("Registers", variable_reference,
+  scopes.push_back(CreateScope(ScopeKind::Registers, variable_reference,
                                dap.variables.registers.GetSize(), false));
 
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Registers,
