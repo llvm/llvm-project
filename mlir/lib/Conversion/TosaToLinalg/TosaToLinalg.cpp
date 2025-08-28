@@ -910,20 +910,6 @@ static Value broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
   return operand;
 }
 
-static bool hasDynamicDimensions(ValueRange operands) {
-  for (auto operand : operands) {
-    auto rankedTensorType = cast_or_null<RankedTensorType>(operand.getType());
-    if (!rankedTensorType)
-      continue;
-    int64_t rank = rankedTensorType.getRank();
-    for (auto dim : llvm::seq<int64_t>(0, rank)) {
-      if (rankedTensorType.isDynamicDim(dim))
-        return true;
-    }
-  }
-  return false;
-}
-
 static SmallVector<Value>
 broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                            IndexPool &indexPool, ValueRange operands,
@@ -933,7 +919,16 @@ broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
   if (operands.size() == 1)
     return operands;
 
-  if (!hasDynamicDimensions(operands))
+  // No need to broadcast for static shape
+  bool hasDynamic = false;
+  for (auto op : operands) {
+    const auto tType = dyn_cast<RankedTensorType>(op.getType());
+    if (tType && !tType.hasStaticShape()) {
+      hasDynamic = true;
+      break;
+    }
+  }
+  if (!hasDynamic)
     return operands;
 
   // Broadcast dynamic dimensions operand by operand
