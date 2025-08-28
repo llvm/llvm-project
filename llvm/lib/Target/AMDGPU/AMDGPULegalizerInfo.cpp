@@ -2084,7 +2084,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // TODO: Only Try to form v2s16 with legal packed instructions.
   getActionDefinitionsBuilder(G_FSHR)
-    .legalFor({{S32, S32}})
     .lowerFor({{V2S16, V2S16}})
     .clampMaxNumElementsStrict(0, S16, 2)
     .scalarize(0)

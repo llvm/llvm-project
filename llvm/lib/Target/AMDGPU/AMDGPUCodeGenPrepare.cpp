@@ -255,6 +255,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitFunnelShift(IntrinsicInst &I);
   bool run();
 };
 
@@ -1915,6 +1916,9 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::fshr:
+  case Intrinsic::fshl:
+    return visitFunnelShift(I);
   default:
     return false;
   }
@@ -2103,6 +2107,37 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   if (!Impl.FlowChanged)
     PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+bool AMDGPUCodeGenPrepareImpl::visitFunnelShift(IntrinsicInst &I) {
+  if (!I.getType()->isIntegerTy(32))
+    return false;
+
+  // Only convert divergent operations to v_alignbit
+  if (UA.isUniform(&I))
+    return false;
+
+  Intrinsic::ID IID = I.getIntrinsicID();
+  Value *Src0 = I.getOperand(0);
+  Value *Src1 = I.getOperand(1);
+  Value *Amt = I.getOperand(2);
+
+  IRBuilder<> Builder(&I);
+  Function *AlignBitFn = Intrinsic::getOrInsertDeclaration(
+      I.getModule(), Intrinsic::amdgcn_v_alignbit);
+
+  Value *AlignBitCall = nullptr;
+  if (IID == Intrinsic::fshr)
+    AlignBitCall = Builder.CreateCall(AlignBitFn, {Src0, Src1, Amt});
+  else if (IID == Intrinsic::fshl) {
+    Value *InvAmt = Builder.CreateSub(Builder.getInt32(32), Amt);
+    AlignBitCall = Builder.CreateCall(AlignBitFn, {Src1, Src0, InvAmt});
+  } else
+    return false;
+
+  I.replaceAllUsesWith(AlignBitCall);
+  I.eraseFromParent();
+  return true;
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,

@@ -373,8 +373,8 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX8-SDAG-LABEL: undef_lo2_v4i16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8-SDAG-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; GFX8-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -383,8 +383,9 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX8-GISEL-LABEL: undef_lo2_v4i16:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8-GISEL-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 16
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-GISEL-NEXT:    ;;#ASMSTART
 ; GFX8-GISEL-NEXT:    ; use v[0:1]
@@ -439,8 +440,8 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX8-SDAG-LABEL: undef_lo2_v4f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8-SDAG-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; GFX8-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    ;;#ASMSTART
 ; GFX8-SDAG-NEXT:    ; use v[0:1]
 ; GFX8-SDAG-NEXT:    ;;#ASMEND
@@ -449,8 +450,9 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX8-GISEL-LABEL: undef_lo2_v4f16:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX8-GISEL-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 16
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-GISEL-NEXT:    ;;#ASMSTART
 ; GFX8-GISEL-NEXT:    ; use v[0:1]
