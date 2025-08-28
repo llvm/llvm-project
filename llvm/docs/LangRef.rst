@@ -24128,8 +24128,7 @@ Overview:
 Given a vector load from %ptrA followed by a vector store to %ptrB, this
 instruction generates a mask where an active lane indicates that the
 write-after-read sequence can be performed safely for that lane, without the
-danger of it turning into a read-after-write sequence and introducing a
-store-to-load forwarding hazard.
+danger of a write-after-read hazard occurring.
 
 A write-after-read hazard occurs when a write-after-read sequence for a given
 lane in a vector ends up being executed as a read-after-write sequence due to
@@ -24149,8 +24148,7 @@ The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
 The element of the result mask is active when loading from %ptrA then storing to
-%ptrB is safe and doesn't result in a write-after-read sequence turning into a
-read-after-write sequence, meaning that:
+%ptrB is safe and doesn't result in a write-after-read hazard:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
 * (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
@@ -24188,12 +24186,18 @@ Overview:
 
 Given a vector store to %ptrA followed by a vector load from %ptrB, this
 instruction generates a mask where an active lane indicates that the
-read-after-write sequence can be performed safely for that lane, without the
-danger of it turning into a write-after-read sequence.
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard occurring or a a new store-to-load forwarding hazard
+being introduced.
 
 A read-after-write hazard occurs when a read-after-write sequence for a given
 lane in a vector ends up being executed as a write-after-read sequence due to
 the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load.
+Only the overlapping addresses can be forwarded to the load if the data hasn't
+been written to memory yet.
 
 Arguments:
 """"""""""
@@ -24212,8 +24216,8 @@ The element of the result mask is active when storing to %ptrA then loading from
 %ptrB is safe and doesn't result in aliasing, meaning that:
 
 * abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
-  occurs before loading from this address)
-* ptrA == ptrB doesn't introduce any new hazards and is safe
+  occurs before loading from this address), or
+* ptrA == ptrB, doesn't introduce any new hazards
 
 Examples:
 """""""""
