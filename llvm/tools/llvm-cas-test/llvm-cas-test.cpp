@@ -225,17 +225,28 @@ static int runOneTest(const char *Argv0) {
         Subprocesses.push_back(SP);
     }
 
-    if (Conf.Settings & CheckTermination) {
-      for_each(Subprocesses, [](auto &P) {
-        // Wait 1 second and killed the process.
-        auto WP = sys::Wait(P, 1);
-        if (WP.ReturnCode && Verbose)
-          llvm::errs() << "subprocess killed successfully\n";
-      });
-    } else {
-      for_each(Subprocesses, [](auto &P) { sys::Wait(P, std::nullopt); });
-    }
+    std::optional<unsigned> Timeout;
+    // Wait 1 second and killed the process if CheckTermination.
+    if (Conf.Settings & CheckTermination)
+      Timeout = 1;
 
+    auto HasError = any_of(Subprocesses, [&](auto &P) {
+      auto WP = sys::Wait(P, Timeout);
+      if (WP.ReturnCode == 0)
+        return false;
+      if ((Conf.Settings & CheckTermination) && WP.ReturnCode == -2) {
+        if (Verbose)
+          llvm::errs() << "subprocess killed successfully\n";
+        return false;
+      }
+      llvm::errs() << "subprocess failed with error code (" << WP.ReturnCode
+                   << ")\n";
+      return true;
+    });
+    if (HasError) {
+      llvm::errs() << "end of stress test due to an error in subprocess\n";
+      return 1;
+    }
   } else {
     // in-process fill data.
     fillData(CAS, AC, Conf);
