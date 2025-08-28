@@ -4794,13 +4794,29 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
     UseLASX = true;
     break;
   };
-  if (UseLASX && !(Subtarget.has32S() && Subtarget.hasExtLASX()))
-    return SDValue();
   Src = PropagateSExt ? signExtendBitcastSrcVector(DAG, SExtVT, Src, DL)
                       : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
-  Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
 
-  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src);
+  SDValue V;
+  if (!Subtarget.has32S() || !Subtarget.hasExtLASX()) {
+    if (Src.getSimpleValueType() == MVT::v32i8) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(Src, DL);
+      Lo = DAG.getNode(LoongArchISD::VMSKLTZ, DL, MVT::i64, Lo);
+      Hi = DAG.getNode(LoongArchISD::VMSKLTZ, DL, MVT::i64, Hi);
+      Hi = DAG.getNode(ISD::SHL, DL, MVT::i64, Hi,
+                       DAG.getConstant(16, DL, MVT::i8));
+      V = DAG.getNode(ISD::OR, DL, MVT::i64, Lo, Hi);
+    } else if (UseLASX) {
+      return SDValue();
+    }
+  }
+
+  if (!V) {
+    Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+    V = DAG.getNode(Opc, DL, MVT::i64, Src);
+  }
+
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
   V = DAG.getZExtOrTrunc(V, DL, T);
   return DAG.getBitcast(VT, V);
@@ -7949,7 +7965,7 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     if (Size < 32 && (AI->getOperation() == AtomicRMWInst::And ||
                       AI->getOperation() == AtomicRMWInst::Or ||
                       AI->getOperation() == AtomicRMWInst::Xor))
-      return AtomicExpansionKind::Expand;
+      return AtomicExpansionKind::CustomExpand;
     if (AI->getOperation() == AtomicRMWInst::Nand || Size < 32)
       return AtomicExpansionKind::CmpXChg;
   }
