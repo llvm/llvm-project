@@ -186,7 +186,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (0 != nPostConfigEnvCallback) {
     // Run an optional callback function in reverse order of registration
     // after the core of the ExecutionEnvironment() logic.
-    for (auto i = nPostConfigEnvCallback - 1; i >= 0; --i) {
+    for (auto i = 0; i != nPostConfigEnvCallback; ++i) {
       PostConfigEnvCallback[i](ac, av, env, envDefaults);
     }
   }
