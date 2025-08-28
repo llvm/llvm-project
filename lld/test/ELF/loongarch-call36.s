@@ -8,14 +8,14 @@
 ## hi20 = target - pc + (1 << 17) >> 18 = 0x60020 - 0x20010 + 0x20000 >> 18 = 1
 ## lo18 = target - pc & (1 << 18) - 1 = 0x60020 - 0x20010 & 0x3ffff = 16
 # EXE1:      20010: pcaddu18i $t0, 1
-# EXE1-NEXT: 20014: jirl $zero, $t0, 16 <foo>
+# EXE1-NEXT: 20014: jirl $zero, $t0, 16
 
 # RUN: ld.lld %t/a.o --section-start=.text=0x20010 --section-start=.sec.foo=0x40020 -o %t/exe2
 # RUN: llvm-objdump --no-show-raw-insn -d %t/exe2 | FileCheck --match-full-lines %s --check-prefix=EXE2
 ## hi20 = target - pc + (1 << 17) >> 18 = 0x40020 - 0x20010 + 0x20000 >> 18 = 1
 ## lo18 = target - pc & (1 << 18) - 1 = 0x40020 - 0x20010 & 0x3ffff = -131056
 # EXE2:      20010: pcaddu18i $t0, 1
-# EXE2-NEXT: 20014: jirl $zero, $t0, -131056 <foo>
+# EXE2-NEXT: 20014: jirl $zero, $t0, -131056
 
 # RUN: ld.lld %t/a.o -shared -T %t/a.t -o %t/a.so
 # RUN: llvm-readelf -x .got.plt %t/a.so | FileCheck --check-prefix=GOTPLT %s
@@ -34,7 +34,7 @@
 ## hi20 = foo@plt - pc + (1 << 17) >> 18 = 0x1234520 - 0x1274670 + 0x20000 >> 18 = -1
 ## lo18 = foo@plt - pc & (1 << 18) - 1 = 0x1234520 - 0x1274670 & 0x3ffff = -336
 # SO-NEXT: pcaddu18i $t0, -1{{$}}
-# SO-NEXT: jirl $zero, $t0, -336 <.plt+0x20>{{$}}
+# SO-NEXT: jirl $zero, $t0, -336{{$}}
 
 # GOTPLT:      section '.got.plt':
 # GOTPLT-NEXT: 0x01274730 00000000 00000000 00000000 00000000
