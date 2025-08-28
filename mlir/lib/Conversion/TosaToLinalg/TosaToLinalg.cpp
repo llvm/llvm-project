@@ -160,9 +160,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
           b = arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(), b);
 
         auto shiftAmount = shiftIsConstant ? shiftConst : args[2];
-        auto result = tosa::ApplyScaleOp::create(
-            rewriter, loc, rewriter.getI32Type(), a, b, shiftAmount,
-            rewriter.getStringAttr("SINGLE_ROUND"));
+        auto roundingAttr = RoundingModeAttr::get(rewriter.getContext(),
+                                                  RoundingMode::SINGLE_ROUND);
+        auto result =
+            tosa::ApplyScaleOp::create(rewriter, loc, rewriter.getI32Type(), a,
+                                       b, shiftAmount, roundingAttr);
 
         return result;
       }
