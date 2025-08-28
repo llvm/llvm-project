@@ -1754,6 +1754,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
                                     fortranOptions.predefinitions);
   }
 
+  if (frontendOptions.features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA)) {
+    fortranOptions.predefinitions.emplace_back("_CUDA", "1");
+  }
+
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
   if (targetTriple.isOSLinux()) {
     fortranOptions.predefinitions.emplace_back("__linux__", "1");
