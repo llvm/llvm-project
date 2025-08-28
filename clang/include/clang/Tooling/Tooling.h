@@ -32,6 +32,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -238,6 +239,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
     DiagnosticConsumer *DiagConsumer = nullptr,
+    CaptureDiagsKind CaptureKind = CaptureDiagsKind::None,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
         llvm::vfs::getRealFileSystem());
 

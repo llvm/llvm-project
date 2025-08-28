@@ -161,7 +161,7 @@ TEST(buildASTFromCode, FileSystem) {
       R"(#include "included_file.h")", {}, "input.cc", "clang-tool",
       std::make_shared<PCHContainerOperations>(),
       getClangStripDependencyFileAdjuster(), FileContentMappings(), nullptr,
-      InMemoryFileSystem);
+      CaptureDiagsKind::None, InMemoryFileSystem);
   ASSERT_TRUE(AST.get());
   EXPECT_TRUE(FindClassDeclX(AST.get()));
 }
