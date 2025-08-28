@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Enum {
-  let name = "ol_symbol_kind_t";
+def ol_symbol_kind_t : Enum {
   let desc = "The kind of a symbol";
   let etors =[
     Etor<"KERNEL", "a kernel object">,
@@ -19,8 +18,7 @@ def : Enum {
   ];
 }
 
-def : Function {
-    let name = "olGetSymbol";
+def olGetSymbol : Function {
     let desc = "Get a symbol (kernel or global variable) identified by `Name` in the given program.";
     let details = [
         "Symbol handles are owned by the program and do not need to be manually destroyed."
@@ -34,8 +32,7 @@ def : Function {
     let returns = [];
 }
 
-def : Enum {
-  let name = "ol_symbol_info_t";
+def ol_symbol_info_t : Enum {
   let desc = "Supported symbol info.";
   let is_typed = 1;
   let etors = [
@@ -45,8 +42,7 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetSymbolInfo";
+def olGetSymbolInfo : Function {
   let desc = "Queries the given property of the symbol.";
   let details = [
     "`olGetSymbolInfoSize` can be used to query the storage size "
@@ -73,8 +69,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetSymbolInfoSize";
+def olGetSymbolInfoSize : Function {
   let desc = "Returns the storage size of the given symbol query.";
   let details = [];
   let params = [

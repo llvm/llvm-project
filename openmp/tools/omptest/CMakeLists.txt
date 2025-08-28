@@ -4,7 +4,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.20)
 project(omptest LANGUAGES CXX)
 
 option(LIBOMPTEST_BUILD_STANDALONE
@@ -12,9 +12,11 @@ option(LIBOMPTEST_BUILD_STANDALONE
        ${OPENMP_STANDALONE_BUILD})
 option(LIBOMPTEST_BUILD_UNITTESTS
        "Build ompTest's unit tests, requires GoogleTest." OFF)
+option(LIBOMPTEST_INSTALL_COMPONENTS
+       "Install ompTest library, headers and package files." OFF)
 
-# In absence of corresponding OMPT support: exit early
-if(NOT ${LIBOMP_OMPT_SUPPORT})
+# Exit early if OMPT support or LLVM-tests were disabled by the user.
+if((NOT ${LIBOMP_OMPT_SUPPORT}) OR (NOT ${LLVM_INCLUDE_TESTS}))
   return()
 endif()
 
@@ -52,7 +54,7 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # Check if standalone build was requested together with unittests
   if (LIBOMPTEST_BUILD_STANDALONE)
     # Emit warning: this build actually depends on LLVM's GoogleTest
-    message(Warning "LIBOMPTEST_BUILD_STANDALONE and LIBOMPTEST_BUILD_UNITTESTS"
+    message(WARNING "LIBOMPTEST_BUILD_STANDALONE and LIBOMPTEST_BUILD_UNITTESTS"
                     " requested simultaneously.\n"
                     "Linking against LLVM's GoogleTest library archives.\n"
                     "Disable LIBOMPTEST_BUILD_UNITTESTS to perform an actual"
@@ -61,11 +63,11 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     set(LIBOMPTEST_BUILD_STANDALONE OFF)
   endif()
 
-  # Use LLVM's gtest library archive
-  set(GTEST_LIB "${LLVM_BINARY_DIR}/lib/libllvm_gtest.a")
+  # Add dependency llvm_gtest; emits error if unavailable.
+  add_dependencies(omptest llvm_gtest)
 
-  # Link gtest as whole-archive to expose required symbols
-  set(GTEST_LINK_CMD "-Wl,--whole-archive" ${GTEST_LIB}
+  # Link llvm_gtest as whole-archive to expose required symbols
+  set(GTEST_LINK_CMD "-Wl,--whole-archive" llvm_gtest
                      "-Wl,--no-whole-archive" LLVMSupport)
 
   # Add GoogleTest-based header
@@ -92,6 +94,18 @@ else()
     ./src/OmptTesterStandalone.cpp)
 endif()
 
+if(TARGET cxx-headers)
+  add_dependencies(omptest cxx-headers)
+endif()
+
+if(TARGET cxx_shared)
+  add_dependencies(omptest cxx_shared)
+endif()
+
+if(TARGET cxxabi_shared)
+  add_dependencies(omptest cxxabi_shared)
+endif()
+
 # Add common include directories.
 target_include_directories(omptest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -100,36 +114,42 @@ target_include_directories(omptest PUBLIC
 
 target_compile_features(omptest PRIVATE cxx_std_17)
 
-# Create and install package configuration files.
+# Perform package configuration.
+set(OMPTEST_CONFIG_INSTALL_DIR "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest")
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/omptest-config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/omptest-config.cmake
-  INSTALL_DESTINATION "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest"
+  INSTALL_DESTINATION "${OMPTEST_CONFIG_INSTALL_DIR}"
 )
 
-install(FILES ${omptest_BINARY_DIR}/cmake/omptest-config.cmake
-        DESTINATION "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest")
+# Perform installation only if requested by the user.
+if(LIBOMPTEST_INSTALL_COMPONENTS)
+  # Install package configuration files.
+  install(FILES ${omptest_BINARY_DIR}/cmake/omptest-config.cmake
+          DESTINATION "${OMPTEST_CONFIG_INSTALL_DIR}")
 
-# Install libomptest header files: Copy header-files from include dir
-install(DIRECTORY ./include/
-        DESTINATION "${LIBOMP_HEADERS_INSTALL_PATH}/omptest"
-        FILES_MATCHING PATTERN "*.h")
+  # Install libomptest header files: Copy header-files from include dir
+  set(OMPTEST_HEADER_INSTALL_DIR "${LIBOMP_HEADERS_INSTALL_PATH}/omptest")
+  install(DIRECTORY ./include/
+          DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}"
+          FILES_MATCHING PATTERN "*.h")
 
-# Install library and export targets.
-# Note: find_package(omptest) may require setting of PATH_SUFFIXES
-#       Example: "lib/cmake/openmp/omptest", this is due to the install location
-install(TARGETS omptest
-        EXPORT OPENMPomptest
-        LIBRARY COMPONENT omptest
-        DESTINATION "${OPENMP_INSTALL_LIBDIR}"
-        INCLUDES DESTINATION "${LIBOMP_HEADERS_INSTALL_PATH}/omptest")
+  # Install library and export targets.
+  # Note: find_package(omptest) may require setting of PATH_SUFFIXES
+  #       Example: "lib/cmake/openmp/omptest", this is due to the install location
+  install(TARGETS omptest
+          EXPORT OPENMPomptest
+          LIBRARY COMPONENT omptest
+          DESTINATION "${OPENMP_INSTALL_LIBDIR}"
+          INCLUDES DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}")
 
-# Allow to link omptest by using: target_link_libraries( ... omptest::omptest)
-# Additionally, it automatically propagates the include directory.
-install(EXPORT OPENMPomptest
-        DESTINATION "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest"
-        NAMESPACE omptest::
-        FILE omptest-targets.cmake)
+  # Allow to link omptest by using: target_link_libraries( ... omptest::omptest)
+  # Additionally, it automatically propagates the include directory.
+  install(EXPORT OPENMPomptest
+          DESTINATION "${OMPTEST_CONFIG_INSTALL_DIR}"
+          NAMESPACE omptest::
+          FILE omptest-targets.cmake)
+endif()
 
 # Discover unit tests (added to check-openmp)
 if(LIBOMPTEST_BUILD_UNITTESTS)

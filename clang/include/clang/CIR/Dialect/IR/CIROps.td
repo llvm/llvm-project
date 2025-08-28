@@ -1907,6 +1907,70 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTTAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
+  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Get the VTT address point";
+  let description = [{
+    The `vtt.address_point` operation retrieves an element from the virtual
+    table table (VTT), which is the address point of a C++ vtable. In virtual
+    inheritance, a set of internal `__vptr` members for an object are
+    initialized by this operation, which assigns an element from the VTT. The
+    initialization order is as follows:
+
+    The complete object constructors and destructors find the VTT,
+    via the mangled name of the VTT global variable. They pass the address of
+    the subobject's sub-VTT entry in the VTT as a second parameter
+    when calling the base object constructors and destructors.
+    The base object constructors and destructors use the address passed to
+    initialize the primary virtual pointer and virtual pointers that point to
+    the classes which either have virtual bases or override virtual functions
+    with a virtual step.
+
+    The first parameter is either the mangled name of VTT global variable
+    or the address of the subobject's sub-VTT entry in the VTT.
+    The second parameter `offset` provides a virtual step to adjust to
+    the actual address point of the vtable.
+
+    The return type is always a `!cir.ptr<!cir.ptr<void>>`.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.base_class_addr(%1 : !cir.ptr<!rec_D> nonnull) [0]
+             -> !cir.ptr<!rec_B>
+    %4 = cir.vtt.address_point @_ZTT1D, offset = 1
+             -> !cir.ptr<!cir.ptr<!void>>
+    cir.call @_ZN1BC2Ev(%3, %4)
+    ```
+    Or:
+    ```mlir
+    %7 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1
+             -> !cir.ptr<!cir.ptr<!void>>
+    ```
+  }];
+
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
+                       Optional<CIR_AnyType>:$sym_addr,
+                       I32Attr:$offset);
+  let results = (outs CIR_PointerType:$addr);
+
+  let assemblyFormat = [{
+      ($name^)?
+      ($sym_addr^ `:` type($sym_addr))?
+      `,`
+      `offset` `=` $offset
+    `->` qualified(type($addr)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -3185,7 +3249,7 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp
+// ComplexMulOp & ComplexDivOp
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32EnumAttr<
@@ -3204,18 +3268,61 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    Range is used to select the implementation used when the operation
-    is lowered to the LLVM dialect. For multiplication, 'improved',
-    'promoted', and 'basic' are all handled equivalently, producing the
-    algebraic formula with no special handling for NaN value. If 'full' is
-    used, a runtime-library function is called if one of the intermediate
-    calculations produced a NaN value.
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
+    are all handled equivalently, producing the algebraic formula with no
+    special handling for NaN value. If 'full' is used, a runtime-library
+    function is called if one of the intermediate calculations produced
+    a NaN value.
 
     Example:
 
     ```mlir
     %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexDivOp : CIR_Op<"complex.div", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex division";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    For complex types with floating-point components, the `range` attribute
+    specifies the algorithm to be used when the operation is lowered to
+    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
+    Complex division with no additional handling for NaN values. If 'promoted'
+    is used, the values are promoted to a higher precision type, if possible,
+    and the calculation is performed using the algebraic formula, with
+    no additional handling for NaN values. We fall back on Smith's algorithm
+    when the target doesn't support a higher precision type. If 'full' is used,
+    a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value. and for 'basic' algebraic formula with
+    no additional handling for the NaN value will be used. For integers types
+    `range` attribute will be ignored.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 

@@ -23,7 +23,7 @@ set(LLVM_ROOT "${PACKAGE_PREFIX_DIR}")
 # Provide header and library paths.
 set(LIBOMP_HEADERS_INSTALL_PATH "${LLVM_ROOT}/@LIBOMP_HEADERS_INSTALL_PATH@")
 set(LIBOMP_LIBRARY_INSTALL_PATH "${LLVM_ROOT}/@OPENMP_INSTALL_LIBDIR@")
-set(omptest_INCLUDE_DIR         "${LIBOMP_HEADERS_INSTALL_PATH}/omptest/include")
+set(omptest_INCLUDE_DIR         "${LIBOMP_HEADERS_INSTALL_PATH}/omptest")
 set(omptest_LIBRARY_DIR         "${LIBOMP_LIBRARY_INSTALL_PATH}")
 
 # Provide compiler default values.

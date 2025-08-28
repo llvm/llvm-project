@@ -153,6 +153,10 @@ public:
   ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
                                ArrayRef<hlsl::RootSignatureElement> Elements);
 
+  void SetRootSignatureOverride(IdentifierInfo *DeclIdent) {
+    RootSigOverrideIdent = DeclIdent;
+  }
+
   // Returns true if any RootSignatureElement is invalid and a diagnostic was
   // produced
   bool
@@ -220,6 +224,8 @@ private:
   llvm::SmallVector<Decl *> DefaultCBufferDecls;
 
   uint32_t ImplicitBindingNextOrderID = 0;
+
+  IdentifierInfo *RootSigOverrideIdent = nullptr;
 
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);

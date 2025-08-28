@@ -82,6 +82,8 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
     return 32;
   if (size <= 64)
     return 64;
+  if (size <= 128)
+    return 128;
   return size;
 }
 
@@ -89,7 +91,7 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||
-         Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+         Ty->getScalarSizeInBits() >= 128 || Ty->isHalfTy() || Ty->isBFloatTy();
 }
 
 namespace NVPTX {

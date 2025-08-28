@@ -181,6 +181,9 @@ CreateFrontendAction(CompilerInstance &CI) {
 
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
 
+  if (CI.getLangOpts().HLSL)
+    Act = std::make_unique<HLSLFrontendAction>(std::move(Act));
+
   if (FEOpts.FixAndRecompile) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }

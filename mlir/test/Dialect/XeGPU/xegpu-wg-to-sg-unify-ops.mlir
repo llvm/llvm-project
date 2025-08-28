@@ -263,4 +263,62 @@ gpu.module @test_distribution {
   } {sg_id_range = #xegpu.range<[3, 19]>}
   gpu.return
   }
+
+  // CHECK-LABEL: distribute_load_matrix
+  // CHECK-SAME: [[arg0:%.+]]: memref<32768xi8, 3>
+  gpu.func @distribute_load_matrix(%arg0: memref<32768xi8, 3>) {
+    //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[arg0]] : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    //CHECK: [[sgid:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[c2:%.+]] = arith.constant 2 : index
+    //CHECK: [[c4:%.+]] = arith.constant 4 : index
+    //CHECK: [[c4_0:%.+]] = arith.constant 4 : index
+    //CHECK: [[id_y:%.+]] = affine.apply #map()[[[sgid]]]
+    //CHECK: [[id_x:%.+]] = affine.apply #map1()[[[sgid]]]
+    //CHECK: [[c32:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_y:%.+]] = index.mul [[id_y]], [[c32]]
+    //CHECK: [[c32_1:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_x:%.+]] = index.mul [[id_x]], [[c32_1]]
+    //CHECK: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK: [[c0_1:%.+]] = arith.constant 0 : index
+    //CHECK: [[l_off_y_0:%.+]] = arith.addi [[l_off_y]], [[c0]] : index
+    //CHECK: [[l_off_x_0:%.+]] = arith.addi [[l_off_x]], [[c0_1]] : index
+    //CHECK: [[c64:%.+]] = arith.constant 64 : index
+    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y_0]], [[c64]]
+    //CHECK: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x_0]], [[c128]]
+    //CHECK: xegpu.load_matrix [[mdesc]][[[off_y]], [[off_x]]] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
+    %0 = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    %1 = xegpu.load_matrix %0[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32], lane_layout = [2, 8], lane_data = [1, 1]>}>: !xegpu.mem_desc<64x128xf32> -> vector<64x128xf32>
+    gpu.return
+  }
+
+  //CHECK-LABEL: distribute_store_matrix
+  //CHECK-SAME: [[arg0:%.+]]: memref<32768xi8, 3>
+  gpu.func @distribute_store_matrix(%arg0 : memref<32768xi8, 3>) {
+    //CHECK: [[cst:%.+]] = arith.constant dense<1.000000e+00> : vector<32x32xf32>
+    //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[arg0]] : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    //CHECK: [[sgid:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[c2:%.+]] = arith.constant 2 : index
+    //CHECK: [[c4:%.+]] = arith.constant 4 : index
+    //CHECK: [[c4_0:%.+]] = arith.constant 4 : index
+    //CHECK: [[id_y:%.+]] = affine.apply #map()[[[sgid]]]
+    //CHECK: [[id_x:%.+]] = affine.apply #map1()[[[sgid]]]
+    //CHECK: [[c32:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_y_0:%.+]] = index.mul [[id_y]], [[c32]]
+    //CHECK: [[c32_1:%.+]] = arith.constant 32 : index
+    //CHECK: [[l_off_x_0:%.+]] = index.mul [[id_x]], [[c32_1]]
+    //CHECK: [[c0:%.+]] = arith.constant 0 : index
+    //CHECK: [[c0_2:%.+]] = arith.constant 0 : index
+    //CHECK: [[l_off_y:%.+]] = arith.addi [[l_off_y_0]], [[c0]] : index
+    //CHECK: [[l_off_x:%.+]] = arith.addi [[l_off_x_0]], [[c0_2]] : index
+    //CHECK: [[c64:%.+]] = arith.constant 64 : index
+    //CHECK: [[off_y:%.+]] = index.remu [[l_off_y]], [[c64]]
+    //CHECK: [[c128:%.+]] = arith.constant 128 : index
+    //CHECK: [[off_x:%.+]] = index.remu [[l_off_x]], [[c128]]
+    //CHECK: xegpu.store_matrix [[cst]], [[mdesc]][[[off_y]], [[off_x]]] : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32]>} dense<1.0> : vector<64x128xf32>
+    %mdesc = xegpu.create_mem_desc %arg0 : memref<32768xi8, 3> -> !xegpu.mem_desc<64x128xf32>
+    xegpu.store_matrix %cst, %mdesc[0, 0] {layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [32, 32]>} : vector<64x128xf32>, !xegpu.mem_desc<64x128xf32>
+    gpu.return
+  }
 }

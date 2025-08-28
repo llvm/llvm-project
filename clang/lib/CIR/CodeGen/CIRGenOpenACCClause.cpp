@@ -452,7 +452,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
       // We are OK with no init for builtins, arrays of builtins, or pointers,
       // else we should NYI so we know to go look for these.
-      if (!varRecipe->getType()
+      if (cgf.getContext().getLangOpts().CPlusPlus &&
+          !varRecipe->getType()
                ->getPointeeOrArrayElementType()
                ->isBuiltinType() &&
           !varRecipe->getType()->isPointerType() && !varRecipe->getInit()) {
@@ -506,8 +507,9 @@ class OpenACCClauseCIREmitter final
                              const VarDecl *varRecipe, const VarDecl *temporary,
                              DeclContext *dc, QualType baseType,
                              mlir::Value mainOp) {
-    mlir::ModuleOp mod =
-        builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+    mlir::ModuleOp mod = builder.getBlock()
+                             ->getParent()
+                             ->template getParentOfType<mlir::ModuleOp>();
 
     std::string recipeName =
         getRecipeName<RecipeTy>(varRef->getSourceRange(), baseType);

@@ -272,14 +272,4 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
-#define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
-  do {                                                                         \
-    switch (Expr) {                                                            \
-      TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-    default: {                                                                 \
-      D;                                                                       \
-      break;                                                                   \
-    }                                                                          \
-    }                                                                          \
-  } while (0)
 #endif

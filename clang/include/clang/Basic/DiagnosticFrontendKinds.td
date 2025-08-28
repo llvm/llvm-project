@@ -287,6 +287,10 @@ def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
 
+def err_flatten_function_needs_feature : Error<
+  "flatten function %0 calls %1 which requires target feature '%2', but the "
+  "caller is compiled without support for '%2'">;
+
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;

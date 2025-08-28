@@ -7,16 +7,17 @@ declare <4 x float> @bar()
 define void @foo(ptr %ptr) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 retval0[16];
 ; CHECK-NEXT:    call.uni (retval0), bar, ();
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [retval0];
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    st.v2.b64 [%rd1], {%rd2, %rd3};
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %val = tail call <4 x float> @bar()
   store <4 x float> %val, ptr %ptr
