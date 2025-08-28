@@ -4,513 +4,887 @@ See https://llvm.org/LICENSE.txt for license information.
 SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 -->
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLVM Advisor - Compilation Analysis Dashboard</title>
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Chart.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Prism.js for syntax highlighting -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/custom.css">
-    
-    <!-- Custom Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'llvm-blue': '#1e40af',
-                        'llvm-dark': '#1f2937',
-                        'success': '#10b981',
-                        'warning': '#f59e0b',
-                        'error': '#ef4444'
-                    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LLVM Advisor - Compilation Analysis Dashboard</title>
+
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+
+        <!-- Chart.js for visualizations -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <!-- Prism.js for syntax highlighting -->
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css"
+            rel="stylesheet"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+        <!-- Custom CSS -->
+        <link rel="stylesheet" href="/static/css/custom.css" />
+
+        <!-- Custom Tailwind Config -->
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            "llvm-blue": "#1e40af",
+                            "llvm-dark": "#1f2937",
+                            success: "#10b981",
+                            warning: "#f59e0b",
+                            error: "#ef4444",
+                        },
+                    },
+                },
+            };
+        </script>
+
+        <!-- Custom styles for loading states and animations -->
+        <style>
+            @keyframes pulse-custom {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
                 }
             }
-        }
-    </script>
-    
-    <!-- Custom styles for loading states and animations -->
-    <style>
-        @keyframes pulse-custom {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .loading-pulse {
-            animation: pulse-custom 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        .tab-transition {
-            transition: all 0.3s ease-in-out;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-        
-        .metric-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .metric-card-green {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-        
-        .metric-card-orange {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        }
-        
-        .metric-card-red {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        }
 
-        /* Advanced Performance Styles */
-        .flamegraph-tooltip {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 1000;
-            max-width: 300px;
-        }
+            .loading-pulse {
+                animation: pulse-custom 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
 
-        .performance-controls {
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 10;
-            border-bottom: 1px solid #e5e7eb;
-        }
+            .tab-transition {
+                transition: all 0.3s ease-in-out;
+            }
 
-        .minimap-container {
-            border: 1px solid #d1d5db;
-            background: #f9fafb;
-            border-radius: 4px;
-        }
+            .chart-container {
+                position: relative;
+                height: 300px;
+                width: 100%;
+            }
 
-        .flamegraph-canvas {
-            cursor: crosshair;
-            user-select: none;
-        }
+            .metric-card {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
 
-        .flamegraph-canvas:active {
-            cursor: grabbing;
-        }
+            .metric-card-green {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            }
 
-        .search-highlight {
-            background: linear-gradient(135deg, #fef3c7, #fcd34d);
-            border: 2px solid #f59e0b;
-        }
+            .metric-card-orange {
+                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            }
 
-        .keyboard-shortcuts {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
+            .metric-card-red {
+                background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            }
 
-        .keyboard-shortcuts.visible {
-            opacity: 1;
-        }
+            /* Advanced Performance Styles */
+            .flamegraph-tooltip {
+                position: absolute;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                pointer-events: none;
+                z-index: 1000;
+                max-width: 300px;
+            }
 
-        .performance-stats-enhanced {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-    </style>
-</head>
-<body class="h-full bg-gray-50">
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div class="text-center">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-llvm-blue"></div>
-            <h2 class="mt-4 text-xl font-semibold text-gray-700">Loading LLVM Advisor Dashboard...</h2>
-            <p class="mt-2 text-gray-500">Analyzing compilation data</p>
+            .performance-controls {
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 10;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .minimap-container {
+                border: 1px solid #d1d5db;
+                background: #f9fafb;
+                border-radius: 4px;
+            }
+
+            .flamegraph-canvas {
+                cursor: crosshair;
+                user-select: none;
+            }
+
+            .flamegraph-canvas:active {
+                cursor: grabbing;
+            }
+
+            .search-highlight {
+                background: linear-gradient(135deg, #fef3c7, #fcd34d);
+                border: 2px solid #f59e0b;
+            }
+
+            .keyboard-shortcuts {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 12px;
+                border-radius: 6px;
+                font-size: 11px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                pointer-events: none;
+            }
+
+            .keyboard-shortcuts.visible {
+                opacity: 1;
+            }
+
+            .performance-stats-enhanced {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+        </style>
+    </head>
+    <body class="h-full bg-gray-50">
+        <!-- Loading Screen -->
+        <div
+            id="loading-screen"
+            class="fixed inset-0 bg-white z-50 flex items-center justify-center"
+        >
+            <div class="text-center">
+                <div
+                    class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-llvm-blue"
+                ></div>
+                <h2 class="mt-4 text-xl font-semibold text-gray-700">
+                    Loading LLVM Advisor Dashboard...
+                </h2>
+                <p class="mt-2 text-gray-500">Analyzing compilation data</p>
+            </div>
         </div>
-    </div>
 
-    <!-- Main Application -->
-    <div id="app" class="hidden h-full flex flex-col">
-        <!-- Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <!-- Logo and Title -->
-                    <div class="flex items-center space-x-4">
-                        <div class="flex-shrink-0">
-                            <div class="h-8 w-8 bg-llvm-blue rounded-lg flex items-center justify-center">
-                                <span class="text-white font-bold text-sm">LA</span>
-                            </div>
-                        </div>
-                        <div>
-                            <h1 class="text-xl font-semibold text-gray-900">LLVM Advisor</h1>
-                            <p class="text-sm text-gray-500">Compilation Analysis Dashboard</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Compilation Unit Selector -->
-                    <div class="flex items-center space-x-4">
-                        <div class="flex items-center space-x-2">
-                            <label for="unit-selector" class="text-sm font-medium text-gray-700">Unit:</label>
-                            <select id="unit-selector" class="block w-48 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm">
-                                <option value="">Loading units...</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Status Indicator -->
-                        <div id="status-indicator" class="flex items-center space-x-2">
-                            <div class="h-2 w-2 bg-success rounded-full"></div>
-                            <span class="text-sm text-gray-600">Connected</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Tab Navigation -->
-        <nav class="bg-white border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex space-x-8">
-                    <button id="tab-dashboard" class="tab-button active border-b-2 border-llvm-blue text-llvm-blue py-4 px-1 text-sm font-medium" data-tab="dashboard">
-                        Dashboard
-                    </button>
-                    <button id="tab-explorer" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" data-tab="explorer">
-                        Explorer
-                    </button>
-                    <button id="tab-diagnostics" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" data-tab="diagnostics">
-                        Diagnostics
-                    </button>
-                    <button id="tab-performance" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" data-tab="performance">
-                        Performance
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
-            <div class="min-h-full">
-                
-                <!-- Dashboard Tab -->
-                <div id="dashboard-content" class="tab-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <!-- Alert Banner -->
-                    <div id="alert-banner" class="hidden mb-6 bg-blue-50 border-l-4 border-blue-400 p-4">
-                        <div class="flex">
-                            <div class="ml-3">
-                                <p class="text-sm text-blue-700" id="alert-message"></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Key Metrics Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <!-- Total Files Metric -->
-                        <div class="metric-card rounded-lg shadow-lg p-6 text-white">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-blue-100 text-sm font-medium">Total Files</p>
-                                    <p id="metric-total-files" class="text-3xl font-bold">-</p>
-                                </div>
-                                <div class="bg-white bg-opacity-20 rounded-full p-3">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
+        <!-- Main Application -->
+        <div id="app" class="hidden h-full flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <!-- Logo and Title -->
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <div
+                                    class="h-8 w-8 bg-llvm-blue rounded-lg flex items-center justify-center"
+                                >
+                                    <span class="text-white font-bold text-sm"
+                                        >LA</span
+                                    >
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Success Rate Metric -->
-                        <div class="metric-card-green rounded-lg shadow-lg p-6 text-white">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-blue-100 text-sm font-medium">Success Rate</p>
-                                    <p id="metric-success-rate" class="text-3xl font-bold">-</p>
-                                </div>
-                                <div class="bg-white bg-opacity-20 rounded-full p-3">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
+                            <div>
+                                <h1 class="text-xl font-semibold text-gray-900">
+                                    LLVM Advisor
+                                </h1>
+                                <p class="text-sm text-gray-500">
+                                    Compilation Analysis Dashboard
+                                </p>
                             </div>
                         </div>
 
-                        <!-- Total Errors Metric -->
-                        <div class="metric-card-orange rounded-lg shadow-lg p-6 text-white">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-orange-100 text-sm font-medium">Total Errors</p>
-                                    <p id="metric-total-errors" class="text-3xl font-bold">-</p>
-                                </div>
-                                <div class="bg-white bg-opacity-20 rounded-full p-3">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Compilation Phases -->
-                        <div class="metric-card-red rounded-lg shadow-lg p-6 text-white">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-red-100 text-sm font-medium">Compilation Phases</p>
-                                    <p id="metric-timing-phases" class="text-3xl font-bold">-</p>
-                                </div>
-                                <div class="bg-white bg-opacity-20 rounded-full p-3">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <!-- Remarks Distribution -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Remarks Distribution</h3>
-                            <div class="chart-container">
-                                <canvas id="remarks-distribution-chart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Diagnostic Levels -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Diagnostic Levels</h3>
-                            <div class="chart-container">
-                                <canvas id="diagnostic-levels-chart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Compilation Info -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Compilation Information</h3>
-                            <div id="compilation-info-table">
-                                <!-- Compilation info table will be loaded here -->
-                            </div>
-                        </div>
-
-                        <!-- Binary Size Breakdown -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Binary Size Breakdown</h3>
-                            <div class="chart-container">
-                                <canvas id="binary-size-chart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Insights and Remarks -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <!-- Optimization Remarks Summary -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Optimization Remarks Summary</h3>
-                            <div id="remarks-summary-list" class="space-y-3">
-                                <!-- Dynamic content will be loaded here -->
-                            </div>
-                        </div>
-
-                        <!-- Top Optimization Passes -->
-                        <div class="bg-white rounded-lg shadow-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Top Optimization Passes</h3>
-                            <div id="optimization-passes-list" class="space-y-3">
-                                <!-- Dynamic content will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Explorer Tab -->
-                <div id="explorer-content" class="tab-content hidden" style="height: calc(100vh - 180px);">
-                    <!-- Explorer Split View Container -->
-                    <div class="h-full flex flex-col">
-                        <!-- Explorer Toolbar -->
-                        <div class="bg-white border-b border-gray-200 p-4">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-medium text-gray-900">Code Explorer</h3>
-                                <div class="flex items-center space-x-4">
-                                    <!-- File Selector -->
-                                    <div class="flex items-center space-x-2">
-                                        <label for="file-selector" class="text-sm font-medium text-gray-700">File:</label>
-                                        <select id="file-selector" class="block w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm">
-                                            <option value="">Select a file...</option>
-                                        </select>
-                                    </div>
-                                    <!-- View Type Selector -->
-                                    <div class="flex items-center space-x-2">
-                                        <label for="view-type-selector" class="text-sm font-medium text-gray-700">View:</label>
-                                        <select id="view-type-selector" class="block w-32 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm">
-                                            <option value="assembly">Assembly</option>
-                                            <option value="ir">LLVM IR</option>
-                                            <option value="optimized-ir">Optimized IR</option>
-                                            <option value="object">Object Code</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Split View Container -->
-                        <div class="flex-1 flex overflow-hidden">
-                            <!-- Left Panel - Source Code -->
-                            <div class="w-1/2 flex flex-col border-r border-gray-200">
-                                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                                    <h4 class="text-sm font-medium text-gray-700">Source Code</h4>
-                                    <div class="flex items-center space-x-2">
-                                        <button id="toggle-diagnostics-btn" class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-200 disabled:opacity-50" disabled>
-                                            Diagnostics
-                                        </button>
-                                        <button id="toggle-remarks-btn" class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-200 disabled:opacity-50" disabled>
-                                            Remarks
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="flex-1 overflow-auto">
-                                    <div id="source-code-container" class="h-full">
-                                        <div class="flex items-center justify-center h-full text-gray-500">
-                                            <div class="text-center">
-                                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                                </svg>
-                                                <p class="mt-2">Select a file to view source code</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Right Panel - Assembly/IR/Object -->
-                            <div class="w-1/2 flex flex-col">
-                                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                                    <h4 id="right-panel-title" class="text-sm font-medium text-gray-700">Assembly</h4>
-                                    <div class="flex items-center space-x-2">
-                                        <button id="copy-output-btn" class="text-sm text-llvm-blue hover:text-blue-800 disabled:opacity-50" disabled>
-                                            Copy
-                                        </button>
-                                        <button id="download-output-btn" class="text-sm text-llvm-blue hover:text-blue-800 disabled:opacity-50" disabled>
-                                            Download
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="flex-1 overflow-auto">
-                                    <div id="output-container" class="h-full">
-                                        <div class="flex items-center justify-center h-full text-gray-500">
-                                            <div class="text-center">
-                                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                <p class="mt-2">Select a file and view type to see output</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Performance Tab -->
-                <div id="performance-content" class="tab-content hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <!-- Performance Header -->
-                    <div class="mb-6">
-                        <h3 class="text-2xl font-bold text-gray-900 mb-4">Performance Analysis</h3>
-                        
-                        <!-- Controls -->
-                        <div class="flex items-center space-x-4 mb-6 bg-gray-50 p-4 rounded-lg">
-                            <!-- View Type Selector -->
+                        <!-- Compilation Unit Selector -->
+                        <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
-                                <label for="view-type-selector-perf" class="text-sm font-medium text-gray-700">Visualization:</label>
-                                <select id="view-type-selector-perf" class="block w-36 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm">
-                                    <option value="time-order">Time Order</option>
-                                    <option value="sandwich">Sandwich View</option>
+                                <label
+                                    for="unit-selector"
+                                    class="text-sm font-medium text-gray-700"
+                                    >Unit:</label
+                                >
+                                <select
+                                    id="unit-selector"
+                                    class="block w-48 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm"
+                                >
+                                    <option value="">Loading units...</option>
                                 </select>
                             </div>
-                            
-                            <!-- Refresh Button -->
-                            <button id="refresh-performance-btn" class="flex items-center px-4 py-2 bg-llvm-blue text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-llvm-blue focus:ring-offset-2 transition-colors">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                </svg>
-                                Refresh Data
-                            </button>
+
+                            <!-- Status Indicator -->
+                            <div
+                                id="status-indicator"
+                                class="flex items-center space-x-2"
+                            >
+                                <div
+                                    class="h-2 w-2 bg-success rounded-full"
+                                ></div>
+                                <span class="text-sm text-gray-600"
+                                    >Connected</span
+                                >
+                            </div>
                         </div>
                     </div>
+                </div>
+            </header>
 
-                    <!-- Performance Content -->
-                    <div id="performance-visualization" class="min-h-[600px]">
-                        <div class="flex items-center justify-center h-96 text-gray-500">
-                            <div class="text-center">
-                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-llvm-blue mb-4"></div>
-                                <p>Loading performance data...</p>
+            <!-- Tab Navigation -->
+            <nav class="bg-white border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex space-x-8">
+                        <button
+                            id="tab-dashboard"
+                            class="tab-button active border-b-2 border-llvm-blue text-llvm-blue py-4 px-1 text-sm font-medium"
+                            data-tab="dashboard"
+                        >
+                            Dashboard
+                        </button>
+                        <button
+                            id="tab-explorer"
+                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium"
+                            data-tab="explorer"
+                        >
+                            Explorer
+                        </button>
+                        <button
+                            id="tab-performance"
+                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium"
+                            data-tab="performance"
+                        >
+                            Performance
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto">
+                <div class="min-h-full">
+                    <!-- Dashboard Tab -->
+                    <div
+                        id="dashboard-content"
+                        class="tab-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+                    >
+                        <!-- Alert Banner -->
+                        <div
+                            id="alert-banner"
+                            class="hidden mb-6 bg-blue-50 border-l-4 border-blue-400 p-4"
+                        >
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p
+                                        class="text-sm text-blue-700"
+                                        id="alert-message"
+                                    ></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Key Metrics Cards -->
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+                        >
+                            <!-- Total Files Metric -->
+                            <div
+                                class="metric-card rounded-lg shadow-lg p-6 text-white"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p
+                                            class="text-blue-100 text-sm font-medium"
+                                        >
+                                            Total Files
+                                        </p>
+                                        <p
+                                            id="metric-total-files"
+                                            class="text-3xl font-bold"
+                                        >
+                                            -
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="bg-white bg-opacity-20 rounded-full p-3"
+                                    >
+                                        <svg
+                                            class="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Success Rate Metric -->
+                            <div
+                                class="metric-card-green rounded-lg shadow-lg p-6 text-white"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p
+                                            class="text-blue-100 text-sm font-medium"
+                                        >
+                                            Success Rate
+                                        </p>
+                                        <p
+                                            id="metric-success-rate"
+                                            class="text-3xl font-bold"
+                                        >
+                                            -
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="bg-white bg-opacity-20 rounded-full p-3"
+                                    >
+                                        <svg
+                                            class="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Total Errors Metric -->
+                            <div
+                                class="metric-card-orange rounded-lg shadow-lg p-6 text-white"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p
+                                            class="text-orange-100 text-sm font-medium"
+                                        >
+                                            Total Errors
+                                        </p>
+                                        <p
+                                            id="metric-total-errors"
+                                            class="text-3xl font-bold"
+                                        >
+                                            -
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="bg-white bg-opacity-20 rounded-full p-3"
+                                    >
+                                        <svg
+                                            class="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Compilation Phases -->
+                            <div
+                                class="metric-card-red rounded-lg shadow-lg p-6 text-white"
+                            >
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p
+                                            class="text-red-100 text-sm font-medium"
+                                        >
+                                            Compilation Phases
+                                        </p>
+                                        <p
+                                            id="metric-timing-phases"
+                                            class="text-3xl font-bold"
+                                        >
+                                            -
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="bg-white bg-opacity-20 rounded-full p-3"
+                                    >
+                                        <svg
+                                            class="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Grid -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <!-- Remarks Distribution -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Remarks Distribution
+                                </h3>
+                                <div class="chart-container">
+                                    <canvas
+                                        id="remarks-distribution-chart"
+                                    ></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Diagnostic Levels -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Diagnostic Levels
+                                </h3>
+                                <div class="chart-container">
+                                    <canvas
+                                        id="diagnostic-levels-chart"
+                                    ></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Compilation Info -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Compilation Information
+                                </h3>
+                                <div id="compilation-info-table">
+                                    <!-- Compilation info table will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Binary Size Breakdown -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Binary Size Breakdown
+                                </h3>
+                                <div class="chart-container">
+                                    <canvas id="binary-size-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Insights and Remarks -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <!-- Optimization Remarks Summary -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Optimization Remarks Summary
+                                </h3>
+                                <div
+                                    id="remarks-summary-list"
+                                    class="space-y-3"
+                                >
+                                    <!-- Dynamic content will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Top Optimization Passes -->
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    Top Optimization Passes
+                                </h3>
+                                <div
+                                    id="optimization-passes-list"
+                                    class="space-y-3"
+                                >
+                                    <!-- Dynamic content will be loaded here -->
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Performance Stats -->
-                    <div class="mt-8 performance-stats-enhanced">
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h5 class="text-sm font-medium text-gray-500 mb-2">Total Events</h5>
-                            <p id="perf-total-events" class="text-2xl font-bold text-gray-900">-</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h5 class="text-sm font-medium text-gray-500 mb-2">Total Duration</h5>
-                            <p id="perf-total-duration" class="text-2xl font-bold text-gray-900">-</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h5 class="text-sm font-medium text-gray-500 mb-2">Avg Event Duration</h5>
-                            <p id="perf-avg-duration" class="text-2xl font-bold text-gray-900">-</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h5 class="text-sm font-medium text-gray-500 mb-2">Zoom Level</h5>
-                            <p id="perf-zoom-level" class="text-2xl font-bold text-gray-900">1.0x</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h5 class="text-sm font-medium text-gray-500 mb-2">View Mode</h5>
-                            <p id="perf-view-mode" class="text-2xl font-bold text-gray-900">-</p>
+                    <!-- Explorer Tab -->
+                    <div
+                        id="explorer-content"
+                        class="tab-content hidden"
+                        style="height: calc(100vh - 180px)"
+                    >
+                        <!-- Explorer Split View Container -->
+                        <div class="h-full flex flex-col">
+                            <!-- Explorer Toolbar -->
+                            <div class="bg-white border-b border-gray-200 p-4">
+                                <div class="flex items-center justify-between">
+                                    <h3
+                                        class="text-lg font-medium text-gray-900"
+                                    >
+                                        Code Explorer
+                                    </h3>
+                                    <div class="flex items-center space-x-4">
+                                        <!-- File Selector -->
+                                        <div
+                                            class="flex items-center space-x-2"
+                                        >
+                                            <label
+                                                for="file-selector"
+                                                class="text-sm font-medium text-gray-700"
+                                                >File:</label
+                                            >
+                                            <select
+                                                id="file-selector"
+                                                class="block w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm"
+                                            >
+                                                <option value="">
+                                                    Select a file...
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <!-- View Type Selector -->
+                                        <div
+                                            class="flex items-center space-x-2"
+                                        >
+                                            <label
+                                                for="view-type-selector"
+                                                class="text-sm font-medium text-gray-700"
+                                                >View:</label
+                                            >
+                                            <select
+                                                id="view-type-selector"
+                                                class="block w-32 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm"
+                                            >
+                                                <option value="assembly">
+                                                    Assembly
+                                                </option>
+                                                <option value="ir">
+                                                    LLVM IR
+                                                </option>
+                                                <option value="optimized-ir">
+                                                    Optimized IR
+                                                </option>
+                                                <option value="object">
+                                                    Object Code
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Split View Container -->
+                            <div class="flex-1 flex overflow-hidden">
+                                <!-- Left Panel - Source Code -->
+                                <div
+                                    class="w-1/2 flex flex-col border-r border-gray-200"
+                                >
+                                    <div
+                                        class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between"
+                                    >
+                                        <h4
+                                            class="text-sm font-medium text-gray-700"
+                                        >
+                                            Source Code
+                                        </h4>
+                                        <div
+                                            class="flex items-center space-x-2"
+                                        >
+                                            <button
+                                                id="toggle-diagnostics-btn"
+                                                class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                                                disabled
+                                            >
+                                                Diagnostics
+                                            </button>
+                                            <button
+                                                id="toggle-remarks-btn"
+                                                class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+                                                disabled
+                                            >
+                                                Remarks
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 overflow-auto">
+                                        <div
+                                            id="source-code-container"
+                                            class="h-full"
+                                        >
+                                            <div
+                                                class="flex items-center justify-center h-full text-gray-500"
+                                            >
+                                                <div class="text-center">
+                                                    <svg
+                                                        class="mx-auto h-12 w-12 text-gray-400"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                                                        />
+                                                    </svg>
+                                                    <p class="mt-2">
+                                                        Select a file to view
+                                                        source code
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Panel - Assembly/IR/Object -->
+                                <div class="w-1/2 flex flex-col">
+                                    <div
+                                        class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between"
+                                    >
+                                        <h4
+                                            id="right-panel-title"
+                                            class="text-sm font-medium text-gray-700"
+                                        >
+                                            Assembly
+                                        </h4>
+                                        <div
+                                            class="flex items-center space-x-2"
+                                        >
+                                            <button
+                                                id="copy-output-btn"
+                                                class="text-sm text-llvm-blue hover:text-blue-800 disabled:opacity-50"
+                                                disabled
+                                            >
+                                                Copy
+                                            </button>
+                                            <button
+                                                id="download-output-btn"
+                                                class="text-sm text-llvm-blue hover:text-blue-800 disabled:opacity-50"
+                                                disabled
+                                            >
+                                                Download
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 overflow-auto">
+                                        <div
+                                            id="output-container"
+                                            class="h-full"
+                                        >
+                                            <div
+                                                class="flex items-center justify-center h-full text-gray-500"
+                                            >
+                                                <div class="text-center">
+                                                    <svg
+                                                        class="mx-auto h-12 w-12 text-gray-400"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                        />
+                                                    </svg>
+                                                    <p class="mt-2">
+                                                        Select a file and view
+                                                        type to see output
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Keyboard Shortcuts Help -->
-                    <div id="keyboard-shortcuts" class="keyboard-shortcuts">
-                        <div class="text-xs font-semibold mb-2">Keyboard Shortcuts:</div>
-                        <div>+/- : Zoom in/out</div>
-                        <div>Arrow Keys : Pan</div>
-                        <div>R : Reset view</div>
-                        <div>? : Toggle help</div>
+                    <!-- Performance Tab -->
+                    <div
+                        id="performance-content"
+                        class="tab-content hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+                    >
+                        <!-- Performance Header -->
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-4">
+                                Performance Analysis
+                            </h3>
+
+                            <!-- Controls -->
+                            <div
+                                class="flex items-center space-x-4 mb-6 bg-gray-50 p-4 rounded-lg"
+                            >
+                                <!-- View Type Selector -->
+                                <div class="flex items-center space-x-2">
+                                    <label
+                                        for="view-type-selector-perf"
+                                        class="text-sm font-medium text-gray-700"
+                                        >Visualization:</label
+                                    >
+                                    <select
+                                        id="view-type-selector-perf"
+                                        class="block w-36 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-llvm-blue focus:border-llvm-blue sm:text-sm"
+                                    >
+                                        <option value="time-order">
+                                            Time Order
+                                        </option>
+                                        <option value="sandwich">
+                                            Sandwich View
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Refresh Button -->
+                                <button
+                                    id="refresh-performance-btn"
+                                    class="flex items-center px-4 py-2 bg-llvm-blue text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-llvm-blue focus:ring-offset-2 transition-colors"
+                                >
+                                    <svg
+                                        class="w-4 h-4 mr-2"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
+                                    </svg>
+                                    Refresh Data
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Performance Content -->
+                        <div
+                            id="performance-visualization"
+                            class="min-h-[600px]"
+                        >
+                            <div
+                                class="flex items-center justify-center h-96 text-gray-500"
+                            >
+                                <div class="text-center">
+                                    <div
+                                        class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-llvm-blue mb-4"
+                                    ></div>
+                                    <p>Loading performance data...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Performance Stats -->
+                        <div class="mt-8 performance-stats-enhanced">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h5
+                                    class="text-sm font-medium text-gray-500 mb-2"
+                                >
+                                    Total Events
+                                </h5>
+                                <p
+                                    id="perf-total-events"
+                                    class="text-2xl font-bold text-gray-900"
+                                >
+                                    -
+                                </p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h5
+                                    class="text-sm font-medium text-gray-500 mb-2"
+                                >
+                                    Total Duration
+                                </h5>
+                                <p
+                                    id="perf-total-duration"
+                                    class="text-2xl font-bold text-gray-900"
+                                >
+                                    -
+                                </p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h5
+                                    class="text-sm font-medium text-gray-500 mb-2"
+                                >
+                                    Avg Event Duration
+                                </h5>
+                                <p
+                                    id="perf-avg-duration"
+                                    class="text-2xl font-bold text-gray-900"
+                                >
+                                    -
+                                </p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h5
+                                    class="text-sm font-medium text-gray-500 mb-2"
+                                >
+                                    Zoom Level
+                                </h5>
+                                <p
+                                    id="perf-zoom-level"
+                                    class="text-2xl font-bold text-gray-900"
+                                >
+                                    1.0x
+                                </p>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h5
+                                    class="text-sm font-medium text-gray-500 mb-2"
+                                >
+                                    View Mode
+                                </h5>
+                                <p
+                                    id="perf-view-mode"
+                                    class="text-2xl font-bold text-gray-900"
+                                >
+                                    -
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Keyboard Shortcuts Help -->
+                        <div id="keyboard-shortcuts" class="keyboard-shortcuts">
+                            <div class="text-xs font-semibold mb-2">
+                                Keyboard Shortcuts:
+                            </div>
+                            <div>+/- : Zoom in/out</div>
+                            <div>Arrow Keys : Pan</div>
+                            <div>R : Reset view</div>
+                            <div>? : Toggle help</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </main>
-    </div>
+            </main>
+        </div>
 
-    <!-- JavaScript Modules -->
-    <script src="/static/js/performance.js"></script>
-    <script type="module" src="/static/js/app.js"></script>
-</body>
+        <!-- JavaScript Modules -->
+        <script src="/static/js/performance.js"></script>
+        <script type="module" src="/static/js/app.js"></script>
+    </body>
 </html>
