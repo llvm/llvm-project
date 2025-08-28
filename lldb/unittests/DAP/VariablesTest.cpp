@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Variables.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "gtest/gtest.h"
@@ -66,20 +67,45 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 }
 
 TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
+  lldb::SBFrame frame;
+  uint32_t frame_id = 0;
+
+  vars.ReadyFrame(frame_id, frame);
+  vars.SwitchFrame(frame_id);
+
   vars.locals.Append(lldb::SBValue());
   vars.globals.Append(lldb::SBValue());
   vars.registers.Append(lldb::SBValue());
 
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_LOCALS), &vars.locals);
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_GLOBALS), &vars.globals);
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_REGS), &vars.registers);
+  int64_t locals_ref = vars.GetNewVariableReference(false);
+  vars.AddScopeKind(locals_ref, ScopeKind::Locals, frame_id);
+
+  int64_t globals_ref = vars.GetNewVariableReference(false);
+  vars.AddScopeKind(globals_ref, ScopeKind::Globals, frame_id);
+
+  int64_t registers_ref = vars.GetNewVariableReference(false);
+  vars.AddScopeKind(registers_ref, ScopeKind::Registers, frame_id);
+
+  EXPECT_EQ(vars.GetTopLevelScope(locals_ref), &vars.locals);
+  EXPECT_EQ(vars.GetTopLevelScope(globals_ref), &vars.globals);
+  EXPECT_EQ(vars.GetTopLevelScope(registers_ref), &vars.registers);
   EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
+  lldb::SBFrame frame;
+  uint32_t frame_id = 0;
+
+  vars.ReadyFrame(frame_id, frame);
+  vars.SwitchFrame(frame_id);
+
   lldb::SBValue dummy;
   vars.locals.Append(dummy);
-  lldb::SBValue found = vars.FindVariable(VARREF_LOCALS, "");
+
+  int64_t locals_ref = vars.GetNewVariableReference(false);
+  vars.AddScopeKind(locals_ref, ScopeKind::Locals, frame_id);
+
+  lldb::SBValue found = vars.FindVariable(locals_ref, "");
 
   EXPECT_EQ(found.IsValid(), dummy.IsValid());
 }

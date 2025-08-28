@@ -341,24 +341,25 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
+        local_scope_ref = self.get_locals_scope_reference()
+        self.assertFalse(self.dap_server.request_setVariable(local_scope_ref, "x2", 9)["success"])
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:0", 9)["success"]
         )
 
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:19", 19)["success"]
         )
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:21", 21)["success"]
         )
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", 23)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:23", 23)["success"]
         )
 
         # The following should have no effect
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", "invalid")[
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:23", "invalid")[
                 "success"
             ]
         )
@@ -370,7 +371,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
+        self.assertTrue(self.dap_server.request_setVariable(local_scope_ref, "x", 22)["success"])
         verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
@@ -709,7 +710,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 break
 
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
+            self.dap_server.request_setVariable(self.get_locals_scope_reference(), "(Return Value)", 20)["success"]
         )
 
     @skipIfWindows
