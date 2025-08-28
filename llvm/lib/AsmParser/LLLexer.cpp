@@ -176,6 +176,14 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
 
 int LLLexer::getNextChar() {
   char CurChar = *CurPtr++;
+  // Increment line number if this is the first character after a newline
+  // CurPtr points to the char after CurChar, so two positions before that
+  if ((CurPtr - 2) >= CurBuf.begin() && *(CurPtr - 2) == '\n') {
+    CurLineNum++;
+    CurColNum = 0;
+  } else
+    CurColNum++;
+
   switch (CurChar) {
   default: return (unsigned char)CurChar;
   case 0:
@@ -190,11 +198,52 @@ int LLLexer::getNextChar() {
   }
 }
 
+const char *LLLexer::skipNChars(unsigned N) {
+  while (N--)
+    getNextChar();
+  return CurPtr;
+}
+
+void LLLexer::advancePositionTo(const char *Ptr) {
+  bool RecalculateColumn = false;
+  while (CurPtr != Ptr) {
+    if (CurPtr > Ptr) {
+      --CurPtr;
+      --CurColNum;
+      // Since CurPtr is one char ahead of the stored position, chech if the
+      // previous char is not a newline
+      if (CurPtr != CurBuf.begin() && *(CurPtr - 1) == '\n') {
+        --CurLineNum;
+        RecalculateColumn = true;
+      }
+    } else
+      getNextChar();
+  }
+  if (RecalculateColumn) {
+    CurColNum = 0;
+    // Count the number of chars to the previous newline or start of buffer
+    for (const char *Ptr = CurPtr; Ptr != CurBuf.begin() && *(Ptr - 1) != '\n';
+         --Ptr, ++CurColNum)
+      ;
+  }
+}
+
 lltok::Kind LLLexer::LexToken() {
+  // Set token end to next location, since the end is
+  // exclusive
+  if (CurPtr != CurBuf.begin() && *(CurPtr - 1) == '\n') {
+    PrevTokEndLineNum = CurLineNum + 1;
+    PrevTokEndColNum = 0;
+  } else {
+    PrevTokEndLineNum = CurLineNum;
+    PrevTokEndColNum = CurColNum + 1;
+  }
   while (true) {
     TokStart = CurPtr;
-
     int CurChar = getNextChar();
+    CurTokColNum = CurColNum;
+    CurTokLineNum = CurLineNum;
+
     switch (CurChar) {
     default:
       // Handle letters: [a-zA-Z_]
@@ -216,12 +265,12 @@ lltok::Kind LLLexer::LexToken() {
     case '"': return LexQuote();
     case '.':
       if (const char *Ptr = isLabelTail(CurPtr)) {
-        CurPtr = Ptr;
+        advancePositionTo(Ptr);
         StrVal.assign(TokStart, CurPtr-1);
         return lltok::LabelStr;
       }
       if (CurPtr[0] == '.' && CurPtr[1] == '.') {
-        CurPtr += 2;
+        skipNChars(2);
         return lltok::dotdotdot;
       }
       return lltok::Error;
@@ -299,14 +348,14 @@ lltok::Kind LLLexer::LexAt() {
 
 lltok::Kind LLLexer::LexDollar() {
   if (const char *Ptr = isLabelTail(TokStart)) {
-    CurPtr = Ptr;
+    advancePositionTo(Ptr);
     StrVal.assign(TokStart, CurPtr - 1);
     return lltok::LabelStr;
   }
 
   // Handle DollarStringConstant: $\"[^\"]*\"
   if (CurPtr[0] == '"') {
-    ++CurPtr;
+    getNextChar();
 
     while (true) {
       int CurChar = getNextChar();
@@ -358,11 +407,11 @@ bool LLLexer::ReadVarName() {
   if (isalpha(static_cast<unsigned char>(CurPtr[0])) ||
       CurPtr[0] == '-' || CurPtr[0] == '$' ||
       CurPtr[0] == '.' || CurPtr[0] == '_') {
-    ++CurPtr;
+    getNextChar();
     while (isalnum(static_cast<unsigned char>(CurPtr[0])) ||
            CurPtr[0] == '-' || CurPtr[0] == '$' ||
            CurPtr[0] == '.' || CurPtr[0] == '_')
-      ++CurPtr;
+      getNextChar();
 
     StrVal.assign(NameStart, CurPtr);
     return true;
@@ -376,7 +425,8 @@ lltok::Kind LLLexer::LexUIntID(lltok::Kind Token) {
   if (!isdigit(static_cast<unsigned char>(CurPtr[0])))
     return lltok::Error;
 
-  for (++CurPtr; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
+  for (getNextChar(); isdigit(static_cast<unsigned char>(CurPtr[0]));
+       getNextChar())
     /*empty*/;
 
   uint64_t Val = atoull(TokStart + 1, CurPtr);
@@ -389,7 +439,7 @@ lltok::Kind LLLexer::LexUIntID(lltok::Kind Token) {
 lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
   // Handle StringConstant: \"[^\"]*\"
   if (CurPtr[0] == '"') {
-    ++CurPtr;
+    getNextChar();
 
     while (true) {
       int CurChar = getNextChar();
@@ -435,7 +485,7 @@ lltok::Kind LLLexer::LexQuote() {
     return kind;
 
   if (CurPtr[0] == ':') {
-    ++CurPtr;
+    getNextChar();
     if (StringRef(StrVal).contains(0)) {
       LexError("NUL character is not allowed in names");
       kind = lltok::Error;
@@ -455,11 +505,11 @@ lltok::Kind LLLexer::LexExclaim() {
   if (isalpha(static_cast<unsigned char>(CurPtr[0])) ||
       CurPtr[0] == '-' || CurPtr[0] == '$' ||
       CurPtr[0] == '.' || CurPtr[0] == '_' || CurPtr[0] == '\\') {
-    ++CurPtr;
+    getNextChar();
     while (isalnum(static_cast<unsigned char>(CurPtr[0])) ||
            CurPtr[0] == '-' || CurPtr[0] == '$' ||
            CurPtr[0] == '.' || CurPtr[0] == '_' || CurPtr[0] == '\\')
-      ++CurPtr;
+      getNextChar();
 
     StrVal.assign(TokStart+1, CurPtr);   // Skip !
     UnEscapeLexed(StrVal);
@@ -495,7 +545,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   const char *IntEnd = CurPtr[-1] == 'i' ? nullptr : StartChar;
   const char *KeywordEnd = nullptr;
 
-  for (; isLabelChar(*CurPtr); ++CurPtr) {
+  for (; isLabelChar(*CurPtr); getNextChar()) {
     // If we decide this is an integer, remember the end of the sequence.
     if (!IntEnd && !isdigit(static_cast<unsigned char>(*CurPtr)))
       IntEnd = CurPtr;
@@ -507,7 +557,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   // If we stopped due to a colon, unless we were directed to ignore it,
   // this really is a label.
   if (!IgnoreColonInIdentifiers && *CurPtr == ':') {
-    StrVal.assign(StartChar-1, CurPtr++);
+    StrVal.assign(StartChar - 1, CurPtr);
+    getNextChar();
     return lltok::LabelStr;
   }
 
@@ -515,7 +566,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   // return it.
   if (!IntEnd) IntEnd = CurPtr;
   if (IntEnd != StartChar) {
-    CurPtr = IntEnd;
+    advancePositionTo(IntEnd);
     uint64_t NumBits = atoull(StartChar, CurPtr);
     if (NumBits < IntegerType::MIN_INT_BITS ||
         NumBits > IntegerType::MAX_INT_BITS) {
@@ -528,7 +579,7 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // Otherwise, this was a letter sequence.  See which keyword this is.
   if (!KeywordEnd) KeywordEnd = CurPtr;
-  CurPtr = KeywordEnd;
+  advancePositionTo(KeywordEnd);
   --StartChar;
   StringRef Keyword(StartChar, CurPtr - StartChar);
 
@@ -1043,7 +1094,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     StringRef HexStr(TokStart + 3, len);
     if (!all_of(HexStr, isxdigit)) {
       // Bad token, return it as an error.
-      CurPtr = TokStart+3;
+      advancePositionTo(TokStart + 3);
       return lltok::Error;
     }
     APInt Tmp(bits, HexStr, 16);
@@ -1056,12 +1107,12 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // If this is "cc1234", return this as just "cc".
   if (TokStart[0] == 'c' && TokStart[1] == 'c') {
-    CurPtr = TokStart+2;
+    advancePositionTo(TokStart + 2);
     return lltok::kw_cc;
   }
 
   // Finally, if this isn't known, return an error.
-  CurPtr = TokStart+1;
+  advancePositionTo(TokStart + 1);
   return lltok::Error;
 }
 
@@ -1074,24 +1125,25 @@ lltok::Kind LLLexer::LexIdentifier() {
 ///    HexHalfConstant   0xH[0-9A-Fa-f]+
 ///    HexBFloatConstant 0xR[0-9A-Fa-f]+
 lltok::Kind LLLexer::Lex0x() {
-  CurPtr = TokStart + 2;
+  advancePositionTo(TokStart + 2);
 
   char Kind;
   if ((CurPtr[0] >= 'K' && CurPtr[0] <= 'M') || CurPtr[0] == 'H' ||
       CurPtr[0] == 'R') {
-    Kind = *CurPtr++;
+    Kind = *CurPtr;
+    getNextChar();
   } else {
     Kind = 'J';
   }
 
   if (!isxdigit(static_cast<unsigned char>(CurPtr[0]))) {
     // Bad token, return it as an error.
-    CurPtr = TokStart+1;
+    advancePositionTo(TokStart + 1);
     return lltok::Error;
   }
 
   while (isxdigit(static_cast<unsigned char>(CurPtr[0])))
-    ++CurPtr;
+    getNextChar();
 
   if (Kind == 'J') {
     // HexFPConstant - Floating point constant represented in IEEE format as a
@@ -1148,7 +1200,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
     // Okay, this is not a number after the -, it's probably a label.
     if (const char *End = isLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
-      CurPtr = End;
+      advancePositionTo(End);
       return lltok::LabelStr;
     }
 
@@ -1158,13 +1210,13 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   // At this point, it is either a label, int or fp constant.
 
   // Skip digits, we have at least one.
-  for (; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
+  for (; isdigit(static_cast<unsigned char>(CurPtr[0])); getNextChar())
     /*empty*/;
 
   // Check if this is a fully-numeric label:
   if (isdigit(TokStart[0]) && CurPtr[0] == ':') {
     uint64_t Val = atoull(TokStart, CurPtr);
-    ++CurPtr; // Skip the colon.
+    getNextChar(); // Skip the colon.
     if ((unsigned)Val != Val)
       LexError("invalid value number (too large)");
     UIntVal = unsigned(Val);
@@ -1175,7 +1227,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   if (isLabelChar(CurPtr[0]) || CurPtr[0] == ':') {
     if (const char *End = isLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
-      CurPtr = End;
+      advancePositionTo(End);
       return lltok::LabelStr;
     }
   }
@@ -1189,17 +1241,19 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
     return lltok::APSInt;
   }
 
-  ++CurPtr;
+  getNextChar();
 
   // Skip over [0-9]*([eE][-+]?[0-9]+)?
-  while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
+  while (isdigit(static_cast<unsigned char>(CurPtr[0])))
+    getNextChar();
 
   if (CurPtr[0] == 'e' || CurPtr[0] == 'E') {
     if (isdigit(static_cast<unsigned char>(CurPtr[1])) ||
         ((CurPtr[1] == '-' || CurPtr[1] == '+') &&
           isdigit(static_cast<unsigned char>(CurPtr[2])))) {
-      CurPtr += 2;
-      while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
+      skipNChars(2);
+      while (isdigit(static_cast<unsigned char>(CurPtr[0])))
+        getNextChar();
     }
   }
 
@@ -1217,26 +1271,29 @@ lltok::Kind LLLexer::LexPositive() {
     return lltok::Error;
 
   // Skip digits.
-  for (++CurPtr; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
+  for (getNextChar(); isdigit(static_cast<unsigned char>(CurPtr[0]));
+       getNextChar())
     /*empty*/;
 
   // At this point, we need a '.'.
   if (CurPtr[0] != '.') {
-    CurPtr = TokStart+1;
+    advancePositionTo(TokStart + 1);
     return lltok::Error;
   }
 
-  ++CurPtr;
+  getNextChar();
 
   // Skip over [0-9]*([eE][-+]?[0-9]+)?
-  while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
+  while (isdigit(static_cast<unsigned char>(CurPtr[0])))
+    getNextChar();
 
   if (CurPtr[0] == 'e' || CurPtr[0] == 'E') {
     if (isdigit(static_cast<unsigned char>(CurPtr[1])) ||
         ((CurPtr[1] == '-' || CurPtr[1] == '+') &&
         isdigit(static_cast<unsigned char>(CurPtr[2])))) {
-      CurPtr += 2;
-      while (isdigit(static_cast<unsigned char>(CurPtr[0]))) ++CurPtr;
+      skipNChars(2);
+      while (isdigit(static_cast<unsigned char>(CurPtr[0])))
+        getNextChar();
     }
   }
 

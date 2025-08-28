@@ -29,6 +29,20 @@ namespace llvm {
     const char *CurPtr;
     StringRef CurBuf;
 
+    // The line number at `CurPtr-1`, zero-indexed
+    unsigned CurLineNum = 0;
+    // The column number at `CurPtr-1`, zero-indexed
+    unsigned CurColNum = -1;
+    // The line number of the start of the current token, zero-indexed
+    unsigned CurTokLineNum = 0;
+    // The column number of the start of the current token, zero-indexed
+    unsigned CurTokColNum = 0;
+    // The line number of the end of the current token, zero-indexed
+    unsigned PrevTokEndLineNum = -1;
+    // The column number of the end (exclusive) of the current token,
+    // zero-indexed
+    unsigned PrevTokEndColNum = -1;
+
     enum class ErrorPriority {
       None,   // No error message present.
       Parser, // Errors issued by parser.
@@ -62,9 +76,7 @@ namespace llvm {
     explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
                      LLVMContext &C);
 
-    lltok::Kind Lex() {
-      return CurKind = LexToken();
-    }
+    lltok::Kind Lex() { return CurKind = LexToken(); }
 
     typedef SMLoc LocTy;
     LocTy getLoc() const { return SMLoc::getFromPointer(TokStart); }
@@ -78,6 +90,21 @@ namespace llvm {
     void setIgnoreColonInIdentifiers(bool val) {
       IgnoreColonInIdentifiers = val;
     }
+
+    // Get the current line number, zero-indexed
+    unsigned getLineNum() { return CurLineNum; }
+    // Get the current column number, zero-indexed
+    unsigned getColNum() { return CurColNum; }
+    // Get the line number of the start of the current token, zero-indexed
+    unsigned getTokLineNum() { return CurTokLineNum; }
+    // Get the column number of the start of the current token, zero-indexed
+    unsigned getTokColNum() { return CurTokColNum; }
+    // Get the line number of the end of the previous token, zero-indexed,
+    // exclusive
+    unsigned getPrevTokEndLineNum() { return PrevTokEndLineNum; }
+    // Get the column number of the end of the previous token, zero-indexed,
+    // exclusive
+    unsigned getPrevTokEndColNum() { return PrevTokEndColNum; }
 
     // This returns true as a convenience for the parser functions that return
     // true on error.
@@ -94,6 +121,8 @@ namespace llvm {
     lltok::Kind LexToken();
 
     int getNextChar();
+    const char *skipNChars(unsigned N);
+    void advancePositionTo(const char *Ptr);
     void SkipLineComment();
     bool SkipCComment();
     lltok::Kind ReadString(lltok::Kind kind);
