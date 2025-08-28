@@ -268,8 +268,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
-void OmpStructureChecker::AnalyzeObject(
-    const parser::OmpObject &object, bool allowAssumedSizeArrays) {
+void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
   if (std::holds_alternative<parser::Name>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
@@ -294,14 +293,13 @@ void OmpStructureChecker::AnalyzeObject(
     }
   }
   evaluate::ExpressionAnalyzer ea{context_};
-  auto restore{ea.AllowWholeAssumedSizeArray(allowAssumedSizeArrays)};
+  auto restore{ea.AllowWholeAssumedSizeArray(true)};
   common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
 }
 
-void OmpStructureChecker::AnalyzeObjects(
-    const parser::OmpObjectList &objects, bool allowAssumedSizeArrays) {
+void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
   for (const parser::OmpObject &object : objects.v) {
-    AnalyzeObject(object, allowAssumedSizeArrays);
+    AnalyzeObject(object);
   }
 }
 
@@ -2759,20 +2757,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
-  auto allowsAssumedSizeArrays{[](llvm::omp::Clause c) {
-    // These clauses allow assumed-size-arrays as list items.
-    switch (c) {
-    case llvm::omp::Clause::OMPC_map:
-    case llvm::omp::Clause::OMPC_shared:
-    case llvm::omp::Clause::OMPC_use_device_addr:
-      return true;
-    default:
-      return false;
-    }
-  }};
-
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
-    AnalyzeObjects(*objList, allowsAssumedSizeArrays(id));
+    AnalyzeObjects(*objList);
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {

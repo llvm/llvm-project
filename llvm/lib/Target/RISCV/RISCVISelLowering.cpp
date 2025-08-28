@@ -9287,6 +9287,14 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
+      // Use SHL/ADDI to avoid having to materialize a constant in register
+      // TODO: Handle the inverse case when the condition can be cheaply flipped
+      if ((TrueVal - FalseVal).isPowerOf2() && FalseVal.isSignedIntN(12)) {
+        SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+      }
+
       auto getCost = [&](const APInt &Delta, const APInt &Addend) {
         const int DeltaCost = RISCVMatInt::getIntMatCost(
             Delta, Subtarget.getXLen(), Subtarget, /*CompressionCost=*/true);
@@ -9301,12 +9309,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                          getCost(TrueVal - FalseVal, FalseVal);
       SDValue LHSVal = DAG.getConstant(
           IsCZERO_NEZ ? FalseVal - TrueVal : TrueVal - FalseVal, DL, VT);
-      SDValue RHSVal =
-          DAG.getConstant(IsCZERO_NEZ ? TrueVal : FalseVal, DL, VT);
       SDValue CMOV =
           DAG.getNode(IsCZERO_NEZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ,
                       DL, VT, LHSVal, CondV);
-      return DAG.getNode(ISD::ADD, DL, VT, CMOV, RHSVal);
+      return DAG.getNode(ISD::ADD, DL, VT, CMOV, IsCZERO_NEZ ? TrueV : FalseV);
     }
 
     // (select c, c1, t) -> (add (czero_nez t - c1, c), c1)
@@ -9341,7 +9347,8 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
-          DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
+          DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV),
+          SDNodeFlags::Disjoint);
   }
 
   if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
@@ -16073,9 +16080,10 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
 
   SDValue NewN0 = DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV.getOperand(0),
                               Cond);
-  SDValue NewN1 = DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV.getOperand(0),
-                              Cond);
-  SDValue NewOr = DAG.getNode(ISD::OR, DL, VT, NewN0, NewN1);
+  SDValue NewN1 =
+      DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV.getOperand(0), Cond);
+  SDValue NewOr =
+      DAG.getNode(ISD::OR, DL, VT, NewN0, NewN1, SDNodeFlags::Disjoint);
   return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
 }
 
@@ -21470,8 +21478,16 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     if (Tmp < 33) return 1;
     return 33;
   }
+  case RISCVISD::SRAW: {
+    unsigned Tmp =
+        DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    // sraw produces at least 33 sign bits. If the input already has more than
+    // 33 sign bits sraw, will preserve them.
+    // TODO: A more precise answer could be calculated depending on known bits
+    // in the shift amount.
+    return std::max(Tmp, 33U);
+  }
   case RISCVISD::SLLW:
-  case RISCVISD::SRAW:
   case RISCVISD::SRLW:
   case RISCVISD::DIVW:
   case RISCVISD::DIVUW:
@@ -21482,9 +21498,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
   case RISCVISD::STRICT_FCVT_WU_RV64:
-    // TODO: As the result is sign-extended, this is conservatively correct. A
-    // more precise answer could be calculated for SRAW depending on known
-    // bits in the shift amount.
+    // TODO: As the result is sign-extended, this is conservatively correct.
     return 33;
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the

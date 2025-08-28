@@ -1060,8 +1060,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
-    if (Res == CUDA_SUCCESS)
+    if (Res == CUDA_SUCCESS) {
       Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
+      Info.add("Product Name", TmpChar, "", DeviceInfo::PRODUCT_NAME);
+    }
 
     Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
@@ -1444,7 +1446,7 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
     if (auto Err = Plugin::check(
             AttrResult,
-            "Error in cuLaunchKernel while setting the memory limits: %s"))
+            "error in cuFuncSetAttribute while setting the memory limits: %s"))
       return Err;
     MaxDynCGroupMemLimit = MaxDynCGroupMem;
   }
