@@ -321,7 +321,7 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
     if supported_isa_versions:
         return supported_isa_versions
     if major_version >= 13:
-        raise RuntimeError(f"ptxas {ptxas} does not support ISA version listing")
+        raise RuntimeError("ptxas {} does not support ISA version listing".format(ptxas))
 
     cuda_version_to_isa_version = {
         (12, 9): [(8, 8)],
@@ -404,7 +404,7 @@ def ptxas_supports_address_size_32(ptxas_executable):
         return False
     if "Missing .version directive at start of file" in result.stderr:
         return True
-    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
+    raise RuntimeError("Unexpected ptxas output: {}".format(result.stderr))
 
 
 def enable_ptxas(ptxas_executable):
@@ -412,20 +412,20 @@ def enable_ptxas(ptxas_executable):
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
+            ToolSubst("%ptxas-verify", "{} -c -".format(ptxas_executable)),
         ]
     )
 
     major_version, minor_version = ptxas_version(ptxas_executable)
-    config.available_features.add(f"ptxas-{major_version}.{minor_version}")
+    config.available_features.add("ptxas-{}.{}".format(major_version, minor_version))
 
     for major, minor in ptxas_supported_isa_versions(
         ptxas_executable, major_version, minor_version
     ):
-        config.available_features.add(f"ptxas-isa-{major}.{minor}")
+        config.available_features.add("ptxas-isa-{}.{}".format(major, minor))
 
     for sm in ptxas_supported_sms(ptxas_executable):
-        config.available_features.add(f"ptxas-sm_{sm}")
+        config.available_features.add("ptxas-sm_{}".format(sm))
 
     if ptxas_supports_address_size_32(ptxas_executable):
         config.available_features.add("ptxas-ptr32")
