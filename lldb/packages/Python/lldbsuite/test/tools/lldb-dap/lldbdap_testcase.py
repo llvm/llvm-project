@@ -462,9 +462,7 @@ class DAPTestCaseBase(TestBase):
         try:
             self.dap_server.terminate()
         except Exception as e:
-            print(
-                f"Warning: terminate failed ({e}), DAP server may have already died"
-            )
+            print(f"Warning: terminate failed ({e}), DAP server may have already died")
 
     def _build_error_message(self, base_message, response):
         """Build a detailed error message from a DAP response.
