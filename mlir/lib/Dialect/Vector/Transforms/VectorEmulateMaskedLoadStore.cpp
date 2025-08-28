@@ -65,8 +65,7 @@ struct VectorMaskedLoadOpConverter final
     Value base = maskedLoadOp.getBase();
     Value iValue = maskedLoadOp.getPassThru();
     bool nontemporal = false;
-    auto alignment = maskedLoadOp.getAlignment();
-    uint64_t align = alignment.has_value() ? alignment.value() : 0;
+    std::optional<uint64_t> alignment = maskedLoadOp.getAlignment();
     auto indices = llvm::to_vector_of<Value>(maskedLoadOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
                                           IntegerAttr::get(indexType, 1));
@@ -77,7 +76,7 @@ struct VectorMaskedLoadOpConverter final
           rewriter, loc, maskBit,
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue = memref::LoadOp::create(
-                builder, loc, base, indices, nontemporal, align);
+                builder, loc, base, indices, nontemporal, alignment.value_or(0));
             auto combinedValue =
                 vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
             scf::YieldOp::create(builder, loc, combinedValue.getResult());
@@ -136,8 +135,7 @@ struct VectorMaskedStoreOpConverter final
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
     bool nontemporal = false;
-    auto alignment = maskedStoreOp.getAlignment();
-    uint64_t align = alignment.has_value() ? alignment.value() : 0;
+    std::optional<uint64_t> alignment = maskedStoreOp.getAlignment();
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
                                           IntegerAttr::get(indexType, 1));
@@ -148,7 +146,7 @@ struct VectorMaskedStoreOpConverter final
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
       memref::StoreOp::create(rewriter, loc, extractedValue, base, indices,
-                              nontemporal, align);
+                              nontemporal, alignment.value_or(0));
 
       rewriter.setInsertionPointAfter(ifOp);
       indices.back() =
