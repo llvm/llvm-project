@@ -31,7 +31,6 @@
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -75,7 +74,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -1566,7 +1564,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRB.CreateUnreachable();
 
   // Align the whole table by entry size.
-  F->setAlignment(Align(JumpTableEntrySize));
+  F->setPreferredAlignment(Align(JumpTableEntrySize));
   // Skip prologue.
   // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
   // Luckily, this function does not get any prologue even without the
