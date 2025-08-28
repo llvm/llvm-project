@@ -97,9 +97,8 @@
 ///     An unsigned immediate value specifying the starting positions of the
 ///     bytes to operate on.
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-#define _mm256_mpsadbw_epu8(X, Y, M)                                           \
-  ((__m256i)__builtin_ia32_mpsadbw256((__v32qi)(__m256i)(X),                   \
-                                      (__v32qi)(__m256i)(Y), (int)(M)))
+#define _mm256_mpsadbw_epu8(X, Y, M) \
+  ((__m256i)__builtin_ia32_mpsadbw256((__v32qi)(__m256i)(X), \
 
 /// Computes the absolute value of each signed byte in the 256-bit integer
 ///    vector \a __a and returns each value in the corresponding byte of
