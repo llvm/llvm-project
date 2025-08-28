@@ -26,6 +26,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -37,6 +38,9 @@ using namespace llvm;
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
 
 namespace {
+
+STATISTIC(NumMFMAsRewrittenToAGPR,
+          "Number of MFMA instructions rewritten to use AGPR form");
 
 class AMDGPURewriteAGPRCopyMFMAImpl {
   MachineFunction &MF;
@@ -255,6 +259,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     int NewMFMAOp =
         AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
     RewriteCandidate->setDesc(TII.get(NewMFMAOp));
+    ++NumMFMAsRewrittenToAGPR;
   }
 
   return true;
