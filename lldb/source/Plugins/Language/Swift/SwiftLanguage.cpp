@@ -703,6 +703,10 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "URL summary provider", ConstString("Foundation._SwiftURL"),
       TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
 
+  lldb_private::formatters::AddStringSummary(
+      swift_category_sp, "${var._url}", ConstString("Foundation._BridgedURL"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,
       lldb_private::formatters::swift::IndexPath_SummaryProvider,
