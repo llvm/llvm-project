@@ -734,6 +734,7 @@ else()
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
   filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
+  filter_available_targets(RIPPLE_SUPPORTED_ARCH ${ALL_RIPPLE_SUPPORTED_ARCH})
 endif()
 
 if (MSVC)
@@ -952,6 +953,12 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND SHADOWCALLSTACK_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_SHADOWCALLSTACK TRUE)
 else()
   set(COMPILER_RT_HAS_SHADOWCALLSTACK FALSE)
+endif()
+
+if (OS_NAME MATCHES "Android|Linux")
+  set(COMPILER_RT_HAS_RIPPLE TRUE)
+else()
+  set(COMPILER_RT_HAS_RIPPLE FALSE)
 endif()
 
 # Note: Fuchsia and Windows are not currently supported by GWP-ASan. Support
