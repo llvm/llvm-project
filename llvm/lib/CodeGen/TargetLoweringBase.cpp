@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -89,6 +90,11 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     "optsize-jump-table-density", cl::init(40), cl::Hidden,
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
+
+static cl::opt<unsigned>
+    MinimumBitTestCmps("min-bit-test-cmps", cl::init(2), cl::Hidden,
+                       cl::desc("Set minimum of largest number of comparisons "
+                                "to use bit test for switch."));
 
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
@@ -2118,6 +2124,14 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 
 bool TargetLoweringBase::isJumpTableRelative() const {
   return getTargetMachine().isPositionIndependent();
+}
+
+unsigned TargetLoweringBase::getMinimumBitTestCmps() const {
+  return MinimumBitTestCmps;
+}
+
+void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
+  MinimumBitTestCmps = Val;
 }
 
 Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
