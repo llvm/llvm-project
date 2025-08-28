@@ -613,7 +613,7 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 
 /// Converts arith.index_cast to spirv.Select if the type of source is i1 or
 /// vector of i1.
-struct IndexCastI1Pattern final : public OpConversionPattern<arith::IndexCastOp> {
+struct IndexCastI1IndexPattern final : public OpConversionPattern<arith::IndexCastOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -626,17 +626,11 @@ struct IndexCastI1Pattern final : public OpConversionPattern<arith::IndexCastOp>
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
-    // if (!dstType.isIndex()) {
-    //   llvm::errs() << "why doesnt this work?\n";
-    //   return failure();
-    // }
 
-    auto *converter = this->template getTypeConverter<SPIRVTypeConverter>();
     Location loc = op.getLoc();
-    Type spirvI32T = converter->getIndexType();
-    Value zero = spirv::ConstantOp::getZero(spirvI32T, loc, rewriter);
-    Value one = spirv::ConstantOp::getOne(spirvI32T, loc, rewriter);
-    auto newOp = rewriter.replaceOpWithNewOp<spirv::SelectOp>(
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(
         op, dstType, adaptor.getOperands().front(), one, zero);
     return success();
   }
@@ -1363,7 +1357,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::SIToFPOp, spirv::ConvertSToFOp>,
     TypeCastingOpPattern<arith::FPToUIOp, spirv::ConvertFToUOp>,
     TypeCastingOpPattern<arith::FPToSIOp, spirv::ConvertFToSOp>,
-    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>, IndexCastI1Pattern,
+    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>, IndexCastI1IndexPattern,
     TypeCastingOpPattern<arith::IndexCastUIOp, spirv::UConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
