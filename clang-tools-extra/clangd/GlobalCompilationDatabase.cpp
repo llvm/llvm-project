@@ -55,7 +55,7 @@ void actOnAllParentDirectories(PathRef FileName,
 } // namespace
 
 tooling::CompileCommand
-GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
+GlobalCompilationDatabase::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
   std::vector<std::string> Argv = {"clang"};
   // Clang treats .h files as C by default and files without extension as linker
   // input, resulting in unhelpful diagnostics.
@@ -64,7 +64,7 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  tooling::CompileCommand Cmd(llvm::sys::path::parent_path(File),
+  tooling::CompileCommand Cmd(ProjectRoot ? *ProjectRoot : llvm::sys::path::parent_path(File),
                               llvm::sys::path::filename(File), std::move(Argv),
                               /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
@@ -797,8 +797,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   return Cmd;
 }
 
-tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
-  auto Cmd = DelegatingCDB::getFallbackCommand(File);
+tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
+  auto Cmd = DelegatingCDB::getFallbackCommand(File, ProjectRoot);
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
@@ -877,10 +877,10 @@ DelegatingCDB::getProjectModules(PathRef File) const {
   return Base->getProjectModules(File);
 }
 
-tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {
+tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot) const {
   if (!Base)
-    return GlobalCompilationDatabase::getFallbackCommand(File);
-  return Base->getFallbackCommand(File);
+    return GlobalCompilationDatabase::getFallbackCommand(File, ProjectRoot);
+  return Base->getFallbackCommand(File, ProjectRoot);
 }
 
 bool DelegatingCDB::blockUntilIdle(Deadline D) const {
