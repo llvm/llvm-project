@@ -780,7 +780,7 @@ struct WgToSgLoadGatherOpWithOffset
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
-    if (!layout || !layout.getSgLayout())
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
@@ -820,9 +820,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    ArrayRef<int64_t> wgShape = valueType.getShape();
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getValue());
-    if (!layout || !layout.getSgLayout())
+    if (!layout || !layout.isForWorkgroup())
       return failure();
 
     auto chunkSizeOpt = op.getChunkSize();
@@ -833,12 +832,9 @@ struct WgToSgStoreScatterOpWithOffset
       rewriter.create<xegpu::StoreScatterOp>(
           loc, val, op.getDest(), offs, mask, chunkSizeAttr, op.getL1HintAttr(),
           op.getL2HintAttr(), op.getL3HintAttr());
-      // Update the layout_result_0 attribute to drop sg_layout and sg_data.
-      if (auto layoutAttr =
-              op->getAttrOfType<xegpu::LayoutAttr>("layout_result_0")) {
-        if (auto newLayout = layoutAttr.dropSgLayoutAndData())
-          op->setAttr("layout_result_0", newLayout);
-      }
+      // Update the layout attribute to drop sg_layout and sg_data.
+      if (auto newLayout = layout.dropSgLayoutAndData())
+        op->setAttr("layout", newLayout);
     }
     rewriter.eraseOp(op);
     return success();
@@ -1042,7 +1038,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   target.addDynamicallyLegalOp<xegpu::StoreScatterOp>(
       [=](xegpu::StoreScatterOp op) -> bool {
         // Check if the layout attribute is present on the result.
-        auto layout = op->getAttrOfType<xegpu::LayoutAttr>("layout_result_0");
+        auto layout = op->getAttrOfType<xegpu::LayoutAttr>("layout");
         if (!layout)
           return true;
         return isLegal(layout);
