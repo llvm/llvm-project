@@ -485,16 +485,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!CanPadInst)
     return;
 
-  if (PendingBA) {
-    auto *NextFragment = PendingBA->getNext();
-    assert(NextFragment && "NextFragment should not be null");
-    if (NextFragment == OS.getCurrentFragment())
-      return;
-    // We eagerly create an empty fragment when inserting a fragment
-    // with a variable-size tail.
-    if (NextFragment->getKind() == MCFragment::FT_Relaxable)
-      return;
-
+  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
