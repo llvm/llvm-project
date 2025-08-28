@@ -1861,7 +1861,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       }
       // Exit BB which have one branch back into the loop and another one to
       // a trap can still be optimized, because local side effects cannot
-      // be observed in the exit case (the trap).
+      // be observed in the exit case (the trap). We could be smarter about
+      // this, but for now lets pattern match common cases that directly trap.
       if (Unreachable == nullptr || InLoop == nullptr)
         continue;
       if (llvm::any_of(*Unreachable, [](Instruction &I) {
