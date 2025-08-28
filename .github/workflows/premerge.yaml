@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Build and Test Linux
+    name: Build and Test Linux ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && 'AArch64') || 'X86_64' }}
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
