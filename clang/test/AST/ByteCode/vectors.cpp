@@ -143,3 +143,28 @@ namespace {
   constexpr __m128d v_mm_cvtps_pd = _mm_cvtps_pd(kf1);
   static_assert(v_mm_cvtps_pd[0] == -1.0 && v_mm_cvtps_pd[1] == +2.0);
 }
+
+namespace Assign {
+  constexpr int a2() {
+      VI a = {0, 0, 0, 0};
+      VI b; // both-warning {{C++20 extension}}
+
+      b = {1,1,1,1};
+      return b[0] + b[1] + b[2] + b[3];
+  }
+
+  static_assert(a2() == 4);
+
+  typedef short          v2int16_t __attribute__((ext_vector_type(2)));
+  typedef unsigned short v2int_t __attribute__((ext_vector_type(2)));
+
+
+  constexpr bool invalid() {
+    v2int16_t a = {0, 0};
+    v2int_t b; // both-warning {{C++20 extension}}
+    b = a; // both-error {{incompatible type}}
+
+    return true;
+  }
+  static_assert(invalid()); // both-error {{not an integral constant expression}}
+}
