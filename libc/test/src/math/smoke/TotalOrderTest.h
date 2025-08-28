@@ -104,12 +104,6 @@ public:
   }
 
   void testNaNPayloads(TotalOrderFunc func) {
-
-    T qnan_0x15 = FPBits::quiet_nan(Sign::POS, 0x15).get_val();
-    T neg_qnan_0x15 = FPBits::quiet_nan(Sign::NEG, 0x15).get_val();
-    T snan_0x15 = FPBits::signaling_nan(Sign::POS, 0x15).get_val();
-    T neg_snan_0x15 = FPBits::signaling_nan(Sign::NEG, 0x15).get_val();
-
     EXPECT_TRUE(funcWrapper(func, aNaN, aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, sNaN));
 
