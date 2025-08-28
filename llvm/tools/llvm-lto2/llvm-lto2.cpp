@@ -394,8 +394,7 @@ static int run(int argc, char **argv) {
   // behavior. Instead, we don't exit in the multi-threaded case, but we make
   // sure to report the error and then at the end (after joining cleanly)
   // exit(1).
-  std::atomic<bool> HasErrors;
-  std::atomic_init(&HasErrors, false);
+  std::atomic<bool> HasErrors{false};
   Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);

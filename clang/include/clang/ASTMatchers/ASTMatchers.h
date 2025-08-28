@@ -8823,7 +8823,7 @@ AST_MATCHER(OMPDefaultClause, isFirstPrivateKind) {
 ///   #pragma omp          for
 /// \endcode
 ///
-/// `ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
+/// ``ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
 /// ``omp parallel`` and ``omp parallel for``.
 ///
 /// If the matcher is use from clang-query, ``OpenMPClauseKind`` parameter

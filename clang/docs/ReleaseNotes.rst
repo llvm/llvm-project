@@ -273,7 +273,7 @@ Bug Fixes in This Version
   ``#pragma pop_macro("")``. (#GH149762).
 - Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type 
   being used in ``_Countof`` expression. (#GH152826).
-- `-Wunreachable-code`` now diagnoses tautological or contradictory
+- ``-Wunreachable-code`` now diagnoses tautological or contradictory
   comparisons such as ``x != 0 || x != 1.0`` and ``x == 0 && x == 1.0`` on
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
