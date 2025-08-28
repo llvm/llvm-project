@@ -9,6 +9,7 @@
 
 // Manually marking the .eh_frame_hdr as DW_EH_PE_omit to make libunwind to do
 // the linear search.
+// Assuming the begining of the function is at the start of the FDE range.
 
 // clang-format off
 // REQUIRES: target={{x86_64-.+-linux-gnu}}
@@ -35,6 +36,9 @@ void f() {
   const void *fde_pc = _Unwind_Find_FDE(pc, &bases);
   const void *fde_fpc = _Unwind_Find_FDE(fpc, &bases);
   const void *fde_fpc1 = _Unwind_Find_FDE(fpc1, &bases);
+  printf("fde_pc = %p\n", fde_pc);
+  printf("fde_fpc = %p\n", fde_fpc);
+  printf("fde_fpc1 = %p\n", fde_fpc1);
   assert(fde_pc != NULL);
   assert(fde_fpc != NULL);
   assert(fde_fpc1 != NULL);
