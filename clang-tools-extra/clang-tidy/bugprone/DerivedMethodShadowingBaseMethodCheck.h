@@ -16,8 +16,6 @@ namespace clang::tidy::bugprone {
 /// Checks that a derived class does not define the same (non virtual) method as
 /// a base class
 ///
-/// This anti-pattern is a Liskov violation.
-///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/derived-method-shadowing-base-method.html
 class DerivedMethodShadowingBaseMethodCheck : public ClangTidyCheck {
