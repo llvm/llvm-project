@@ -9543,6 +9543,39 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   return Legalized;
 }
 
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
+          MI.getOpcode() == TargetOpcode::G_ABDU) &&
+         "Expected G_ABDS or G_ABDU instruction");
+
+  // lhs_frz = freeze(lhs)
+  // rhs_frz = freeze(rhs)
+  Register DstReg = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(LHS);
+  auto LHSFrz = MIRBuilder.buildFreeze(Ty, LHS);
+  auto RHSFrz = MIRBuilder.buildFreeze(Ty, RHS);
+
+  // abds(lhs_frz, rhs_frz)
+  //   → sub(smax(lhs_frz, rhs_frz), smin(lhs_frz, rhs_frz))
+  // abdu(lhs_frz, rhs_frz)
+  //   → sub(umax(lhs_frz, rhs_frz), umin(lhs_frz, rhs_frz))
+  Register MaxReg, MinReg;
+  if (MI.getOpcode() == TargetOpcode::G_ABDS) {
+    MaxReg = MIRBuilder.buildSMax(Ty, LHSFrz, RHSFrz).getReg(0);
+    MinReg = MIRBuilder.buildSMin(Ty, LHSFrz, RHSFrz).getReg(0);
+  } else {
+    MaxReg = MIRBuilder.buildUMax(Ty, LHSFrz, RHSFrz).getReg(0);
+    MinReg = MIRBuilder.buildUMin(Ty, LHSFrz, RHSFrz).getReg(0);
+  }
+  MIRBuilder.buildSub(DstReg, MaxReg, MinReg);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(1).getReg();
   Register DstReg = MI.getOperand(0).getReg();
