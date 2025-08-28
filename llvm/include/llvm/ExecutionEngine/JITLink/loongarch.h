@@ -149,8 +149,8 @@ enum EdgeKind_loongarch : Edge::Kind {
   /// target.
   ///
   /// Fixup expression:
-  ///   Fixup <- (((Target + Addend + ((Target + Addend) & 0x800)) & ~0xfff)
-  //              - (Fixup & ~0xfff)) >> 12 : int20
+  ///   Fixup <- getLoongArchPageDelta(Target + Addend, Fixup, Kind)[31:12] :
+  ///   int20
   ///
   /// Notes:
   ///   For PCALAU12I fixups.
@@ -161,6 +161,15 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///
   Page20,
 
+  /// The signed 20-bit delta from the fixup page to the page containing the
+  /// target for 64-bit addresses.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- getLoongArchPageDelta(Target + Addend, Fixup, Kind)[51:32] :
+  ///   int20
+  ///
+  Page64LO20,
+
   /// The 12-bit offset of the target within its page.
   ///
   /// Typically used to fix up ADDI/LD_W/LD_D immediates.
@@ -169,6 +178,14 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///   Fixup <- ((Target + Addend) >> Shift) & 0xfff : int12
   ///
   PageOffset12,
+
+  /// The 12-bit high part of the 64-bit page delta.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- getLoongArchPageDelta(Target + Addend, Fixup, Kind)[63:52] :
+  ///   int12
+  ///
+  Page64HI12,
 
   /// A GOT entry getter/constructor, transformed to Page20 pointing at the GOT
   /// entry for the original target.
@@ -205,6 +222,16 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///   NONE
   ///
   RequestGOTAndTransformToPageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to Page64LO20 pointing at the
+  /// GOT entry for the original target.
+  ///
+  RequestGOTAndTransformToPage64LO20,
+
+  /// A GOT entry getter/constructor, transformed to Page64HI12 pointing at the
+  /// GOT entry for the original target.
+  ///
+  RequestGOTAndTransformToPage64HI12,
 
   /// A 36-bit PC-relative call.
   ///
@@ -330,6 +357,32 @@ inline uint32_t extractBits(uint64_t Val, unsigned Hi, unsigned Lo) {
   return Hi == 63 ? Val >> Lo : (Val & ((((uint64_t)1 << (Hi + 1)) - 1))) >> Lo;
 }
 
+static uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc,
+                                      Edge::Kind kind) {
+  uint64_t pcalau12i_pc;
+  switch (kind) {
+  case RequestGOTAndTransformToPage64LO20:
+  case Page64LO20:
+    pcalau12i_pc = pc - 8;
+    break;
+  case RequestGOTAndTransformToPage64HI12:
+  case Page64HI12:
+    pcalau12i_pc = pc - 12;
+    break;
+  default:
+    pcalau12i_pc = pc;
+    break;
+  }
+
+  uint64_t result = (dest & ~0xfffULL) - (pcalau12i_pc & ~0xfffULL);
+  if (dest & 0x800)
+    result += 0x1000 - 0x1'0000'0000;
+  if (result & 0x8000'0000)
+    result += 0x1'0000'0000;
+
+  return result;
+}
+
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   using namespace support;
@@ -418,13 +471,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     break;
   case Page20: {
     uint64_t Target = TargetAddress + Addend;
-    uint64_t TargetPage =
-        (Target + (Target & 0x800)) & ~static_cast<uint64_t>(0xfff);
-    uint64_t PCPage = FixupAddress & ~static_cast<uint64_t>(0xfff);
 
-    int64_t PageDelta = TargetPage - PCPage;
-    if (!isInt<32>(PageDelta))
-      return makeTargetOutOfRangeError(G, B, E);
+    int64_t PageDelta =
+        getLoongArchPageDelta(Target, FixupAddress, E.getKind());
 
     uint32_t RawInstr = *(little32_t *)FixupPtr;
     uint32_t Imm31_12 = extractBits(PageDelta, /*Hi=*/31, /*Lo=*/12) << 5;
@@ -454,6 +503,30 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
     uint32_t Lo16 = extractBits(Value, /*Hi=*/17, /*Lo=*/2) << 10;
     *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
+    break;
+  }
+  case RequestGOTAndTransformToPage64HI12:
+  case Page64HI12: {
+    uint64_t Target = TargetAddress + Addend;
+    uint64_t pageDelta =
+        getLoongArchPageDelta(Target, FixupAddress, E.getKind());
+    uint32_t imm = extractBits(pageDelta, 63, 52) << 10;
+
+    uint32_t instr = *(little32_t *)FixupPtr;
+    instr = (instr & 0xFFC003FF) | imm;
+    *(little32_t *)FixupPtr = instr;
+    break;
+  }
+  case RequestGOTAndTransformToPage64LO20:
+  case Page64LO20: {
+    uint64_t Target = TargetAddress + Addend;
+    uint64_t pageDelta =
+        getLoongArchPageDelta(Target, FixupAddress, E.getKind());
+    uint32_t imm = extractBits(pageDelta, 51, 32) << 5;
+
+    uint32_t instr = *(little32_t *)FixupPtr;
+    instr = (instr & 0xFE00001F) | imm;
+    *(little32_t *)FixupPtr = instr;
     break;
   }
   case Add6: {
@@ -630,6 +703,12 @@ public:
       break;
     case RequestGOTAndTransformToPageOffset12:
       KindToSet = PageOffset12;
+      break;
+    case RequestGOTAndTransformToPage64HI12:
+      KindToSet = Page64HI12;
+      break;
+    case RequestGOTAndTransformToPage64LO20:
+      KindToSet = Page64LO20;
       break;
     default:
       return false;
