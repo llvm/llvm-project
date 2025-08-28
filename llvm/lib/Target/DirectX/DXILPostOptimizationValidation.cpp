@@ -315,7 +315,6 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
-    AU.addPreserved<DXILResourceTypeWrapperPass>();
   }
 };
 char DXILPostOptimizationValidationLegacy::ID = 0;
