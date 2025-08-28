@@ -39,11 +39,11 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 
 define void @main() local_unnamed_addr #1 {
 entry:
-  %standard_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %standard_layout, 8, 0, 4), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.b0)
-  %standard_handle_with_different_offset = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %standard_layout, 12, 0, 8), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.b1)
-  %backwards_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %backwards_layout, 8, 4, 0), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.b2)
-  %large_gap_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %large_gap, 1024, 0, 64, 1020, 4), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.b3)
-  %mixed_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %mixed_layout, 16, 0, 8, 4, 12), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.b4)
+  %standard_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %standard_layout, 8, 0, 4), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.b0)
+  %standard_handle_with_different_offset = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %standard_layout, 12, 0, 8), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.b1)
+  %backwards_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %backwards_layout, 8, 4, 0), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.b2)
+  %large_gap_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %large_gap, 1024, 0, 64, 1020, 4), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.b3)
+  %mixed_handle = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %mixed_layout, 16, 0, 8, 4, 12), 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_Bs_8_0_4t_2_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.b4)
   ret void
 }
 
