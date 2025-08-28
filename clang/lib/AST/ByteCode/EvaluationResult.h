@@ -55,7 +55,7 @@ private:
 
   void setSource(DeclTy D) { Source = D; }
 
-  void setValue(const APValue &V) {
+  void takeValue(APValue &&V) {
     // V could still be an LValue.
     assert(empty());
     Value = std::move(V);
