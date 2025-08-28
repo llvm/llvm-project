@@ -232,7 +232,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
-  generating fix-it hints when size method is called from implicit ``this``.
+  generating fix-it hints when size method is called from implicit ``this``
+  and adding detection in container's method except ``empty``.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
