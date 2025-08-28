@@ -551,10 +551,10 @@ private:
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  virtual uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                                uint32_t BlockLimitClause[3],
-                                uint64_t LoopTripCount, uint32_t &NumThreads,
-                                bool IsNumThreadsFromUser) const;
+  virtual
+  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
+                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
+                        uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
 
   /// The kernel name.
   std::string Name;
