@@ -53,7 +53,7 @@ protected:
     }
 
     std::string connection_uri = "listen://[localhost]:0";
-    if (args.GetArgumentCount() > 2)
+    if (args.GetArgumentCount() >= 2)
       connection_uri = args.GetArgumentAtIndex(1);
 
     const char *connection_error =
