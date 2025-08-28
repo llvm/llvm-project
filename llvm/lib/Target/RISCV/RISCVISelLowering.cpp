@@ -24405,22 +24405,6 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   return true;
 }
 
-bool RISCVTargetLowering::isLegalFaultOnlyFirstLoad(EVT DataType,
-                                                    Align Alignment) const {
-  if (!Subtarget.hasVInstructions())
-    return false;
-
-  EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
-    return false;
-
-  if (!Subtarget.enableUnalignedVectorMem() &&
-      Alignment < ScalarType.getStoreSize())
-    return false;
-
-  return true;
-}
-
 MachineInstr *
 RISCVTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
                                    MachineBasicBlock::instr_iterator &MBBI,

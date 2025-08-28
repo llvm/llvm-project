@@ -324,12 +324,6 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
-  bool isLegalFaultOnlyFirstLoad(Type *DataType,
-                                 Align Alignment) const override {
-    EVT DataTypeVT = TLI->getValueType(DL, DataType);
-    return TLI->isLegalFaultOnlyFirstLoad(DataTypeVT, Alignment);
-  }
-
   bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                     Align Alignment,
                                     unsigned AddrSpace) const override {

@@ -1782,14 +1782,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                                  ORE, TheLoop);
       return false;
     }
-    if (!TTI->isLegalFaultOnlyFirstLoad(LI->getType(), LI->getAlign())) {
-      reportVectorizationFailure("Loop may fault",
-                                 "Cannot vectorize early exit loop with "
-                                 "illegal fault-only-first load",
-                                 "EarlyExitLoopWithIllegalFaultOnlyFirstLoad",
-                                 ORE, TheLoop);
-      return false;
-    }
     FaultOnlyFirstLoads.insert(LI);
     LLVM_DEBUG(dbgs() << "LV: Found fault-only-first load: " << *LI << "\n");
   }
