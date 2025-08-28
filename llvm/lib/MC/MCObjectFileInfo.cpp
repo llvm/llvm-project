@@ -1290,7 +1290,7 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
         S->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
     std::string COMDATSymName = (S->getName() + "_" + FuncName).str();
     return Ctx->getCOFFSection(S->getName(), Characteristics, COMDATSymName,
-                               COFF::IMAGE_COMDAT_SELECT_ANY);
+                               COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH);
   }
 
   return PseudoProbeDescSection;
