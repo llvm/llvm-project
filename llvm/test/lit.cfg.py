@@ -321,7 +321,9 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
     if supported_isa_versions:
         return supported_isa_versions
     if major_version >= 13:
-        raise RuntimeError("ptxas {} does not support ISA version listing".format(ptxas))
+        raise RuntimeError(
+            "ptxas {} does not support ISA version listing".format(ptxas)
+        )
 
     cuda_version_to_isa_version = {
         (12, 9): [(8, 8)],
