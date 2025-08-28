@@ -34,8 +34,8 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
 
   Block &block = expressionOp.createBody();
   IRMapping mapper;
-  for (auto [operand, arg] : llvm::zip(expressionOp.getOperands(),
-                                       block.getArguments()))
+  for (auto [operand, arg] :
+       llvm::zip(expressionOp.getOperands(), block.getArguments()))
     mapper.map(operand, arg);
   builder.setInsertionPointToEnd(&block);
 

@@ -452,9 +452,11 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, OpAsmOpInterface, IsolatedFromAbove,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">]> {
+def EmitC_ExpressionOp
+    : EmitC_Op<
+          "expression", [HasOnlyGraphRegion, OpAsmOpInterface,
+                         IsolatedFromAbove,
+                         SingleBlockImplicitTerminator<"emitc::YieldOp">]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
@@ -492,7 +494,7 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
   }];
 
   let arguments = (ins Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$defs,
-                       UnitAttr:$do_not_inline);
+      UnitAttr:$do_not_inline);
   let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
