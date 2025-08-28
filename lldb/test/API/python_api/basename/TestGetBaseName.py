@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class GetBaseNameTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
