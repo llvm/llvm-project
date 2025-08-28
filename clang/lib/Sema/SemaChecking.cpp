@@ -15893,23 +15893,24 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
 /// vector of 4 'const float' values vs vector of 4 'float' values.
 /// So we compare unqualified types of their elements and number of elements.
 /// See GitHub issue #155405.
-static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
+static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef,
                                            ArrayRef<Expr *> Args) {
-  assert(NumArgs > 0 && "Should have at least one argument.");
+  assert(Args.size() > 0 && "Should have at least one argument.");
 
-  auto EmitError = [&](unsigned I) {
-    SemaRef.Diag(Args[0]->getBeginLoc(),
+  Expr *Arg0 = Args.front();
+  QualType Ty0 = Arg0->getType();
+
+  auto EmitError = [&](Expr *ArgI) {
+    SemaRef.Diag(Arg0->getBeginLoc(),
                  diag::err_typecheck_call_different_arg_types)
-        << Args[0]->getType() << Args[I]->getType();
+        << Arg0->getType() << ArgI->getType();
   };
-
-  QualType Ty0 = Args[0]->getType();
 
   // Compare scalar types.
   if (!Ty0->isVectorType()) {
-    for (unsigned I = 1; I != NumArgs; ++I)
-      if (!SemaRef.Context.hasSameUnqualifiedType(Ty0, Args[I]->getType())) {
-        EmitError(I);
+    for (Expr *ArgI : Args.drop_front())
+      if (!SemaRef.Context.hasSameUnqualifiedType(Ty0, ArgI->getType())) {
+        EmitError(ArgI);
         return true;
       }
 
@@ -15918,17 +15919,13 @@ static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef, unsigned NumArgs,
 
   // Compare vector types.
   const auto *Vec0 = Ty0->castAs<VectorType>();
-  for (unsigned I = 1; I != NumArgs; ++I) {
-    QualType TyI = Args[I]->getType();
-    if (!TyI->isVectorType()) {
-      EmitError(I);
-      return true;
-    }
-    const auto *VecI = TyI->castAs<VectorType>();
-    if (!SemaRef.Context.hasSameUnqualifiedType(Vec0->getElementType(),
+  for (Expr *ArgI : Args.drop_front()) {
+    const auto *VecI = ArgI->getType()->getAs<VectorType>();
+    if (!VecI ||
+        !SemaRef.Context.hasSameUnqualifiedType(Vec0->getElementType(),
                                                 VecI->getElementType()) ||
         Vec0->getNumElements() != VecI->getNumElements()) {
-      EmitError(I);
+      EmitError(ArgI);
       return true;
     }
   }
@@ -15961,9 +15958,8 @@ Sema::BuiltinVectorMath(CallExpr *TheCall,
   if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
     return std::nullopt;
 
-  if (checkBuiltinVectorMathArgTypes(*this, 2, Args)) {
+  if (checkBuiltinVectorMathArgTypes(*this, Args))
     return std::nullopt;
-  }
 
   TheCall->setArg(0, Args[0]);
   TheCall->setArg(1, Args[1]);
@@ -15998,9 +15994,8 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
-  if (checkBuiltinVectorMathArgTypes(*this, 3, Args)) {
+  if (checkBuiltinVectorMathArgTypes(*this, Args))
     return true;
-  }
 
   for (int I = 0; I < 3; ++I)
     TheCall->setArg(I, Args[I]);
