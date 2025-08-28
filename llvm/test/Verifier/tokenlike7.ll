@@ -2,7 +2,7 @@
 
 define void @f() {
 entry:
-  call target("dx.RawBuffer", half, 1, 0) () undef ()
+  call target("dx.RawBuffer", half, 1, 0) () poison ()
   ret void
 }
 ; CHECK: Return type cannot be token for indirect call!
