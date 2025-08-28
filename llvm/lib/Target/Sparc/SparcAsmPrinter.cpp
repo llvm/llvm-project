@@ -70,8 +70,6 @@ public:
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
 
-  void LowerV8Bar(const MachineInstr *MI, const MCSubtargetInfo &STI);
-
   MCOperand lowerOperand(const MachineOperand &MO) const;
 
 private:
@@ -263,26 +261,6 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   EmitADD(*OutStreamer, MCRegOP, RegO7, MCRegOP, STI);
 }
 
-void SparcAsmPrinter::LowerV8Bar(const MachineInstr *MI,
-                                 const MCSubtargetInfo &STI) {
-  assert(!STI.hasFeature(Sparc::FeatureV9) &&
-         "V8BAR should not be emitted on V9 processors!");
-
-  MCInst STBARInst;
-  MCInst LDSTUBInst;
-
-  // Emit stbar; ldstub [%sp-1], %g0
-  // The sequence acts as a full barrier on V8 systems.
-  STBARInst.setOpcode(SP::STBAR);
-  LDSTUBInst.setOpcode(SP::LDSTUBri);
-  LDSTUBInst.addOperand(MCOperand::createReg(SP::G0));
-  LDSTUBInst.addOperand(MCOperand::createReg(SP::O6));
-  LDSTUBInst.addOperand(MCOperand::createImm(-1));
-
-  OutStreamer->emitInstruction(STBARInst, STI);
-  OutStreamer->emitInstruction(LDSTUBInst, STI);
-}
-
 MCOperand SparcAsmPrinter::lowerOperand(const MachineOperand &MO) const {
   switch (MO.getType()) {
   default:
@@ -362,9 +340,6 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
-    return;
-  case SP::V8BAR:
-    LowerV8Bar(MI, getSubtargetInfo());
     return;
   }
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
