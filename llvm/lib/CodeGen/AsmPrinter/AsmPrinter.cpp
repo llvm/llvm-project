@@ -1875,16 +1875,14 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
-void AsmPrinter::emitCalleeLabels(
+void AsmPrinter::emitCallsiteLabelsForCallgraph(
     FunctionInfo &FuncInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
-  // Only indirect calls have type identifiers set.
-  const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
-
-  // Handle direct callsite info
-  if (CallSiteInfo == CallSitesInfoMap.end()) {
-    const MachineOperand &CalleeOperand = MI.getOperand(0);
+  assert(MI.isCall() && "Callsite labels are meant for call instruction only.");
+  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+    // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
     switch (CalleeOperand.getType()) {
     case llvm::MachineOperand::MO_GlobalAddress:
@@ -1894,20 +1892,22 @@ void AsmPrinter::emitCalleeLabels(
       CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
       break;
     default:
-      llvm_unreachable("Expect only direct call instructions to be handled.");
+      llvm_unreachable(
+          "Expected to only handle direct call instructions here.");
     }
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     FuncInfo.DirectCallSiteLabels.emplace_back(S, CalleeSymbol);
-    return;
-  }
-
-  // Handle indirect callsite info.
-  for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
-    MCSymbol *S = MF->getContext().createTempSymbol();
-    OutStreamer->emitLabel(S);
-    uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+  } else {
+    // Handle indirect callsite info.
+    // Only indirect calls have type identifiers set.
+    const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+    for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+      MCSymbol *S = MF->getContext().createTempSymbol();
+      OutStreamer->emitLabel(S);
+      uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
+      FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+    }
   }
 }
 
@@ -2094,7 +2094,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
-        emitCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
+        emitCallsiteLabelsForCallgraph(FuncInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())

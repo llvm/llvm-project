@@ -388,10 +388,10 @@ public:
 
   /// Generate and emit labels for callees of all callsites which will
   /// be used to populate the .callgraph section.
-  void
-  emitCalleeLabels(FunctionInfo &FuncInfo,
-                   const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
-                   const MachineInstr &MI);
+  void emitCallsiteLabelsForCallgraph(
+      FunctionInfo &FuncInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
