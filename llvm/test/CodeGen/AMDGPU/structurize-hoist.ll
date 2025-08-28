@@ -189,12 +189,11 @@ define void @test_nested_if(ptr %ptr, i32 %val, i1 %cond) {
 ; GFX900-NEXT:    s_mov_b64 s[10:11], -1
 ; GFX900-NEXT:    s_xor_b64 s[4:5], s[6:7], -1
 ; GFX900-NEXT:    s_mov_b64 s[12:13], s[6:7]
-; GFX900-NEXT:    ; implicit-def: $vgpr3
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX900-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; GFX900-NEXT:    s_cbranch_execz .LBB3_4
 ; GFX900-NEXT:  ; %bb.1: ; %if
-; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX900-NEXT:    s_and_saveexec_b64 s[12:13], s[4:5]
 ; GFX900-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX900-NEXT:  ; %bb.2: ; %if_2
@@ -230,7 +229,6 @@ define void @test_nested_if(ptr %ptr, i32 %val, i1 %cond) {
 ; GFX900-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX900-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX900-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    flat_store_dword v[0:1], v4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]

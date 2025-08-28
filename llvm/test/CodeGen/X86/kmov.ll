@@ -143,6 +143,57 @@ define <8 x i1> @invert_i8_mask_extract_8(i8 %mask) {
   ret <8 x i1> %cmp.45
 }
 
+define <8 x i1> @i8_mask_extract_7(i8 %mask) {
+; X64-AVX512-LABEL: i8_mask_extract_7:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    shrb %dil
+; X64-AVX512-NEXT:    movzbl %dil, %eax
+; X64-AVX512-NEXT:    kmovd %eax, %k0
+; X64-AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; X64-AVX512-NEXT:    retq
+;
+; X64-KNL-LABEL: i8_mask_extract_7:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    vmovd %edi, %xmm0
+; X64-KNL-NEXT:    vpbroadcastb %xmm0, %xmm0
+; X64-KNL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0]
+; X64-KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-KNL-NEXT:    retq
+  %.splatinsert = insertelement <8 x i8> poison, i8 %mask, i64 0
+  %.splat = shufflevector <8 x i8> %.splatinsert, <8 x i8> poison, <8 x i32> zeroinitializer
+  %1 = and <8 x i8> %.splat, <i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 poison>
+  %cmp.45 = icmp ne <8 x i8> %1, zeroinitializer
+  ret <8 x i1> %cmp.45
+}
+
+define <8 x i1> @invert_i8_mask_extract_7(i8 %mask) {
+; X64-AVX512-LABEL: invert_i8_mask_extract_7:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    shrb %dil
+; X64-AVX512-NEXT:    movzbl %dil, %eax
+; X64-AVX512-NEXT:    kmovd %eax, %k0
+; X64-AVX512-NEXT:    knotb %k0, %k0
+; X64-AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; X64-AVX512-NEXT:    retq
+;
+; X64-KNL-LABEL: invert_i8_mask_extract_7:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    vmovd %edi, %xmm0
+; X64-KNL-NEXT:    vpbroadcastb %xmm0, %xmm0
+; X64-KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; X64-KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-KNL-NEXT:    retq
+  %.splatinsert = insertelement <8 x i8> poison, i8 %mask, i64 0
+  %.splat = shufflevector <8 x i8> %.splatinsert, <8 x i8> poison, <8 x i32> zeroinitializer
+  %1 = and <8 x i8> %.splat, <i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 poison>
+  %cmp.45 = icmp eq <8 x i8> %1, zeroinitializer
+  ret <8 x i1> %cmp.45
+}
+
 define <4 x i1> @i16_mask_extract_4(i16 %mask) {
 ; X64-AVX512-LABEL: i16_mask_extract_4:
 ; X64-AVX512:       # %bb.0:

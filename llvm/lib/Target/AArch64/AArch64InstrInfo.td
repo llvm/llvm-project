@@ -989,6 +989,9 @@ def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
                                  [(int_aarch64_neon_fcvtxn node:$Rn),
                                   (AArch64fcvtxn_n node:$Rn)]>;
 
+def AArch64fcvtzs_half : SDNode<"AArch64ISD::FCVTZS_HALF", SDTFPExtendOp>;
+def AArch64fcvtzu_half : SDNode<"AArch64ISD::FCVTZU_HALF", SDTFPExtendOp>;
+
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
 // Vector immediate ops
@@ -6538,6 +6541,16 @@ defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
 
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
+
+// f16 -> i16 conversions leave the bit pattern in a f32
+class F16ToI16ScalarPat<SDNode cvt_isd, BaseSIMDTwoScalar instr>
+    : Pat<(f32 (cvt_isd (f16 FPR16:$Rn))),
+     (f32 (SUBREG_TO_REG (i64 0), (instr FPR16:$Rn), hsub))>;
+
+let Predicates = [HasFullFP16] in {
+def : F16ToI16ScalarPat<AArch64fcvtzs_half, FCVTZSv1f16>;
+def : F16ToI16ScalarPat<AArch64fcvtzu_half, FCVTZUv1f16>;
+}
 
 // Round FP64 to BF16.
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in

@@ -730,7 +730,7 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.AddAPInt(E->getValue());
 
-  if (E->getValue().getBitWidth() == 32) {
+  if (E->getBitWidth() == 32) {
     AbbrevToUse = Writer.getIntegerLiteralAbbrev();
   }
 

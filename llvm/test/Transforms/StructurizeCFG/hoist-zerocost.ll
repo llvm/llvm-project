@@ -172,7 +172,7 @@ define void @test_nested_if(ptr %ptr, i32 %val, i1 %cond) {
 ; CHECK-NEXT:    [[A16:%.*]] = icmp slt i32 [[VAL]], 255
 ; CHECK-NEXT:    br i1 [[COND_INV]], label %[[THEN_2:.*]], label %[[FLOW1:.*]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FLOW1]] ], [ poison, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FLOW1]] ], [ [[A_ELSE]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP3:%.*]], %[[FLOW1]] ], [ [[COND]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ELSE:.*]], label %[[MERGE:.*]]
 ; CHECK:       [[THEN_2]]:

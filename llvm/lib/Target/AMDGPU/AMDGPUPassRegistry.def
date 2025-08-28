@@ -20,6 +20,7 @@ MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
+MODULE_PASS("amdgpu-lower-intrinsics", AMDGPULowerIntrinsicsPass(*this))
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
 MODULE_PASS("amdgpu-perf-hint",

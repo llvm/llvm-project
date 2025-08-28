@@ -90,13 +90,14 @@ DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
                            isTargetPrivatization) {}
 
 void DataSharingProcessor::processStep1(
-    mlir::omp::PrivateClauseOps *clauseOps) {
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
   collectPreDeterminedSymbols();
 
-  privatize(clauseOps);
+  privatize(clauseOps, dir);
 
   insertBarrier(clauseOps);
 }
@@ -581,14 +582,15 @@ void DataSharingProcessor::collectPreDeterminedSymbols() {
                    preDeterminedSymbols);
 }
 
-void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps) {
+void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                                     std::optional<llvm::omp::Directive> dir) {
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
-        privatizeSymbol(&*mem, clauseOps);
+        privatizeSymbol(&*mem, clauseOps, dir);
     } else
-      privatizeSymbol(sym, clauseOps);
+      privatizeSymbol(sym, clauseOps, dir);
   }
 }
 
@@ -607,7 +609,8 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 
 void DataSharingProcessor::privatizeSymbol(
     const semantics::Symbol *symToPrivatize,
-    mlir::omp::PrivateClauseOps *clauseOps) {
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
   if (!useDelayedPrivatization) {
     cloneSymbol(symToPrivatize);
     copyFirstPrivateSymbol(symToPrivatize);
@@ -617,7 +620,7 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
 }
 } // namespace omp
 } // namespace lower
