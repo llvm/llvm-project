@@ -172,9 +172,9 @@ public:
         [&HasOverlap](auto, auto) { HasOverlap = true; });
   }
 
-  LLVM_ABI BoundRegs getBoundRegs() {
+  LLVM_ABI BoundRegs takeBoundRegs() {
     assert(std::is_sorted(Bindings.begin(), Bindings.end()) &&
-           "Bindings must be sorted");
+           "takeBoundRegs should only be called after calculateBindingInfo");
     return BoundRegs(std::move(Bindings));
   }
 

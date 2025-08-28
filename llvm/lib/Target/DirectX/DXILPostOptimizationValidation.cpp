@@ -232,7 +232,7 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-  const hlsl::BoundRegs &BoundRegs = Builder.getBoundRegs();
+  const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
