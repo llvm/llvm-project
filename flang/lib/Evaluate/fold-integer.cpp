@@ -350,10 +350,8 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
     CountAccumulator<T, maskKind> accumulator{arrayAndMask->array};
     Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
         dim, Scalar<T>{}, accumulator)};
-    if (accumulator.overflow() &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
-      context.messages().Say(common::UsageWarning::FoldingException,
+    if (accumulator.overflow()) {
+      context.Warn(common::UsageWarning::FoldingException,
           "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
     }
     return Expr<T>{std::move(result)};
@@ -965,10 +963,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
 
   auto FromInt64{[&name, &context](std::int64_t n) {
     Scalar<T> result{n};
-    if (result.ToInt64() != n &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
-      context.messages().Say(common::UsageWarning::FoldingException,
+    if (result.ToInt64() != n) {
+      context.Warn(common::UsageWarning::FoldingException,
           "Result of intrinsic function '%s' (%jd) overflows its result type"_warn_en_US,
           name, std::intmax_t{n});
     }
@@ -979,10 +975,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
-          if (j.overflow &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingException)) {
-            context.messages().Say(common::UsageWarning::FoldingException,
+          if (j.overflow) {
+            context.Warn(common::UsageWarning::FoldingException,
                 "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
@@ -999,11 +993,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             return FoldElementalIntrinsic<T, TR>(context, std::move(funcRef),
                 ScalarFunc<T, TR>([&](const Scalar<TR> &x) {
                   auto y{x.template ToInteger<Scalar<T>>(mode)};
-                  if (y.flags.test(RealFlag::Overflow) &&
-                      context.languageFeatures().ShouldWarn(
-                          common::UsageWarning::FoldingException)) {
-                    context.messages().Say(
-                        common::UsageWarning::FoldingException,
+                  if (y.flags.test(RealFlag::Overflow)) {
+                    context.Warn(common::UsageWarning::FoldingException,
                         "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
@@ -1029,10 +1020,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>(
             [&context](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
               auto result{x.DIM(y)};
-              if (result.overflow &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
-                context.messages().Say(common::UsageWarning::FoldingException,
+              if (result.overflow) {
+                context.Warn(common::UsageWarning::FoldingException,
                     "DIM intrinsic folding overflow"_warn_en_US);
               }
               return result.value;
@@ -1061,11 +1050,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         context.messages().Say(
             "Character in intrinsic function %s must have length one"_err_en_US,
             name);
-      } else if (len.value() > 1 &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::Portability)) {
+      } else if (len.value() > 1) {
         // Do not die, this was not checked before
-        context.messages().Say(common::UsageWarning::Portability,
+        context.Warn(common::UsageWarning::Portability,
             "Character in intrinsic function %s should have length one"_port_en_US,
             name);
       } else {
@@ -1256,11 +1243,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     bool badPConst{false};
     if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
-          pConst->IsZero() &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+          pConst && pConst->IsZero()) {
+        context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MOD: P argument is zero"_warn_en_US);
         badPConst = true;
       }
@@ -1270,17 +1255,12 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             [badPConst](FoldingContext &context, const Scalar<T> &x,
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
-              if (context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-                if (!badPConst && quotRem.divisionByZero) {
-                  context.messages().Say(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
-                      "mod() by zero"_warn_en_US);
-                } else if (quotRem.overflow) {
-                  context.messages().Say(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
-                      "mod() folding overflowed"_warn_en_US);
-                }
+              if (!badPConst && quotRem.divisionByZero) {
+                context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                    "mod() by zero"_warn_en_US);
+              } else if (quotRem.overflow) {
+                context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                    "mod() folding overflowed"_warn_en_US);
               }
               return quotRem.remainder;
             }));
@@ -1288,11 +1268,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     bool badPConst{false};
     if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
-          pConst->IsZero() &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+          pConst && pConst->IsZero()) {
+        context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "MODULO: P argument is zero"_warn_en_US);
         badPConst = true;
       }
@@ -1302,10 +1280,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                                            const Scalar<T> &x,
                                            const Scalar<T> &y) -> Scalar<T> {
           auto result{x.MODULO(y)};
-          if (!badPConst && result.overflow &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingException)) {
-            context.messages().Say(common::UsageWarning::FoldingException,
+          if (!badPConst && result.overflow) {
+            context.Warn(common::UsageWarning::FoldingException,
                 "modulo() folding overflowed"_warn_en_US);
           }
           return result.value;
@@ -1405,10 +1381,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>([&context](const Scalar<T> &j,
                                 const Scalar<T> &k) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
-          if (result.overflow &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingException)) {
-            context.messages().Say(common::UsageWarning::FoldingException,
+          if (result.overflow) {
+            context.Warn(common::UsageWarning::FoldingException,
                 "sign(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return result.value;
@@ -1465,11 +1439,11 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       auto realBytes{
           context.targetCharacteristics().GetByteSize(TypeCategory::Real,
               context.defaults().GetDefaultKind(TypeCategory::Real))};
-      if (intBytes != realBytes &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingValueChecks)) {
-        context.messages().Say(common::UsageWarning::FoldingValueChecks,
-            *context.moduleFileName(),
+      if (intBytes != realBytes) {
+        // Using the low-level API to bypass the module file check in this case.
+        context.messages().Warn(
+            /*isInModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::FoldingValueChecks, *context.moduleFileName(),
             "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
       }
       return Expr<T>{8 * std::min(intBytes, realBytes)};
@@ -1496,11 +1470,9 @@ Expr<Type<TypeCategory::Unsigned, KIND>> FoldIntrinsicFunction(
     bool badPConst{false};
     if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
       *pExpr = Fold(context, std::move(*pExpr));
-      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
-          pConst->IsZero() &&
-          context.languageFeatures().ShouldWarn(
-              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)};
+          pConst && pConst->IsZero()) {
+        context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
             "%s: P argument is zero"_warn_en_US, name);
         badPConst = true;
       }
@@ -1510,13 +1482,9 @@ Expr<Type<TypeCategory::Unsigned, KIND>> FoldIntrinsicFunction(
             [badPConst, &name](FoldingContext &context, const Scalar<T> &x,
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideUnsigned(y)};
-              if (context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-                if (!badPConst && quotRem.divisionByZero) {
-                  context.messages().Say(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
-                      "%s() by zero"_warn_en_US, name);
-                }
+              if (!badPConst && quotRem.divisionByZero) {
+                context.Warn(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                    "%s() by zero"_warn_en_US, name);
               }
               return quotRem.remainder;
             }));

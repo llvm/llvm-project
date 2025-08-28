@@ -410,6 +410,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:PtrDialect",
         "//mlir:Reducer",
+        "//mlir:SCFTransforms",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TensorDialect",
