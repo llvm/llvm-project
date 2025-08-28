@@ -52,10 +52,13 @@ jobs:
           echo "Formatting files:"
           echo "$CHANGED_FILES"
 
+      # The clang format version should always be upgraded to the first version
+      # of a release cycle (x.1.0) or the last version of a release cycle, or
+      # if there have been relevant clang-format backports.
       - name: Install clang-format
         uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
         with:
-          clangformat: 20.1.8
+          clangformat: 21.1.0
 
       - name: Setup Python env
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
