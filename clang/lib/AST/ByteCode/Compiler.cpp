@@ -1376,11 +1376,17 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
   assert(!E->isCommaOp() &&
          "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
-  assert(E->getLHS()->getType()->isVectorType());
-  assert(E->getRHS()->getType()->isVectorType());
+  assert(LHS->getType()->isVectorType());
+  assert(RHS->getType()->isVectorType());
+
+  // We can only handle vectors with primitive element types.
+  if (!canClassify(LHS->getType()->castAs<VectorType>()->getElementType()))
+    return false;
 
   // Prepare storage for result.
   if (!Initializing && !E->isCompoundAssignmentOp() && !E->isAssignmentOp()) {
@@ -1391,8 +1397,6 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
       return false;
   }
 
-  const Expr *LHS = E->getLHS();
-  const Expr *RHS = E->getRHS();
   const auto *VecTy = E->getType()->getAs<VectorType>();
   auto Op = E->isCompoundAssignmentOp()
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
