@@ -12,12 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
-
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/ComplexToSPIRV/ComplexToSPIRV.h"
+#include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
+#include "mlir/Conversion/IndexToSPIRV/IndexToSPIRV.h"
+#include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
+#include "mlir/Conversion/TensorToSPIRV/TensorToSPIRV.h"
+#include "mlir/Conversion/UBToSPIRV/UBToSPIRV.h"
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -158,6 +163,15 @@ void GPUToSPIRVPass::runOnOperation() {
     populateMemRefToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
     populateVectorToSPIRVPatterns(typeConverter, patterns);
+
+    mlir::populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+    mlir::populateComplexToSPIRVPatterns(typeConverter, patterns);
+    mlir::cf::populateControlFlowToSPIRVPatterns(typeConverter, patterns);
+    mlir::index::populateIndexToSPIRVPatterns(typeConverter, patterns);
+    mlir::populateMathToSPIRVPatterns(typeConverter, patterns);
+    mlir::populateTensorToSPIRVPatterns(typeConverter,
+                                        /*byteCountThreshold=*/64, patterns);
+    mlir::ub::populateUBToSPIRVConversionPatterns(typeConverter, patterns);
 
     if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
       return signalPassFailure();
