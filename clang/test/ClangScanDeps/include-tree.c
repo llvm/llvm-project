@@ -34,13 +34,13 @@
 
 // RUN: cat %t/result1.txt > %t/full.txt
 // RUN: echo "FULL DEPS START" >> %t/full.txt
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' >> %t/full.txt
+// RUN: cat %t/deps.json >> %t/full.txt
 
-// RUN: FileCheck %s -DPREFIX=%/t -DCLANG=%clang -check-prefix=FULL -input-file %t/full.txt
+// RUN: cat %t/full.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t --sanitize CLANG=%/clang --enable-yaml-compatibility %s -check-prefix=FULL
 
 // Capture the tree id from experimental-include-tree ; ensure that it matches
 // the result from experimental-full.
-// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - [[PREFIX]]{{[/\\]}}t.c
+// FULL: [[TREE_ID:llvmcas://[[:xdigit:]]+]] - PREFIX{{/|\\}}t.c
 // FULL: FULL DEPS START
 
 // FULL-NEXT: {
@@ -54,7 +54,7 @@
 // FULL:                "command-line": [
 // FULL-NEXT:             "-cc1"
 // FULL:                  "-fcas-path"
-// FULL-NEXT:             "[[PREFIX]]/cas"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}cas"
 // FULL:                  "-disable-free"
 // FULL:                  "-fcas-include-tree"
 // FULL-NEXT:             "[[TREE_ID]]"
@@ -67,17 +67,17 @@
 // FULL-NEXT:             "t.c"
 // FULL-NOT:              "t.c"
 // FULL:                ]
-// FULL:                "{{.*[\\/]clang(\.exe)?}}",
+// FULL:                "executable": "CLANG",
 // FULL:                "file-deps": [
-// FULL-NEXT:             "[[PREFIX]]/t.c"
-// FULL-NEXT:             "[[PREFIX]]/top.h"
-// FULL-NEXT:             "[[PREFIX]]/n1.h"
-// FULL-NEXT:             "[[PREFIX]]/n2.h"
-// FULL-NEXT:             "[[PREFIX]]/n3.h"
-// FULL-NEXT:             "[[PREFIX]]/n3.h"
-// FULL-NEXT:             "[[PREFIX]]/n2.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}t.c"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}top.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}n1.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}n2.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}n3.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}n3.h"
+// FULL-NEXT:             "PREFIX{{/|\\\\}}n2.h"
 // FULL-NEXT:           ]
-// FULL:                "input-file": "[[PREFIX]]/t.c"
+// FULL:                "input-file": "PREFIX{{/|\\\\}}t.c"
 // FULL:              }
 // FULL:            ]
 // FULL:          }
