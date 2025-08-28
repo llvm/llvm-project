@@ -39,6 +39,7 @@ void f() {
   printf("fde_pc = %p\n", fde_pc);
   printf("fde_fpc = %p\n", fde_fpc);
   printf("fde_fpc1 = %p\n", fde_fpc1);
+  fflush(stdout);
   assert(fde_pc != NULL);
   assert(fde_fpc != NULL);
   assert(fde_fpc1 != NULL);
