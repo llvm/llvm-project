@@ -36,7 +36,7 @@ using SCFTileSizeComputationFunction =
 ///
 /// \param ivs Induction variables of the newly formed scf.forall loop.
 /// \returns SmallVector<Value> containing the original tile indices.
-using SCFUpdateConductionVarFn = std::function<SmallVector<Value>(
+using SCFUpdateInductionVarFn = std::function<SmallVector<Value>(
     RewriterBase &, Location &, ValueRange ivs)>;
 
 /// Controls tile iteration and distribution for an scf.forall loop.
@@ -47,12 +47,12 @@ using SCFUpdateConductionVarFn = std::function<SmallVector<Value>(
 ///   - lbs: Lower bounds for the scf.forall loop.
 ///   - ubs: Upper bounds for the scf.forall loop.
 ///   - steps: Step sizes for the scf.forall loop.
-///   - updateConductionVarFn: Function to compute original tile indices from
+///   - updateInductionVarFn: Function to compute original tile indices from
 ///   new induction variables.
 
 using SCFTileDistributionFn = std::function<
     std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
-               SmallVector<OpFoldResult>, SCFUpdateConductionVarFn>(
+               SmallVector<OpFoldResult>, SCFUpdateInductionVarFn>(
         RewriterBase &, Location, ArrayRef<Range> loopRanges,
         ArrayRef<OpFoldResult> tileSizes)>;
 
@@ -67,7 +67,7 @@ struct SCFTilingOptions {
   /// Function to have control over tile ordering within the scf.forall loop.
   /// This function takes the iterationDomain as parameter and returns:
   /// loop bounds : (lbs, ubs, steps)
-  /// ConductionVarFn : compute old tile indexes from old ones.
+  /// InductionVarFn : compute old tile indexes from old ones.
   SCFTileDistributionFn tileDistributionFunction = nullptr;
 
   SCFTilingOptions &

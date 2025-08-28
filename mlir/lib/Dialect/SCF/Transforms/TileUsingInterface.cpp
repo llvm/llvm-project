@@ -526,7 +526,7 @@ static LogicalResult generateLoopNestUsingForallOp(
 
   scf::ForallOp forallOp;
   bool useNumThreads = !numThreads.empty();
-  scf::SCFUpdateConductionVarFn updateConductionVar = nullptr;
+  scf::SCFUpdateInductionVarFn updateInductionVar = nullptr;
 
   if (useNumThreads) {
     // Prune the zero numthreads.
@@ -541,7 +541,7 @@ static LogicalResult generateLoopNestUsingForallOp(
   } else {
     SmallVector<OpFoldResult> lbs, ubs, steps;
     if (tileDistributionFn) {
-      std::tie(lbs, ubs, steps, updateConductionVar) =
+      std::tie(lbs, ubs, steps, updateInductionVar) =
           tileDistributionFn(rewriter, loc, loopRanges, tileSizes);
     } else {
       std::tie(lbs, ubs, steps) =
@@ -559,9 +559,9 @@ static LogicalResult generateLoopNestUsingForallOp(
   SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
   SmallVector<Value> originalInductionVars = forallOp.getInductionVars();
   SmallVector<Value> updatedInductionVars = originalInductionVars;
-  if (updateConductionVar) {
+  if (updateInductionVar) {
     updatedInductionVars =
-        updateConductionVar(rewriter, loc, originalInductionVars);
+        updateInductionVar(rewriter, loc, originalInductionVars);
   }
   if (failed(tiledBodyFn(rewriter, loc, updatedInductionVars,
                          destinationTensors, tiledResults, resultOffsets,
