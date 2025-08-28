@@ -4784,6 +4784,21 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.properties.types
 )
+
+add_entrypoint_object(
+  totalorderbf16
+  SRCS
+    totalorderbf16.cpp
+  HDRS
+    ../totalorderbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+)
+
 add_entrypoint_object(
   totalordermag
   SRCS
@@ -4833,6 +4848,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  totalordermagbf16
+  SRCS
+    totalordermagbf16.cpp
+  HDRS
+    ../totalordermagbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_entrypoint_object(
