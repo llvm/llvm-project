@@ -1341,22 +1341,6 @@ class OpenMP_SimdlenClauseSkip<
 def OpenMP_SimdlenClause : OpenMP_SimdlenClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V5.2: [9.1.1] `sizes` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_TileSizesClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
-  );
-}
-
-def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
 // V5.2: [5.5.9] `task_reduction` clause
 //===----------------------------------------------------------------------===//
 
@@ -1417,6 +1401,22 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.1.1] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_TileSizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
+  );
+}
+
+def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [12.1] `untied` clause

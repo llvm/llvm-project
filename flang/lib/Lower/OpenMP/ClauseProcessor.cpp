@@ -529,15 +529,9 @@ bool ClauseProcessor::processProcBind(
 
 bool ClauseProcessor::processTileSizes(
     lower::pft::Evaluation &eval, mlir::omp::LoopNestOperands &result) const {
-  bool found = false;
-  llvm::SmallVector<int64_t> sizeValues;
   auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
-  collectTileSizesFromOpenMPConstruct(ompCons, sizeValues, semaCtx);
-  if (sizeValues.size() > 0) {
-    found = true;
-    result.tileSizes = sizeValues;
-  }
-  return found;
+  collectTileSizesFromOpenMPConstruct(ompCons, result.tileSizes, semaCtx);
+  return !result.tileSizes.empty();
 }
 
 bool ClauseProcessor::processSafelen(

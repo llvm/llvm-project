@@ -627,7 +627,6 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     that should be collapsed (1 if no collapse is done) after any tiling is
     performed. The tiling sizes is represented by the tile sizes clause.
 
-
     The lower and upper bounds specify a half-open range: the range includes the
     lower bound but does not include the upper bound. If the `loop_inclusive`
     attribute is specified then the upper bound is also included.
@@ -639,7 +638,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     `loop_steps` arguments.
 
     ```mlir
-    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)  collapse(2) tiles(5,5) {
+    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) collapse(2) tiles(5,5) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
       %sum = arith.addf %a, %b : f32
