@@ -834,13 +834,140 @@ genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
   return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
 }
 
-static Type getOmpDeviceType(MLIRContext *c) { return IntegerType::get(c, 32); }
+static mlir::LLVM::ConstantOp
+genI64Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
+  mlir::Type i64Ty = rewriter.getI64Type();
+  mlir::IntegerAttr attr = rewriter.getI64IntegerAttr(value);
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, i64Ty, attr);
+}
+
+static Value genDescriptorGetBaseAddress(fir::FirOpBuilder &builder,
+                                         Location loc, Value boxDesc) {
+  Value box = boxDesc;
+  if (auto refBox = dyn_cast<fir::ReferenceType>(boxDesc.getType())) {
+    box = fir::LoadOp::create(builder, loc, boxDesc);
+  }
+  assert(isa<fir::BoxType>(box.getType()) &&
+         "Unknown type passed to genDescriptorGetBaseAddress");
+  auto i8Type = builder.getI8Type();
+  auto unknownArrayType =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Type);
+  auto i8BoxType = fir::BoxType::get(unknownArrayType);
+  auto typedBox = fir::ConvertOp::create(builder, loc, i8BoxType, box);
+  auto rawAddr = fir::BoxAddrOp::create(builder, loc, typedBox);
+  return rawAddr;
+}
+
+static Value genDescriptorGetTotalElements(fir::FirOpBuilder &builder,
+                                           Location loc, Value boxDesc) {
+  Value box = boxDesc;
+  if (auto refBox = dyn_cast<fir::ReferenceType>(boxDesc.getType())) {
+    box = fir::LoadOp::create(builder, loc, boxDesc);
+  }
+  assert(isa<fir::BoxType>(box.getType()) &&
+         "Unknown type passed to genDescriptorGetTotalElements");
+  auto i64Type = builder.getI64Type();
+  return fir::BoxTotalElementsOp::create(builder, loc, i64Type, box);
+}
+
+static Value genDescriptorGetEleSize(fir::FirOpBuilder &builder, Location loc,
+                                     Value boxDesc) {
+  Value box = boxDesc;
+  if (auto refBox = dyn_cast<fir::ReferenceType>(boxDesc.getType())) {
+    box = fir::LoadOp::create(builder, loc, boxDesc);
+  }
+  assert(isa<fir::BoxType>(box.getType()) &&
+         "Unknown type passed to genDescriptorGetElementSize");
+  auto i64Type = builder.getI64Type();
+  return fir::BoxEleSizeOp::create(builder, loc, i64Type, box);
+}
+
+static Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
+                                             Location loc, Value boxDesc) {
+  Value box = boxDesc;
+  if (auto refBox = dyn_cast<fir::ReferenceType>(boxDesc.getType())) {
+    box = fir::LoadOp::create(builder, loc, boxDesc);
+  }
+  assert(isa<fir::BoxType>(box.getType()) &&
+         "Unknown type passed to genDescriptorGetElementSize");
+  Value eleSize = genDescriptorGetEleSize(builder, loc, box);
+  Value totalElements = genDescriptorGetTotalElements(builder, loc, box);
+  return mlir::arith::MulIOp::create(builder, loc, totalElements, eleSize);
+}
+
+static mlir::Value genOmpGetMappedPtrIfPresent(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               mlir::Value hostPtr,
+                                               mlir::Value deviceNum,
+                                               mlir::ModuleOp module) {
+  auto *context = builder.getContext();
+  auto voidPtrType = fir::LLVMPointerType::get(context, builder.getI8Type());
+  auto i32Type = builder.getI32Type();
+  auto funcName = "omp_get_mapped_ptr";
+  auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcName);
+
+  if (!funcOp) {
+    auto funcType =
+        mlir::FunctionType::get(context, {voidPtrType, i32Type}, {voidPtrType});
+
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+
+    funcOp = mlir::func::FuncOp::create(builder, loc, funcName, funcType);
+    funcOp.setPrivate();
+  }
+
+  llvm::SmallVector<mlir::Value> args;
+  args.push_back(fir::ConvertOp::create(builder, loc, voidPtrType, hostPtr));
+  args.push_back(fir::ConvertOp::create(builder, loc, i32Type, deviceNum));
+  auto callOp = fir::CallOp::create(builder, loc, funcOp, args);
+  auto mappedPtr = callOp.getResult(0);
+  auto isNull = builder.genIsNullAddr(loc, mappedPtr);
+  auto convertedHostPtr =
+      fir::ConvertOp::create(builder, loc, voidPtrType, hostPtr);
+  auto result = arith::SelectOp::create(builder, loc, isNull, convertedHostPtr,
+                                        mappedPtr);
+  return result;
+}
+
+static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value dst,
+                                   mlir::Value src, mlir::Value length,
+                                   mlir::Value dstOffset, mlir::Value srcOffset,
+                                   mlir::Value device, mlir::ModuleOp module) {
+  auto *context = builder.getContext();
+  // int omp_target_memcpy(void *dst, const void *src, size_t length,
+  //                       size_t dst_offset, size_t src_offset,
+  //                       int dst_device, int src_device)
+  auto funcName = "omp_target_memcpy";
+  auto voidPtrType = fir::LLVMPointerType::get(context, builder.getI8Type());
+  auto sizeTType = builder.getI64Type(); // assuming size_t is 64-bit
+  auto i32Type = builder.getI32Type();
+  auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcName);
+
+  if (!funcOp) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+    llvm::SmallVector<mlir::Type> argTypes = {
+        voidPtrType, voidPtrType, sizeTType, sizeTType,
+        sizeTType,   i32Type,     i32Type};
+    auto funcType = mlir::FunctionType::get(context, argTypes, {i32Type});
+    funcOp = mlir::func::FuncOp::create(builder, loc, funcName, funcType);
+    funcOp.setPrivate();
+  }
+
+  llvm::SmallVector<mlir::Value> args{dst,       src,    length, dstOffset,
+                                      srcOffset, device, device};
+  fir::CallOp::create(builder, loc, funcOp, args);
+  return;
+}
 
 // moveToHost method clones all the ops from target region outside of it.
 // It hoists runtime functions and replaces them with omp vesions.
 // Also hoists and replaces fir.allocmem with omp.target_allocmem and
 // fir.freemem with omp.target_freemem
-static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
+static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
+                       mlir::ModuleOp module) {
   OpBuilder::InsertionGuard guard(rewriter);
   Block *targetBlock = &targetOp.getRegion().front();
   assert(targetBlock == &targetOp.getRegion().back());
@@ -859,7 +986,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
     Value privateVar = targetOp.getPrivateVars()[i];
     // The mapping should link the device-side variable to the host-side one.
     BlockArgument arg = targetBlock->getArguments()[mapSize + i];
-    // Map the device-side copy (arg) to the host-side value (privateVar).
+    // Map the device-side copy (`arg`) to the host-side value (`privateVar`).
     mapping.map(arg, privateVar);
   }
 
@@ -872,69 +999,43 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
   for (auto it = targetBlock->begin(), end = std::prev(targetBlock->end());
        it != end; ++it) {
     auto *op = &*it;
-    if (isRuntimeCall(op)) {
-      fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      auto module = runtimeCall->getParentOfType<ModuleOp>();
-      auto callee =
-          cast<func::FuncOp>(module.lookupSymbol(runtimeCall.getCalleeAttr()));
-      std::string newCalleeName = (callee.getName() + "_omp").str();
-      mlir::OpBuilder moduleBuilder(module.getBodyRegion());
-      func::FuncOp newCallee =
-          cast_or_null<func::FuncOp>(module.lookupSymbol(newCalleeName));
-      if (!newCallee) {
-        SmallVector<Type> argTypes(callee.getFunctionType().getInputs());
-        argTypes.push_back(getOmpDeviceType(rewriter.getContext()));
-        newCallee = moduleBuilder.create<func::FuncOp>(
-            callee->getLoc(), newCalleeName,
-            FunctionType::get(rewriter.getContext(), argTypes,
-                              callee.getFunctionType().getResults()));
-        if (callee.getArgAttrs())
-          newCallee.setArgAttrsAttr(*callee.getArgAttrs());
-        if (callee.getResAttrs())
-          newCallee.setResAttrsAttr(*callee.getResAttrs());
-        newCallee.setSymVisibility(callee.getSymVisibility());
-        newCallee->setDiscardableAttrs(callee->getDiscardableAttrDictionary());
-      }
-      SmallVector<Value> operands = runtimeCall.getOperands();
-      operands.push_back(device);
-      auto tmpCall = rewriter.create<fir::CallOp>(
-          runtimeCall.getLoc(), runtimeCall.getResultTypes(),
-          SymbolRefAttr::get(newCallee), operands, nullptr, nullptr, nullptr,
-          runtimeCall.getFastmathAttr());
-      Operation *newCall = rewriter.clone(*tmpCall, mapping);
-      mapping.map(&*it, newCall);
-      rewriter.eraseOp(tmpCall);
-    } else {
-      Operation *clonedOp = rewriter.clone(*op, mapping);
-      for (unsigned i = 0; i < op->getNumResults(); ++i) {
-        mapping.map(op->getResult(i), clonedOp->getResult(i));
-      }
-      // fir.declare changes its type when hoisting it out of omp.target to
-      // omp.target_data Introduce a load, if original declareOp input is not of
-      // reference type, but cloned delcareOp input is reference type.
-      if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(clonedOp)) {
-        auto originalDeclareOp = cast<fir::DeclareOp>(op);
-        Type originalInType = originalDeclareOp.getMemref().getType();
-        Type clonedInType = clonedDeclareOp.getMemref().getType();
+    Operation *clonedOp = rewriter.clone(*op, mapping);
+    for (unsigned i = 0; i < op->getNumResults(); ++i) {
+      mapping.map(op->getResult(i), clonedOp->getResult(i));
+    }
+    // fir.declare changes its type when hoisting it out of omp.target to
+    // omp.target_data Introduce a load, if original declareOp input is not of
+    // reference type, but cloned delcareOp input is reference type.
 
-        fir::ReferenceType originalRefType =
-            dyn_cast<fir::ReferenceType>(originalInType);
-        fir::ReferenceType clonedRefType =
-            dyn_cast<fir::ReferenceType>(clonedInType);
-        if (!originalRefType && clonedRefType) {
-          Type clonedEleTy = clonedRefType.getElementType();
-          if (clonedEleTy == originalDeclareOp.getType()) {
-            opsToReplace.push_back(clonedOp);
-          }
+    if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(clonedOp)) {
+      auto originalDeclareOp = cast<fir::DeclareOp>(op);
+      Type originalInType = originalDeclareOp.getMemref().getType();
+      Type clonedInType = clonedDeclareOp.getMemref().getType();
+
+      fir::ReferenceType originalRefType =
+          dyn_cast<fir::ReferenceType>(originalInType);
+      fir::ReferenceType clonedRefType =
+          dyn_cast<fir::ReferenceType>(clonedInType);
+      if (!originalRefType && clonedRefType) {
+        Type clonedEleTy = clonedRefType.getElementType();
+        if (clonedEleTy == originalDeclareOp.getType()) {
+          opsToReplace.push_back(clonedOp);
         }
       }
+    }
       if (isa<fir::AllocMemOp>(clonedOp) || isa<fir::FreeMemOp>(clonedOp))
         opsToReplace.push_back(clonedOp);
-    }
+      if (isRuntimeCall(clonedOp)) {
+        fir::CallOp runtimeCall = cast<fir::CallOp>(op);
+        if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
+            "_FortranAAssign") {
+          opsToReplace.push_back(clonedOp);
+        } else {
+          llvm_unreachable("Unhandled runtime call hoisting.");
+        }
+      }
   }
 
-  // Replace fir.allocmem with omp.target_allocmem,
-  // fir.freemem with omp.target_freemem.
   for (Operation *op : opsToReplace) {
     if (auto allocOp = dyn_cast<fir::AllocMemOp>(op)) {
       rewriter.setInsertionPoint(allocOp);
@@ -963,16 +1064,40 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
       Value loadedValue = rewriter.create<fir::LoadOp>(
           clonedDeclareOp.getLoc(), clonedEleTy, clonedDeclareOp.getMemref());
       clonedDeclareOp.getResult().replaceAllUsesWith(loadedValue);
+    } else if (isRuntimeCall(op)) {
+      rewriter.setInsertionPoint(op);
+      fir::CallOp runtimeCall = cast<fir::CallOp>(op);
+      SmallVector<Value> operands = runtimeCall.getOperands();
+      mlir::Location loc = runtimeCall.getLoc();
+      fir::FirOpBuilder builder{rewriter, op};
+      assert(operands.size() == 4);
+      Value sourceFile{operands[2]}, sourceLine{operands[3]};
+
+      auto fromBaseAddr =
+          genDescriptorGetBaseAddress(builder, loc, operands[1]);
+      auto toBaseAddr = genDescriptorGetBaseAddress(builder, loc, operands[0]);
+      auto dataSizeInBytes =
+          genDescriptorGetDataSizeInBytes(builder, loc, operands[1]);
+
+      Value toPtr =
+          genOmpGetMappedPtrIfPresent(builder, loc, toBaseAddr, device, module);
+      Value fromPtr = genOmpGetMappedPtrIfPresent(builder, loc, fromBaseAddr,
+                                                  device, module);
+      Value zero = genI64Constant(loc, rewriter, 0);
+      genOmpTargetMemcpyCall(builder, loc, toPtr, fromPtr, dataSizeInBytes,
+                             zero, zero, device, module);
+      rewriter.eraseOp(op);
     }
   }
   rewriter.eraseOp(targetOp);
 }
 
-void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter) {
+void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter,
+                   mlir::ModuleOp module) {
   auto tuple = getNestedOpToIsolate(targetOp);
   if (!tuple) {
     LLVM_DEBUG(llvm::dbgs() << " No op to isolate\n");
-    moveToHost(targetOp, rewriter);
+    moveToHost(targetOp, rewriter, module);
     return;
   }
 
@@ -982,18 +1107,18 @@ void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter) {
 
   if (splitBefore && splitAfter) {
     auto res = isolateOp(toIsolate, splitAfter, rewriter);
-    moveToHost(res.preTargetOp, rewriter);
-    fissionTarget(res.postTargetOp, rewriter);
+    moveToHost(res.preTargetOp, rewriter, module);
+    fissionTarget(res.postTargetOp, rewriter, module);
     return;
   }
   if (splitBefore) {
     auto res = isolateOp(toIsolate, splitAfter, rewriter);
-    moveToHost(res.preTargetOp, rewriter);
+    moveToHost(res.preTargetOp, rewriter, module);
     return;
   }
   if (splitAfter) {
     auto res = isolateOp(toIsolate->getNextNode(), splitAfter, rewriter);
-    fissionTarget(res.postTargetOp, rewriter);
+    fissionTarget(res.postTargetOp, rewriter, module);
     return;
   }
 }
@@ -1023,7 +1148,7 @@ public:
       for (auto targetOp : targetOps) {
         auto res = splitTargetData(targetOp, rewriter);
         if (res)
-          fissionTarget(res->targetOp, rewriter);
+          fissionTarget(res->targetOp, rewriter, moduleOp);
       }
     }
   }
