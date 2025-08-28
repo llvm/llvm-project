@@ -764,7 +764,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 };
 
 // This pattern transforms the LoadGatherOp with explicit offsets to load
-// subgroup data, similar to WgToSgLoadNdOpWithOffset.
+// subgroup data
 struct WgToSgLoadGatherOpWithOffset
     : public OpConversionPattern<xegpu::LoadGatherOp> {
   using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
@@ -804,7 +804,7 @@ struct WgToSgLoadGatherOpWithOffset
 };
 
 // This pattern transforms the StoreScatterOp with explicit offsets to store
-// subgroup data, similar to WgToSgStoreNdOpWithOffset.
+// subgroup data
 struct WgToSgStoreScatterOpWithOffset
     : public OpConversionPattern<xegpu::StoreScatterOp> {
   using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
