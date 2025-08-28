@@ -785,6 +785,14 @@ struct WgToSgLoadGatherOpWithOffset
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
+    // The offsets need to be distributed
+    if (dyn_cast<VectorType>(adaptor.getOffsets().front().getType())
+            .getShape() !=
+        dyn_cast<VectorType>(adaptor.getMask().front().getType()).getShape()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "offsets have not been distributed");
+    }
+
     SmallVector<Value> newLoadOps;
     auto chunkSizeAttr =
         rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
@@ -823,6 +831,14 @@ struct WgToSgStoreScatterOpWithOffset
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getValue());
     if (!layout || !layout.isForWorkgroup())
       return failure();
+
+    // The offsets need to be distributed
+    if (dyn_cast<VectorType>(adaptor.getOffsets().front().getType())
+            .getShape() !=
+        dyn_cast<VectorType>(adaptor.getMask().front().getType()).getShape()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "offsets have not been distributed");
+    }
 
     auto chunkSizeOpt = op.getChunkSize();
     int64_t chunkSize = chunkSizeOpt ? static_cast<int64_t>(*chunkSizeOpt) : 1;
