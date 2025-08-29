@@ -807,6 +807,21 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 
    %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
 
+Lanemask Operands
+^^^^^^^^^^^^^^^^^^
+
+A Lanemask operand is 64-bit unsigned value that can the store lane information 
+for a register operand in the instruction. It can be used as many times as needed
+in an instruction, with one (atleast) or more register operands associated with it.
+
+
+For example, the COPY_LANEMASK instruction uses this operand to copy only active 
+lanes(of the source register) in the mask. The syntax for it would look:
+
+.. code-block:: text
+
+   $vgpr1 = COPY_LANEMASK $vgpr0, lanemask(0x00000000000000C0)
+   
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.
 .. TODO: Describe the syntax for virtual register YAML definitions.
