@@ -4277,10 +4277,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
-    CharUnits Align = CGM.getNaturalTypeAlignment(E->getType(), nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
-
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
     if (E->getNumArgs() > 2)
       PassThru = EmitScalarExpr(E->getArg(2));
@@ -4289,8 +4285,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (BuiltinID == Builtin::BI__builtin_masked_load) {
       Function *F =
           CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
-      Result =
-          Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+      Result = Builder.CreateCall(
+          F, {Ptr, llvm::ConstantInt::get(Int32Ty, 1), Mask, PassThru},
+          "masked_load");
     } else {
       Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
       Result =
@@ -4308,14 +4305,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
     llvm::Type *PtrTy = Ptr->getType();
 
-    CharUnits Align = CGM.getNaturalTypeAlignment(ValTy, nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
-
     if (BuiltinID == Builtin::BI__builtin_masked_store) {
       llvm::Function *F =
           CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
-      Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+      Builder.CreateCall(F,
+                         {Val, Ptr, llvm::ConstantInt::get(Int32Ty, 1), Mask});
     } else {
       llvm::Function *F =
           CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
