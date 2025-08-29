@@ -120,10 +120,17 @@ f14:
 jmp f14.cfi
 .balign 8, 0xcc
 
+// Empty target section.
 // CHECK: <f15>:
 // CHECK-NEXT: jmp {{.*}} <f15.cfi>
 f15:
 jmp f15.cfi
+.balign 8, 0xcc
+
+// CHECK: <f16>:
+// CHECK-NEXT: jmp {{.*}} <f16.cfi>
+f16:
+jmp f16.cfi
 .balign 8, 0xcc
 
 // CHECK: <f1>:
@@ -202,9 +209,12 @@ f14.cfi:
 ret $14
 
 .section .text.f15,"ax",@progbits
-.balign 64
 f15.cfi:
-ret $15
+
+.section .text.f16,"ax",@progbits
+.balign 64
+f16.cfi:
+ret $16
 .zero 16
 
 // CHECK: <.iplt>:
