@@ -244,7 +244,7 @@ static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
   for (; elements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
-    Fortran::runtime::memmove(
+    runtime::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
     p += copiedCharacters;
     for (auto n{padding}; n-- > 0;) {
@@ -743,22 +743,35 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
   if (alloc.rank() > 0 && source.rank() == 0) {
     // The value of each element of allocate object becomes the value of source.
     DescriptorAddendum *allocAddendum{alloc.Addendum()};
-    const typeInfo::DerivedType *allocDerived{
-        allocAddendum ? allocAddendum->derivedType() : nullptr};
     SubscriptValue allocAt[maxRank];
     alloc.GetLowerBounds(allocAt);
-    if (allocDerived) {
+    std::size_t allocElementBytes{alloc.ElementBytes()};
+    if (const typeInfo::DerivedType *allocDerived{
+            allocAddendum ? allocAddendum->derivedType() : nullptr}) {
+      // Handle derived type or short character source
       for (std::size_t n{alloc.InlineElements()}; n-- > 0;
           alloc.IncrementSubscripts(allocAt)) {
-        Descriptor allocElement{*Descriptor::Create(*allocDerived,
-            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(*allocDerived,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
         Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
-    } else { // intrinsic type
+    } else if (allocElementBytes > source.ElementBytes()) {
+      // Scalar expansion of short character source
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(source.type(), allocElementBytes,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
+        Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
+      }
+    } else { // intrinsic type scalar expansion, same data size
       for (std::size_t n{alloc.InlineElements()}; n-- > 0;
           alloc.IncrementSubscripts(allocAt)) {
         memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
-            alloc.ElementBytes());
+            allocElementBytes);
       }
     }
   } else {

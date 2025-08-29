@@ -35,8 +35,7 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
-    Direction direction, Fortran::common::optional<bool>,
-    IoErrorHandler &handler) {
+    Direction direction, common::optional<bool>, IoErrorHandler &handler) {
   if (direction != Direction::Output) {
     handler.Crash("ExternalFileUnit only supports output IO");
   }
@@ -59,14 +58,14 @@ ExternalFileUnit &ExternalFileUnit::NewUnit(const Terminator &, bool) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
-    Fortran::common::optional<Action>, Position, OwningPtr<char> &&,
-    std::size_t, Convert, IoErrorHandler &handler) {
+bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
+    common::optional<Action>, Position, OwningPtr<char> &&, std::size_t,
+    Convert, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-bool ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
-    Fortran::common::optional<Action>, Position, Convert convert,
+bool ExternalFileUnit::OpenAnonymousUnit(common::optional<OpenStatus>,
+    common::optional<Action>, Position, Convert convert,
     IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
@@ -105,13 +104,12 @@ void PseudoOpenFile::set_mayAsynchronous(bool yes) {
   }
 }
 
-Fortran::common::optional<PseudoOpenFile::FileOffset>
-PseudoOpenFile::knownSize() const {
+common::optional<PseudoOpenFile::FileOffset> PseudoOpenFile::knownSize() const {
   Terminator{__FILE__, __LINE__}.Crash("unsupported");
 }
 
-void PseudoOpenFile::Open(OpenStatus, Fortran::common::optional<Action>,
-    Position, IoErrorHandler &handler) {
+void PseudoOpenFile::Open(
+    OpenStatus, common::optional<Action>, Position, IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 

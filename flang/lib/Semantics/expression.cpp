@@ -2198,7 +2198,8 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     }
     if (symbol) {
       const semantics::Scope &innermost{context_.FindScope(exprSource)};
-      if (auto msg{CheckAccessibleSymbol(innermost, *symbol)}) {
+      if (auto msg{CheckAccessibleSymbol(
+              innermost, *symbol, /*inStructureConstructor=*/true)}) {
         Say(exprSource, std::move(*msg));
       }
       if (checkConflicts) {

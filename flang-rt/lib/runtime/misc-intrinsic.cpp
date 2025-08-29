@@ -19,7 +19,7 @@ namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
     const Descriptor &source, const Descriptor &mold, const char *sourceFile,
-    int line, Fortran::common::optional<std::int64_t> resultExtent) {
+    int line, common::optional<std::int64_t> resultExtent) {
   int rank{resultExtent.has_value() ? 1 : 0};
   std::size_t elementBytes{mold.ElementBytes()};
   result.Establish(mold.type(), elementBytes, nullptr, rank, nullptr,
@@ -91,7 +91,7 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
-  Fortran::common::optional<std::int64_t> elements;
+  common::optional<std::int64_t> elements;
   if (mold.rank() > 0) {
     if (std::size_t sourceElementBytes{
             source.Elements() * source.ElementBytes()}) {

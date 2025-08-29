@@ -391,14 +391,14 @@ def Tosa_RESIZE_BILINEAR                  : I32EnumAttrCase<"BILINEAR", 2>;
 
 def Tosa_ResizeModeAttr
     : Tosa_I32EnumAttr<"ResizeMode", "Supported resize/upsampling strategies", "resize_mode",
-                    [Tosa_RESIZE_NEAREST_NEIGHBOR, Tosa_RESIZE_BILINEAR]>;       
+                    [Tosa_RESIZE_NEAREST_NEIGHBOR, Tosa_RESIZE_BILINEAR]>;
 
 def Tosa_NANPROPAGATION_PROPAGATE : I32EnumAttrCase<"PROPAGATE", 1>;
 def Tosa_NANPROPAGATION_IGNORE    : I32EnumAttrCase<"IGNORE", 2>;
 
 def Tosa_NanPropagationModeAttr
     : Tosa_I32EnumAttr<"NanPropagationMode", "Supported NaN propagation strategies", "nan_mode",
-                    [Tosa_NANPROPAGATION_PROPAGATE, Tosa_NANPROPAGATION_IGNORE]>;  
+                    [Tosa_NANPROPAGATION_PROPAGATE, Tosa_NANPROPAGATION_IGNORE]>;
 
 def Tosa_ROUNDING_SINGLE_ROUND    : I32EnumAttrCase<"SINGLE_ROUND", 1>;
 def Tosa_ROUNDING_INEXACT_ROUND   : I32EnumAttrCase<"INEXACT_ROUND", 2>;
@@ -406,7 +406,7 @@ def Tosa_ROUNDING_DOUBLE_ROUND    : I32EnumAttrCase<"DOUBLE_ROUND", 3>;
 
 def Tosa_RoundingModeAttr
     : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
-                    [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;                         
+                    [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -472,10 +472,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
               SameOperandsAndResultRank,
-              Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+              Pure])> {}
 
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
@@ -483,22 +480,18 @@ class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
               SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {}
 
 class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
-    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+    : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {}
 
 // The "SameVariadicOperandSize" trait allows us to pass optional arguments
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
       [SameVariadicOperandSize])> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TOSA_OP_BASE

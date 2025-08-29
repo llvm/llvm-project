@@ -52,9 +52,9 @@ template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   // Skip leading white space & zeroes
-  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
+  common::optional<int> remaining{io.CueUpInput(edit)};
   auto start{io.GetConnectionState().positionInRecord};
-  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
+  common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next.value_or('?') == '0') {
     do {
       start = io.GetConnectionState().positionInRecord;
@@ -154,8 +154,8 @@ static RT_API_ATTRS bool EditBOZInput(
 
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
-    const DataEdit &edit, Fortran::common::optional<char32_t> &next,
-    Fortran::common::optional<int> &remaining,
+    const DataEdit &edit, common::optional<char32_t> &next,
+    common::optional<int> &remaining,
     IoStatementState::FastAsciiField *fastField = nullptr) {
   remaining = io.CueUpInput(edit, fastField);
   next = io.NextInField(remaining, edit, fastField);
@@ -202,8 +202,8 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-  Fortran::common::optional<int> remaining;
-  Fortran::common::optional<char32_t> next;
+  common::optional<int> remaining;
+  common::optional<char32_t> next;
   auto fastField{io.GetUpcomingFastAsciiField()};
   char sign{ScanNumericPrefix(io, edit, next, remaining, &fastField)};
   if (sign == '-' && !isSigned) {
@@ -318,10 +318,10 @@ struct ScannedRealInput {
 };
 static RT_API_ATTRS ScannedRealInput ScanRealInput(
     char *buffer, int bufferSize, IoStatementState &io, const DataEdit &edit) {
-  Fortran::common::optional<int> remaining;
-  Fortran::common::optional<char32_t> next;
+  common::optional<int> remaining;
+  common::optional<char32_t> next;
   int got{0};
-  Fortran::common::optional<int> radixPointOffset;
+  common::optional<int> radixPointOffset;
   // The following lambda definition violates the conding style,
   // but cuda-11.8 nvcc hits an internal error with the brace initialization.
   auto Put = [&](char ch) -> void {
@@ -938,8 +938,8 @@ RT_API_ATTRS bool EditLogicalInput(
         edit.descriptor);
     return false;
   }
-  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
-  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
+  common::optional<int> remaining{io.CueUpInput(edit)};
+  common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next && *next == '.') { // skip optional period
     next = io.NextInField(remaining, edit);
   }

@@ -488,6 +488,10 @@ public:
     // Result symbol
     Symbol *resultSymbol{nullptr};
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
+    // Functions with previous implicitly-typed references get those types
+    // checked against their later definitions.
+    const DeclTypeSpec *previousImplicitType{nullptr};
+    SourceName previousName;
   };
 
   // Completes the definition of the top function's result.
@@ -943,7 +947,7 @@ private:
   // Edits an existing symbol created for earlier calls to a subprogram or ENTRY
   // so that it can be replaced by a later definition.
   bool HandlePreviousCalls(const parser::Name &, Symbol &, Symbol::Flag);
-  void CheckExtantProc(const parser::Name &, Symbol::Flag);
+  const Symbol *CheckExtantProc(const parser::Name &, Symbol::Flag);
   // Create a subprogram symbol in the current scope and push a new scope.
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
       const parser::LanguageBindingSpec * = nullptr,
@@ -2691,11 +2695,17 @@ void ArraySpecVisitor::PostAttrSpec() {
 
 FuncResultStack::~FuncResultStack() { CHECK(stack_.empty()); }
 
+static bool TypesMismatchIfNonNull(
+    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
+  return type1 && type2 && *type1 != *type2;
+}
+
 void FuncResultStack::CompleteFunctionResultType() {
   // If the function has a type in the prefix, process it now.
   FuncInfo *info{Top()};
-  if (info && &info->scope == &scopeHandler_.currScope()) {
-    if (info->parsedType && info->resultSymbol) {
+  if (info && &info->scope == &scopeHandler_.currScope() &&
+      info->resultSymbol) {
+    if (info->parsedType) {
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
               scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
@@ -2711,6 +2721,16 @@ void FuncResultStack::CompleteFunctionResultType() {
         }
       }
       info->parsedType = nullptr;
+    }
+    if (TypesMismatchIfNonNull(
+            info->resultSymbol->GetType(), info->previousImplicitType)) {
+      scopeHandler_
+          .Say(info->resultSymbol->name(),
+              "Function '%s' has a result type that differs from the implicit type it obtained in a previous reference"_err_en_US,
+              info->previousName)
+          .Attach(info->previousName,
+              "Previous reference implicitly typed as %s\n"_en_US,
+              info->previousImplicitType->AsFortran());
     }
   }
 }
@@ -4761,9 +4781,7 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   if (info.resultName && !distinctResultName) {
     context().Warn(common::UsageWarning::HomonymousResult,
         info.resultName->source,
-        "The function name should not appear in RESULT; references to '%s' "
-        "inside the function will be considered as references to the "
-        "result only"_warn_en_US,
+        "The function name should not appear in RESULT; references to '%s' inside the function will be considered as references to the result only"_warn_en_US,
         name.source);
     // RESULT name was ignored above, the only side effect from doing so will be
     // the inability to make recursive calls. The related parser::Name is still
@@ -5074,8 +5092,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   if (hasModulePrefix && !currScope().IsModule() &&
       !currScope().IsSubmodule()) { // C1547
     Say(name,
-        "'%s' is a MODULE procedure which must be declared within a "
-        "MODULE or SUBMODULE"_err_en_US);
+        "'%s' is a MODULE procedure which must be declared within a MODULE or SUBMODULE"_err_en_US);
     // Don't return here because it can be useful to have the scope set for
     // other semantic checks run before we print the errors
     isValid = false;
@@ -5196,9 +5213,10 @@ bool SubprogramVisitor::HandlePreviousCalls(
   }
 }
 
-void SubprogramVisitor::CheckExtantProc(
+const Symbol *SubprogramVisitor::CheckExtantProc(
     const parser::Name &name, Symbol::Flag subpFlag) {
-  if (auto *prev{FindSymbol(name)}) {
+  Symbol *prev{FindSymbol(name)};
+  if (prev) {
     if (IsDummy(*prev)) {
     } else if (auto *entity{prev->detailsIf<EntityDetails>()};
                IsPointer(*prev) && entity && !entity->type()) {
@@ -5210,12 +5228,15 @@ void SubprogramVisitor::CheckExtantProc(
       SayAlreadyDeclared(name, *prev);
     }
   }
+  return prev;
 }
 
 Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
   Symbol *symbol{GetSpecificFromGeneric(name)};
+  const DeclTypeSpec *previousImplicitType{nullptr};
+  SourceName previousName;
   if (!symbol) {
     if (bindingSpec && currScope().IsGlobal() &&
         std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(
@@ -5228,14 +5249,25 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
           &MakeSymbol(context().GetTempName(currScope()), Attrs{},
               MiscDetails{MiscDetails::Kind::ScopeName}));
     }
-    CheckExtantProc(name, subpFlag);
+    if (const Symbol *previous{CheckExtantProc(name, subpFlag)}) {
+      if (previous->test(Symbol::Flag::Function) &&
+          previous->test(Symbol::Flag::Implicit)) {
+        // Function was implicitly typed in previous compilation unit.
+        previousImplicitType = previous->GetType();
+        previousName = previous->name();
+      }
+    }
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
   symbol->ReplaceName(name.source);
   symbol->set(subpFlag);
   PushScope(Scope::Kind::Subprogram, symbol);
   if (subpFlag == Symbol::Flag::Function) {
-    funcResultStack().Push(currScope(), name.source);
+    auto &funcResultTop{funcResultStack().Push(currScope(), name.source)};
+    funcResultTop.previousImplicitType = previousImplicitType;
+    ;
+    funcResultTop.previousName = previousName;
+    ;
   }
   if (inInterfaceBlock()) {
     auto &details{symbol->get<SubprogramDetails>()};
@@ -8667,11 +8699,6 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
           },
       },
       x.u);
-}
-
-static bool TypesMismatchIfNonNull(
-    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
-  return type1 && type2 && *type1 != *type2;
 }
 
 // If implicit types are allowed, ensure name is in the symbol table.
