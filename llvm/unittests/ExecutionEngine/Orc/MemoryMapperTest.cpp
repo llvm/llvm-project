@@ -11,6 +11,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include <variant>
+
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
@@ -18,33 +20,37 @@ using namespace llvm::orc::shared;
 namespace {
 
 Expected<ExecutorAddrRange> reserve(MemoryMapper &M, size_t NumBytes) {
-  std::promise<MSVCPExpected<ExecutorAddrRange>> P;
-  auto F = P.get_future();
-  M.reserve(NumBytes, [&](auto R) { P.set_value(std::move(R)); });
-  return F.get();
+  std::variant<std::monostate, Expected<ExecutorAddrRange>> Result;
+  M.reserve(NumBytes, [&](auto R) { Result = std::move(R); });
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "MemoryMapper operations should complete synchronously in tests");
+  return std::move(std::get<Expected<ExecutorAddrRange>>(Result));
 }
 
 Expected<ExecutorAddr> initialize(MemoryMapper &M,
                                   MemoryMapper::AllocInfo &AI) {
-  std::promise<MSVCPExpected<ExecutorAddr>> P;
-  auto F = P.get_future();
-  M.initialize(AI, [&](auto R) { P.set_value(std::move(R)); });
-  return F.get();
+  std::variant<std::monostate, Expected<ExecutorAddr>> Result;
+  M.initialize(AI, [&](auto R) { Result = std::move(R); });
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "MemoryMapper operations should complete synchronously in tests");
+  return std::move(std::get<Expected<ExecutorAddr>>(Result));
 }
 
 Error deinitialize(MemoryMapper &M,
                    const std::vector<ExecutorAddr> &Allocations) {
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  M.deinitialize(Allocations, [&](auto R) { P.set_value(std::move(R)); });
-  return F.get();
+  std::variant<std::monostate, Error> Result;
+  M.deinitialize(Allocations, [&](auto R) { Result = std::move(R); });
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "MemoryMapper operations should complete synchronously in tests");
+  return std::move(std::get<Error>(Result));
 }
 
 Error release(MemoryMapper &M, const std::vector<ExecutorAddr> &Reservations) {
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  M.release(Reservations, [&](auto R) { P.set_value(std::move(R)); });
-  return F.get();
+  std::variant<std::monostate, Error> Result;
+  M.release(Reservations, [&](auto R) { Result = std::move(R); });
+  assert(!std::holds_alternative<std::monostate>(Result) &&
+         "MemoryMapper operations should complete synchronously in tests");
+  return std::move(std::get<Error>(Result));
 }
 
 // A basic function to be used as both initializer/deinitializer
