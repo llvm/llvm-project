@@ -268,7 +268,7 @@ Bug Fixes in This Version
 - Fixed scope of typedefs present inside a template class. (#GH91451)
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
-  and vector of 4 ``float`` values. (#GH155620)
+  and vector of 4 ``float`` values. (#GH155405)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
