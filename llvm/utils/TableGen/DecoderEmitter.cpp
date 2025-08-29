@@ -2492,7 +2492,7 @@ namespace {
           Encoding.getBitWidth();
     }
 
-    // For variable instruction, we emit a instruction length table to let the
+    // For variable instruction, we emit an instruction length table to let the
     // decoder know how long the instructions are. You can see example usage in
     // M68k's disassembler.
     emitInstrLenTable(OS, InstrLen);
