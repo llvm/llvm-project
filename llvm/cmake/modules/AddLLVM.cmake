@@ -2192,35 +2192,20 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR"
-                          "PARAMS;DEPENDS;ARGS;EXCLUDE_DIR;INCLUDE_DIR" ${ARGN})
+    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL"
+                              "FOLDER;BINARY_DIR;EXCLUDE_DIRS;INCLUDE_DIRS"
+                              "PARAMS;DEPENDS;ARGS"
+                               ${ARGN})
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
       set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
 
-    # Create a list of excluded paths. If not empty, any directory that begins
-    # with one of the excluded paths will excluded, others will be included.
-    set(excluded_dirs "")
-    if (ARG_EXCLUDE_DIR)
-      foreach(path ${ARG_EXCLUDE_DIR})
-        list(APPEND excluded_dirs ${path})
-      endforeach()
-    endif()
+    separate_arguments(ARG_EXCLUDE_DIRS)
+    separate_arguments(ARG_INCLUDE_DIRS)
 
-    # Create a list of included paths. If not empty, any directory that begins
-    # with any of the included paths will included, others will be excluded.
-    # If both included and excluded lists are empty, all directories will be
-    # included.
-    set(included_dirs "")
-    if (ARG_INCLUDE_DIR)
-      foreach(path ${ARG_INCLUDE_DIR})
-        list(APPEND included_dirs ${path})
-      endforeach()
-    endif()
-
-    if (excluded_dirs AND included_dirs)
+    if (ARG_EXCLUDE_DIRS AND ARG_INCLUDE_DIRS)
       message(FATAL_ERROR, "Cannot specify both include and exclude directories")
     endif()
 
@@ -2245,20 +2230,28 @@ function(add_lit_testsuites project directory)
       endif()
 
       # Determine whether to skip this directory.
-      if (excluded_dirs)
+      #
+      # If the exclude list is specified, any directory that begins with one of
+      # the excluded paths will be excluded, others will be included.
+      #
+      # If the include list is specified, any directory that begins with one of
+      # the included paths will be included, others will be excluded.
+      #
+      # If neither is specified, all directories will be included.
+      if (ARG_EXCLUDE_DIRS)
         # Include by default, unless in the exclude list.
         set(is_skipped false)
-        foreach (excluded_dir ${excluded_dirs})
+        foreach (excluded_dir ${ARG_EXCLUDE_DIRS})
           string(FIND "${name_slash}" "${excluded_dir}" exclude_index)
           if (exclude_index EQUAL 0)
             set(is_skipped true)
             break()
           endif()
         endforeach()
-      elseif(included_dirs)
+      elseif(ARG_INCLUDE_DIRS)
         # Exclude by default, unless in the include list.
         set(is_skipped true)
-        foreach (included_dir ${included_dirs})
+        foreach (included_dir ${ARG_INCLUDE_DIRS})
           string(FIND "${name_slash}" "${included_dir}" include_index)
           if (include_index EQUAL 0)
             set(is_skipped false)
@@ -2266,7 +2259,7 @@ function(add_lit_testsuites project directory)
           endif()
         endforeach()
       else()
-        # Neither include nor exclude list specified. Include
+        # If neither include nor exclude list is specified, include all.
         set(is_skipped false)
       endif()
 
