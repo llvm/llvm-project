@@ -39,11 +39,6 @@ static cl::opt<bool>
                        cl::desc("Enable if-conversion during vectorization."));
 
 static cl::opt<bool>
-AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
-                       cl::desc("Enable recognition of non-constant strided "
-                                "pointer induction variables."));
-
-static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
                          cl::desc("Allow enabling loop hints to reorder "
                                   "FP operations during vectorization."));
@@ -880,18 +875,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
-    // We prevent matching non-constant strided pointer IVS to preserve
-    // historical vectorizer behavior after a generalization of the
-    // IVDescriptor code.  The intent is to remove this check, but we
-    // have to fix issues around code quality for such loops first.
-    auto IsDisallowedStridedPointerInduction =
-        [](const InductionDescriptor &ID) {
-          if (AllowStridedPointerIVs)
-            return false;
-          return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-                 ID.getConstIntStepValue() == nullptr;
-        };
-
     // TODO: Instead of recording the AllowedExit, it would be good to
     // record the complementary set: NotAllowedExit. These include (but may
     // not be limited to):
@@ -907,8 +890,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // By recording these, we can then reason about ways to vectorize each
     // of these NotAllowedExit.
     InductionDescriptor ID;
-    if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+    if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
       addInductionPhi(Phi, ID, AllowedExit);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
@@ -922,8 +904,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
-    if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+    if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true)) {
       addInductionPhi(Phi, ID, AllowedExit);
       return true;
     }
