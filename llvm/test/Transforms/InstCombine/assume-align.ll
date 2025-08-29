@@ -186,7 +186,6 @@ define ptr @dont_fold_assume_align_zero_of_loaded_pointer_into_align_metadata(pt
 define ptr @redundant_assume_align_1(ptr %p) {
 ; CHECK-LABEL: @redundant_assume_align_1(
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 1) ]
 ; CHECK-NEXT:    call void @foo(ptr [[P2]])
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
@@ -200,7 +199,6 @@ define ptr @redundant_assume_align_1(ptr %p) {
 define ptr @redundant_assume_align_8_via_align_metadata(ptr %p) {
 ; CHECK-LABEL: @redundant_assume_align_8_via_align_metadata(
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 8) ]
 ; CHECK-NEXT:    call void @foo(ptr [[P2]])
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
@@ -295,7 +293,6 @@ declare void @bar()
 define ptr @dont_fold_assume_align_not_constant_of_loaded_pointer_into_align_metadata(ptr %p, i64 %align) {
 ; CHECK-LABEL: @dont_fold_assume_align_not_constant_of_loaded_pointer_into_align_metadata(
 ; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i64 [[ALIGN:%.*]]) ]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
   %p2 = load ptr, ptr %p
