@@ -151,7 +151,7 @@ endfunction()
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY;GENERATE_TYPE_STUBS"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
@@ -163,17 +163,24 @@ function(declare_mlir_python_extension name)
   if(NOT ARG_PYTHON_BINDINGS_LIBRARY)
     set(ARG_PYTHON_BINDINGS_LIBRARY "pybind11")
   endif()
+  if(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "pybind11")
+    set(ARG_GENERATE_TYPE_STUBS OFF)
+  endif()
+  if(NOT DEFINED ARG_GENERATE_TYPE_STUBS)
+    set(ARG_GENERATE_TYPE_STUBS ON)
+  endif()
 
   add_library(${name} INTERFACE)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY;mlir_python_GENERATE_TYPE_STUBS"
     mlir_python_SOURCES_TYPE extension
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
     mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
+    mlir_python_GENERATE_TYPE_STUBS "${ARG_GENERATE_TYPE_STUBS}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -276,19 +283,22 @@ function(add_mlir_python_modules name)
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
-      generate_type_stubs(
-        ${_module_name}
-        ${_extension_target}
-        "${modules_target}.extension._mlir.dso"
-        "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
-      )
-      declare_mlir_python_sources(
-        "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen"
-        ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-        ADD_TO_PARENT "${sources_target}"
-        SOURCES_GLOB "_mlir_libs/${_module_name}/**/*.pyi"
-      )
-      add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
+      get_target_property(_generate_type_stubs ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
+      if(_generate_type_stubs)
+        generate_type_stubs(
+          ${_module_name}
+          ${_extension_target}
+          "${modules_target}.extension._mlir.dso"
+          "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
+        )
+        declare_mlir_python_sources(
+          "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen"
+          ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+          ADD_TO_PARENT "${sources_target}"
+          SOURCES_GLOB "_mlir_libs/${_module_name}/**/*.pyi"
+        )
+        add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
+      endif()
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()
