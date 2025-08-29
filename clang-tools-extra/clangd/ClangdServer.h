@@ -37,6 +37,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -263,7 +264,7 @@ public:
                       Callback<std::vector<LocatedSymbol>> CB);
 
   void findAST(const SearchASTArgs &Args,
-               Callback<std::vector<std::vector<ASTNode>>> CB);
+               Callback<BoundASTNodes> CB);
 
   /// Switch to a corresponding source file when given a header file, and vice
   /// versa.

@@ -1463,6 +1463,7 @@ struct SearchASTArgs {
   static auto constexpr Tk = TraversalKind::TK_IgnoreUnlessSpelledInSource;
 };
 bool fromJSON(const llvm::json::Value &, SearchASTArgs &, llvm::json::Path);
+using BoundASTNodes = std::vector<std::map<std::string, struct ASTNode>>;
 
 struct PrepareRenameResult {
   /// Range of the string to rename.

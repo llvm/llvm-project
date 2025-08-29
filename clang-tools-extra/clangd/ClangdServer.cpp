@@ -811,7 +811,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
 }
 
 void ClangdServer::findAST(SearchASTArgs const &Args,
-                           Callback<std::vector<std::vector<ASTNode>>> CB) {
+                           Callback<BoundASTNodes> CB) {
   auto Action =
       [Args, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
         if (!InpAST)
@@ -824,19 +824,17 @@ void ClangdServer::findAST(SearchASTArgs const &Args,
 
         auto &&AST = InpAST->AST;
         // Convert BoundNodes to a vector of vectors to ASTNode's.
-        std::vector<std::vector<ASTNode>> Result;
+        BoundASTNodes Result;
         Result.reserve(BoundNodes->size());
         for (auto &&BN : *BoundNodes) {
           auto &&Map = BN.getMap();
-          std::vector<ASTNode> Nodes;
-          Nodes.reserve(Map.size());
+          BoundASTNodes::value_type BAN;
           for (const auto &[Key, Value] : Map) {
-            auto Node = dumpAST(Value, AST.getTokens(), AST.getASTContext());
-            Nodes.push_back(std::move(Node));
+            BAN.emplace(Key, dumpAST(Value, AST.getTokens(), AST.getASTContext()));
           }
-          if (Nodes.empty())
+          if (BAN.empty())
             continue;
-          Result.push_back(std::move(Nodes));
+          Result.push_back(std::move(BAN));
         }
         if (Result.empty()) {
           return CB(error("No AST nodes found for the query"));

@@ -111,6 +111,10 @@ public:
   // (using std::pair forces extra copies).
   struct KV;
   explicit Object(std::initializer_list<KV> Properties);
+  template <typename Collection> explicit Object(Collection &&C) {
+    for (auto &&P : C)
+      M.insert(P);
+  }
 
   iterator begin() { return M.begin(); }
   const_iterator begin() const { return M.begin(); }

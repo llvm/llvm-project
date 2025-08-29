@@ -856,7 +856,7 @@ void ClangdLSPServer::onCommandApplyRename(const RenameParams &R,
 void ClangdLSPServer::onMethodSearchAST(const SearchASTArgs &Args,
                                         Callback<llvm::json::Value> Reply) {
   Server->findAST(Args, [Reply = std::move(Reply)](
-                            llvm::Expected<std::vector<std::vector<ASTNode>>>
+                            llvm::Expected<BoundASTNodes>
                                 BoundNodes) mutable {
     if (!BoundNodes)
       return Reply(BoundNodes.takeError());
