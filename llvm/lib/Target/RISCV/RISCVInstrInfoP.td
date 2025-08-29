@@ -895,23 +895,31 @@ let Predicates = [HasStdExtP, IsRV32] in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
-def : PatGprImm<int_riscv_pslli_b,  PSLLI_B,  uimm3>;
-def : PatGprImm<int_riscv_pslli_h,  PSLLI_H,  uimm4>;
-def : PatGprImm<int_riscv_psslai_h, PSSLAI_H, uimm4>;
-def : PatGprGpr<int_riscv_psll_bs,  PSLL_BS>;
-def : PatGprGpr<int_riscv_psll_hs,  PSLL_HS>;
-def : PatGprGpr<int_riscv_padd_bs,  PADD_BS>;
-def : PatGprGpr<int_riscv_padd_hs,  PADD_HS>;
+def : PatGprImm<int_riscv_pslli_b,   PSLLI_B,  uimm3>;
+def : PatGprImm<int_riscv_pslli_h,   PSLLI_H,  uimm4>;
+def : PatGprImm<int_riscv_psslai_h,  PSSLAI_H, uimm4>;
+def : PatGprGpr<int_riscv_psll_bs,   PSLL_BS>;
+def : PatGprGpr<int_riscv_psll_hs,   PSLL_HS>;
+def : PatGprGpr<int_riscv_padd_bs,   PADD_BS>;
+def : PatGprGpr<int_riscv_padd_hs,   PADD_HS>;
+def : PatGprGpr<int_riscv_pssha_hs,  PSSHA_HS>;
+def : PatGprGpr<int_riscv_psshar_hs, PSSHAR_HS>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
 def : PatGprImm<int_riscv_sslai, SSLAI, uimm5>;
+def : PatGprGpr<int_riscv_ssha,  SSHA>;
+def : PatGprGpr<int_riscv_sshar, SSHAR>;
 def : PatGprGpr<int_riscv_sadd,  SADD>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def : PatGprImm<int_riscv_pslli_w,  PSLLI_W,  uimm5>;
-def : PatGprImm<int_riscv_psslai_w, PSSLAI_W, uimm5>;
-def : PatGprGpr<int_riscv_psll_ws,  PSLL_WS>;
-def : PatGprGpr<int_riscv_padd_ws,  PADD_WS>;
+def : PatGprImm<int_riscv_pslli_w,   PSLLI_W,  uimm5>;
+def : PatGprImm<int_riscv_psslai_w,  PSSLAI_W, uimm5>;
+def : PatGprGpr<int_riscv_psll_ws,   PSLL_WS>;
+def : PatGprGpr<int_riscv_padd_ws,   PADD_WS>;
+def : PatGprGpr<int_riscv_pssha_ws,  PSSHA_WS>;
+def : PatGprGpr<int_riscv_sha,       SHA>;
+def : PatGprGpr<int_riscv_psshar_ws, PSSHAR_WS>;
+def : PatGprGpr<int_riscv_shar,      SHAR>;
 } // Predicates = [HasStdExtP, IsRV64]

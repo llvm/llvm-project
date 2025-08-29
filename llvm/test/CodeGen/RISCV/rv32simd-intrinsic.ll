@@ -90,6 +90,50 @@ define i32 @padd_hs(i32 %a, i32 %b) {
   ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.pssha.hs.i32(i32, i32)
+
+define i32 @pssha_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: pssha_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    pssha.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.pssha.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.ssha.i32(i32, i32)
+
+define i32 @ssha(i32 %a, i32 %b) {
+; RV32P-LABEL: ssha:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ssha a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ssha.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psshar.hs.i32(i32, i32)
+
+define i32 @psshar_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: psshar_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psshar.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psshar.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.sshar.i32(i32, i32)
+
+define i32 @sshar(i32 %a, i32 %b) {
+; RV32P-LABEL: sshar:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    sshar a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.sshar.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {

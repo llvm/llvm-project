@@ -122,3 +122,69 @@ define i64 @padd_ws(i64 %a, i64 %b) {
   %tmp = call i64 @llvm.riscv.padd.ws.i64.i64(i64 %a, i64 %b)
   ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.pssha.hs.i64(i64, i64)
+
+define i64 @pssha_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: pssha_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pssha.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pssha.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pssha.ws.i64(i64, i64)
+
+define i64 @pssha_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: pssha_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pssha.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pssha.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.sha.i64(i64, i64)
+
+define i64 @sha(i64 %a, i64 %b) {
+; RV64P-LABEL: sha:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    sha a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.sha.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psshar.hs.i64(i64, i64)
+
+define i64 @psshar_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: psshar_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psshar.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psshar.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psshar.ws.i64(i64, i64)
+
+define i64 @psshar_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: psshar_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psshar.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psshar.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.shar.i64(i64, i64)
+
+define i64 @shar(i64 %a, i64 %b) {
+; RV64P-LABEL: shar:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    shar a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.shar.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}

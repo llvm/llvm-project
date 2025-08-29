@@ -1910,13 +1910,21 @@ let TargetPrefix = "riscv" in {
   multiclass RVPBinaryIntrinsics {
     def "int_riscv_" # NAME   : RVPBinaryIntrinsics;
   }
-  defm psll_bs : RVPBinaryIntrinsics;
-  defm psll_hs : RVPBinaryIntrinsics;
-  defm psll_ws : RVPBinaryIntrinsics;
-  defm padd_bs : RVPBinaryIntrinsics;
-  defm padd_hs : RVPBinaryIntrinsics;
-  defm padd_ws : RVPBinaryIntrinsics;
-  defm sadd    : RVPBinaryIntrinsics;
+  defm psll_bs   : RVPBinaryIntrinsics;
+  defm psll_hs   : RVPBinaryIntrinsics;
+  defm psll_ws   : RVPBinaryIntrinsics;
+  defm padd_bs   : RVPBinaryIntrinsics;
+  defm padd_hs   : RVPBinaryIntrinsics;
+  defm padd_ws   : RVPBinaryIntrinsics;
+  defm pssha_hs  : RVPBinaryIntrinsics;
+  defm pssha_ws  : RVPBinaryIntrinsics;
+  defm sha       : RVPBinaryIntrinsics;
+  defm ssha      : RVPBinaryIntrinsics;
+  defm psshar_hs : RVPBinaryIntrinsics;
+  defm psshar_ws : RVPBinaryIntrinsics;
+  defm shar      : RVPBinaryIntrinsics;
+  defm sshar     : RVPBinaryIntrinsics;
+  defm sadd      : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],
@@ -1927,7 +1935,7 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
   }
 
-  defm pslli_b  : RVPBinaryAABIntrinsics;
+      defm pslli_b  : RVPBinaryAABIntrinsics;
   defm pslli_h  : RVPBinaryAABIntrinsics;
   defm pslli_w  : RVPBinaryAABIntrinsics;
   defm psslai_h : RVPBinaryAABIntrinsics;
