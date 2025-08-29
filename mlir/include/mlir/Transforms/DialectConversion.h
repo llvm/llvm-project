@@ -1346,15 +1346,25 @@ struct ConversionConfig {
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
 
-  /// If set to "true", the dialect conversion attempts to build source/target
-  /// materializations through the type converter API in lieu of
-  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
-  /// at least one materialization could not be built.
-  ///
-  /// If set to "false", the dialect conversion does not build any custom
-  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
-  /// ops to ensure that the resulting IR is valid.
-  bool buildMaterializations = true;
+  enum class MaterializationMode {
+    /// Never build materializations with the type converter. Instead, insert
+    /// "builtin.unrealized_conversion_cast" ops to ensure that the types of
+    /// the resulting IR are valid.
+    Never,
+    /// Build materializations with the type converter immediately. (If that
+    /// fails, insert "builtin.unrealized_conversion_cast" ops.)
+    Immediate,
+    /// Insert "builtin.unrealized_conversion_cast" ops first. At the end of
+    /// the conversion, replace them with materializations built with the type
+    /// converter. This can result in fewer materializations because
+    /// "builtin.unrealized_conversion_cast" ops that cancel each other out are
+    /// folded away.
+    Delayed
+  };
+
+  /// This option controls whether and when materializations should be built
+  /// through the type converter API.
+  MaterializationMode buildMaterializations = MaterializationMode::Delayed;
 
   /// If set to "true", pattern rollback is allowed. The conversion driver
   /// rolls back IR modifications in the following situations.

@@ -1660,11 +1660,20 @@ struct TestLegalizePatternDriver
       llvm::cl::desc(
           "Attach materialization kind to unrealized_conversion_cast ops"),
       llvm::cl::init(false)};
-  Option<bool> buildMaterializations{
+  Option<ConversionConfig::MaterializationMode> buildMaterializations{
       *this, "build-materializations",
-      llvm::cl::desc(
-          "If set to 'false', leave unrealized_conversion_cast ops in place"),
-      llvm::cl::init(true)};
+      llvm::cl::desc("When to build unresovled materializations."),
+      llvm::cl::init(ConversionConfig::MaterializationMode::Delayed),
+      llvm::cl::values(
+          clEnumValN(ConversionConfig::MaterializationMode::Never, "never",
+                     "Never build materialization with the type converter."),
+          clEnumValN(ConversionConfig::MaterializationMode::Delayed, "delayed",
+                     "Build materializations with the type converter at the "
+                     "end of the conversion."),
+          clEnumValN(ConversionConfig::MaterializationMode::Immediate,
+                     "immediate",
+                     "Build materializations with the type converter "
+                     "immediately."))};
 };
 } // namespace
 
