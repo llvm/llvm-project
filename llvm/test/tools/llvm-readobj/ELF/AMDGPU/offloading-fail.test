@@ -1,11 +1,10 @@
 ## Test that --offloading with a fatbin works correctly.
 # REQUIRES: target={{x86_64-.*-linux.*}}
 # REQUIRES: amdgpu-registered-target
-# UNSUPPORTED: system-windows
 
 # RUN: yaml2obj %s -o %t.elf
 # RUN: not llvm-readobj --offloading %t.elf 2>&1 | \ 
-# RUN: FileCheck %s --check-prefix=ERR -DFILE_NAME=%t.elf 
+# RUN:   FileCheck %s --check-prefix=ERR -DFILE_NAME=%t.elf 
 
 # ERR: error: '{{.*}}': Stream Error: The stream is too short to perform the requested operation.
 
