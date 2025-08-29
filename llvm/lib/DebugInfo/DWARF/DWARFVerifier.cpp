@@ -894,7 +894,16 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     uint64_t PrologueLength = LineTable->Prologue.PrologueLength;
     uint64_t TotalLength = LineTable->Prologue.TotalLength;
     uint64_t LineTableEnd = LineTableStart + TotalLength + DwarfOffset;
-    uint64_t SequencesStart = LineTableStart + PrologueLength + DwarfOffset;
+
+    // See DWARF definition for this, the following three do not
+    // count toward prologue length. Calculate SequencesStart correctly
+    // according to DWARF specification:
+    uint64_t InitialLengthSize = DwarfOffset;
+    // Version field is always 2 bytes
+    uint64_t VersionSize = 2;
+    uint64_t PrologueLengthSize = DwarfOffset;
+    uint64_t SequencesStart = LineTableStart + InitialLengthSize + VersionSize +
+                              PrologueLengthSize + PrologueLength;
 
     // Check if the offset is within the bounds of this specific line table
     if (*SectionOffset < SequencesStart || *SectionOffset >= LineTableEnd) {
@@ -907,7 +916,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       break;
     }
 
-    // Check if the offset matches any of the sequence offset offsets using
+    // Check if the offset matches any of the sequence offset.
     auto It =
         std::find_if(LineTable->Sequences.begin(), LineTable->Sequences.end(),
                      [SectionOffset](const auto &Sequence) {

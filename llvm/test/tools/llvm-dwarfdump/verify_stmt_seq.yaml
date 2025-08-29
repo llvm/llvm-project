@@ -6,11 +6,24 @@
 # RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID --implicit-check-not=error:
 # RUN: llvm-dwarfdump -debug-line -verbose -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_DEBUG_LINE
 
-
-# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x0000002e, 0x000000fd)
+# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x00000034, 0x000000fd)
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00000000)
 
-# 0xd3 would be a valid offset, if the line table wan't ill formed with two rows having the same PC (0x8c).
+# CHECK_DEBUG_LINE:                  Address            Line   Column File   ISA Discriminator OpIndex Flags
+# CHECK_DEBUG_LINE-NEXT:             ------------------ ------ ------ ------ --- ------------- ------- -------------
+# CHECK_DEBUG_LINE-NEXT: 0x00000034: 05 DW_LNS_set_column (10)
+# CHECK_DEBUG_LINE-NEXT: 0x00000036: 0a DW_LNS_set_prologue_end
+# CHECK_DEBUG_LINE-NEXT: 0x00000037: 00 DW_LNE_set_address (0x0000000000000000)
+# CHECK_DEBUG_LINE-NEXT: 0x00000042: 14 address += 0,  line += 2,  op-index += 0
+# CHECK_DEBUG_LINE-NEXT:             0x0000000000000000      3     10      1   0             0       0  is_stmt prologue_end
+# CHECK_DEBUG_LINE-NEXT: 0x00000043: 05 DW_LNS_set_column (3)
+# CHECK_DEBUG_LINE-NEXT: 0x00000045: 06 DW_LNS_negate_stmt
+# CHECK_DEBUG_LINE-NEXT: 0x00000046: 4a address += 4,  line += 0,  op-index += 0
+# CHECK_DEBUG_LINE-NEXT:             0x0000000000000004      3      3      1   0             0       0
+# CHECK_DEBUG_LINE-NEXT: 0x00000047: 00 DW_LNE_end_sequence
+# CHECK_DEBUG_LINE-NEXT:             0x0000000000000004      3      3      1   0             0       0  end_sequence
+
+# 0xd3 would be a valid offset, if the line table wasn't ill formed with two rows having the same PC (0x8c).
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000d3 does not point to a valid sequence offset in the line table
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x000000d3)
 
@@ -25,12 +38,15 @@
 
 # CHECK_INVALID: error: DIE has invalid DW_AT_LLVM_stmt_sequence encoding
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_data4]  (0x000000a7)
-
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000ab does not point to a valid sequence offset in the line table
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x000000ab)
 
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset is beyond .debug_line bounds: 0x00eeeee7
 # CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00eeeee7)
+
+# CHECK_DEBUG_LINE:      0x000000f8: 02 DW_LNS_advance_pc (addr += 4, op-index += 0)
+# CHECK_DEBUG_LINE-NEXT: 0x000000fa: 00 DW_LNE_end_sequence
+# CHECK_DEBUG_LINE-NEXT:             0x0000000000000094     30     86      1   0             0       0  is_stmt end_sequence
 
 # CHECK_INVALID: error: Aggregated error counts:
 # CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of bounds occurred 1 time(s).
