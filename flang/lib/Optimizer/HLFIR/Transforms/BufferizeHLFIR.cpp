@@ -445,8 +445,16 @@ struct AssociateOpConversion
              !mlir::isa<fir::BaseBoxType>(assocType)) ||
             ((mlir::isa<fir::BoxCharType>(sourceVar.getType()) &&
               !mlir::isa<fir::BoxCharType>(assocType)))) {
-          sourceVar =
-              fir::BoxAddrOp::create(builder, loc, assocType, sourceVar);
+          sourceVar = builder.create<fir::BoxAddrOp>(loc, assocType, sourceVar);
+        } else if (mlir::isa<fir::ReferenceType>(sourceVar.getType()) &&
+                   mlir::isa<fir::BoxCharType>(assocType)) {
+          mlir::Value lenVal = associate.getTypeparams()[0];
+          auto refTy = mlir::cast<fir::ReferenceType>(sourceVar.getType());
+          auto charTy = mlir::cast<fir::CharacterType>(refTy.getEleTy());
+          auto boxCharType =
+              fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
+          sourceVar = builder.create<fir::EmboxCharOp>(loc, boxCharType,
+                                                       sourceVar, lenVal);
         } else {
           sourceVar = builder.createConvert(loc, assocType, sourceVar);
         }
