@@ -327,10 +327,8 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e) {
   QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
   mlir::Value result = VisitPlusMinus(e, cir::UnaryOpKind::Plus, promotionTy);
-  if (!promotionTy.isNull()) {
-    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryPlus emitUnPromotedValue");
-    return {};
-  }
+  if (!promotionTy.isNull())
+    return cgf.emitUnPromotedValue(result, e->getSubExpr()->getType());
   return result;
 }
 
@@ -352,10 +350,8 @@ mlir::Value ComplexExprEmitter::VisitPlusMinus(const UnaryOperator *e,
 mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
   QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
   mlir::Value result = VisitPlusMinus(e, cir::UnaryOpKind::Minus, promotionTy);
-  if (!promotionTy.isNull()) {
-    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryMinus emitUnPromotedValue");
-    return {};
-  }
+  if (!promotionTy.isNull())
+    return cgf.emitUnPromotedValue(result, e->getSubExpr()->getType());
   return result;
 }
 
