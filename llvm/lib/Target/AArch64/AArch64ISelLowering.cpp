@@ -5265,10 +5265,13 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   unsigned PredElements = getPackedSVEVectorVT(EltVT).getVectorMinNumElements();
   bool Split = NumElements > PredElements;
 
-  if (EltSizeInBytes * NumElements < 16)
+  if (EltSizeInBytes * NumElements < 16) {
     // The element size and vector length combination must at least form a
     // 128-bit vector. Shorter vector lengths can be widened then extracted
     FullVT = FullVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    // Re-create the node, but widened.
+    Op = DAG.getNode(Op.getOpcode(), DL, FullVT, Op->ops());
+  }
 
   auto MaskWithAddressOffset = [&](EVT VT, unsigned Offset) {
     SDValue PtrA = Op.getOperand(0);
@@ -5288,7 +5291,29 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, Op.getOperand(2));
   };
 
-  SDValue Result;
+  auto ContaineriseFixedWidth = [&](SDValue MaskOp) {
+    assert((MaskOp.getOpcode() == ISD::LOOP_DEPENDENCE_WAR_MASK ||
+            MaskOp.getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK) &&
+           "Expected to containerise a loop dependence mask.");
+    // We can use the SVE whilewr/whilerw instruction to lower this
+    // intrinsic by creating the appropriate sequence of scalable vector
+    // operations and then extracting a fixed-width subvector from the
+    // scalable vector. Scalable vector variants are already legal.
+    EVT VT = MaskOp.getValueType();
+    EVT ContainerVT =
+        EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                         VT.getVectorNumElements(), true);
+    EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
+
+    SDValue Mask =
+        DAG.getNode(MaskOp.getOpcode(), DL, WhileVT, MaskOp.getOperand(0),
+                    MaskOp.getOperand(1), MaskOp.getOperand(2));
+    SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
+                       DAG.getVectorIdxConstant(0, DL));
+  };
+
+  SDValue Result = Op;
   if (Split) {
     unsigned NumElementsPerSplit = NumElements / 2;
     EVT PartVT =
@@ -5297,36 +5322,24 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     SDValue Low = MaskWithAddressOffset(PartVT, 0);
     SDValue High = MaskWithAddressOffset(
         PartVT, PartVT.getVectorMinNumElements() * EltSizeInBytes);
+    if (!PartVT.isScalableVT()) {
+      Low = ContaineriseFixedWidth(Low);
+      High = ContaineriseFixedWidth(High);
+    }
     SDValue Inserted =
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, FullVT, DAG.getPOISON(FullVT),
                     Low, DAG.getVectorIdxConstant(0, DL));
     Result = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, FullVT, Inserted, High,
                          DAG.getVectorIdxConstant(NumElementsPerSplit, DL));
-  } else {
-    if (FullVT.isScalableVT()) {
-      // Re-create the node. FullVT could be different to Op's type if we need
-      // to widen then extract.
-      Result = DAG.getNode(Op.getOpcode(), DL, FullVT, Op->ops());
-    } else {
-      // We can use the SVE whilewr/whilerw instruction to lower this
-      // intrinsic by creating the appropriate sequence of scalable vector
-      // operations and then extracting a fixed-width subvector from the
-      // scalable vector. Scalable vector variants are already legal.
-      EVT ContainerVT =
-          EVT::getVectorVT(*DAG.getContext(), FullVT.getVectorElementType(),
-                           FullVT.getVectorNumElements(), true);
-      EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
-
-      SDValue Mask = DAG.getNode(Op.getOpcode(), DL, WhileVT, Op.getOperand(0),
-                                 Op.getOperand(1), Op.getOperand(2));
-      SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
-      Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FullVT, MaskAsInt,
-                           DAG.getVectorIdxConstant(0, DL));
-    }
+  } else if (!FullVT.isScalableVT()) {
+    Result = ContaineriseFixedWidth(Result);
   }
-  if (ExtractVT != FullVT)
+
+  if (ExtractVT != FullVT) {
+    // Extract the widened vector.
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT, Result,
                        DAG.getVectorIdxConstant(0, DL));
+  }
   return Result;
 }
 
