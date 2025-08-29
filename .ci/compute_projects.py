@@ -81,6 +81,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     "compiler-rt": {"compiler-rt"},
+    "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
     ".ci": {"compiler-rt", "libc", "flang-rt"},
 }

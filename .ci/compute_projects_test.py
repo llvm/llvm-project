@@ -216,8 +216,8 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;flang;llvm")
         self.assertEqual(env_variables["project_check_targets"], "check-flang")
-        self.assertEqual(env_variables["runtimes_to_build"], "")
-        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "flang-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-flang-rt")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
