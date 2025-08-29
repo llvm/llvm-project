@@ -1,9 +1,5 @@
 // RUN: %clang_asan -Wno-alloc-size -fsanitize-recover=address %s -o %t && %env_asan_opts=halt_on_error=0 %run %t 2>&1 | FileCheck %s
 
-// ASan doesn't catch this because internally it translates 0-byte allocations
-// into 1-byte
-// XFAIL: *
-
 #include <malloc.h>
 #include <stdio.h>
 
