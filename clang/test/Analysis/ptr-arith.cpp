@@ -169,15 +169,11 @@ unsigned long ptr_arithmetic(void *p) {
 struct AllocOpaqueFlag {};
 
 void *operator new(unsigned long, void *ptr) noexcept { return ptr; }
-void *operator new(unsigned long, void *ptr, AllocOpaqueFlag const &) noexcept {
-  return ptr;
-}
+void *operator new(unsigned long, void *ptr, AllocOpaqueFlag const &) noexcept;
 
 void *operator new[](unsigned long, void *ptr) noexcept { return ptr; }
 void *operator new[](unsigned long, void *ptr,
-                     AllocOpaqueFlag const &) noexcept {
-  return ptr;
-}
+                     AllocOpaqueFlag const &) noexcept;
 
 struct Buffer {
   char buf[100];
@@ -222,7 +218,7 @@ void checkPlacementNewObjectInObject() {
 void checkPlacementNewObjectInObjectOpaque() {
   Buffer buffer;
   int *array = new (&buffer, AllocOpaqueFlag{}) int;
-  ++array; // expected-warning{{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
+  ++array; // no warning (allocator is opaque)
   (void)*array;
 }
 
