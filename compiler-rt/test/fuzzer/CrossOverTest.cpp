@@ -47,7 +47,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     *NullPtr = 0;
   // It's UB to read *Data when Size == 0
   if (Size == 0)
-    return;
+    return 0;
   if (*Data == 'A')
     Sink++;
   if (*Data == 'Z')
