@@ -589,7 +589,7 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
         streamFile(Request, *PathOrErr);
       });
   if (Err)
-    return std::move(Err);
+    return Err;
 
   Err =
       Server.get(R"(/buildid/(.*)/executable)", [&](HTTPServerRequest Request) {
@@ -610,7 +610,7 @@ Error DebuginfodServer::init(DebuginfodLog &Log,
         streamFile(Request, *PathOrErr);
       });
   if (Err)
-    return std::move(Err);
+    return Err;
   return Error::success();
 }
 
