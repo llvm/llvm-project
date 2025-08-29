@@ -2038,43 +2038,22 @@ let Features = "avx512dq,evex512", Attributes = [NoThrow, Const, RequiredVectorW
 
 let Features = "avx512f,evex512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def prold512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
-  def prolq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def prold128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def prold256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def prolq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def prolq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
-}
-
-let Features = "avx512f,evex512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def prord512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
+  def prolq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Constant int)">;
   def prorq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Constant int)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+  def prold128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
   def prord128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def prord256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
-}
-
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+  def prolq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Constant int)">;
   def prorq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Constant int)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+  def prold256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
+  def prord256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
+  def prolq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
   def prorq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
 }
 
