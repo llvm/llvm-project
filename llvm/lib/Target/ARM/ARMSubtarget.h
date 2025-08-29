@@ -187,6 +187,9 @@ protected:
   bool IsLittle;
 
   /// DM - Denormal mode
+  /// NEON and VFP RunFast mode are not IEEE 754 compliant,
+  /// use this field to determine whether to generate NEON/VFP
+  /// instructions in related function.
   DenormalMode DM;
 
   /// TargetTriple - What processor and OS we're targeting.
