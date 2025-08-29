@@ -27,9 +27,6 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-
-class Target;
-
 namespace mca {
 
 /// Class which can be overriden by targets to modify the
@@ -174,21 +171,17 @@ class LLVM_ABI InstrumentManager {
 protected:
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;
-  bool EnableDefaults;
-  std::unique_ptr<InstrumentManager> TargetIM;
+  bool EnableInstruments;
 
 public:
   InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-                    bool EnableDefaults = false,
-                    const Target *TheTarget = nullptr);
+                    bool EnableInstruments = false) :
+      STI(STI), MCII(MCII), EnableInstruments(EnableInstruments) {};
 
   virtual ~InstrumentManager() = default;
 
   /// Returns true if llvm-mca should ignore instruments.
-  virtual bool shouldIgnoreInstruments() const {
-    return !EnableDefaults &&
-           (!TargetIM || TargetIM->shouldIgnoreInstruments());
-  }
+  virtual bool shouldIgnoreInstruments() const { return !EnableInstruments; }
 
   // Returns true if this supports processing Instrument with
   // Instrument.Desc equal to Type

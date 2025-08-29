@@ -46,22 +46,8 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
 
 static const llvm::StringRef CustomInstrumentName = "CUSTOMIZE";
 
-InstrumentManager::InstrumentManager(const MCSubtargetInfo &STI,
-                                     const MCInstrInfo &MCII,
-                                     bool EnableDefaults,
-                                     const Target* TheTarget)
-    : STI(STI), MCII(MCII), EnableDefaults(EnableDefaults) {
-  if (TheTarget)
-    TargetIM = std::unique_ptr<InstrumentManager>(
-        TheTarget->createInstrumentManager(STI, MCII));
-}
-
 bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
-  if (EnableDefaults && Type == CustomInstrumentName)
-    return true;
-  if (TargetIM)
-    return TargetIM->supportsInstrumentType(Type);
-  return false;
+  return EnableInstruments && Type == CustomInstrumentName;
 }
 
 bool InstrumentManager::canCustomize(
@@ -83,25 +69,17 @@ void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
 
 UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
                                                      llvm::StringRef Data) {
-  if (TargetIM && TargetIM->supportsInstrumentType(Desc))
-    return TargetIM->createInstrument(Desc, Data);
-  if (!EnableDefaults)
-    return std::make_unique<Instrument>(Desc, Data);
   return std::make_unique<Instrument>(Desc, Data);
 }
 
 SmallVector<UniqueInstrument>
 InstrumentManager::createInstruments(const MCInst &Inst) {
-  if (TargetIM)
-    return TargetIM->createInstruments(Inst);
   return SmallVector<UniqueInstrument>();
 }
 
 unsigned InstrumentManager::getSchedClassID(
     const MCInstrInfo &MCII, const MCInst &MCI,
     const llvm::SmallVector<Instrument *> &IVec) const {
-  if (TargetIM)
-    return TargetIM->getSchedClassID(MCII, MCI, IVec);
   return MCII.get(MCI.getOpcode()).getSchedClass();
 }
 
