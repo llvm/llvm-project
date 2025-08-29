@@ -32,18 +32,14 @@ define double @constraint_f_double(double %a) nounwind {
 define double @constraint_gpr(double %a) {
 ; LA32-LABEL: constraint_gpr:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    .cfi_def_cfa_offset 16
-; LA32-NEXT:    fst.d $fa0, $sp, 8
-; LA32-NEXT:    ld.w $a7, $sp, 8
-; LA32-NEXT:    ld.w $t0, $sp, 12
+; LA32-NEXT:    .cfi_def_cfa_offset 0
+; LA32-NEXT:    movfr2gr.s $a7, $fa0
+; LA32-NEXT:    movfrh2gr.s $t0, $fa0
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    move $a6, $a7
 ; LA32-NEXT:    #NO_APP
-; LA32-NEXT:    st.w $a7, $sp, 4
-; LA32-NEXT:    st.w $a6, $sp, 0
-; LA32-NEXT:    fld.d $fa0, $sp, 0
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    movgr2fr.w $fa0, $a6
+; LA32-NEXT:    movgr2frh.w $fa0, $a7
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: constraint_gpr:

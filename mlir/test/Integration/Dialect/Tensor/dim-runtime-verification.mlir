@@ -1,10 +1,20 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
-// RUN:     -one-shot-bufferize \
-// RUN:     -buffer-deallocation-pipeline \
+// RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
 // RUN:     -test-cf-assert \
 // RUN:     -convert-to-llvm | \
 // RUN: mlir-runner -e main -entry-point-result=void \
-// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
 func.func @main() {

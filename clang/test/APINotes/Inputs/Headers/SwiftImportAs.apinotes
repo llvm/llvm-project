@@ -19,6 +19,10 @@ Tags:
   SwiftReleaseOp: release
   SwiftRetainOp: retain
   SwiftDefaultOwnership: unretained
+- Name: OpaqueRefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: ORCRelease
+  SwiftRetainOp: ORCRetain
 - Name: NonCopyableType
   SwiftCopyable: false
   SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol
@@ -28,6 +32,9 @@ Tags:
   SwiftEscapable: false
 - Name: EscapableType
   SwiftEscapable: true
+- Name: NoncopyableWithDestroyType
+  SwiftCopyable: false
+  SwiftDestroyOp: NCDDestroy
 
 Functions:
   - Name: functionReturningFrt__
@@ -35,3 +42,7 @@ Functions:
     SwiftReturnOwnership: unretained
   - Name: functionReturningFrt_returns_retained
     SwiftReturnOwnership: retained
+Typedefs:
+  - Name: WrappedOptions
+    SwiftWrapper: struct
+    SwiftConformsTo: Swift.OptionSet

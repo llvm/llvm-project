@@ -432,6 +432,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::BreakpointSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -449,6 +453,10 @@ protected:
   }
 
   python::PythonObject Transform(Event *arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(const SymbolContext &arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -553,6 +561,11 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
 
 template <>
 Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
+    python::PythonObject &p, Status &error);
+
+template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error);
 
 template <>

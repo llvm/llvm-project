@@ -124,7 +124,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   LIBC_NAMESPACE::printf_core::FormatSection high_precision_conv;
   high_precision_conv.has_conv = true;
-  high_precision_conv.raw_string = "%4s";
+  high_precision_conv.raw_string = "%.4s";
   high_precision_conv.conv_name = 's';
   high_precision_conv.precision = 4;
   high_precision_conv.conv_val_ptr = const_cast<char *>("456");

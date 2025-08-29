@@ -121,7 +121,6 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       Live Range Shrink
-; CHECK-NEXT:       X86 Windows Fixup Buffer Security Check
 ; CHECK-NEXT:       X86 Fixup SetCC
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       X86 LEA Optimize

@@ -1314,7 +1314,7 @@ AsmWriterEmitter::AsmWriterEmitter(const RecordKeeper &R)
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
   // Get the instruction numbering.
-  NumberedInstructions = Target.getInstructionsByEnumValue();
+  NumberedInstructions = Target.getInstructions();
 
   for (const auto &[Idx, I] : enumerate(NumberedInstructions)) {
     if (!I->AsmString.empty() && I->TheDef->getName() != "PHI")

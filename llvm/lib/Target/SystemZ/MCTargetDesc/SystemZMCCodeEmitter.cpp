@@ -129,6 +129,11 @@ private:
 };
 
 } // end anonymous namespace
+  //
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
 
 void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                              SmallVectorImpl<char> &CB,
@@ -170,8 +175,7 @@ uint64_t SystemZMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNum,
     unsigned OpBitSize =
         SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind].TargetSize;
     uint32_t BitOffset = MIBitSize - RawBitOffset - OpBitSize;
-    Fixups.push_back(MCFixup::create(BitOffset >> 3, MO.getExpr(),
-                                     (MCFixupKind)Kind, MI.getLoc()));
+    addFixup(Fixups, BitOffset >> 3, MO.getExpr(), Kind);
     return 0;
   }
   llvm_unreachable("Unexpected operand type!");
@@ -203,16 +207,15 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
       // into MI.  Add Offset to the relocation value to cancel out
       // this difference.
       const MCExpr *OffsetExpr = MCConstantExpr::create(Offset, Ctx);
-      Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx);
+      Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx, Loc);
     }
   }
-  Fixups.push_back(MCFixup::create(Offset, Expr, (MCFixupKind)Kind, Loc));
+  addFixup(Fixups, Offset, Expr, Kind, true);
 
   // Output the fixup for the TLS marker if present.
   if (AllowTLS && OpNum + 1 < MI.getNumOperands()) {
     const MCOperand &MOTLS = MI.getOperand(OpNum + 1);
-    Fixups.push_back(MCFixup::create(
-        0, MOTLS.getExpr(), (MCFixupKind)SystemZ::FK_390_TLS_CALL, Loc));
+    addFixup(Fixups, 0, MOTLS.getExpr(), SystemZ::FK_390_TLS_CALL);
   }
   return 0;
 }

@@ -431,12 +431,12 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
                            {Key, KeyLen}, unwrap(Val));
 }
 
-LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
-  return unwrap(M)->IsNewDbgInfoFormat;
-}
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) { return true; }
 
 void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
-  unwrap(M)->setIsNewDbgInfoFormat(UseNewFormat);
+  if (!UseNewFormat)
+    llvm_unreachable("LLVM no longer supports intrinsic based debug-info");
+  (void)M;
 }
 
 /*--.. Printing modules ....................................................--*/
@@ -2186,12 +2186,22 @@ void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
   unwrap<GlobalObject>(Global)->setMetadata(Kind, unwrap<MDNode>(MD));
 }
 
+void LLVMGlobalAddMetadata(LLVMValueRef Global, unsigned Kind,
+                           LLVMMetadataRef MD) {
+  unwrap<GlobalObject>(Global)->addMetadata(Kind, *unwrap<MDNode>(MD));
+}
+
 void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind) {
   unwrap<GlobalObject>(Global)->eraseMetadata(Kind);
 }
 
 void LLVMGlobalClearMetadata(LLVMValueRef Global) {
   unwrap<GlobalObject>(Global)->clearMetadata();
+}
+
+void LLVMGlobalAddDebugInfo(LLVMValueRef Global, LLVMMetadataRef GVE) {
+  unwrap<GlobalVariable>(Global)->addDebugInfo(
+      unwrap<DIGlobalVariableExpression>(GVE));
 }
 
 /*--.. Operations on global variables ......................................--*/
@@ -2949,6 +2959,14 @@ LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
   return (LLVMIntPredicate)0;
+}
+
+LLVMBool LLVMGetICmpSameSign(LLVMValueRef Inst) {
+  return unwrap<ICmpInst>(Inst)->hasSameSign();
+}
+
+void LLVMSetICmpSameSign(LLVMValueRef Inst, LLVMBool SameSign) {
+  unwrap<ICmpInst>(Inst)->setSameSign(SameSign);
 }
 
 LLVMRealPredicate LLVMGetFCmpPredicate(LLVMValueRef Inst) {

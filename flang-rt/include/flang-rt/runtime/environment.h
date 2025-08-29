@@ -31,7 +31,7 @@ RT_OFFLOAD_VAR_GROUP_END
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 
-RT_API_ATTRS Fortran::common::optional<Convert> GetConvertFromString(
+RT_API_ATTRS common::optional<Convert> GetConvertFromString(
     const char *, std::size_t);
 
 struct ExecutionEnvironment {
@@ -63,6 +63,9 @@ struct ExecutionEnvironment {
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
+
+  enum InternalDebugging { WorkQueue = 1 };
+  int internalDebugging{0}; // FLANG_RT_DEBUG
 
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE

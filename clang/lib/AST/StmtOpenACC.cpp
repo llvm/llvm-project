@@ -209,7 +209,7 @@ OpenACCWaitConstruct *OpenACCWaitConstruct::Create(
     ArrayRef<Expr *> QueueIdExprs, SourceLocation RParenLoc, SourceLocation End,
     ArrayRef<const OpenACCClause *> Clauses) {
 
-  assert(llvm::all_of(QueueIdExprs, [](Expr *E) { return E != nullptr; }));
+  assert(!llvm::is_contained(QueueIdExprs, nullptr));
 
   void *Mem = C.Allocate(
       OpenACCWaitConstruct::totalSizeToAlloc<Expr *, OpenACCClause *>(

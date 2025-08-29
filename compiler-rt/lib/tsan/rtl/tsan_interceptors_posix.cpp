@@ -22,6 +22,8 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
@@ -75,17 +77,6 @@ struct ucontext_t {
   // The size is determined by looking at sizeof of real ucontext_t on linux.
   u64 opaque[936 / sizeof(u64) + 1];
 };
-#endif
-
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
-    defined(__s390x__)
-#define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
-#elif defined(__aarch64__) || SANITIZER_PPC64V2
-#define PTHREAD_ABI_BASE  "GLIBC_2.17"
-#elif SANITIZER_LOONGARCH64
-#define PTHREAD_ABI_BASE  "GLIBC_2.36"
-#elif SANITIZER_RISCV64
-#  define PTHREAD_ABI_BASE "GLIBC_2.27"
 #endif
 
 extern "C" int pthread_attr_init(void *attr);
@@ -339,11 +330,6 @@ void ScopedInterceptor::DisableIgnoresImpl() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
-#else
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
-#endif
 #if SANITIZER_FREEBSD
 #  define TSAN_MAYBE_INTERCEPT_FREEBSD_ALIAS(func) \
     INTERCEPT_FUNCTION(_pthread_##func)
@@ -747,6 +733,41 @@ TSAN_INTERCEPTOR(void, free, void *p) {
   user_free(thr, pc, p);
 }
 
+#  if SANITIZER_INTERCEPT_FREE_SIZED
+TSAN_INTERCEPTOR(void, free_sized, void *p, uptr size) {
+  if (UNLIKELY(!p))
+    return;
+  if (in_symbolizer())
+    return InternalFree(p);
+  if (DlsymAlloc::PointerIsMine(p))
+    return DlsymAlloc::Free(p);
+  invoke_free_hook(p);
+  SCOPED_INTERCEPTOR_RAW(free_sized, p, size);
+  user_free(thr, pc, p);
+}
+#    define TSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FREE_SIZED
+#  endif
+
+#  if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+TSAN_INTERCEPTOR(void, free_aligned_sized, void *p, uptr alignment, uptr size) {
+  if (UNLIKELY(!p))
+    return;
+  if (in_symbolizer())
+    return InternalFree(p);
+  if (DlsymAlloc::PointerIsMine(p))
+    return DlsymAlloc::Free(p);
+  invoke_free_hook(p);
+  SCOPED_INTERCEPTOR_RAW(free_aligned_sized, p, alignment, size);
+  user_free(thr, pc, p);
+}
+#    define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED \
+      INTERCEPT_FUNCTION(free_aligned_sized)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
+#  endif
+
 TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (UNLIKELY(!p))
     return;
@@ -763,6 +784,9 @@ TSAN_INTERCEPTOR(uptr, malloc_usable_size, void *p) {
   SCOPED_INTERCEPTOR_RAW(malloc_usable_size, p);
   return user_alloc_usable_size(p);
 }
+#else
+#  define TSAN_MAYBE_INTERCEPT_FREE_SIZED
+#  define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
 #endif
 
 TSAN_INTERCEPTOR(char *, strcpy, char *dst, const char *src) {
@@ -2102,13 +2126,29 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeErrnoInSignal);
-  rep.SetSigNum(sig);
-  if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
-    rep.AddStack(stack, true);
-    OutputReport(thr, rep);
+  // Use alloca, because malloc during signal handling deadlocks
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  bool suppressed;
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    new (rep) ScopedReport(ReportTypeErrnoInSignal);
+    rep->SetSigNum(sig);
+    suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
+    if (!suppressed)
+      rep->AddStack(stack, true);
+#if SANITIZER_APPLE
+  }  // Close this scope to release the locks before writing report
+#endif
+    if (!suppressed)
+      OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
+#endif
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
@@ -2849,12 +2889,12 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #endif
 
 #if SANITIZER_FREEBSD
-TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
+TSAN_INTERCEPTOR(void, thr_exit, ThreadID *state) {
   SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
   DestroyThreadState();
   REAL(thr_exit(state));
 }
-#define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
+#  define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
 #else
 #define TSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif
@@ -2963,6 +3003,8 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(realloc);
   TSAN_INTERCEPT(reallocarray);
   TSAN_INTERCEPT(free);
+  TSAN_MAYBE_INTERCEPT_FREE_SIZED;
+  TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);
   TSAN_MAYBE_INTERCEPT_MEMALIGN;
@@ -2983,12 +3025,26 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
 
-  TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
+  // may return an outdated symbol (max(2.2,base_version)) if the port was
+  // introduced before 2.3.2 (when the new pthread_cond_t was introduced).
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
 

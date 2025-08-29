@@ -149,7 +149,7 @@ struct __find_segment;
 template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);

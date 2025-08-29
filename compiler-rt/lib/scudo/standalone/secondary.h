@@ -269,7 +269,8 @@ public:
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
 
-    if (useMemoryTagging<Config>(Options)) {
+    bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
+    if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
         // Release the memory and make it inaccessible at the same time by
         // creating a new MAP_NOACCESS mapping on top of the existing mapping.
@@ -302,7 +303,7 @@ public:
       if (Entry.Time != 0)
         Entry.Time = Time;
 
-      if (useMemoryTagging<Config>(Options) && QuarantinePos == -1U) {
+      if (MemoryTaggingEnabled && !useMemoryTagging<Config>(Options)) {
         // If we get here then memory tagging was disabled in between when we
         // read Options and when we locked Mutex. We can't insert our entry into
         // the quarantine or the cache because the permissions would be wrong so
@@ -310,7 +311,8 @@ public:
         unmapCallBack(Entry.MemMap);
         break;
       }
-      if (Config::getQuarantineSize() && useMemoryTagging<Config>(Options)) {
+
+      if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
@@ -506,16 +508,19 @@ public:
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-      if (Quarantine[I].isValid()) {
-        MemMapT &MemMap = Quarantine[I].MemMap;
-        unmapCallBack(MemMap);
-        Quarantine[I].invalidate();
+    if (!Config::getQuarantineDisabled()) {
+      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+        if (Quarantine[I].isValid()) {
+          MemMapT &MemMap = Quarantine[I].MemMap;
+          unmapCallBack(MemMap);
+          Quarantine[I].invalidate();
+        }
       }
+      QuarantinePos = -1U;
     }
+
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
-    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -572,8 +577,9 @@ private:
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-      releaseIfOlderThan(Quarantine[I], Time);
+    if (!Config::getQuarantineDisabled())
+      for (uptr I = 0; I < Config::getQuarantineSize(); I++)
+        releaseIfOlderThan(Quarantine[I], Time);
     for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
       releaseIfOlderThan(Entries[I], Time);
   }

@@ -20,49 +20,62 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
   return Offset;
 }
 
-static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
-                                       uint32_t Offset) {
+static uint32_t rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
+                                           uint32_t Offset) {
+  uint32_t ByteOffset = Stream.tell();
   uint32_t Value =
       support::endian::byte_swap<uint32_t, llvm::endianness::little>(
-          Stream.tell());
+          ByteOffset);
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
+  return ByteOffset;
 }
 
 size_t RootSignatureDesc::getSize() const {
-  size_t Size =
-      sizeof(dxbc::RTS0::v1::RootSignatureHeader) +
-      ParametersContainer.size() * sizeof(dxbc::RTS0::v1::RootParameterHeader) +
+  uint32_t StaticSamplersOffset = computeStaticSamplersOffset();
+  size_t StaticSamplersSize =
       StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
+  return size_t(StaticSamplersOffset) + StaticSamplersSize;
+}
+
+uint32_t RootSignatureDesc::computeRootParametersOffset() const {
+  return sizeof(dxbc::RTS0::v1::RootSignatureHeader);
+}
+
+uint32_t RootSignatureDesc::computeStaticSamplersOffset() const {
+  uint32_t Offset = computeRootParametersOffset();
+
   for (const RootParameterInfo &I : ParametersContainer) {
-    switch (I.Header.ParameterType) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Size += sizeof(dxbc::RTS0::v1::RootConstants);
+    Offset += sizeof(dxbc::RTS0::v1::RootParameterHeader);
+    switch (I.Type) {
+    case dxbc::RootParameterType::Constants32Bit:
+      Offset += sizeof(dxbc::RTS0::v1::RootConstants);
       break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
       if (Version == 1)
-        Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
+        Offset += sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
-        Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
+        Offset += sizeof(dxbc::RTS0::v2::RootDescriptor);
 
       break;
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+    case dxbc::RootParameterType::DescriptorTable:
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(I.Location);
 
       // 4 bytes for the number of ranges in table and
       // 4 bytes for the ranges offset
-      Size += 2 * sizeof(uint32_t);
+      Offset += 2 * sizeof(uint32_t);
       if (Version == 1)
-        Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
+        Offset += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
       else
-        Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
+        Offset += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
       break;
     }
   }
-  return Size;
+
+  return Offset;
 }
 
 void RootSignatureDesc::write(raw_ostream &OS) const {
@@ -71,20 +84,18 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   BOS.reserveExtraSpace(getSize());
 
   const uint32_t NumParameters = ParametersContainer.size();
-
+  const uint32_t NumSamplers = StaticSamplers.size();
   support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, RootParameterOffset, llvm::endianness::little);
-  support::endian::write(BOS, NumStaticSamplers, llvm::endianness::little);
-  support::endian::write(BOS, StaticSamplersOffset, llvm::endianness::little);
+  support::endian::write(BOS, NumSamplers, llvm::endianness::little);
+  uint32_t SSO = writePlaceholder(BOS);
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const RootParameterInfo &P : ParametersContainer) {
-    support::endian::write(BOS, P.Header.ParameterType,
-                           llvm::endianness::little);
-    support::endian::write(BOS, P.Header.ShaderVisibility,
-                           llvm::endianness::little);
+  for (const RootParameterInfo &I : ParametersContainer) {
+    support::endian::write(BOS, I.Type, llvm::endianness::little);
+    support::endian::write(BOS, I.Visibility, llvm::endianness::little);
 
     ParamsOffsets.push_back(writePlaceholder(BOS));
   }
@@ -92,11 +103,11 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
-    switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+    const RootParameterInfo &Info = ParametersContainer.getInfo(I);
+    switch (Info.Type) {
+    case dxbc::RootParameterType::Constants32Bit: {
       const dxbc::RTS0::v1::RootConstants &Constants =
-          ParametersContainer.getConstant(Loc);
+          ParametersContainer.getConstant(Info.Location);
       support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, Constants.RegisterSpace,
@@ -105,11 +116,11 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       break;
     }
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV: {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
-          ParametersContainer.getRootDescriptor(Loc);
+          ParametersContainer.getRootDescriptor(Info.Location);
 
       support::endian::write(BOS, Descriptor.ShaderRegister,
                              llvm::endianness::little);
@@ -119,9 +130,9 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
         support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
       break;
     }
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    case dxbc::RootParameterType::DescriptorTable: {
       const DescriptorTable &Table =
-          ParametersContainer.getDescriptorTable(Loc);
+          ParametersContainer.getDescriptorTable(Info.Location);
       support::endian::write(BOS, (uint32_t)Table.Ranges.size(),
                              llvm::endianness::little);
       rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
@@ -133,15 +144,18 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                                llvm::endianness::little);
         support::endian::write(BOS, Range.RegisterSpace,
                                llvm::endianness::little);
-        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
-                               llvm::endianness::little);
         if (Version > 1)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
       }
       break;
     }
     }
   }
+  [[maybe_unused]] uint32_t Offset = rewriteOffsetToCurrentByte(BOS, SSO);
+  assert(Offset == computeStaticSamplersOffset() &&
+         "Computed offset does not match written offset");
   for (const auto &S : StaticSamplers) {
     support::endian::write(BOS, S.Filter, llvm::endianness::little);
     support::endian::write(BOS, S.AddressU, llvm::endianness::little);

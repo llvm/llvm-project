@@ -53,26 +53,26 @@ constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 void emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t(Val), uint8_t((uint16_t)Val >> 8)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t(Val), uint8_t((uint32_t)Val >> 8), "
-        "uint8_t((uint32_t)Val >> 16), uint8_t((uint32_t)Val >> 24)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(Val), uint8_t((uint64_t)Val >> 8), "
-        "uint8_t((uint64_t)Val >> 16), uint8_t((uint64_t)Val >> 24),  "
-        "uint8_t((uint64_t)Val >> 32), uint8_t((uint64_t)Val >> 40), "
-        "uint8_t((uint64_t)Val >> 48), uint8_t((uint64_t)Val >> 56)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24),  "
+        "uint8_t(uint64_t(Val) >> 32), uint8_t(uint64_t(Val) >> 40), "
+        "uint8_t(uint64_t(Val) >> 48), uint8_t(uint64_t(Val) >> 56)\n"
      << "#else\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t((uint16_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t((uint32_t)Val >> 24), uint8_t((uint32_t)Val >> 16), "
-        "uint8_t((uint32_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t((uint64_t)Val >> 56), uint8_t((uint64_t)Val >> 48), "
-        "uint8_t((uint64_t)Val >> 40), uint8_t((uint64_t)Val >> 32),  "
-        "uint8_t((uint64_t)Val >> 24), uint8_t((uint64_t)Val >> 16), "
-        "uint8_t((uint64_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t(uint64_t(Val) >> 56), uint8_t(uint64_t(Val) >> 48), "
+        "uint8_t(uint64_t(Val) >> 40), uint8_t(uint64_t(Val) >> 32),  "
+        "uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#endif\n";
 }
 
@@ -237,9 +237,12 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
 
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
-  if (NumBytes == 1 && IntValue < 0)
-    Str = "uint8_t(" + Str + ")";
+  uint64_t UIntValue = IntValue;
+  if (NumBytes < 8)
+    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
+  std::string Str = llvm::to_string(UIntValue);
+  if (UIntValue > INT64_MAX)
+    Str += 'u';
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
@@ -476,6 +479,14 @@ bool GroupMatcher::candidateConditionMatches(
   return Predicate.isIdentical(RepresentativeCondition);
 }
 
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
@@ -689,6 +700,9 @@ void SwitchMatcher::emit(MatchTable &Table) {
 }
 
 //===- RuleMatcher --------------------------------------------------------===//
+
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
@@ -1096,6 +1110,8 @@ unsigned RuleMatcher::countRendererFns() const {
       });
 }
 
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+
 //===- PredicateMatcher ---------------------------------------------------===//
 
 PredicateMatcher::~PredicateMatcher() {}
@@ -1448,7 +1464,7 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
+  for (const CodeGenInstruction *I : Target.getInstructions())
     OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 

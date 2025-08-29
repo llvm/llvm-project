@@ -7,7 +7,7 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   endif()
 endif()
 
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
@@ -27,8 +27,9 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
-  common/LockFileBase.cpp
+  common/JSONTransport.cpp
   common/LZMA.cpp
+  common/LockFileBase.cpp
   common/MainLoopBase.cpp
   common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp

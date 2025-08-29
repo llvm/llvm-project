@@ -52,8 +52,7 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
 }
 
 RT_OFFLOAD_API_GROUP_BEGIN
-Fortran::common::optional<Convert> GetConvertFromString(
-    const char *x, std::size_t n) {
+common::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   static const char *keywords[]{
       "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
   switch (IdentifyValue(x, n, keywords)) {
@@ -68,7 +67,7 @@ Fortran::common::optional<Convert> GetConvertFromString(
   case 4:
     return Convert::Swap;
   default:
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 RT_OFFLOAD_API_GROUP_END
@@ -141,6 +140,10 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
           "ignored\n",
           x);
     }
+  }
+
+  if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
+    internalDebugging = std::strtol(x, nullptr, 10);
   }
 
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {

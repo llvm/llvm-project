@@ -199,8 +199,7 @@ namespace PAuthGadgetScanner {
 // to distinguish intermediate and final results at the type level.
 //
 // Here is an overview of issue life-cycle:
-// * an analysis (SrcSafetyAnalysis at now, DstSafetyAnalysis will be added
-//   later to support the detection of authentication oracles) computes register
+// * an analysis (SrcSafetyAnalysis or DstSafetyAnalysis) computes register
 //   state for each instruction in the function.
 // * for each instruction, it is checked whether it is a gadget of some kind,
 //   taking the computed state into account. If a gadget is found, its kind
@@ -273,11 +272,30 @@ public:
   virtual ~ExtraInfo() {}
 };
 
+/// The set of instructions writing to the affected register in an unsafe
+/// manner.
+///
+/// This is a hint to be printed alongside the report. It should be further
+/// analyzed by the user.
 class ClobberingInfo : public ExtraInfo {
   SmallVector<MCInstReference> ClobberingInstrs;
 
 public:
   ClobberingInfo(ArrayRef<MCInstReference> Instrs) : ClobberingInstrs(Instrs) {}
+
+  void print(raw_ostream &OS, const MCInstReference Location) const override;
+};
+
+/// The set of instructions leaking the authenticated pointer before the
+/// result of authentication was checked.
+///
+/// This is a hint to be printed alongside the report. It should be further
+/// analyzed by the user.
+class LeakageInfo : public ExtraInfo {
+  SmallVector<MCInstReference> LeakingInstrs;
+
+public:
+  LeakageInfo(ArrayRef<MCInstReference> Instrs) : LeakingInstrs(Instrs) {}
 
   void print(raw_ostream &OS, const MCInstReference Location) const override;
 };
@@ -321,6 +339,9 @@ class FunctionAnalysisContext {
 
   void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
   void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
+
+  void findUnsafeDefs(SmallVector<PartialReport<MCPhysReg>> &Reports);
+  void augmentUnsafeDefReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
 
   /// Process the reports which do not have to be augmented, and remove them
   /// from Reports.

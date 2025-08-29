@@ -18,8 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -375,6 +373,43 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
+
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  auto stringKey = dyn_cast<StringAttr>(key);
+  if (!stringKey)
+    return failure();
+
+  if (contains(stringKey))
+    return UnitAttr::get(getContext());
+
+  if (contains((std::string("+") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), true);
+
+  if (contains((std::string("-") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), false);
+
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
+  }
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
 
 LogicalResult
 ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,

@@ -3126,8 +3126,8 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // Modify the condition code of operands in OperandsToUpdate.
   // Since we have SUB(r1, r2) and CMP(r2, r1), the condition code needs to
   // be changed from r2 > r1 to r1 < r2, from r2 < r1 to r1 > r2, etc.
-  for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
-    OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
+  for (auto &[MO, Cond] : OperandsToUpdate)
+    MO->setImm(Cond);
 
   MI->clearRegisterDeads(ARM::CPSR);
 
@@ -4261,8 +4261,7 @@ std::optional<unsigned> ARMBaseInstrInfo::getOperandLatencyImpl(
     // instructions).
     if (Latency > 0 && Subtarget.isThumb2()) {
       const MachineFunction *MF = DefMI.getParent()->getParent();
-      // FIXME: Use Function::hasOptSize().
-      if (MF->getFunction().hasFnAttribute(Attribute::OptimizeForSize))
+      if (MF->getFunction().hasOptSize())
         --Latency;
     }
     return Latency;
@@ -6731,7 +6730,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
         Register Reg = S.getReg();
         auto CIter = CrossIterationNeeds.find(Reg.id());
         if (CIter != CrossIterationNeeds.end()) {
-          auto Stg2 = SMS.stageScheduled(const_cast<SUnit *>(S.getSUnit()));
+          auto Stg2 = SMS.stageScheduled(S.getSUnit());
           assert(Stg2 <= Stg && "Data dependence upon earlier stage");
           if (Stg - Stg2 < MAX_STAGES)
             CIter->second.set(Stg - Stg2);

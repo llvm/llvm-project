@@ -406,7 +406,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       ctx.arg.isStatic = true;
       break;
     case OPT_Bdynamic:
-      ctx.arg.isStatic = false;
+      if (!ctx.arg.relocatable)
+        ctx.arg.isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -1226,9 +1227,9 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   // Update pointers in input files.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (Symbol *&sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 
   // Update pointers in the symbol table.

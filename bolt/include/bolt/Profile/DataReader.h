@@ -97,6 +97,9 @@ struct FuncBranchData {
   /// Total execution count for the function.
   int64_t ExecutionCount{0};
 
+  /// Total entry count from external code for the function.
+  uint64_t ExternEntryCount{0};
+
   /// Indicate if the data was used.
   bool Used{false};
 

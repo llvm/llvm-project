@@ -1,11 +1,9 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap module request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import re
 
@@ -45,16 +43,20 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             context="repl",
         )
 
-        def checkSymbolsLoadedWithSize():
+        def check_symbols_loaded_with_size():
             active_modules = self.dap_server.get_modules()
             program_module = active_modules[program_basename]
             self.assertIn("symbolFilePath", program_module)
             self.assertIn(symbols_path, program_module["symbolFilePath"])
-            symbol_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
-            return symbol_regex.match(program_module["symbolStatus"])
+            size_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
+            return size_regex.match(program_module["debugInfoSize"])
 
         if expect_debug_info_size:
-            self.waitUntil(checkSymbolsLoadedWithSize)
+            self.assertTrue(
+                self.wait_until(check_symbols_loaded_with_size),
+                "expect has debug info size",
+            )
+
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module["name"])
@@ -64,7 +66,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # Collect all the module names we saw as events.
         module_new_names = []
         module_changed_names = []
-        module_event = self.dap_server.wait_for_event("module", 1)
+        module_event = self.dap_server.wait_for_event(["module"], 1)
         while module_event is not None:
             reason = module_event["body"]["reason"]
             if reason == "new":
@@ -72,7 +74,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             elif reason == "changed":
                 module_changed_names.append(module_event["body"]["module"]["name"])
 
-            module_event = self.dap_server.wait_for_event("module", 1)
+            module_event = self.dap_server.wait_for_event(["module"], 1)
 
         # Make sure we got an event for every active module.
         self.assertNotEqual(len(module_new_names), 0)
@@ -83,6 +85,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # symbols got added.
         self.assertNotEqual(len(module_changed_names), 0)
         self.assertIn(program_module["name"], module_changed_names)
+        self.continue_to_exit()
 
     @skipIfWindows
     def test_modules(self):
@@ -124,3 +127,5 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(response["body"])
         cu_paths = [cu["compileUnitPath"] for cu in response["body"]["compileUnits"]]
         self.assertIn(main_source_path, cu_paths, "Real path to main.cpp matches")
+
+        self.continue_to_exit()

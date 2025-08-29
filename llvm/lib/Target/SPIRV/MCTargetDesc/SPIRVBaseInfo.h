@@ -37,6 +37,11 @@ namespace Capability {
 #include "SPIRVGenTables.inc"
 } // namespace Capability
 
+namespace Environment {
+#define GET_Environment_DECL
+#include "SPIRVGenTables.inc"
+} // namespace Environment
+
 namespace SourceLanguage {
 #define GET_SourceLanguage_DECL
 #include "SPIRVGenTables.inc"
@@ -222,6 +227,11 @@ namespace CooperativeMatrixOperands {
 #include "SPIRVGenTables.inc"
 } // namespace CooperativeMatrixOperands
 
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
@@ -236,6 +246,7 @@ enum InstFlags {
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
+using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
@@ -249,6 +260,8 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value);
+EnvironmentList getSymbolicOperandAllowedEnvironments(
+    SPIRV::OperandCategory::OperandCategory Category, uint32_t Value);
 CapabilityList
 getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension);
 ExtensionList

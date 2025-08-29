@@ -15,6 +15,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstdint>
 
@@ -112,32 +113,33 @@ protected:
   CallbackID::ValTy NextCallbackID = 1;
 
   /// Remove \p V from the maps and returns the unique_ptr.
-  std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
+  LLVM_ABI std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
   /// Remove \p SBV from all SandboxIR maps and stop owning it. This effectively
   /// detaches \p V from the underlying IR.
-  std::unique_ptr<Value> detach(Value *V);
+  LLVM_ABI std::unique_ptr<Value> detach(Value *V);
   friend class Instruction; // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
-  Value *registerValue(std::unique_ptr<Value> &&VPtr);
+  LLVM_ABI Value *registerValue(std::unique_ptr<Value> &&VPtr);
   friend class EraseFromParent; // For registerValue().
   /// This is the actual function that creates sandboxir values for \p V,
   /// and among others handles all instruction types.
-  Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
+  LLVM_ABI Value *getOrCreateValueInternal(llvm::Value *V,
+                                           llvm::User *U = nullptr);
   /// Get or create a sandboxir::Argument for an existing LLVM IR \p LLVMArg.
-  Argument *getOrCreateArgument(llvm::Argument *LLVMArg);
+  LLVM_ABI Argument *getOrCreateArgument(llvm::Argument *LLVMArg);
   /// Get or create a sandboxir::Value for an existing LLVM IR \p LLVMV.
   Value *getOrCreateValue(llvm::Value *LLVMV) {
     return getOrCreateValueInternal(LLVMV, 0);
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
-  Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+  LLVM_ABI Constant *getOrCreateConstant(llvm::Constant *LLVMC);
   friend class ConstantDataSequential; // For getOrCreateConstant().
   friend class Utils; // For getMemoryBase
 
-  void runEraseInstrCallbacks(Instruction *I);
-  void runCreateInstrCallbacks(Instruction *I);
-  void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
-  void runSetUseCallbacks(const Use &U, Value *NewSrc);
+  LLVM_ABI void runEraseInstrCallbacks(Instruction *I);
+  LLVM_ABI void runCreateInstrCallbacks(Instruction *I);
+  LLVM_ABI void runMoveInstrCallbacks(Instruction *I, const BBIterator &Where);
+  LLVM_ABI void runSetUseCallbacks(const Use &U, Value *NewSrc);
 
   friend class User;  // For runSetUseCallbacks().
   friend class Value; // For runSetUseCallbacks().
@@ -148,90 +150,97 @@ protected:
 
   /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
   /// also create all contents of the block.
-  BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
+  LLVM_ABI BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
   friend class BasicBlock; // For getOrCreateValue().
 
   IRBuilder<ConstantFolder> LLVMIRBuilder;
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
-  VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
+  LLVM_ABI VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
   friend VAArgInst; // For createVAArgInst()
-  FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
+  LLVM_ABI FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
   friend FreezeInst; // For createFreezeInst()
-  FenceInst *createFenceInst(llvm::FenceInst *SI);
+  LLVM_ABI FenceInst *createFenceInst(llvm::FenceInst *SI);
   friend FenceInst; // For createFenceInst()
-  SelectInst *createSelectInst(llvm::SelectInst *SI);
+  LLVM_ABI SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
-  InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
+  LLVM_ABI InsertElementInst *
+  createInsertElementInst(llvm::InsertElementInst *IEI);
   friend InsertElementInst; // For createInsertElementInst()
-  ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
+  LLVM_ABI ExtractElementInst *
+  createExtractElementInst(llvm::ExtractElementInst *EEI);
   friend ExtractElementInst; // For createExtractElementInst()
-  ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
+  LLVM_ABI ShuffleVectorInst *
+  createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
   friend ShuffleVectorInst; // For createShuffleVectorInst()
-  ExtractValueInst *createExtractValueInst(llvm::ExtractValueInst *IVI);
+  LLVM_ABI ExtractValueInst *
+  createExtractValueInst(llvm::ExtractValueInst *IVI);
   friend ExtractValueInst; // For createExtractValueInst()
-  InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
+  LLVM_ABI InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
-  BranchInst *createBranchInst(llvm::BranchInst *I);
+  LLVM_ABI BranchInst *createBranchInst(llvm::BranchInst *I);
   friend BranchInst; // For createBranchInst()
-  LoadInst *createLoadInst(llvm::LoadInst *LI);
+  LLVM_ABI LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
-  StoreInst *createStoreInst(llvm::StoreInst *SI);
+  LLVM_ABI StoreInst *createStoreInst(llvm::StoreInst *SI);
   friend StoreInst; // For createStoreInst()
-  ReturnInst *createReturnInst(llvm::ReturnInst *I);
+  LLVM_ABI ReturnInst *createReturnInst(llvm::ReturnInst *I);
   friend ReturnInst; // For createReturnInst()
-  CallInst *createCallInst(llvm::CallInst *I);
+  LLVM_ABI CallInst *createCallInst(llvm::CallInst *I);
   friend CallInst; // For createCallInst()
-  InvokeInst *createInvokeInst(llvm::InvokeInst *I);
+  LLVM_ABI InvokeInst *createInvokeInst(llvm::InvokeInst *I);
   friend InvokeInst; // For createInvokeInst()
-  CallBrInst *createCallBrInst(llvm::CallBrInst *I);
+  LLVM_ABI CallBrInst *createCallBrInst(llvm::CallBrInst *I);
   friend CallBrInst; // For createCallBrInst()
-  LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
+  LLVM_ABI LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
   friend LandingPadInst; // For createLandingPadInst()
-  CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
+  LLVM_ABI CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
   friend CatchPadInst; // For createCatchPadInst()
-  CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
+  LLVM_ABI CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
   friend CleanupPadInst; // For createCleanupPadInst()
-  CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
+  LLVM_ABI CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
   friend CatchReturnInst; // For createCatchReturnInst()
-  CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
+  LLVM_ABI CleanupReturnInst *
+  createCleanupReturnInst(llvm::CleanupReturnInst *I);
   friend CleanupReturnInst; // For createCleanupReturnInst()
-  GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
+  LLVM_ABI GetElementPtrInst *
+  createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
-  CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
+  LLVM_ABI CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
   friend CatchSwitchInst; // For createCatchSwitchInst()
-  ResumeInst *createResumeInst(llvm::ResumeInst *I);
+  LLVM_ABI ResumeInst *createResumeInst(llvm::ResumeInst *I);
   friend ResumeInst; // For createResumeInst()
-  SwitchInst *createSwitchInst(llvm::SwitchInst *I);
+  LLVM_ABI SwitchInst *createSwitchInst(llvm::SwitchInst *I);
   friend SwitchInst; // For createSwitchInst()
-  UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
+  LLVM_ABI UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
   friend UnaryOperator; // For createUnaryOperator()
-  BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
+  LLVM_ABI BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
   friend BinaryOperator; // For createBinaryOperator()
-  AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
+  LLVM_ABI AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
   friend AtomicRMWInst; // For createAtomicRMWInst()
-  AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
+  LLVM_ABI AtomicCmpXchgInst *
+  createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
   friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
-  AllocaInst *createAllocaInst(llvm::AllocaInst *I);
+  LLVM_ABI AllocaInst *createAllocaInst(llvm::AllocaInst *I);
   friend AllocaInst; // For createAllocaInst()
-  CastInst *createCastInst(llvm::CastInst *I);
+  LLVM_ABI CastInst *createCastInst(llvm::CastInst *I);
   friend CastInst; // For createCastInst()
-  PHINode *createPHINode(llvm::PHINode *I);
+  LLVM_ABI PHINode *createPHINode(llvm::PHINode *I);
   friend PHINode; // For createPHINode()
-  UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
+  LLVM_ABI UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
   friend UnreachableInst; // For createUnreachableInst()
-  CmpInst *createCmpInst(llvm::CmpInst *I);
+  LLVM_ABI CmpInst *createCmpInst(llvm::CmpInst *I);
   friend CmpInst; // For createCmpInst()
-  ICmpInst *createICmpInst(llvm::ICmpInst *I);
+  LLVM_ABI ICmpInst *createICmpInst(llvm::ICmpInst *I);
   friend ICmpInst; // For createICmpInst()
-  FCmpInst *createFCmpInst(llvm::FCmpInst *I);
+  LLVM_ABI FCmpInst *createFCmpInst(llvm::FCmpInst *I);
   friend FCmpInst; // For createFCmpInst()
 
 public:
-  Context(LLVMContext &LLVMCtx);
-  ~Context();
+  LLVM_ABI Context(LLVMContext &LLVMCtx);
+  LLVM_ABI ~Context();
   /// Clears function-level state.
-  void clear();
+  LLVM_ABI void clear();
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
@@ -241,14 +250,14 @@ public:
   /// Convenience function for `getTracker().accept()`
   void accept() { IRTracker.accept(); }
 
-  sandboxir::Value *getValue(llvm::Value *V) const;
+  LLVM_ABI sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
     return getValue(const_cast<llvm::Value *>(V));
   }
 
-  Module *getModule(llvm::Module *LLVMM) const;
+  LLVM_ABI Module *getModule(llvm::Module *LLVMM) const;
 
-  Module *getOrCreateModule(llvm::Module *LLVMM);
+  LLVM_ABI Module *getOrCreateModule(llvm::Module *LLVMM);
 
   Type *getType(llvm::Type *LLVMTy) {
     if (LLVMTy == nullptr)
@@ -265,10 +274,10 @@ public:
   /// This is the main API function for creating Sandbox IR.
   /// Note: this will not fully populate its parent module. The only globals
   /// that will be available are those used within the function.
-  Function *createFunction(llvm::Function *F);
+  LLVM_ABI Function *createFunction(llvm::Function *F);
 
   /// Create a sandboxir::Module corresponding to \p LLVMM.
-  Module *createModule(llvm::Module *LLVMM);
+  LLVM_ABI Module *createModule(llvm::Module *LLVMM);
 
   /// \Returns the number of values registered with Context.
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
@@ -277,26 +286,26 @@ public:
   /// to be removed from its parent. Note that this will also be called when
   /// reverting the creation of an instruction.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
-  void unregisterEraseInstrCallback(CallbackID ID);
+  LLVM_ABI CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
+  LLVM_ABI void unregisterEraseInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called right after a SandboxIR instruction
   /// is created. Note that this will also be called when reverting the removal
   /// of an instruction.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
-  void unregisterCreateInstrCallback(CallbackID ID);
+  LLVM_ABI CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
+  LLVM_ABI void unregisterCreateInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be moved. Note that this will also be called when reverting a move.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
-  void unregisterMoveInstrCallback(CallbackID ID);
+  LLVM_ABI CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
+  LLVM_ABI void unregisterMoveInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a Use gets set.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerSetUseCallback(SetUseCallback CB);
-  void unregisterSetUseCallback(CallbackID ID);
+  LLVM_ABI CallbackID registerSetUseCallback(SetUseCallback CB);
+  LLVM_ABI void unregisterSetUseCallback(CallbackID ID);
 };
 
 } // namespace sandboxir

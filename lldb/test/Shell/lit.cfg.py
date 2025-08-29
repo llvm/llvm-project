@@ -25,7 +25,7 @@ config.test_format = toolchain.ShTestLldb(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
-config.suffixes = [".test", ".cpp", ".s", ".m"]
+config.suffixes = [".test", ".cpp", ".s", ".m", ".ll"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -203,3 +203,6 @@ if platform.system() == "Darwin":
 # location of the Python libraries. This ensures that we use the same
 # version of Python that was used to build lldb to run our tests.
 config.environment["PYTHONHOME"] = config.python_root_dir
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

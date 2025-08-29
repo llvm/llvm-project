@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include "src/sys/auxv/getauxval.h"

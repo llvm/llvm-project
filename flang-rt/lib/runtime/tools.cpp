@@ -205,7 +205,7 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
 // Doing the recursion upwards instead of downwards puts the more common
 // cases earlier in the if-chain and has a tangible impact on performance.
 template <typename P, int RANK> struct ShallowCopyRankSpecialize {
-  static bool execute(const Descriptor &to, const Descriptor &from,
+  static RT_API_ATTRS bool execute(const Descriptor &to, const Descriptor &from,
       bool toIsContiguous, bool fromIsContiguous) {
     if (to.rank() == RANK && from.rank() == RANK) {
       ShallowCopyInner<P, RANK>(to, from, toIsContiguous, fromIsContiguous);
@@ -217,7 +217,7 @@ template <typename P, int RANK> struct ShallowCopyRankSpecialize {
 };
 
 template <typename P> struct ShallowCopyRankSpecialize<P, maxRank + 1> {
-  static bool execute(const Descriptor &to, const Descriptor &from,
+  static RT_API_ATTRS bool execute(const Descriptor &to, const Descriptor &from,
       bool toIsContiguous, bool fromIsContiguous) {
     return false;
   }

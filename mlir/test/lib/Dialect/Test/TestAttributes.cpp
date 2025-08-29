@@ -194,7 +194,7 @@ void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
   if (auto *blob = getHandle().getBlob())
     return blob->getDataAs<uint64_t>();
-  return std::nullopt;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +211,16 @@ static ParseResult parseTrueFalse(AsmParser &p, std::optional<int> &result) {
 
 static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
   p << (*result ? "true" : "false");
+}
+
+//===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -513,6 +523,18 @@ Attribute SlashAttr::parse(AsmParser &parser, Type type) {
 
 void SlashAttr::print(AsmPrinter &printer) const {
   printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestCustomStorageCtorAttr
+//===----------------------------------------------------------------------===//
+
+test::detail::TestCustomStorageCtorAttrAttrStorage *
+test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

@@ -30,6 +30,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -87,7 +88,7 @@ static cl::opt<bool> EarlyByValArgsCopy(
     cl::desc("Create a copy of byval function arguments early."),
     cl::init(false), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // Register the target.
   RegisterTargetMachine<NVPTXTargetMachine32> X(getTheNVPTXTarget32());
   RegisterTargetMachine<NVPTXTargetMachine64> Y(getTheNVPTXTarget64());
@@ -114,6 +115,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
+  initializeNVPTXPrologEpilogPassPass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -124,12 +126,12 @@ static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
   // (addrspace:3).
   if (!is64Bit)
     Ret += "-p:32:32-p6:32:32-p7:32:32";
-  else if (UseShortPointers) {
+  else if (UseShortPointers)
     Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
-  } else
+  else
     Ret += "-p6:32:32";
 
-  Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
+  Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
 
   return Ret;
 }

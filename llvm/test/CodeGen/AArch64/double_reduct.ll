@@ -65,8 +65,10 @@ define float @fmul_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v2.2s, v3.2s
-; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-NEXT:    mov s3, v1.s[1]
+; CHECK-GI-NEXT:    fmul s0, s0, s2
+; CHECK-GI-NEXT:    fmul s1, s1, s3
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v8f32(float 1.0, <8 x float> %a)
@@ -90,8 +92,10 @@ define float @fmul_f32_same(<4 x float> %a, <4 x float> %b) {
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-NEXT:    mov s3, v1.s[1]
+; CHECK-GI-NEXT:    fmul s0, s0, s2
+; CHECK-GI-NEXT:    fmul s1, s1, s3
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.0, <4 x float> %a)
@@ -829,13 +833,11 @@ define i32 @smax_i32_same(<4 x i32> %a, <4 x i32> %b) {
 define float @nested_fadd_f32(<4 x float> %a, <4 x float> %b, float %c, float %d) {
 ; CHECK-SD-LABEL: nested_fadd_f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    faddp v1.4s, v1.4s, v1.4s
+; CHECK-SD-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fadd s2, s2, s3
 ; CHECK-SD-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    faddp s1, v1.2s
 ; CHECK-SD-NEXT:    faddp s0, v0.2s
-; CHECK-SD-NEXT:    fadd s1, s1, s3
 ; CHECK-SD-NEXT:    fadd s0, s0, s2
-; CHECK-SD-NEXT:    fadd s0, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_fadd_f32:
@@ -901,15 +903,12 @@ define float @nested_fadd_f32_slow(<4 x float> %a, <4 x float> %b, float %c, flo
 define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d) {
 ; CHECK-SD-LABEL: nested_mul_f32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    fmul v1.2s, v1.2s, v4.2s
-; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v5.2s
-; CHECK-SD-NEXT:    fmul s1, s1, v1.s[1]
+; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fmul s2, s2, s3
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-SD-NEXT:    fmul s1, s1, s3
 ; CHECK-SD-NEXT:    fmul s0, s0, s2
-; CHECK-SD-NEXT:    fmul s0, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_mul_f32:
@@ -918,8 +917,10 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 ; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v4.2s
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v5.2s
-; CHECK-GI-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-GI-NEXT:    fmul s1, s1, v1.s[1]
+; CHECK-GI-NEXT:    mov s4, v0.s[1]
+; CHECK-GI-NEXT:    mov s5, v1.s[1]
+; CHECK-GI-NEXT:    fmul s0, s0, s4
+; CHECK-GI-NEXT:    fmul s1, s1, s5
 ; CHECK-GI-NEXT:    fmul s0, s0, s2
 ; CHECK-GI-NEXT:    fmul s1, s1, s3
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
@@ -935,12 +936,10 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 define i32 @nested_add_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_add_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    addv s1, v1.4s
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    add w8, w0, w1
 ; CHECK-SD-NEXT:    addv s0, v0.4s
-; CHECK-SD-NEXT:    fmov w8, s1
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    add w9, w9, w0
-; CHECK-SD-NEXT:    add w8, w8, w1
 ; CHECK-SD-NEXT:    add w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -965,12 +964,10 @@ define i32 @nested_add_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_add_c1_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_add_c1_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    addv s1, v1.4s
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    add w8, w0, w1
 ; CHECK-SD-NEXT:    addv s0, v0.4s
-; CHECK-SD-NEXT:    fmov w8, s1
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    add w9, w0, w9
-; CHECK-SD-NEXT:    add w8, w8, w1
 ; CHECK-SD-NEXT:    add w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -995,12 +992,10 @@ define i32 @nested_add_c1_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_add_c2_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_add_c2_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    addv s1, v1.4s
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    add w8, w0, w1
 ; CHECK-SD-NEXT:    addv s0, v0.4s
-; CHECK-SD-NEXT:    fmov w8, s1
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    add w9, w9, w0
-; CHECK-SD-NEXT:    add w8, w1, w8
 ; CHECK-SD-NEXT:    add w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1059,19 +1054,14 @@ define i32 @nested_add_manyreduct_i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, 
 define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_mul_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v3.2s
-; CHECK-SD-NEXT:    mul v1.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
+; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    mul w8, w0, w1
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    mov w9, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    mov w9, v1.s[1]
-; CHECK-SD-NEXT:    mul w8, w10, w8
-; CHECK-SD-NEXT:    fmov w10, s1
 ; CHECK-SD-NEXT:    mul w9, w10, w9
-; CHECK-SD-NEXT:    mul w8, w8, w0
-; CHECK-SD-NEXT:    mul w9, w9, w1
-; CHECK-SD-NEXT:    mul w0, w8, w9
+; CHECK-SD-NEXT:    mul w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_mul_i32:
@@ -1101,19 +1091,14 @@ define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_and_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    and w8, w0, w1
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
-; CHECK-SD-NEXT:    lsr x11, x8, #32
-; CHECK-SD-NEXT:    and w9, w9, w0
-; CHECK-SD-NEXT:    and w8, w8, w1
-; CHECK-SD-NEXT:    and w9, w9, w10
-; CHECK-SD-NEXT:    and w8, w8, w11
-; CHECK-SD-NEXT:    and w0, w9, w8
+; CHECK-SD-NEXT:    and w8, w9, w8
+; CHECK-SD-NEXT:    and w0, w8, w10
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_and_i32:
@@ -1143,19 +1128,14 @@ define i32 @nested_and_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_or_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    orr v1.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr w8, w0, w1
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
-; CHECK-SD-NEXT:    lsr x11, x8, #32
-; CHECK-SD-NEXT:    orr w9, w9, w0
-; CHECK-SD-NEXT:    orr w8, w8, w1
-; CHECK-SD-NEXT:    orr w9, w9, w10
-; CHECK-SD-NEXT:    orr w8, w8, w11
-; CHECK-SD-NEXT:    orr w0, w9, w8
+; CHECK-SD-NEXT:    orr w8, w9, w8
+; CHECK-SD-NEXT:    orr w0, w8, w10
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_or_i32:
@@ -1185,19 +1165,14 @@ define i32 @nested_or_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_xor_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    eor v1.8b, v1.8b, v2.8b
-; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    eor w8, w0, w1
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x9, d0
 ; CHECK-SD-NEXT:    lsr x10, x9, #32
-; CHECK-SD-NEXT:    lsr x11, x8, #32
-; CHECK-SD-NEXT:    eor w9, w9, w0
-; CHECK-SD-NEXT:    eor w8, w8, w1
-; CHECK-SD-NEXT:    eor w9, w9, w10
-; CHECK-SD-NEXT:    eor w8, w8, w11
-; CHECK-SD-NEXT:    eor w0, w9, w8
+; CHECK-SD-NEXT:    eor w8, w9, w8
+; CHECK-SD-NEXT:    eor w0, w8, w10
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_xor_i32:
@@ -1227,14 +1202,11 @@ define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_smin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_smin_i32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel w8, w0, w1, lt
 ; CHECK-SD-NEXT:    sminv s0, v0.4s
-; CHECK-SD-NEXT:    sminv s1, v1.4s
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    fmov w8, s1
-; CHECK-SD-NEXT:    cmp w9, w0
-; CHECK-SD-NEXT:    csel w9, w9, w0, lt
-; CHECK-SD-NEXT:    cmp w8, w1
-; CHECK-SD-NEXT:    csel w8, w8, w1, lt
 ; CHECK-SD-NEXT:    cmp w9, w8
 ; CHECK-SD-NEXT:    csel w0, w9, w8, lt
 ; CHECK-SD-NEXT:    ret
@@ -1263,14 +1235,11 @@ define i32 @nested_smin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_smax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_smax_i32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel w8, w0, w1, gt
 ; CHECK-SD-NEXT:    smaxv s0, v0.4s
-; CHECK-SD-NEXT:    smaxv s1, v1.4s
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    fmov w8, s1
-; CHECK-SD-NEXT:    cmp w9, w0
-; CHECK-SD-NEXT:    csel w9, w9, w0, gt
-; CHECK-SD-NEXT:    cmp w8, w1
-; CHECK-SD-NEXT:    csel w8, w8, w1, gt
 ; CHECK-SD-NEXT:    cmp w9, w8
 ; CHECK-SD-NEXT:    csel w0, w9, w8, gt
 ; CHECK-SD-NEXT:    ret
@@ -1299,14 +1268,11 @@ define i32 @nested_smax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_umin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_umin_i32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel w8, w0, w1, lo
 ; CHECK-SD-NEXT:    uminv s0, v0.4s
-; CHECK-SD-NEXT:    uminv s1, v1.4s
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    fmov w8, s1
-; CHECK-SD-NEXT:    cmp w9, w0
-; CHECK-SD-NEXT:    csel w9, w9, w0, lo
-; CHECK-SD-NEXT:    cmp w8, w1
-; CHECK-SD-NEXT:    csel w8, w8, w1, lo
 ; CHECK-SD-NEXT:    cmp w9, w8
 ; CHECK-SD-NEXT:    csel w0, w9, w8, lo
 ; CHECK-SD-NEXT:    ret
@@ -1335,14 +1301,11 @@ define i32 @nested_umin_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define i32 @nested_umax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_umax_i32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel w8, w0, w1, hi
 ; CHECK-SD-NEXT:    umaxv s0, v0.4s
-; CHECK-SD-NEXT:    umaxv s1, v1.4s
 ; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    fmov w8, s1
-; CHECK-SD-NEXT:    cmp w9, w0
-; CHECK-SD-NEXT:    csel w9, w9, w0, hi
-; CHECK-SD-NEXT:    cmp w8, w1
-; CHECK-SD-NEXT:    csel w8, w8, w1, hi
 ; CHECK-SD-NEXT:    cmp w9, w8
 ; CHECK-SD-NEXT:    csel w0, w9, w8, hi
 ; CHECK-SD-NEXT:    ret
@@ -1371,11 +1334,10 @@ define i32 @nested_umax_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 define float @nested_fmin_float(<4 x float> %a, <4 x float> %b, float %c, float %d) {
 ; CHECK-SD-LABEL: nested_fmin_float:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fminnmv s1, v1.4s
+; CHECK-SD-NEXT:    fminnm v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fminnm s2, s2, s3
 ; CHECK-SD-NEXT:    fminnmv s0, v0.4s
-; CHECK-SD-NEXT:    fminnm s1, s1, s3
 ; CHECK-SD-NEXT:    fminnm s0, s0, s2
-; CHECK-SD-NEXT:    fminnm s0, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_fmin_float:
@@ -1397,11 +1359,10 @@ define float @nested_fmin_float(<4 x float> %a, <4 x float> %b, float %c, float 
 define float @nested_fmax_float(<4 x float> %a, <4 x float> %b, float %c, float %d) {
 ; CHECK-SD-LABEL: nested_fmax_float:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmaxnmv s1, v1.4s
+; CHECK-SD-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fmaxnm s2, s2, s3
 ; CHECK-SD-NEXT:    fmaxnmv s0, v0.4s
-; CHECK-SD-NEXT:    fmaxnm s1, s1, s3
 ; CHECK-SD-NEXT:    fmaxnm s0, s0, s2
-; CHECK-SD-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_fmax_float:

@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -53,6 +56,11 @@ let Command = "settings clear" in {
     Desc<"Clear all settings.">;
 }
 
+let Command = "settings show" in {
+  def setshow_defaults : Option<"defaults", "d">,
+    Desc<"Include default values if defined.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
@@ -76,7 +84,7 @@ let Command = "breakpoint modify" in {
     Desc<"Set the number of times this breakpoint is skipped before stopping.">;
   def breakpoint_modify_one_shot : Option<"one-shot", "o">, Group<1>,
     Arg<"Boolean">,
-    Desc<"The breakpoint is deleted the first time it stop causes a stop.">;
+    Desc<"The breakpoint is deleted the first time it causes a stop.">;
   def breakpoint_modify_thread_index : Option<"thread-index", "x">, Group<1>,
     Arg<"ThreadIndex">, Desc<"The breakpoint stops only for the thread whose "
     "index matches this argument.">;
@@ -92,6 +100,12 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
     Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
     "expression evaluates to true.">;
+  def breakpoint_modify_condition_language
+      : Option<"condition-language", "Y">,
+        Group<1>,
+        Arg<"Language">,
+        Desc<"Specifies the Language to use when executing the breakpoint's "
+             "condition expression.">;
   def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
     Arg<"Boolean">,
     Desc<"The breakpoint will auto-continue after running its commands.">;
@@ -196,7 +210,7 @@ let Command = "breakpoint set" in {
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
     Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
-    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,
@@ -352,6 +366,8 @@ let Command = "disassemble" in {
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
     Desc<"Force disassembly of large functions.">;
+  def disassemble_options_variable : Option<"variable", "v">,
+    Desc<"Enable variable disassembly annotations for this invocation.">;
 }
 
 let Command = "diagnostics dump" in {
@@ -727,18 +743,35 @@ let Command = "process launch" in {
 }
 
 let Command = "process attach" in {
-  def process_attach_continue : Option<"continue", "c">,
-    Desc<"Immediately continue the process once attached.">;
-  def process_attach_plugin : Option<"plugin", "P">, Arg<"Plugin">,
-    Desc<"Name of the process plugin you want to use.">;
-  def process_attach_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
-    Desc<"The process ID of an existing process to attach to.">;
-  def process_attach_name : Option<"name", "n">, Group<2>, Arg<"ProcessName">,
-    Desc<"The name of the process to attach to.">;
-  def process_attach_include_existing : Option<"include-existing", "i">,
-    Group<2>, Desc<"Include existing processes when doing attach -w.">;
-  def process_attach_waitfor : Option<"waitfor", "w">, Group<2>,
-    Desc<"Wait for the process with <process-name> to launch.">;
+  def process_attach_continue
+      : Option<"continue", "c">,
+        Desc<"Immediately ${ansi.underline}c${ansi.normal}ontinue the process "
+             "once attached.">;
+  def process_attach_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"Name of the process ${ansi.underline}p${ansi.normal}lugin you "
+             "want to use.">;
+  def process_attach_pid : Option<"pid", "p">,
+                           Group<1>,
+                           Arg<"Pid">,
+                           Desc<"The ${ansi.underline}p${ansi.normal}rocess ID "
+                                "of an existing process to attach to.">;
+  def process_attach_name : Option<"name", "n">,
+                            Group<2>,
+                            Arg<"ProcessName">,
+                            Desc<"The ${ansi.underline}n${ansi.normal}ame of "
+                                 "the process to attach to.">;
+  def process_attach_include_existing
+      : Option<"include-existing", "i">,
+        Group<2>,
+        Desc<"${ansi.underline}I${ansi.normal}nclude existing processes when "
+             "doing attach -w.">;
+  def process_attach_waitfor
+      : Option<"waitfor", "w">,
+        Group<2>,
+        Desc<"${ansi.underline}W${ansi.normal}ait for the process with "
+             "<process-name> to launch.">;
 }
 
 let Command = "process continue" in {
@@ -1482,13 +1515,15 @@ let Command = "statistics dump" in {
     "this is turned off unless specified. "
     "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Arg<"Boolean">,
-    Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is 'true', include a JSON array with all commands the user and/or "
-    "scripts executed during a debug session. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified.">;
+  def statistics_dump_transcript
+      : Option<"transcript", "t">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"If the setting interpreter.save-transcript is enabled and this "
+             "option is 'true', include a JSON array with all commands the "
+             "user and/or "
+             "scripts executed during a debug session. "
+             "Defaults to false. ">;
   def statistics_dump_plugins
       : Option<"plugins", "p">,
         Group<1>,

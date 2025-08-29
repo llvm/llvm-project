@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -32,10 +31,6 @@ void registerToLLVMIRTranslation() {
         if (!llvmModule)
           return failure();
 
-        // When printing LLVM IR, we should convert the module to the debug info
-        // format that LLVM expects us to print.
-        // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-        llvm::ScopedDbgInfoFormatSetter formatSetter(*llvmModule, true);
         llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();

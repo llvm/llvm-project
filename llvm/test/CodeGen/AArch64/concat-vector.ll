@@ -13,10 +13,11 @@ define <4 x i8> @concat1(<2 x i8> %A, <2 x i8> %B) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov w8, v0.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov w9, v1.s[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov w8, v1.s[1]
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], w8
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    mov v0.h[3], w9
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
    %v4i8 = shufflevector <2 x i8> %A, <2 x i8> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -185,8 +186,9 @@ define <16 x i8> @concat_v16s8_v4s8_load(ptr %ptrA, ptr %ptrB, ptr %ptrC, ptr %p
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
-; CHECK-NEXT:    ld1 { v0.s }[2], [x2]
-; CHECK-NEXT:    ld1 { v0.s }[3], [x3]
+; CHECK-NEXT:    ldr s1, [x2]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x3]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
     %A = load <4 x i8>, ptr %ptrA
     %B = load <4 x i8>, ptr %ptrB

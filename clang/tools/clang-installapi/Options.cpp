@@ -100,8 +100,8 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
   }
 
   std::vector<const char *> CArgs(Storage.size());
-  llvm::for_each(Storage,
-                 [&CArgs](StringRef Str) { CArgs.emplace_back(Str.data()); });
+  for (StringRef Str : Storage)
+    CArgs.emplace_back(Str.data());
 
   unsigned MissingArgIndex, MissingArgCount;
   return Table->ParseArgs(CArgs, MissingArgIndex, MissingArgCount);
@@ -730,8 +730,8 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   // After all InstallAPI necessary arguments have been collected. Go back and
   // assign values that were unknown before the clang driver opt table was used.
   ArchitectureSet AllArchs;
-  llvm::for_each(DriverOpts.Targets,
-                 [&AllArchs](const auto &T) { AllArchs.set(T.first.Arch); });
+  for (const auto &T : DriverOpts.Targets)
+    AllArchs.set(T.first.Arch);
   auto assignDefaultLibAttrs = [&AllArchs](LibAttrs &Attrs) {
     for (auto &[_, Archs] : Attrs.get())
       if (Archs.empty())
@@ -794,8 +794,8 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
   };
 
   PlatformSet Platforms;
-  llvm::for_each(DriverOpts.Targets,
-                 [&](const auto &T) { Platforms.insert(T.first.Platform); });
+  for (const auto &T : DriverOpts.Targets)
+    Platforms.insert(T.first.Platform);
   // Populate search paths by looking at user paths before system ones.
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
   for (const PlatformType P : Platforms) {

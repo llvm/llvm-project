@@ -44,11 +44,27 @@ define half @test_v1f16(<1 x half> %a) nounwind {
 }
 
 define float @test_v1f32(<1 x float> %a) nounwind {
-; CHECK-LABEL: test_v1f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v1f32:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NOFP-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v1f32:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-FP-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v1f32:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v1f32:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-FP-GI-NEXT:    ret
   %b = call nnan float @llvm.vector.reduce.fmin.v1f32(<1 x float> %a)
   ret float %b
 }
@@ -573,7 +589,7 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    b.ge .LBB18_2
+; CHECK-NEXT:    b.pl .LBB18_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:  .LBB18_2:

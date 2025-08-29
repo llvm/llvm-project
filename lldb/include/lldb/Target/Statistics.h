@@ -153,6 +153,8 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
+  uint32_t dwo_file_count = 0;
+  uint32_t loaded_dwo_file_count = 0;
 };
 
 struct ConstStringStats {
@@ -189,11 +191,7 @@ public:
 
   void SetIncludeTranscript(bool value) { m_include_transcript = value; }
   bool GetIncludeTranscript() const {
-    if (m_include_transcript.has_value())
-      return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value based on
-    // `m_summary_only`.
-    return !GetSummaryOnly();
+    return m_include_transcript.value_or(false);
   }
 
   void SetIncludePlugins(bool value) { m_include_plugins = value; }

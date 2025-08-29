@@ -16,7 +16,6 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -186,7 +185,8 @@ LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
                           TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
                           ScalarEvolution *, ICFLoopSafetyInfo *,
                           SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation);
+                          bool, bool AllowSpeculation,
+                          bool HasCoroSuspendInst = false);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
@@ -371,6 +371,9 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
 LLVM_ABI constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+/// Returns the llvm.vector.reduce min/max intrinsic that corresponds to the
+/// intrinsic op.
+LLVM_ABI Intrinsic::ID getMinMaxReductionIntrinsicID(Intrinsic::ID IID);
 
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 LLVM_ABI unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
@@ -423,8 +426,9 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-LLVM_ABI Value *createSimpleReduction(VectorBuilder &VB, Value *Src,
-                                      RecurKind RdxKind);
+LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
+                                      RecurKind RdxKind, Value *Mask,
+                                      Value *EVL);
 
 /// Create a reduction of the given vector \p Src for a reduction of kind
 /// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
@@ -434,7 +438,8 @@ LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
 /// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::FindLastIV.
 LLVM_ABI Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
-                                          Value *Start, Value *Sentinel);
+                                          RecurKind RdxKind, Value *Start,
+                                          Value *Sentinel);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
@@ -442,8 +447,9 @@ LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,
                                        Value *Src, Value *Start);
 /// Overloaded function to generate vector-predication intrinsics for ordered
 /// reduction.
-LLVM_ABI Value *createOrderedReduction(VectorBuilder &VB, RecurKind RdxKind,
-                                       Value *Src, Value *Start);
+LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,
+                                       Value *Src, Value *Start, Value *Mask,
+                                       Value *EVL);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).

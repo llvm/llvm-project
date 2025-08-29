@@ -71,23 +71,6 @@ struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 struct contiguous_iterator_tag : public random_access_iterator_tag {};
 #endif
 
-template <class _Tp>
-struct __has_iterator_typedefs {
-private:
-  template <class _Up>
-  static false_type __test(...);
-  template <class _Up>
-  static true_type
-  __test(__void_t<typename _Up::iterator_category>* = nullptr,
-         __void_t<typename _Up::difference_type>*   = nullptr,
-         __void_t<typename _Up::value_type>*        = nullptr,
-         __void_t<typename _Up::reference>*         = nullptr,
-         __void_t<typename _Up::pointer>*           = nullptr);
-
-public:
-  static const bool value = decltype(__test<_Tp>(nullptr, nullptr, nullptr, nullptr, nullptr))::value;
-};
-
 #if _LIBCPP_STD_VER >= 20
 
 // The `cpp17-*-iterator` exposition-only concepts have very similar names to the `Cpp17*Iterator` named requirements
@@ -321,6 +304,23 @@ struct __iterator_traits<_Iter, true>
     : __iterator_traits_impl< _Iter,
                               is_convertible<typename _Iter::iterator_category, input_iterator_tag>::value ||
                                   is_convertible<typename _Iter::iterator_category, output_iterator_tag>::value > {};
+
+template <class _Tp>
+struct __has_iterator_typedefs {
+private:
+  template <class _Up>
+  static false_type __test(...);
+  template <class _Up>
+  static true_type
+  __test(__void_t<typename _Up::iterator_category>* = nullptr,
+         __void_t<typename _Up::difference_type>*   = nullptr,
+         __void_t<typename _Up::value_type>*        = nullptr,
+         __void_t<typename _Up::reference>*         = nullptr,
+         __void_t<typename _Up::pointer>*           = nullptr);
+
+public:
+  static const bool value = decltype(__test<_Tp>(nullptr, nullptr, nullptr, nullptr, nullptr))::value;
+};
 
 // iterator_traits<Iterator> will only have the nested types if Iterator::iterator_category
 //    exists.  Else iterator_traits<Iterator> will be an empty class.  This is a

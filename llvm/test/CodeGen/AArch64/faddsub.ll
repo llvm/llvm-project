@@ -196,7 +196,7 @@ define <7 x half> @fadd_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[1]
@@ -537,7 +537,7 @@ define <7 x half> @fsub_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v4.h[2], v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v3.h[2], v1.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v4.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[1]
