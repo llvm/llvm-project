@@ -41,10 +41,10 @@ void f() {
   printf("fde_fpc = %p\n", fde_fpc);
   printf("fde_fpc1 = %p\n", fde_fpc1);
   fflush(stdout);
-//  assert(fde_pc != NULL);
-//  assert(fde_fpc != NULL);
-//  assert(fde_fpc1 != NULL);
-//  assert(fde_fpc == fde_fpc1);
+  //  assert(fde_pc != NULL);
+  //  assert(fde_fpc != NULL);
+  //  assert(fde_fpc1 != NULL);
+  //  assert(fde_fpc == fde_fpc1);
 }
 
 int main() {
