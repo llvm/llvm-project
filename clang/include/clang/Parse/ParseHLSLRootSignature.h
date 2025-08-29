@@ -240,6 +240,8 @@ IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
                                        llvm::dxbc::RootSignatureVersion Version,
                                        StringLiteral *Signature);
 
+void HandleRootSignatureTarget(Sema &S);
+
 } // namespace hlsl
 } // namespace clang
 
