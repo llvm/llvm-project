@@ -979,7 +979,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
       MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
       ValueVector valuesToMap, ValueRange inputs, TypeRange outputTypes,
       Type originalType, const TypeConverter *converter,
-      UnrealizedConversionCastOp *castOp = nullptr,
       bool isPureTypeConversion = true);
 
   /// Find a replacement value for the given SSA value in the conversion value
@@ -1588,7 +1587,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
               origArg.getLoc(),
               /*valuesToMap=*/{}, /*inputs=*/ValueRange(),
               /*outputTypes=*/origArgType, /*originalType=*/Type(), converter,
-              /*castOp=*/nullptr, /*isPureTypeConversion=*/false)
+              /*isPureTypeConversion=*/false)
               .front();
       replaceUsesOfBlockArgument(origArg, mat, converter);
       continue;
@@ -1630,7 +1629,7 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
     ValueVector valuesToMap, ValueRange inputs, TypeRange outputTypes,
     Type originalType, const TypeConverter *converter,
-    UnrealizedConversionCastOp *castOp, bool isPureTypeConversion) {
+    bool isPureTypeConversion) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
   assert(TypeRange(inputs) != outputTypes &&
@@ -1651,8 +1650,6 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     convertOp->setAttr(kPureTypeConversionMarker, builder.getUnitAttr());
 
   // Register the materialization.
-  if (castOp)
-    *castOp = convertOp;
   unresolvedMaterializations[convertOp] =
       UnresolvedMaterializationInfo(converter, kind, originalType);
   if (config.allowPatternRollback) {
@@ -1866,8 +1863,7 @@ void ConversionPatternRewriterImpl::replaceOp(
           MaterializationKind::Source, computeInsertPoint(result),
           result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
           /*outputTypes=*/result.getType(), /*originalType=*/Type(),
-          currentTypeConverter, /*castOp=*/nullptr,
-          /*isPureTypeConversion=*/false);
+          currentTypeConverter, /*isPureTypeConversion=*/false);
       continue;
     }
 
