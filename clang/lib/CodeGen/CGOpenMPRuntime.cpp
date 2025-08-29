@@ -7538,10 +7538,10 @@ private:
       MapCombinedInfoTy &CombinedInfo,
       MapCombinedInfoTy &StructBaseCombinedInfo,
       StructRangeInfoTy &PartialStruct, AttachInfoTy &AttachInfo,
-      bool IsFirstComponentList,
-      bool IsImplicit, bool GenerateAllInfoForClauses,
-      const ValueDecl *Mapper = nullptr, bool ForDeviceAddr = false,
-      const ValueDecl *BaseDecl = nullptr, const Expr *MapExpr = nullptr,
+      bool IsFirstComponentList, bool IsImplicit,
+      bool GenerateAllInfoForClauses, const ValueDecl *Mapper = nullptr,
+      bool ForDeviceAddr = false, const ValueDecl *BaseDecl = nullptr,
+      const Expr *MapExpr = nullptr,
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedElements = {}) const {
 
