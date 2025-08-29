@@ -632,9 +632,6 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
-  auto *Sel = dyn_cast<SelectInst>(&I);
-  bool BFloatOpnd = !Sel && I.getType()->getScalarType()->isBFloatTy();
-
   return MIFlags;
 }
 
