@@ -55,8 +55,6 @@
 namespace llvm {
 namespace ir2vec {
 
-static cl::OptionCategory IR2VecToolCategory("IR2Vec Tool Options");
-
 // Subcommands
 static cl::SubCommand
     TripletsSubCmd("triplets", "Generate triplets for vocabulary training");
@@ -72,18 +70,18 @@ static cl::opt<std::string>
     InputFilename(cl::Positional,
                   cl::desc("<input bitcode file or '-' for stdin>"),
                   cl::init("-"), cl::sub(TripletsSubCmd),
-                  cl::sub(EmbeddingsSubCmd), cl::cat(IR2VecToolCategory));
+                  cl::sub(EmbeddingsSubCmd), cl::cat(ir2vec::IR2VecCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"),
-                                           cl::cat(IR2VecToolCategory));
+                                           cl::cat(ir2vec::IR2VecCategory));
 
 // Embedding-specific options
 static cl::opt<std::string>
     FunctionName("function", cl::desc("Process specific function only"),
                  cl::value_desc("name"), cl::Optional, cl::init(""),
-                 cl::sub(EmbeddingsSubCmd), cl::cat(IR2VecToolCategory));
+                 cl::sub(EmbeddingsSubCmd), cl::cat(ir2vec::IR2VecCategory));
 
 enum EmbeddingLevel {
   InstructionLevel, // Generate instruction-level embeddings
@@ -100,7 +98,7 @@ static cl::opt<EmbeddingLevel>
                      clEnumValN(FunctionLevel, "func",
                                 "Generate function-level embeddings")),
           cl::init(FunctionLevel), cl::sub(EmbeddingsSubCmd),
-          cl::cat(IR2VecToolCategory));
+          cl::cat(ir2vec::IR2VecCategory));
 
 namespace {
 
@@ -325,7 +323,7 @@ int main(int argc, char **argv) {
   using namespace llvm::ir2vec;
 
   InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(IR2VecToolCategory);
+  cl::HideUnrelatedOptions(ir2vec::IR2VecCategory);
   cl::ParseCommandLineOptions(
       argc, argv,
       "IR2Vec - Embedding Generation Tool\n"

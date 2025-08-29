@@ -2310,7 +2310,9 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << "__builtin_masked_load" << MaskTy << PointeeTy);
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << PointeeTy);
 
   TheCall->setType(PointeeTy);
   return TheCall;
@@ -2344,7 +2346,9 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
       MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << "__builtin_masked_store" << MaskTy << PointeeTy);
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << PointeeTy);
 
   if (!S.Context.hasSameType(ValTy, PointeeTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
@@ -2610,8 +2614,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // TheCall will be freed by the smart pointer here, but that's fine, since
     // BuiltinShuffleVector guts it, but then doesn't release it.
   case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load:
     return BuiltinMaskedLoad(*this, TheCall);
   case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store:
     return BuiltinMaskedStore(*this, TheCall);
   case Builtin::BI__builtin_invoke:
     return BuiltinInvoke(*this, TheCall);
