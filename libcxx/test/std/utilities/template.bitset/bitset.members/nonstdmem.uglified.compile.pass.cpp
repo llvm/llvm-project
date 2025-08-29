@@ -14,8 +14,6 @@
 // See https://github.com/llvm/llvm-project/issues/111125.
 // See https://github.com/llvm/llvm-project/issues/121618.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstddef>
 #include <bitset>
 #include <type_traits>
