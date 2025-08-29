@@ -439,7 +439,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Monotonic))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
