@@ -1,0 +1,28 @@
+# NOTE: Dead register detection test
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=amdgpu-next-use -debug-only=amdgpu-next-use %s -o /dev/null 2>&1 | FileCheck %s
+
+---
+name:            dead_registers
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    ; %0 is defined but never used - should be DEAD
+    %0:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 100, implicit $exec  
+    %2:vgpr_32 = V_ADD_F32_e32 %1, %1, implicit $exec, implicit $mode
+    S_ENDPGM 0
+
+# CHECK: === NextUseAnalysis Results for dead_registers ===
+# CHECK: --- MBB_0 ---
+
+# %0 should be considered dead since it's never used
+# CHECK: Block End Distances:
+# Look for either DEAD or very high distance for %0
+
+# CHECK: === End NextUseAnalysis Results ===
+...

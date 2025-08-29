@@ -170,6 +170,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
     }
     }
     dumpUsedInBlock();
+  // Dump complete analysis results for testing
+  LLVM_DEBUG(dumpAllNextUseDistances(MF));
     T1->stopTimer();
     LLVM_DEBUG(TG->print(llvm::errs()));
   }
@@ -332,4 +334,103 @@ void AMDGPUNextUseAnalysisWrapper::getAnalysisUsage(
 AMDGPUNextUseAnalysisWrapper::AMDGPUNextUseAnalysisWrapper()
     : MachineFunctionPass(ID) {
   initializeAMDGPUNextUseAnalysisWrapperPass(*PassRegistry::getPassRegistry());
+}
+void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "=== NextUseAnalysis Results for " << MF.getName() << " ===\n");
+  
+  for (const auto &MBB : MF) {
+    unsigned MBBNum = MBB.getNumber();
+    LLVM_DEBUG(dbgs() << "\n--- MBB_" << MBBNum << " ---\n");
+    
+    if (!NextUseMap.contains(MBBNum)) {
+      LLVM_DEBUG(dbgs() << "  No analysis data for this block\n");
+      continue;
+    }
+    
+    const NextUseInfo &Info = NextUseMap.at(MBBNum);
+    
+    // Process each instruction in the block
+    for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
+      const MachineInstr &MI = *II;
+      
+      // Print instruction
+      LLVM_DEBUG(dbgs() << "  Instr: ");
+      LLVM_DEBUG(MI.print(dbgs(), /*IsStandalone=*/false, /*SkipOpers=*/false, 
+                         /*SkipDebugLoc=*/true, /*AddNewLine=*/false));
+      LLVM_DEBUG(dbgs() << "\n");
+      
+      // Print distances at this instruction
+      if (Info.InstrDist.contains(&MI)) {
+        const VRegDistances &Dists = Info.InstrDist.at(&MI);
+        LLVM_DEBUG(dbgs() << "    Next-use distances:\n");
+        
+        for (const auto &VRegEntry : Dists) {
+          unsigned VReg = VRegEntry.getFirst();
+          const auto &Records = VRegEntry.getSecond();
+          
+          for (const auto &Record : Records) {
+            LaneBitmask LaneMask = Record.first;
+            unsigned Distance = Record.second;
+            
+            LLVM_DEBUG(dbgs() << "      ");
+            
+            // Print register with sub-register if applicable
+            LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
+            if (LaneMask != FullMask) {
+              unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
+              LLVM_DEBUG(dbgs() << printReg(VReg, TRI, SubRegIdx, MRI));
+            } else {
+              LLVM_DEBUG(dbgs() << printReg(VReg, TRI));
+            }
+            
+            if (Distance == Infinity) {
+              LLVM_DEBUG(dbgs() << " -> DEAD (infinite distance)\n");
+            } else {
+              LLVM_DEBUG(dbgs() << " -> " << Distance << " instructions\n");
+            }
+          }
+        }
+        
+        if (Dists.size() == 0) {
+          LLVM_DEBUG(dbgs() << "    (no register uses)\n");
+        }
+      } else {
+        LLVM_DEBUG(dbgs() << "    (no distance data)\n");
+      }
+    }
+    
+    // Print distances at end of block
+    LLVM_DEBUG(dbgs() << "  Block End Distances:\n");
+    for (const auto &VRegEntry : Info.Bottom) {
+      unsigned VReg = VRegEntry.getFirst();
+      const auto &Records = VRegEntry.getSecond();
+      
+      for (const auto &Record : Records) {
+        LaneBitmask LaneMask = Record.first;
+        unsigned Distance = Record.second;
+        
+        LLVM_DEBUG(dbgs() << "    ");
+        
+        LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
+        if (LaneMask != FullMask) {
+          unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
+          LLVM_DEBUG(dbgs() << printReg(VReg, TRI, SubRegIdx, MRI));
+        } else {
+          LLVM_DEBUG(dbgs() << printReg(VReg, TRI));
+        }
+        
+        if (Distance == Infinity) {
+          LLVM_DEBUG(dbgs() << " -> DEAD\n");
+        } else {
+          LLVM_DEBUG(dbgs() << " -> " << Distance << "\n");
+        }
+      }
+    }
+    
+    if (Info.Bottom.size() == 0) {
+      LLVM_DEBUG(dbgs() << "    (no registers live at block end)\n");
+    }
+  }
+  
+  LLVM_DEBUG(dbgs() << "\n=== End NextUseAnalysis Results ===\n");
 }

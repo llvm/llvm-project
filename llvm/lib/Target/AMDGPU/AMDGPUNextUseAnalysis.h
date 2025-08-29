@@ -275,6 +275,9 @@ public:
   }
 
   void dumpUsedInBlock();
+
+  /// Dump complete next-use analysis results for testing
+  void dumpAllNextUseDistances(const MachineFunction &MF);
 };
 
 class AMDGPUNextUseAnalysis : public AnalysisInfoMixin<AMDGPUNextUseAnalysis> {
