@@ -776,7 +776,9 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
 
     Location loc = op.getLoc();
-    VectorType resultType = op.getResult().getType();
+    VectorType resultType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!resultType)
+      return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
