@@ -232,9 +232,7 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
       content = StringRef();
     } else {
       line = content.substr(0, pos);
-      content = content.substr(pos);
-      while (!content.empty() && (content[0] == '\r' || content[0] == '\n'))
-        content = content.substr(1);
+      content = content.substr(pos).ltrim("\r\n");
     }
 
     line = line.trim();
@@ -242,15 +240,14 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
       continue;
 
     StringRef sectionName = line.split(' ').first;
-    std::string sectionNameStr = sectionName.str();
 
-    if (ctx.config.sectionOrder.count(sectionNameStr)) {
-      Warn(ctx) << "duplicate section '" << sectionNameStr
+    if (ctx.config.sectionOrder.count(sectionName.str())) {
+      Warn(ctx) << "duplicate section '" << sectionName.str()
                 << "' in section layout file, ignoring";
       continue;
     }
 
-    ctx.config.sectionOrder[sectionNameStr] = index++;
+    ctx.config.sectionOrder[sectionName.str()] = index++;
   }
 }
 
