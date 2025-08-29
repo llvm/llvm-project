@@ -2893,6 +2893,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     alignment = builder.getInt64(intAttr.getInt());
     assert(ty->isPointerTy() && "Invalid type for aligned variable");
     assert(alignment && "Invalid alignment value");
+
+    // Check if the alignment value is not a power of 2. If so, skip emitting
+    // alignment.
+    if (!intAttr.getValue().isPowerOf2())
+      continue;
+
     auto curInsert = builder.saveIP();
     builder.SetInsertPoint(sourceBlock);
     llvmVal = builder.CreateLoad(ty, llvmVal);
