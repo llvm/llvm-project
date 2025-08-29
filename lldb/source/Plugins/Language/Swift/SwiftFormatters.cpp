@@ -219,18 +219,22 @@ static bool makeStringGutsSummary(
     llvm::StringRef variantCase = variant_sp->GetValueAsCString();
 
     ValueObjectSP payload_sp;
-    if (variantCase.starts_with("immortal")) {
-      payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
-    } else if (variantCase.starts_with("native")) {
-      payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
-    } else if (variantCase.starts_with("bridged")) {
-      static ConstString g_bridged("bridged");
-      auto anyobject_sp = variant_sp->GetChildMemberWithName(g_bridged, true);
-      if (!anyobject_sp)
-        return error("unexpected layout (bridged)");
-      payload_sp = anyobject_sp->GetChildAtIndex(0, true); // "instance"
+    if (variantCase == "immortal" || variantCase == "native" ||
+        variantCase == "bridged") {
+      payload_sp = variant_sp->GetSyntheticValue();
+      if (!payload_sp)
+        return error("unexpected layout (no variant)");
+      payload_sp = payload_sp->GetChildAtIndex(0);
+      if (!payload_sp)
+        return error("unexpected layout (no variant payload)");
+      payload_sp = payload_sp->GetSyntheticValue();
     } else {
       return error("unknown variant");
+    }
+    if (variantCase == "bridged") {
+      if (!payload_sp)
+        return error("unexpected layout (bridged)");
+      payload_sp = payload_sp->GetChildAtIndex(0, true); // "instance"
     }
     if (!payload_sp)
       return error("no payload");
