@@ -317,7 +317,7 @@ class ConditionalController(DebuggerControllerBase):
 
                 elif bpr.is_continue:
                     debugger_continue = True
-                    if bpr.range_to != None:
+                    if bpr.range_to is not None:
                         self.debugger.add_breakpoint(bpr.path, bpr.range_to)
 
                 else:
