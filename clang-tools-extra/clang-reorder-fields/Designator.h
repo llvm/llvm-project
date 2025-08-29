@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the DesignatorIter and Designators
-/// utility class.
+/// This file contains the declarations of the Designator and Designators
+/// utility classes.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,23 +22,26 @@
 namespace clang {
 namespace reorder_fields {
 
-class DesignatorIter {
+/// Represents a part of a designation in a C99/C++20 designated initializer. It
+/// is a tagged union of different kinds of designators: struct, array and array
+/// range. Holds enough information to be able to advance to the next field and
+/// to know when all fields have been iterated through.
+class Designator {
 public:
   enum Kind { STRUCT, ARRAY, ARRAY_RANGE };
 
-  DesignatorIter(const QualType Type, RecordDecl::field_iterator Field,
-                 const RecordDecl *RD)
+  Designator(const QualType Type, RecordDecl::field_iterator Field,
+             const RecordDecl *RD)
       : Tag(STRUCT), Type(Type), StructIt({Field, RD}) {}
 
-  DesignatorIter(const QualType Type, uint64_t Idx, uint64_t Size)
+  Designator(const QualType Type, uint64_t Idx, uint64_t Size)
       : Tag(ARRAY), Type(Type), ArrayIt({Idx, Size}) {}
 
-  DesignatorIter(const QualType Type, uint64_t Start, uint64_t End,
-                 uint64_t Size)
+  Designator(const QualType Type, uint64_t Start, uint64_t End, uint64_t Size)
       : Tag(ARRAY_RANGE), Type(Type), ArrayRangeIt({Start, End, Size}) {}
 
   /// Moves the iterator to the next element.
-  DesignatorIter &operator++();
+  void advanceToNextField();
 
   /// Checks if the iterator has iterated through all elements.
   bool isFinished();
@@ -113,6 +116,7 @@ private:
   };
 };
 
+/// List of designators.
 class Designators {
 public:
   /// Initialize to the first member of the struct/array. Enters implicit
@@ -123,6 +127,9 @@ public:
   /// Initialize to the designators of the given expression.
   Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
               const ASTContext *Context);
+
+  /// Return whether this designator list is valid.
+  bool isValid() const { return !DesignatorList.empty(); }
 
   /// Moves the designators to the next initializer in the struct/array. If the
   /// type of next initializer doesn't match the expected type then there are
@@ -135,10 +142,10 @@ public:
 
   size_t size() const { return DesignatorList.size(); }
 
-  SmallVector<DesignatorIter>::const_iterator begin() const {
+  SmallVector<Designator>::const_iterator begin() const {
     return DesignatorList.begin();
   }
-  SmallVector<DesignatorIter>::const_iterator end() const {
+  SmallVector<Designator>::const_iterator end() const {
     return DesignatorList.end();
   }
 
@@ -149,7 +156,7 @@ private:
 
   const InitListExpr *ILE;
   const ASTContext *Context;
-  SmallVector<DesignatorIter, 1> DesignatorList;
+  SmallVector<Designator, 1> DesignatorList;
 };
 
 } // namespace reorder_fields

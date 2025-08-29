@@ -95,7 +95,7 @@ public:
   /// Compares compatible designators according to the new struct order.
   /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
   /// if they are equal.
-  bool operator()(const DesignatorIter &Lhs, const DesignatorIter &Rhs) const;
+  bool operator()(const Designator &Lhs, const Designator &Rhs) const;
 
   /// Compares compatible designator lists according to the new struct order.
   /// Returns a negative value if Lhs < Rhs, positive value if Lhs > Rhs and 0
@@ -107,12 +107,11 @@ public:
   SmallVector<unsigned, 4> NewFieldsPositions;
 };
 
-bool ReorderedStruct::operator()(const DesignatorIter &Lhs,
-                                 const DesignatorIter &Rhs) const {
+bool ReorderedStruct::operator()(const Designator &Lhs,
+                                 const Designator &Rhs) const {
   switch (Lhs.getTag()) {
-  case DesignatorIter::STRUCT:
-    assert(Rhs.getTag() == DesignatorIter::STRUCT &&
-           "Incompatible designators");
+  case Designator::STRUCT:
+    assert(Rhs.getTag() == Designator::STRUCT && "Incompatible designators");
     assert(Lhs.getStructDecl() == Rhs.getStructDecl() &&
            "Incompatible structs");
     // Use the new layout for reordered struct.
@@ -122,16 +121,16 @@ bool ReorderedStruct::operator()(const DesignatorIter &Lhs,
     }
     return Lhs.getStructIter()->getFieldIndex() <
            Rhs.getStructIter()->getFieldIndex();
-  case DesignatorIter::ARRAY:
-  case DesignatorIter::ARRAY_RANGE:
+  case Designator::ARRAY:
+  case Designator::ARRAY_RANGE:
     // Array designators can be compared to array range designators.
-    assert((Rhs.getTag() == DesignatorIter::ARRAY ||
-            Rhs.getTag() == DesignatorIter::ARRAY_RANGE) &&
+    assert((Rhs.getTag() == Designator::ARRAY ||
+            Rhs.getTag() == Designator::ARRAY_RANGE) &&
            "Incompatible designators");
-    size_t LhsIdx = Lhs.getTag() == DesignatorIter::ARRAY
+    size_t LhsIdx = Lhs.getTag() == Designator::ARRAY
                         ? Lhs.getArrayIndex()
                         : Lhs.getArrayRangeStart();
-    size_t RhsIdx = Rhs.getTag() == DesignatorIter::ARRAY
+    size_t RhsIdx = Rhs.getTag() == Designator::ARRAY
                         ? Rhs.getArrayIndex()
                         : Rhs.getArrayRangeStart();
     return LhsIdx < RhsIdx;
@@ -408,6 +407,15 @@ static const InitListExpr *getExplicitILE(const InitListExpr *ILE,
   return TopLevelILE;
 }
 
+static void reportError(const Twine &Message, SourceLocation Loc,
+                        const SourceManager &SM) {
+  if (Loc.isValid()) {
+    llvm::errs() << SM.getFilename(Loc) << ":" << SM.getPresumedLineNumber(Loc)
+                 << ":" << SM.getPresumedColumnNumber(Loc) << ": ";
+  }
+  llvm::errs() << Message;
+}
+
 /// Reorders initializers in the brace initialization of an aggregate.
 ///
 /// At the moment partial initialization is not supported.
@@ -437,7 +445,8 @@ static bool reorderFieldsInInitListExpr(
   // initializers are present and none have designators then just reorder them
   // normally. Otherwise, designators are added to all initializers and they are
   // sorted in the new order.
-  bool ShouldAddDesignators = false;
+  bool HasImplicitInit = false;
+  bool HasDesignatedInit = false;
   // The method InitListExpr::getSyntacticForm may return nullptr indicating
   // that the current initializer list also serves as its syntactic form.
   const InitListExpr *SyntacticInitListEx = InitListEx;
@@ -447,16 +456,16 @@ static bool reorderFieldsInInitListExpr(
     if (SynILE->isIdiomaticZeroInitializer(Context.getLangOpts()))
       return true;
 
-    ShouldAddDesignators = InitListEx->getNumInits() != SynILE->getNumInits() ||
-                           llvm::any_of(SynILE->inits(), [](const Expr *Init) {
-                             return isa<DesignatedInitExpr>(Init);
-                           });
+    HasImplicitInit = InitListEx->getNumInits() != SynILE->getNumInits();
+    HasDesignatedInit = llvm::any_of(SynILE->inits(), [](const Expr *Init) {
+      return isa<DesignatedInitExpr>(Init);
+    });
 
     SyntacticInitListEx = SynILE;
   } else {
     // If there is no syntactic form, there can be no designators. Instead,
     // there might be implicit values.
-    ShouldAddDesignators =
+    HasImplicitInit =
         (RS.NewFieldsOrder.size() != InitListEx->getNumInits()) ||
         llvm::any_of(InitListEx->inits(), [&Context](const Expr *Init) {
           return isa<ImplicitValueInitExpr>(Init) ||
@@ -465,11 +474,13 @@ static bool reorderFieldsInInitListExpr(
         });
   }
 
-  if (ShouldAddDesignators) {
+  if (HasImplicitInit || HasDesignatedInit) {
     // Designators are only supported from C++20.
-    if (Context.getLangOpts().CPlusPlus && !Context.getLangOpts().CPlusPlus20) {
-      llvm::errs()
-          << "Currently only full initialization is supported for C++\n";
+    if (!HasDesignatedInit && Context.getLangOpts().CPlusPlus &&
+        !Context.getLangOpts().CPlusPlus20) {
+      reportError(
+          "Only full initialization without implicit values is supported\n",
+          InitListEx->getBeginLoc(), Context.getSourceManager());
       return false;
     }
 
@@ -483,9 +494,9 @@ static bool reorderFieldsInInitListExpr(
     for (const Expr *Init : SyntacticInitListEx->inits()) {
       if (const auto *DIE = dyn_cast_or_null<DesignatedInitExpr>(Init)) {
         CurrentDesignators.emplace(DIE, SyntacticInitListEx, &Context);
-        if (CurrentDesignators->size() == 0) {
-          llvm::errs() << "Initializer list with excess elements or "
-                          "non-constant size is not supported\n";
+        if (!CurrentDesignators->isValid()) {
+          reportError("Unsupported initializer list\n", DIE->getBeginLoc(),
+                      Context.getSourceManager());
           return false;
         }
 
@@ -497,12 +508,14 @@ static bool reorderFieldsInInitListExpr(
         // field, otherwise move the next field.
         if (!CurrentDesignators) {
           CurrentDesignators.emplace(Init, SyntacticInitListEx, &Context);
-          if (CurrentDesignators->size() == 0) {
-            llvm::errs() << "Unsupported initializer list\n";
+          if (!CurrentDesignators->isValid()) {
+            reportError("Unsupported initializer list\n",
+                        InitListEx->getBeginLoc(), Context.getSourceManager());
             return false;
           }
         } else if (!CurrentDesignators->advanceToNextField(Init)) {
-          llvm::errs() << "Unsupported initializer list\n";
+          reportError("Unsupported initializer list\n",
+                      InitListEx->getBeginLoc(), Context.getSourceManager());
           return false;
         }
 

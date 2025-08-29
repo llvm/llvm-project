@@ -7,19 +7,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the definition of the DesignatorIter and Designators
-/// utility classes.
+/// This file contains the definition of the Designator and Designators utility
+/// classes.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "Designator.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace reorder_fields {
 
-DesignatorIter &DesignatorIter::operator++() {
+void Designator::advanceToNextField() {
   assert(!isFinished() && "Iterator is already finished");
   switch (Tag) {
   case STRUCT:
@@ -45,10 +46,9 @@ DesignatorIter &DesignatorIter::operator++() {
     Tag = ARRAY;
     break;
   }
-  return *this;
 }
 
-bool DesignatorIter::isFinished() {
+bool Designator::isFinished() {
   switch (Tag) {
   case STRUCT:
     return StructIt.Field == StructIt.Record->field_end();
@@ -140,7 +140,7 @@ bool Designators::advanceToNextField(const Expr *Init) {
   // element of the array.
   while (!DesignatorList.empty()) {
     auto &CurrentDesignator = DesignatorList.back();
-    ++CurrentDesignator;
+    CurrentDesignator.advanceToNextField();
     if (CurrentDesignator.isFinished()) {
       DesignatorList.pop_back();
       continue;
@@ -153,7 +153,12 @@ bool Designators::advanceToNextField(const Expr *Init) {
   if (DesignatorList.empty())
     return false;
 
-  return enterImplicitInitLists(Init);
+  if (!enterImplicitInitLists(Init)) {
+    DesignatorList.clear();
+    return false;
+  }
+
+  return true;
 }
 
 bool Designators::enterImplicitInitLists(const Expr *Init) {
@@ -191,21 +196,22 @@ bool Designators::enterImplicitInitLists(const Expr *Init) {
 std::string Designators::toString() const {
   if (DesignatorList.empty())
     return "";
-  std::string Designator = "";
+  std::string Designator;
+  llvm::raw_string_ostream OS(Designator);
   for (auto &I : DesignatorList) {
     switch (I.getTag()) {
-    case DesignatorIter::STRUCT:
-      Designator += "." + I.getStructIter()->getName().str();
+    case Designator::STRUCT:
+      OS << '.' << I.getStructIter()->getName();
       break;
-    case DesignatorIter::ARRAY:
-      Designator += "[" + std::to_string(I.getArrayIndex()) + "]";
+    case Designator::ARRAY:
+      OS << '[' << I.getArrayIndex() << ']';
       break;
-    case DesignatorIter::ARRAY_RANGE:
-      Designator += "[" + std::to_string(I.getArrayRangeStart()) + "..." +
-                    std::to_string(I.getArrayRangeEnd()) + "]";
+    case Designator::ARRAY_RANGE:
+      OS << '[' << I.getArrayRangeStart() << "..." << I.getArrayRangeEnd()
+         << ']';
     }
   }
-  Designator += " = ";
+  OS << " = ";
   return Designator;
 }
 
