@@ -8717,7 +8717,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // to remove the need to keep a map of masks beyond the predication
   // transform.
   RecipeBuilder.updateBlockMaskCache(Old2New);
-  for (const auto &[Old, _] : Old2New)
+  for (VPValue *Old : Old2New.keys())
     Old->getDefiningRecipe()->eraseFromParent();
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
