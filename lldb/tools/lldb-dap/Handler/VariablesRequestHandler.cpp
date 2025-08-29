@@ -11,6 +11,7 @@
 #include "Handler/RequestHandler.h"
 #include "JSONUtils.h"
 #include "ProtocolUtils.h"
+#include "Variables.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -38,15 +39,16 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
-    std::optional<ScopeKind> scope_kind = dap.variables.GetScopeKind(var_ref);
-    if (scope_kind && *scope_kind == ScopeKind::Registers) {
+    std::optional<ScopeData> scope_data = dap.variables.GetScopeKind(var_ref);
+    if (scope_data.has_value() && scope_data->kind == ScopeKind::Registers) {
+
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
       // and resolve what the pointer resolves to. Only change the format if the
       // format was set to the default format or if it was hex as some registers
       // have formats set for them.
       const uint32_t addr_size = dap.target.GetProcess().GetAddressByteSize();
-      lldb::SBValue reg_set = dap.variables.registers.GetValueAtIndex(0);
+      lldb::SBValue reg_set = scope_data->scope.GetValueAtIndex(0);
       const uint32_t num_regs = reg_set.GetNumChildren();
       for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
         lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
@@ -59,7 +61,8 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     }
 
     num_children = top_scope->GetSize();
-    if (num_children == 0 && scope_kind && *scope_kind == ScopeKind::Locals) {
+    if (num_children == 0 && scope_data &&
+        scope_data->kind == ScopeKind::Locals) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
@@ -95,7 +98,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     }
 
     // Show return value if there is any ( in the local top frame )
-    if (scope_kind && *scope_kind == ScopeKind::Locals) {
+    if (scope_data && scope_data->kind == ScopeKind::Locals) {
       auto process = dap.target.GetProcess();
       auto selected_thread = process.GetSelectedThread();
       lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();

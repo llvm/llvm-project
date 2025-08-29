@@ -162,7 +162,6 @@ void EvaluateRequestHandler::operator()(
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
       dap.focus_tid = frame.GetThread().GetThreadID();
-      dap.variables.SwitchFrame(frame.GetFrameID());
     }
 
     bool required_command_failed = false;

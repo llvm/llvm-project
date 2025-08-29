@@ -30,8 +30,8 @@ namespace lldb_dap {
 ///
 /// \return
 ///     A `protocol::Scope`
-Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
-                  int64_t namedVariables, bool expensive) {
+static Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
+                         int64_t namedVariables, bool expensive) {
   Scope scope;
 
   // TODO: Support "arguments" and "return value" scope.
@@ -53,8 +53,6 @@ Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
     scope.presentationHint = Scope::eScopePresentationHintRegisters;
     scope.name = "Registers";
     break;
-  default:
-    llvm_unreachable("Unhandled ScopeKind");
   }
 
   scope.variablesReference = variablesReference;
@@ -90,24 +88,27 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
   uint32_t frame_id = frame.GetFrameID();
 
   dap.variables.ReadyFrame(frame_id, frame);
-  dap.variables.SwitchFrame(frame_id);
 
-  std::vector<Scope> scopes = {};
+  std::vector<protocol::Scope> scopes = {};
 
   int64_t variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(ScopeKind::Locals, variable_reference,
-                               dap.variables.locals.GetSize(), false));
+  scopes.push_back(CreateScope(
+      ScopeKind::Locals, variable_reference,
+      dap.variables.GetScope(frame_id, ScopeKind::Locals)->GetSize(), false));
 
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Locals, frame_id);
 
   variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(ScopeKind::Globals, variable_reference,
-                               dap.variables.globals.GetSize(), false));
+  scopes.push_back(CreateScope(
+      ScopeKind::Globals, variable_reference,
+      dap.variables.GetScope(frame_id, ScopeKind::Globals)->GetSize(), false));
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Globals, frame_id);
 
   variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(ScopeKind::Registers, variable_reference,
-                               dap.variables.registers.GetSize(), false));
+  scopes.push_back(CreateScope(
+      ScopeKind::Registers, variable_reference,
+      dap.variables.GetScope(frame_id, ScopeKind::Registers)->GetSize(),
+      false));
 
   dap.variables.AddScopeKind(variable_reference, ScopeKind::Registers,
                              frame_id);
