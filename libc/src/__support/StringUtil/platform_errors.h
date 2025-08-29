@@ -11,6 +11,8 @@
 
 #if defined(__linux__) || defined(__Fuchsia__)
 #include "tables/linux_platform_errors.h"
+#elif defined(__EMSCRIPTEN__)
+#include "tables/emscripten_platform_errors.h"
 #else
 #include "tables/minimal_platform_errors.h"
 #endif
