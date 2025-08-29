@@ -13,8 +13,18 @@ constexpr bool match_v1di(__m64 v, long long a) {
   return v[0] == a;
 }
 
+constexpr bool match_v1du(__m64 _v, unsigned long long a) {
+  __v1du v = (__v1du)_v;
+  return v[0] == a;
+}
+
 constexpr bool match_v2si(__m64 _v, int a, int b) {
   __v2si v = (__v2si)_v;
+  return v[0] == a && v[1] == b;
+}
+
+constexpr bool match_v2su(__m64 _v, unsigned a, unsigned b) {
+  __v2su v = (__v2su)_v;
   return v[0] == a && v[1] == b;
 }
 
@@ -63,8 +73,18 @@ constexpr bool match_v2di(__m128i v, long long a, long long b) {
   return v[0] == a && v[1] == b;
 }
 
+constexpr bool match_v2du(__m128i _v, unsigned long long a, unsigned long long b) {
+  __v2du v = (__v2du)_v;
+  return v[0] == a && v[1] == b;
+}
+
 constexpr bool match_v4si(__m128i _v, int a, int b, int c, int d) {
   __v4si v = (__v4si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
+}
+
+constexpr bool match_v4su(__m128i _v, unsigned a, unsigned b, unsigned c, unsigned d) {
+  __v4su v = (__v4su)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
 
@@ -120,6 +140,11 @@ constexpr bool match_v4di(__m256i _v, long long a, long long b, long long c, lon
 
 constexpr bool match_v8si(__m256i _v, int a, int b, int c, int d, int e, int f, int g, int h) {
   __v8si v = (__v8si)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
+}
+
+constexpr bool match_v8su(__m256i _v, unsigned a, unsigned b, unsigned c, unsigned d, unsigned e, unsigned f, unsigned g, unsigned h) {
+  __v8su v = (__v8su)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 
