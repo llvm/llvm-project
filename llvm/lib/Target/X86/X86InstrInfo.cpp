@@ -758,17 +758,77 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       break;
     }
 
-    // BLENDV uses XMM0 as implicit mask register
-    // https://www.felixcloutier.com/x86/pblendvb
-    BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
-        .addReg(MaskReg)
-        .setMIFlag(MachineInstr::MIFlag::NoMerge);
+    // Check if XMM0 is used as one of source registers, if yes then save it
+    // in Dst register and update FalseVal and TrueVal to Dst register
+    bool DidSaveXMM0 = false;
+    Register SavedXMM0 = X86::XMM0;
+    if (FalseVal == X86::XMM0 || TrueVal == X86::XMM0) {
+      Register SrcXMM0 = (FalseVal == X86::XMM0) ? FalseVal : TrueVal;
 
-    BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
-        .addReg(FalseVal)
-        .addReg(TrueVal)
-        .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      // if XMM0 is one of the source registers, it will not match with Dst
+      // registers, so we need to move it to Dst register
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+          .addReg(SrcXMM0)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
 
+      // update FalseVal and TrueVal to Dst register
+      if (FalseVal == X86::XMM0)
+        FalseVal = Dst;
+      if (TrueVal == X86::XMM0)
+        TrueVal = Dst;
+
+      // update SavedXMM0 to Dst register
+      SavedXMM0 = Dst;
+
+      // set DidSaveXMM0 to true to indicate that we saved XMM0 into Dst
+      // register
+      DidSaveXMM0 = true;
+    }
+
+    if (MaskReg != X86::XMM0) {
+      // BLENDV uses XMM0 as implicit mask register
+      // https://www.felixcloutier.com/x86/pblendvb
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
+          .addReg(MaskReg)
+          .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+      // move FalseVal to mask (use MaskReg as the dst of the blend)
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), MaskReg)
+          .addReg(FalseVal)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+      // MaskReg := blend(MaskReg /*false*/, TrueVal /*true*/)  ; mask in
+      // xmm0
+      BuildMI(*MBB, MI, DL, get(BlendOpc), MaskReg)
+          .addReg(MaskReg)
+          .addReg(TrueVal)
+          .addReg(X86::XMM0)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+      // restore XMM0 from SavedXMM0 if we saved it into Dst
+      if (DidSaveXMM0) {
+        BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
+            .addReg(SavedXMM0)
+            .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      }
+      // dst = result (now in MaskReg)
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+          .addReg(MaskReg)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    } else {
+      // move FalseVal to Dst register since MaskReg is XMM0 and Dst is not
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+          .addReg(FalseVal)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+
+      // Dst := blend(Dst /*false*/, TrueVal /*true*/)  ; mask in
+      // xmm0
+      BuildMI(*MBB, MI, DL, get(BlendOpc), Dst)
+          .addReg(Dst)
+          .addReg(TrueVal)
+          .addReg(X86::XMM0)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+    }
   } else {
 
     // dst = mask
