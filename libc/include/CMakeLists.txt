@@ -290,6 +290,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
@@ -331,6 +332,7 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros.annex_k_macros
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
@@ -339,6 +341,7 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+    .llvm-libc-types.errno_t
     .llvm_libc_common_h
 )
 
@@ -358,6 +361,8 @@ add_header_macro(
     .llvm-libc-types.lldiv_t
     .llvm-libc-types.locale_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.rsize_t
+    .llvm-libc-types.constraint_handler_t
     .llvm_libc_common_h
 )
 
