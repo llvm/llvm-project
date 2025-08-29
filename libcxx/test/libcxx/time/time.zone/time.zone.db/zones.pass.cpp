@@ -212,32 +212,32 @@ Z nj 0 r f 42 Jul 1 -
   assert(continuations(result.zones[0])[0].__in == std::chrono::January);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[1])[0].__year == std::chrono::year(1000));
   assert(continuations(result.zones[1])[0].__in == std::chrono::January);
   assert(std::get<std::chrono::day>(continuations(result.zones[1])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[1])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[1])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[1])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[2])[0].__year == std::chrono::year(-1000));
   assert(continuations(result.zones[2])[0].__in == std::chrono::November);
   assert(std::get<std::chrono::day>(continuations(result.zones[2])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[2])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[2])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[2])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[3])[0].__year == std::chrono::year::max());
   assert(continuations(result.zones[3])[0].__in == std::chrono::September);
   assert(std::get<std::chrono::day>(continuations(result.zones[3])[0].__on) == std::chrono::day(31));
   assert(continuations(result.zones[3])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[3])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[3])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[4])[0].__year == std::chrono::year(0));
   assert(continuations(result.zones[4])[0].__in == std::chrono::January);
   assert(std::get<std::chrono::weekday_last>(continuations(result.zones[4])[0].__on) ==
          std::chrono::weekday_last{std::chrono::Wednesday});
   assert(continuations(result.zones[4])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[4])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[4])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[5])[0].__year == std::chrono::year(-42));
   assert(continuations(result.zones[5])[0].__in == std::chrono::June);
@@ -246,7 +246,7 @@ Z nj 0 r f 42 Jul 1 -
   assert(r.__comparison == std::chrono::__tz::__constrained_weekday::__le);
   assert(r.__day == std::chrono::day(1));
   assert(continuations(result.zones[5])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[5])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[5])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[6])[0].__year == std::chrono::year(42));
   assert(continuations(result.zones[6])[0].__in == std::chrono::July);
@@ -255,26 +255,26 @@ Z nj 0 r f 42 Jul 1 -
   assert(r.__comparison == std::chrono::__tz::__constrained_weekday::__ge);
   assert(r.__day == std::chrono::day(12));
   assert(continuations(result.zones[6])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[6])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[6])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[7])[0].__year == std::chrono::year(42));
   assert(continuations(result.zones[7])[0].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[7])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[7])[0].__at.__time == std::chrono::hours(2));
-  assert(continuations(result.zones[7])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[7])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[8])[0].__year == std::chrono::year(42));
   assert(continuations(result.zones[8])[0].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[8])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[8])[0].__at.__time ==
          std::chrono::hours(1) + std::chrono::minutes(28) + std::chrono::seconds(14));
-  assert(continuations(result.zones[8])[0].__at.__clock == std::chrono::__tz::__clock::__universal);
+  assert(continuations(result.zones[8])[0].__at.__clock == std::chrono::__tz::__clock::__universal_tm);
 
   assert(continuations(result.zones[9])[0].__year == std::chrono::year(42));
   assert(continuations(result.zones[9])[0].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[9])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[9])[0].__at.__time == std::chrono::hours(0)); // The man page expresses it in hours
-  assert(continuations(result.zones[9])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[9])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 }
 
 static void test_continuation() {
@@ -301,32 +301,32 @@ Z na 0 r f
   assert(continuations(result.zones[0])[0].__in == std::chrono::January);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[0].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[0].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[0].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[0].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[1].__year == std::chrono::year(1000));
   assert(continuations(result.zones[0])[1].__in == std::chrono::January);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[1].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[1].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[1].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[1].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[2].__year == std::chrono::year(-1000));
   assert(continuations(result.zones[0])[2].__in == std::chrono::November);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[2].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[2].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[2].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[2].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[3].__year == std::chrono::year::max());
   assert(continuations(result.zones[0])[3].__in == std::chrono::September);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[3].__on) == std::chrono::day(31));
   assert(continuations(result.zones[0])[3].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[3].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[3].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[4].__year == std::chrono::year(0));
   assert(continuations(result.zones[0])[4].__in == std::chrono::January);
   assert(std::get<std::chrono::weekday_last>(continuations(result.zones[0])[4].__on) ==
          std::chrono::weekday_last{std::chrono::Wednesday});
   assert(continuations(result.zones[0])[4].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[4].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[4].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[5].__year == std::chrono::year(-42));
   assert(continuations(result.zones[0])[5].__in == std::chrono::June);
@@ -335,7 +335,7 @@ Z na 0 r f
   assert(r.__comparison == std::chrono::__tz::__constrained_weekday::__le);
   assert(r.__day == std::chrono::day(1));
   assert(continuations(result.zones[0])[5].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[5].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[5].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[6].__year == std::chrono::year(42));
   assert(continuations(result.zones[0])[6].__in == std::chrono::July);
@@ -344,26 +344,26 @@ Z na 0 r f
   assert(r.__comparison == std::chrono::__tz::__constrained_weekday::__ge);
   assert(r.__day == std::chrono::day(12));
   assert(continuations(result.zones[0])[6].__at.__time == std::chrono::seconds(0));
-  assert(continuations(result.zones[0])[6].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[6].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[7].__year == std::chrono::year(42));
   assert(continuations(result.zones[0])[7].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[7].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[7].__at.__time == std::chrono::hours(2));
-  assert(continuations(result.zones[0])[7].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[7].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 
   assert(continuations(result.zones[0])[8].__year == std::chrono::year(42));
   assert(continuations(result.zones[0])[8].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[8].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[8].__at.__time ==
          std::chrono::hours(1) + std::chrono::minutes(28) + std::chrono::seconds(14));
-  assert(continuations(result.zones[0])[8].__at.__clock == std::chrono::__tz::__clock::__universal);
+  assert(continuations(result.zones[0])[8].__at.__clock == std::chrono::__tz::__clock::__universal_tm);
 
   assert(continuations(result.zones[0])[9].__year == std::chrono::year(42));
   assert(continuations(result.zones[0])[9].__in == std::chrono::July);
   assert(std::get<std::chrono::day>(continuations(result.zones[0])[9].__on) == std::chrono::day(1));
   assert(continuations(result.zones[0])[9].__at.__time == std::chrono::hours(0)); // The man page expresses it in hours
-  assert(continuations(result.zones[0])[9].__at.__clock == std::chrono::__tz::__clock::__local);
+  assert(continuations(result.zones[0])[9].__at.__clock == std::chrono::__tz::__clock::__local_tm);
 }
 
 int main(int, const char**) {
