@@ -148,6 +148,7 @@ public:
 
   const Binding *getReg(dxil::ResourceClass RC, uint32_t Space,
                         uint32_t LowerBound) const {
+    // UpperBound and Cookie are  not used in operator<
     const Binding *It =
         llvm::upper_bound(Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
     if (It == Bindings.begin())
