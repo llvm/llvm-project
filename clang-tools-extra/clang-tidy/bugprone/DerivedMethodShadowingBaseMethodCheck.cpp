@@ -46,11 +46,12 @@ bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
 AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   const CXXRecordDecl *DerivedClass = Node.getParent();
   for (const auto &Base : DerivedClass->bases()) {
-    std::stack<const CXXBaseSpecifier *> Stack;
-    Stack.push(&Base);
+    // SmallVector instead of std::stack, to avoid allications in most cases
+    llvm::SmallVector<const CXXBaseSpecifier*, 8> Stack;
+    Stack.push_back(&Base);
     while (!Stack.empty()) {
-      const CXXBaseSpecifier *CurrentBaseSpec = Stack.top();
-      Stack.pop();
+      const CXXBaseSpecifier *CurrentBaseSpec = Stack.back();
+      Stack.pop_back();
 
       if (CurrentBaseSpec->getAccessSpecifier() ==
           clang::AccessSpecifier::AS_private)
@@ -76,7 +77,7 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
       }
 
       for (const auto &SubBase : CurrentRecord->bases())
-        Stack.push(&SubBase);
+        Stack.push_back(&SubBase);
     }
   }
   return false;
