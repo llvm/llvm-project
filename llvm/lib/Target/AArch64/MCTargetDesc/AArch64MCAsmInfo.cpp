@@ -53,9 +53,9 @@ const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
     {AArch64::S_MACHO_TLVPPAGEOFF, "TLVPPAGEOFF"},
 };
 
-StringRef AArch64::getSpecifierName(const MCSpecifierExpr &Expr) {
+StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   // clang-format off
-  switch (static_cast<uint32_t>(Expr.getSpecifier())) {
+  switch (static_cast<uint32_t>(S)) {
   case AArch64::S_CALL:                return "";
   case AArch64::S_LO12:                return ":lo12:";
   case AArch64::S_ABS_G3:              return ":abs_g3:";
@@ -183,7 +183,7 @@ void AArch64MCAsmInfoDarwin::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
     return AE->print(OS, this);
-  OS << AArch64::getSpecifierName(Expr);
+  OS << AArch64::getSpecifierName(Expr.getSpecifier());
   printExpr(OS, *Expr.getSubExpr());
 }
 
@@ -232,7 +232,7 @@ void AArch64MCAsmInfoELF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
     return AE->print(OS, this);
-  OS << AArch64::getSpecifierName(Expr);
+  OS << AArch64::getSpecifierName(Expr.getSpecifier());
   printExpr(OS, *Expr.getSubExpr());
 }
 
@@ -262,7 +262,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
 
 void AArch64MCAsmInfoMicrosoftCOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  OS << AArch64::getSpecifierName(Expr);
+  OS << AArch64::getSpecifierName(Expr.getSpecifier());
   printExpr(OS, *Expr.getSubExpr());
 }
 
@@ -292,7 +292,7 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
 
 void AArch64MCAsmInfoGNUCOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  OS << AArch64::getSpecifierName(Expr);
+  OS << AArch64::getSpecifierName(Expr.getSpecifier());
   printExpr(OS, *Expr.getSubExpr());
 }
 

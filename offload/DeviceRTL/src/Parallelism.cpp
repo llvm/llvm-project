@@ -170,6 +170,7 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     // in certain situations to avoid resource consumption of unused
     // logic in parallel_51.
     __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
+
     return;
   }
 
