@@ -9938,6 +9938,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  if (!LVL.getFaultOnlyFirstLoads().empty()) {
+    reportVectorizationFailure(
+        "Auto-vectorization of loops with fault-only-first "
+        "load is not supported",
+        "FaultOnlyFirstLoadsNotSupported", ORE, L);
+    return false;
+  }
+
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify
