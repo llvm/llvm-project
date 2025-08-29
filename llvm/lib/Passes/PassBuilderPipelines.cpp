@@ -1559,7 +1559,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // FIXME: This may not be the right place in the pipeline.
   // We need to have the data to support the right place.
-  if (PTO.LoopFusion)
+  if (PTO.LoopFusion || EnableLoopFusion)
     OptimizePM.addPass(LoopFusePass());
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
