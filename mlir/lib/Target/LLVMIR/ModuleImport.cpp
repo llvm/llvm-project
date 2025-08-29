@@ -1409,6 +1409,67 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
   return success();
 }
 
+/// Converts LLVM string, integer, and enum attributes into MLIR attributes,
+/// skipping those in `attributesToSkip` and emitting a warning at `loc` for
+/// any other unsupported attributes.
+static ArrayAttr
+convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
+                            llvm::AttributeSet attributes,
+                            ArrayRef<StringLiteral> attributesToSkip = {}) {
+  SmallVector<Attribute> mlirAttributes;
+  for (llvm::Attribute attr : attributes) {
+    StringRef attrName;
+    if (attr.isStringAttribute())
+      attrName = attr.getKindAsString();
+    else
+      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
+    if (llvm::is_contained(attributesToSkip, attrName))
+      continue;
+
+    auto keyAttr = StringAttr::get(context, attrName);
+    if (attr.isStringAttribute()) {
+      StringRef val = attr.getValueAsString();
+      if (val.empty()) {
+        // For string attributes without values, add only the attribute name.
+        mlirAttributes.push_back(keyAttr);
+        continue;
+      }
+      // For string attributes with a value, create a [name, value] pair.
+      mlirAttributes.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isIntAttribute()) {
+      // For integer attributes, convert the value to a string and create a
+      // [name, value] pair.
+      auto val = std::to_string(attr.getValueAsInt());
+      mlirAttributes.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isEnumAttribute()) {
+      // For enum attributes, add only the attribute name.
+      mlirAttributes.push_back(keyAttr);
+      continue;
+    }
+
+    emitWarning(loc)
+        << "'" << attrName
+        << "' attribute is invalid on current operation, skipping it";
+  }
+  return ArrayAttr::get(context, mlirAttributes);
+}
+
+/// Converts LLVM attributes from `globalVar` into MLIR attributes and adds them
+/// to `globalOp` as target-specific attributes.
+static void processTargetSpecificAttrs(llvm::GlobalVariable *globalVar,
+                                       GlobalOp globalOp) {
+  ArrayAttr targetSpecificAttrs = convertLLVMAttributesToMLIR(
+      globalOp.getLoc(), globalOp.getContext(), globalVar->getAttributes());
+  if (!targetSpecificAttrs.empty())
+    globalOp.setTargetSpecificAttrsAttr(targetSpecificAttrs);
+}
+
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
@@ -1473,6 +1534,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   if (globalVar->hasComdat())
     globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
+
+  processTargetSpecificAttrs(globalVar, globalOp);
 
   return success();
 }
@@ -2526,7 +2589,7 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array kExplicitAttributes{
+static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("aarch64_in_za"),
     StringLiteral("aarch64_inout_za"),
     StringLiteral("aarch64_new_za"),
@@ -2543,6 +2606,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("frame-pointer"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
+    StringLiteral("memory"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
@@ -2557,61 +2621,17 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("willreturn"),
 };
 
+/// Converts LLVM attributes from `func` into MLIR attributes and adds them
+/// to `funcOp` as passthrough attributes, skipping those listed in
+/// `kExplicitLLVMFuncAttributes`.
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
-  SmallVector<Attribute> passthroughs;
   llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
       llvm::AttributeList::AttrIndex::FunctionIndex);
-  for (llvm::Attribute attr : funcAttrs) {
-    // Skip the memory attribute since the LLVMFuncOp has an explicit memory
-    // attribute.
-    if (attr.hasAttribute(llvm::Attribute::Memory))
-      continue;
-
-    // Skip invalid type attributes.
-    if (attr.isTypeAttribute()) {
-      emitWarning(funcOp.getLoc(),
-                  "type attributes on a function are invalid, skipping it");
-      continue;
-    }
-
-    StringRef attrName;
-    if (attr.isStringAttribute())
-      attrName = attr.getKindAsString();
-    else
-      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
-    auto keyAttr = StringAttr::get(context, attrName);
-
-    // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(kExplicitAttributes, attrName))
-      continue;
-
-    if (attr.isStringAttribute()) {
-      StringRef val = attr.getValueAsString();
-      if (val.empty()) {
-        passthroughs.push_back(keyAttr);
-        continue;
-      }
-      passthroughs.push_back(
-          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
-      continue;
-    }
-    if (attr.isIntAttribute()) {
-      auto val = std::to_string(attr.getValueAsInt());
-      passthroughs.push_back(
-          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
-      continue;
-    }
-    if (attr.isEnumAttribute()) {
-      passthroughs.push_back(keyAttr);
-      continue;
-    }
-
-    llvm_unreachable("unexpected attribute kind");
-  }
-
-  if (!passthroughs.empty())
-    funcOp.setPassthroughAttr(ArrayAttr::get(context, passthroughs));
+  ArrayAttr passthroughAttr =
+      convertLLVMAttributesToMLIR(funcOp.getLoc(), funcOp.getContext(),
+                                  funcAttrs, kExplicitLLVMFuncOpAttributes);
+  if (!passthroughAttr.empty())
+    funcOp.setPassthroughAttr(passthroughAttr);
 }
 
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
