@@ -115,6 +115,9 @@ def SDTPtrAddOp : SDTypeProfile<1, 2, [     // ptradd
 def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>
 ]>;
+def SDTIntBinVPOp : SDTypeProfile<1, 4, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisVec<0>, SDTCVecEltisVT<3, i1>, SDTCisSameNumEltsAs<0, 3>, SDTCisInt<4>
+]>;
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
 ]>;
@@ -423,6 +426,8 @@ def smullohi   : SDNode<"ISD::SMUL_LOHI" , SDTIntBinHiLoOp, [SDNPCommutative]>;
 def umullohi   : SDNode<"ISD::UMUL_LOHI" , SDTIntBinHiLoOp, [SDNPCommutative]>;
 def sdiv       : SDNode<"ISD::SDIV"      , SDTIntBinOp>;
 def udiv       : SDNode<"ISD::UDIV"      , SDTIntBinOp>;
+def vp_sdiv    : SDNode<"ISD::VP_SDIV"   , SDTIntBinVPOp>;
+def vp_udiv    : SDNode<"ISD::VP_UDIV"   , SDTIntBinVPOp>;
 def srem       : SDNode<"ISD::SREM"      , SDTIntBinOp>;
 def urem       : SDNode<"ISD::UREM"      , SDTIntBinOp>;
 def sdivrem    : SDNode<"ISD::SDIVREM"   , SDTIntBinHiLoOp>;
