@@ -32,7 +32,7 @@ using namespace ir2vec;
 #define DEBUG_TYPE "ir2vec"
 
 STATISTIC(VocabMissCounter,
-          "Number of lookups to entites not present in the vocabulary");
+          "Number of lookups to entities not present in the vocabulary");
 
 namespace llvm {
 namespace ir2vec {
@@ -213,7 +213,7 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   for (const auto &I : BB.instructionsWithoutDebug()) {
     Embedding ArgEmb(Dimension, 0);
     for (const auto &Op : I.operands())
-      ArgEmb += Vocab[Op];
+      ArgEmb += Vocab[*Op];
     auto InstVector =
         Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
     InstVecMap[&I] = InstVector;
@@ -242,8 +242,8 @@ void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
       // If the operand is not defined by an instruction, we use the vocabulary
       else {
         LLVM_DEBUG(errs() << "Using embedding from vocabulary for operand: "
-                          << *Op << "=" << Vocab[Op][0] << "\n");
-        ArgEmb += Vocab[Op];
+                          << *Op << "=" << Vocab[*Op][0] << "\n");
+        ArgEmb += Vocab[*Op];
       }
     }
     // Create the instruction vector by combining opcode, type, and arguments
@@ -264,12 +264,7 @@ Vocabulary::Vocabulary(VocabVector &&Vocab)
     : Vocab(std::move(Vocab)), Valid(true) {}
 
 bool Vocabulary::isValid() const {
-  return Vocab.size() == Vocabulary::expectedSize() && Valid;
-}
-
-size_t Vocabulary::size() const {
-  assert(Valid && "IR2Vec Vocabulary is invalid");
-  return Vocab.size();
+  return Vocab.size() == NumCanonicalEntries && Valid;
 }
 
 unsigned Vocabulary::getDimension() const {
@@ -277,19 +272,32 @@ unsigned Vocabulary::getDimension() const {
   return Vocab[0].size();
 }
 
-const Embedding &Vocabulary::operator[](unsigned Opcode) const {
+unsigned Vocabulary::getSlotIndex(unsigned Opcode) {
   assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
-  return Vocab[Opcode - 1];
+  return Opcode - 1; // Convert to zero-based index
 }
 
-const Embedding &Vocabulary::operator[](Type::TypeID TypeId) const {
-  assert(static_cast<unsigned>(TypeId) < MaxTypeIDs && "Invalid type ID");
-  return Vocab[MaxOpcodes + static_cast<unsigned>(TypeId)];
+unsigned Vocabulary::getSlotIndex(Type::TypeID TypeID) {
+  assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
+  return MaxOpcodes + static_cast<unsigned>(getCanonicalTypeID(TypeID));
 }
 
-const ir2vec::Embedding &Vocabulary::operator[](const Value *Arg) const {
-  OperandKind ArgKind = getOperandKind(Arg);
-  return Vocab[MaxOpcodes + MaxTypeIDs + static_cast<unsigned>(ArgKind)];
+unsigned Vocabulary::getSlotIndex(const Value *Op) {
+  unsigned Index = static_cast<unsigned>(getOperandKind(Op));
+  assert(Index < MaxOperandKinds && "Invalid OperandKind");
+  return MaxOpcodes + MaxCanonicalTypeIDs + Index;
+}
+
+const Embedding &Vocabulary::operator[](unsigned Opcode) const {
+  return Vocab[getSlotIndex(Opcode)];
+}
+
+const Embedding &Vocabulary::operator[](Type::TypeID TypeID) const {
+  return Vocab[getSlotIndex(TypeID)];
+}
+
+const ir2vec::Embedding &Vocabulary::operator[](const Value &Arg) const {
+  return Vocab[getSlotIndex(&Arg)];
 }
 
 StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
@@ -303,63 +311,27 @@ StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
   return "UnknownOpcode";
 }
 
+StringRef Vocabulary::getVocabKeyForCanonicalTypeID(CanonicalTypeID CType) {
+  unsigned Index = static_cast<unsigned>(CType);
+  assert(Index < MaxCanonicalTypeIDs && "Invalid CanonicalTypeID");
+  return CanonicalTypeNames[Index];
+}
+
+Vocabulary::CanonicalTypeID
+Vocabulary::getCanonicalTypeID(Type::TypeID TypeID) {
+  unsigned Index = static_cast<unsigned>(TypeID);
+  assert(Index < MaxTypeIDs && "Invalid TypeID");
+  return TypeIDMapping[Index];
+}
+
 StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
-  switch (TypeID) {
-  case Type::VoidTyID:
-    return "VoidTy";
-  case Type::HalfTyID:
-  case Type::BFloatTyID:
-  case Type::FloatTyID:
-  case Type::DoubleTyID:
-  case Type::X86_FP80TyID:
-  case Type::FP128TyID:
-  case Type::PPC_FP128TyID:
-    return "FloatTy";
-  case Type::IntegerTyID:
-    return "IntegerTy";
-  case Type::FunctionTyID:
-    return "FunctionTy";
-  case Type::StructTyID:
-    return "StructTy";
-  case Type::ArrayTyID:
-    return "ArrayTy";
-  case Type::PointerTyID:
-  case Type::TypedPointerTyID:
-    return "PointerTy";
-  case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    return "VectorTy";
-  case Type::LabelTyID:
-    return "LabelTy";
-  case Type::TokenTyID:
-    return "TokenTy";
-  case Type::MetadataTyID:
-    return "MetadataTy";
-  case Type::X86_AMXTyID:
-  case Type::TargetExtTyID:
-    return "UnknownTy";
-  }
-  return "UnknownTy";
+  return getVocabKeyForCanonicalTypeID(getCanonicalTypeID(TypeID));
 }
 
 StringRef Vocabulary::getVocabKeyForOperandKind(Vocabulary::OperandKind Kind) {
   unsigned Index = static_cast<unsigned>(Kind);
   assert(Index < MaxOperandKinds && "Invalid OperandKind");
   return OperandKindNames[Index];
-}
-
-Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
-  VocabVector DummyVocab;
-  float DummyVal = 0.1f;
-  // Create a dummy vocabulary with entries for all opcodes, types, and
-  // operand
-  for ([[maybe_unused]] unsigned _ :
-       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
-                   Vocabulary::MaxOperandKinds)) {
-    DummyVocab.push_back(Embedding(Dim, DummyVal));
-    DummyVal += 0.1f;
-  }
-  return DummyVocab;
 }
 
 // Helper function to classify an operand into OperandKind
@@ -373,34 +345,18 @@ Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
   return OperandKind::VariableID;
 }
 
-unsigned Vocabulary::getNumericID(unsigned Opcode) {
-  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
-  return Opcode - 1; // Convert to zero-based index
-}
-
-unsigned Vocabulary::getNumericID(Type::TypeID TypeID) {
-  assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
-  return MaxOpcodes + static_cast<unsigned>(TypeID);
-}
-
-unsigned Vocabulary::getNumericID(const Value *Op) {
-  unsigned Index = static_cast<unsigned>(getOperandKind(Op));
-  assert(Index < MaxOperandKinds && "Invalid OperandKind");
-  return MaxOpcodes + MaxTypeIDs + Index;
-}
-
 StringRef Vocabulary::getStringKey(unsigned Pos) {
-  assert(Pos < Vocabulary::expectedSize() &&
-         "Position out of bounds in vocabulary");
+  assert(Pos < NumCanonicalEntries && "Position out of bounds in vocabulary");
   // Opcode
   if (Pos < MaxOpcodes)
     return getVocabKeyForOpcode(Pos + 1);
   // Type
-  if (Pos < MaxOpcodes + MaxTypeIDs)
-    return getVocabKeyForTypeID(static_cast<Type::TypeID>(Pos - MaxOpcodes));
+  if (Pos < MaxOpcodes + MaxCanonicalTypeIDs)
+    return getVocabKeyForCanonicalTypeID(
+        static_cast<CanonicalTypeID>(Pos - MaxOpcodes));
   // Operand
   return getVocabKeyForOperandKind(
-      static_cast<OperandKind>(Pos - MaxOpcodes - MaxTypeIDs));
+      static_cast<OperandKind>(Pos - MaxOpcodes - MaxCanonicalTypeIDs));
 }
 
 // For now, assume vocabulary is stable unless explicitly invalidated.
@@ -408,6 +364,21 @@ bool Vocabulary::invalidate(Module &M, const PreservedAnalyses &PA,
                             ModuleAnalysisManager::Invalidator &Inv) const {
   auto PAC = PA.getChecker<IR2VecVocabAnalysis>();
   return !(PAC.preservedWhenStateless());
+}
+
+Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
+  VocabVector DummyVocab;
+  DummyVocab.reserve(NumCanonicalEntries);
+  float DummyVal = 0.1f;
+  // Create a dummy vocabulary with entries for all opcodes, types, and
+  // operands
+  for ([[maybe_unused]] unsigned _ :
+       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxCanonicalTypeIDs +
+                   Vocabulary::MaxOperandKinds)) {
+    DummyVocab.push_back(Embedding(Dim, DummyVal));
+    DummyVal += 0.1f;
+  }
+  return DummyVocab;
 }
 
 // ==----------------------------------------------------------------------===//
@@ -502,6 +473,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   // Handle Opcodes
   std::vector<Embedding> NumericOpcodeEmbeddings(Vocabulary::MaxOpcodes,
                                                  Embedding(Dim, 0));
+  NumericOpcodeEmbeddings.reserve(Vocabulary::MaxOpcodes);
   for (unsigned Opcode : seq(0u, Vocabulary::MaxOpcodes)) {
     StringRef VocabKey = Vocabulary::getVocabKeyForOpcode(Opcode + 1);
     auto It = OpcVocab.find(VocabKey.str());
@@ -513,14 +485,15 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   Vocab.insert(Vocab.end(), NumericOpcodeEmbeddings.begin(),
                NumericOpcodeEmbeddings.end());
 
-  // Handle Types
-  std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxTypeIDs,
+  // Handle Types - only canonical types are present in vocabulary
+  std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxCanonicalTypeIDs,
                                                Embedding(Dim, 0));
-  for (unsigned TypeID : seq(0u, Vocabulary::MaxTypeIDs)) {
-    StringRef VocabKey =
-        Vocabulary::getVocabKeyForTypeID(static_cast<Type::TypeID>(TypeID));
+  NumericTypeEmbeddings.reserve(Vocabulary::MaxCanonicalTypeIDs);
+  for (unsigned CTypeID : seq(0u, Vocabulary::MaxCanonicalTypeIDs)) {
+    StringRef VocabKey = Vocabulary::getVocabKeyForCanonicalTypeID(
+        static_cast<Vocabulary::CanonicalTypeID>(CTypeID));
     if (auto It = TypeVocab.find(VocabKey.str()); It != TypeVocab.end()) {
-      NumericTypeEmbeddings[TypeID] = It->second;
+      NumericTypeEmbeddings[CTypeID] = It->second;
       continue;
     }
     handleMissingEntity(VocabKey.str());
@@ -531,6 +504,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
   // Handle Arguments/Operands
   std::vector<Embedding> NumericArgEmbeddings(Vocabulary::MaxOperandKinds,
                                               Embedding(Dim, 0));
+  NumericArgEmbeddings.reserve(Vocabulary::MaxOperandKinds);
   for (unsigned OpKind : seq(0u, Vocabulary::MaxOperandKinds)) {
     Vocabulary::OperandKind Kind = static_cast<Vocabulary::OperandKind>(OpKind);
     StringRef VocabKey = Vocabulary::getVocabKeyForOperandKind(Kind);
