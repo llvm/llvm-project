@@ -195,7 +195,7 @@ static LayoutInfo getDefaultSIMTLayoutInfo(unsigned rank) {
 
 /// Helper to get the default layout for a vector type.
 static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy,
-                                           bool scattered = false) {
+                                           bool isScattered = false) {
   // Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -208,7 +208,7 @@ static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy,
   // Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
-  if (scattered) {
+  if (isScattered) {
     packingFactor =
         bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
             ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
@@ -224,7 +224,7 @@ static LayoutInfo getDefaultSIMTLayoutInfo(VectorType vectorTy,
 
 /// Helper to get the default layout for a vector type.
 static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy,
-                                           bool scattered = false) {
+                                           bool isScattered = false) {
   // Expecting a 1D or 2D vector.
   assert((tdescTy.getRank() == 1 || tdescTy.getRank() == 2) &&
          "Expected 1D or 2D TensorDesc.");
@@ -237,7 +237,7 @@ static LayoutInfo getDefaultSIMTLayoutInfo(xegpu::TensorDescType tdescTy,
   // Packing factor is determined by the element type bitwidth.
   unsigned bitwidth = tdescTy.getElementType().getIntOrFloatBitWidth();
 
-  if (scattered) {
+  if (isScattered) {
     int packingFactor =
         bitwidth < xegpu::targetinfo::packedSizeInBitsForGatherScatter
             ? xegpu::targetinfo::packedSizeInBitsForGatherScatter / bitwidth
@@ -558,7 +558,10 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   // The layout is strictly determined by the payload type.
   auto payloadTy = dyn_cast<VectorType>(load.getValueType());
-  assert(payloadTy && "Only vector payload distribution is supported");
+  if (!payloadTy) {
+    load.emitWarning("Not propagating, non-vector payload supplied.");
+    return;
+  }
   LayoutInfo layout = getDefaultSIMTLayoutInfo(payloadTy, /*scattered*/ true);
 
   // Mask operand should have 1D default layout.
@@ -569,9 +572,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     propagateIfChanged(operands[0], operands[0]->meet(layout));
   // Propagate the new layout to the mask and optional offset operand.
   propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
-  if (load.getOffsets()) {
+  if (load.getOffsets())
     propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
-  }
 }
 
 /// Propagate the layout of the descriptor to the vector offset operand in
@@ -597,7 +599,10 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   // the tensor descriptor is equal to the subgroup size. This is ensured by
   // the op verifier.
   auto payloadTy = dyn_cast<VectorType>(storeScatter.getValueType());
-  assert(payloadTy && "Only vector payload distribution is supported");
+  if (!payloadTy) {
+    storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
+    return;
+  }
   auto payloadShape = payloadTy.getShape();
   if (payloadShape.size() > 1)
     assert(

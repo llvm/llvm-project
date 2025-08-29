@@ -330,24 +330,15 @@ gpu.module @test {
   gpu.func @scatter_ops_chunksize(%src: memref<256xf16>) {
     %1 = arith.constant dense<1>: vector<16xi1>
     %offset = arith.constant dense<12> : vector<16xindex>
-    %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-    xegpu.store %3, %src[%offset], %1 <{chunk_size=8}> : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-    gpu.return
-  }
-}
-
-// -----
-// CHECK-LABEL: gpu.func @scatter_ops({{.*}}) {
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK-NEXT: %[[LANE_OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
-// CHECK-NEXT: %[[LOADED:.*]] = xegpu.load %arg0[%[[LANE_OFFSET]]], %[[MASK]] : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
-// CHECK-NEXT: xegpu.store %[[LOADED]], %arg0[%[[LANE_OFFSET]]], %[[MASK]] : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-gpu.module @test {
-  gpu.func @scatter_ops(%src: memref<256xf16>) {
-    %1 = arith.constant dense<1>: vector<16xi1>
-    %offset = arith.constant dense<12> : vector<16xindex>
-    %3 = xegpu.load %src[%offset], %1 : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
-    xegpu.store %3, %src[%offset], %1 : vector<16xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
+      layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+    xegpu.store %3, %src[%offset], %1 <{chunk_size=8}> {
+      layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>,
+      layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+    } : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
     gpu.return
   }
 }

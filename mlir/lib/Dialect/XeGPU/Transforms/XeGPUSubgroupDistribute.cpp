@@ -849,18 +849,10 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(storeScatterOp,
                                          "Expected 1D offsets and mask vector");
     VectorType storeVecTy = cast<VectorType>(storeScatterOp.getValueType());
-    assert(storeVecTy.getRank() <= 2 &&
-           "Expected at most 2D result at SG level");
-    VectorType distStoreVecTy;
-    if (storeVecTy.getRank() == 2)
-      distStoreVecTy = VectorType::Builder(storeVecTy).dropDim(0);
-    else // rank 1
-      distStoreVecTy = VectorType::Builder(storeVecTy).setDim(0, 1);
-    // Assume offset and mask producers will be distributed as well.
-    VectorType distOffsetsTy =
-        VectorType::get({1}, getElementTypeOrSelf(offsetsTy));
-    VectorType distMaskTy = VectorType::get(
-        {1}, getElementTypeOrSelf(storeScatterOp.getMask().getType()));
+    if (storeVecTy.getRank() > 2)
+      return rewriter.notifyMatchFailure(
+          storeScatterOp, "Expected at most 2D result at SG level");
+
     std::string layoutPayloadName =
         xegpu::getLayoutName(storeScatterOp->getOpOperand(0));
     std::string layoutOffsetsName =
@@ -884,17 +876,20 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
     if (failed(distStoreVecByWarpOpOrFailure) ||
         failed(distOffsetsByWarpOpOrFailure) ||
         failed(distMaskByWarpOpOrFailure)) {
-      storeScatterOp.emitWarning(
+      return rewriter.notifyMatchFailure(
+          storeScatterOp,
           "Some vector operands have no layouts, using defaults instead.");
     }
-    distStoreVecTy = distStoreVecByWarpOpOrFailure.value_or(distStoreVecTy);
-    distOffsetsTy = distOffsetsByWarpOpOrFailure.value_or(distOffsetsTy);
-    distMaskTy = distMaskByWarpOpOrFailure.value_or(distMaskTy);
+    VectorType distPayloadTy = distStoreVecByWarpOpOrFailure.value();
+    VectorType expectedPayloadTy = VectorType::get(
+        {distPayloadTy.getNumElements()}, distPayloadTy.getElementType());
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = storeScatterOp->getOperands();
     SmallVector<Type> operandTypesToYield = {
-        distStoreVecTy, operands[1].getType(), distOffsetsTy, distMaskTy};
+        expectedPayloadTy, operands[1].getType(),
+        distOffsetsByWarpOpOrFailure.value(),
+        distMaskByWarpOpOrFailure.value()};
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
@@ -958,10 +953,6 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(loadGatherOp,
                                          "Expected 1D offsets and mask vector");
     // Assume offset and mask producers will be distributed as well.
-    VectorType distOffsetsTy =
-        VectorType::get({1}, getElementTypeOrSelf(offsetsTy));
-    VectorType distMaskTy = VectorType::get({1}, getElementTypeOrSelf(maskTy));
-
     std::string layoutOffsetsName =
         xegpu::getLayoutName(loadGatherOp->getOpOperand(1));
     std::string layoutMaskName =
@@ -978,16 +969,16 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layoutMask, maskTy);
     if (failed(distOffsetsByWarpOpOrFailure) ||
         failed(distMaskByWarpOpOrFailure)) {
-      loadGatherOp.emitWarning(
+      return rewriter.notifyMatchFailure(
+          loadGatherOp,
           "Some vector operands have no layouts, using defaults instead.");
     }
-    distOffsetsTy = distOffsetsByWarpOpOrFailure.value_or(distOffsetsTy);
-    distMaskTy = distMaskByWarpOpOrFailure.value_or(distMaskTy);
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = loadGatherOp->getOperands();
-    SmallVector<Type> operandTypesToYield = {operands[0].getType(),
-                                             distOffsetsTy, distMaskTy};
+    SmallVector<Type> operandTypesToYield = {
+        operands[0].getType(), distOffsetsByWarpOpOrFailure.value(),
+        distMaskByWarpOpOrFailure.value()};
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
@@ -998,7 +989,6 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     const unsigned operandIdx = producedByLastLoad->getOperandNumber();
     VectorType loadVecTy =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
-    assert(loadVecTy.getRank() == 1 && "Expected a distributed vector");
 
     rewriter.setInsertionPointAfter(newWarpOp);
     xegpu::LoadGatherOp newOp = rewriter.create<xegpu::LoadGatherOp>(
