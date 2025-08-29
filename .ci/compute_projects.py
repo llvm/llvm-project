@@ -98,7 +98,6 @@ EXCLUDE_LINUX = {
 
 EXCLUDE_WINDOWS = {
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
-    "compiler-rt",  # TODO(issues/132798): Tests take excessive time.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
     "lldb",  # TODO(issues/132800): Needs environment setup.
