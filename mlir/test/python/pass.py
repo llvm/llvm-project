@@ -55,22 +55,25 @@ def testCustomPass():
         class CustomPass(Pass):
             def __init__(self):
                 super().__init__("CustomPass", op_name="builtin.module")
+
             def run(self, m):
                 frozen = PDLModule(pdl_module).freeze()
                 apply_patterns_and_fold_greedily_for_op(m, frozen)
 
-        module = ModuleOp.parse(r"""
+        module = ModuleOp.parse(
+            r"""
             module {
               func.func @add(%a: index, %b: index) -> index {
                 %sum = arith.addi %a, %b : index
                 return %sum : index
               }
             }
-        """)
+        """
+        )
 
         # CHECK-LABEL: Dump After CustomPass
         # CHECK: arith.muli
-        pm = PassManager('any')
+        pm = PassManager("any")
         pm.enable_ir_printing()
         pm.add(CustomPass())
         pm.run(module)
