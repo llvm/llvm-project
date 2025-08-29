@@ -511,6 +511,60 @@ define i64 @test_resign_load_relative_largeOffset_constdisc(i64 %arg,i64 %arg1) 
   %tmp = call i64 @llvm.ptrauth.resign.load.relative(i64 %arg,i32 2,i64 %arg1,i32 2,i64 256,i64 32556)
   ret i64 %tmp
 }
+define void  @test_intrinsic_glue_chain_correctly_setup(ptr %0, i64 %1, ptr %2)  {
+; UNCHECKED-LABEL: test_intrinsic_glue_chain_correctly_setup:
+; UNCHECKED:         %bb.0:
+; UNCHECKED-NEXT:    str x2, [x0]
+; UNCHECKED-NEXT:    mov x16, x1
+; UNCHECKED-NEXT:    mov x17, #29199
+; UNCHECKED-NEXT:    autda x16, x17
+; UNCHECKED-NEXT:    ldrsw x17, [x16, #0]!
+; UNCHECKED-NEXT:    add x16, x16, x17
+; UNCHECKED-NEXT:    mov x17, #29199
+; UNCHECKED-NEXT:    pacia x16, x17
+; UNCHECKED-NEXT:    ret
+;
+; CHECKED-LABEL: test_intrinsic_glue_chain_correctly_setup:
+; CHECKED:         %bb.0:
+; CHECKED-NEXT:    str x2, [x0]
+; CHECKED-NEXT:    mov x16, x1
+; CHECKED-NEXT:    mov x17, #29199
+; CHECKED-NEXT:    autda x16, x17
+; CHECKED-NEXT:    mov x17, x16
+; CHECKED-NEXT:    xpacd x17
+; CHECKED-NEXT:    cmp x16, x17
+; CHECKED-NEXT:    b.eq [[L]]auth_success_9
+; CHECKED-NEXT:    mov x16, x17
+; CHECKED-NEXT:    b [[L]]resign_end_9
+; CHECKED-NEXT:  Lauth_success_9:
+; CHECKED-NEXT:    ldrsw x17, [x16, #0]!
+; CHECKED-NEXT:    add x16, x16, x17
+; CHECKED-NEXT:    mov x17, #29199
+; CHECKED-NEXT:    pacia x16, x17
+; CHECKED-NEXT:  Lresign_end_9:
+; CHECKED-NEXT:    ret
+;
+; TRAP-LABEL: test_intrinsic_glue_chain_correctly_setup:
+; TRAP:         %bb.0:
+; TRAP-NEXT:    str x2, [x0]
+; TRAP-NEXT:    mov x16, x1
+; TRAP-NEXT:    mov x17, #29199
+; TRAP-NEXT:    autda x16, x17
+; TRAP-NEXT:    mov x17, x16
+; TRAP-NEXT:    xpacd x17
+; TRAP-NEXT:    cmp x16, x17
+; TRAP-NEXT:    b.eq [[L]]auth_success_9
+; TRAP-NEXT:    brk #0xc472
+; TRAP-NEXT:  Lauth_success_9:
+; TRAP-NEXT:    ldrsw x17, [x16, #0]!
+; TRAP-NEXT:    add x16, x16, x17
+; TRAP-NEXT:    mov x17, #29199
+; TRAP-NEXT:    pacia x16, x17
+; TRAP-NEXT:    ret
+  store ptr %2, ptr %0, align 8
+  %15 = tail call i64 @llvm.ptrauth.resign.load.relative(i64 %1, i32 2, i64 29199, i32 0, i64 29199, i64 0)
+  ret void
+}
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)
 declare i64 @llvm.ptrauth.resign.load.relative(i64,i32,i64,i32,i64,i64)

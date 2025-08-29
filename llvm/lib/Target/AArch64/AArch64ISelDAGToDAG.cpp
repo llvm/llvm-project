@@ -1606,9 +1606,10 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
 
   if (HasLoad) {
     SDValue Addend = N->getOperand(OffsetBase + 6);
-    SDValue Ops[] = {AUTKey, AUTConstDisc,       AUTAddrDisc,
-                     PACKey, PACConstDisc,       PACAddrDisc,
-                     Addend, X16Copy.getValue(1)};
+    SDValue IncomingChain = N->getOperand(0);
+    SDValue Ops[] = {AUTKey, AUTConstDisc,  AUTAddrDisc,
+                     PACKey, PACConstDisc,  PACAddrDisc,
+                     Addend, IncomingChain, X16Copy.getValue(1)};
 
     SDNode *AUTRELLOADPAC = CurDAG->getMachineNode(AArch64::AUTRELLOADPAC, DL,
                                                    MVT::i64, MVT::Other, Ops);
