@@ -49,6 +49,7 @@ add_llvm_unittest(CodeGenTests
   TestAsmPrinter.cpp
   MLRegAllocDevelopmentFeatures.cpp
   VRegMaskPairTest.cpp
+  X86MCInstLowerTest.cpp
   )
 
 add_subdirectory(GlobalISel)
