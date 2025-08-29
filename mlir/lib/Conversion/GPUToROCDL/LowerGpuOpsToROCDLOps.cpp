@@ -171,6 +171,14 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
+static bool isSupportedReadLaneType(Type type) {
+  // read(first)lane also supports some vector types, but limit it for scalars
+  // for now.
+  return type.isInteger(16) || type.isInteger(32) || type.isInteger(64) ||
+         isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
+             LLVM::LLVMPointerType>(type);
+}
+
 struct GPUSubgroupBroadcastOpToROCDL
     : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
@@ -179,6 +187,9 @@ struct GPUSubgroupBroadcastOpToROCDL
   matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value src = adaptor.getSrc();
+    if (!isSupportedReadLaneType(src.getType()))
+      return rewriter.notifyMatchFailure(op, "unsupported readlane type");
+
     if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
       rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
                                                      adaptor.getLane());
