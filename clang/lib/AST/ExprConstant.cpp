@@ -11599,6 +11599,89 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
   return false;
 }
 
+enum class PackKind {
+  SSWB,
+  USWB,
+  SSDW,
+  USDW
+}; // 16→8 signed/unsigned; 32→16 signed/unsigned
+
+static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
+                            PackKind K) {
+  APValue L, R;
+  if (!EvaluateAsRValue(Info, E->getArg(0), L) ||
+      !EvaluateAsRValue(Info, E->getArg(1), R))
+    return false;
+
+  unsigned SrcBits = (K == PackKind::SSWB || K == PackKind::USWB) ? 16 : 32;
+  unsigned DstBits = SrcBits / 2;
+
+  unsigned NL = L.getVectorLength();
+  unsigned NR = R.getVectorLength();
+  if (NL == 0 || NR == 0 || NL != NR)
+    return false;
+
+  // Bounds for saturation (extended to SrcBits for compares).
+  APInt Lo = (K == PackKind::USWB || K == PackKind::USDW)
+                 ? APInt(SrcBits, 0)
+                 : APInt::getSignedMinValue(DstBits).sext(SrcBits);
+  APInt Hi = (K == PackKind::USWB || K == PackKind::USDW)
+                 ? APInt::getMaxValue(DstBits).zext(SrcBits)
+                 : APInt::getSignedMaxValue(DstBits).sext(SrcBits);
+
+  // Result element signedness follows the builtin's return vector element type.
+  QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+  bool DestIsUnsigned = DestEltTy->isUnsignedIntegerType();
+
+  // Clamp one source element to the target range and narrow to DstBits.
+  auto clampOne = [&](const APSInt &X) -> APSInt {
+    APInt V = X;
+    if (V.getBitWidth() != SrcBits)
+      V = V.sextOrTrunc(SrcBits);
+
+    if (K == PackKind::USWB || K == PackKind::USDW) {
+      if (V.isNegative())
+        V = Lo;
+      else if (V.ugt(Hi))
+        V = Hi;
+      APInt Narrow = V.zextOrTrunc(DstBits);
+      return APSInt(Narrow, /*isUnsigned=*/true);
+    } else {
+      if (V.sgt(Hi))
+        V = Hi;
+      else if (V.slt(Lo))
+        V = Lo;
+      APInt Narrow = V.sextOrTrunc(DstBits);
+      return APSInt(Narrow, /*isUnsigned=*/DestIsUnsigned);
+    }
+  };
+
+  SmallVector<APValue, 64> Out;
+  Out.reserve(NL + NR);
+
+  // Process per 128-bit lane (MMX 64-bit uses a single lane).
+  unsigned VectorBits = NL * SrcBits;
+  unsigned srcPerLane, lanes;
+  if (VectorBits >= 128) {
+    srcPerLane = 128 / SrcBits; // 8 (16→8) or 4 (32→16)
+    lanes = VectorBits / 128;   // 1 (128b), 2 (256b), 4 (512b)
+  } else {
+    srcPerLane = NL; // MMX
+    lanes = 1;
+  }
+
+  for (unsigned lane = 0; lane != lanes; ++lane) {
+    unsigned base = lane * srcPerLane;
+    for (unsigned i = 0; i != srcPerLane; ++i)
+      Out.push_back(APValue(clampOne(L.getVectorElt(base + i).getInt())));
+    for (unsigned i = 0; i != srcPerLane; ++i)
+      Out.push_back(APValue(clampOne(R.getVectorElt(base + i).getInt())));
+  }
+
+  Result = APValue(Out.data(), Out.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -11752,6 +11835,22 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_packsswb128:
+  case X86::BI__builtin_ia32_packsswb256:
+  case X86::BI__builtin_ia32_packsswb512:
+    return evalPackBuiltin(E, Info, Result, PackKind::SSWB);
+  case X86::BI__builtin_ia32_packuswb128:
+  case X86::BI__builtin_ia32_packuswb256:
+  case X86::BI__builtin_ia32_packuswb512:
+    return evalPackBuiltin(E, Info, Result, PackKind::USWB);
+  case X86::BI__builtin_ia32_packssdw128:
+  case X86::BI__builtin_ia32_packssdw256:
+  case X86::BI__builtin_ia32_packssdw512:
+    return evalPackBuiltin(E, Info, Result, PackKind::SSDW);
+  case X86::BI__builtin_ia32_packusdw128:
+  case X86::BI__builtin_ia32_packusdw256:
+  case X86::BI__builtin_ia32_packusdw512:
+    return evalPackBuiltin(E, Info, Result, PackKind::USDW);
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
