@@ -13,18 +13,21 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/IntegerSet.h"
-#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/IRModule.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+
+// clang-format off
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h" // ON WINDOWS This is expected after nanobind.
+// clang-format on
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -707,25 +710,24 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            [](PyAffineMap &self) {
              return static_cast<size_t>(llvm::hash_value(self.get().ptr));
            })
-      .def_static("compress_unused_symbols",
-                  [](const nb::list &affineMaps,
-                     DefaultingPyMlirContext context) {
-                    SmallVector<MlirAffineMap> maps;
-                    pyListToVector<PyAffineMap, MlirAffineMap>(
-                        affineMaps, maps, "attempting to create an AffineMap");
-                    std::vector<MlirAffineMap> compressed(affineMaps.size());
-                    auto populate = [](void *result, intptr_t idx,
-                                       MlirAffineMap m) {
-                      static_cast<MlirAffineMap *>(result)[idx] = (m);
-                    };
-                    mlirAffineMapCompressUnusedSymbols(
-                        maps.data(), maps.size(), compressed.data(), populate);
-                    std::vector<PyAffineMap> res;
-                    res.reserve(compressed.size());
-                    for (auto m : compressed)
-                      res.emplace_back(context->getRef(), m);
-                    return res;
-                  })
+      .def_static(
+          "compress_unused_symbols",
+          [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
+            SmallVector<MlirAffineMap> maps;
+            pyListToVector<PyAffineMap, MlirAffineMap>(
+                affineMaps, maps, "attempting to create an AffineMap");
+            std::vector<MlirAffineMap> compressed(affineMaps.size());
+            auto populate = [](void *result, intptr_t idx, MlirAffineMap m) {
+              static_cast<MlirAffineMap *>(result)[idx] = (m);
+            };
+            mlirAffineMapCompressUnusedSymbols(maps.data(), maps.size(),
+                                               compressed.data(), populate);
+            std::vector<PyAffineMap> res;
+            res.reserve(compressed.size());
+            for (auto m : compressed)
+              res.emplace_back(context->getRef(), m);
+            return res;
+          })
       .def_prop_ro(
           "context",
           [](PyAffineMap &self) { return self.getContext().getObject(); },
