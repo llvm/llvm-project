@@ -2466,6 +2466,9 @@ SILoadStoreOptimizer::collectMergeableInsts(
       continue;
 
     if (CI.InstClass == DS_WRITE && CI.IsAGPR) {
+      LLVM_DEBUG(
+          dbgs() << "cannot merge ds writes with mixed AGPR and VGPR data\n");
+
       // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
       //        operands. However we are reporting that ds_write2 shall have
       //        only VGPR data so that machine copy propagation does not
