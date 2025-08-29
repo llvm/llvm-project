@@ -437,13 +437,13 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   SmallString<16> OrigDir(OrigPath);
   llvm::sys::path::remove_filename(OrigDir);
   SmallString<16> DebugPath = OrigDir;
-  // Try relative/path/to/original_binary/debuglink_name.
+  // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
     Result = std::string(DebugPath);
     return true;
   }
-  // Try relative/path/to/original_binary/.debug/debuglink_name.
+  // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
@@ -452,17 +452,17 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   }
   // Make the path absolute so that lookups will go to
   // "/usr/lib/debug/full/path/to/debug", not
-  // "/usr/lib/debug/to/debug".
+  // "/usr/lib/debug/to/debug"
   llvm::sys::fs::make_absolute(OrigDir);
   if (!Opts.FallbackDebugPath.empty()) {
-    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name.
+    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name
     DebugPath = Opts.FallbackDebugPath;
   } else {
 #if defined(__NetBSD__)
-    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name.
+    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name
     DebugPath = "/usr/libdata/debug";
 #else
-    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name.
+    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name
     DebugPath = "/usr/lib/debug";
 #endif
   }
@@ -511,11 +511,11 @@ std::string LLVMSymbolizer::lookUpGsymFile(const std::string &Path) {
     return !EC && !llvm::sys::fs::is_directory(Status);
   };
 
-  // First, look beside the binary file.
+  // First, look beside the binary file
   if (const auto GsymPath = Path + ".gsym"; CheckGsymFile(GsymPath))
     return GsymPath;
 
-  // Then, look in the directories specified by GsymFileDirectory.
+  // Then, look in the directories specified by GsymFileDirectory
 
   for (const auto &Directory : Opts.GsymFileDirectory) {
     SmallString<16> GsymPath = llvm::StringRef{Directory};
@@ -595,7 +595,6 @@ Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
     const ArchiveCacheKey &Key,
     llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
     const std::string &PathForBinaryCache) {
-
   auto It = ObjectFileCache.find(Key);
   if (It != ObjectFileCache.end())
     return It->second.get();
@@ -837,7 +836,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
     Context = BTFContext::create(Obj);
   else
     Context = DWARFContext::create(Obj);
-  // FIXME: handle COFF object with PDB info to use PDBContext.
+  // FIXME: handle COFF object with PDB info to use PDBContext
   return createModuleInfo(&Obj, std::move(Context), ObjName);
 }
 
