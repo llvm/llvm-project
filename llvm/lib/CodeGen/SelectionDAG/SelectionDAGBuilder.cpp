@@ -8295,6 +8295,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitVectorExtractLastActive(I, Intrinsic);
     return;
   }
+  case Intrinsic::loop_dependence_war_mask:
+    setValue(&I,
+             DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
+  case Intrinsic::loop_dependence_raw_mask:
+    setValue(&I,
+             DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
   }
 }
 
