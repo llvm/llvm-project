@@ -28,17 +28,28 @@
 /// and a VGPR_16. If we use the VGPR_16 that corresponds to the lo16 bits of
 /// the VGPR_32, the COPY can be completely eliminated.
 ///
+/// Additionally, this pass also unpacks packed instructions (V_PK_MUL_F32/F16,
+/// V_PK_ADD_F32/F16, V_PK_FMA_F32) adjacent to MFMAs such that they can be
+/// co-issued. This helps with overlapping MFMA and certain vector instructions
+/// in machine schedules and is expected to improve performance. Only those
+/// packed instructions are unpacked that are overlapped by the MFMA latency.
+/// Rest should remain untouched.
 //===----------------------------------------------------------------------===//
 
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
+#include "GCNSchedStrategy.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
@@ -53,6 +64,26 @@ private:
   LiveIntervals *LIS;
 
   bool processReg(Register Reg);
+  bool createListOfPackedInstr(MachineInstr &BeginMI,
+                               SetVector<MachineInstr *> &InstrsToUnpack,
+                               uint16_t NumMFMACycles);
+  bool isUnpackingSupportedInstr(MachineInstr &MI) const;
+  void processF32Unpacking(MachineInstr &I);
+  uint16_t mapToUnpackedOpcode(MachineInstr &I);
+
+  void insertUnpackedF32MI(MachineInstr &I, MachineOperand &DstMO,
+                           MachineOperand &LoSrcMO1, MachineOperand &LoSrcMO2,
+                           MachineOperand &HiSrcMO1, MachineOperand &HiSrcMO2,
+                           bool isVreg_64);
+  void processF16Unpacking(MachineInstr &I, uint16_t AvailableBudget);
+  void processFMAF32Unpacking(MachineInstr &I);
+  MachineInstrBuilder createUnpackedMI(MachineBasicBlock &MBB, MachineInstr &I, const DebugLoc &DL, uint16_t UnpackedOpcode, bool isHiBits, bool isFMA);
+  bool hasReadWriteDependencies(const MachineInstr &PredMI, const MachineInstr &SuccMI);
+
+  bool IsF16MaskSet;
+  Register MaskLo; // mask to extract lower 16 bits for F16 packed instructions
+  Register
+      ShiftAmt; // mask to extract higher 16 bits from F16 packed instructions
 
 public:
   GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
@@ -225,6 +256,577 @@ bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   return true;
 }
 
+bool GCNPreRAOptimizationsImpl::isUnpackingSupportedInstr(
+    MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F16:
+  case AMDGPU::V_PK_ADD_F16:
+    return (MI.getOperand(2).isReg() && MI.getOperand(4).isReg());
+  case AMDGPU::V_PK_FMA_F32:
+    return (MI.getOperand(2).isReg() && MI.getOperand(4).isReg() && MI.getOperand(6).isReg());
+  default:
+    return false;
+  }
+}
+
+uint16_t GCNPreRAOptimizationsImpl::mapToUnpackedOpcode(MachineInstr &I) {
+  unsigned Opcode = I.getOpcode();
+  // use 64 bit encoding to allow use of VOP3 instructions.
+  // VOP3 instructions allow VOP3P source modifiers to be translated to VOP3
+  // e32 instructions are VOP2 and don't allow source modifiers
+  switch (Opcode) {
+  case AMDGPU::V_PK_ADD_F32:
+    return AMDGPU::V_ADD_F32_e64;
+  case AMDGPU::V_PK_MUL_F32:
+    return AMDGPU::V_MUL_F32_e64;
+  case AMDGPU::V_PK_ADD_F16:
+    return AMDGPU::V_ADD_F16_e64;
+  case AMDGPU::V_PK_MUL_F16:
+    return AMDGPU::V_MUL_F16_e64;
+  case AMDGPU::V_PK_FMA_F32:
+    return AMDGPU::V_FMA_F32_e64;
+  default:
+    return std::numeric_limits<uint16_t>::max();
+  }
+}
+
+bool GCNPreRAOptimizationsImpl::hasReadWriteDependencies(const MachineInstr &PredMI, const MachineInstr &SuccMI) {
+  for (const MachineOperand &Pred_Ops: PredMI.operands()) {
+    if (!Pred_Ops.isReg() || !Pred_Ops.isDef()) continue;
+    Register Pred_Reg = Pred_Ops.getReg();
+    if (!Pred_Reg.isValid()) continue;
+    for (const MachineOperand &Succ_Ops: SuccMI.operands()) {
+      if (!Succ_Ops.isReg() || !Succ_Ops.isDef()) continue;
+      Register Succ_Reg = Succ_Ops.getReg();
+      if (!Succ_Reg.isValid()) continue;
+      if ((Pred_Reg == Succ_Reg) || TRI->regsOverlap(Pred_Reg, Succ_Reg)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
+    MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
+    uint16_t NumMFMACycles) {
+  auto *BB = BeginMI.getParent();
+  auto *MF = BB->getParent();
+  int NumInst = 0;
+
+  auto E = BB->end();
+
+  int TotalCyclesBetweenCandidates = 0;
+  auto SchedModel = TII->getSchedModel();
+  for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
+    MachineInstr &Instr = *I;
+    const MCSchedClassDesc *InstrSchedClassDesc =
+        SchedModel.resolveSchedClass(&Instr);
+    TotalCyclesBetweenCandidates +=
+        SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
+
+    if (Instr.isMetaInstruction())
+      continue;
+
+    if (Instr.isTerminator())
+      return false;
+
+    if (TotalCyclesBetweenCandidates > NumMFMACycles)
+      return false;
+
+    if ((isUnpackingSupportedInstr(Instr)) && TII->isNeverCoissue(Instr)) {
+      if (hasReadWriteDependencies(BeginMI, Instr)){
+        dbgs() << "## here\n";
+      }
+      if ((Instr.getOpcode() == AMDGPU::V_PK_MUL_F16) ||
+          (Instr.getOpcode() == AMDGPU::V_PK_ADD_F16)) {
+        // unpacking packed F16 instructions requires multiple instructions.
+        // Instructions are issued to extract lower and higher bits for each
+        // operand Instructions are then issued for 2 unpacked instructions, and
+        // additional instructions to put them back into the original
+        // destination register The following sequence of instructions are
+        // issued
+
+        // The next two are needed to move masks into vgprs. Ideally, immediates
+        // should be used. However, if one of the source operands are
+        // sgpr/sregs, then immediates are not allowed. Hence, the need to move
+        // these into vgprs
+
+        // vgpr_32 = V_MOV_B32_e32 65535
+        // vgpr_32 = V_MOV_B32_e32 16
+
+        // vgpr_32 = V_AND_B32_e32 sub1:sreg_64, vgpr_32
+        // vgpr_32 = V_LSHRREV_B32_e64 vgpr_32, sub1:sreg_64
+        // vgpr_32 = V_AND_B32_e32 vgpr_32, vgpr_32
+        // vgpr_32 = V_LSHRREV_B32_e64 vgpr_32, vgpr_32
+        // vgpr_32 = V_MUL_F16_e64 0, killed vgpr_32, 0, killed vgpr_32, 0, 0
+        // vgpr_32 = V_MUL_F16_e64 0, killed vgpr_32, 0, killed vgpr_32, 0, 0
+        // vgpr_32 = V_LSHLREV_B32_e64 vgpr_32, vgpr_32
+        // dst_reg = V_OR_B32_e64 vgpr_32, vgpr_32
+
+        // we need to issue the MOV instructions above only once. Once these are
+        // issued, the IsF16MaskSet flag is set subsequent unpacking only needs
+        // to issue the remaining instructions The number of latency cycles for
+        // each instruction above is 1. It's hard coded into the code to reduce
+        // code complexity.
+        if (IsF16MaskSet)
+          TotalCyclesBetweenCandidates += 7;
+        else
+          TotalCyclesBetweenCandidates += 9;
+      } else
+        TotalCyclesBetweenCandidates += 1;
+
+      if (!(TotalCyclesBetweenCandidates > NumMFMACycles))
+        InstrsToUnpack.insert(&Instr);
+    }
+  }
+  return true;
+}
+
+void GCNPreRAOptimizationsImpl::insertUnpackedF32MI(
+    MachineInstr &I, MachineOperand &DstMO, MachineOperand &LoSrcMO1,
+    MachineOperand &LoSrcMO2, MachineOperand &HiSrcMO1,
+    MachineOperand &HiSrcMO2, bool IsVreg_64) {
+
+  MachineBasicBlock &MBB = *I.getParent();  
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = DstMO.getReg();
+
+  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  if (UnpackedOpcode == std::numeric_limits<uint16_t>::max())
+    return;
+
+  MachineInstrBuilder Op0L_Op1L = createUnpackedMI(MBB, I, DL, UnpackedOpcode, false, false);
+  if (IsVreg_64) {
+    Op0L_Op1L->getOperand(0).setIsUndef();
+  } else if (DstMO.isUndef()) {
+    Op0L_Op1L->getOperand(0).setIsUndef();
+  }
+  LIS->InsertMachineInstrInMaps(*Op0L_Op1L);
+  
+  MachineInstrBuilder Op0H_Op1H = createUnpackedMI(MBB, I, DL, UnpackedOpcode, true, false);
+  LIS->InsertMachineInstrInMaps(*Op0H_Op1H);
+
+  if (I.getFlag(MachineInstr::MIFlag::NoFPExcept)) {
+    Op0L_Op1L->setFlag(MachineInstr::MIFlag::NoFPExcept);
+    Op0H_Op1H->setFlag(MachineInstr::MIFlag::NoFPExcept);
+  }
+  if (I.getFlag(MachineInstr::MIFlag::FmContract)) {
+    Op0L_Op1L->setFlag(MachineInstr::MIFlag::FmContract);
+    Op0H_Op1H->setFlag(MachineInstr::MIFlag::FmContract);
+  }
+
+  LIS->RemoveMachineInstrFromMaps(I);
+  I.eraseFromParent();
+  LIS->removeInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(DstReg);
+  return;
+}
+
+void GCNPreRAOptimizationsImpl::processFMAF32Unpacking(MachineInstr &I) {
+  MachineBasicBlock &MBB = *I.getParent();
+  Register DstReg = I.getOperand(0).getReg();
+  const DebugLoc &DL = I.getDebugLoc();
+  const TargetRegisterClass *DstRC = MRI->getRegClass(I.getOperand(0).getReg());
+  bool IsVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+
+  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  if (UnpackedOpcode == std::numeric_limits<uint16_t>::max())
+    return;
+  
+  MachineInstrBuilder Op0L_Op1L = createUnpackedMI(MBB, I, DL, UnpackedOpcode, false, true);
+  if (IsVReg64)
+    Op0L_Op1L->getOperand(0).setIsUndef();
+  else if (I.getOperand(0).isUndef()) {
+    Op0L_Op1L->getOperand(0).setIsUndef();
+  }
+  LIS->InsertMachineInstrInMaps(*Op0L_Op1L);
+
+  MachineInstrBuilder Op0H_Op1H = createUnpackedMI(MBB, I, DL, UnpackedOpcode, true, true);
+  LIS->InsertMachineInstrInMaps(*Op0H_Op1H);
+
+  if (I.getFlag(MachineInstr::MIFlag::NoFPExcept)) {
+    Op0L_Op1L->setFlag(MachineInstr::MIFlag::NoFPExcept);
+    Op0H_Op1H->setFlag(MachineInstr::MIFlag::NoFPExcept);
+  }
+  if (I.getFlag(MachineInstr::MIFlag::FmContract)) {
+    Op0L_Op1L->setFlag(MachineInstr::MIFlag::FmContract);
+    Op0H_Op1H->setFlag(MachineInstr::MIFlag::FmContract);
+  }
+
+  LIS->RemoveMachineInstrFromMaps(I);
+  I.eraseFromParent();
+  LIS->removeInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(DstReg);
+  return;
+}
+
+MachineInstrBuilder GCNPreRAOptimizationsImpl::createUnpackedMI(MachineBasicBlock &MBB, MachineInstr &I,  const DebugLoc &DL, uint16_t UnpackedOpcode, bool isHiBits, bool isFMA) {
+  MachineOperand &DstMO = I.getOperand(0);
+  MachineOperand &SrcMO1 = I.getOperand(2);
+  MachineOperand &SrcMO2 = I.getOperand(4);
+  Register DstReg = DstMO.getReg();
+  Register SrcReg1 = SrcMO1.getReg();
+  Register SrcReg2 = SrcMO2.getReg();
+  const TargetRegisterClass *DstRC = MRI->getRegClass(DstMO.getReg());
+  unsigned DestSubIdx = isHiBits ? TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub1) : TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub0);
+  int ClampIdx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::clamp);
+  int64_t ClampVal = I.getOperand(ClampIdx).getImm();
+  int Src0_modifiers_Idx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src0_modifiers);
+  int Src1_modifiers_Idx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src1_modifiers);
+  
+  unsigned Src0_Mods = I.getOperand(Src0_modifiers_Idx).getImm();
+  unsigned Src1_Mods = I.getOperand(Src1_modifiers_Idx).getImm();
+  // Packed instructions (VOP3P) do not support abs. It is okay to ignore them.
+  unsigned New_Src0_Mods = 0;
+  unsigned New_Src1_Mods = 0;
+  
+  unsigned NegModifier = isHiBits ? SISrcMods::NEG_HI : SISrcMods::NEG;
+  unsigned OpSelModifier = isHiBits ? SISrcMods::OP_SEL_1 : SISrcMods::OP_SEL_0;
+  
+  MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
+  NewMI.addDef(DstReg, 0, DestSubIdx); // vdst
+  if (Src0_Mods & NegModifier) {
+    New_Src0_Mods |= SISrcMods::NEG;
+  }
+  NewMI.addImm(New_Src0_Mods); // src0_modifiers
+
+  if (Src0_Mods & OpSelModifier) {
+    unsigned Src0SubIdx =
+        TRI->composeSubRegIndices(SrcMO1.getSubReg(), AMDGPU::sub1);
+    NewMI.addReg(SrcMO1.getReg(), 0, Src0SubIdx); // src0
+  } else {
+    unsigned Src0SubIdx =
+        TRI->composeSubRegIndices(SrcMO1.getSubReg(), AMDGPU::sub0);
+    // if op_sel == 0, select register 0 of reg:sub0_sub1
+    NewMI.addReg(SrcMO1.getReg(), 0, Src0SubIdx);
+  }
+
+  if (Src1_Mods & NegModifier) {
+    New_Src1_Mods |= SISrcMods::NEG;
+  }
+  NewMI.addImm(New_Src1_Mods); // src1_modifiers
+  if (Src1_Mods & OpSelModifier) {
+    unsigned Src1SubIdx =
+        TRI->composeSubRegIndices(SrcMO2.getSubReg(), AMDGPU::sub1);
+    NewMI.addReg(SrcMO2.getReg(), 0, Src1SubIdx); // src0
+  } else {
+    // if op_sel_hi == 0, select register 0 of reg:sub0_sub1
+    unsigned Src1SubIdx =
+        TRI->composeSubRegIndices(SrcMO2.getSubReg(), AMDGPU::sub0);
+    NewMI.addReg(SrcMO2.getReg(), 0,
+                     Src1SubIdx);
+  }
+
+  if (isFMA) {
+    MachineOperand &SrcMO3 = I.getOperand(6);
+    Register SrcReg3 = SrcMO3.getReg();
+    int Src2_modifiers_Idx = AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src2_modifiers);
+    unsigned Src2_Mods = I.getOperand(Src2_modifiers_Idx).getImm();
+    unsigned New_Src2_Mods = 0;
+    //If NEG or NEG_HI is true, we need to negate the corresponding 32 bit lane. 
+    // This is also true for NEG_HI as it shares the same bit position with ABS. 
+    // But packed instructions do not support ABS. Therefore, NEG_HI must
+    // be translated to NEG source modifier for the higher 32 bits.
+    // Unpacked VOP3 instructions do support ABS, therefore we need to explicitly add
+    // the NEG modifier if present in the packed instruction
+    if (Src2_Mods & NegModifier) {
+      // New_Src2_Mods |= NegModifier;
+      New_Src2_Mods |= SISrcMods::NEG;  
+    }
+    NewMI.addImm(New_Src2_Mods); // src2_modifiers
+    if (Src2_Mods & OpSelModifier) {
+      unsigned Src2SubIdx =
+          TRI->composeSubRegIndices(SrcMO3.getSubReg(), AMDGPU::sub1);
+      NewMI.addReg(SrcMO3.getReg(), 0, Src2SubIdx);
+    } else {
+      unsigned Src2SubIdx =
+          TRI->composeSubRegIndices(SrcMO3.getSubReg(), AMDGPU::sub0);
+      // if op_sel_hi == 0, select register 0 of reg:sub0_sub1
+      NewMI.addReg(SrcMO3.getReg(), 0, Src2SubIdx);
+    }
+  }
+  NewMI.addImm(ClampVal); // clamp
+  // packed instructions do not support output modifiers. safe to assign them 0
+  // for this use case
+  NewMI.addImm(0); // omod
+  return NewMI;
+}
+
+void GCNPreRAOptimizationsImpl::processF32Unpacking(MachineInstr &I) {
+  if (I.getOpcode() == AMDGPU::V_PK_FMA_F32) {
+    processFMAF32Unpacking(I);
+    return;
+  }
+  MachineBasicBlock &MBB = *I.getParent();
+  
+  MachineOperand &DstMO = I.getOperand(0);
+  MachineOperand &SrcMO1 = I.getOperand(2);
+  MachineOperand &SrcMO2 = I.getOperand(4);
+
+  const DebugLoc &DL = I.getDebugLoc();
+  const TargetRegisterClass *DstRC = MRI->getRegClass(I.getOperand(0).getReg());
+
+  bool IsVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+  insertUnpackedF32MI(I, DstMO, SrcMO1, SrcMO2, SrcMO1, SrcMO2, IsVReg64);
+  return;
+}
+
+void GCNPreRAOptimizationsImpl::processF16Unpacking(MachineInstr &I,
+                                                    uint16_t AvailableBudget) {
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineOperand &DstMO = I.getOperand(0);
+  MachineOperand &SrcMO0 = I.getOperand(2);
+  MachineOperand &SrcMO1 = I.getOperand(4);
+  Register DstReg = DstMO.getReg();
+  Register SrcReg0 = SrcMO0.getReg();
+  Register SrcReg1 = SrcMO1.getReg();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  const TargetRegisterClass *RC = &AMDGPU::VGPR_32RegClass;
+  auto SchedModel = TII->getSchedModel();
+
+  auto BuildImm = [&](uint32_t Val) -> std::pair<Register, uint16_t> {
+    Register ImmReg = MRI.createVirtualRegister(RC);
+    auto NewMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), ImmReg)
+                     .addImm(Val);
+    LIS->InsertMachineInstrInMaps(*NewMI);
+    const MCSchedClassDesc *SchedClassDesc =
+        SchedModel.resolveSchedClass(NewMI);
+    uint16_t LatencyCycles =
+        SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+    return {ImmReg, LatencyCycles};
+  };
+
+  if (!IsF16MaskSet) {
+    std::pair<Register, uint16_t> RegAndLatency = BuildImm(0x0000FFFF);
+    MaskLo = RegAndLatency.first; // mask for lower 16 bits
+    RegAndLatency = BuildImm(16);
+    ShiftAmt = RegAndLatency.first; // mask for higher 16 bits
+    IsF16MaskSet = true;
+  }
+
+  Register Src0_Lo = MRI.createVirtualRegister(RC);
+  Register Src1_Lo = MRI.createVirtualRegister(RC);
+  Register Src0_Hi = MRI.createVirtualRegister(RC);
+  Register Src1_Hi = MRI.createVirtualRegister(RC);
+
+  unsigned SubRegID = 0;
+  if (SrcMO0.getSubReg())
+    SubRegID = SrcMO0.getSubReg();
+
+  int Src0_modifiers_Idx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src0_modifiers);
+  int Src1_modifiers_Idx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::src1_modifiers);
+  unsigned Src0_Mods = I.getOperand(Src0_modifiers_Idx).getImm();
+  unsigned Src1_Mods = I.getOperand(Src1_modifiers_Idx).getImm();
+  int ClampIdx =
+      AMDGPU::getNamedOperandIdx(I.getOpcode(), AMDGPU::OpName::clamp);
+  int64_t ClampVal = I.getOperand(ClampIdx).getImm();
+
+  // handle op_sel for src0
+  if (Src0_Mods & SISrcMods::OP_SEL_0) {
+    // if op_sel is set, select higher 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder LoInput0_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64), Src0_Lo)
+            .addReg(ShiftAmt);
+    if (SubRegID)
+      LoInput0_MI.addReg(SrcReg0, 0, SubRegID);
+    else
+      LoInput0_MI.addReg(SrcReg0);
+    LIS->InsertMachineInstrInMaps(*LoInput0_MI);
+  } else {
+    // if op_sel is not set, select lower 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder LoInput0_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_AND_B32_e32), Src0_Lo);
+    if (SubRegID)
+      LoInput0_MI.addReg(SrcReg0, 0, SubRegID);
+    else
+      LoInput0_MI.addReg(SrcReg0);
+    LoInput0_MI.addReg(MaskLo);
+    LIS->InsertMachineInstrInMaps(*LoInput0_MI);
+  }
+
+  // handle op_sel_hi for src0
+  if (Src0_Mods & SISrcMods::OP_SEL_1) {
+    // if op_sel_hi is set, select higher 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder HiInput0_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64), Src0_Hi)
+            .addReg(ShiftAmt);
+    if (SubRegID)
+      HiInput0_MI.addReg(SrcReg0, 0, SubRegID);
+    else
+      HiInput0_MI.addReg(SrcReg0);
+    LIS->InsertMachineInstrInMaps(*HiInput0_MI);
+  } else {
+    // if op_sel_hi is not set, select lower 16 bits and copy into lower 16 bits
+    // of new vgpr
+    MachineInstrBuilder HiInput0_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_AND_B32_e32), Src0_Hi);
+    if (SubRegID)
+      HiInput0_MI.addReg(SrcReg0, 0, SubRegID);
+    else
+      HiInput0_MI.addReg(SrcReg0);
+    HiInput0_MI.addReg(MaskLo);
+    LIS->InsertMachineInstrInMaps(*HiInput0_MI);
+  }
+
+  SubRegID = 0;
+  if (SrcMO0.getSubReg())
+    SubRegID = SrcMO1.getSubReg();
+  // handle op_sel for src1
+  if (Src1_Mods & SISrcMods::OP_SEL_0) {
+    // if op_sel is set, select higher 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder LoInput1_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64), Src1_Lo)
+            .addReg(ShiftAmt);
+    if (SubRegID)
+      LoInput1_MI.addReg(SrcReg1, 0, SubRegID);
+    else
+      LoInput1_MI.addReg(SrcReg1);
+    LIS->InsertMachineInstrInMaps(*LoInput1_MI);
+  } else {
+    // if op_sel is not set, select lower 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder LoInput1_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_AND_B32_e32), Src1_Lo);
+    if (SubRegID)
+      LoInput1_MI.addReg(SrcReg1, 0, SubRegID);
+    else
+      LoInput1_MI.addReg(SrcReg1);
+    LoInput1_MI.addReg(MaskLo);
+    LIS->InsertMachineInstrInMaps(*LoInput1_MI);
+  }
+
+  // handle op_sel_hi for src1
+  if (Src1_Mods & SISrcMods::OP_SEL_1) {
+    // if op_sel_hi is set, select higher 16 bits and copy into lower 16 bits of
+    // new vgpr
+    MachineInstrBuilder HiInput1_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_LSHRREV_B32_e64), Src1_Hi)
+            .addReg(ShiftAmt);
+    if (SubRegID)
+      HiInput1_MI.addReg(SrcReg1, 0, SubRegID);
+    else
+      HiInput1_MI.addReg(SrcReg1);
+    LIS->InsertMachineInstrInMaps(*HiInput1_MI);
+  } else {
+    // if op_sel_hi is not set, select lower 16 bits and copy into lower 16 bits
+    // of new vgpr
+    MachineInstrBuilder HiInput1_MI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::V_AND_B32_e32), Src1_Hi);
+    if (SubRegID)
+      HiInput1_MI.addReg(SrcReg1, 0, SubRegID);
+    else
+      HiInput1_MI.addReg(SrcReg1);
+    HiInput1_MI.addReg(MaskLo);
+    LIS->InsertMachineInstrInMaps(*HiInput1_MI);
+  }
+
+  Register LoMul = MRI.createVirtualRegister(RC);
+  Register HiMul = MRI.createVirtualRegister(RC);
+
+  unsigned Lo_src0_mods = 0;
+  unsigned Lo_src1_mods = 0;
+  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+
+  if (UnpackedOpcode == std::numeric_limits<uint16_t>::max())
+    return;
+  // Unpacked instructions
+  MachineInstrBuilder LoMul_MI =
+      BuildMI(MBB, I, DL, TII->get(UnpackedOpcode), LoMul);
+
+  if (Src0_Mods & SISrcMods::NEG)
+    Lo_src0_mods |= SISrcMods::NEG;
+
+  LoMul_MI.addImm(Lo_src0_mods);            // src0_modifiers
+  LoMul_MI.addReg(Src0_Lo, RegState::Kill); // src0
+
+  if (Src1_Mods & SISrcMods::NEG)
+    Lo_src1_mods |= SISrcMods::NEG;
+
+  LoMul_MI.addImm(Lo_src1_mods);            // src1_modifiers
+  LoMul_MI.addReg(Src1_Lo, RegState::Kill); // src1
+  LoMul_MI.addImm(ClampVal);                // clamp
+  // packed instructions do not support output modifiers. safe to assign them 0
+  // for this use case
+  LoMul_MI.addImm(0); // omod
+
+  // unpacked instruction with VOP3 encoding for Hi bits
+  unsigned Hi_src0_mods = 0;
+  unsigned Hi_src1_mods = 0;
+
+  MachineInstrBuilder HiMul_MI =
+      BuildMI(MBB, I, DL, TII->get(UnpackedOpcode), HiMul);
+  if (Src0_Mods & SISrcMods::NEG_HI)
+    Hi_src0_mods |= SISrcMods::NEG_HI;
+
+  HiMul_MI.addImm(Hi_src0_mods); // src0_modifiers
+  HiMul_MI.addReg(Src0_Hi,
+                  RegState::Kill); // select higher 16 bits if op_sel_hi is set
+
+  if (Src1_Mods & SISrcMods::NEG_HI)
+    Hi_src1_mods |= SISrcMods::NEG_HI;
+
+  HiMul_MI.addImm(Hi_src1_mods); // src0_modifiers
+  HiMul_MI.addReg(
+      Src1_Hi,
+      RegState::Kill); // select higher 16 bits from src1 if op_sel_hi is set
+  HiMul_MI.addImm(ClampVal); // clamp
+  // packed instructions do not support output modifiers. safe to assign them 0
+  // for this use case
+  HiMul_MI.addImm(0); // omod
+
+  // Shift HiMul left by 16
+  Register HiMulShifted = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder HiMulShifted_MI =
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_LSHLREV_B32_e64), HiMulShifted)
+          .addReg(ShiftAmt)
+          .addReg(HiMul);
+
+  SubRegID = 0;
+  if (DstMO.getSubReg())
+    SubRegID = DstMO.getSubReg();
+  // OR LoMul | (HiMul << 16)
+  MachineInstrBuilder RewriteBackToDst_MI =
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_OR_B32_e64));
+  if (SubRegID) {
+    if (DstMO.isUndef()) {
+      RewriteBackToDst_MI.addDef(DstReg, RegState::Undef, SubRegID);
+    } else {
+      RewriteBackToDst_MI.addDef(DstReg, 0, SubRegID);
+    }
+  } else {
+    if (DstMO.isUndef()) {
+      RewriteBackToDst_MI.addDef(DstReg, RegState::Undef);
+    } else {
+      RewriteBackToDst_MI.addDef(DstReg);
+    }
+  }
+  RewriteBackToDst_MI.addReg(LoMul);
+  RewriteBackToDst_MI.addReg(HiMulShifted);
+
+  LIS->InsertMachineInstrInMaps(*LoMul_MI);
+  LIS->InsertMachineInstrInMaps(*HiMul_MI);
+  LIS->InsertMachineInstrInMaps(*HiMulShifted_MI);
+  LIS->InsertMachineInstrInMaps(*RewriteBackToDst_MI);
+  LIS->RemoveMachineInstrFromMaps(I);
+  I.eraseFromParent();
+  LIS->removeInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(DstReg);
+}
+
 bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -260,38 +862,63 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     Changed |= processReg(Reg);
   }
 
-  if (!ST.useRealTrue16Insts())
-    return Changed;
-
   // Add RA hints to improve True16 COPY elimination.
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != AMDGPU::COPY)
-        continue;
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
-      if (Dst.isVirtual() &&
-          MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          Src.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
-      if (Src.isVirtual() &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
-          Dst.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
-      if (!Dst.isVirtual() || !Src.isVirtual())
-        continue;
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
-        MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+  // Unpack packed instructions to overlap MFMAs. This allows the compiler to
+  // co-issue unpacked instructions with MFMA
+  for (MachineBasicBlock &MBB : MF) {
+    SetVector<MachineInstr *> InstrsToUnpack;
+    SetVector<MachineOperand *> WriteOperands;
+    SetVector<MachineOperand *> ReadOperands;
+    IsF16MaskSet = false;
+    uint16_t NumMFMACycles = 0;
+    auto SchedModel = TII->getSchedModel();
+    for (MachineInstr &MI : MBB) {
+      if (SIInstrInfo::isMFMA(MI)) {
+        const MCSchedClassDesc *SchedClassDesc =
+            SchedModel.resolveSchedClass(&MI);
+        NumMFMACycles =
+            SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+        createListOfPackedInstr(MI, InstrsToUnpack, NumMFMACycles);
       }
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+      if (ST.useRealTrue16Insts()) {
+        if (MI.getOpcode() != AMDGPU::COPY)
+          continue;
+        Register Dst = MI.getOperand(0).getReg();
+        Register Src = MI.getOperand(1).getReg();
+        if (Dst.isVirtual() &&
+            MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+            Src.isPhysical() &&
+            TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
+        if (Src.isVirtual() &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
+            Dst.isPhysical() &&
+            TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
+        if (!Dst.isVirtual() || !Src.isVirtual())
+          continue;
+        if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
+          MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
+          MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+        }
+        if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+            MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+          MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+      }
+    }
+
+    if (!InstrsToUnpack.empty()) {
+      for (MachineInstr *MI : InstrsToUnpack) {
+        if ((MI->getOpcode() == AMDGPU::V_PK_MUL_F16) ||
+            (MI->getOpcode() == AMDGPU::V_PK_ADD_F16)) {
+          processF16Unpacking(*MI, NumMFMACycles);
+        } else {
+          processF32Unpacking(*MI);
+        }
+      }
     }
   }
-
+  LIS->reanalyze(MF);
   return Changed;
 }
