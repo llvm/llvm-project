@@ -612,7 +612,8 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 //===----------------------------------------------------------------------===//
 
 /// Converts arith.index_cast to spirv.Select if the type of source is index.
-struct IndexCastIndexI1Pattern final : public OpConversionPattern<arith::IndexCastOp> {
+struct IndexCastIndexI1Pattern final
+    : public OpConversionPattern<arith::IndexCastOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -629,10 +630,11 @@ struct IndexCastIndexI1Pattern final : public OpConversionPattern<arith::IndexCa
     Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     Value zeroIdx = spirv::ConstantOp::getZero(srcType, loc, rewriter);
-    auto isZero = spirv::IEqualOp::create(
-        rewriter, loc, dstType, zeroIdx, adaptor.getOperands().front());
+    auto isZero = spirv::IEqualOp::create(rewriter, loc, dstType, zeroIdx,
+                                          adaptor.getOperands().front());
     // spriv.IEqual outputs i32, spirv.Select is used to truncate to i1:
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, isZero, zero, one);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, isZero, zero,
+                                                 one);
     return success();
   }
 };
