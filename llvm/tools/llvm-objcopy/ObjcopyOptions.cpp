@@ -16,6 +16,8 @@
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/OffloadBinary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -282,6 +284,13 @@ static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
                              "'%s' is not a valid symbol visibility",
                              VisType.str().c_str());
   return type;
+}
+
+Expected<StringRef> llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
+  if (Error Err = object::extractOffloadBundleByURI(URI))
+    return std::move(Err);
+
+  return URI;
 }
 
 namespace {
@@ -729,6 +738,15 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
 
   SmallVector<const char *, 2> Positional;
 
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
+  COFFConfig &COFFConfig = ConfigMgr.COFF;
+  ELFConfig &ELFConfig = ConfigMgr.ELF;
+  MachOConfig &MachOConfig = ConfigMgr.MachO;
+
+  if (InputArgs.hasArg(OBJCOPY_dump_offload_bundle))
+    Config.NeedPositional = false;
+
   for (auto *Arg : InputArgs.filtered(OBJCOPY_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
                              Arg->getAsString(InputArgs).c_str());
@@ -736,27 +754,31 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
 
-  if (Positional.empty())
+  if (Positional.empty() && Config.NeedPositional)
     return createStringError(errc::invalid_argument, "no input file specified");
 
-  if (Positional.size() > 2)
+  if (Positional.size() > 2 && Config.NeedPositional)
     return createStringError(errc::invalid_argument,
                              "too many positional arguments");
 
-  ConfigManager ConfigMgr;
-  CommonConfig &Config = ConfigMgr.Common;
-  COFFConfig &COFFConfig = ConfigMgr.COFF;
-  ELFConfig &ELFConfig = ConfigMgr.ELF;
-  MachOConfig &MachOConfig = ConfigMgr.MachO;
-  Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
-  if (InputArgs.hasArg(OBJCOPY_target) &&
-      (InputArgs.hasArg(OBJCOPY_input_target) ||
-       InputArgs.hasArg(OBJCOPY_output_target)))
-    return createStringError(
-        errc::invalid_argument,
-        "--target cannot be used with --input-target or --output-target");
+  if (Arg *A = InputArgs.getLastArg(OBJCOPY_dump_offload_bundle)) {
+    for (StringRef URIStr : llvm::split(A->getValue(), ",")) {
+      Expected<StringRef> res = llvm::objcopy::parseDumpOffloadBundle(URIStr);
+      if (!res)
+        return res.takeError();
+    }
+  }
 
+  if (Config.NeedPositional) {
+    Config.InputFilename = Positional[0];
+    Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
+    if (InputArgs.hasArg(OBJCOPY_target) &&
+        (InputArgs.hasArg(OBJCOPY_input_target) ||
+         InputArgs.hasArg(OBJCOPY_output_target)))
+      return createStringError(
+          errc::invalid_argument,
+          "--target cannot be used with --input-target or --output-target");
+  }
   if (InputArgs.hasArg(OBJCOPY_regex) && InputArgs.hasArg(OBJCOPY_wildcard))
     return createStringError(errc::invalid_argument,
                              "--regex and --wildcard are incompatible");
@@ -1419,9 +1441,9 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
                              Arg->getAsString(InputArgs).c_str());
   for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_INPUT))
     Positional.push_back(Arg->getValue());
-  if (Positional.empty())
+  if (Positional.empty() && Config.NeedPositional)
     return createStringError(errc::invalid_argument, "no input file specified");
-  if (Positional.size() > 1)
+  if (Positional.size() > 1 && Config.NeedPositional)
     return createStringError(
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
@@ -1437,7 +1459,6 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
     return createStringError(errc::invalid_argument,
                              "input file: %s is not a Mach-O file",
                              Config.InputFilename.str().c_str());
-
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
 }
@@ -1544,6 +1565,11 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
     exit(0);
   }
 
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
+  ELFConfig &ELFConfig = ConfigMgr.ELF;
+  MachOConfig &MachOConfig = ConfigMgr.MachO;
+
   SmallVector<StringRef, 2> Positional;
   for (auto *Arg : InputArgs.filtered(STRIP_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",
@@ -1559,11 +1585,6 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
     return createStringError(
         errc::invalid_argument,
         "multiple input files cannot be used in combination with -o");
-
-  ConfigManager ConfigMgr;
-  CommonConfig &Config = ConfigMgr.Common;
-  ELFConfig &ELFConfig = ConfigMgr.ELF;
-  MachOConfig &MachOConfig = ConfigMgr.MachO;
 
   if (InputArgs.hasArg(STRIP_regex) && InputArgs.hasArg(STRIP_wildcard))
     return createStringError(errc::invalid_argument,
