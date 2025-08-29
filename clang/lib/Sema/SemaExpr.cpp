@@ -13620,6 +13620,8 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   VarDecl *Var = dyn_cast<VarDecl>(Value);
   if (!Var)
     return NCCK_None;
+  if (Var->getType()->isReferenceType())
+    return NCCK_None;
 
   assert(Var->hasLocalStorage() && "capture added 'const' to non-local?");
 
