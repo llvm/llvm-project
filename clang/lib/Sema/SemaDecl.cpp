@@ -18050,7 +18050,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
           }
         }
       } else if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
-                 RD && RD->isInjectedClassName()) {
+                 TUK == TagUseKind::Reference && RD &&
+                 RD->isInjectedClassName()) {
         // If lookup found the injected class name, the previous declaration is
         // the class being injected into.
         PrevDecl = cast<TagDecl>(RD->getDeclContext());
