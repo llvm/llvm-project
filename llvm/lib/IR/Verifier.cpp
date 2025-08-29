@@ -1298,9 +1298,11 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_set_type) {
     if (auto *T = N.getRawBaseType()) {
       auto *Enum = dyn_cast_or_null<DICompositeType>(T);
+      auto *Subrange = dyn_cast_or_null<DISubrangeType>(T);
       auto *Basic = dyn_cast_or_null<DIBasicType>(T);
       CheckDI(
           (Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type) ||
+              (Subrange && Subrange->getTag() == dwarf::DW_TAG_subrange_type) ||
               (Basic && (Basic->getEncoding() == dwarf::DW_ATE_unsigned ||
                          Basic->getEncoding() == dwarf::DW_ATE_signed ||
                          Basic->getEncoding() == dwarf::DW_ATE_unsigned_char ||
