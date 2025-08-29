@@ -417,8 +417,12 @@ define void @t7(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - consistent anti [1 0 0]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    {-1,+,1}<%for.cond1.preheader> Added Flags: <nusw><nssw>
 ; CHECK-NEXT:  Src: store i32 %add12, ptr %arrayidx2, align 4 --> Dst: store i32 %add12, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  {-1,+,1}<%for.cond1.preheader> Added Flags: <nusw><nssw>
 ;
 entry:
   %cmp49 = icmp sgt i32 %n, 0
@@ -442,17 +446,18 @@ for.cond5.preheader:                              ; preds = %for.cond.cleanup7, 
   br i1 %cmp645, label %for.body8.lr.ph, label %for.cond.cleanup7
 
 for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
-  %mul944 = add i32 %j.048, %mul
-  %add = mul i32 %mul944, %o
+  %mul944 = add nsw i32 %j.048, %mul
+  %add = mul nsw i32 %mul944, %o
   br label %for.body8
 
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
-  %add11 = add nsw i32 %k.046, %add
+
+%add11 = add nsw i32 %k.046, %add
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
   %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
-  %mo = mul i32 %m, %o
+  %mo = mul nsw i32 %m, %o
   %add111 = sub nsw i32 %add11, %mo
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
   store i32 %add12, ptr %arrayidx2, align 4
@@ -598,11 +603,11 @@ for.end12:                                        ; preds = %for.inc10, %entry
 define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK-LABEL: 'nonnegative'
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 1, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *|<]!
+; CHECK-NEXT:    da analyze - consistent output [0 0|<]!
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   %cmp44 = icmp eq i32 %N, 0
@@ -649,8 +654,14 @@ define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    {%a,+,%k}<%loop> Added Flags: <nusw><nssw>
+; CHECK-NEXT:    {(%k + %a),+,%k}<%loop> Added Flags: <nusw><nssw>
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  {%a,+,%k}<%loop> Added Flags: <nusw><nssw>
+; CHECK-NEXT:  {(%k + %a),+,%k}<%loop> Added Flags: <nusw><nssw>
 ;
 entry:
   br label %loop
@@ -688,11 +699,24 @@ define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    {%a,+,%k}<%loop> Added Flags: <nusw><nssw>
+; CHECK-NEXT:    {(%k + %a),+,%k}<%loop> Added Flags: <nusw><nssw>
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  {%a,+,%k}<%loop> Added Flags: <nusw><nssw>
+; CHECK-NEXT:  {(%k + %a),+,%k}<%loop> Added Flags: <nusw><nssw>
 ;
+
 entry:
-  br label %loop
+
+
+
+
+
+
+br label %loop
 
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]

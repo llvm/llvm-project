@@ -873,6 +873,9 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
                                         SmallBitVector &Loops) const {
   while (LoopNest) {
     unsigned Level = LoopNest->getLoopDepth();
+    LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+    LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+    assert(Level <= MaxLevels && "Level larger than MaxLevels.");
     if (Level <= CommonLevels && !SE->isLoopInvariant(Expression, LoopNest))
       Loops.set(Level);
     LoopNest = LoopNest->getParentLoop();
@@ -959,6 +962,10 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!AddRec)
     return isLoopInvariant(Expr, LoopNest);
 
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  if (!isLoopInvariant(Step, LoopNest))
+    return false;
+
   // The AddRec must depend on one of the containing loops. Otherwise,
   // mapSrcLoop and mapDstLoop return indices outside the intended range. This
   // can happen when a subscript in one loop references an IV from a sibling
@@ -970,14 +977,16 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!L)
     return false;
 
+  unsigned Level = IsSrc ? mapSrcLoop(L) : mapDstLoop(L);
+  // Check that the mapped loop index is within bounds for the SmallBitVector.
+  // This can happen when loop depths exceed MaxLevels due to the mapping
+  // algorithm.
+
+  LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+  LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+  assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+  Loops.set(Level);
   const SCEV *Start = AddRec->getStart();
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  if (!isLoopInvariant(Step, LoopNest))
-    return false;
-  if (IsSrc)
-    Loops.set(mapSrcLoop(AddRec->getLoop()));
-  else
-    Loops.set(mapDstLoop(AddRec->getLoop()));
   return checkSubscript(Start, LoopNest, Loops, IsSrc);
 }
 
@@ -2247,6 +2256,34 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     assert(CurLoop == DstAddRec->getLoop() &&
            "both loops in SIV should be same");
     Level = mapSrcLoop(CurLoop);
+
+    // Check if either AddRec may wrap, which would invalidate SIV analysis
+    auto addWrapPredicate = [&](const SCEVAddRecExpr *AR, const char *Name) {
+      std::optional<bool> MayWrap = SE->mayAddRecWrap(AR);
+      if (MayWrap == true) {
+        LLVM_DEBUG(dbgs() << "\tSIV test skipped due to wrapping " << Name
+                          << " AddRec\n");
+        return false;
+      }
+      if (!MayWrap.has_value()) {
+        // Unknown wrapping - add runtime predicate.
+        auto WrapFlags = static_cast<SCEVWrapPredicate::IncrementWrapFlags>(
+            SCEVWrapPredicate::IncrementNUSW |
+            SCEVWrapPredicate::IncrementNSSW);
+        const SCEVPredicate *WrapPred = SE->getWrapPredicate(AR, WrapFlags);
+        const_cast<DependenceInfo *>(this)->Assumptions.push_back(WrapPred);
+        LLVM_DEBUG(dbgs() << "\t    Added runtime wrap assumption for " << Name
+                          << ": " << *AR << "\n");
+      }
+      return true;
+    };
+
+    if (!addWrapPredicate(SrcAddRec, "Src") ||
+        !addWrapPredicate(DstAddRec, "Dst")) {
+      // Conservative - cannot prove independence.
+      return false;
+    }
+
     bool disproven;
     if (SrcCoeff == DstCoeff)
       disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop, Level,
@@ -2281,8 +2318,14 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                               Result, NewConstraint) ||
            gcdMIVtest(Src, Dst, Result);
   }
-  llvm_unreachable("SIV test expected at least one AddRec");
-  return false;
+  // If neither expression is an AddRec, this means propagation has simplified
+  // them to non-AddRec forms. In this case, fall back to ZIV analysis since
+  // the expressions are effectively loop-invariant.
+  LLVM_DEBUG(dbgs() << "    falling back to ZIV test due to no AddRec\n");
+  // Set to first valid level to avoid Level=0 causing DV[-1] access.
+  // See comment in establishNestingLevels.
+  Level = 1;
+  return testZIV(Src, Dst, Result);
 }
 
 // testRDIV -
@@ -2343,8 +2386,14 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
       SrcLoop = DstAddRec->getLoop();
     } else
       llvm_unreachable("RDIV reached by surprising SCEVs");
-  } else
-    llvm_unreachable("RDIV expected at least one AddRec");
+  } else {
+    // If neither expression is an AddRec, this means propagation has simplified
+    // them to non-AddRec forms. Fall back to ZIV analysis since the expressions
+    // are effectively loop-invariant.
+    LLVM_DEBUG(
+        dbgs() << "    RDIV falling back to ZIV test due to no AddRec\n");
+    return testZIV(Src, Dst, Result);
+  }
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
          gcdMIVtest(Src, Dst, Result) ||
@@ -3548,6 +3597,37 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
   return SCEVUnionPredicate(Assumptions, *SE);
 }
 
+// getNonRedundantAssumptions - Remove redundant assumptions from the collection
+// and return a SCEVUnionPredicate with the unique assumptions. This ensures
+// that each assumption is only present once and that stronger assumptions imply
+// weaker ones, avoiding unnecessary runtime checks.
+SCEVUnionPredicate DependenceInfo::getNonRedundantAssumptions() const {
+  SmallVector<const SCEVPredicate *, 4> UniqueAssumptions;
+
+  for (const SCEVPredicate *P : Assumptions) {
+    bool Implied = false;
+    for (const SCEVPredicate *Existing : UniqueAssumptions) {
+      if (Existing->implies(P, *SE)) {
+        Implied = true;
+        break;
+      }
+    }
+    if (!Implied) {
+      auto I = UniqueAssumptions.begin();
+      while (I != UniqueAssumptions.end()) {
+        if (P->implies(*I, *SE)) {
+          I = UniqueAssumptions.erase(I);
+        } else {
+          ++I;
+        }
+      }
+      UniqueAssumptions.push_back(P);
+    }
+  }
+
+  return SCEVUnionPredicate(UniqueAssumptions, *SE);
+}
+
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.
@@ -3562,7 +3642,6 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
 std::unique_ptr<Dependence>
 DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                         bool UnderRuntimeAssumptions) {
-  SmallVector<const SCEVPredicate *, 4> Assume;
   bool PossiblyLoopIndependent = true;
   if (Src == Dst)
     PossiblyLoopIndependent = false;
@@ -3574,8 +3653,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (!isLoadOrStore(Src) || !isLoadOrStore(Dst)) {
     // can only analyze simple loads and stores, i.e., no calls, invokes, etc.
     LLVM_DEBUG(dbgs() << "can only handle simple loads and stores\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   }
 
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
@@ -3586,8 +3664,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   case AliasResult::NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
@@ -3601,8 +3678,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     // The dependence test gets confused if the size of the memory accesses
     // differ.
     LLVM_DEBUG(dbgs() << "can't analyze must alias with different sizes\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   }
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
@@ -3621,8 +3697,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     // We check this upfront so we don't crash in cases where getMinusSCEV()
     // returns a SCEVCouldNotCompute.
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   }
 
   // Even if the base pointers are the same, they may not be loop-invariant. It
@@ -3634,8 +3709,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (!isLoopInvariant(SrcBase, SrcLoop) ||
       !isLoopInvariant(DstBase, DstLoop)) {
     LLVM_DEBUG(dbgs() << "The base pointer is not loop invariant.\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   }
 
   uint64_t EltSize = SrcLoc.Size.toRaw();
@@ -3643,34 +3717,22 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
   // Check that memory access offsets are multiples of element sizes.
-  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assumptions) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize, Assumptions)) {
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
   }
 
-  if (!Assume.empty()) {
-    if (!UnderRuntimeAssumptions)
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    // Add non-redundant assumptions.
-    unsigned N = Assumptions.size();
-    for (const SCEVPredicate *P : Assume) {
-      bool Implied = false;
-      for (unsigned I = 0; I != N && !Implied; I++)
-        if (Assumptions[I]->implies(P, *SE))
-          Implied = true;
-      if (!Implied)
-        Assumptions.push_back(P);
-    }
-  }
+  // If runtime assumptions were added but not allowed, return confused
+  // dependence.
+  if (!UnderRuntimeAssumptions && !Assumptions.empty())
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
 
   establishNestingLevels(Src, Dst);
   LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
   LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
 
-  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
+  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assumptions, *SE),
                         PossiblyLoopIndependent, CommonLevels);
   ++TotalArrayPairs;
 
@@ -3821,7 +3883,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       break;
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
-      unsigned Level;
+      unsigned Level = 0;
       const SCEV *SplitIter = nullptr;
       if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                   SplitIter))
@@ -3872,12 +3934,17 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         for (unsigned SJ : Sivs.set_bits()) {
           LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
           // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
+          unsigned Level = 0;
           const SCEV *SplitIter = nullptr;
           LLVM_DEBUG(dbgs() << "SIV\n");
           if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
                       SplitIter))
             return nullptr;
+
+          LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+          LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+          assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
           ConstrainedLevels.set(Level);
           if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
             if (Constraints[Level].isEmpty()) {
@@ -4014,6 +4081,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       return nullptr;
   }
 
+  // If runtime assumptions were added but not allowed, return confused
+  // dependence.
+  if (!UnderRuntimeAssumptions && !Assumptions.empty())
+    return std::make_unique<Dependence>(Src, Dst, getNonRedundantAssumptions());
+
+  Result.Assumptions = getNonRedundantAssumptions();
   return std::make_unique<FullDependence>(std::move(Result));
 }
 
@@ -4155,7 +4228,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   for (unsigned SI : Separable.set_bits()) {
     switch (Pair[SI].Classification) {
     case Subscript::SIV: {
-      unsigned Level;
+      unsigned Level = 0;
       const SCEV *SplitIter = nullptr;
       (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                     SplitIter);
@@ -4195,12 +4268,17 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
       bool Changed = false;
       for (unsigned SJ : Sivs.set_bits()) {
         // SJ is an SIV subscript that's part of the current coupled group
-        unsigned Level;
+        unsigned Level = 0;
         const SCEV *SplitIter = nullptr;
         (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
                       SplitIter);
         if (Level == SplitLevel && SplitIter)
           return SplitIter;
+
+        LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+        LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+        assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
         ConstrainedLevels.set(Level);
         if (intersectConstraints(&Constraints[Level], &NewConstraint))
           Changed = true;

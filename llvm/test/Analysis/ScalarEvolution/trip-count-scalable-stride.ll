@@ -237,7 +237,7 @@ define void @vscale_slt_with_vp_plain(ptr nocapture %A, i32 %n) mustprogress vsc
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,2147483645) Exits: (4 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add nsw i32 %i.05, %VF
 ; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><nsw><%for.body> U: [8,-2147483648) S: [8,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_slt_with_vp_plain
@@ -278,7 +278,7 @@ define void @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vsca
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<nuw><nsw><%for.body> U: [0,-2147483648) S: [0,2147483645) Exits: (4 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %left = sub i32 %n, %i.05
 ; CHECK-NEXT:    --> {%n,+,(-4 * vscale)<nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((-4 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %VF.capped = call i32 @llvm.umin.i32(i32 %VF, i32 %left)
@@ -375,7 +375,7 @@ define void @vscale_slt_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_ra
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,vscale}<%for.body> U: full-set S: full-set Exits: (vscale * ((-1 + %n) /u vscale))<nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(4 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((4 * vscale * ((-1 + %n) /u vscale)) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(4 * vscale)<nuw><nsw>}<nuw><%for.body> U: full-set S: full-set Exits: ((4 * vscale * ((-1 + %n) /u vscale)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %vscale
 ; CHECK-NEXT:    --> {vscale,+,vscale}<nuw><nsw><%for.body> U: [2,-2147483648) S: [2,-2147483648) Exits: (vscale * (1 + ((-1 + %n) /u vscale))<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_slt_noflags
@@ -413,7 +413,7 @@ define void @vscalex4_ult_noflags(ptr nocapture %A, i32 %n) mustprogress vscale_
 ; CHECK-NEXT:    %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (4 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
-; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%A,+,(16 * vscale)<nuw><nsw>}<nuw><%for.body> U: full-set S: full-set Exits: ((16 * vscale * ((-1 + %n) /u (4 * vscale)<nuw><nsw>)) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %VF
 ; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><%for.body> U: [8,-3) S: [-2147483648,2147483645) Exits: (vscale * (4 + (4 * ((-1 + %n) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_ult_noflags
@@ -455,7 +455,7 @@ define void @vscale_countdown_ne(ptr nocapture %A, i32 %n) mustprogress vscale_r
 ; CHECK-NEXT:    %iv = phi i32 [ %sub, %for.body ], [ %start, %entry ]
 ; CHECK-NEXT:    --> {((-1 * vscale)<nsw> + %n),+,(-1 * vscale)<nsw>}<%for.body> U: full-set S: full-set Exits: ((vscale * (-1 + (-1 * (((-2 * vscale)<nsw> + %n) /u vscale))<nsw>)<nsw>) + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %iv
-; CHECK-NEXT:    --> {((4 * %n) + (-4 * vscale)<nsw> + %A),+,(-4 * vscale)<nsw>}<%for.body> U: full-set S: full-set Exits: ((4 * %n) + (vscale * (-4 + (-4 * (((-2 * vscale)<nsw> + %n) /u vscale)))) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {((4 * %n) + (-4 * vscale)<nsw> + %A),+,(-4 * vscale)<nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((4 * %n) + (vscale * (-4 + (-4 * (((-2 * vscale)<nsw> + %n) /u vscale)))) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %sub = sub i32 %iv, %vscale
 ; CHECK-NEXT:    --> {((-2 * vscale)<nsw> + %n),+,(-1 * vscale)<nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((vscale * (-2 + (-1 * (((-2 * vscale)<nsw> + %n) /u vscale))<nsw>)) + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_countdown_ne
@@ -496,7 +496,7 @@ define void @vscalex4_countdown_ne(ptr nocapture %A, i32 %n) mustprogress vscale
 ; CHECK-NEXT:    %iv = phi i32 [ %sub, %for.body ], [ %start, %entry ]
 ; CHECK-NEXT:    --> {((-4 * vscale)<nsw> + %n),+,(-4 * vscale)<nsw>}<%for.body> U: full-set S: full-set Exits: ((vscale * (-4 + (-4 * (((-8 * vscale)<nsw> + %n) /u (4 * vscale)<nuw><nsw>))<nsw>)<nsw>) + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %iv
-; CHECK-NEXT:    --> {((4 * %n) + (-16 * vscale)<nsw> + %A),+,(-16 * vscale)<nsw>}<%for.body> U: full-set S: full-set Exits: ((4 * %n) + (vscale * (-16 + (-16 * (((-8 * vscale)<nsw> + %n) /u (4 * vscale)<nuw><nsw>)))) + %A) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {((4 * %n) + (-16 * vscale)<nsw> + %A),+,(-16 * vscale)<nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((4 * %n) + (vscale * (-16 + (-16 * (((-8 * vscale)<nsw> + %n) /u (4 * vscale)<nuw><nsw>)))) + %A) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %sub = sub i32 %iv, %VF
 ; CHECK-NEXT:    --> {((-8 * vscale)<nsw> + %n),+,(-4 * vscale)<nsw>}<nw><%for.body> U: full-set S: full-set Exits: ((vscale * (-8 + (-4 * (((-8 * vscale)<nsw> + %n) /u (4 * vscale)<nuw><nsw>))<nsw>)) + %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscalex4_countdown_ne

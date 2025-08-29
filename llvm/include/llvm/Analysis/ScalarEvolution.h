@@ -1339,6 +1339,12 @@ public:
   /// sharpen it.
   LLVM_ABI void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
 
+  /// Check if this AddRec expression may wrap.
+  /// Wrapping AddRecs create cyclic patterns that violate linearity
+  /// assumptions. Returns true if definitely wraps, false if definitely safe,
+  /// nullopt if unknown.
+  LLVM_ABI std::optional<bool> mayAddRecWrap(const SCEVAddRecExpr *AddRec);
+
   class LoopGuards {
     DenseMap<const SCEV *, const SCEV *> RewriteMap;
     bool PreserveNUW = false;

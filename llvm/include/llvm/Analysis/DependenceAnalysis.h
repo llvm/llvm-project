@@ -598,6 +598,12 @@ private:
   /// returns NULL.
   const SCEVConstant *collectConstantUpperBound(const Loop *l, Type *T) const;
 
+  /// getNonRedundantAssumptions - Remove redundant assumptions from the
+  /// collection and return a SCEVUnionPredicate with unique assumptions.
+  /// This ensures that each assumption is only present once and that
+  /// stronger assumptions imply weaker ones.
+  SCEVUnionPredicate getNonRedundantAssumptions() const;
+
   /// classifyPair - Examines the subscript pair (the Src and Dst SCEVs)
   /// and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
   /// Collects the associated loops in a set.

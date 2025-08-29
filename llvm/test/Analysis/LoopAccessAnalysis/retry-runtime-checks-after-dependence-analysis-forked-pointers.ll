@@ -50,7 +50,7 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:            Member: %c
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -122,13 +122,13 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
-; CHECK-NEXT:            Member: {%b,+,4}<%loop>
+; CHECK-NEXT:            Member: {%b,+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %c High: ((4 * %n) + %c))
-; CHECK-NEXT:            Member: {%c,+,4}<%loop>
+; CHECK-NEXT:            Member: {%c,+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -169,7 +169,7 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
@@ -218,7 +218,7 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>

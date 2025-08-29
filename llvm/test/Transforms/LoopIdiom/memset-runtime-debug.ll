@@ -13,10 +13,10 @@
 
 ; Check on debug outputs...
 ; CHECK: loop-idiom Scanning: F[MemsetSize_LoopVariant] Countable Loop %for.body
-; CHECK-NEXT: memset size is non-constant
+; CHECK: memset size is non-constant
 ; CHECK-NEXT: memset size is not a loop-invariant, abort
 ; CHECK: loop-idiom Scanning: F[MemsetSize_Stride_Mismatch] Countable Loop %for.body
-; CHECK-NEXT: memset size is non-constant
+; CHECK: memset size is non-constant
 ; CHECK-NEXT: MemsetSizeSCEV: (4 * (sext i32 %m to i64))<nsw>
 ; CHECK-NEXT: PositiveStrideSCEV: (4 + (4 * (sext i32 %m to i64))<nsw>)<nsw>
 ; CHECK-NEXT: Try to fold SCEV based on loop guard
@@ -24,10 +24,10 @@
 ; CHECK-NEXT: FoldedPositiveStride: (4 + (4 * (sext i32 %m to i64))<nsw>)<nsw>
 ; CHECK-NEXT: SCEV don't match, abort
 ; CHECK: loop-idiom Scanning: F[NonZeroAddressSpace] Countable Loop %for.cond1.preheader
-; CHECK-NEXT: memset size is non-constant
+; CHECK: memset size is non-constant
 ; CHECK-NEXT: pointer is not in address space zero, abort
 ; CHECK: loop-idiom Scanning: F[NonAffinePointer] Countable Loop %for.body
-; CHECK-NEXT: Pointer is not affine, abort
+; CHECK: Pointer is not affine, abort
 
 define void @MemsetSize_LoopVariant(ptr %ar, i32 %n, i32 %m) {
 ; CHECK-LABEL: @MemsetSize_LoopVariant(

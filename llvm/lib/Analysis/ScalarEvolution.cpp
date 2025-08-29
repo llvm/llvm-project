@@ -2959,25 +2959,52 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       if (AddRecLoop == cast<SCEVAddRecExpr>(Ops[OtherIdx])->getLoop()) {
         // Other + {A,+,B}<L> + {C,+,D}<L>  -->  Other + {A+C,+,B+D}<L>
         SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
+
+        // Track flags: start with the flags from the first AddRec.
+        bool AllHaveNSW = AddRec->hasNoSignedWrap();
+        bool AllHaveNUW = AddRec->hasNoUnsignedWrap();
+
         for (; OtherIdx != Ops.size() && isa<SCEVAddRecExpr>(Ops[OtherIdx]);
              ++OtherIdx) {
           const auto *OtherAddRec = cast<SCEVAddRecExpr>(Ops[OtherIdx]);
           if (OtherAddRec->getLoop() == AddRecLoop) {
+            // Update flags based on this AddRec
+            if (!OtherAddRec->hasNoSignedWrap())
+              AllHaveNSW = false;
+            if (!OtherAddRec->hasNoUnsignedWrap())
+              AllHaveNUW = false;
             for (unsigned i = 0, e = OtherAddRec->getNumOperands();
                  i != e; ++i) {
               if (i >= AddRecOps.size()) {
                 append_range(AddRecOps, OtherAddRec->operands().drop_front(i));
                 break;
               }
+              // Preserve no-wrap flags when combining AddRec operands.
+              SCEV::NoWrapFlags CombineFlags = SCEV::FlagAnyWrap;
+              if (auto *AR1 = dyn_cast<SCEVAddRecExpr>(AddRecOps[i]))
+                if (auto *AR2 =
+                        dyn_cast<SCEVAddRecExpr>(OtherAddRec->getOperand(i))) {
+                  if (AR1->hasNoSignedWrap() && AR2->hasNoSignedWrap())
+                    CombineFlags = setFlags(CombineFlags, SCEV::FlagNSW);
+                  if (AR1->hasNoUnsignedWrap() && AR2->hasNoUnsignedWrap())
+                    CombineFlags = setFlags(CombineFlags, SCEV::FlagNUW);
+                }
               SmallVector<const SCEV *, 2> TwoOps = {
                   AddRecOps[i], OtherAddRec->getOperand(i)};
-              AddRecOps[i] = getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
+              AddRecOps[i] = getAddExpr(TwoOps, CombineFlags, Depth + 1);
             }
             Ops.erase(Ops.begin() + OtherIdx); --OtherIdx;
           }
         }
         // Step size has changed, so we cannot guarantee no self-wraparound.
-        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, SCEV::FlagAnyWrap);
+        // However, preserve NSW/NUW flags if all combined AddRecs had them.
+        SCEV::NoWrapFlags FinalFlags = SCEV::FlagAnyWrap;
+        if (AllHaveNSW)
+          FinalFlags = setFlags(FinalFlags, SCEV::FlagNSW);
+        if (AllHaveNUW)
+          FinalFlags = setFlags(FinalFlags, SCEV::FlagNUW);
+
+        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, FinalFlags);
         return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
       }
     }
@@ -3275,7 +3302,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       //  NLI * LI * {Start,+,Step}  -->  NLI * {LI*Start,+,LI*Step}
       SmallVector<const SCEV *, 4> NewOps;
       NewOps.reserve(AddRec->getNumOperands());
-      const SCEV *Scale = getMulExpr(LIOps, SCEV::FlagAnyWrap, Depth + 1);
+      const SCEV *Scale = getMulExpr(LIOps, OrigFlags, Depth + 1);
 
       // If both the mul and addrec are nuw, we can preserve nuw.
       // If both the mul and addrec are nsw, we can only preserve nsw if either
@@ -3283,6 +3310,15 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // b) all multiplications of addrec operands with scale are nsw.
       SCEV::NoWrapFlags Flags =
           AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
+
+      // Preserve flags for positive constant Scale.
+      if (auto *SC = dyn_cast<SCEVConstant>(Scale))
+        if (SC->getAPInt().isStrictlyPositive()) {
+          if (hasFlags(OrigFlags, SCEV::FlagNSW))
+            Flags = setFlags(Flags, SCEV::FlagNSW);
+          if (hasFlags(OrigFlags, SCEV::FlagNUW))
+            Flags = setFlags(Flags, SCEV::FlagNUW);
+        }
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
@@ -3293,7 +3329,9 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
               Instruction::Mul, getSignedRange(Scale),
               OverflowingBinaryOperator::NoSignedWrap);
           if (!NSWRegion.contains(getSignedRange(AddRec->getOperand(i))))
-            Flags = clearFlags(Flags, SCEV::FlagNSW);
+            if (!hasFlags(OrigFlags, SCEV::FlagNSW))
+              Flags = clearFlags(Flags, SCEV::FlagNSW);
+          // Keep NSW flag if it was in OrigFlags.
         }
       }
 
@@ -3782,6 +3820,31 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
   if (NW.hasNoUnsignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
+
+  // Inherit flags from index expressions when GEP has no explicit flags.
+  if (OffsetWrap == SCEV::FlagAnyWrap) {
+    // Check if all index expressions have compatible no-wrap flags
+    bool AllHaveNSW = true, AllHaveNUW = true;
+    for (const SCEV *IndexExpr : IndexExprs) {
+      if (auto *AR = dyn_cast<SCEVAddRecExpr>(IndexExpr)) {
+        if (!AR->hasNoSignedWrap())
+          AllHaveNSW = false;
+        if (!AR->hasNoUnsignedWrap())
+          AllHaveNUW = false;
+      } else {
+        // Be conservative for non-AddRec expressions.
+        AllHaveNSW = false;
+        AllHaveNUW = false;
+        break;
+      }
+    }
+    // Inherit NSW if all have NSW.
+    if (AllHaveNSW)
+      OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
+    // Inherit NUW if all have NUW.
+    if (AllHaveNUW)
+      OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
+  }
 
   Type *CurTy = GEP->getType();
   bool FirstIter = true;
@@ -6462,8 +6525,37 @@ void ScalarEvolution::setNoWrapFlags(SCEVAddRecExpr *AddRec,
   }
 }
 
-ConstantRange ScalarEvolution::
-getRangeForUnknownRecurrence(const SCEVUnknown *U) {
+std::optional<bool>
+ScalarEvolution::mayAddRecWrap(const SCEVAddRecExpr *AddRec) {
+  if (AddRec->hasNoSelfWrap())
+    return false;
+
+  // For simple constant step cases, do explicit wrapping check.
+  const SCEV *Step = AddRec->getStepRecurrence(*this);
+  const SCEVConstant *ConstStep = dyn_cast<SCEVConstant>(Step);
+  if (ConstStep) {
+    const Loop *Loop = AddRec->getLoop();
+    if (hasLoopInvariantBackedgeTakenCount(Loop)) {
+      const SCEV *BTC = getBackedgeTakenCount(Loop);
+      const SCEVConstant *ConstBTC = dyn_cast<SCEVConstant>(BTC);
+      if (ConstBTC) {
+        // Check if step * iterations would exceed type range.
+        APInt StepVal = ConstStep->getAPInt();
+        APInt BTCVal = ConstBTC->getAPInt();
+        unsigned BitWidth = AddRec->getType()->getScalarSizeInBits();
+
+        bool Overflow = false;
+        APInt Product = StepVal.zext(64).umul_ov(BTCVal.zext(64), Overflow);
+
+        return Overflow || Product.getZExtValue() >= (1ULL << BitWidth);
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+ConstantRange
+ScalarEvolution::getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   const DataLayout &DL = getDataLayout();
 
   unsigned BitWidth = getTypeSizeInBits(U->getType());
