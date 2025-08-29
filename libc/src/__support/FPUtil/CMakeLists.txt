@@ -231,6 +231,7 @@ add_header_library(
     Hypot.h
   DEPENDS
     .basic_operations
+    .cast
     .fenv_impl
     .fp_bits
     .rounding_mode

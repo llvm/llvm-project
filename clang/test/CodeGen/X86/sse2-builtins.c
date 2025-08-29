@@ -9,6 +9,17 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -243,18 +254,21 @@ __m128i test_mm_cmpeq_epi8(__m128i A, __m128i B) {
   // CHECK: icmp eq <16 x i8>
   return _mm_cmpeq_epi8(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_cmpeq_epi8((__m128i)(__v16qs){1,-2,3,-4,-5,6,-7,8,-9,10,-11,12,-13,14,-15,16}, (__m128i)(__v16qs){10,-2,6,-4,-5,12,-14,8,-9,20,-22,12,-26,14,-30,16}), 0,-1,0,-1,-1,0,0,-1,-1,0,0,-1,0,-1,0,-1));
 
 __m128i test_mm_cmpeq_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpeq_epi16
   // CHECK: icmp eq <8 x i16>
   return _mm_cmpeq_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_cmpeq_epi16((__m128i)(__v8hi){+1, -2, +3, -4, +5, -6, +7, -8}, (__m128i)(__v8hi){-10, -2, +6, -4, +5, -12, +14, -8}), 0, -1, 0, -1, -1, 0, 0, -1));
 
 __m128i test_mm_cmpeq_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpeq_epi32
   // CHECK: icmp eq <4 x i32>
   return _mm_cmpeq_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cmpeq_epi32((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-10, -2, +6, -4}), 0, -1, 0, -1));
 
 __m128d test_mm_cmpeq_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpeq_pd
@@ -293,18 +307,24 @@ __m128i test_mm_cmpgt_epi8(__m128i A, __m128i B) {
   // CHECK: icmp sgt <16 x i8>
   return _mm_cmpgt_epi8(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_cmpgt_epi8(
+    (__m128i)(__v16qs){15,-2,8,-4,12,6,-20,8,25,-10,30,12,-35,14,40,-16},
+    (__m128i)(__v16qs){10,-2,6,-4,5,12,-14,8,9,-20,22,12,-26,14,30,-16}),
+            -1, 0, -1, 0, -1, 0, 0, 0,-1, -1, -1, 0, 0, 0, -1, 0));
 
 __m128i test_mm_cmpgt_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpgt_epi16
   // CHECK: icmp sgt <8 x i16>
   return _mm_cmpgt_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_cmpgt_epi16((__m128i)(__v8hi){15,2,8,4,12,6,20,8}, (__m128i)(__v8hi){10,2,6,4,5,12,14,8}), -1,0,-1,0,-1,0,-1,0));
 
 __m128i test_mm_cmpgt_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpgt_epi32
   // CHECK: icmp sgt <4 x i32>
   return _mm_cmpgt_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cmpgt_epi32((__m128i)(__v4si){15,2,8,4}, (__m128i)(__v4si){10,2,6,4}), -1,0,-1,0));
 
 __m128d test_mm_cmpgt_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpgt_pd
@@ -343,18 +363,24 @@ __m128i test_mm_cmplt_epi8(__m128i A, __m128i B) {
   // CHECK: icmp sgt <16 x i8>
   return _mm_cmplt_epi8(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_cmplt_epi8(
+    (__m128i)(__v16qs){15,-2,8,-4,12,6,-20,8,25,-10,30,12,-35,14,40,-16},
+    (__m128i)(__v16qs){10,-2,6,-4,5,12,-14,8,9,-20,22,12,-26,14,30,-16}),
+            0, 0, 0, 0, 0, -1, -1, 0,0, 0, 0, 0, -1, 0, 0, 0));
 
 __m128i test_mm_cmplt_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmplt_epi16
   // CHECK: icmp sgt <8 x i16>
   return _mm_cmplt_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_cmplt_epi16((__m128i)(__v8hi){5,2,3,4,1,6,7,8}, (__m128i)(__v8hi){10,2,6,4,5,12,14,8}), -1, 0, -1, 0, -1, -1, -1, 0));
 
 __m128i test_mm_cmplt_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmplt_epi32
   // CHECK: icmp sgt <4 x i32>
   return _mm_cmplt_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cmplt_epi32((__m128i)(__v4si){5,2,3,4}, (__m128i)(__v4si){10,2,6,4}), -1,0,-1,0));
 
 __m128d test_mm_cmplt_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmplt_pd
@@ -925,6 +951,7 @@ __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_epu32(A, B);
 }
+TEST_CONSTEXPR(match_m128i(_mm_mul_epu32((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-16, -14, +12, +10}), 4294967280, 36));
 
 __m128d test_mm_mul_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_mul_pd

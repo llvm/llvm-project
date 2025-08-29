@@ -514,8 +514,9 @@ private:
             << "failed attribute check: rounding_mode = DOUBLE_ROUND "
             << "requires extension [doubleround]";
         return false;
-      } else if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
-                 !targetEnv.allows(Extension::inexactround)) {
+      }
+      if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
+          !targetEnv.allows(Extension::inexactround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = INEXACT_ROUND "
             << "requires extension [inexactround]";
@@ -1307,7 +1308,8 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
                Float8E5M2Type>(type);
-  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
