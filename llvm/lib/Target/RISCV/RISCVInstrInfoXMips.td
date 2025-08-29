@@ -126,8 +126,8 @@ class Mips_prefetch_ri<dag outs, dag ins, string opcodestr, string argstr>
 }
 
 // MIPS Ext Insns Fromat.
-let hasSideEffects = 1, mayLoad = 0,
-    mayStore = 0 in class MIPSExtInst_ri<bits<6> shimm5, string opcodestr>
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class MIPSExtInst_ri<bits<6> shimm5, string opcodestr>
     : RVInstIShift<0b00000, 0b001, OPC_OP_IMM, (outs), (ins), opcodestr, ""> {
   let shamt = shimm5;
   let rd = 0;
