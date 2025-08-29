@@ -1,6 +1,29 @@
 #include <stdint.h>
 #include <string>
 
+template <typename T> struct CustomAlloc {
+  using value_type = T;
+  using pointer = value_type *;
+  using const_pointer = const value_type *;
+  using size_type = std::size_t;
+
+  pointer allocate(size_type) { return new T; }
+
+  void deallocate(pointer p, size_type) { delete p; }
+};
+
+using CustomString =
+    std::basic_string<char, std::char_traits<char>, CustomAlloc<char>>;
+
+using CustomWString =
+    std::basic_string<wchar_t, std::char_traits<wchar_t>, CustomAlloc<wchar_t>>;
+
+using CustomStringU16 = std::basic_string<char16_t, std::char_traits<char16_t>,
+                                          CustomAlloc<char16_t>>;
+
+using CustomStringU32 = std::basic_string<char32_t, std::char_traits<char32_t>,
+                                          CustomAlloc<char32_t>>;
+
 size_t touch_string(std::string &in_str) {
   return in_str.size(); // Break here to look at bad string
 }
@@ -98,6 +121,13 @@ int main() {
   auto &rQ = Q;
   std::string *pq = &q;
   std::string *pQ = &Q;
+
+  CustomString custom_str("hello!");
+  CustomWString custom_wstr(L"hello!");
+  CustomStringU16 custom_u16(u16_string);
+  CustomStringU16 custom_u16_empty(u"");
+  CustomStringU32 custom_u32(u32_string);
+  CustomStringU32 custom_u32_empty(U"");
 
   S.assign(L"!!!!!"); // Set break point at this line.
   std::string *not_a_string = (std::string *)0x0;
