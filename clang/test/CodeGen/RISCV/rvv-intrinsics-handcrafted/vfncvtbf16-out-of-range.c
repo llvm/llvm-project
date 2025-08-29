@@ -1,4 +1,4 @@
-// requires: riscv-registered-target
+// REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d \
 // RUN:   -target-feature +v -target-feature +zvfbfmin \
 // RUN:   -fsyntax-only -verify %s
