@@ -287,6 +287,17 @@ public:
   /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
   const std::optional<DemangledNameInfo> &GetDemangledInfo() const;
 
+  /// Compute the base name (without namespace/class qualifiers) from the
+  /// demangled name.
+  ///
+  /// For a demangled name like "ns::MyClass<int>::templateFunc", this returns
+  /// just "templateFunc".
+  ///
+  /// \return
+  ///     A ConstString containing the basename, or nullptr if computation
+  ///     fails.
+  ConstString GetBaseName() const;
+
 private:
   /// If \c force is \c false, this function will re-use the previously
   /// demangled name (if any). If \c force is \c true (or the mangled name
