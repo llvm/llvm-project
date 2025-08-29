@@ -15892,7 +15892,6 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
 /// types can make the vector types be considered not equal. For example,
 /// vector of 4 'const float' values vs vector of 4 'float' values.
 /// So we compare unqualified types of their elements and number of elements.
-/// See GitHub issue #155405.
 static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef,
                                            ArrayRef<Expr *> Args) {
   assert(!Args.empty() && "Should have at least one argument.");
