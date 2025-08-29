@@ -297,6 +297,29 @@ define i32 @negative_single_use_add(i32 %x, i32 %y, i32 %z) {
   ret i32 %and
 }
 
+define i32 @negative_add_as_root_operand(i32 %x, i32 %y, i32 %c) {
+; CHECK-LABEL: @negative_add_as_root_operand(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, %c
+  %and = and i32 %add, %y   ; Root: %add is direct operand
+  ret i32 %and
+}
+
+define i32 @negative_sub_as_root_operand(i32 %a, i32 %b, i32 %offset) {
+; CHECK-LABEL: @negative_sub_as_root_operand(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SUB]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+; Similar test with SUB as root operand
+  %sub = sub i32 %a, %offset 
+  %xor = xor i32 %sub, %b     ; Root: %sub is direct operand
+  ret i32 %xor
+}
+
 ; ==============================
 ;       Multi-use Tests
 ; ==============================
