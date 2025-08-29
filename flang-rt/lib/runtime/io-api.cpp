@@ -388,8 +388,8 @@ Cookie IODEF(BeginEndfile)(
   Terminator terminator{sourceFile, sourceLine};
   Cookie errorCookie{nullptr};
   if (ExternalFileUnit *
-      unit{GetOrCreateUnit(unitNumber, Direction::Output,
-          Fortran::common::nullopt, terminator, errorCookie)}) {
+      unit{GetOrCreateUnit(unitNumber, Direction::Output, common::nullopt,
+          terminator, errorCookie)}) {
     if (ChildIo * child{unit->GetChildIo()}) {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
           IostatBadOpOnChildUnit, nullptr /* no unit */, sourceFile,
@@ -408,8 +408,8 @@ Cookie IODEF(BeginRewind)(
   Terminator terminator{sourceFile, sourceLine};
   Cookie errorCookie{nullptr};
   if (ExternalFileUnit *
-      unit{GetOrCreateUnit(unitNumber, Direction::Input,
-          Fortran::common::nullopt, terminator, errorCookie)}) {
+      unit{GetOrCreateUnit(unitNumber, Direction::Input, common::nullopt,
+          terminator, errorCookie)}) {
     if (ChildIo * child{unit->GetChildIo()}) {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
           IostatBadOpOnChildUnit, nullptr /* no unit */, sourceFile,
@@ -734,7 +734,7 @@ bool IODEF(SetAction)(Cookie cookie, const char *keyword, std::size_t length) {
     io.GetIoErrorHandler().Crash(
         "SetAction() called after GetNewUnit() for an OPEN statement");
   }
-  Fortran::common::optional<Action> action;
+  common::optional<Action> action;
   static const char *keywords[]{"READ", "WRITE", "READWRITE", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:

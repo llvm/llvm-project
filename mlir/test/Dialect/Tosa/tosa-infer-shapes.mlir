@@ -106,7 +106,7 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>, %arg1 : tensor<2xi8>) -> () {
   %shift = "tosa.const"() {values = dense<[14, 15]> : tensor<2xi8>} : () -> tensor<2xi8>
   %input_zp = "tosa.const"() {values = dense<43> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<52> : tensor<1xi8>} : () -> tensor<1xi8>
-  %6 = tosa.rescale %arg1, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = true, input_unsigned = true, output_unsigned = true} : (tensor<2xi8>, tensor<2xi16>, tensor<2xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %6 = tosa.rescale %arg1, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = #tosa.rounding_mode<SINGLE_ROUND>, per_channel = true, input_unsigned = true, output_unsigned = true} : (tensor<2xi8>, tensor<2xi16>, tensor<2xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
 
   // CHECK: tosa.identity %arg0 : (tensor<4xi32>) -> tensor<4xi32>
   %7 = tosa.identity %arg0 : (tensor<4xi32>) -> tensor<?xi32>
@@ -1071,7 +1071,7 @@ func.func @resize_int_horizontal(%arg0: tensor<1x15x13x1xi8>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x23x179x1xi8>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi8>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi8>
   return
 }
 
@@ -1083,7 +1083,7 @@ func.func @resize_int_vertical(%arg0: tensor<1x49x42x1xi16>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x112x220x1xi16>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x49x42x1xi16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi16>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x49x42x1xi16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi16>
   return
 }
 
@@ -1095,7 +1095,7 @@ func.func @resize_int_power_of_two_upscale(%arg0: tensor<1x23x19x1xi8>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x353x289x1xi32>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<1x23x19x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<BILINEAR>} : (tensor<1x23x19x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi32>
   return
 }
 
@@ -1107,7 +1107,7 @@ func.func @resize_int_power_of_two_upscale_offsetted(%arg0: tensor<1x41x26x1xi16
   %offset = tosa.const_shape { values = dense<[-7, -7]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[7, 7]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x328x208x1xi48>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<1x41x26x1xi16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi48>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<BILINEAR>} : (tensor<1x41x26x1xi16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xi48>
   return
 }
 
@@ -1118,7 +1118,7 @@ func.func @resize_fp_horizontal(%arg0: tensor<1x50x48x1xf32>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x106x85x1xf32>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<BILINEAR>} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }
 
@@ -1129,7 +1129,7 @@ func.func @resize_fp_vertical(%arg0: tensor<1x50x48x1xf32>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x128x13x1xf32>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }
 
@@ -1141,7 +1141,7 @@ func.func @resize_fp_power_of_two_upscale(%arg0: tensor<1x23x23x1xf32>) {
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x89x89x1xf32>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<1x23x23x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<BILINEAR>} : (tensor<1x23x23x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }
 
@@ -1153,7 +1153,7 @@ func.func @resize_fp_power_of_two_upscale_offsetted(%arg0: tensor<1x50x48x1xf32>
   %offset = tosa.const_shape { values = dense<[-31, -31]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[31, 31]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x1600x1536x1xf32>
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }
 
@@ -1165,7 +1165,7 @@ func.func @resize_negative_output_dim(%arg0: tensor<1x3x1x1xi8>) {
   %offset = tosa.const_shape { values = dense<[6, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[-15, 0]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{calculated output height and width must be non-negative, got height = -5, width = 0}}
-  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x3x1x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xi8>
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x3x1x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xi8>
   return
 }
 
