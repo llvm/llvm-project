@@ -2013,8 +2013,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.ApproxFunc)
-      FuncAttrs.addAttribute("approx-func-fp-math", "true");
     if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
         (LangOpts.getDefaultFPContractMode() ==

@@ -66,8 +66,6 @@ LLVM_ABI bool getEnableNoNaNsFPMath();
 
 LLVM_ABI bool getEnableNoSignedZerosFPMath();
 
-LLVM_ABI bool getEnableApproxFuncFPMath();
-
 LLVM_ABI bool getEnableNoTrappingFPMath();
 
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();

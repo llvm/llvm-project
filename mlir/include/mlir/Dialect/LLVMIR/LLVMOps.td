@@ -1961,7 +1961,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
     OptionalAttr<BoolAttr>:$no_nans_fp_math,
-    OptionalAttr<BoolAttr>:$approx_func_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math_f32,
