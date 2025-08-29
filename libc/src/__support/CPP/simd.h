@@ -32,21 +32,8 @@ static_assert(LIBC_HAS_VECTOR_TYPE, "compiler does not support vector types");
 
 namespace internal {
 
-template <size_t Size> struct get_as_integer_type;
-template <> struct get_as_integer_type<1> {
-  using type = uint8_t;
-};
-template <> struct get_as_integer_type<2> {
-  using type = uint16_t;
-};
-template <> struct get_as_integer_type<4> {
-  using type = uint32_t;
-};
-template <> struct get_as_integer_type<8> {
-  using type = uint64_t;
-};
-template <class T>
-using get_as_integer_type_t = typename get_as_integer_type<sizeof(T)>::type;
+template <typename T>
+using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
 
 #if defined(LIBC_TARGET_CPU_HAS_AVX512F)
 template <typename T>
@@ -60,6 +47,10 @@ inline constexpr size_t native_vector_size = 16 / sizeof(T);
 #else
 template <typename T> inline constexpr size_t native_vector_size = 1;
 #endif
+
+template <typename T> LIBC_INLINE constexpr T poison() {
+  return __builtin_nondeterministic_value(T());
+}
 } // namespace internal
 
 // Type aliases.
@@ -71,9 +62,9 @@ template <typename T>
 using simd_mask = simd<bool, internal::native_vector_size<T>>;
 
 // Type trait helpers.
-template <typename T> struct simd_size : cpp::integral_constant<size_t, 1> {};
-template <typename T, unsigned N>
-struct simd_size<simd<T, N>> : cpp::integral_constant<size_t, N> {};
+template <typename T>
+struct simd_size : cpp::integral_constant<size_t, __builtin_vectorelements(T)> {
+};
 template <class T> constexpr size_t simd_size_v = simd_size<T>::value;
 
 template <typename T> struct is_simd : cpp::integral_constant<bool, false> {};
@@ -86,6 +77,13 @@ struct is_simd_mask : cpp::integral_constant<bool, false> {};
 template <unsigned N>
 struct is_simd_mask<simd<bool, N>> : cpp::integral_constant<bool, true> {};
 template <class T> constexpr bool is_simd_mask_v = is_simd_mask<T>::value;
+
+template <typename T> struct simd_element_type;
+template <typename T, size_t N> struct simd_element_type<simd<T, N>> {
+  using type = T;
+};
+template <typename T>
+using simd_element_type_t = typename simd_element_type<T>::type;
 
 template <typename T>
 using enable_if_simd_t = cpp::enable_if_t<is_simd_v<T>, T>;
@@ -182,10 +180,10 @@ LIBC_INLINE enable_if_simd_t<T> store_aligned(T v, void *ptr) {
   store_unaligned<T>(v, __builtin_assume_aligned(ptr, alignof(T)));
 }
 template <typename T>
-LIBC_INLINE enable_if_simd_t<T> masked_load(simd<bool, simd_size_v<T>> m,
-                                            void *ptr) {
-  return __builtin_masked_load(
-      m, static_cast<T *>(__builtin_assume_aligned(ptr, alignof(T))));
+LIBC_INLINE enable_if_simd_t<T>
+masked_load(simd<bool, simd_size_v<T>> m, void *ptr,
+            T passthru = internal::poison<simd_element_type<T>>()) {
+  return __builtin_masked_load(m, ptr, passthru);
 }
 template <typename T>
 LIBC_INLINE enable_if_simd_t<T> masked_store(simd<bool, simd_size_v<T>> m, T v,
