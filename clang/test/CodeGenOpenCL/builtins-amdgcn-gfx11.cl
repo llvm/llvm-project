@@ -1,13 +1,13 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1101 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1102 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1103 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1150 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1101 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1102 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1103 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1150 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;
@@ -50,7 +50,8 @@ void test_s_wait_event_export_ready() {
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// GCN: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// AMDGCNSPIRV: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
 #if !defined(__SPIRV__)
 void test_global_add_f32(float *rtn, global float *addr, float x) {
 #else
