@@ -797,8 +797,7 @@ INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *cond,
 
 INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_destroy");
-  int res = REAL(pthread_cond_destroy)(cond);
-  return res;
+  return REAL(pthread_cond_destroy)(cond);
 }
 
 INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *lock) {
