@@ -127,7 +127,8 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps);
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                 std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -169,21 +170,9 @@ public:
   // * Step3: performs the copying for lastprivates and requires knowledge of
   // the MLIR operation to insert the last private update. Step3 adds
   // dealocation code as well.
-  //
-  // The split was performed for the following reasons:
-  //
-  // 1. Step1 was split so that the `target` op knows which symbols should not
-  // be mapped into the target region due to being `private`. The implicit
-  // mapping happens before the op body is generated so we need to to collect
-  // the private symbols first and then later in the body actually privatize
-  // them.
-  //
-  // 2. Step2 was split in order to call privatisation for looping constructs
-  // before the operation is created since the bounds of the MLIR OpenMP
-  // operation can be privatised.
-  void processStep1();
-  void processStep2(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
-  void processStep3(mlir::Operation *op, bool isLoop);
+  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+                    std::optional<llvm::omp::Directive> dir = std::nullopt);
+  void processStep2(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
@@ -199,7 +188,8 @@ public:
   }
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       mlir::omp::PrivateClauseOps *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps,
+                       std::optional<llvm::omp::Directive> dir = std::nullopt);
 };
 
 } // namespace omp
