@@ -59,7 +59,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   llvm::DenseMap<lldb::opaque_compiler_type_t,
                  llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
       &m_cxx_record_map;
-  bool m_any_virtual_method = false;
+  bool m_any_virtual_base = false;
 
 public:
   UdtRecordCompleter(
