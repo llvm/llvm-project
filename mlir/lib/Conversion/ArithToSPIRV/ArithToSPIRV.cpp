@@ -608,6 +608,36 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// IndexCastOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.index_cast to spirv.Select if the type of source is index.
+struct IndexCastIndexI1Pattern final : public OpConversionPattern<arith::IndexCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getOperands().front().getType();
+    // Indexes have already been converted to its respective spirv type:
+    Type indexType = getTypeConverter<SPIRVTypeConverter>()->getIndexType();
+    if (srcType != indexType || !op.getType().isInteger(1))
+      return failure();
+
+    Type dstType = rewriter.getI1Type();
+    Location loc = op.getLoc();
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+    Value zeroIdx = spirv::ConstantOp::getZero(srcType, loc, rewriter);
+    auto isZero = spirv::IEqualOp::create(
+        rewriter, loc, dstType, zeroIdx, adaptor.getOperands().front());
+    // spriv.IEqual outputs i32, spirv.Select is used to truncate to i1:
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, isZero, zero, one);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ExtSIOp
 //===----------------------------------------------------------------------===//
 
@@ -1328,7 +1358,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::SIToFPOp, spirv::ConvertSToFOp>,
     TypeCastingOpPattern<arith::FPToUIOp, spirv::ConvertFToUOp>,
     TypeCastingOpPattern<arith::FPToSIOp, spirv::ConvertFToSOp>,
-    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
+    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>, IndexCastIndexI1Pattern,
     TypeCastingOpPattern<arith::IndexCastUIOp, spirv::UConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
