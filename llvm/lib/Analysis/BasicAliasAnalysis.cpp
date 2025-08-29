@@ -1086,10 +1086,13 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
     // Example Call1 = sme.fdot.lane and Call2 = set.fpmr
     if (LocCall1MR == ModRefInfo::Ref && LocCall2MR == ModRefInfo::Mod &&
         MECall2Loc.getWithoutLoc(static_cast<IRMemLocation>(TargetLoc))
-            .doesNotAccessMemory())
+            .doesNotAccessMemory()) {
       Changed = true;
-    else
-      Changed = false;
+      NewMR |= ModRefInfo::NoModRef;
+    } else {
+      Changed = true;
+      NewMR |= ModRefInfo::ModRef;
+    }
   }
 
   if (Changed)
