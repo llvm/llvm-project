@@ -270,14 +270,13 @@ define i32 @neg_range_int_comp(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: neg_range_int_comp:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    orr w8, w3, #0x1
 ; CHECK-GI-NEXT:    cmp w0, w2
-; CHECK-GI-NEXT:    neg w8, w8
-; CHECK-GI-NEXT:    ccmp w1, w8, #4, lt
+; CHECK-GI-NEXT:    orr w8, w3, #0x1
+; CHECK-GI-NEXT:    ccmn w1, w8, #4, lt
 ; CHECK-GI-NEXT:    csel w0, w1, w0, gt
 ; CHECK-GI-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp sgt i32 %b, %negd
   %cmp1 = icmp slt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -373,14 +372,13 @@ define i32 @neg_range_int_comp2(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;
 ; CHECK-GI-LABEL: neg_range_int_comp2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    orr w8, w3, #0x1
 ; CHECK-GI-NEXT:    cmp w0, w2
-; CHECK-GI-NEXT:    neg w8, w8
-; CHECK-GI-NEXT:    ccmp w1, w8, #0, ge
+; CHECK-GI-NEXT:    orr w8, w3, #0x1
+; CHECK-GI-NEXT:    ccmn w1, w8, #0, ge
 ; CHECK-GI-NEXT:    csel w0, w1, w0, lt
 ; CHECK-GI-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp slt i32 %b, %negd
   %cmp1 = icmp sge i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -407,7 +405,7 @@ define i32 @neg_range_int_comp_u2(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-GI-NEXT:    csel w0, w1, w0, lo
 ; CHECK-GI-NEXT:    ret
   %dor = or i32 %d, 1
-  %negd = sub i32 0, %dor
+  %negd = sub nsw i32 0, %dor
   %cmp = icmp ult i32 %b, %negd
   %cmp1 = icmp sgt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
