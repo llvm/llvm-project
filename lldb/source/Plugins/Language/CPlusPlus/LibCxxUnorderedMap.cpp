@@ -113,10 +113,11 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   // wraps a std::pair. Peel away the internal wrapper type - whose structure is
   // of no value to users, to expose the std::pair. This matches the structure
   // returned by the std::map synthetic provider.
-  if (isUnorderedMap(m_backend.GetCompilerType()
-                         .GetNonReferenceType()
-                         .GetCanonicalType()
-                         .GetTypeName())) {
+  CompilerType backend_type = m_backend.GetCompilerType();
+  if (backend_type.IsPointerOrReferenceType())
+    backend_type = backend_type.GetPointeeType();
+
+  if (isUnorderedMap(backend_type.GetCanonicalType().GetTypeName())) {
     std::string name;
     CompilerType field_type =
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
@@ -165,9 +166,9 @@ lldb::ValueObjectSP lldb_private::formatters::
     ValueObjectSP hash_sp = node_sp->GetChildMemberWithName("__hash_");
     if (!hash_sp || !value_sp) {
       node_sp = m_next_element->Cast(m_node_type.GetPointerType())
-              ->Dereference(error);
+                    ->Dereference(error);
       if (!node_sp || error.Fail())
-          return nullptr;
+        return nullptr;
 
       hash_sp = node_sp->GetChildMemberWithName("__hash_");
       if (!hash_sp)
