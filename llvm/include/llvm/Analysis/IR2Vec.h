@@ -24,6 +24,12 @@
 ///   Code Optimization (TACO), 2020. https://doi.org/10.1145/3418463.
 ///   https://arxiv.org/abs/1909.06228
 ///
+/// To obtain embeddings:
+/// First run IR2VecVocabAnalysis to populate the vocabulary.
+/// Then, use the Embedder interface to generate embeddings for the desired IR
+/// entities. See the documentation for more details -
+/// https://llvm.org/docs/MLGO.html#ir2vec-embeddings
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_IR2VEC_H
