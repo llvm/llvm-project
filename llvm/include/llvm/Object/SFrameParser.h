@@ -59,9 +59,16 @@ public:
   iterator_range<fre_iterator> fres(const sframe::FuncDescEntry<E> &FDE,
                                     Error &Err) const;
 
+  struct RegisterLocation {
+    enum ValueKind { Register, StackSlot };
+
+    enum ValueKind Kind;
+    int32_t Value;
+  };
+
   std::optional<int32_t> getCFAOffset(const FrameRowEntry &FRE) const;
-  std::optional<int32_t> getRAOffset(const FrameRowEntry &FRE) const;
-  std::optional<int32_t> getFPOffset(const FrameRowEntry &FRE) const;
+  std::optional<RegisterLocation> getRAOffset(const FrameRowEntry &FRE) const;
+  std::optional<RegisterLocation> getFPOffset(const FrameRowEntry &FRE) const;
   ArrayRef<int32_t> getExtraOffsets(const FrameRowEntry &FRE) const;
 
 private:
@@ -80,6 +87,8 @@ private:
   uint64_t getFREBase() const {
     return getFDEBase() + Header.NumFDEs * sizeof(sframe::FuncDescEntry<E>);
   }
+
+  RegisterLocation getRegisterLocation(int32_t Offset) const;
 };
 
 template <endianness E> class SFrameParser<E>::FallibleFREIterator {

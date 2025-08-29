@@ -151,7 +151,10 @@ Sections:
 #  CASE1-NEXT:          Return Address Signed: No
 #  CASE1-NEXT:          Offset Size: B1 (0x0)
 #  CASE1-NEXT:          Base Register: FP (0x0)
-#  CASE1-NEXT:          RA Offset: 64
+#  CASE1-NEXT:          RA Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 64
+#  CASE1-NEXT:          }
 #  CASE1-NEXT:        }
 #  CASE1-NEXT:        Frame Row Entry {
 #  CASE1-NEXT:          Start Address: 0xDE0080
@@ -159,7 +162,10 @@ Sections:
 #  CASE1-NEXT:          Offset Size: B4 (0x2)
 #  CASE1-NEXT:          Base Register: SP (0x1)
 #  CASE1-NEXT:          CFA Offset: 116
-#  CASE1-NEXT:          RA Offset: 64
+#  CASE1-NEXT:          RA Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 64
+#  CASE1-NEXT:          }
 #  CASE1-NEXT:        }
 #  CASE1-NEXT:      ]
 #       CASE1:    FuncDescEntry [1] {
@@ -174,8 +180,14 @@ Sections:
 #  CASE1-NEXT:          Offset Size: B2 (0x1)
 #  CASE1-NEXT:          Base Register: FP (0x0)
 #  CASE1-NEXT:          CFA Offset: 16
-#  CASE1-NEXT:          RA Offset: 64
-#  CASE1-NEXT:          FP Offset: 32
+#  CASE1-NEXT:          RA Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 64
+#  CASE1-NEXT:          }
+#  CASE1-NEXT:          FP Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 32
+#  CASE1-NEXT:          }
 #  CASE1-NEXT:        }
 #  CASE1-NEXT:        Frame Row Entry {
 #  CASE1-NEXT:          Start Address: 0x100
@@ -183,8 +195,14 @@ Sections:
 #  CASE1-NEXT:          Offset Size: B1 (0x0)
 #  CASE1-NEXT:          Base Register: FP (0x0)
 #  CASE1-NEXT:          CFA Offset: 16
-#  CASE1-NEXT:          RA Offset: 64
-#  CASE1-NEXT:          FP Offset: 32
+#  CASE1-NEXT:          RA Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 64
+#  CASE1-NEXT:          }
+#  CASE1-NEXT:          FP Offset {
+#  CASE1-NEXT:            Kind: Stack Slot
+#  CASE1-NEXT:            Value: 32
+#  CASE1-NEXT:          }
 #  CASE1-NEXT:          Extra Offsets: [48, 64]
 #  CASE1-NEXT:        }
 #  CASE1-NEXT:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x6e while reading [0x6e, 0x71)
@@ -279,7 +297,10 @@ Sections:
 #  CASE2-NEXT:          Offset Size: B1 (0x0)
 #  CASE2-NEXT:          Base Register: FP (0x0)
 #  CASE2-NEXT:          CFA Offset: 16
-#  CASE2-NEXT:          RA Offset: 32
+#  CASE2-NEXT:          RA Offset {
+#  CASE2-NEXT:            Kind: Stack Slot
+#  CASE2-NEXT:            Value: 32
+#  CASE2-NEXT:          }
 #  CASE2-NEXT:        }
 #  CASE2-NEXT:        Frame Row Entry {
 #  CASE2-NEXT:          Start Address: 0xDE001F
@@ -287,8 +308,14 @@ Sections:
 #  CASE2-NEXT:          Offset Size: B1 (0x0)
 #  CASE2-NEXT:          Base Register: FP (0x0)
 #  CASE2-NEXT:          CFA Offset: 16
-#  CASE2-NEXT:          RA Offset: 32
-#  CASE2-NEXT:          FP Offset: 48
+#  CASE2-NEXT:          RA Offset {
+#  CASE2-NEXT:            Kind: Stack Slot
+#  CASE2-NEXT:            Value: 32
+#  CASE2-NEXT:          }
+#  CASE2-NEXT:          FP Offset {
+#  CASE2-NEXT:            Kind: Stack Slot
+#  CASE2-NEXT:            Value: 48
+#  CASE2-NEXT:          }
 #  CASE2-NEXT:        }
 #  CASE2-NEXT:        Frame Row Entry {
 #  CASE2-NEXT:          Start Address: 0xDE0020
@@ -296,8 +323,14 @@ Sections:
 #  CASE2-NEXT:          Offset Size: B1 (0x0)
 #  CASE2-NEXT:          Base Register: FP (0x0)
 #  CASE2-NEXT:          CFA Offset: 16
-#  CASE2-NEXT:          RA Offset: 32
-#  CASE2-NEXT:          FP Offset: 48
+#  CASE2-NEXT:          RA Offset {
+#  CASE2-NEXT:            Kind: Stack Slot
+#  CASE2-NEXT:            Value: 32
+#  CASE2-NEXT:          }
+#  CASE2-NEXT:          FP Offset {
+#  CASE2-NEXT:            Kind: Stack Slot
+#  CASE2-NEXT:            Value: 48
+#  CASE2-NEXT:          }
 #  CASE2-NEXT:          Extra Offsets: [64]
 #  CASE2-NEXT:        }
 #  CASE2-NEXT:{{.*}}: warning: '[[FILE]]': unsupported FRE offset size 3 at offset 0x58
