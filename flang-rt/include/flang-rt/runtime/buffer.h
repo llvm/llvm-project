@@ -158,8 +158,8 @@ private:
       // Avoid passing a null pointer, since it would result in an undefined
       // behavior.
       if (old != nullptr) {
-        std::memcpy(buffer_, old + start_, chunk);
-        std::memcpy(buffer_ + chunk, old, length_ - chunk);
+        runtime::memcpy(buffer_, old + start_, chunk);
+        runtime::memcpy(buffer_ + chunk, old, length_ - chunk);
         FreeMemory(old);
       }
       start_ = 0;

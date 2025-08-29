@@ -115,7 +115,7 @@ static RT_API_ATTRS void DefaultInitialize(
           "not yet implemented: CHARACTER(KIND=%d) in EOSHIFT intrinsic", kind);
     }
   } else {
-    std::memset(result.raw().base_addr, 0, bytes);
+    runtime::memset(result.raw().base_addr, 0, bytes);
   }
 }
 
