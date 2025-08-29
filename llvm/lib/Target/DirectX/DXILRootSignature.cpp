@@ -205,7 +205,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
             RS.ParametersContainer.getDescriptorTable(Info.Location);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
-        for (const mcdxbc::DescriptorRange Range : Table) {
+        for (const mcdxbc::DescriptorRange &Range : Table) {
           OS << "  - Range Type: "
              << enumToStringRef(Range.RangeType,
                                 dxbc::getDescriptorRangeTypes())
