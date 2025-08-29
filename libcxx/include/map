@@ -1144,22 +1144,20 @@ public:
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v) {
-    iterator __p = lower_bound(__k);
-    if (__p != end() && !key_comp()(__k, __p->first)) {
-      __p->second = std::forward<_Vp>(__v);
-      return std::make_pair(__p, false);
-    }
-    return std::make_pair(emplace_hint(__p, __k, std::forward<_Vp>(__v)), true);
+    auto __result              = __tree_.__emplace_unique(__k, std::forward<_Vp>(__v));
+    auto& [__iter, __inserted] = __result;
+    if (!__inserted)
+      __iter->second = std::forward<_Vp>(__v);
+    return __result;
   }
 
   template <class _Vp>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v) {
-    iterator __p = lower_bound(__k);
-    if (__p != end() && !key_comp()(__k, __p->first)) {
-      __p->second = std::forward<_Vp>(__v);
-      return std::make_pair(__p, false);
-    }
-    return std::make_pair(emplace_hint(__p, std::move(__k), std::forward<_Vp>(__v)), true);
+    auto __result              = __tree_.__emplace_unique(std::move(__k), std::forward<_Vp>(__v));
+    auto& [__iter, __inserted] = __result;
+    if (!__inserted)
+      __iter->second = std::forward<_Vp>(__v);
+    return __result;
   }
 
   template <class _Vp>
