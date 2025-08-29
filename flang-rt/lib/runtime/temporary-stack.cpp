@@ -16,11 +16,12 @@
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 namespace {
 
+using namespace Fortran;
 using namespace Fortran::runtime;
-
-RT_OFFLOAD_API_GROUP_BEGIN
 
 // the number of elements to allocate when first creating the vector
 constexpr size_t INITIAL_ALLOC = 8;
@@ -99,7 +100,7 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
   // Avoid passing a null pointer, since it would result in an undefined
   // behavior.
   if (data_ != nullptr) {
-    Fortran::runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+    runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
     FreeMemory(data_);
   }
   data_ = newData;
