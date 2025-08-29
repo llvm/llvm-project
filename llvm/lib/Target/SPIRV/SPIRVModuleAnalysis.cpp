@@ -1261,12 +1261,29 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   }
+  case SPIRV::OpDot: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    LLVM_DEBUG(dbgs() << "[BFLOAT] The OpDot MI is " << MI << '\n');
+    LLVM_DEBUG(dbgs() << "[BFLOAT] TypeDef found is " << TypeDef << '\n');
+    if ((TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
+        (TypeDef->getOperand(1).getImm() == 16)) {
+          Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
+        }
+  }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
+    unsigned Fptype = MI.getOperand(2).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
-    else if (BitWidth == 16)
-      Reqs.addCapability(SPIRV::Capability::Float16);
+    else if (BitWidth == 16) {
+      if(Fptype == 1) {
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+        Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::Float16);
+      }
+    }
     break;
   }
   case SPIRV::OpTypeVector: {
