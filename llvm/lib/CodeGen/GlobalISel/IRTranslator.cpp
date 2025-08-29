@@ -2581,10 +2581,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Value *FpValue = CI.getOperand(0);
     ConstantInt *TestMaskValue = cast<ConstantInt>(CI.getOperand(1));
 
-    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
     MIRBuilder
         .buildInstr(TargetOpcode::G_IS_FPCLASS, {getOrCreateVReg(CI)},
-                    {getOrCreateVReg(*FpValue)}, Flags)
+                    {getOrCreateVReg(*FpValue)})
         .addImm(TestMaskValue->getZExtValue());
 
     return true;
@@ -2873,12 +2872,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     }
   }
 
-  // If the spirv intrinsic contain bfloat, enable to Bfloat flag in MachineInst
-  MIB->copyIRFlags(CI);
-  if (containsBF16Type(U)) {
-    MIB.getInstr()->setFlag(MachineInstr::MIFlag::BFloat16);
-  }
-  
   return true;
 }
 
@@ -4161,9 +4154,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
         // Translate any debug-info attached to the instruction.
         translateDbgInfo(Inst, *CurBuilder);
 
-        if (translate(Inst)) {
+        if (translate(Inst)) 
           continue;
-        }
 
         OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                    Inst.getDebugLoc(), BB);

@@ -61,8 +61,6 @@
 #include <cstring>
 #include <utility>
 
-#define DEBUG_TYPE "irtranslator"
-
 using namespace llvm;
 
 static cl::opt<bool>
@@ -636,17 +634,6 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
 
   auto *Sel = dyn_cast<SelectInst>(&I);
   bool BFloatOpnd = !Sel && I.getType()->getScalarType()->isBFloatTy();
-
-  if (isa<CallInst>(&I)) {
-    for (const Value *Op : I.operands()) {
-      Type *OpTy = Op->getType();
-      BFloatOpnd |= OpTy->getScalarType()->isBFloatTy();
-    }
-  }
-
-  if (BFloatOpnd) {
-    MIFlags |= MachineInstr::MIFlag::BFloat16;
-  }
 
   return MIFlags;
 }

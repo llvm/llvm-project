@@ -1264,12 +1264,11 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpDot: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    LLVM_DEBUG(dbgs() << "[BFLOAT] The OpDot MI is " << MI << '\n');
-    LLVM_DEBUG(dbgs() << "[BFLOAT] TypeDef found is " << TypeDef << '\n');
     if ((TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
         (TypeDef->getOperand(1).getImm() == 16)) {
           Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
         }
+    break;
   }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
