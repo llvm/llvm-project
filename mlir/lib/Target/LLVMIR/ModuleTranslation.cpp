@@ -1561,10 +1561,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
-  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
-    llvmFunc->addFnAttr("approx-func-fp-math",
-                        llvm::toStringRef(*approxFuncFpMath));
-
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));

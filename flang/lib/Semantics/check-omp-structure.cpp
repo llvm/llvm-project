@@ -3489,9 +3489,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
           x.v, llvm::omp::OMPC_aligned, GetContext().clauseSource, context_)) {
     auto &modifiers{OmpGetModifiers(x.v)};
     if (auto *align{OmpGetUniqueModifier<parser::OmpAlignment>(modifiers)}) {
-      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+      const auto &v{GetIntValue(align->v)};
+      if (!v || *v <= 0) {
         context_.Say(OmpGetModifierSource(modifiers, align),
             "The alignment value should be a constant positive integer"_err_en_US);
+      } else if (((*v) & (*v - 1)) != 0) {
+        context_.Warn(common::UsageWarning::OpenMPUsage,
+            OmpGetModifierSource(modifiers, align),
+            "Alignment is not a power of 2, Aligned clause will be ignored"_warn_en_US);
       }
     }
   }
