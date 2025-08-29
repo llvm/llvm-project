@@ -53,8 +53,10 @@ class NextUseResult {
       }
     };
 
+  public:
     using SortedRecords = std::set<Record, CompareByDist>;
 
+  private:
     DenseMap<unsigned, SortedRecords> NextUseMap;
 
   public:
@@ -127,7 +129,6 @@ class NextUseResult {
         return false;
 
       for (auto P : NextUseMap) {
-        unsigned Key = P.getFirst();
         
         std::pair<bool, SortedRecords> OtherDists = Other.get(P.getFirst());
         if (!OtherDists.first)
@@ -187,9 +188,6 @@ class NextUseResult {
   };
 
   DenseMap<unsigned, NextUseInfo> NextUseMap;
-
-public:
-  
 
 private:
   DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;

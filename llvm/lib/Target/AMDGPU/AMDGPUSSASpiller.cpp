@@ -84,19 +84,9 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   DenseMap<unsigned, unsigned> PostponedLoopLatches;
   DenseMap<unsigned, SmallVector<unsigned>> LoopHeader2Latches;
 
-  void printVRegMaskPair(const VRegMaskPair P) {
-    SmallVector<unsigned> Idxs;
-    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
-    bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, P.LaneMask, Idxs);
-    dbgs() << "Vreg: ";
-    if (HasSubReg)
-      for (auto i : Idxs)
-        dbgs() << printReg(P.VReg, TRI, i, MRI) << "]\n";
-    else
-      dbgs() << printReg(P.VReg) << "]\n";
-  }
+  LLVM_ATTRIBUTE_NOINLINE void printVRegMaskPair(const VRegMaskPair P);
 
-  #ifndef NDEBUG
+#ifndef NDEBUG
   void dump() {
     for (auto SI : RegisterMap) {
       dbgs() << "\nMBB: " << SI.first;
@@ -737,7 +727,8 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
   int FI = assignVirt2StackSlot(VMP);
   TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(),
                            SubRegIdx == AMDGPU::NoRegister ? true : false, FI,
-                           RC, TRI, VMP.getVReg(), SubRegIdx);
+                           RC, TRI, VMP.getVReg(), MachineInstr::NoFlags,
+                           SubRegIdx);
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
   MachineInstr &Spill = *(--InsertBefore);
   LIS.InsertMachineInstrInMaps(Spill);
