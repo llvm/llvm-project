@@ -134,6 +134,8 @@ public:
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
+        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
@@ -154,8 +156,6 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
-    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
-        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
