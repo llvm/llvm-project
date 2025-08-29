@@ -40,6 +40,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
             self.continue_to_exit()
 
     @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_by_pid(self):
         """
         Tests attaching to a process by process ID.
