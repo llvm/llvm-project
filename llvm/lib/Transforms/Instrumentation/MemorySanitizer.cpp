@@ -3902,8 +3902,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            ReturnType->getPrimitiveSizeInBits());
 
     if (I.arg_size() == 3) {
-      FixedVectorType *AccumulatorType =
-          cast<FixedVectorType>(I.getOperand(0)->getType());
+      auto *AccumulatorType = cast<FixedVectorType>(I.getOperand(0)->getType());
       assert(AccumulatorType == ReturnType);
     }
 
