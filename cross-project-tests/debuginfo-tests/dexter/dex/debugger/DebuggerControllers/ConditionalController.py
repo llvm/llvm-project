@@ -327,9 +327,6 @@ class ConditionalController(DebuggerControllerBase):
                     # final line.
                     for line in range(bpr.range_from + 1, bpr.range_to + 1):
                         id = self.debugger.add_breakpoint(bpr.path, line)
-                        self.context.logger.warning(
-                            f"Set trailing breakpoint {id} at {line}"
-                        )
 
             # Remove any trailing or expired leading breakpoints we just hit.
             self.debugger.delete_breakpoints(bp_to_delete)
