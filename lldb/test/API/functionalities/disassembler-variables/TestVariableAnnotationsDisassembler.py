@@ -23,7 +23,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
         return self.res.GetOutput()
 
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_d_original_example_O1(self):
         obj = self._build_obj("d_original_example.o")
@@ -37,7 +37,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_regs_int_params(self):
         obj = self._build_obj("regs_int_params.o")
@@ -54,7 +54,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_regs_fp_params(self):
         obj = self._build_obj("regs_fp_params.o")
@@ -71,7 +71,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_regs_mixed_params(self):
         obj = self._build_obj("regs_mixed_params.o")
@@ -88,7 +88,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_live_across_call(self):
         obj = self._build_obj("live_across_call.o")
@@ -102,7 +102,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_loop_reg_rotate(self):
         obj = self._build_obj("loop_reg_rotate.o")
@@ -118,7 +118,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
     @no_debug_info_test
     @skipIfWindows
-    @skipUnlessPlatform(["linux","freebsd","netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_seed_reg_const_undef(self):
         obj = self._build_obj("seed_reg_const_undef.o")
