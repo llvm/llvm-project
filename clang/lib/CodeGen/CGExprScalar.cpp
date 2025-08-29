@@ -5185,8 +5185,8 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   }
   // OpenMP: Handle lastprivate(condition:) in scalar assignment
   if (CGF.getLangOpts().OpenMP) {
-   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
-                                                                 E->getLHS());
+    CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
+                                                                  E->getLHS());
   }
 
   // If the result is clearly ignored, return now.
