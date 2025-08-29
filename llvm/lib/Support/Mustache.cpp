@@ -694,12 +694,13 @@ void ASTNode::indentTextNode(std::string &Body, size_t Indentation,
   if (FinalNode)
     LastChar = Body.find_last_not_of(" \t\r\f\v");
 
-  while ((pos = Body.find('\n', pos)) != std::string::npos) {
-    if (FinalNode && (pos == LastChar))
+  while ((Pos = Body.find('\n', Pos)) != std::string::npos) {
+    if (FinalNode && (Pos == LastChar))
       break;
 
-    Body.insert(pos + 1, Spaces);
-    pos += 1 + Indentation;
+    Body.insert(Pos + 1, Spaces);
+    Pos += 1 + Indentation;
+    LastChar += Indentation;
   }
 }
 

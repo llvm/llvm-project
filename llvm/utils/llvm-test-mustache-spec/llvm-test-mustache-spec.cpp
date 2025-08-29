@@ -141,7 +141,6 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Triple Mustache - Standalone",
          "Triple Mustache With Padding",
      }},
-    {"partials.json", {"Standalone Indentation"}},
     {"sections.json", {"Implicit Iterator - Triple mustache"}},
 }};
 
