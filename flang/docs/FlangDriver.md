@@ -360,10 +360,8 @@ be exactly what you want to test.  In fact, you can check these additional
 flags by using the `-###` compiler driver command line option.
 
 Lastly, you can use `! REQUIRES: <feature>` for tests that will only work when
-`<feature>` is available. For example, you can use`! REQUIRES: shell` to mark a
-test as only available on Unix-like systems (i.e. systems that contain a Unix
-shell). In practice this means that the corresponding test is skipped on
-Windows.
+`<feature>` is available. For example, you can use`! REQUIRES: system-linux` to
+mark a test as only available on Linux systems.
 
 ## Frontend Driver Plugins
 Plugins are an extension to the frontend driver that make it possible to run
