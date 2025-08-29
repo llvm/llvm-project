@@ -28,6 +28,10 @@ namespace llvm {
 /// This information is optionally emitted by the LLParser while
 /// it reads LLVM textual IR.
 class AsmParserContext {
+  DenseMap<Function *, FileLocRange> Functions;
+  DenseMap<BasicBlock *, FileLocRange> Blocks;
+  DenseMap<Instruction *, FileLocRange> Instructions;
+
 public:
   std::optional<FileLocRange> getFunctionLocation(const Function *) const;
   std::optional<FileLocRange> getBlockLocation(const BasicBlock *) const;
@@ -42,11 +46,6 @@ public:
   bool addFunctionLocation(Function *, const FileLocRange &);
   bool addBlockLocation(BasicBlock *, const FileLocRange &);
   bool addInstructionLocation(Instruction *, const FileLocRange &);
-
-private:
-  DenseMap<Function *, FileLocRange> Functions;
-  DenseMap<BasicBlock *, FileLocRange> Blocks;
-  DenseMap<Instruction *, FileLocRange> Instructions;
 };
 } // namespace llvm
 
