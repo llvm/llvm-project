@@ -14,6 +14,7 @@
 
 #include "hwasan.h"
 #include "interception/interception.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_mallinfo.h"
