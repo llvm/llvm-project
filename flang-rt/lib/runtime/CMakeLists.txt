@@ -175,7 +175,7 @@ else ()
   set(f128_sources "")
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx" OR FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${gpu_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
