@@ -36,13 +36,13 @@ Remote system
 *************
 
 On Linux and Android, all required remote functionality is contained in the
-lldb-server binary. This binary combines the functionality of the platform and
+``lldb-server binary``. This binary combines the functionality of the platform and
 gdb-remote stub. A single binary facilitates deployment and reduces code size,
-since the two functions share a lot of code. The lldb-server binary is also
-statically linked with the rest of LLDB (unlike lldb, which dynamically links
-to liblldb.so by default), so it does not have any dependencies on the rest of
+since the two functions share a lot of code. The ``lldb-server`` binary is also
+statically linked with the rest of LLDB (unlike ``lldb``, which dynamically links
+to ``liblldb.so`` by default), so it does not have any dependencies on the rest of
 lldb. On macOS and iOS, the remote-gdb functionality is implemented by the
-debugserver binary, which you will need to deploy alongside lldb-server.
+``debugserver`` binary, which you will need to deploy alongside ``lldb-server``.
 
 The binaries mentioned above need to be present on the remote system to enable
 remote debugging. You can either compile on the remote system directly or copy
@@ -51,8 +51,8 @@ differs from the local one, you will need to cross-compile the correct version
 of the binaries. More information on cross-compiling LLDB can be found on the
 build page.
 
-Once the binaries are in place, you just need to run the lldb-server in
-platform mode and specify the port it should listen on. For example, the
+Once the binaries are in place, you just need to run the ``lldb-server`` in
+``platform`` mode and specify the port it should listen on. For example, the
 command
 
 ::
@@ -60,8 +60,8 @@ command
    remote% lldb-server platform --listen "*:1234" --server
 
 will start the LLDB platform and wait for incoming connections from any address
-to port 1234. Specifying an address instead of * will only allow connections
-originating from that address. Adding a --server parameter to the command line
+to port ``1234``. Specifying an address instead of ``*`` will only allow connections
+originating from that address. Adding a ``--server`` parameter to the command line
 will fork off a new process for every incoming connection, allowing multiple
 parallel debug sessions.
 
