@@ -14,6 +14,13 @@ RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
 RUN: lld-link /out:%t.exe /entry:main /sectionlayout:@%t.layout.txt %t.obj
 RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
 
+## Ensure tokens after section name is ignored (for now, to align with MS link.exe)
+RUN: echo ".text1 ALIGN=1" > %t.layout.txt
+RUN: echo ".text3" >> %t.layout.txt
+RUN: echo ".text2" >> %t.layout.txt
+RUN: lld-link /out:%t.exe /entry:main /sectionlayout:@%t.layout.txt %t.obj
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
+
 CHECK1: Sections [
 CHECK1:   Section {
 CHECK1:     Number: 1
