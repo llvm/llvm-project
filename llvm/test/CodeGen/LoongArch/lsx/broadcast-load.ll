@@ -2,8 +2,6 @@
 ; RUN: llc --mtriple=loongarch32 -mattr=+32s,+lsx < %s | FileCheck %s --check-prefixes=CHECK,LA32
 ; RUN: llc --mtriple=loongarch64 -mattr=+lsx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
-; TODO: Load a element and splat it to a vector could be lowerd to vldrepl
-
 ; A load has more than one user shouldn't be lowered to vldrepl
 define <2 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst){
 ; LA32-LABEL: should_not_be_optimized:
