@@ -52,8 +52,34 @@ v8i test_load_passthru(v8b m, v8i *p, v8i t) {
   return __builtin_masked_load(m, p, t);
 }
 
+// CHECK-LABEL: define dso_local <8 x i32> @test_load_expand(
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[T_ADDR:%.*]] = alloca <8 x i32>, align 32
+// CHECK-NEXT:    store i8 [[M_COERCE]], ptr [[M]], align 1
+// CHECK-NEXT:    [[LOAD_BITS:%.*]] = load i8, ptr [[M]], align 1
+// CHECK-NEXT:    [[M1:%.*]] = bitcast i8 [[LOAD_BITS]] to <8 x i1>
+// CHECK-NEXT:    [[T:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[M1]] to i8
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[M_ADDR]], align 1
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store <8 x i32> [[T]], ptr [[T_ADDR]], align 32
+// CHECK-NEXT:    [[LOAD_BITS2:%.*]] = load i8, ptr [[M_ADDR]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[T_ADDR]], align 32
+// CHECK-NEXT:    [[MASKED_EXPAND_LOAD:%.*]] = call <8 x i32> @llvm.masked.expandload.v8i32(ptr [[TMP3]], <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
+// CHECK-NEXT:    ret <8 x i32> [[MASKED_EXPAND_LOAD]]
+//
+v8i test_load_expand(v8b m, v8i *p, v8i t) {
+  return __builtin_masked_expand_load(m, p, t);
+}
+
 // CHECK-LABEL: define dso_local void @test_store(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -76,4 +102,30 @@ v8i test_load_passthru(v8b m, v8i *p, v8i t) {
 //
 void test_store(v8b m, v8i v, v8i *p) {
   __builtin_masked_store(m, v, p);
+}
+
+// CHECK-LABEL: define dso_local void @test_compress_store(
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <8 x i32>, align 32
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store i8 [[M_COERCE]], ptr [[M]], align 1
+// CHECK-NEXT:    [[LOAD_BITS:%.*]] = load i8, ptr [[M]], align 1
+// CHECK-NEXT:    [[M1:%.*]] = bitcast i8 [[LOAD_BITS]] to <8 x i1>
+// CHECK-NEXT:    [[V:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[M1]] to i8
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[M_ADDR]], align 1
+// CHECK-NEXT:    store <8 x i32> [[V]], ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[LOAD_BITS2:%.*]] = load i8, ptr [[M_ADDR]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.masked.compressstore.v8i32(<8 x i32> [[TMP3]], ptr [[TMP4]], <8 x i1> [[TMP2]])
+// CHECK-NEXT:    ret void
+//
+void test_compress_store(v8b m, v8i v, v8i *p) {
+  __builtin_masked_compress_store(m, v, p);
 }
