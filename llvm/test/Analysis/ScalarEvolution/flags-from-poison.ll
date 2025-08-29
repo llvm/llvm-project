@@ -102,7 +102,7 @@ define void @test-add-scope-invariant(ptr %input, i32 %needle) {
 ; CHECK-NEXT:    %of_interest = add nuw nsw i32 %i.next, %offset
 ; CHECK-NEXT:    --> {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: %needle LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, ptr %input, i32 %of_interest
-; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 %needle to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {(1 + %offset)<nuw><nsw>,+,1}<nuw><%loop> to i64))<nuw><nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 %needle to i64))<nuw><nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-invariant
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %offset) + %needle)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
@@ -133,7 +133,7 @@ define void @test-add-scope-bound(ptr %input, i32 %needle) {
 ; CHECK-NEXT:    %i = phi i32 [ %i.next, %loop ], [ 0, %entry ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr i32, ptr %input, i32 %i
-; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nuw><nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %offset = load i32, ptr %gep, align 4
 ; CHECK-NEXT:    --> %offset U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, 1
@@ -174,7 +174,7 @@ define void @test-add-scope-bound-unkn-preheader(ptr %input, i32 %needle) {
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, ptr %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nuw><nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-preheader
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
@@ -205,7 +205,7 @@ define void @test-add-scope-bound-unkn-preheader-neg1(ptr %input, i32 %needle) {
 ; CHECK-NEXT:    %i.next = add nuw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,%offset}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep2 = getelementptr i32, ptr %input, i32 %i.next
-; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {%offset,+,%offset}<nuw><%loop> to i64))<nuw><nsw> + %input) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-scope-bound-unkn-preheader-neg1
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
