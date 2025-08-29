@@ -160,7 +160,7 @@ inlineCostFeatureToMlFeature(InlineCostFeatureIndex Feature) {
   return static_cast<FeatureIndex>(static_cast<size_t>(Feature));
 }
 
-LLVM_ABI extern std::vector<TensorSpec> FeatureMap;
+LLVM_ABI extern std::vector<TensorSpec> &getFeatureMap();
 
 LLVM_ABI extern const char *const DecisionName;
 LLVM_ABI extern const TensorSpec InlineDecisionSpec;

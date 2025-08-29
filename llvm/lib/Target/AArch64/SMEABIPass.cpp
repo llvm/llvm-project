@@ -15,11 +15,16 @@
 #include "AArch64.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -33,9 +38,13 @@ struct SMEABI : public FunctionPass {
 
   bool runOnFunction(Function &F) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+  }
+
 private:
   bool updateNewStateFunctions(Module *M, Function *F, IRBuilder<> &Builder,
-                               SMEAttrs FnAttrs);
+                               SMEAttrs FnAttrs, const TargetLowering &TLI);
 };
 } // end anonymous namespace
 
@@ -51,14 +60,16 @@ FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 //===----------------------------------------------------------------------===//
 
 // Utility function to emit a call to __arm_tpidr2_save and clear TPIDR2_EL0.
-void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, bool ZT0IsUndef = false) {
+void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, const TargetLowering &TLI,
+                    bool ZT0IsUndef = false) {
   auto &Ctx = M->getContext();
   auto *TPIDR2SaveTy =
       FunctionType::get(Builder.getVoidTy(), {}, /*IsVarArgs=*/false);
   auto Attrs =
       AttributeList().addFnAttribute(Ctx, "aarch64_pstate_sm_compatible");
+  RTLIB::Libcall LC = RTLIB::SMEABI_TPIDR2_SAVE;
   FunctionCallee Callee =
-      M->getOrInsertFunction("__arm_tpidr2_save", TPIDR2SaveTy, Attrs);
+      M->getOrInsertFunction(TLI.getLibcallName(LC), TPIDR2SaveTy, Attrs);
   CallInst *Call = Builder.CreateCall(Callee);
 
   // If ZT0 is undefined (i.e. we're at the entry of a "new_zt0" function), mark
@@ -67,8 +78,7 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, bool ZT0IsUndef = false) {
   if (ZT0IsUndef)
     Call->addFnAttr(Attribute::get(Ctx, "aarch64_zt0_undef"));
 
-  Call->setCallingConv(
-      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
+  Call->setCallingConv(TLI.getLibcallCallingConv(LC));
 
   // A save to TPIDR2 should be followed by clearing TPIDR2_EL0.
   Function *WriteIntr =
@@ -98,7 +108,8 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, bool ZT0IsUndef = false) {
 /// interface if it does not share ZA or ZT0.
 ///
 bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
-                                     IRBuilder<> &Builder, SMEAttrs FnAttrs) {
+                                     IRBuilder<> &Builder, SMEAttrs FnAttrs,
+                                     const TargetLowering &TLI) {
   LLVMContext &Context = F->getContext();
   BasicBlock *OrigBB = &F->getEntryBlock();
   Builder.SetInsertPoint(&OrigBB->front());
@@ -124,7 +135,7 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
 
     // Create a call __arm_tpidr2_save, which commits the lazy save.
     Builder.SetInsertPoint(&SaveBB->back());
-    emitTPIDR2Save(M, Builder, /*ZT0IsUndef=*/FnAttrs.isNewZT0());
+    emitTPIDR2Save(M, Builder, TLI, /*ZT0IsUndef=*/FnAttrs.isNewZT0());
 
     // Enable pstate.za at the start of the function.
     Builder.SetInsertPoint(&OrigBB->front());
@@ -172,10 +183,14 @@ bool SMEABI::runOnFunction(Function &F) {
   if (F.isDeclaration() || F.hasFnAttribute("aarch64_expanded_pstate_za"))
     return false;
 
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  const TargetLowering &TLI = *TM.getSubtargetImpl(F)->getTargetLowering();
+
   bool Changed = false;
   SMEAttrs FnAttrs(F);
   if (FnAttrs.isNewZA() || FnAttrs.isNewZT0())
-    Changed |= updateNewStateFunctions(M, &F, Builder, FnAttrs);
+    Changed |= updateNewStateFunctions(M, &F, Builder, FnAttrs, TLI);
 
   return Changed;
 }
