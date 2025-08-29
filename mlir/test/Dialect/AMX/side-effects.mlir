@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -cse -convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -cse -convert-vector-to-llvm="enable-amx" | FileCheck %s
 
 // With inclusion of memory side-effects, it is expected CSE not to fold multiple 
 // "tileload" and "tilezero".
