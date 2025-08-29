@@ -2590,7 +2590,9 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
 }
 
 std::pair<VarDecl *, VarDecl *>
-SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
+SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
+                              OpenACCReductionOperator ReductionOperator,
+                              const Expr *VarExpr) {
   // Strip off any array subscripts/array section exprs to get to the type of
   // the variable.
   while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
@@ -2722,7 +2724,45 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
                                      /*TreatUnavailableAsInvalid=*/false);
       Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
     } else if (CK == OpenACCClauseKind::Reduction) {
-      // TODO: OpenACC: Implement this for whatever reduction needs.
+      // How we initialize the reduction variable depends on the operator used,
+      // according to the chart in OpenACC 3.3 section 2.6.15.
+
+      switch (ReductionOperator) {
+      case OpenACCReductionOperator::Invalid:
+        // This can only happen when there is an error, and since these inits
+        // are used for code generation, we can just ignore/not bother doing any
+        // initialization here.
+        break;
+      case OpenACCReductionOperator::Multiplication:
+      case OpenACCReductionOperator::Max:
+      case OpenACCReductionOperator::Min:
+      case OpenACCReductionOperator::BitwiseAnd:
+      case OpenACCReductionOperator::And:
+        // TODO: OpenACC: figure out init for these.
+        break;
+
+      case OpenACCReductionOperator::Addition:
+      case OpenACCReductionOperator::BitwiseOr:
+      case OpenACCReductionOperator::BitwiseXOr:
+      case OpenACCReductionOperator::Or: {
+        // +, |, ^, and || all use 0 for their initializers, so we can just
+        // use 'zero init' here and not bother with the rest of the
+        // array/compound type/etc contents.
+        Expr *InitExpr = new (getASTContext()) InitListExpr(
+            getASTContext(), VarExpr->getBeginLoc(), {}, VarExpr->getEndLoc());
+        // we set this to void so that the initialization sequence generation
+        // will get this type correct/etc.
+        InitExpr->setType(getASTContext().VoidTy);
+
+        InitializationKind Kind = InitializationKind::CreateForInit(
+            Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
+        InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, InitExpr,
+                                       /*TopLevelOfInitList=*/false,
+                                       /*TreatUnavailableAsInvalid=*/false);
+        Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+        break;
+      }
+      }
     } else {
       llvm_unreachable("Unknown clause kind in CreateInitRecipe");
     }

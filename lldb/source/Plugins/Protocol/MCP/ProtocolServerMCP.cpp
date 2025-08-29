@@ -39,6 +39,8 @@ void ProtocolServerMCP::Initialize() {
 }
 
 void ProtocolServerMCP::Terminate() {
+  if (llvm::Error error = ProtocolServer::Terminate())
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(error), "{0}");
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 

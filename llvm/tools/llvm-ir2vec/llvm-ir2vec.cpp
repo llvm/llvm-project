@@ -162,8 +162,8 @@ public:
 
     for (const BasicBlock &BB : F) {
       for (const auto &I : BB.instructionsWithoutDebug()) {
-        unsigned Opcode = Vocabulary::getNumericID(I.getOpcode());
-        unsigned TypeID = Vocabulary::getNumericID(I.getType()->getTypeID());
+        unsigned Opcode = Vocabulary::getSlotIndex(I.getOpcode());
+        unsigned TypeID = Vocabulary::getSlotIndex(I.getType()->getTypeID());
 
         // Add "Next" relationship with previous instruction
         if (HasPrevOpcode) {
@@ -184,7 +184,7 @@ public:
         // Add "Arg" relationships
         unsigned ArgIndex = 0;
         for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getNumericID(U.get());
+          unsigned OperandID = Vocabulary::getSlotIndex(U.get());
           unsigned RelationID = ArgRelation + ArgIndex;
           OS << Opcode << '\t' << OperandID << '\t' << RelationID << '\n';
 
@@ -211,13 +211,7 @@ public:
 
   /// Dump entity ID to string mappings
   static void generateEntityMappings(raw_ostream &OS) {
-    // FIXME: Currently, the generated entity mappings are not one-to-one;
-    // Multiple TypeIDs map to same string key (Like Half, BFloat, etc. map to
-    // FloatTy). This would hinder learning good seed embeddings.
-    // We should fix this in the future by ensuring unique string keys either by
-    // post-processing here without changing the mapping in ir2vec::Vocabulary,
-    // or by changing the Vocabulary generation logic to ensure unique keys.
-    auto EntityLen = Vocabulary::expectedSize();
+    auto EntityLen = Vocabulary::getCanonicalSize();
     OS << EntityLen << "\n";
     for (unsigned EntityID = 0; EntityID < EntityLen; ++EntityID)
       OS << Vocabulary::getStringKey(EntityID) << '\t' << EntityID << '\n';

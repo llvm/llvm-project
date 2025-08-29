@@ -425,6 +425,7 @@ class OpenACCClauseCIREmitter final
         &recipe.getCopyRegion(), recipe.getCopyRegion().end(),
         {mainOp.getType(), mainOp.getType()}, {loc, loc});
     builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
+    CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
     mlir::BlockArgument fromArg = block->getArgument(0);
     mlir::BlockArgument toArg = block->getArgument(1);
@@ -457,11 +458,6 @@ class OpenACCClauseCIREmitter final
                             RecipeTy recipe, const VarDecl *varRecipe,
                             const VarDecl *temporary) {
     assert(varRecipe && "Required recipe variable not set?");
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      // We haven't implemented the 'init' recipe for Reduction yet, so NYI
-      // it.
-      cgf.cgm.errorNYI(exprRange, "OpenACC Reduction recipe init");
-    }
 
     CIRGenFunction::AutoVarEmission tempDeclEmission{
         CIRGenFunction::AutoVarEmission::invalid()};
@@ -469,9 +465,12 @@ class OpenACCClauseCIREmitter final
 
     // Do the 'init' section of the recipe IR, which does an alloca, then the
     // initialization (except for firstprivate).
-    builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                        {mainOp.getType()}, {loc});
+    mlir::Block *block = builder.createBlock(&recipe.getInitRegion(),
+                                             recipe.getInitRegion().end(),
+                                             {mainOp.getType()}, {loc});
     builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
+    CIRGenFunction::LexicalScope ls(cgf, loc, block);
+
     tempDeclEmission =
         cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
 
@@ -495,6 +494,13 @@ class OpenACCClauseCIREmitter final
         // production is a violation of the standard, so we cannot do them.
         cgf.cgm.errorNYI(exprRange, "private default-init recipe");
       }
+      cgf.emitAutoVarInit(tempDeclEmission);
+    } else if constexpr (std::is_same_v<RecipeTy,
+                                        mlir::acc::ReductionRecipeOp>) {
+      // Unlike Private, the recipe here is always required as it has to do
+      // init, not just 'default' init.
+      if (!varRecipe->getInit())
+        cgf.cgm.errorNYI(exprRange, "reduction init recipe");
       cgf.emitAutoVarInit(tempDeclEmission);
     }
 
@@ -527,6 +533,7 @@ class OpenACCClauseCIREmitter final
         &recipe.getCombinerRegion(), recipe.getCombinerRegion().end(),
         {mainOp.getType(), mainOp.getType()}, {loc, loc});
     builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
+    CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
     mlir::BlockArgument lhsArg = block->getArgument(0);
 
@@ -544,6 +551,7 @@ class OpenACCClauseCIREmitter final
     mlir::Block *block = builder.createBlock(
         &destroyRegion, destroyRegion.end(), {mainOp.getType()}, {loc});
     builder.setInsertionPointToEnd(&destroyRegion.back());
+    CIRGenFunction::LexicalScope ls(cgf, loc, block);
 
     mlir::Type elementTy =
         mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
