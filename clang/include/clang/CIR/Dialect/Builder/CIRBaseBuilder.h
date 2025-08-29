@@ -161,16 +161,15 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         uint64_t alignment = 0) {
+                         bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
-    assert(!cir::MissingFeatures::opLoadStoreVolatile());
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
-                               alignmentAttr, cir::MemOrderAttr{});
+                               alignmentAttr, isVolatile, cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
                                 uint64_t alignment) {
-    return createLoad(loc, ptr, alignment);
+    return createLoad(loc, ptr, /*isVolatile=*/false, alignment);
   }
 
   mlir::Value createNot(mlir::Value value) {
@@ -251,7 +250,7 @@ public:
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, align, isVolatile, order);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
@@ -275,7 +274,8 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
-                               alignmentAttr, /*mem_order=*/{});
+                               alignmentAttr, /*isVolatile=*/false,
+                               /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
