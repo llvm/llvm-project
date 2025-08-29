@@ -5,6 +5,69 @@ declare void @use(i8)
 declare void @use.i1(i1)
 declare i8 @llvm.umin.i8(i8, i8)
 
+define i32 @test_icmp_select_lte(i32 %x) {
+; CHECK-LABEL: @test_icmp_select_lte(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X:%.*]], 1233
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RE]]
+;
+  %cmp = icmp slt i32 %x, 1234
+  %lshr = lshr i32 %x, 31
+  %re = select i1 %cmp, i32 %lshr, i32 1
+  ret i32 %re
+}
+
+define i16 @test_icmp_select_sgt(i16 %x) {
+; CHECK-LABEL: @test_icmp_select_sgt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X:%.*]], 124
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[CMP]] to i16
+; CHECK-NEXT:    ret i16 [[RE]]
+;
+  %cmp = icmp sgt i16 %x, 123
+  %lshr = lshr i16 %x, 15
+  %re = select i1 %cmp, i16 %lshr, i16 1
+  ret i16 %re
+}
+
+define i8 @test_icmp_select_ugt(i8 %x) {
+; CHECK-LABEL: @test_icmp_select_ugt(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 11
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[RE]]
+;
+  %cmp = icmp ugt i8 %x, 10
+  %lshr = lshr i8 %x, 7
+  %re = select i1 %cmp, i8 %lshr, i8 1
+  ret i8 %re
+}
+
+define <2 x i32> @test_icmp_select_sge_vector(<2 x i32> %x) {
+; CHECK-LABEL: @test_icmp_select_sge_vector(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 512, i32 512>
+; CHECK-NEXT:    [[RE:%.*]] = zext <2 x i1> [[CMP]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RE]]
+;
+  %cmp = icmp sge <2 x i32> %x, <i32 512, i32 512>
+  %lshr = lshr <2 x i32> %x, <i32 31, i32 31>
+  %re = select <2 x i1> %cmp, <2 x i32> %lshr, <2 x i32> <i32 1, i32 1>
+  ret <2 x i32> %re;
+}
+
+define i8 @test_with_more_than_one_use(i8 %x) {
+; CHECK-LABEL: @test_with_more_than_one_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 9
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], 7
+; CHECK-NEXT:    [[RE:%.*]] = select i1 [[CMP]], i8 [[LSHR]], i8 1
+; CHECK-NEXT:    call void @use(i8 [[LSHR]])
+; CHECK-NEXT:    ret i8 [[RE]]
+;
+  %cmp = icmp sge i8 %x, 10
+  %lshr = lshr i8 %x, 7
+  %re = select i1 %cmp, i8 %lshr, i8 1
+  call void @use(i8 %lshr)
+  ret i8 %re
+}
+
 define i1 @icmp_select_const(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_select_const(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
