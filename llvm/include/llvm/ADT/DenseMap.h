@@ -174,20 +174,8 @@ public:
     return contains(Val) ? 1 : 0;
   }
 
-  iterator find(const_arg_type_t<KeyT> Val) {
-    if (BucketT *Bucket = doFind(Val))
-      return makeIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
-  }
-  const_iterator find(const_arg_type_t<KeyT> Val) const {
-    if (const BucketT *Bucket = doFind(Val))
-      return makeConstIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
-  }
+  iterator find(const_arg_type_t<KeyT> Val) { return find_as(Val); }
+  const_iterator find(const_arg_type_t<KeyT> Val) const { return find_as(Val); }
 
   /// Alternate version of find() which allows a different, and possibly
   /// less expensive, key type.
