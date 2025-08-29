@@ -40,9 +40,6 @@ struct SymbolState {
 
   /// A map from unique integer identifier to DistinctAttr.
   DenseMap<uint64_t, DistinctAttr> distinctAttributes;
-
-  /// A map from unique string identifier to Attribute.
-  llvm::StringMap<Attribute> attributesCache;
 };
 
 //===----------------------------------------------------------------------===//

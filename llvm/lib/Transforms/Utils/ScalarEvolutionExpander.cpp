@@ -1239,10 +1239,13 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-    else if (S->getType() != PN.getType())
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
       continue;
+    }
 
     // Check if we can re-use the existing PN, by adjusting it with an expanded
     // offset, if the offset is simpler.
