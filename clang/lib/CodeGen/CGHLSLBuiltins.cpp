@@ -536,8 +536,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isinf operand must have a float representation");
-    return Builder.CreateIntrinsic(retType, Intrinsic::dx_isinf,
-                                   ArrayRef<Value *>{Op0}, nullptr, "dx.isinf");
+    return Builder.CreateIntrinsic(
+        retType, CGM.getHLSLRuntime().getIsInfIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.isinf");
   }
   case Builtin::BI__builtin_hlsl_mad: {
     Value *M = EmitScalarExpr(E->getArg(0));
