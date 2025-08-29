@@ -396,6 +396,19 @@ def commute_shift : GICombineRule<
          [{ return Helper.matchCommuteShift(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
+// Fold (shift (trunc (shift x, C1)), C2) -> trunc (shift x, (C1 + C2))
+def shift_right_op : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_LSHR, G_ASHR],
+           (pattern (op $dst, $shifted, $amt)))>;
+def shift_of_trunc_of_shift_matchdata : GIDefMatchData<"ShiftOfTruncOfShift">;
+def shift_of_trunc_of_shift : GICombineRule<
+  (defs root:$dst, shift_of_trunc_of_shift_matchdata:$matchinfo),
+  (match (shift_right_op $dst):$root,
+         [{ return Helper.matchShiftOfTruncOfShift(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyShiftOfTruncOfShift(*${root}, ${matchinfo}); }])>;
+
 def narrow_binop_feeding_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
@@ -2133,7 +2146,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, 
+    truncsat_combines, shift_of_trunc_of_shift]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
