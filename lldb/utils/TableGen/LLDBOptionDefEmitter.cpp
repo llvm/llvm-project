@@ -24,7 +24,7 @@ using namespace lldb_private;
 
 namespace {
 /// Parses curly braces and replaces them with ANSI underline formatting.
-inline std::string underline(llvm::StringRef Str) {
+std::string underline(llvm::StringRef Str) {
   llvm::StringRef OpeningHead, OpeningTail, ClosingHead, ClosingTail;
   std::string Result;
   llvm::raw_string_ostream Stream(Result);
