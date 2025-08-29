@@ -25,11 +25,10 @@ define void @foo(ptr nocapture noalias %A, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @inc, align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i32 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i32 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i32 24
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x float>, ptr [[TMP6]], align 4
@@ -37,11 +36,10 @@ define void @foo(ptr nocapture noalias %A, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <8 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <8 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <8 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i32 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A]], i32 16
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i32 24
-; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[TMP14]], align 4
+; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[A]], align 4
 ; CHECK-NEXT:    store <8 x float> [[TMP8]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    store <8 x float> [[TMP9]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <8 x float> [[TMP10]], ptr [[TMP13]], align 4

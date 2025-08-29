@@ -135,7 +135,7 @@ body:             |
     ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC2]](<2 x s32>), [[FPTRUNC3]](<2 x s32>)
     ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY5]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY5]], [[C]](s64)
     ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store (<4 x s32>) into unknown-address + 16)
     ; CHECK-NEXT: RET_ReallyLR
     %2:_(<2 x s64>) = COPY $q0

@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
 #define LLVM_LIBC_SRC___SUPPORT_GPU_ALLOCATOR_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace gpu {

@@ -157,6 +157,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlwaysModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAutomapModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"automap-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_enter}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"chunk-modifier",

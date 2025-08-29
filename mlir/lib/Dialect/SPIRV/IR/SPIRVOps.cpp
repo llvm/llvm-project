@@ -767,19 +767,25 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 // spirv.EXTConstantCompositeReplicate
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
-  Type valueType;
-  if (auto typedAttr = dyn_cast<TypedAttr>(getValue())) {
-    valueType = typedAttr.getType();
-  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
-    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
-    if (!typedElemAttr)
-      return emitError("value attribute is not typed");
-    valueType =
-        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
-  } else {
-    return emitError("unknown value attribute type");
+// Returns type of attribute. In case of a TypedAttr this will simply return
+// the type. But for an ArrayAttr which is untyped and can be multidimensional
+// it creates the ArrayType recursively.
+static Type getValueType(Attribute attr) {
+  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
+    return typedAttr.getType();
   }
+
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    return spirv::ArrayType::get(getValueType(arrayAttr[0]), arrayAttr.size());
+  }
+
+  return nullptr;
+}
+
+LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
+  Type valueType = getValueType(getValue());
+  if (!valueType)
+    return emitError("unknown value attribute type");
 
   auto compositeType = dyn_cast<spirv::CompositeType>(getType());
   if (!compositeType)

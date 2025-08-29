@@ -1,4 +1,4 @@
-; RUN: llvm-ir2vec --mode=triplets %s | FileCheck %s -check-prefix=TRIPLETS
+; RUN: llvm-ir2vec triplets %s | FileCheck %s -check-prefix=TRIPLETS
 
 define i32 @simple_add(i32 %a, i32 %b) {
 entry:
@@ -24,15 +24,42 @@ entry:
   ret i32 %result
 }
 
-; TRIPLETS: Add IntegerTy Variable Variable
-; TRIPLETS-NEXT: Ret VoidTy Variable
-; TRIPLETS-NEXT: Mul IntegerTy Variable Variable
-; TRIPLETS-NEXT: Ret VoidTy Variable
-; TRIPLETS-NEXT: Alloca PointerTy Constant
-; TRIPLETS-NEXT: Alloca PointerTy Constant
-; TRIPLETS-NEXT: Store VoidTy Variable Pointer
-; TRIPLETS-NEXT: Store VoidTy Variable Pointer
-; TRIPLETS-NEXT: Load IntegerTy Pointer
-; TRIPLETS-NEXT: Load IntegerTy Pointer
-; TRIPLETS-NEXT: Add IntegerTy Variable Variable
-; TRIPLETS-NEXT: Ret VoidTy Variable
+; TRIPLETS: MAX_RELATION=3
+; TRIPLETS-NEXT: 12      80      0
+; TRIPLETS-NEXT: 12      92      2
+; TRIPLETS-NEXT: 12      92      3
+; TRIPLETS-NEXT: 12      0       1
+; TRIPLETS-NEXT: 0       75      0
+; TRIPLETS-NEXT: 0       92      2
+; TRIPLETS-NEXT: 16      80      0
+; TRIPLETS-NEXT: 16      92      2
+; TRIPLETS-NEXT: 16      92      3
+; TRIPLETS-NEXT: 16      0       1
+; TRIPLETS-NEXT: 0       75      0
+; TRIPLETS-NEXT: 0       92      2
+; TRIPLETS-NEXT: 30      82      0
+; TRIPLETS-NEXT: 30      91      2
+; TRIPLETS-NEXT: 30      30      1
+; TRIPLETS-NEXT: 30      82      0
+; TRIPLETS-NEXT: 30      91      2
+; TRIPLETS-NEXT: 30      32      1
+; TRIPLETS-NEXT: 32      75      0
+; TRIPLETS-NEXT: 32      92      2
+; TRIPLETS-NEXT: 32      90      3
+; TRIPLETS-NEXT: 32      32      1
+; TRIPLETS-NEXT: 32      75      0
+; TRIPLETS-NEXT: 32      92      2
+; TRIPLETS-NEXT: 32      90      3
+; TRIPLETS-NEXT: 32      31      1
+; TRIPLETS-NEXT: 31      80      0
+; TRIPLETS-NEXT: 31      90      2
+; TRIPLETS-NEXT: 31      31      1
+; TRIPLETS-NEXT: 31      80      0
+; TRIPLETS-NEXT: 31      90      2
+; TRIPLETS-NEXT: 31      12      1
+; TRIPLETS-NEXT: 12      80      0
+; TRIPLETS-NEXT: 12      92      2
+; TRIPLETS-NEXT: 12      92      3
+; TRIPLETS-NEXT: 12      0       1
+; TRIPLETS-NEXT: 0       75      0
+; TRIPLETS-NEXT: 0       92      2

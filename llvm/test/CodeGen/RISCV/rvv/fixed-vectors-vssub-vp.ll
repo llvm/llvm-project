@@ -449,20 +449,13 @@ define <256 x i8> @vssub_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
   ret <256 x i8> %v
 }
 
-; FIXME: The upper half is doing nothing.
-
 define <256 x i8> @vssub_vi_v258i8_evl128(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vssub_vi_v258i8_evl128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a0)
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vssub.vx v8, v8, a1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetivli zero, 0, e8, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v16, v16, a1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.ssub.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 128)
   ret <256 x i8> %v
@@ -1460,14 +1453,9 @@ define <32 x i64> @vssub_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 define <32 x i64> @vssub_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
 ; CHECK-LABEL: vssub_vx_v32i64_evl12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    vsetivli zero, 12, e64, m8, ta, ma
 ; CHECK-NEXT:    vssub.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, ma
-; CHECK-NEXT:    vssub.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.ssub.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 12)
   ret <32 x i64> %v

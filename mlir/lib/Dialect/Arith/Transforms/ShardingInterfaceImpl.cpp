@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/IR/DialectRegistry.h"
 
 using namespace mlir;
 using namespace mlir::arith;
-using namespace mlir::mesh;
+using namespace mlir::shard;
 
 namespace {
 
 // Sharding of arith.constant
 // RankedTensor constants can be sharded like any other tensor.
 //   %cst = arith.constant dense<0.000000e+00> : tensor<1024x1024xf32>
-//   %sharding = mesh.sharding @mesh4x4 split_axes = [[0]] : !mesh.sharding
+//   %sharding = shard.sharding @grid4x4 split_axes = [[0]] : !shard.sharding
 // Scalar constants are always replicated and need no sharding annotation.
 
 struct ConstantShardingInterface
@@ -48,8 +48,8 @@ struct ConstantShardingInterface
   // Otherwise mirror result sharding if it is a tensor constant.
   // Otherwise return replication option.
   FailureOr<ShardingOption>
-  getShardingOption(Operation *op, ArrayRef<MeshSharding> operandShardings,
-                    ArrayRef<MeshSharding> resultShardings) const {
+  getShardingOption(Operation *op, ArrayRef<Sharding> operandShardings,
+                    ArrayRef<Sharding> resultShardings) const {
     assert(resultShardings.size() == 1 &&
            "Expecting exactly one result sharding for arith.constant");
     auto resultSharding = resultShardings[0];
@@ -61,17 +61,17 @@ struct ConstantShardingInterface
       for (auto [i, axes] : llvm::enumerate(resultSharding.getSplitAxes())) {
         axesArray[i].append(axes.asArrayRef().begin(), axes.asArrayRef().end());
       }
-      return ShardingOption(axesArray, resultSharding.getMeshAttr());
+      return ShardingOption(axesArray, resultSharding.getGridAttr());
     }
-    return ShardingOption({}, resultSharding.getMeshAttr());
+    return ShardingOption({}, resultSharding.getGridAttr());
   }
 
-  LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshSharding> operandShardings,
-                        ArrayRef<MeshSharding> resultShardings,
-                        IRMapping &spmdizationMap,
-                        SymbolTableCollection &symbolTable,
-                        OpBuilder &builder) const {
+  LogicalResult partition(Operation *op, ArrayRef<Value> partitiondOperands,
+                          ArrayRef<Sharding> operandShardings,
+                          ArrayRef<Sharding> resultShardings,
+                          IRMapping &partitionMap,
+                          SymbolTableCollection &symbolTable,
+                          OpBuilder &builder) const {
     auto cOp = cast<ConstantOp>(op);
     if (auto value = dyn_cast<DenseIntOrFPElementsAttr>(cOp.getValue())) {
       if (!value.isSplat() || !resultShardings[0]) {
@@ -80,15 +80,15 @@ struct ConstantShardingInterface
       }
       auto sharding = resultShardings[0];
       auto newType = cast<RankedTensorType>(shardType(
-          cOp.getType(), getMesh(op, sharding.getMeshAttr(), symbolTable),
+          cOp.getType(), getGrid(op, sharding.getGridAttr(), symbolTable),
           sharding));
       auto newValue = value.resizeSplat(newType);
-      auto newOp = builder.create<ConstantOp>(op->getLoc(), newType, newValue);
-      spmdizationMap.map(op->getResult(0), newOp.getResult());
-      spmdizationMap.map(op, newOp.getOperation());
+      auto newOp = ConstantOp::create(builder, op->getLoc(), newType, newValue);
+      partitionMap.map(op->getResult(0), newOp.getResult());
+      partitionMap.map(op, newOp.getOperation());
     } else {
       // `clone` will populate the mapping of old to new results.
-      (void)builder.clone(*op, spmdizationMap);
+      (void)builder.clone(*op, partitionMap);
     }
     return success();
   }

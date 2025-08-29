@@ -27,6 +27,7 @@ add_libc_test(
   SRCS
     bit_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.CPP.bit
     libc.src.__support.macros.properties.types

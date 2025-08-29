@@ -24,6 +24,106 @@ define void @alloca_test() sanitize_type {
 ;
 entry:
   %x = alloca [10 x i8], align 1
-  call void @alloca_test_use([10 x i8]* %x)
+  call void @alloca_test_use(ptr %x)
+  ret void
+}
+
+define void @alloca_lifetime_test(i1 %c) sanitize_type {
+; CHECK-LABEL: @alloca_lifetime_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
+; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 8
+; CHECK-NEXT:    [[X:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP4]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP9]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
+; CHECK-NEXT:    call void @alloca_test_use(ptr [[X]])
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP11]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP14]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca [10 x i8], align 1
+  br label %loop
+
+loop:
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @alloca_test_use(ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @dynamic_alloca_lifetime_test(i1 %c, i64 %n) sanitize_type {
+; CHECK-LABEL: @dynamic_alloca_lifetime_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
+; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 8
+; CHECK-NEXT:    [[X:%.*]] = alloca i32, i64 [[N:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP0]], 3
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP5]], i8 0, i64 [[TMP6]], i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP9]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
+; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[TMP7]], 3
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP12]], i8 0, i64 [[TMP13]], i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
+; CHECK-NEXT:    call void @alloca_test_use(ptr [[X]])
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[N]], 4
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP16:%.*]] = and i64 [[TMP15]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP16]], 3
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP14]], 3
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP19]], i8 0, i64 [[TMP20]], i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca i32, i64 %n, align 1
+  br label %loop
+
+loop:
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @alloca_test_use(ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  br i1 %c, label %loop, label %exit
+
+exit:
   ret void
 }
