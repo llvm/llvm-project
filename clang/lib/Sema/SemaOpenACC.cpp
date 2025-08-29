@@ -2748,13 +2748,8 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // +, |, ^, and || all use 0 for their initializers, so we can just
         // use 'zero init' here and not bother with the rest of the
         // array/compound type/etc contents.
-        auto *Zero = IntegerLiteral::Create(
-            getASTContext(),
-            llvm::APInt(getASTContext().getTypeSize(getASTContext().IntTy), 0),
-            getASTContext().IntTy, VarExpr->getBeginLoc());
-        Expr *InitExpr = new (getASTContext())
-            InitListExpr(getASTContext(), VarExpr->getBeginLoc(), Zero,
-                         VarExpr->getEndLoc());
+        Expr *InitExpr = new (getASTContext()) InitListExpr(
+            getASTContext(), VarExpr->getBeginLoc(), {}, VarExpr->getEndLoc());
         // we set this to void so that the initialization sequence generation
         // will get this type correct/etc.
         InitExpr->setType(getASTContext().VoidTy);
