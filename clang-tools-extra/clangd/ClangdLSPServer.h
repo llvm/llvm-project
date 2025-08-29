@@ -186,7 +186,7 @@ private:
   void onCommandApplyEdit(const WorkspaceEdit &, Callback<llvm::json::Value>);
   void onCommandApplyTweak(const TweakArgs &, Callback<llvm::json::Value>);
   void onCommandApplyRename(const RenameParams &, Callback<llvm::json::Value>);
-  void onCommandSearchAST(const SearchASTArgs &, Callback<llvm::json::Value>);
+  void onMethodSearchAST(const SearchASTArgs &, Callback<llvm::json::Value>);
 
   /// Outgoing LSP calls.
   LSPBinder::OutgoingMethod<ApplyWorkspaceEditParams,

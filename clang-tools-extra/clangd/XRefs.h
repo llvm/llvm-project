@@ -40,7 +40,7 @@ struct LocatedAST {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedAST &);
 
 auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &)
-    -> std::vector<ast_matchers::BoundNodes>;
+    -> llvm::Expected<std::vector<ast_matchers::BoundNodes>>;
 
 // Describes where a symbol is declared and defined (as far as clangd knows).
 // There are three cases:

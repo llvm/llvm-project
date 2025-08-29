@@ -73,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -782,57 +783,54 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
 }
 
 auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &Query)
-    -> std::vector<ast_matchers::BoundNodes> {
+    -> llvm::Expected<std::vector<ast_matchers::BoundNodes>> {
   using namespace ast_matchers;
   using namespace ast_matchers::dynamic;
   using ast_matchers::dynamic::Parser;
 
   Diagnostics Diag;
   auto MatcherSource = llvm::StringRef(Query.searchQuery).ltrim();
-  auto OrigMatcherSource = MatcherSource;
 
   std::optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
       MatcherSource,
       nullptr /* is this sema instance usefull, to reduce overhead?*/,
       nullptr /*we currently don't support let*/, &Diag);
   if (!Matcher) {
-    elog("Not a valid top-level matcher.\n");
-    return {/* TODO */};
+    return error("Not a valid top-level matcher: {}.", Diag.toString());
   }
-  auto ActualSource = OrigMatcherSource.slice(0, OrigMatcherSource.size() -
-                                                     MatcherSource.size());
-  auto *Q = new query::MatchQuery(ActualSource, *Matcher);
-  Q->RemainingContent = MatcherSource;
 
-  // Q->run(AST);:
-  //==
 
   struct CollectBoundNodes : MatchFinder::MatchCallback {
-    std::vector<BoundNodes> &Bindings;
-    CollectBoundNodes(std::vector<BoundNodes> &Bindings) : Bindings(Bindings) {}
+    std::vector<BoundNodes> *Bindings;
+    CollectBoundNodes(std::vector<BoundNodes> &Bindings)
+        : Bindings(&Bindings) {}
     void run(const MatchFinder::MatchResult &Result) override {
-      Bindings.push_back(Result.Nodes);
+      Bindings->push_back(Result.Nodes);
     }
   };
 
-  MatchFinder Finder;
-  std::vector<BoundNodes> Matches;
   DynTypedMatcher MaybeBoundMatcher = *Matcher;
   if (Query.BindRoot) {
     std::optional<DynTypedMatcher> M = Matcher->tryBind("root");
     if (M)
       MaybeBoundMatcher = *M;
   }
+  std::vector<BoundNodes> Matches;
   CollectBoundNodes Collect(Matches);
+
+  MatchFinder::MatchFinderOptions Opt;
+  Opt.IgnoreSystemHeaders = true;
+  MatchFinder Finder{Opt};
   if (!Finder.addDynamicMatcher(MaybeBoundMatcher, &Collect)) {
-    log("Not a valid top-level matcher.\n");
-    return {/* TODO */};
+    return error("Can't add matcher.");
   }
 
   ASTContext &Ctx = AST.getASTContext();
+
+  auto OldTK = Ctx.getParentMapContext().getTraversalKind();
   Ctx.getParentMapContext().setTraversalKind(Query.Tk);
   Finder.matchAST(Ctx);
-
+  Ctx.getParentMapContext().setTraversalKind(OldTK);
   return Matches;
 }
 

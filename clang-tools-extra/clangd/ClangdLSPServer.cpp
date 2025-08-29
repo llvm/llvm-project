@@ -76,7 +76,7 @@ std::optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
 const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
 const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
 const llvm::StringLiteral ApplyRenameCommand = "clangd.applyRename";
-constexpr llvm::StringLiteral SearchASTCommand = "clangd.searchAST";
+constexpr llvm::StringLiteral SearchASTMethod = "textDocument/searchAST";
 
 CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {
@@ -853,14 +853,13 @@ void ClangdLSPServer::onCommandApplyRename(const RenameParams &R,
   });
 }
 
-void ClangdLSPServer::onCommandSearchAST(const SearchASTArgs &Args,
-                                         Callback<llvm::json::Value> Reply) {
+void ClangdLSPServer::onMethodSearchAST(const SearchASTArgs &Args,
+                                        Callback<llvm::json::Value> Reply) {
   Server->findAST(Args, [Reply = std::move(Reply)](
                             llvm::Expected<std::vector<std::vector<ASTNode>>>
                                 BoundNodes) mutable {
     if (!BoundNodes)
       return Reply(BoundNodes.takeError());
-    auto v = llvm::json::Value(*BoundNodes);
     return Reply(*BoundNodes);
   });
 }
@@ -1741,7 +1740,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
   Bind.command(ApplyRenameCommand, this, &ClangdLSPServer::onCommandApplyRename);
-  Bind.command(SearchASTCommand, this, &ClangdLSPServer::onCommandSearchAST);
+  Bind.method(SearchASTMethod, this, &ClangdLSPServer::onMethodSearchAST);
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");
   PublishDiagnostics = Bind.outgoingNotification("textDocument/publishDiagnostics");

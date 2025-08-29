@@ -817,14 +817,16 @@ void ClangdServer::findAST(SearchASTArgs const &Args,
         if (!InpAST)
           return CB(InpAST.takeError());
         auto BoundNodes = clangd::locateASTQuery(InpAST->AST, Args);
-        if (BoundNodes.empty())
+        if (!BoundNodes)
+          return CB(BoundNodes.takeError());
+        if (BoundNodes->empty())
           return CB(error("No matching AST nodes found"));
 
         auto &&AST = InpAST->AST;
         // Convert BoundNodes to a vector of vectors to ASTNode's.
         std::vector<std::vector<ASTNode>> Result;
-        Result.reserve(BoundNodes.size());
-        for (auto &&BN : BoundNodes) {
+        Result.reserve(BoundNodes->size());
+        for (auto &&BN : *BoundNodes) {
           auto &&Map = BN.getMap();
           std::vector<ASTNode> Nodes;
           Nodes.reserve(Map.size());
