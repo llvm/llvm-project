@@ -46,12 +46,10 @@ struct RecordsEntry {
   void dump() const;
 
   RecordsEntry() = default;
-  RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
-  RecordsEntry(std::unique_ptr<ForeachLoop> Loop) : Loop(std::move(Loop)) {}
-  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion)
-      : Assertion(std::move(Assertion)) {}
-  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump)
-      : Dump(std::move(Dump)) {}
+  RecordsEntry(std::unique_ptr<Record> Rec);
+  RecordsEntry(std::unique_ptr<ForeachLoop> Loop);
+  RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion);
+  RecordsEntry(std::unique_ptr<Record::DumpInfo> Dump);
 };
 
 /// ForeachLoop - Record the iteration state associated with a for loop.

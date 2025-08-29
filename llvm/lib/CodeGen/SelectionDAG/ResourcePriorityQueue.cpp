@@ -63,6 +63,8 @@ ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
   HorizontalVerticalBalance = 0;
 }
 
+ResourcePriorityQueue::~ResourcePriorityQueue() = default;
+
 unsigned
 ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
   unsigned NumberDeps = 0;

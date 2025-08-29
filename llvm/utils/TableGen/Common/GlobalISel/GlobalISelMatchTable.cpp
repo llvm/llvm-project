@@ -479,6 +479,14 @@ bool GroupMatcher::candidateConditionMatches(
   return Predicate.isIdentical(RepresentativeCondition);
 }
 
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
@@ -692,6 +700,9 @@ void SwitchMatcher::emit(MatchTable &Table) {
 }
 
 //===- RuleMatcher --------------------------------------------------------===//
+
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
@@ -1098,6 +1109,8 @@ unsigned RuleMatcher::countRendererFns() const {
         return A + Matcher->countRendererFns();
       });
 }
+
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 

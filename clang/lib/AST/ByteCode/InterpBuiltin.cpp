@@ -3256,8 +3256,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllv8si:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
-          if (RHS.uge(RHS.getBitWidth())) {
-            return APInt::getZero(RHS.getBitWidth());
+          if (RHS.uge(LHS.getBitWidth())) {
+            return APInt::getZero(LHS.getBitWidth());
           }
           return LHS.shl(RHS.getZExtValue());
         });
@@ -3266,8 +3266,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrav8si:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
-          if (RHS.uge(RHS.getBitWidth())) {
-            return LHS.ashr(RHS.getBitWidth() - 1);
+          if (RHS.uge(LHS.getBitWidth())) {
+            return LHS.ashr(LHS.getBitWidth() - 1);
           }
           return LHS.ashr(RHS.getZExtValue());
         });
@@ -3278,8 +3278,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlv8si:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
-          if (RHS.uge(RHS.getBitWidth())) {
-            return APInt::getZero(RHS.getBitWidth());
+          if (RHS.uge(LHS.getBitWidth())) {
+            return APInt::getZero(LHS.getBitWidth());
           }
           return LHS.lshr(RHS.getZExtValue());
         });

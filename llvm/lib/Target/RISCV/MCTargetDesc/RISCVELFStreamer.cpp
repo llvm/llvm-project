@@ -36,6 +36,12 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setFlagsFromFeatures(STI);
 }
 
+RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
+                                   std::unique_ptr<MCAsmBackend> MAB,
+                                   std::unique_ptr<MCObjectWriter> MOW,
+                                   std::unique_ptr<MCCodeEmitter> MCE)
+    : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }

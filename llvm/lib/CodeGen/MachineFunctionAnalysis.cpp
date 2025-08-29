@@ -21,6 +21,10 @@ using namespace llvm;
 
 AnalysisKey MachineFunctionAnalysis::Key;
 
+llvm::MachineFunctionAnalysis::Result::Result(
+    std::unique_ptr<MachineFunction> MF)
+    : MF(std::move(MF)) {}
+
 bool MachineFunctionAnalysis::Result::invalidate(
     Function &, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &) {
