@@ -35,20 +35,22 @@ class PyPassBase {
 public:
   PyPassBase(std::string name, std::string argument, std::string description,
              std::string opName)
-      : callbacks{}, name(std::move(name)), argument(std::move(argument)),
+      : name(std::move(name)), argument(std::move(argument)),
         description(std::move(description)), opName(std::move(opName)) {
-    callbacks.construct = [](void *) {};
-    callbacks.destruct = [](void *) {};
+    callbacks.construct = [](void *obj) {};
+    callbacks.destruct = [](void *obj) {
+      nb::handle(static_cast<PyObject *>(obj)).dec_ref();
+    };
     callbacks.run = [](MlirOperation op, MlirExternalPass, void *obj) {
-      static_cast<PyPassBase *>(obj)->run(op);
+      auto handle = nb::handle(static_cast<PyObject *>(obj));
+      nb::cast<PyPassBase *>(handle)->run(op);
     };
-    // TODO: currently we don't support pass cloning in python
-    // due to lifetime management issues.
     callbacks.clone = [](void *obj) -> void * {
-      // since the caller here should be MLIR C++ code,
-      // we need to avoid using exceptions like throw py::value_error(...).
-      llvm_unreachable("cloning of python-defined passes is not supported");
+      nb::object copy = nb::module_::import_("copy");
+      nb::object deepcopy = copy.attr("deepcopy");
+      return deepcopy(obj).release().ptr();
     };
+    callbacks.initialize = nullptr;
   }
 
   // this method should be overridden by subclasses in Python.
@@ -61,12 +63,13 @@ public:
   // object and release it when appropriate.
   // Also, `*this` must remain alive as long as the returned object is alive.
   MlirPass make() {
+    auto *obj = nb::find(this).release().ptr();
     return mlirCreateExternalPass(
         mlirTypeIDCreate(this), mlirStringRefCreate(name.data(), name.length()),
         mlirStringRefCreate(argument.data(), argument.length()),
         mlirStringRefCreate(description.data(), description.length()),
         mlirStringRefCreate(opName.data(), opName.size()), 0, nullptr,
-        callbacks, this);
+        callbacks, obj);
   }
 
   const std::string &getName() const { return name; }
@@ -255,10 +258,7 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           [](PyPassManager &passManager, PyPassBase &pass) {
             mlirPassManagerAddOwnedPass(passManager.get(), pass.make());
           },
-          "pass"_a, "Add a python-defined pass to the pass manager.",
-          // NOTE that we should keep the pass object alive as long as the
-          // passManager to prevent dangling objects.
-          nb::keep_alive<1, 2>())
+          "pass"_a, "Add a python-defined pass to the pass manager.")
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op,
