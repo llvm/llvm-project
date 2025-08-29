@@ -5,6 +5,9 @@ import os
 import re
 
 
+# Requires ELF assembler directives (.section … @progbits, .ident, etc.);
+# not compatible with COFF/Mach-O toolchains.
+@skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
 class TestVariableAnnotationsDisassembler(TestBase):
     def _build_obj(self, obj_name: str) -> str:
         # Let the Makefile build all .o’s (pattern rule). Then grab the one we need.
