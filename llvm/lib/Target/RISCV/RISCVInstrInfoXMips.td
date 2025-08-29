@@ -125,7 +125,7 @@ class Mips_prefetch_ri<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
-// MIPS Ext Insns Fromat.
+// MIPS Custom Barrier Insns Format.
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class MIPSExtInst_ri<bits<6> shimm5, string opcodestr>
     : RVInstIShift<0b00000, 0b001, OPC_OP_IMM, (outs), (ins), opcodestr, ""> {
