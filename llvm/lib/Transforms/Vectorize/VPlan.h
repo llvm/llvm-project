@@ -2442,15 +2442,15 @@ class LLVM_ABI_FOR_TEST VPInterleaveBase : public VPRecipeBase,
                                            public VPIRMetadata {
   const InterleaveGroup<Instruction> *IG;
 
+  /// Indicates if the interleave group is in a conditional block and requires a
+  /// mask.
+  bool HasMask = false;
+
   /// Indicates if gaps between members of the group need to be masked out or if
   /// unusued gaps can be loaded speculatively.
   bool NeedsMaskForGaps = false;
 
 protected:
-  /// Indicates if the interleave group is in a conditional block and requires a
-  /// mask.
-  bool HasMask = false;
-
   VPInterleaveBase(const unsigned char SC,
                    const InterleaveGroup<Instruction> *IG,
                    ArrayRef<VPValue *> Operands,
@@ -2570,7 +2570,7 @@ public:
   }
 
   unsigned getNumStoreOperands() const override {
-    return getNumOperands() - (HasMask ? 2 : 1);
+    return getNumOperands() - (getMask() ? 2 : 1);
   }
 };
 
@@ -2619,7 +2619,7 @@ public:
   }
 
   unsigned getNumStoreOperands() const override {
-    return getNumOperands() - (HasMask ? 3 : 2);
+    return getNumOperands() - (getMask() ? 3 : 2);
   }
 };
 
