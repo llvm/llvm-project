@@ -53,10 +53,7 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
 
 /// This is to create optimal 3-variable boolean logic from truth tables.
 /// currently it supports the cases pertaining to the issue 97044. More cases
-/// can be added based on real-world justification for specific 3 input cases
-///  or with reviewer approval all 256 cases can be added (choose the
-///  canonicalizations found
-/// in x86InstCombine.cpp?)
+/// can be added based on real-world justification for specific 3 input cases.
 static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
                                        Value *Op1, Value *Op2, Value *Root,
                                        IRBuilderBase &Builder) {
@@ -102,8 +99,7 @@ static std::tuple<Value *, Value *, Value *>
 extractThreeVariablesAndInstructions(
     Value *Root, SmallVectorImpl<Instruction *> &Instructions) {
   SmallPtrSet<Value *, 3> Variables;
-  SmallPtrSet<Value *, 32> Visited; // Prevent hanging during loop unrolling
-                                    // (see bitreverse-hang.ll)
+  SmallPtrSet<Value *, 32> Visited;
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
 
@@ -113,87 +109,80 @@ extractThreeVariablesAndInstructions(
     if (!Visited.insert(V).second)
       continue;
 
-    Value *NotV;
-    if (match(V, m_Not(m_Value(NotV)))) {
+    // Due to lack of cost-based heuristic, only traverse if it belongs to this
+    // expression tree.
+    bool ShouldTraverse = (V == Root || V->hasOneUse());
+
+    if (Value *NotV; match(V, m_Not(m_Value(NotV)))) {
       if (auto *I = dyn_cast<Instruction>(V))
         Instructions.push_back(I);
-      if (V == Root ||
-          V->hasOneUse()) { // Due to lack of cost-based heuristic, only
-                            // traverse if it belongs to this expression tree
+      if (ShouldTraverse)
         Worklist.push_back(NotV);
-      }
       continue;
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
       if (!BO->isBitwiseLogicOp()) {
-        if (V != Root && !V->hasOneUse()) {
-          Variables.insert(V);
-          continue;
-        }
-        return {nullptr, nullptr, nullptr};
+        if (V == Root)
+          return {nullptr, nullptr, nullptr};
+        Variables.insert(V);
+        continue;
       }
 
       Instructions.push_back(BO);
 
-      if (V == Root || V->hasOneUse()) {
+      if (ShouldTraverse) {
         Worklist.push_back(BO->getOperand(0));
         Worklist.push_back(BO->getOperand(1));
       }
-    } else if (isa<Argument>(V) || isa<Instruction>(V)) {
-      if (V != Root) {
-        Variables.insert(V);
-      }
+    } else if ((isa<Argument>(V) || isa<Instruction>(V)) && V != Root) {
+      Variables.insert(V);
     }
   }
 
-  if (Variables.size() != 3) {
+  if (Variables.size() != 3)
     return {nullptr, nullptr, nullptr};
-  }
   // Check that all instructions (both variables and computation instructions)
-  // are in the same BB
+  // are in the same BB.
   SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
   BasicBlock *FirstBB = nullptr;
 
-  for (Value *V : SortedVars) {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      if (!FirstBB) {
-        FirstBB = I->getParent();
-      } else if (I->getParent() != FirstBB) {
-        return {nullptr, nullptr, nullptr};
-      }
-    }
-  }
-
-  for (Instruction *I : Instructions) {
-    if (!FirstBB) {
+  auto CheckSameBB = [&FirstBB](Instruction *I) -> bool {
+    if (!FirstBB)
       FirstBB = I->getParent();
-    } else if (I->getParent() != FirstBB) {
+    else if (I->getParent() != FirstBB)
+      return false;
+    return true;
+  };
+
+  for (Value *V : SortedVars)
+    if (auto *I = dyn_cast<Instruction>(V); I && !CheckSameBB(I))
       return {nullptr, nullptr, nullptr};
-    }
-  }
+
+  for (Instruction *I : Instructions)
+    if (!CheckSameBB(I))
+      return {nullptr, nullptr, nullptr};
 
   // Validation that all collected instructions have operands that will be in
-  // Computed map
+  // Computed map.
   SmallPtrSet<Value *, 32> ValidOperands(Variables.begin(), Variables.end());
   ValidOperands.insert(Instructions.begin(), Instructions.end());
 
   for (Instruction *I : Instructions) {
     Value *NotV;
-    if (match(I, m_Not(m_Value(NotV)))) {
-      // For NOT operations, only check the variable operand (constant -1 is
-      // handled by pattern matcher)
-      if (!ValidOperands.count(NotV))
-        return {nullptr, nullptr, nullptr};
-    } else {
+    bool IsNot = match(I, m_Not(m_Value(NotV)));
+
+    if (!IsNot) {
       for (Use &U : I->operands()) {
         if (!ValidOperands.count(U.get()))
           return {nullptr, nullptr, nullptr};
       }
+    } else if (!ValidOperands.count(NotV)) {
+      // For NOT: only check the variable operand (constant -1 is handled by
+      // pattern matcher).
+      return {nullptr, nullptr, nullptr};
     }
   }
 
-  // Sort variables by argNo if both are arguments, otherwise args before
-  // instructions
   llvm::sort(SortedVars, [](Value *A, Value *B) {
     if (isa<Argument>(A) != isa<Argument>(B))
       return isa<Argument>(A);
@@ -204,7 +193,7 @@ extractThreeVariablesAndInstructions(
     return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
   });
 
-  // Sort instructions within the same BB
+  // Sort instructions (Useful until all 256 cases are added).
   llvm::sort(Instructions,
              [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
 
@@ -216,7 +205,7 @@ static std::optional<std::bitset<8>>
 evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
                           const SmallVector<Instruction *> &Instructions) {
 
-  // Initialize bit-vector values for the 3 variables
+  // Initialize bit-vector values for the 3 variables as:
   // Op0: 0b11110000 (true for combinations 000,001,010,011)
   // Op1: 0b11001100 (true for combinations 000,001,100,101)
   // Op2: 0b10101010 (true for combinations 000,010,100,110)
@@ -252,7 +241,8 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
   return std::bitset<8>(Computed.at(Expr));
 }
 
-/// Try to canonicalize 3-variable boolean expressions using truth table lookup.
+// Entry point for the 3-variable boolean expression folding. Handles early
+// returns and checks for infinite cycles.
 static Value *foldThreeVarBoolExpr(Instruction &Root,
                                    InstCombiner::BuilderTy &Builder) {
 
@@ -272,6 +262,15 @@ static Value *foldThreeVarBoolExpr(Instruction &Root,
   auto Table = evaluateBooleanExpression(&Root, Op0, Op1, Op2, Instructions);
   if (!Table)
     return nullptr;
+
+  // Prevent infinite cycles by checking for structurally similar instructions:
+  // early return if extracted variables overlap with root operands.
+  auto *RootBO = cast<BinaryOperator>(&Root);
+  for (unsigned i = 0; i < RootBO->getNumOperands(); ++i) {
+    Value *RootOp = RootBO->getOperand(i);
+    if (RootOp == Op0 || RootOp == Op1 || RootOp == Op2)
+      return nullptr;
+  }
 
   return createLogicFromTable3Var(*Table, Op0, Op1, Op2, &Root, Builder);
 }
