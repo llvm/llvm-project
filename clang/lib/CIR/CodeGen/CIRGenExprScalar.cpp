@@ -92,6 +92,10 @@ public:
                                             mlir::Value value, CastKind kind,
                                             QualType destTy);
 
+  mlir::Value emitNullValue(QualType ty, mlir::Location loc) {
+    return cgf.cgm.emitNullConstant(ty, loc);
+  }
+
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     return builder.createFloatingCast(result, cgf.convertType(promotionType));
   }
@@ -1967,9 +1971,8 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
   }
 
   if (numInitElements == 0) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "InitListExpr Non VectorType with 0 init elements");
-    return {};
+    // C++11 value-initialization for the scalar.
+    return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
   }
 
   return Visit(e->getInit(0));
