@@ -45,6 +45,7 @@ typedef int __i32x2 __attribute__((__vector_size__(8), __aligned__(8)));
 typedef unsigned int __u32x2
     __attribute__((__vector_size__(8), __aligned__(8)));
 typedef float __f32x2 __attribute__((__vector_size__(8), __aligned__(8)));
+typedef __fp16 __f16x4 __attribute__((__vector_size__(8), __aligned__(8)));
 
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("simd128"),        \
@@ -2008,6 +2009,14 @@ static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_convert_i16x8(v128_t __a) {
 
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_convert_u16x8(v128_t __a) {
   return (v128_t) __builtin_convertvector((__u16x8)__a, __f16x8);
+}
+
+static __inline__ v128_t __FP16_FN_ATTRS
+wasm_f32x4_promote_low_f16x8(v128_t __a) {
+  return (v128_t) __builtin_convertvector(
+      (__f16x4){((__f16x8)__a)[0], ((__f16x8)__a)[1], ((__f16x8)__a)[2],
+                ((__f16x8)__a)[3]},
+      __f32x4);
 }
 
 static __inline__ v128_t __FP16_FN_ATTRS wasm_f16x8_relaxed_madd(v128_t __a,
