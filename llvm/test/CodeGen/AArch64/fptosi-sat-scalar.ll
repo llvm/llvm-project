@@ -689,13 +689,8 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i16_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
-; CHECK-GI-FP16-NEXT:    mov w9, #32767 // =0x7fff
-; CHECK-GI-FP16-NEXT:    cmp w8, w9
-; CHECK-GI-FP16-NEXT:    csel w8, w8, w9, lt
-; CHECK-GI-FP16-NEXT:    mov w9, #-32768 // =0xffff8000
-; CHECK-GI-FP16-NEXT:    cmn w8, #8, lsl #12 // =32768
-; CHECK-GI-FP16-NEXT:    csel w0, w8, w9, gt
+; CHECK-GI-FP16-NEXT:    fcvtzs h0, h0
+; CHECK-GI-FP16-NEXT:    fmov w0, s0
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i16 @llvm.fptosi.sat.i16.f16(half %f)
     ret i16 %x

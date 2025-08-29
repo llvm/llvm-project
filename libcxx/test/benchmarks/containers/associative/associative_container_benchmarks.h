@@ -259,6 +259,49 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
+  if constexpr (is_map_like && !is_multi_key_container) {
+    bench("insert_or_assign(key, value) (already present)", [=](auto& st) {
+      const std::size_t size = st.range(0) ? st.range(0) : 1;
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+      Value to_insert        = in[in.size() / 2]; // pick any existing value
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+      typename Container::iterator inserted[BatchSize];
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          inserted[i] =
+              adapt_operations<Container>::get_iterator(c[i].insert_or_assign(to_insert.first, to_insert.second));
+          benchmark::DoNotOptimize(inserted[i]);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+      }
+    });
+
+    bench("insert_or_assign(key, value) (new value)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      Value to_insert        = in.back();
+      in.pop_back();
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          auto result = c[i].insert_or_assign(to_insert.first, to_insert.second);
+          benchmark::DoNotOptimize(result);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+        }
+        st.ResumeTiming();
+      }
+    });
+  }
+
   // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
   // a good way to compute a hint for unordered ones.
   if constexpr (is_ordered_container) {

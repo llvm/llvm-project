@@ -4271,7 +4271,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_masked_load: {
+  case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
 
@@ -4284,14 +4285,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (E->getNumArgs() > 2)
       PassThru = EmitScalarExpr(E->getArg(2));
 
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
-
-    llvm::Value *Result =
-        Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    llvm::Value *Result;
+    if (BuiltinID == Builtin::BI__builtin_masked_load) {
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
+      Result =
+          Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    } else {
+      Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
+      Result =
+          Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
+    }
     return RValue::get(Result);
   };
-  case Builtin::BI__builtin_masked_store: {
+  case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
@@ -4304,10 +4312,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *AlignVal =
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
-
-    Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    if (BuiltinID == Builtin::BI__builtin_masked_store) {
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
+      Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    } else {
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
+      Builder.CreateCall(F, {Val, Ptr, Mask});
+    }
     return RValue::get(nullptr);
   }
 
