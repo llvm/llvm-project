@@ -2015,8 +2015,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (stack.size() < 1) {
         UpdateValueTypeFromLocationDescription(log, dwarf_cu,
                                                LocationDescriptionKind::Empty);
-        // Reset for the next piece.
-        dwarf4_location_description_kind = Memory;
         return llvm::createStringError(
             "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
@@ -2077,7 +2075,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     }
 
     case DW_OP_implicit_pointer: {
-      dwarf4_location_description_kind = Implicit;
       return llvm::createStringError("Could not evaluate %s.",
                                      DW_OP_value_to_name(op));
     }

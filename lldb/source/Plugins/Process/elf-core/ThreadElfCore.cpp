@@ -192,18 +192,22 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
           *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_gpregset_data,
           m_notes);
+      delete reg_interface;
       break;
     case llvm::Triple::loongarch64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
           *this, arch, m_gpregset_data, m_notes);
+      delete reg_interface;
       break;
     case llvm::Triple::riscv32:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv32::Create(
           *this, arch, m_gpregset_data, m_notes);
+      delete reg_interface;
       break;
     case llvm::Triple::riscv64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
           *this, arch, m_gpregset_data, m_notes);
+      delete reg_interface;
       break;
     case llvm::Triple::mipsel:
     case llvm::Triple::mips:

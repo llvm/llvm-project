@@ -218,11 +218,8 @@ LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,
                                           bool throw_bp) {
-  LanguageRuntimeCreateInstance create_callback;
   for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
-       nullptr;
+       PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx) != nullptr;
        idx++) {
     if (auto precondition_callback =
             PluginManager::GetLanguageRuntimeGetExceptionPreconditionAtIndex(
@@ -289,12 +286,8 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   if (!parent->IsMultiwordObject())
     return;
 
-  LanguageRuntimeCreateInstance create_callback;
-
   for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
-       nullptr;
+       PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx) != nullptr;
        ++idx) {
     if (LanguageRuntimeGetCommandObject command_callback =
             PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex(idx)) {

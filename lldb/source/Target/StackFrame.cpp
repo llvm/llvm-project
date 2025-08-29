@@ -635,7 +635,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     if (!instance_var_name.empty()) {
       var_sp = variable_list->FindVariable(ConstString(instance_var_name));
       if (var_sp) {
-        separator_idx = 0;
         if (Type *var_type = var_sp->GetType())
           if (auto compiler_type = var_type->GetForwardCompilerType())
             if (!compiler_type.IsPointerType())
@@ -738,7 +737,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       [[fallthrough]];
     case '.': {
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
-      separator_idx = var_expr.find_first_of(".-[");
       ConstString child_name(var_expr.substr(0, var_expr.find_first_of(".-[")));
 
       if (check_ptr_vs_member) {

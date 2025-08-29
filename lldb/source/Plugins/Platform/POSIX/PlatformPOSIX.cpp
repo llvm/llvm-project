@@ -657,8 +657,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   arguments.PushValue(value);
   arguments.PushValue(value);
   arguments.PushValue(value);
-  
-  do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
+
+  dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
   if (utility_error.Fail()) {
     error = Status::FromErrorStringWithFormat(

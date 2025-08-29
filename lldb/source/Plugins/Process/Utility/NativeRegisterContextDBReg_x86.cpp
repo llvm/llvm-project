@@ -94,8 +94,10 @@ const RegisterInfo *NativeRegisterContextDBReg_x86::GetDR(int num) const {
 
 Status NativeRegisterContextDBReg_x86::IsWatchpointHit(uint32_t wp_index,
                                                        bool &is_hit) {
-  if (wp_index >= NumSupportedHardwareWatchpoints())
+  if (wp_index >= NumSupportedHardwareWatchpoints()) {
+    is_hit = false;
     return Status::FromErrorString("Watchpoint index out of range");
+  }
 
   RegisterValue dr6;
   Status error = ReadRegister(GetDR(6), dr6);
@@ -127,8 +129,10 @@ NativeRegisterContextDBReg_x86::GetWatchpointHitIndex(uint32_t &wp_index,
 
 Status NativeRegisterContextDBReg_x86::IsWatchpointVacant(uint32_t wp_index,
                                                           bool &is_vacant) {
-  if (wp_index >= NumSupportedHardwareWatchpoints())
+  if (wp_index >= NumSupportedHardwareWatchpoints()) {
+    is_vacant = false;
     return Status::FromErrorString("Watchpoint index out of range");
+  }
 
   RegisterValue dr7;
   Status error = ReadRegister(GetDR(7), dr7);

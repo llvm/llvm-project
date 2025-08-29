@@ -95,7 +95,7 @@ static inline uint32_t LSL_C(const uint32_t value, const uint32_t amount,
     return 0;
   }
   *success = true;
-  carry_out = amount <= 32 ? Bit32(value, 32 - amount) : 0;
+  carry_out = amount < 32 ? Bit32(value, 32 - amount) : 0;
   return value << amount;
 }
 
@@ -119,7 +119,7 @@ static inline uint32_t LSR_C(const uint32_t value, const uint32_t amount,
     return 0;
   }
   *success = true;
-  carry_out = amount <= 32 ? Bit32(value, amount - 1) : 0;
+  carry_out = amount < 32 ? Bit32(value, amount - 1) : 0;
   return value >> amount;
 }
 

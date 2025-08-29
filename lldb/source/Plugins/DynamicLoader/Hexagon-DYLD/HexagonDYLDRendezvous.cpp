@@ -90,7 +90,7 @@ bool HexagonDYLDRendezvous::Resolve() {
   if (!(cursor = ReadWord(cursor, &info.state, word_size)))
     return false;
 
-  if (!(cursor = ReadPointer(cursor + padding, &info.ldbase)))
+  if (!ReadPointer(cursor + padding, &info.ldbase))
     return false;
 
   // The rendezvous was successfully read.  Update our internal state.
@@ -276,7 +276,7 @@ bool HexagonDYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr,
   if (!(addr = ReadPointer(addr, &entry.next)))
     return false;
 
-  if (!(addr = ReadPointer(addr, &entry.prev)))
+  if (!ReadPointer(addr, &entry.prev))
     return false;
 
   entry.path = ReadStringFromMemory(entry.path_addr);
