@@ -12,8 +12,6 @@
 // Assuming the begining of the function is at the start of the FDE range.
 
 // clang-format off
-// REQUIRES: target={{x86_64-.+-linux-gnu}}
-
 
 // RUN: %{build}
 // RUN: objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
