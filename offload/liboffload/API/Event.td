@@ -33,11 +33,15 @@ def olDestroyEvent : Function {
 
 def olSyncEvent : Function {
     let desc = "Block the calling thread until the event is complete.";
-    let details = [];
+    let details = [
+      "If the queue or any dependencies encounter an error, this returns early and no work after the error will be complete."
+    ];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
     ];
-    let returns = [];
+    let returns = [
+      Return<"OL_ERRC_QUEUE_ERROR", ["The queue associated with this event or any of its dependencies encountered an error"]>,
+    ];
 }
 
 def ol_event_info_t : Enum {
