@@ -3926,8 +3926,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
     Instruction *Member = Group->getMember(I);
     // Skip the gaps in the group.
     if (!Member) {
-      Value *Undef = PoisonValue::get(SubVT);
-      StoredVecs.push_back(Undef);
+      StoredVecs.push_back(PoisonValue::get(SubVT));
       continue;
     }
 
