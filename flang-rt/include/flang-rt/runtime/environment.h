@@ -31,7 +31,7 @@ RT_OFFLOAD_VAR_GROUP_END
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 
-RT_API_ATTRS Fortran::common::optional<Convert> GetConvertFromString(
+RT_API_ATTRS common::optional<Convert> GetConvertFromString(
     const char *, std::size_t);
 
 struct ExecutionEnvironment {
