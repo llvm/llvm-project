@@ -282,7 +282,8 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       LocalVarCopiedFrom(
           memberExpr(hasObjectExpression(anyOf(hasDescendant(DeclRefToConstVar),
-                                               DeclRefToConstVar)))
+                                               DeclRefToConstVar)),
+                     unless(hasDescendant(cxxMemberCallExpr())))
               .bind("memExpr")),
       this);
 }
