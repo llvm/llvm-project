@@ -80,9 +80,9 @@ public:
   bool Pre(parser::EndSubroutineStmt &) { return false; }
   bool Pre(parser::EndTypeStmt &) { return false; }
 
-  bool Pre(parser::OpenMPBlockConstruct &);
+  bool Pre(parser::OmpBlockConstruct &);
   bool Pre(parser::OpenMPLoopConstruct &);
-  void Post(parser::OpenMPBlockConstruct &);
+  void Post(parser::OmpBlockConstruct &);
   void Post(parser::OpenMPLoopConstruct &);
 
 private:
@@ -187,7 +187,7 @@ void RewriteMutator::OpenMPSimdOnly(
               continue;
             }
           }
-        } else if (auto *ompBlock{std::get_if<parser::OpenMPBlockConstruct>(
+        } else if (auto *ompBlock{std::get_if<parser::OmpBlockConstruct>(
                        &omp->value().u)}) {
           it = replaceInlineBlock(std::get<parser::Block>(ompBlock->t), it);
           continue;
@@ -368,7 +368,7 @@ bool RewriteMutator::Pre(parser::Block &block) {
 
 void RewriteMutator::Post(parser::Block &block) { this->Pre(block); }
 
-bool RewriteMutator::Pre(parser::OpenMPBlockConstruct &block) {
+bool RewriteMutator::Pre(parser::OmpBlockConstruct &block) {
   if (context_.langOptions().OpenMPSimd) {
     auto &innerBlock = std::get<parser::Block>(block.t);
     OpenMPSimdOnly(innerBlock);
@@ -376,7 +376,7 @@ bool RewriteMutator::Pre(parser::OpenMPBlockConstruct &block) {
   return true;
 }
 
-void RewriteMutator::Post(parser::OpenMPBlockConstruct &block) {
+void RewriteMutator::Post(parser::OmpBlockConstruct &block) {
   this->Pre(block);
 }
 

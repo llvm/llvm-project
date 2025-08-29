@@ -2833,9 +2833,6 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPBlockConstruct &x) {
-    Unparse(static_cast<const OmpBlockConstruct &>(x));
-  }
   void Unparse(const OpenMPLoopConstruct &x) {
     BeginOpenMP();
     Word("!$OMP ");

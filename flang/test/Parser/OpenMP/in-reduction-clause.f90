@@ -28,12 +28,12 @@ subroutine omp_in_reduction_taskgroup()
     !$omp end taskgroup
 end subroutine omp_in_reduction_taskgroup
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskgroup
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> TaskReduction -> OmpTaskReductionClause
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> InReduction -> OmpInReductionClause
@@ -65,7 +65,7 @@ subroutine omp_in_reduction_parallel()
     !$omp end parallel
 end subroutine omp_in_reduction_parallel
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause

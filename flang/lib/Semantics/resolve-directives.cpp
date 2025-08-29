@@ -411,8 +411,8 @@ public:
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPBlockConstruct &);
-  void Post(const parser::OpenMPBlockConstruct &);
+  bool Pre(const parser::OmpBlockConstruct &);
+  void Post(const parser::OmpBlockConstruct &);
 
   void Post(const parser::OmpBeginDirective &x) {
     GetContext().withinConstruct = true;
@@ -1753,7 +1753,7 @@ static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope);
 
 #endif
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {
@@ -1792,7 +1792,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   return true;
 }
 
-void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
+void OmpAttributeVisitor::Post(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Directive dirId{dirSpec.DirId()};
   switch (dirId) {

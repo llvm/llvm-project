@@ -814,7 +814,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   parser::CharBlock source;
   common::visit(
       common::visitors{
-          [&](const parser::OpenMPBlockConstruct &c) {
+          [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
             source = beginSpec.DirName().source;
             if (beginSpec.DirId() == llvm::omp::Directive::OMPD_target_data) {
@@ -864,7 +864,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
   const parser::Block &block{std::get<parser::Block>(x.t)};
@@ -1045,7 +1045,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 }
 
 void OmpStructureChecker::CheckMasterNesting(
-    const parser::OpenMPBlockConstruct &x) {
+    const parser::OmpBlockConstruct &x) {
   // A MASTER region may not be `closely nested` inside a worksharing, loop,
   // task, taskloop, or atomic region.
   // TODO:  Expand the check to include `LOOP` construct as well when it is
@@ -1074,7 +1074,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
   }
@@ -4605,7 +4605,7 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
     if (const auto *ompConstruct{
             parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
       if (const auto *ompBlockConstruct{
-              std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+              std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
         llvm::omp::Directive dirId{ompBlockConstruct->BeginDir().DirId()};
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
@@ -4652,7 +4652,7 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         // 'Parallel' constructs
         auto currentDir{llvm::omp::Directive::OMPD_unknown};
         if (const auto *ompBlockConstruct{
-                std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+                std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
           currentDir = ompBlockConstruct->BeginDir().DirId();
         } else if (const auto *ompLoopConstruct{
                        std::get_if<parser::OpenMPLoopConstruct>(

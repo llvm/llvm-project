@@ -175,7 +175,7 @@ end
 !UNPARSE: !$OMP END TARGET_DATA
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
