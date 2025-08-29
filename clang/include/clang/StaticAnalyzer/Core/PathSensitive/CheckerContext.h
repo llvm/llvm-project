@@ -58,25 +58,34 @@ public:
   AnalysisManager &getAnalysisManager() {
     return Eng.getAnalysisManager();
   }
+  const AnalysisManager &getAnalysisManager() const {
+    return Eng.getAnalysisManager();
+  }
 
   ConstraintManager &getConstraintManager() {
+    return Eng.getConstraintManager();
+  }
+  const ConstraintManager &getConstraintManager() const {
     return Eng.getConstraintManager();
   }
 
   StoreManager &getStoreManager() {
     return Eng.getStoreManager();
   }
+  const StoreManager &getStoreManager() const { return Eng.getStoreManager(); }
 
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
+  const ExplodedNode *getPredecessor() const { return Pred; }
   const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
   bool isDifferent() { return Changed; }
+  bool isDifferent() const { return Changed; }
 
   /// Returns the number of times the current block has been visited
   /// along the analyzed path.
@@ -108,22 +117,36 @@ public:
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
   }
+  const BugReporter &getBugReporter() const { return Eng.getBugReporter(); }
 
   const SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
   }
+  const SourceManager &getSourceManager() const {
+    return getBugReporter().getSourceManager();
+  }
 
   Preprocessor &getPreprocessor() { return getBugReporter().getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const {
+    return getBugReporter().getPreprocessor();
+  }
 
   SValBuilder &getSValBuilder() {
     return Eng.getSValBuilder();
   }
+  const SValBuilder &getSValBuilder() const { return Eng.getSValBuilder(); }
 
   SymbolManager &getSymbolManager() {
     return getSValBuilder().getSymbolManager();
   }
+  const SymbolManager &getSymbolManager() const {
+    return getSValBuilder().getSymbolManager();
+  }
 
   ProgramStateManager &getStateManager() {
+    return Eng.getStateManager();
+  }
+  const ProgramStateManager &getStateManager() const {
     return Eng.getStateManager();
   }
 

@@ -20,7 +20,7 @@ public:
   virtual ~ResourceProvider() = default;
 
   virtual std::vector<lldb_protocol::mcp::Resource> GetResources() const = 0;
-  virtual llvm::Expected<lldb_protocol::mcp::ResourceResult>
+  virtual llvm::Expected<lldb_protocol::mcp::ReadResourceResult>
   ReadResource(llvm::StringRef uri) const = 0;
 };
 
