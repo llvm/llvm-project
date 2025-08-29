@@ -110,7 +110,7 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     Fortran::common::optional<std::int64_t> startPos;
     if (edit.descriptor == DataEdit::DefinedDerivedType &&
         special.which() == typeInfo::SpecialBinding::Which::ReadFormatted) {
-      // DT is an edit descriptor so everything that the child
+      // DT is an edit descriptor, so everything that the child
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }
@@ -170,6 +170,8 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
       io.GotChar(io.InquirePos() - *startPos);
     }
     return handler.GetIoStat() == IostatOk;
+  } else if (peek && peek->descriptor == DataEdit::ListDirectedNullValue) {
+    return false;
   } else {
     // There's a defined I/O subroutine, but there's a FORMAT present and
     // it does not have a DT data edit descriptor, so apply default formatting

@@ -14,6 +14,14 @@ cir.func @empty() {
 // CHECK:   cir.return
 // CHECK: }
 
+// void empty() { }
+cir.func no_proto @noProto() {
+  cir.return
+}
+// CHECK: cir.func no_proto @noProto() {
+// CHECK:   cir.return
+// CHECK: }
+
 // void voidret() { return; }
 cir.func @voidret() {
   cir.return

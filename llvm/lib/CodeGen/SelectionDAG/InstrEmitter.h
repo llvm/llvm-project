@@ -48,8 +48,8 @@ private:
 
   /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
   /// implicit physical register output.
-  void EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
-                       Register SrcReg, VRBaseMapType &VRBaseMap);
+  void EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
+                       VRBaseMapType &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,

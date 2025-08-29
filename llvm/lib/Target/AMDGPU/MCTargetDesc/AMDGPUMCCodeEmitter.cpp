@@ -253,7 +253,7 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
       STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
-  // The rest part needs to align with AMDGPUInstPrinter::printImmediate64.
+  // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
   if (IsFP) {
     return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Val) ? 254
@@ -272,10 +272,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-      return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-              OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
-                 ? 254
-                 : 255;
+      return AMDGPU::getOperandSize(OpInfo) == 8 ? 254 : 255;
   } else {
     assert(!MO.isDFPImm());
 
@@ -341,6 +338,9 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return 255;
+
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
@@ -386,6 +386,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
+      // Matrix B scale operand reuses op_sel_hi.
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
       // Matrix B reuse operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
@@ -690,11 +692,8 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-    auto OpType = Desc.operands()[OpNo].OperandType;
-    MCFixupKind Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-                        OpType == AMDGPU::OPERAND_REG_IMM_INT64)
-                           ? FK_Data_8
-                           : FK_Data_4;
+    unsigned Size = AMDGPU::getOperandSize(Desc, OpNo);
+    MCFixupKind Kind = MCFixup::getDataKindForSize(Size);
     addFixup(Fixups, Offset, MO.getExpr(), Kind, PCRel);
   }
 

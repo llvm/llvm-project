@@ -67,7 +67,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -501,10 +500,11 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
-const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
+const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC,
+                                             SCEV::NoWrapFlags Flags) {
   const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
   if (EC.isScalable())
-    Res = getMulExpr(Res, getVScale(Ty));
+    Res = getMulExpr(Res, getVScale(Ty), Flags);
   return Res;
 }
 
@@ -2338,15 +2338,23 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
-  // TODO: Support mul.
-  if (BinOp == Instruction::Mul)
-    return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
   if (!RHSC)
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
+  if (BinOp == Instruction::Mul) {
+    // Multiplying by 0 or 1 never overflows
+    if (C.isZero() || C.isOne())
+      return true;
+    if (Signed)
+      return false;
+    APInt Limit = APInt::getMaxValue(NumBits).udiv(C);
+    // To avoid overflow, we need to make sure that LHS <= MAX / C.
+    return isKnownPredicateAt(ICmpInst::ICMP_ULE, LHS, getConstant(Limit),
+                              CtxI);
+  }
   bool IsSub = (BinOp == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.
@@ -2680,6 +2688,20 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         SmallVector<const SCEV *, 4> NewOps(AddExpr->operands());
         NewOps[0] = getConstant(ConstAdd);
         return getAddExpr(NewOps, PreservedFlags);
+      }
+    }
+
+    // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
+    // (B), if trunc (A) + -A + B  does not unsigned-wrap.
+    const SCEVAddExpr *InnerAdd;
+    if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
+          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
+                                         SCEV::FlagAnyWrap),
+                   SCEV::FlagNUW)) {
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
       }
     }
   }
@@ -3185,6 +3207,21 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           return getAddRecExpr(Operands, AddRec->getLoop(),
                                AddRec->getNoWrapFlags(FlagsMask));
         }
+      }
+
+      // Try to push the constant operand into a ZExt: C * zext (A + B) ->
+      // zext (C*A + C*B) if trunc (C) * (A + B)  does not unsigned-wrap.
+      const SCEVAddExpr *InnerAdd;
+      if (match(Ops[1], m_scev_ZExt(m_scev_Add(InnerAdd)))) {
+        const SCEV *NarrowC = getTruncateExpr(LHSC, InnerAdd->getType());
+        if (isa<SCEVConstant>(InnerAdd->getOperand(0)) &&
+            getZeroExtendExpr(NarrowC, Ops[1]->getType()) == LHSC &&
+            hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
+                                           SCEV::FlagAnyWrap),
+                     SCEV::FlagNUW)) {
+          auto *Res = getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
+          return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
+        };
       }
     }
   }
@@ -7270,7 +7307,7 @@ ScalarEvolution::getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
                                        bool &Precise) {
   Precise = true;
   // Do a bounded search of the def relation of the requested SCEVs.
-  SmallSet<const SCEV *, 16> Visited;
+  SmallPtrSet<const SCEV *, 16> Visited;
   SmallVector<const SCEV *> Worklist;
   auto pushOp = [&](const SCEV *S) {
     if (!Visited.insert(S).second)
@@ -7421,7 +7458,15 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (auto *SI = dyn_cast<StoreInst>(I))
         return !SI->isSimple();
 
-      return I->mayThrow() || I->mayWriteToMemory();
+      if (I->mayThrow())
+        return true;
+
+      // Non-volatile memset / memcpy do not count as side-effect for forward
+      // progress.
+      if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
+
+      return I->mayWriteToMemory();
     };
 
     LoopProperties LP = {/* HasNoAbnormalExits */ true,
@@ -14929,6 +14974,29 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   if (!AddRec)
     return nullptr;
+
+  // Check if any of the transformed predicates is known to be false. In that
+  // case, it doesn't make sense to convert to a predicated AddRec, as the
+  // versioned loop will never execute.
+  for (const SCEVPredicate *Pred : TransformPreds) {
+    auto *WrapPred = dyn_cast<SCEVWrapPredicate>(Pred);
+    if (!WrapPred || WrapPred->getFlags() != SCEVWrapPredicate::IncrementNSSW)
+      continue;
+
+    const SCEVAddRecExpr *AddRecToCheck = WrapPred->getExpr();
+    const SCEV *ExitCount = getBackedgeTakenCount(AddRecToCheck->getLoop());
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      continue;
+
+    const SCEV *Step = AddRecToCheck->getStepRecurrence(*this);
+    if (!Step->isOne())
+      continue;
+
+    ExitCount = getTruncateOrSignExtend(ExitCount, Step->getType());
+    const SCEV *Add = getAddExpr(AddRecToCheck->getStart(), ExitCount);
+    if (isKnownPredicate(CmpInst::ICMP_SLT, Add, AddRecToCheck->getStart()))
+      return nullptr;
+  }
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.

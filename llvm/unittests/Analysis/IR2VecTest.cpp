@@ -30,7 +30,6 @@ namespace {
 class TestableEmbedder : public Embedder {
 public:
   TestableEmbedder(const Function &F, const Vocabulary &V) : Embedder(F, V) {}
-  void computeEmbeddings() const override {}
   void computeEmbeddings(const BasicBlock &BB) const override {}
 };
 
@@ -258,6 +257,18 @@ TEST(IR2VecTest, CreateSymbolicEmbedder) {
   EXPECT_NE(Emb, nullptr);
 }
 
+TEST(IR2VecTest, CreateFlowAwareEmbedder) {
+  Vocabulary V = Vocabulary(Vocabulary::createDummyVocabForTest());
+
+  LLVMContext Ctx;
+  Module M("M", Ctx);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, V);
+  EXPECT_NE(Emb, nullptr);
+}
+
 TEST(IR2VecTest, CreateInvalidMode) {
   Vocabulary V = Vocabulary(Vocabulary::createDummyVocabForTest());
 
@@ -310,8 +321,27 @@ protected:
   }
 };
 
-TEST_F(IR2VecTestFixture, GetInstVecMap) {
+TEST_F(IR2VecTestFixture, GetInstVecMap_Symbolic) {
   auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  const auto &InstMap = Emb->getInstVecMap();
+
+  EXPECT_EQ(InstMap.size(), 2u);
+  EXPECT_TRUE(InstMap.count(AddInst));
+  EXPECT_TRUE(InstMap.count(RetInst));
+
+  const auto &AddEmb = InstMap.at(AddInst);
+  const auto &RetEmb = InstMap.at(RetInst);
+  EXPECT_EQ(AddEmb.size(), 2u);
+  EXPECT_EQ(RetEmb.size(), 2u);
+
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 27.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 17.0)));
+}
+
+TEST_F(IR2VecTestFixture, GetInstVecMap_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &InstMap = Emb->getInstVecMap();
@@ -323,11 +353,11 @@ TEST_F(IR2VecTestFixture, GetInstVecMap) {
   EXPECT_EQ(InstMap.at(AddInst).size(), 2u);
   EXPECT_EQ(InstMap.at(RetInst).size(), 2u);
 
-  EXPECT_TRUE(InstMap.at(AddInst).approximatelyEquals(Embedding(2, 27.6)));
-  EXPECT_TRUE(InstMap.at(RetInst).approximatelyEquals(Embedding(2, 16.8)));
+  EXPECT_TRUE(InstMap.at(AddInst).approximatelyEquals(Embedding(2, 27.9)));
+  EXPECT_TRUE(InstMap.at(RetInst).approximatelyEquals(Embedding(2, 35.6)));
 }
 
-TEST_F(IR2VecTestFixture, GetBBVecMap) {
+TEST_F(IR2VecTestFixture, GetBBVecMap_Symbolic) {
   auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
@@ -337,22 +367,47 @@ TEST_F(IR2VecTestFixture, GetBBVecMap) {
   EXPECT_TRUE(BBMap.count(BB));
   EXPECT_EQ(BBMap.at(BB).size(), 2u);
 
-  // BB vector should be sum of add and ret: {27.6, 27.6} + {16.8, 16.8} =
-  // {44.4, 44.4}
-  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 44.4)));
+  // BB vector should be sum of add and ret: {27.9, 27.9} + {17.0, 17.0} =
+  // {44.9, 44.9}
+  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 44.9)));
 }
 
-TEST_F(IR2VecTestFixture, GetBBVector) {
+TEST_F(IR2VecTestFixture, GetBBVecMap_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  const auto &BBMap = Emb->getBBVecMap();
+
+  EXPECT_EQ(BBMap.size(), 1u);
+  EXPECT_TRUE(BBMap.count(BB));
+  EXPECT_EQ(BBMap.at(BB).size(), 2u);
+
+  // BB vector should be sum of add and ret: {27.9, 27.9} + {35.6, 35.6} =
+  // {63.5, 63.5}
+  EXPECT_TRUE(BBMap.at(BB).approximatelyEquals(Embedding(2, 63.5)));
+}
+
+TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
   auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 44.4)));
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 44.9)));
 }
 
-TEST_F(IR2VecTestFixture, GetFunctionVector) {
+TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  const auto &BBVec = Emb->getBBVector(*BB);
+
+  EXPECT_EQ(BBVec.size(), 2u);
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 63.5)));
+}
+
+TEST_F(IR2VecTestFixture, GetFunctionVector_Symbolic) {
   auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
   ASSERT_TRUE(static_cast<bool>(Emb));
 
@@ -360,8 +415,19 @@ TEST_F(IR2VecTestFixture, GetFunctionVector) {
 
   EXPECT_EQ(FuncVec.size(), 2u);
 
-  // Function vector should match BB vector (only one BB): {44.4, 44.4}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 44.4)));
+  // Function vector should match BB vector (only one BB): {44.9, 44.9}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 44.9)));
+}
+
+TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
+  auto Emb = Embedder::create(IR2VecKind::FlowAware, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
+
+  const auto &FuncVec = Emb->getFunctionVector();
+
+  EXPECT_EQ(FuncVec.size(), 2u);
+  // Function vector should match BB vector (only one BB): {63.5, 63.5}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 63.5)));
 }
 
 static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;

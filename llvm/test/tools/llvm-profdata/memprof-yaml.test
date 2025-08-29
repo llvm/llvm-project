@@ -18,6 +18,11 @@
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out-no-dap.yaml
 ; RUN: diff -b %t/memprof-in-no-dap.yaml %t/memprof-out-no-dap.yaml
 
+; memprof-in-no-heap.yaml has empty heap access profiles.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-heap.yaml -o %t/memprof-out-no-heap.indexed
+; RUN: llvm-profdata show --memory %t/memprof-out-no-heap.indexed > %t/memprof-out-no-heap.yaml
+; RUN: diff -b %t/memprof-in-no-heap.yaml %t/memprof-out-no-heap.yaml
+
 ;--- memprof-in.yaml
 ---
 # MemProfSummary:
@@ -150,4 +155,33 @@ HeapProfileRecords:
         - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
         - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
         CalleeGuids: [ 0x300 ]
+...
+;--- memprof-in-no-heap.yaml
+---
+# MemProfSummary:
+#   Total contexts: 0
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 0
+#   Maximum hot context total size: 0
+---
+DataAccessProfiles:
+  SampledRecords:
+    - Symbol:          abcde
+      AccessCount:     100
+      Locations:
+      - FileName:      file2.h
+        Line:          123
+      - FileName:      file3.cpp
+        Line:          456
+    - Hash:            101010
+      AccessCount:     200
+      Locations:
+        - FileName:        file.cpp
+          Line:            233
+  KnownColdSymbols:
+    - foo
+    - bar
+  KnownColdStrHashes: [ 999, 1001 ]
 ...

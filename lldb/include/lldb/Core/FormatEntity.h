@@ -91,6 +91,7 @@ struct Entry {
     FunctionPrefix,
     FunctionScope,
     FunctionBasename,
+    FunctionNameQualifiers,
     FunctionTemplateArguments,
     FunctionFormattedArguments,
     FunctionReturnLeft,

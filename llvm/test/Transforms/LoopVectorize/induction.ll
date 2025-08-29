@@ -2747,12 +2747,10 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i8 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[B_NEXT]] = add i8 [[B_0]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[B_NEXT]], 0
@@ -2818,12 +2816,10 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br label [[EXIT:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i8 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[B_NEXT]] = add i8 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[EC:%.*]] = icmp eq i8 [[B_NEXT]], 0
@@ -2884,12 +2880,10 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_0_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[B_0_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[B_0_NEXT]] = add i16 [[B_0]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[B_0_NEXT]], 0
@@ -2955,12 +2949,10 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br label [[EXIT:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_0_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[B_0_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[B_0_NEXT]] = add i16 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[EC:%.*]] = icmp eq i16 [[B_0_NEXT]], 0
@@ -4986,8 +4978,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 -20, i16 -19>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UREM_CONTINUE2]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 -20, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i16> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; CHECK:       pred.urem.if:
@@ -5006,7 +4997,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE2]]
 ; CHECK:       pred.urem.continue2:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ [[TMP8]], [[PRED_UREM_CONTINUE]] ], [ [[TMP12]], [[PRED_UREM_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i16> zeroinitializer, <2 x i16> [[TMP13]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> [[TMP13]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext <2 x i16> [[PREDPHI]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP15]] = or <2 x i32> [[VEC_PHI]], [[TMP14]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -5017,12 +5008,10 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP15]])
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -20, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ -20, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[VAR0:%.*]] = phi i32 [ [[A]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[VAR1:%.*]] = trunc i32 [[I]] to i16
 ; CHECK-NEXT:    [[VAR2:%.*]] = icmp eq i16 [[VAR1]], 0
 ; CHECK-NEXT:    br i1 [[VAR2]], label [[FOR_INC]], label [[FOR_COND:%.*]]
@@ -5182,10 +5171,8 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; UNROLL-NO-IC-NEXT:    [[OFFSET_IDX:%.*]] = add i32 -20, [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i16> [[STEP_ADD]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
+; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i16> [[VEC_IND]], zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i16> [[STEP_ADD]], zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP6]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.urem.if:
@@ -5222,8 +5209,8 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE7]]
 ; UNROLL-NO-IC:       pred.urem.continue7:
 ; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = phi <2 x i16> [ [[TMP20]], [[PRED_UREM_CONTINUE5]] ], [ [[TMP24]], [[PRED_UREM_IF6]] ]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i16> zeroinitializer, <2 x i16> [[TMP15]]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI8:%.*]] = select <2 x i1> [[TMP3]], <2 x i16> zeroinitializer, <2 x i16> [[TMP25]]
+; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i16> [[TMP15]], <2 x i16> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[PREDPHI8:%.*]] = select <2 x i1> [[TMP5]], <2 x i16> [[TMP25]], <2 x i16> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = sext <2 x i16> [[PREDPHI]] to <2 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = sext <2 x i16> [[PREDPHI8]] to <2 x i32>
 ; UNROLL-NO-IC-NEXT:    [[TMP28]] = or <2 x i32> [[VEC_PHI]], [[TMP26]]
@@ -5237,12 +5224,10 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[BIN_RDX]])
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -20, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[A]], [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-IC:       for.body:
-; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[VAR0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
+; UNROLL-NO-IC-NEXT:    [[I:%.*]] = phi i32 [ -20, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; UNROLL-NO-IC-NEXT:    [[VAR0:%.*]] = phi i32 [ [[A]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
 ; UNROLL-NO-IC-NEXT:    [[VAR1:%.*]] = trunc i32 [[I]] to i16
 ; UNROLL-NO-IC-NEXT:    [[VAR2:%.*]] = icmp eq i16 [[VAR1]], 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[VAR2]], label [[FOR_INC]], label [[FOR_COND:%.*]]
@@ -5833,14 +5818,11 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RECUR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[LV]], [[RECUR]]
 ; CHECK-NEXT:    [[TRUNC_IV_NEXT]] = add i32 [[TRUNC_IV]], 1
@@ -5955,14 +5937,11 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    br label [[EXIT:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[ENTRY]] ]
-; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[RECUR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-IC-NEXT:    [[MUL:%.*]] = mul nsw i32 [[LV]], [[RECUR]]
 ; UNROLL-NO-IC-NEXT:    [[TRUNC_IV_NEXT]] = add i32 [[TRUNC_IV]], 1

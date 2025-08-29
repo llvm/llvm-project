@@ -52,6 +52,22 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
     return "apple-m1";
   }
 
+  if (Triple.getOS() == llvm::Triple::IOS) {
+    assert(!Triple.isSimulatorEnvironment() && "iossim should be mac-like");
+    // iOS 26 only runs on apple-a12 and later CPUs.
+    if (!Triple.isOSVersionLT(26))
+      return "apple-a12";
+  }
+
+  if (Triple.isWatchOS()) {
+    assert(!Triple.isSimulatorEnvironment() && "watchossim should be mac-like");
+    // arm64_32/arm64e watchOS requires S4 before watchOS 26, S6 after.
+    if (Triple.getArch() == llvm::Triple::aarch64_32 || Triple.isArm64e())
+      return Triple.isOSVersionLT(26) ? "apple-s4" : "apple-s6";
+    // arm64 (non-e, non-32) watchOS comes later, and requires S6 anyway.
+    return "apple-s6";
+  }
+
   if (Triple.isXROS()) {
     // The xrOS simulator runs on M1 as well, it should have been covered above.
     assert(!Triple.isSimulatorEnvironment() && "xrossim should be mac-like");

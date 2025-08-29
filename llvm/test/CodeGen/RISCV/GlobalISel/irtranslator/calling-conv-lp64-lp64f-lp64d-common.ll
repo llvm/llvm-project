@@ -1075,13 +1075,13 @@ define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result
   ; RV64I-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; RV64I-NEXT:   G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64) into %ir.agg.result, align 4)
   ; RV64I-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C4]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C4]](s64)
   ; RV64I-NEXT:   G_STORE [[C1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir.b, align 4)
   ; RV64I-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C5]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C5]](s64)
   ; RV64I-NEXT:   G_STORE [[C2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %ir.c, align 4)
   ; RV64I-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C6]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C6]](s64)
   ; RV64I-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %ir.d, align 4)
   ; RV64I-NEXT:   PseudoRET
   store i64 1, ptr %agg.result, align 4
@@ -1104,7 +1104,7 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64-NEXT:   $x10 = COPY [[ADD]](s64)
@@ -1119,7 +1119,7 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64F-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64F-NEXT:   $x10 = COPY [[ADD]](s64)
@@ -1134,7 +1134,7 @@ define i64 @caller_large_struct_ret() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.1)
   ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64D-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.3)
   ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
   ; LP64D-NEXT:   $x10 = COPY [[ADD]](s64)
@@ -1165,13 +1165,13 @@ define %struct.large2 @callee_large_struct_ret2() nounwind {
   ; RV64I-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; RV64I-NEXT:   G_STORE [[C]](s64), [[COPY]](p0) :: (store (s64), align 16)
   ; RV64I-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C4]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C4]](s64)
   ; RV64I-NEXT:   G_STORE [[C1]](s128), [[PTR_ADD]](p0) :: (store (s128))
   ; RV64I-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C5]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C5]](s64)
   ; RV64I-NEXT:   G_STORE [[C2]](s64), [[PTR_ADD1]](p0) :: (store (s64), align 16)
   ; RV64I-NEXT:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C6]](s64)
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C6]](s64)
   ; RV64I-NEXT:   G_STORE [[C3]](s64), [[PTR_ADD2]](p0) :: (store (s64))
   ; RV64I-NEXT:   PseudoRET
   %a = insertvalue %struct.large2 poison, i64 1, 0
@@ -1191,13 +1191,13 @@ define i64 @caller_large_struct_ret2() nounwind {
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
   ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; LP64-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
   ; LP64-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
   ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
   ; LP64-NEXT:   $x10 = COPY [[ADD]](s64)
@@ -1212,13 +1212,13 @@ define i64 @caller_large_struct_ret2() nounwind {
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64F-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
   ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; LP64F-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
   ; LP64F-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
   ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
   ; LP64F-NEXT:   $x10 = COPY [[ADD]](s64)
@@ -1233,13 +1233,13 @@ define i64 @caller_large_struct_ret2() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64D-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[PTR_ADD]](p0) :: (load (s128) from %stack.0)
   ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; LP64D-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %stack.0, align 16)
   ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 40
-  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
   ; LP64D-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from %stack.0)
   ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD3]]
   ; LP64D-NEXT:   $x10 = COPY [[ADD]](s64)
