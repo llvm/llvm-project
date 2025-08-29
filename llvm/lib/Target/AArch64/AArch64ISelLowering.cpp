@@ -27018,6 +27018,9 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
   unsigned NumParts = N->getNumOperands();
   if (NumParts != 2 && NumParts != 4)
     return SDValue();
@@ -27027,8 +27030,9 @@ static SDValue performVectorDeinterleaveCombine(
   // At the moment we're unlikely to see a fixed-width vector deinterleave as
   // we usually generate shuffles instead.
   unsigned MinNumElements = SubVecTy.getVectorMinNumElements();
-  if (!SubVecTy.isScalableVT() ||
-      SubVecTy.getSizeInBits().getKnownMinValue() != 128 || MinNumElements == 1)
+  if (!SubVecTy.isScalableVector() ||
+      SubVecTy.getSizeInBits().getKnownMinValue() != 128 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
     return SDValue();
 
   // Make sure each input operand is the correct extract_subvector of the same
@@ -27039,8 +27043,7 @@ static SDValue performVectorDeinterleaveCombine(
     if (OpI->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
         OpI->getOperand(0) != Op0->getOperand(0))
       return SDValue();
-    auto *Idx = cast<ConstantSDNode>(OpI->getOperand(1));
-    if (Idx->getZExtValue() != (I * MinNumElements))
+    if (OpI->getConstantOperandVal(1) != (I * MinNumElements))
       return SDValue();
   }
 
@@ -27052,8 +27055,7 @@ static SDValue performVectorDeinterleaveCombine(
   // an unsupported passthru value until we find a valid use case.
   auto MaskedLoad = dyn_cast<MaskedLoadSDNode>(Op0->getOperand(0));
   if (!MaskedLoad || !MaskedLoad->hasNUsesOfValue(NumParts, 0) ||
-      MaskedLoad->getExtensionType() != ISD::NON_EXTLOAD ||
-      MaskedLoad->getAddressingMode() != ISD::UNINDEXED ||
+      !MaskedLoad->isSimple() || !ISD::isNormalMaskedLoad(MaskedLoad) ||
       !MaskedLoad->getOffset().isUndef() ||
       (!MaskedLoad->getPassThru()->isUndef() &&
        !isZerosVector(MaskedLoad->getPassThru().getNode())))
@@ -27073,36 +27075,29 @@ static SDValue performVectorDeinterleaveCombine(
 
     // We should be concatenating each sequential result from a
     // VECTOR_INTERLEAVE.
-    SDValue InterleaveOp = Mask->getOperand(0);
+    SDNode *InterleaveOp = Mask->getOperand(0).getNode();
     if (InterleaveOp->getOpcode() != ISD::VECTOR_INTERLEAVE ||
         InterleaveOp->getNumOperands() != NumParts)
       return SDValue();
 
     for (unsigned I = 0; I < NumParts; I++) {
-      SDValue ConcatOp = Mask->getOperand(I);
-      if (ConcatOp.getResNo() != I ||
-          ConcatOp.getNode() != InterleaveOp.getNode())
+      if (Mask.getOperand(I) != SDValue(InterleaveOp, I))
         return SDValue();
     }
 
     // Make sure the inputs to the vector interleave are identical.
-    for (unsigned I = 1; I < NumParts; I++) {
-      if (InterleaveOp->getOperand(I) != InterleaveOp->getOperand(0))
-        return SDValue();
-    }
+    if (!llvm::all_equal(InterleaveOp->op_values()))
+      return SDValue();
 
     NarrowMask = InterleaveOp->getOperand(0);
   } else { // ISD::SPLAT_VECTOR
-    auto *SplatVal = dyn_cast<ConstantSDNode>(Mask->getOperand(0));
-    if (!SplatVal || SplatVal->getZExtValue() != 1)
-      return SDValue();
     ElementCount EC = Mask.getValueType().getVectorElementCount();
-    assert((EC.getKnownMinValue() % NumParts) == 0 &&
+    assert(EC.isKnownMultipleOf(NumParts) &&
            "Expected element count divisible by number of parts");
-    EC = ElementCount::getScalable(EC.getKnownMinValue() / NumParts);
+    EC = EC.divideCoefficientBy(NumParts);
     NarrowMask =
         DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
-                    DAG.getConstant(1, DL, MVT::i1));
+                    Mask->getOperand(0));
   }
 
   const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
