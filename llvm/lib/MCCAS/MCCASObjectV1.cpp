@@ -1635,7 +1635,7 @@ MCCVInlineLineTableFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  llvm::append_range(B->Data, F.getContents());
+  B->Data.append(FragmentContents.begin(), FragmentContents.end());
   return get(B->build());
 }
 
@@ -1704,7 +1704,7 @@ MCLEBFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  llvm::append_range(B->Data, F.getContents());
+  B->Data.append(FragmentContents.begin(), FragmentContents.end());
   return get(B->build());
 }
 
@@ -1904,7 +1904,8 @@ Error MCDataFragmentMerger::tryMerge(const MCFragment &F, unsigned Size,
                              F.getKind() == MCFragment::FT_Data ||
                              F.getKind() == MCFragment::FT_Dwarf ||
                              F.getKind() == MCFragment::FT_DwarfFrame ||
-                             F.getKind() == MCFragment::FT_Align;
+                             F.getKind() == MCFragment::FT_Align ||
+                             F.getKind() == MCFragment::FT_CVDefRange;
 
   // If not the same atom, flush merge candidate and return false.
   if (!IsSameAtom || !IsMergeableFragment || Oversized) {
