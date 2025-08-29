@@ -520,21 +520,23 @@ public:
   unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
                                  InstructionCost LoopCost);
 
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *> prepareToExecute(VPlan &Plan, ElementCount VF,
+                                                   unsigned UF,
+                                                   GeneratedRTChecks &RTChecks,
+                                                   bool VectorizingEpilogue);
+
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
   /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
   /// epilogue vector loop. It should be removed once the re-use issue has been
   /// fixed.
-  ///
-  /// Returns a mapping of SCEVs to their expanded IR values.
-  /// Note that this is a temporary workaround needed due to the current
-  /// epilogue handling.
-  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
-                                              VPlan &BestPlan,
-                                              InnerLoopVectorizer &LB,
-                                              DominatorTree *DT,
-                                              bool VectorizingEpilogue);
+  void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+                   InnerLoopVectorizer &LB, DominatorTree *DT,
+                   bool VectorizingEpilogue);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -567,6 +569,10 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
+
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
@@ -605,10 +611,6 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
-
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
-  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
-                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

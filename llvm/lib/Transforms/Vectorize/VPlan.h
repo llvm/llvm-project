@@ -547,7 +547,6 @@ public:
     case VPRecipeBase::VPWidenSelectSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
-    case VPRecipeBase::VPCanonicalIVPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
@@ -1927,12 +1926,6 @@ public:
 /// the backedge is the second operand.
 ///
 /// Inductions are modeled using the following sub-classes:
-///  * VPCanonicalIVPHIRecipe: Canonical scalar induction of the vector loop,
-///    starting at a specified value (zero for the main vector loop, the resume
-///    value for the epilogue vector loop) and stepping by 1. The induction
-///    controls exiting of the vector loop by comparing against the vector trip
-///    count. Produces a single scalar PHI for the induction value per
-///    iteration.
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
@@ -3285,60 +3278,50 @@ public:
   const SCEV *getSCEV() const { return Expr; }
 };
 
-/// Canonical scalar induction phi of the vector loop. Starting at the specified
+/// Canonical scalar induction of the vector loop. Starting at the specified
 /// start value (either 0 or the resume value when vectorizing the epilogue
-/// loop). VPWidenCanonicalIVRecipe represents the vector version of the
-/// canonical induction variable.
-class VPCanonicalIVPHIRecipe : public VPHeaderPHIRecipe {
+/// loop).
+class VPCanonicalIV : public VPValue, public VPUser {
+  bool HasNUW = true;
+  DebugLoc DL;
+
 public:
-  VPCanonicalIVPHIRecipe(VPValue *StartV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPCanonicalIVPHISC, nullptr, StartV, DL) {}
+  VPCanonicalIV(VPValue *StartV, bool HasNUW = true,
+                DebugLoc DL = DebugLoc::getUnknown())
+      : VPValue(VPValue::VPCanonicalIVSC), VPUser(StartV), HasNUW(HasNUW),
+        DL(DL) {}
 
-  ~VPCanonicalIVPHIRecipe() override = default;
+  ~VPCanonicalIV() override = default;
 
-  VPCanonicalIVPHIRecipe *clone() override {
-    auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
-    R->addOperand(getBackedgeValue());
-    return R;
+  VPCanonicalIV *clone() {
+    return new VPCanonicalIV(getOperand(0), HasNUW, DL);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
-
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("cannot execute this recipe, should be replaced by a "
-                     "scalar phi recipe");
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPCanonicalIVSC;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns the scalar type of the induction.
-  Type *getScalarType() const {
-    return getStartValue()->getLiveInIRValue()->getType();
-  }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
 
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
+  void dropNUW() { HasNUW = false; }
+  bool hasNoUnsignedWrap() const { return HasNUW; }
 
-  /// Return the cost of this VPCanonicalIVPHIRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // For now, match the behavior of the legacy cost model.
-    return 0;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const;
+#endif
+
+  VPValue *getStartValue() const { return getOperand(0); }
+  DebugLoc getDebugLoc() { return DL; }
+
+  /// Returns the scalar type of the induction.
+  Type *getScalarType() const {
+    return getStartValue()->getLiveInIRValue()->getType();
   }
 };
 
@@ -3420,14 +3403,13 @@ public:
 class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe,
                                  public VPUnrollPartAccessor<1> {
 public:
-  VPWidenCanonicalIVRecipe(VPCanonicalIVPHIRecipe *CanonicalIV)
+  VPWidenCanonicalIVRecipe(VPValue *CanonicalIV)
       : VPSingleDefRecipe(VPDef::VPWidenCanonicalIVSC, {CanonicalIV}) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(
-        cast<VPCanonicalIVPHIRecipe>(getOperand(0)));
+    return new VPWidenCanonicalIVRecipe(getOperand(0));
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCanonicalIVSC)
@@ -3466,7 +3448,7 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
+                    VPCanonicalIV *CanonicalIV, VPValue *Step,
                     const Twine &Name = "")
       : VPDerivedIVRecipe(
             IndDesc.getKind(),
@@ -3830,26 +3812,39 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   /// VPRegionBlock.
   VPBlockBase *Exiting;
 
-  /// An indicator whether this region is to generate multiple replicated
-  /// instances of output IR corresponding to its VPBlockBases.
-  bool IsReplicator;
+  /// Canonical IV of the loop region. If nullptr, the region is a replication
+  /// region.
+  VPCanonicalIV *CanIV = nullptr;
 
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
-        IsReplicator(IsReplicator) {
+                const std::string &Name = "")
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting) {
     assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
     assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
     Entry->setParent(this);
     Exiting->setParent(this);
   }
-  VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
+
+  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting, VPCanonicalIV *CanIV,
+                const std::string &Name = "")
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
+        CanIV(CanIV) {
+    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
+    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
+    Entry->setParent(this);
+    Exiting->setParent(this);
+  }
+
+  VPRegionBlock(VPValue *StartV, DebugLoc DL, const std::string &Name = "")
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        IsReplicator(IsReplicator) {}
+        CanIV(new VPCanonicalIV(StartV, true, DL)) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override {
+    if (CanIV)
+      delete CanIV;
+  }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -3888,7 +3883,7 @@ public:
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
-  bool isReplicator() const { return IsReplicator; }
+  bool isReplicator() const { return !CanIV; }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPRegionBlock, thereby "executing" the VPlan.
@@ -3916,6 +3911,11 @@ public:
   /// Remove the current region from its VPlan, connecting its predecessor to
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
+
+  /// Return the canonical induction variable of the region, null for
+  /// replicating regions.
+  VPCanonicalIV *getCanonicalIV() { return CanIV; }
+  const VPCanonicalIV *getCanonicalIV() const { return CanIV; }
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
@@ -4227,14 +4227,9 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  /// Returns the canonical induction recipe of the vector loop.
-  VPCanonicalIVPHIRecipe *getCanonicalIV() {
-    VPBasicBlock *EntryVPBB = getVectorLoopRegion()->getEntryBasicBlock();
-    if (EntryVPBB->empty()) {
-      // VPlan native path.
-      EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
-    }
-    return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
+  /// Returns the canonical induction VPValue of the vector loop.
+  VPCanonicalIV *getCanonicalIV() {
+    return getVectorLoopRegion()->getCanonicalIV();
   }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
@@ -4260,22 +4255,22 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
-  /// IsReplicator is true, the region is a replicate region. The returned block
-  /// is owned by the VPlan and deleted once the VPlan is destroyed.
+  /// Create a new replicate VPRegionBlock with \p Entry, \p Exiting and \p
+  /// Name. The returned block is owned by the VPlan and deleted once the VPlan
+  /// is destroyed.
   VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                     const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+                                     const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Name);
+  /// Create a new loop VPRegionBlock with \p StartV and \p Name, and entry and
+  /// exiting blocks set to nullptr. The returned block is owned by the VPlan
+  /// and deleted once the VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(VPValue *StartV, DebugLoc DL,
+                                     const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(StartV, DL, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

@@ -4059,7 +4059,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPScalarIVStepsSC:
       case VPDef::VPReplicateSC:
       case VPDef::VPInstructionSC:
-      case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
       case VPDef::VPVectorEndPointerSC:
       case VPDef::VPExpandSCEVSC:
@@ -7185,63 +7184,61 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
 
-DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
-    ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
-    InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue) {
-  assert(BestVPlan.hasVF(BestVF) &&
-         "Trying to execute plan with unsupported VF");
-  assert(BestVPlan.hasUF(BestUF) &&
-         "Trying to execute plan with unsupported UF");
-  if (BestVPlan.hasEarlyExit())
+DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::prepareToExecute(
+    VPlan &Plan, ElementCount VF, unsigned UF, GeneratedRTChecks &RTChecks,
+    bool VectorizingEpilogue) {
+  assert(Plan.hasVF(VF) && "Trying to execute plan with unsupported VF");
+  assert(Plan.hasUF(UF) && "Trying to execute plan with unsupported UF");
+  if (Plan.hasEarlyExit())
     ++LoopsEarlyExitVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, Plan, UF);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, Plan);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, Plan);
+  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, Plan, VF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
     std::optional<unsigned> VScale = CM.getVScaleForTuning();
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
-                             BestVPlan, BestVF, VScale);
-  }
-
-  if (!VectorizingEpilogue) {
-    // Checks are the same for all VPlans, added to BestVPlan only for
-    // compactness.
-    attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
+                             Plan, VF, VScale);
   }
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
-  VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
+  VPBasicBlock *VectorPH = cast<VPBasicBlock>(Plan.getVectorPreheader());
 
-  VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
-  VPlanTransforms::simplifyRecipes(BestVPlan);
-  VPlanTransforms::removeBranchOnConst(BestVPlan);
+  VPlanTransforms::optimizeForVFAndUF(Plan, VF, UF, PSE);
+  VPlanTransforms::simplifyRecipes(Plan);
+  VPlanTransforms::removeBranchOnConst(Plan);
   VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
+      Plan, VF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
-  VPlanTransforms::removeDeadRecipes(BestVPlan);
+  VPlanTransforms::removeDeadRecipes(Plan);
 
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan);
+  VPlanTransforms::convertToConcreteRecipes(Plan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
-  VPlanTransforms::dissolveLoopRegions(BestVPlan);
+  VPlanTransforms::dissolveLoopRegions(Plan);
   // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
-  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+  VPlanTransforms::canonicalizeEVLLoops(Plan);
+  VPlanTransforms::materializeBackedgeTakenCount(Plan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()));
-  VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
-  VPlanTransforms::simplifyRecipes(BestVPlan);
+      Plan, VectorPH, CM.foldTailByMasking(),
+      CM.requiresScalarEpilogue(VF.isVector()));
+  VPlanTransforms::materializeVFAndVFxUF(Plan, VectorPH, VF);
+  VPlanTransforms::simplifyRecipes(Plan);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs =
-      VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
+  return VPlanTransforms::expandSCEVs(Plan, *PSE.getSE());
+}
+
+void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
+                                           VPlan &BestVPlan,
+                                           InnerLoopVectorizer &ILV,
+                                           DominatorTree *DT,
+                                           bool VectorizingEpilogue) {
   if (!ILV.getTripCount())
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
   else
@@ -7382,8 +7379,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.fixVectorizedLoop(State);
 
   ILV.printDebugTracesAtEnd();
-
-  return ExpandedSCEVs;
 }
 
 //===--------------------------------------------------------------------===//
@@ -8591,6 +8586,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                             m_Specific(Plan->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
     cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
+    Plan->getCanonicalIV()->dropNUW();
   }
 
   // ---------------------------------------------------------------------------
@@ -8654,8 +8650,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       // latter are added above for masking.
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe, VPBlendRecipe>(
-              &R) ||
+      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe>(&R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
 
@@ -8876,8 +8871,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder, BlockMaskCache, nullptr /*LVer*/);
   for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     auto *HeaderR = cast<VPHeaderPHIRecipe>(&R);
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
   }
@@ -9421,7 +9414,10 @@ static bool processLoopInVPlanNativePath(
                       << L->getHeader()->getParent()->getName() << "\"\n");
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, /*UF=*/1,
                                  VF.MinProfitableTripCount);
-
+    // Checks are the same for all VPlans, added to Plan only for
+    // compactness.
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+    LVP.prepareToExecute(BestPlan, VF.Width, /*UF=*/1, Checks, false);
     LVP.executePlan(VF.Width, /*UF=*/1, BestPlan, LB, DT, false);
   }
 
@@ -9629,8 +9625,6 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   SmallPtrSet<PHINode *, 2> EpiWidenedPhis;
   for (VPRecipeBase &R :
        EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
@@ -9719,51 +9713,49 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
   DenseMap<Value *, Value *> ToFrozen;
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
-  for (VPRecipeBase &R : Header->phis()) {
-    if (auto *IV = dyn_cast<VPCanonicalIVPHIRecipe>(&R)) {
-      // When vectorizing the epilogue loop, the canonical induction start
-      // value needs to be changed from zero to the value after the main
-      // vector loop. Find the resume value created during execution of the main
-      // VPlan. It must be the first phi in the loop preheader.
-      // FIXME: Improve modeling for canonical IV start values in the epilogue
-      // loop.
-      using namespace llvm::PatternMatch;
-      PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
-      for (Value *Inc : EPResumeVal->incoming_values()) {
-        if (match(Inc, m_SpecificInt(0)))
-          continue;
-        assert(!EPI.VectorTripCount &&
-               "Must only have a single non-zero incoming value");
-        EPI.VectorTripCount = Inc;
-      }
-      // If we didn't find a non-zero vector trip count, all incoming values
-      // must be zero, which also means the vector trip count is zero. Pick the
-      // first zero as vector trip count.
-      // TODO: We should not choose VF * UF so the main vector loop is known to
-      // be dead.
-      if (!EPI.VectorTripCount) {
-        assert(
-            EPResumeVal->getNumIncomingValues() > 0 &&
-            all_of(EPResumeVal->incoming_values(),
-                   [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
-            "all incoming values must be 0");
-        EPI.VectorTripCount = EPResumeVal->getOperand(0);
-      }
-      VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
-      assert(all_of(IV->users(),
-                    [](const VPUser *U) {
-                      return isa<VPScalarIVStepsRecipe>(U) ||
-                             isa<VPDerivedIVRecipe>(U) ||
-                             cast<VPRecipeBase>(U)->isScalarCast() ||
-                             cast<VPInstruction>(U)->getOpcode() ==
-                                 Instruction::Add;
-                    }) &&
-             "the canonical IV should only be used by its increment or "
-             "ScalarIVSteps when resetting the start value");
-      IV->setOperand(0, VPV);
+  auto *IV = Plan.getCanonicalIV();
+  // When vectorizing the epilogue loop, the canonical induction start value
+  // needs to be changed from zero to the value after the main vector loop. Find
+  // the resume value created during execution of the main VPlan.
+  // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
+  using namespace llvm::PatternMatch;
+  PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
+  for (Value *Inc : EPResumeVal->incoming_values()) {
+    if (match(Inc, m_SpecificInt(0)))
       continue;
-    }
+    assert(!EPI.VectorTripCount &&
+           "Must only have a single non-zero incoming value");
+    EPI.VectorTripCount = Inc;
+  }
+  // If we didn't find a non-zero vector trip count, all incoming values
+  // must be zero, which also means the vector trip count is zero. Pick the
+  // first zero as vector trip count.
+  // TODO: We should not choose VF * UF so the main vector loop is known to
+  // be dead.
+  if (!EPI.VectorTripCount) {
+    assert(EPResumeVal->getNumIncomingValues() > 0 &&
+           all_of(EPResumeVal->incoming_values(),
+                  [](Value *Inc) { return match(Inc, m_SpecificInt(0)); }) &&
+           "all incoming values must be 0");
+    EPI.VectorTripCount = EPResumeVal->getOperand(0);
+  }
+  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  assert(all_of(IV->users(),
+                [](const VPUser *U) {
+                  return isa<VPScalarIVStepsRecipe>(U) ||
+                         isa<VPDerivedIVRecipe>(U) ||
+                         cast<VPRecipeBase>(U)->isScalarCast() ||
+                         cast<VPInstruction>(U)->getOpcode() ==
+                             Instruction::Add;
+                }) &&
+         "the canonical IV should only be used by its increment or "
+         "ScalarIVSteps when resetting the start value");
+    IV->setOperand(0, VPV);
 
+
+  // Ensure that the start values for all header phi recipes are updated before
+  // vectorizing the epilogue loop.
+  for (VPRecipeBase &R : Header->phis()) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
@@ -10222,10 +10214,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       VPlanTransforms::runPass(
           VPlanTransforms::materializeConstantVectorTripCount, BestPlan,
           VF.Width, IC, PSE);
+
       LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                    VF.MinProfitableTripCount);
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+      LVP.prepareToExecute(BestPlan, VF.Width, IC, Checks, false);
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
-
       ORE->emit([&]() {
         return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
                                   L->getHeader())
@@ -10252,8 +10246,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
                                            BFI, PSI, Checks, *BestMainPlan);
-        auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
-                                             *BestMainPlan, MainILV, DT, false);
+
+        LVP.attachRuntimeChecks(*BestMainPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+        auto ExpandedSCEVs = LVP.prepareToExecute(
+            *BestMainPlan, EPI.MainLoopVF, EPI.MainLoopUF, Checks, false);
+        LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan, MainILV,
+                        DT, false);
         ++LoopsVectorized;
 
         // Second pass vectorizes the epilogue and adjusts the control flow
@@ -10263,6 +10261,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogILV.setTripCount(MainILV.getTripCount());
         preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
 
+        LVP.prepareToExecute(BestEpiPlan, EPI.EpilogueVF, EPI.EpilogueUF,
+                             Checks, true);
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
                         DT, true);
 
@@ -10293,7 +10293,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
             VF.Width, IC, PSE);
         LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                      VF.MinProfitableTripCount);
-
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
+        LVP.prepareToExecute(BestPlan, VF.Width, IC, Checks, false);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
