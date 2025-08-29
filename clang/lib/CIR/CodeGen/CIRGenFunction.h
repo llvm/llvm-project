@@ -1143,6 +1143,8 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  void emitCXXThrowExpr(const CXXThrowExpr *e);
+
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 

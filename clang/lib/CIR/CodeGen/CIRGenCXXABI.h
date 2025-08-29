@@ -53,8 +53,10 @@ public:
   }
 
   /// Emit the ABI-specific prolog for the function
-  virtual void emitInstanceFunctionProlog(SourceLocation Loc,
+  virtual void emitInstanceFunctionProlog(SourceLocation loc,
                                           CIRGenFunction &cgf) = 0;
+
+  virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
