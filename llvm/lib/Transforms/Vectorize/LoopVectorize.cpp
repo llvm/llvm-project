@@ -7206,12 +7206,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::prepareToExecute(
                              Plan, VF, VScale);
   }
 
-  if (!VectorizingEpilogue) {
-    // Checks are the same for all VPlans, added to Plan only for
-    // compactness.
-    attachRuntimeChecks(Plan, RTChecks, HasBranchWeights);
-  }
-
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(Plan.getVectorPreheader());
 
@@ -9423,6 +9417,9 @@ static bool processLoopInVPlanNativePath(
                       << L->getHeader()->getParent()->getName() << "\"\n");
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, /*UF=*/1,
                                  VF.MinProfitableTripCount);
+    // Checks are the same for all VPlans, added to Plan only for
+    // compactness.
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
     LVP.prepareToExecute(BestPlan, VF.Width, /*UF=*/1, Checks, false);
     LVP.executePlan(VF.Width, /*UF=*/1, BestPlan, LB, DT, false);
   }
@@ -10227,6 +10224,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
       LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                    VF.MinProfitableTripCount);
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
       LVP.prepareToExecute(BestPlan, VF.Width, IC, Checks, false);
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
       ORE->emit([&]() {
@@ -10255,6 +10253,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, &CM,
                                            BFI, PSI, Checks, *BestMainPlan);
+
+        LVP.attachRuntimeChecks(*BestMainPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
         auto ExpandedSCEVs = LVP.prepareToExecute(
             *BestMainPlan, EPI.MainLoopVF, EPI.MainLoopUF, Checks, false);
         LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan, MainILV,
@@ -10300,6 +10300,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
             VF.Width, IC, PSE);
         LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                      VF.MinProfitableTripCount);
+    LVP.attachRuntimeChecks(BestPlan, Checks, hasBranchWeightMD(*L->getLoopLatch()->getTerminator()));
         LVP.prepareToExecute(BestPlan, VF.Width, IC, Checks, false);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;

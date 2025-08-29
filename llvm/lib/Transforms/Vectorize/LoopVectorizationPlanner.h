@@ -570,6 +570,10 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
@@ -607,10 +611,6 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
-
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
-  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
-                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
