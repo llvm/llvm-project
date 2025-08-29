@@ -64,9 +64,8 @@ bool verifyRangeType(uint32_t Type) {
 }
 
 bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
-                               uint32_t FlagsVal) {
+                               dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-  FlagT Flags = FlagT(FlagsVal);
 
   const bool IsSampler = (Type == dxbc::DescriptorRangeType::Sampler);
 
@@ -122,6 +121,14 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
     Mask |= FlagT::DataStatic;
   }
   return (Flags & ~Mask) == FlagT::None;
+}
+
+// This is included to avoid including BinaryFormat/DXContainer to make the
+// flags conversion, since this might cause compilation times to increase.
+bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
+                               uint32_t Flags) {
+  return verifyDescriptorRangeFlag(Version, Type,
+                                   dxbc::DescriptorRangeFlags(Flags));
 }
 
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
