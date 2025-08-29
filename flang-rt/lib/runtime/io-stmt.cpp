@@ -984,6 +984,7 @@ ChildIoStatementState<DIR>::nonTbpDefinedIoTable() const {
   return child_.parent().nonTbpDefinedIoTable();
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -994,6 +995,7 @@ void ChildIoStatementState<DIR>::set_nonTbpDefinedIoTable(
   child_.parent().set_nonTbpDefinedIoTable(table);
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1003,6 +1005,7 @@ ConnectionState &ChildIoStatementState<DIR>::GetConnectionState() {
   return child_.parent().GetConnectionState();
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1012,6 +1015,7 @@ ExternalFileUnit *ChildIoStatementState<DIR>::GetExternalFileUnit() const {
   return child_.parent().GetExternalFileUnit();
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1029,6 +1033,7 @@ bool ChildIoStatementState<DIR>::Emit(
   return child_.parent().Emit(data, bytes, elementBytes);
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1038,6 +1043,7 @@ std::size_t ChildIoStatementState<DIR>::GetNextInputBytes(const char *&p) {
   return child_.parent().GetNextInputBytes(p);
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1047,6 +1053,7 @@ void ChildIoStatementState<DIR>::HandleAbsolutePosition(std::int64_t n) {
   return child_.parent().HandleAbsolutePosition(n);
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1056,6 +1063,7 @@ void ChildIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
   return child_.parent().HandleRelativePosition(n);
 #else
   ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1086,6 +1094,7 @@ bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
   return this->child().parent().AdvanceRecord(n);
 #else
   this->ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1102,6 +1111,7 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   }
 #else
   this->ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1116,6 +1126,7 @@ bool ChildListIoStatementState<DIR>::AdvanceRecord(int n) {
   }
 #else
   this->ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
@@ -1136,6 +1147,7 @@ bool ChildUnformattedIoStatementState<DIR>::Receive(
   return this->child().parent().Receive(data, bytes, elementBytes);
 #else
   this->ReportUnsupportedChildIo();
+  llvm_unreachable("unsupported child io");
 #endif
 }
 
