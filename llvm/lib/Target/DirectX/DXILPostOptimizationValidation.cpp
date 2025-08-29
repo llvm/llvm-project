@@ -249,18 +249,25 @@ static void validateRootSignature(Module &M,
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
     dxil::ResourceClass RC = RTI.getResourceClass();
     dxil::ResourceKind RK = RTI.getResourceKind();
-    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
-                           Binding.LowerBound + Binding.Size - 1)) {
-      reportRegNotBound(M, RC, Binding);
-    } else {
-      const llvm::hlsl::Binding *Reg =
-          BoundRegs.getReg(RC, Binding.Space, Binding.LowerBound);
-      const mcdxbc::RootParameterInfo *ParamInfo = static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
-      if((RC == ResourceClass::SRV || RC == ResourceClass::UAV) && 
-            ParamInfo->Type != dxbc::RootParameterType::DescriptorTable &&
-           !(RK == ResourceKind::RawBuffer || RK == ResourceKind::StructuredBuffer))
-            reportInvalidHandleTyError(M, RC, Binding);
+    std::optional<const llvm::hlsl::Binding *> Reg =
+        BoundRegs.getBoundRegister(RC, Binding.Space, Binding.LowerBound,
+                                   Binding.LowerBound + Binding.Size - 1);
+
+    if (Reg.has_value()) {
+      const auto *ParamInfo =
+          static_cast<const mcdxbc::RootParameterInfo *>((*Reg)->Cookie);
+
+      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
+        continue;
+
+      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable)
+        continue;
+
+      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer)
+        reportInvalidHandleTyError(M, RC, Binding);
+    } else {
+      reportRegNotBound(M, RC, Binding);
     }
   }
 }
