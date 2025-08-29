@@ -369,9 +369,10 @@ class DAPTestCaseBase(TestBase):
         for scope in frame_scopes:
             if scope["name"] == "Globals":
                 varRef = scope["variablesReference"]
-                return self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+                return self.dap_server.request_setVariable(
+                    varRef, name, str(value), id=id
+                )
         return None
-
 
     def get_locals_scope_reference(self):
         """Get the variablesReference for the locals scope."""
