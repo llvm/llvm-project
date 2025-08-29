@@ -437,7 +437,7 @@ void X86_64::relaxCFIJumpTables() const {
           ++rnext;
         if (rcur + 1 == rnext) {
           InputSection *target = getMovableSection(*rcur);
-          if (target && target->size <= sec->entsize &&
+          if (target && target->size != 0 && target->size <= sec->entsize &&
               target->addralign <= sec->entsize &&
               target->getParent() == targetOutputSec) {
             // Okay, we found a small enough section. Move it into the jump
