@@ -626,7 +626,6 @@ class R600_LDS_1A <bits<6> lds_op, string name, list<dag> pattern> : R600_LDS <
 
   let usesCustomInserter = 1;
   let LDS_1A = 1;
-  let DisableEncoding = "$dst";
 }
 
 class R600_LDS_1A1D <bits<6> lds_op, dag outs, string name, list<dag> pattern,
@@ -646,6 +645,7 @@ class R600_LDS_1A1D <bits<6> lds_op, dag outs, string name, list<dag> pattern,
   let src2 = 0;
   let src2_rel = 0;
   let LDS_1A1D = 1;
+  string DisableEncoding = "";
 }
 
 class R600_LDS_1A1D_NORET <bits<6> lds_op, string name, list<dag> pattern> :
@@ -688,7 +688,6 @@ class R600_LDS_1A2D_RET <bits<6> lds_op, string name, list<dag> pattern> :
 
   let BaseOp = name;
   let usesCustomInserter = 1;
-  let DisableEncoding = "$dst";
 }
 
 def LDS_ADD : R600_LDS_1A1D_NORET <0x0, "LDS_ADD", [] >;
