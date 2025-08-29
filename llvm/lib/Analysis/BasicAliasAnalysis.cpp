@@ -227,9 +227,9 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
   auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
     std::pair<Instruction *, CaptureComponents> EarliestCapture =
-        FindEarliestCapture(
-            Object, *const_cast<Function *>(DT.getRoot()->getParent()),
-            /*ReturnCaptures=*/false, DT, CaptureComponents::Provenance);
+        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
+                            /*ReturnCaptures=*/false, DT,
+                            CaptureComponents::Provenance);
     if (EarliestCapture.first)
       Inst2Obj[EarliestCapture.first].push_back(Object);
     Iter.first->second = EarliestCapture;
