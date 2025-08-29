@@ -42,6 +42,9 @@ using namespace __tsan;
 
 DECLARE_REAL(void *, memcpy, void *to, const void *from, SIZE_T size)
 DECLARE_REAL(void *, memset, void *block, int c, SIZE_T size)
+#if SANITIZER_MEMSET_EXPLICIT
+DECLARE_REAL(void *, memset_explicit, void *block, int c, SIZE_T size)
+#endif
 
 #if SANITIZER_FREEBSD || SANITIZER_APPLE
 #define stdout __stdoutp
