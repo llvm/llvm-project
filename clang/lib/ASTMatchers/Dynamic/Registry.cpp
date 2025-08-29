@@ -240,6 +240,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(enumDecl);
   REGISTER_MATCHER(enumType);
   REGISTER_MATCHER(equalsBoundNode);
+  REGISTER_MATCHER(declaresSameEntityAsBoundNode);
   REGISTER_MATCHER(equalsIntegralValue);
   REGISTER_MATCHER(explicitCastExpr);
   REGISTER_MATCHER(exportDecl);

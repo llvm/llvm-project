@@ -19,7 +19,7 @@ define void @shl_base_atomicrmw_global_ptr(ptr addrspace(1) %out, ptr addrspace(
   %cast = ptrtoint ptr addrspace(1) %arrayidx0 to i64
   %shl = shl i64 %cast, 2
   %castback = inttoptr i64 %shl to ptr addrspace(1)
-  %val = atomicrmw and ptr addrspace(1) %castback, i32 3 syncscope("agent") seq_cst
+  %val = atomicrmw and ptr addrspace(1) %castback, i32 3 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store volatile i64 %cast, ptr addrspace(1) %extra.use, align 4
   ret void
 }

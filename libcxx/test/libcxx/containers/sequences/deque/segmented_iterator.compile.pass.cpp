@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <deque>
 
 using DequeIterator = typename std::deque<int>::iterator;

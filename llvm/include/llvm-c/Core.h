@@ -2695,6 +2695,14 @@ LLVM_C_ABI void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
                                       LLVMMetadataRef MD);
 
 /**
+ * Adds a metadata attachment.
+ *
+ * @see llvm::GlobalObject::addMetadata()
+ */
+LLVM_C_ABI void LLVMGlobalAddMetadata(LLVMValueRef Global, unsigned Kind,
+                                      LLVMMetadataRef MD);
+
+/**
  * Erases a metadata attachment of the given kind if it exists.
  *
  * @see llvm::GlobalObject::eraseMetadata()
@@ -2707,6 +2715,14 @@ LLVM_C_ABI void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind);
  * @see llvm::GlobalObject::clearMetadata()
  */
 LLVM_C_ABI void LLVMGlobalClearMetadata(LLVMValueRef Global);
+
+/**
+ * Add debuginfo metadata to this global.
+ *
+ * @see llvm::GlobalVariable::addDebugInfo()
+ */
+LLVM_C_ABI void LLVMGlobalAddDebugInfo(LLVMValueRef Global,
+                                       LLVMMetadataRef GVE);
 
 /**
  * Retrieves an array of metadata entries representing the metadata attached to

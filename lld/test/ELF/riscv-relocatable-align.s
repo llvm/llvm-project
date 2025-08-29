@@ -8,12 +8,12 @@
 
 ## No RELAX. Don't synthesize ALIGN.
 # RUN: ld.lld -r bc.o dc.o -o bd.ro
-# RUN: llvm-readelf -r bd.ro | FileCheck %s --check-prefix=NOREL
 
 # NOREL: no relocations
 
 # RUN: ld.lld -r bc.o bc.o ac.o bc.o b1c.o cc.o dc.o -o out.ro
 # RUN: llvm-objdump -dr -M no-aliases out.ro | FileCheck %s
+# RUN: llvm-readelf -r out.ro | FileCheck %s --check-prefix=CHECK-REL
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax b.s -o b.o
@@ -62,6 +62,9 @@
 # CHECK-NEXT: <d0>:
 # CHECK-NEXT:  36: 00258513             addi    a0, a1, 0x2
 
+# CHECK-REL:  Relocation section '.rela.text' at offset {{.*}} contains 7 entries:
+# CHECK-REL:  Relocation section '.rela.text1' at offset {{.*}} contains 3 entries:
+
 # CHECK1:      <_start>:
 # CHECK1-NEXT:    010000ef      jal     ra, 0x10010 <foo>
 # CHECK1-NEXT:    00000013      addi zero, zero, 0x0
@@ -98,6 +101,7 @@ _start:
 .section .text1,"ax"
 .globl foo
 foo:
+  call foo
 
 #--- b.s
 ## Needs synthesized ALIGN
@@ -106,6 +110,11 @@ foo:
 .balign 8
 b0:
   addi a0, a1, 1
+
+.section .text1,"ax"
+.balign 8
+  addi a0, a1, 1
+
 .option pop
 
 #--- b1.s

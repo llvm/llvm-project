@@ -1013,12 +1013,13 @@ struct bind_const_intval_ty {
   bind_const_intval_ty(uint64_t &V) : VR(V) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (const auto *CV = dyn_cast<ConstantInt>(V))
-      if (CV->getValue().ule(UINT64_MAX)) {
-        VR = CV->getZExtValue();
-        return true;
-      }
-    return false;
+    const APInt *ConstInt;
+    if (!apint_match(ConstInt, /*AllowPoison=*/false).match(V))
+      return false;
+    if (ConstInt->getActiveBits() > 64)
+      return false;
+    VR = ConstInt->getZExtValue();
+    return true;
   }
 };
 
@@ -1325,6 +1326,45 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::AShr> m_AShr(const LHS &L,
                                                           const RHS &R) {
   return BinaryOp_match<LHS, RHS, Instruction::AShr>(L, R);
+}
+
+template <typename LHS_t, unsigned Opcode> struct ShiftLike_match {
+  LHS_t L;
+  uint64_t &R;
+
+  ShiftLike_match(const LHS_t &LHS, uint64_t &RHS) : L(LHS), R(RHS) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Opcode)
+        return m_ConstantInt(R).match(Op->getOperand(1)) &&
+               L.match(Op->getOperand(0));
+    }
+    // Interpreted as shiftop V, 0
+    R = 0;
+    return L.match(V);
+  }
+};
+
+/// Matches shl L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::Shl> m_ShlOrSelf(const LHS &L,
+                                                          uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::Shl>(L, R);
+}
+
+/// Matches lshr L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::LShr> m_LShrOrSelf(const LHS &L,
+                                                            uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::LShr>(L, R);
+}
+
+/// Matches ashr L, ConstShAmt or L itself (R will be set to zero in this case).
+template <typename LHS>
+inline ShiftLike_match<LHS, Instruction::AShr> m_AShrOrSelf(const LHS &L,
+                                                            uint64_t &R) {
+  return ShiftLike_match<LHS, Instruction::AShr>(L, R);
 }
 
 template <typename LHS_t, typename RHS_t, unsigned Opcode,

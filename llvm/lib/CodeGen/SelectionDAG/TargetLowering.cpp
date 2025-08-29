@@ -162,14 +162,17 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
-  TargetLowering::ArgListEntry Entry;
   ArrayRef<Type *> OpsTypeOverrides = CallOptions.OpsTypeOverrides;
   for (unsigned i = 0; i < Ops.size(); ++i) {
     SDValue NewOp = Ops[i];
-    Entry.Node = NewOp;
-    Entry.Ty = i < OpsTypeOverrides.size() && OpsTypeOverrides[i]
+    Type *Ty = i < OpsTypeOverrides.size() && OpsTypeOverrides[i]
                    ? OpsTypeOverrides[i]
-                   : Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+                   : NewOp.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(NewOp, Ty);
+    if (CallOptions.IsSoften)
+      Entry.OrigTy =
+          CallOptions.OpsVTBeforeSoften[i].getTypeForEVT(*DAG.getContext());
+
     Entry.IsSExt =
         shouldSignExtendTypeInLibCall(Entry.Ty, CallOptions.IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
@@ -189,18 +192,21 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
       DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
+  Type *OrigRetTy = RetTy;
   TargetLowering::CallLoweringInfo CLI(DAG);
   bool signExtend = shouldSignExtendTypeInLibCall(RetTy, CallOptions.IsSigned);
   bool zeroExtend = !signExtend;
 
-  if (CallOptions.IsSoften &&
-      !shouldExtendTypeInLibCall(CallOptions.RetVTBeforeSoften)) {
-    signExtend = zeroExtend = false;
+  if (CallOptions.IsSoften) {
+    OrigRetTy = CallOptions.RetVTBeforeSoften.getTypeForEVT(*DAG.getContext());
+    if (!shouldExtendTypeInLibCall(CallOptions.RetVTBeforeSoften))
+      signExtend = zeroExtend = false;
   }
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
+      .setLibCallee(getLibcallCallingConv(LC), RetTy, OrigRetTy, Callee,
+                    std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -420,7 +426,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { OldLHS.getValueType(),
                    OldRHS.getValueType() };
-  CallOptions.setTypeListBeforeSoften(OpsVT, RetVT, true);
+  CallOptions.setTypeListBeforeSoften(OpsVT, RetVT);
   auto Call = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl, Chain);
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
@@ -1852,8 +1858,7 @@ bool TargetLowering::SimplifyDemandedBits(
         Op->dropFlags(SDNodeFlags::NoWrap);
         return true;
       }
-      Known.Zero <<= ShAmt;
-      Known.One <<= ShAmt;
+      Known <<= ShAmt;
       // low bits known zero.
       Known.Zero.setLowBits(ShAmt);
 
@@ -2036,8 +2041,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
       // High bits known zero.
       Known.Zero.setHighBits(ShAmt);
 
@@ -2147,8 +2151,7 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
 
       // If the input sign bit is known to be zero, or if none of the top bits
       // are demanded, turn this into an unsigned shift right.
@@ -2219,10 +2222,8 @@ bool TargetLowering::SimplifyDemandedBits(
                                Depth + 1))
         return true;
 
-      Known2.One <<= (IsFSHL ? Amt : (BitWidth - Amt));
-      Known2.Zero <<= (IsFSHL ? Amt : (BitWidth - Amt));
-      Known.One.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
-      Known.Zero.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known2 <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known >>= (IsFSHL ? (BitWidth - Amt) : Amt);
       Known = Known.unionWith(Known2);
 
       // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -2357,8 +2358,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
-    Known.One = Known2.One.reverseBits();
-    Known.Zero = Known2.Zero.reverseBits();
+    Known = Known2.reverseBits();
     break;
   }
   case ISD::BSWAP: {
@@ -2391,8 +2391,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
                              Depth + 1))
       return true;
-    Known.One = Known2.One.byteSwap();
-    Known.Zero = Known2.Zero.byteSwap();
+    Known = Known2.byteSwap();
     break;
   }
   case ISD::CTPOP: {
@@ -10713,7 +10712,6 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
   SDLoc dl(GA);
 
   ArgListTy Args;
-  ArgListEntry Entry;
   const GlobalValue *GV =
       cast<GlobalValue>(GA->getGlobal()->stripPointerCastsAndAliases());
   SmallString<32> NameString("__emutls_v.");
@@ -10722,9 +10720,7 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
   const GlobalVariable *EmuTlsVar =
       GV->getParent()->getNamedGlobal(EmuTlsVarName);
   assert(EmuTlsVar && "Cannot find EmuTlsVar ");
-  Entry.Node = DAG.getGlobalAddress(EmuTlsVar, dl, PtrVT);
-  Entry.Ty = VoidPtrType;
-  Args.push_back(Entry);
+  Args.emplace_back(DAG.getGlobalAddress(EmuTlsVar, dl, PtrVT), VoidPtrType);
 
   SDValue EmuTlsGetAddr = DAG.getExternalSymbol("__emutls_get_address", PtrVT);
 

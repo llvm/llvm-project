@@ -7,8 +7,18 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
 
 #include <x86intrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/xop-intrinsics-fast-isel.ll
 
@@ -182,6 +192,7 @@ __m128i test_mm_cmov_si128(__m128i a, __m128i b, __m128i c) {
   // CHECK-NEXT: %{{.*}} = or <2 x i64> [[AND]], [[ANDN]]
   return _mm_cmov_si128(a, b, c);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cmov_si128((__m128i)(__v4si){+1,+2,+3,+4}, (__m128i)(__v4si){-4,-3,-2,-1}, (__m128i)(__v4si){-1,0,0,-1}), +1, -3, -2, +4));
 
 __m256i test_mm256_cmov_si256(__m256i a, __m256i b, __m256i c) {
   // CHECK-LABEL: test_mm256_cmov_si256
@@ -191,6 +202,7 @@ __m256i test_mm256_cmov_si256(__m256i a, __m256i b, __m256i c) {
   // CHECK-NEXT: %{{.*}} = or <4 x i64> [[AND]], [[ANDN]]
   return _mm256_cmov_si256(a, b, c);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_cmov_si256((__m256i)(__v4di){+1,+2,+3,+4}, (__m256i)(__v4di){-4,-3,-2,-1}, (__m256i)(__v4di){0,-1,0,-1}), -4, +2, -2, +4));
 
 __m128i test_mm_perm_epi8(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_perm_epi8

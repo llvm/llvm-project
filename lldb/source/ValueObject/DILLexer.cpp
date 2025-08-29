@@ -28,18 +28,23 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "coloncolon";
   case Kind::eof:
     return "eof";
+  case Kind::float_constant:
+    return "float_constant";
   case Kind::identifier:
     return "identifier";
+  case Kind::integer_constant:
+    return "integer_constant";
   case Kind::l_paren:
     return "l_paren";
   case Kind::l_square:
     return "l_square";
   case Kind::minus:
     return "minus";
-  case Kind::numeric_constant:
-    return "numeric_constant";
   case Kind::period:
     return "period";
+    return "l_square";
+  case Kind::plus:
+    return "plus";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
@@ -70,13 +75,32 @@ static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
   return candidate;
 }
 
-static bool IsNumberBodyChar(char ch) { return IsDigit(ch) || IsLetter(ch); }
+static bool IsNumberBodyChar(char ch) {
+  return IsDigit(ch) || IsLetter(ch) || ch == '.';
+}
 
-static std::optional<llvm::StringRef> IsNumber(llvm::StringRef expr,
-                                               llvm::StringRef &remainder) {
-  if (IsDigit(remainder[0])) {
-    llvm::StringRef number = remainder.take_while(IsNumberBodyChar);
-    remainder = remainder.drop_front(number.size());
+static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
+                                               bool &isFloat) {
+  llvm::StringRef tail = remainder;
+  llvm::StringRef body = tail.take_while(IsNumberBodyChar);
+  size_t dots = body.count('.');
+  if (dots > 1 || dots == body.size())
+    return std::nullopt;
+  if (IsDigit(body.front()) || (body[0] == '.' && IsDigit(body[1]))) {
+    isFloat = dots == 1;
+    tail = tail.drop_front(body.size());
+    bool isHex = body.contains_insensitive('x');
+    bool hasExp = !isHex && body.contains_insensitive('e');
+    bool hasHexExp = isHex && body.contains_insensitive('p');
+    if (hasExp || hasHexExp) {
+      isFloat = true; // This marks numbers like 0x1p1 and 1e1 as float
+      if (body.ends_with_insensitive("e") || body.ends_with_insensitive("p"))
+        if (tail.consume_front("+") || tail.consume_front("-"))
+          tail = tail.drop_while(IsNumberBodyChar);
+    }
+    size_t number_length = remainder.size() - tail.size();
+    llvm::StringRef number = remainder.take_front(number_length);
+    remainder = remainder.drop_front(number_length);
     return number;
   }
   return std::nullopt;
@@ -106,18 +130,21 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::eof, "", (uint32_t)expr.size());
 
   uint32_t position = cur_pos - expr.begin();
-  std::optional<llvm::StringRef> maybe_number = IsNumber(expr, remainder);
-  if (maybe_number)
-    return Token(Token::numeric_constant, maybe_number->str(), position);
+  bool isFloat = false;
+  std::optional<llvm::StringRef> maybe_number = IsNumber(remainder, isFloat);
+  if (maybe_number) {
+    auto kind = isFloat ? Token::float_constant : Token::integer_constant;
+    return Token(kind, maybe_number->str(), position);
+  }
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
   if (maybe_word)
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::l_paren, "("}, {Token::l_square, "["}, {Token::minus, "-"},
-      {Token::period, "."},  {Token::r_paren, ")"},  {Token::r_square, "]"},
-      {Token::star, "*"},
+      {Token::amp, "&"},      {Token::arrow, "->"},   {Token::coloncolon, "::"},
+      {Token::l_paren, "("},  {Token::l_square, "["}, {Token::minus, "-"},
+      {Token::period, "."},   {Token::plus, "+"},     {Token::r_paren, ")"},
+      {Token::r_square, "]"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

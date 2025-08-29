@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion -fexperimental-new-constant-interpreter | FileCheck %s
+
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __mmask8 test_mm_cmpeq_epu32_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_cmpeq_epu32_mask
@@ -844,6 +848,7 @@ __m256i test_mm256_and_epi32 (__m256i __A, __m256i __B) {
   //CHECK: and <8 x i32> %{{.*}}, %{{.*}}
   return _mm256_and_epi32(__A, __B);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_and_epi32((__m256i)(__v4di){7, 7, 7, 7}, (__m256i)(__v4di){3, 3, 3, 3}), 3, 3, 3, 3));
 
 __m256i test_mm256_mask_and_epi32 (__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   //CHECK-LABEL: test_mm256_mask_and_epi32
@@ -864,6 +869,7 @@ __m128i test_mm_and_epi32 (__m128i __A, __m128i __B) {
   //CHECK: and <4 x i32> %{{.*}}, %{{.*}}
   return _mm_and_epi32(__A, __B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_and_epi32((__m128i)(__v2di){7, 7}, (__m128i)(__v2di){3, 3}), 3, 3));
 
 __m128i test_mm_mask_and_epi32 (__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   //CHECK-LABEL: test_mm_mask_and_epi32
@@ -4472,6 +4478,8 @@ __m128i test_mm_mask_abs_epi32(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> [[ABS]], <4 x i32> %{{.*}}
   return _mm_mask_abs_epi32(__W,__U,__A); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_mask_abs_epi32((__m128i)(__v4si){99, 99, 99, 99}, (__mmask8)0x01, (__m128i)(__v4si){-1, 2, 2, 2}), 1, 99, 99, 99));
+
 __m128i test_mm_maskz_abs_epi32(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_abs_epi32
   // CHECK: [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %{{.*}}, i1 false)
@@ -4480,6 +4488,8 @@ __m128i test_mm_maskz_abs_epi32(__mmask8 __U, __m128i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> [[ABS]], <4 x i32> %{{.*}}
   return _mm_maskz_abs_epi32(__U,__A); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_maskz_abs_epi32((__mmask8)0x05, (__m128i)(__v4si){-1, 2, -3, 4}), 1, 0, 3, 0));
+
 __m256i test_mm256_mask_abs_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_abs_epi32
   // CHECK: [[ABS:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %{{.*}}, i1 false)
@@ -4488,6 +4498,8 @@ __m256i test_mm256_mask_abs_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> [[ABS]], <8 x i32> %{{.*}}
   return _mm256_mask_abs_epi32(__W,__U,__A); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_abs_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, (__mmask8)0x01, (__m256i)(__v8si){-1, 2, 2, 2, 2, 2, 2, 2}), 1, 99, 99, 99, 99, 99, 99, 99));
+
 __m256i test_mm256_maskz_abs_epi32(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_abs_epi32
   // CHECK: [[ABS:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %{{.*}}, i1 false)
@@ -4496,40 +4508,54 @@ __m256i test_mm256_maskz_abs_epi32(__mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> [[ABS]], <8 x i32> %{{.*}}
   return _mm256_maskz_abs_epi32(__U,__A); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_abs_epi32((__mmask8)0x01, (__m256i)(__v8si){-1, 2, 2, 2, 2, 2, 2, 2}), 1, 0, 0, 0, 0, 0, 0, 0));
+
 __m128i test_mm_abs_epi64(__m128i __A) {
   // CHECK-LABEL: test_mm_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<2 x i64> @llvm.abs.v2i64(<2 x i64> %{{.*}}, i1 false)
   return _mm_abs_epi64(__A); 
 }
+TEST_CONSTEXPR(match_v2di(_mm_abs_epi64((__m128i)(__v2di){+5, -3}), 5, 3));
+
 __m128i test_mm_mask_abs_epi64(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<2 x i64> @llvm.abs.v2i64(<2 x i64> %{{.*}}, i1 false)
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> [[ABS]], <2 x i64> %{{.*}}
   return _mm_mask_abs_epi64(__W,__U,__A); 
 }
+TEST_CONSTEXPR(match_v2di(_mm_mask_abs_epi64((__m128i)(__v2di){99, 99}, (__mmask8)0x01, (__m128i)(__v2di){-1, 2}), 1, 99));
+
 __m128i test_mm_maskz_abs_epi64(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<2 x i64> @llvm.abs.v2i64(<2 x i64> %{{.*}}, i1 false)
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> [[ABS]], <2 x i64> %{{.*}}
   return _mm_maskz_abs_epi64(__U,__A); 
 }
+TEST_CONSTEXPR(match_v2di(_mm_maskz_abs_epi64((__mmask8)0x01, (__m128i)(__v2di){-1, 2}), 1, 0));
+
 __m256i test_mm256_abs_epi64(__m256i __A) {
   // CHECK-LABEL: test_mm256_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<4 x i64> @llvm.abs.v4i64(<4 x i64> %{{.*}}, i1 false)
   return _mm256_abs_epi64(__A); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_abs_epi64((__m256i)(__v4di){+5, -3, -1000, 1000}), 5, 3, 1000, 1000));
+
 __m256i test_mm256_mask_abs_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<4 x i64> @llvm.abs.v4i64(<4 x i64> %{{.*}}, i1 false)
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> [[ABS]], <4 x i64> %{{.*}}
   return _mm256_mask_abs_epi64(__W,__U,__A); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_abs_epi64((__m256i)(__v4di){99, 99, 99, 99}, (__mmask8)0x01, (__m256i)(__v4di){-1, 2, 2, 2}), 1, 99, 99, 99));
+
 __m256i test_mm256_maskz_abs_epi64(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_abs_epi64
   // CHECK: [[ABS:%.*]] = call {{.*}}<4 x i64> @llvm.abs.v4i64(<4 x i64> %{{.*}}, i1 false)
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> [[ABS]], <4 x i64> %{{.*}}
   return _mm256_maskz_abs_epi64(__U,__A); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_abs_epi64((__mmask8)0x01, (__m256i)(__v4di){-1, 2, 2, 2}), 1, 0, 0, 0));
+
 __m128i test_mm_maskz_max_epi32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_maskz_max_epi32
   // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
@@ -5962,6 +5988,7 @@ __m128i test_mm_mask_sllv_epi64(__m128i __W, __mmask8 __U, __m128i __X, __m128i 
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_sllv_epi64(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v2di(_mm_mask_sllv_epi64((__m128i)(__v2di){99, 99}, (__mmask8)0x1, (__m128i)(__v2di){1, -3}, (__m128i)(__v2di){8, 63}), 256, 99));
 
 __m128i test_mm_maskz_sllv_epi64(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_sllv_epi64
@@ -5969,6 +5996,7 @@ __m128i test_mm_maskz_sllv_epi64(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_sllv_epi64(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_m128i(_mm_maskz_sllv_epi64((__mmask8)0x2, (__m128i)(__v2di){1, -3}, (__m128i)(__v2di){8, 63}), 0, 0x8000000000000000ULL));
 
 __m256i test_mm256_mask_sllv_epi64(__m256i __W, __mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_sllv_epi64
@@ -5976,6 +6004,7 @@ __m256i test_mm256_mask_sllv_epi64(__m256i __W, __mmask8 __U, __m256i __X, __m25
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_sllv_epi64(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_sllv_epi64((__m256i)(__v4di){99, 99, 99, 99}, (__mmask8)0x6, (__m256i)(__v4di){1, -2, 3, -4}, (__m256i)(__v4di){1, 2, 3, -4}), 99, -8, 24, 99));
 
 __m256i test_mm256_maskz_sllv_epi64(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_sllv_epi64
@@ -5983,6 +6012,7 @@ __m256i test_mm256_maskz_sllv_epi64(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_sllv_epi64(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_sllv_epi64((__mmask8)0x9, (__m256i)(__v4di){1, -2, 3, -4}, (__m256i)(__v4di){1, 2, 3, -4}), 2, 0, 0, 0));
 
 __m128i test_mm_mask_sllv_epi32(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_sllv_epi32
@@ -5990,6 +6020,7 @@ __m128i test_mm_mask_sllv_epi32(__m128i __W, __mmask8 __U, __m128i __X, __m128i 
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_mask_sllv_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_mask_sllv_epi32((__m128i)(__v4si){99, 99, 99, 99}, (__mmask8)0x0E, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 99, -8, 24, 0));
 
 __m128i test_mm_maskz_sllv_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_sllv_epi32
@@ -5997,6 +6028,7 @@ __m128i test_mm_maskz_sllv_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_sllv_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_maskz_sllv_epi32((__mmask8)0xC, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 0, 0, 24, 0));
 
 __m256i test_mm256_mask_sllv_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_sllv_epi32
@@ -6004,6 +6036,7 @@ __m256i test_mm256_mask_sllv_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m25
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_sllv_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_sllv_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, (__mmask8)0x3C, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 99, 99, 24, -64, 0, 0, 99, 99));
 
 __m256i test_mm256_maskz_sllv_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_sllv_epi32
@@ -6011,6 +6044,7 @@ __m256i test_mm256_maskz_sllv_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_sllv_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_sllv_epi32((__mmask8)0xFE, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 0, -8, 24, -64, 0, 0, 0, 0));
 
 __m128i test_mm_mask_srlv_epi64(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_srlv_epi64
@@ -6018,6 +6052,7 @@ __m128i test_mm_mask_srlv_epi64(__m128i __W, __mmask8 __U, __m128i __X, __m128i 
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_mask_srlv_epi64(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_m128i(_mm_mask_srlv_epi64((__m128i)(__v2di){99, 99}, (__mmask8)0x1, (__m128i)(__v2di){1, -3}, (__m128i)(__v2di){8, 63}), 0, 99));
 
 __m128i test_mm_maskz_srlv_epi64(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_srlv_epi64
@@ -6025,6 +6060,7 @@ __m128i test_mm_maskz_srlv_epi64(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm_maskz_srlv_epi64(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_m128i(_mm_maskz_srlv_epi64((__mmask8)0x2, (__m128i)(__v2di){1, -3}, (__m128i)(__v2di){8, 63}), 0, 1));
 
 __m256i test_mm256_mask_srlv_epi64(__m256i __W, __mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_srlv_epi64
@@ -6032,6 +6068,7 @@ __m256i test_mm256_mask_srlv_epi64(__m256i __W, __mmask8 __U, __m256i __X, __m25
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_srlv_epi64(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_m256i(_mm256_mask_srlv_epi64((__m256i)(__v4di){99, 99, 99, 99}, (__mmask8)0x6, (__m256i)(__v4di){1, -2, 3, -4}, (__m256i)(__v4di){1, 2, 3, -4}), 99, 0x3FFFFFFFFFFFFFFFULL, 0, 99));
 
 __m256i test_mm256_maskz_srlv_epi64(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_srlv_epi64
@@ -6039,6 +6076,7 @@ __m256i test_mm256_maskz_srlv_epi64(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_srlv_epi64(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_m256i(_mm256_maskz_srlv_epi64((__mmask8)0x1, (__m256i)(__v4di){1, -2, 3, -4}, (__m256i)(__v4di){1, 2, 3, -4}), 0, 0, 0, 0));
 
 __m128i test_mm_mask_srlv_epi32(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_srlv_epi32
@@ -6046,6 +6084,7 @@ __m128i test_mm_mask_srlv_epi32(__m128i __W, __mmask8 __U, __m128i __X, __m128i 
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_mask_srlv_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_mask_srlv_epi32((__m128i)(__v4si){99, 99, 99, 99}, (__mmask8)0x0E, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 99, 1073741823, 0, 0));
 
 __m128i test_mm_maskz_srlv_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_srlv_epi32
@@ -6053,6 +6092,7 @@ __m128i test_mm_maskz_srlv_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_srlv_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_maskz_srlv_epi32((__mmask8)0xC, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 0, 0, 0, 0));
 
 __m256i test_mm256_mask_srlv_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_srlv_epi32
@@ -6060,6 +6100,7 @@ __m256i test_mm256_mask_srlv_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m25
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_srlv_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_srlv_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, (__mmask8)0x3C, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 99, 99, 0, 268435455, 0, 1, 99, 99));
 
 __m256i test_mm256_maskz_srlv_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_srlv_epi32
@@ -6067,6 +6108,7 @@ __m256i test_mm256_maskz_srlv_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_srlv_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_srlv_epi32((__mmask8)0x9E, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 0, 1073741823, 0, 268435455, 0, 0, 0, 7));
 
 __m128i test_mm_mask_srl_epi32(__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_srl_epi32
@@ -6130,6 +6172,7 @@ __m256i test_mm256_mask_srli_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_srli_epi32(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_srli_epi32((__m256i)(__v8si){100, 101, 102, 103, 104, 105, 106, 107}, (__mmask8)0xff, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}, 3), 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0));
 
 __m256i test_mm256_mask_srli_epi32_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_srli_epi32_2
@@ -6144,6 +6187,7 @@ __m256i test_mm256_maskz_srli_epi32(__mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_srli_epi32(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_srli_epi32((__mmask8)0x71, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 1), 0x7f, 0, 0, 0, 0x2, 0x2, 0x3, 0));
 
 __m256i test_mm256_maskz_srli_epi32_2(__mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_srli_epi32_2
@@ -6213,6 +6257,7 @@ __m256i test_mm256_mask_srli_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_srli_epi64(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_srli_epi64((__m256i)(__v4di){100, 101, 102, 103}, (__mmask8)0b1010, (__m256i)(__v4di){0, 0xff80, 2, 3}, 1), 100, 0x7fc0, 102, 0x1));
 
 __m256i test_mm256_mask_srli_epi64_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_srli_epi64_2
@@ -6227,6 +6272,7 @@ __m256i test_mm256_maskz_srli_epi64(__mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_srli_epi64(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_srli_epi64((__mmask8)0x71, (__m256i)(__v4di){0xff, 1, 2, 3}, 1), 0x7f, 0, 0, 0));
 
 __m256i test_mm256_maskz_srli_epi64_2(__mmask8 __U,__m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_srli_epi64_2
@@ -6297,6 +6343,7 @@ __m256i test_mm256_mask_slli_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_slli_epi32(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_slli_epi32((__m256i)(__v8si){100, 101, 102, 103, 104, 105, 106, 107}, (__mmask8)0xff, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}, 3), 0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38));
 
 __m256i test_mm256_mask_slli_epi32_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_slli_epi32_2
@@ -6311,6 +6358,11 @@ __m256i test_mm256_maskz_slli_epi32(__mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_slli_epi32(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_slli_epi32((__mmask8)0x00ffcc71, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 32), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_slli_epi32((__mmask8)0, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 16), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_slli_epi32((__mmask8)0xff, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 1), 0x1fe, 0x2, 0x4, 0x6, 0x8, 0xa, 0xc, 0xe));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_slli_epi32((__mmask8)0x7, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 1), 0x1fe, 0x2, 0x4, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_slli_epi32((__mmask8)0x71, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 1), 0x1fe, 0, 0, 0, 0x8, 0xa, 0xc, 0));
 
 __m256i test_mm256_maskz_slli_epi32_2(__mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_slli_epi32_2
@@ -6381,6 +6433,7 @@ __m256i test_mm256_mask_slli_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_slli_epi64(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_slli_epi64((__m256i)(__v4di){100, 101, 102, 103}, (__mmask8)0b1010, (__m256i)(__v4di){0, 1, 2, 3}, 4), 100, 0x10, 102, 0x30));
 
 __m256i test_mm256_mask_slli_epi64_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_slli_epi64_2
@@ -6395,6 +6448,11 @@ __m256i test_mm256_maskz_slli_epi64(__mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_slli_epi64(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_slli_epi64((__mmask8)0x00ffcc71, (__m256i)(__v4di){0xff, 1, 2, 3}, 64), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_slli_epi64((__mmask8)0, (__m256i)(__v4di){0xff, 1, 2, 3}, 16), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_slli_epi64((__mmask8)0xff, (__m256i)(__v4di){0xff, 1, 2, 3}, 1), 0x1fe, 0x2, 0x4, 0x6));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_slli_epi64((__mmask8)0x7, (__m256i)(__v4di){0xff, 1, 2, 3}, 1), 0x1fe, 0x2, 0x4, 0));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_slli_epi64((__mmask8)0x71, (__m256i)(__v4di){0xff, 1, 2, 3}, 1), 0x1fe, 0, 0, 0));
 
 __m256i test_mm256_maskz_slli_epi64_2(__mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_slli_epi64_2
@@ -6409,6 +6467,7 @@ __m128i test_mm_mask_srav_epi32(__m128i __W, __mmask8 __U, __m128i __X, __m128i 
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_mask_srav_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_mask_srav_epi32((__m128i)(__v4si){99, 99, 99, 99}, (__mmask8)0x0E, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 99, -1, 0, -1));
 
 __m128i test_mm_maskz_srav_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_maskz_srav_epi32
@@ -6416,6 +6475,7 @@ __m128i test_mm_maskz_srav_epi32(__mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
   return _mm_maskz_srav_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_maskz_srav_epi32((__mmask8)0xC, (__m128i)(__v4si){1, -2, 3, -4}, (__m128i)(__v4si){1, 2, 3, -4}), 0, 0, 0, -1));
 
 __m256i test_mm256_mask_srav_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_mask_srav_epi32
@@ -6423,6 +6483,7 @@ __m256i test_mm256_mask_srav_epi32(__m256i __W, __mmask8 __U, __m256i __X, __m25
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_srav_epi32(__W, __U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_srav_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, (__mmask8)0x3C, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 99, 99, 0, -1, 0, -1, 99, 99));
 
 __m256i test_mm256_maskz_srav_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_srav_epi32
@@ -6430,6 +6491,7 @@ __m256i test_mm256_maskz_srav_epi32(__mmask8 __U, __m256i __X, __m256i __Y) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_srav_epi32(__U, __X, __Y); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_srav_epi32((__mmask8)0x9E, (__m256i)(__v8si){1, -2, 3, -4, 5, -6, 7, -8}, (__m256i)(__v8si){1, 2, 3, 4, -17, 31, 33, 29}), 0, -1, 0, -1, 0, 0, 0, -1));
 
 __m128i test_mm_srav_epi64(__m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_srav_epi64
@@ -7683,6 +7745,7 @@ __m256i test_mm256_mask_srai_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_srai_epi32(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_srai_epi32((__m256i)(__v8si){100, 101, 102, 103, 104, 105, 106, 107}, (__mmask8)0xff, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}, 3), 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0));
 
 __m256i test_mm256_mask_srai_epi32_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_srai_epi32_2
@@ -7697,6 +7760,7 @@ __m256i test_mm256_maskz_srai_epi32(__mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_srai_epi32(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_srai_epi32((__mmask8)0x71, (__m256i)(__v8si){0xff, 1, 2, 3, 4, 5, 6, 7}, 1), 0x7f, 0, 0, 0, 0x2, 0x2, 0x3, 0));
 
 __m256i test_mm256_maskz_srai_epi32_2(__mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_srai_epi32_2
@@ -7750,6 +7814,7 @@ __m128i test_mm_srai_epi64(__m128i __A) {
   // CHECK: @llvm.x86.avx512.psrai.q.128
   return _mm_srai_epi64(__A, 5); 
 }
+TEST_CONSTEXPR(match_v2di(_mm_srai_epi64((__m128i)(__v2di){-32768, -3}, 1), -16384, -2));
 
 __m128i test_mm_srai_epi64_2(__m128i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm_srai_epi64_2
@@ -7790,6 +7855,7 @@ __m256i test_mm256_srai_epi64(__m256i __A) {
   // CHECK: @llvm.x86.avx512.psrai.q.256
   return _mm256_srai_epi64(__A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_srai_epi64((__m256i)(__v4di){-32768, 32767, -3, -2}, 1), -16384, 16383, -2, -1));
 
 __m256i test_mm256_srai_epi64_2(__m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_srai_epi64_2
@@ -7803,6 +7869,7 @@ __m256i test_mm256_mask_srai_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_srai_epi64(__W, __U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_srai_epi64((__m256i)(__v4di){100, 101, 102, 103}, (__mmask8)0b1010, (__m256i)(__v4di){0,-128, 2, 3}, 2), 100, -32, 102, 0x0));
 
 __m256i test_mm256_mask_srai_epi64_2(__m256i __W, __mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_mask_srai_epi64_2
@@ -7817,6 +7884,7 @@ __m256i test_mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_srai_epi64(__U, __A, 5); 
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_srai_epi64((__mmask8)0x71, (__m256i)(__v4di){0xff, 1, 2, 3}, 1), 0x7f, 0, 0, 0));
 
 __m256i test_mm256_maskz_srai_epi64_2(__mmask8 __U, __m256i __A, unsigned int __B) {
   // CHECK-LABEL: test_mm256_maskz_srai_epi64_2
@@ -8121,6 +8189,7 @@ __m256 test_mm256_broadcast_f32x4(__m128 __A) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   return _mm256_broadcast_f32x4(__A); 
 }
+TEST_CONSTEXPR(match_m256(_mm256_broadcast_f32x4((__m128)(__v4sf){1.0f, 3.0f, -5.0f, -8.0f}), 1.0f, 3.0f, -5.0f, -8.0f, 1.0f, 3.0f, -5.0f, -8.0f));
 
 __m256 test_mm256_mask_broadcast_f32x4(__m256 __O, __mmask8 __M, __m128 __A) {
   // CHECK-LABEL: test_mm256_mask_broadcast_f32x4
@@ -8141,6 +8210,7 @@ __m256i test_mm256_broadcast_i32x4(__m128i const* __A) {
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   return _mm256_broadcast_i32x4(_mm_loadu_si128(__A)); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_broadcast_i32x4((__m128i)(__v4si){1, 3, -5, -8}), 1, 3, -5, -8, 1, 3, -5, -8));
 
 __m256i test_mm256_mask_broadcast_i32x4(__m256i __O, __mmask8 __M, __m128i const* __A) {
   // CHECK-LABEL: test_mm256_mask_broadcast_i32x4
@@ -9514,48 +9584,56 @@ __m128d test_mm_mask_mov_pd(__m128d __W, __mmask8 __U, __m128d __A) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_mask_mov_pd(__W, __U, __A);
 }
+TEST_CONSTEXPR(match_m128d(_mm_mask_mov_pd((__m128d){-2.0, -1.0}, 0x2, (__m128d){+1.0, +2.0}), -2.0, +2.0));
 
 __m128d test_mm_maskz_mov_pd(__mmask8 __U, __m128d __A) {
   // CHECK-LABEL: test_mm_maskz_mov_pd
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm_maskz_mov_pd(__U, __A);
 }
+TEST_CONSTEXPR(match_m128d(_mm_maskz_mov_pd(0x1, (__m128d){+1.0, +2.0}), +1.0, +0.0));
 
 __m256d test_mm256_mask_mov_pd(__m256d __W, __mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_mask_mov_pd
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_mov_pd(__W, __U, __A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_mask_mov_pd((__m256d){-4.0, -3.0, -2.0, -1.0}, 0x3, (__m256d){+1.0, +2.0, +3.0, +4.0}), +1.0, +2.0, -2.0, -1.0));
 
 __m256d test_mm256_maskz_mov_pd(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_maskz_mov_pd
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_mov_pd(__U, __A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_mov_pd(0xC, (__m256d){+1.0, +2.0, +3.0, +4.0}), 0.0, 0.0, +3.0, +4.0));
 
 __m128 test_mm_mask_mov_ps(__m128 __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_mask_mov_ps
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_mov_ps(__W, __U, __A);
 }
+TEST_CONSTEXPR(match_m128(_mm_mask_mov_ps((__m128){-4.0f, -3.0f, -2.0f, -1.0f}, 0x3, (__m128){+1.0f, +2.0f, +3.0f, +4.0f}), +1.0f, +2.0f, -2.0f, -1.0f));
 
 __m128 test_mm_maskz_mov_ps(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_maskz_mov_ps
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_mov_ps(__U, __A);
 }
+TEST_CONSTEXPR(match_m128(_mm_maskz_mov_ps(0xC, (__m128){+1.0f, +2.0f, +3.0f, +4.0f}), 0.0f, 0.0f, +3.0f, +4.0f));
 
 __m256 test_mm256_mask_mov_ps(__m256 __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_mask_mov_ps
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_mov_ps(__W, __U, __A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_mask_mov_ps((__m256){-8.0f, -7.0f, -6.0f, -5.0f, -4.0f, -3.0f, -2.0f, -1.0f}, 0xC3, (__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}), +1.0f, +2.0f, -6.0f, -5.0f, -4.0f, -3.0f, +7.0f, +8.0f));
 
 __m256 test_mm256_maskz_mov_ps(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_maskz_mov_ps
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_mov_ps(__U, __A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_maskz_mov_ps(0xC3, (__m256){+1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}), +1.0f, +2.0f, 0.0f, 0.0f, 0.0f, 0.0f, +7.0f, +8.0f));
 
 __m128 test_mm_mask_cvtph_ps(__m128 __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtph_ps

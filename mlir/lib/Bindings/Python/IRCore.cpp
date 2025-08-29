@@ -196,7 +196,7 @@ operations.
 
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
-nb::object classmethod(Func f, Args... args) {
+static nb::object classmethod(Func f, Args... args) {
   nb::object cf = nb::cpp_function(f, args...);
   return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
 }
@@ -729,24 +729,24 @@ size_t PyMlirContext::clearLiveOperations() {
 }
 
 void PyMlirContext::clearOperation(MlirOperation op) {
-  PyOperation *py_op;
+  PyOperation *pyOp;
   {
     nb::ft_lock_guard lock(liveOperationsMutex);
     auto it = liveOperations.find(op.ptr);
     if (it == liveOperations.end()) {
       return;
     }
-    py_op = it->second.second;
+    pyOp = it->second.second;
     liveOperations.erase(it);
   }
-  py_op->setInvalid();
+  pyOp->setInvalid();
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
-  typedef struct {
+  using callBackData = struct {
     PyOperation &rootOp;
     bool rootSeen;
-  } callBackData;
+  };
   callBackData data{op.getOperation(), false};
   // Mark all ops below the op that the passmanager will be rooted
   // at (but not op itself - note the preorder) as invalid.
@@ -2105,7 +2105,7 @@ nb::object PyOpView::buildGeneric(
   // Delegate to create.
   return PyOperation::create(name,
                              /*results=*/std::move(resultTypes),
-                             /*operands=*/std::move(operands),
+                             /*operands=*/operands,
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
                              /*regions=*/*regions, location, maybeIp,
@@ -2786,6 +2786,72 @@ private:
   PyOperationRef operation;
 };
 
+// see
+// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
+
+#ifndef _Py_CAST
+#define _Py_CAST(type, expr) ((type)(expr))
+#endif
+
+// Static inline functions should use _Py_NULL rather than using directly NULL
+// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
+// _Py_NULL is defined as nullptr.
+#ifndef _Py_NULL
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
+    (defined(__cplusplus) && __cplusplus >= 201103)
+#define _Py_NULL nullptr
+#else
+#define _Py_NULL NULL
+#endif
+#endif
+
+// Python 3.10.0a3
+#if PY_VERSION_HEX < 0x030A00A3
+
+// bpo-42262 added Py_XNewRef()
+#if !defined(Py_XNewRef)
+[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
+  Py_XINCREF(obj);
+  return obj;
+}
+#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
+#endif
+
+// bpo-42262 added Py_NewRef()
+#if !defined(Py_NewRef)
+[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
+  Py_INCREF(obj);
+  return obj;
+}
+#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
+#endif
+
+#endif // Python 3.10.0a3
+
+// Python 3.9.0b1
+#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
+
+// bpo-40429 added PyThreadState_GetFrame()
+PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
+  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
+  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
+}
+
+// bpo-40421 added PyFrame_GetBack()
+PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
+  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
+  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
+}
+
+// bpo-40421 added PyFrame_GetCode()
+PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
+  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
+  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
+  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
+}
+
+#endif // Python 3.9.0b1
+
 MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
@@ -2812,7 +2878,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
-#if PY_VERSION_HEX < 0x030b00f0
+    // co_qualname and PyCode_Addr2Location added in py3.11
+#if PY_VERSION_HEX < 0x030B00F0
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
     llvm::StringRef funcName(name);
@@ -2820,7 +2887,6 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     MlirLocation loc =
         mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
 #else
-    // co_qualname and PyCode_Addr2Location added in py3.11
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
     llvm::StringRef funcName(name);

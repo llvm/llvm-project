@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
@@ -268,12 +269,13 @@ TEST_P(CASTest, NodesBig) {
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
 
+#if LLVM_ENABLE_THREADS
 /// Common test functionality for creating blobs in parallel. You can vary which
 /// cas instances are the same or different, and the size of the created blobs.
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
                               ObjectStore &Write1, ObjectStore &Write2,
                               uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel);
+  SCOPED_TRACE("testBlobsParallel");
   unsigned BlobCount = 100;
   std::vector<std::string> Blobs;
   Blobs.reserve(BlobCount);
@@ -315,17 +317,17 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 
   DefaultThreadPool Threads;
   for (unsigned I = 0; I < BlobCount; ++I) {
-    Threads.async(Consumer, I, &Read1);
-    Threads.async(Consumer, I, &Read2);
     Threads.async(Producer, I, &Write1);
     Threads.async(Producer, I, &Write2);
+    Threads.async(Consumer, I, &Read1);
+    Threads.async(Consumer, I, &Read2);
   }
 
   Threads.wait();
 }
 
 static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel1);
+  SCOPED_TRACE("testBlobsParallel1");
   testBlobsParallel(CAS, CAS, CAS, CAS, BlobSize);
 }
 
@@ -342,4 +344,5 @@ TEST_P(CASTest, BlobsBigParallel) {
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
-#endif
+#endif // EXPENSIVE_CHECKS
+#endif // LLVM_ENABLE_THREADS

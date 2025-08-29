@@ -29,8 +29,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP25]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP25]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP8]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <vscale x 8 x i32> [[TMP10]], [[BROADCAST_SPLAT8]]
@@ -54,7 +53,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP26]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1001
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]

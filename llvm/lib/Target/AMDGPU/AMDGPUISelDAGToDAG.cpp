@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #ifdef EXPENSIVE_CHECKS
@@ -74,6 +75,40 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
   }
 
   return false;
+}
+
+static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
+                                        llvm::SelectionDAG *CurDAG,
+                                        const GCNSubtarget *Subtarget) {
+  if (!Subtarget->useRealTrue16Insts()) {
+    return Lo;
+  }
+
+  SDValue NewSrc;
+  SDLoc SL(Lo);
+
+  if (Lo->isDivergent()) {
+    SDValue Undef = SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
+                                                   SL, Lo.getValueType()),
+                            0);
+    const SDValue Ops[] = {
+        CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, SL, MVT::i32), Lo,
+        CurDAG->getTargetConstant(AMDGPU::lo16, SL, MVT::i16), Undef,
+        CurDAG->getTargetConstant(AMDGPU::hi16, SL, MVT::i16)};
+
+    NewSrc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
+                                            Src.getValueType(), Ops),
+                     0);
+  } else {
+    // the S_MOV is needed since the Lo could still be a VGPR16.
+    // With S_MOV, isel insert a "sgpr32 = copy vgpr16" and we reply on
+    // the fixvgpr2sgprcopy pass to legalize it
+    NewSrc = SDValue(
+        CurDAG->getMachineNode(AMDGPU::S_MOV_B32, SL, Src.getValueType(), Lo),
+        0);
+  }
+
+  return NewSrc;
 }
 
 // Look through operations that obscure just looking at the low 16-bits of the
@@ -1162,18 +1197,25 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
+  SDVTList VTList;
   unsigned Opc;
-  if (Subtarget->hasMADIntraFwdBug())
-    Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
-                 : AMDGPU::V_MAD_U64_U32_gfx11_e64;
-  else
-    Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+  if (Subtarget->hasMadU64U32NoCarry()) {
+    VTList = CurDAG->getVTList(MVT::i64);
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
+  } else {
+    VTList = CurDAG->getVTList(MVT::i64, MVT::i1);
+    if (Subtarget->hasMADIntraFwdBug()) {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
+                   : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+    } else {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+    }
+  }
 
   SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
-  SDNode *Mad = CurDAG->getMachineNode(
-      Opc, SL, CurDAG->getVTList(MVT::i64, MVT::i1), Ops);
+  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, VTList, Ops);
   if (!SDValue(N, 0).use_empty()) {
     SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
     SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
@@ -3412,8 +3454,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
       // Really a scalar input. Just select from the low half of the register to
       // avoid packing.
 
-      if (VecSize == 32 || VecSize == Lo.getValueSizeInBits()) {
+      if (VecSize == Lo.getValueSizeInBits()) {
         Src = Lo;
+      } else if (VecSize == 32) {
+        Src = createVOP3PSrc32FromLo16(Lo, Src, CurDAG, Subtarget);
       } else {
         assert(Lo.getValueSizeInBits() == 32 && VecSize == 64);
 

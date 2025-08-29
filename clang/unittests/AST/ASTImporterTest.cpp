@@ -9189,7 +9189,7 @@ protected:
                          .getTypePtr();
     ASSERT_TRUE(Ty);
     EXPECT_FALSE(Ty->isCanonicalUnqualified());
-    const auto *InjTy = Ty->castAs<InjectedClassNameType>();
+    const auto *InjTy = dyn_cast<InjectedClassNameType>(Ty);
     EXPECT_TRUE(InjTy);
     for (const Decl *ReD : D->redecls()) {
       if (ReD == D)
@@ -9204,8 +9204,6 @@ protected:
       EXPECT_FALSE(ReTy->isCanonicalUnqualified());
       EXPECT_NE(ReTy, Ty);
       EXPECT_TRUE(Ctx.hasSameType(ReTy, Ty));
-      const auto *ReInjTy = Ty->castAs<InjectedClassNameType>();
-      EXPECT_TRUE(ReInjTy);
     }
   }
 
