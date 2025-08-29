@@ -3,54 +3,46 @@
 
 source_filename = "/usr/local/google/home/fmayer/loop/src3.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @foo(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo(
+define dso_local void @can_optimize_trap(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @can_optimize_trap(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[BLOCK_SIZE]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 1024)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 1024, [[UMIN]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 3, [[UMIN]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -63,13 +55,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -77,11 +67,10 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   store i8 %1, ptr %arrayidx7, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
   %cmp = icmp ult i32 %inc, %block_size
@@ -89,49 +78,42 @@ if.end4:                                          ; preds = %for.body
 }
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @foo_atomic(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo_atomic(
+define dso_local void @cannot_optimize_atomic(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @cannot_optimize_atomic(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[INDVARS_IV]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[IF_THEN:.*]], label %[[IF_END4]]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_015]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store atomic i8 [[TMP4]], ptr [[ARRAYIDX7]] unordered, align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store atomic i8 [[TMP4]], ptr [[ARRAYIDX7]] unordered, align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -144,13 +126,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -158,11 +138,10 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   store atomic i8 %1, ptr %arrayidx7 unordered, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
   %cmp = icmp ult i32 %inc, %block_size
@@ -170,49 +149,42 @@ if.end4:                                          ; preds = %for.body
 }
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @foo_volatile(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo_volatile(
+define dso_local void @cannot_optimize_volatile(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @cannot_optimize_volatile(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[INDVARS_IV]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[IF_THEN:.*]], label %[[IF_END4]]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_015]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store volatile i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store volatile i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -225,13 +197,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -239,11 +209,10 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   store volatile i8 %1, ptr %arrayidx7, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
   %cmp = icmp ult i32 %inc, %block_size
@@ -251,50 +220,43 @@ if.end4:                                          ; preds = %for.body
 }
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @foo_call(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo_call(
+define dso_local void @cannot_optimize_call(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @cannot_optimize_call(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[INDVARS_IV]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[IF_THEN:.*]], label %[[IF_END4]]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_015]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
 ; CHECK-NEXT:    call void @x(ptr null)
-; CHECK-NEXT:    store volatile i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8]]
+; CHECK-NEXT:    store volatile i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -307,13 +269,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -321,11 +281,10 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   call void @x(ptr null)
   store volatile i8 %1, ptr %arrayidx7, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
@@ -333,51 +292,44 @@ if.end4:                                          ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !8
 }
 
-define dso_local void @foo_ubsan(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo_ubsan(
+define dso_local void @can_optimize_ubsan_trap(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @can_optimize_ubsan_trap(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[BLOCK_SIZE]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 1024)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 1024, [[UMIN]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 3, [[UMIN]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @llvm.ubsantrap(i8 1)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -390,13 +342,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -404,60 +354,52 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   store i8 %1, ptr %arrayidx7, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
   %cmp = icmp ult i32 %inc, %block_size
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !8
 }
 
-define dso_local void @foo_randomcall(i32 noundef %block_size) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @foo_randomcall(
+define dso_local void @cannot_optimize_arbitrary_call(i32 noundef %block_size) local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local void @cannot_optimize_arbitrary_call(
 ; CHECK-SAME: i32 noundef [[BLOCK_SIZE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [1025 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
+; CHECK-NEXT:    [[FOO_ARR:%.*]] = alloca [2 x i8], align 16
+; CHECK-NEXT:    [[BAR_ARR:%.*]] = alloca [2 x i8], align 16
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[FOO_ARR]])
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[BLOCK_SIZE]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    call void @x(ptr noundef nonnull [[BAR_ARR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BAR_ARR]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[FOO_ARR]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[INDVARS_IV]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[IF_THEN:.*]], label %[[IF_END4]]
+; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC:%.*]], %[[IF_END4:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I_015]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_THEN:.*]], label %[[IF_END4]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @noreturn(ptr [[FOO_ARR]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END4]]:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1024 x i8], ptr [[FOO_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP3]], 54
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP8]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [1025 x i8], ptr [[BAR_ARR]], i64 0, i32 [[I_015]]
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[ARRAYIDX7]], align 1, !tbaa [[TBAA4]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_015]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[INC]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7]]
 ;
 entry:
-  %foo_arr = alloca [1024 x i8], align 16
-  %bar_arr = alloca [1025 x i8], align 16
-  call void @llvm.lifetime.start.p0(ptr nonnull %foo_arr) #4
-  call void @llvm.lifetime.start.p0(ptr nonnull %bar_arr) #4
+  %foo_arr = alloca [2 x i8], align 16
+  %bar_arr = alloca [2 x i8], align 16
   call void @x(ptr noundef nonnull %foo_arr)
   %cmp14.not = icmp eq i32 %block_size, 0
   br i1 %cmp14.not, label %for.cond.cleanup, label %for.body.preheader
@@ -470,13 +412,11 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end4
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   call void @x(ptr noundef nonnull %bar_arr)
-  call void @llvm.lifetime.end.p0(ptr nonnull %bar_arr) #4
-  call void @llvm.lifetime.end.p0(ptr nonnull %foo_arr) #4
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end4
   %i.015 = phi i32 [ %inc, %if.end4 ], [ 0, %for.body.preheader ]
-  %cmp1 = icmp samesign ugt i32 %i.015, 1023
+  %cmp1 = icmp samesign ugt i32 %i.015, 2
   br i1 %cmp1, label %if.then, label %if.end4
 
 if.then:                                          ; preds = %for.body
@@ -484,53 +424,42 @@ if.then:                                          ; preds = %for.body
   unreachable
 
 if.end4:                                          ; preds = %for.body
-  %idxprom = zext nneg i32 %i.015 to i64
-  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i64 %idxprom
+  %arrayidx = getelementptr inbounds nuw [1024 x i8], ptr %foo_arr, i64 0, i32 %i.015
   %0 = load i8, ptr %arrayidx, align 1, !tbaa !5
   %1 = xor i8 %0, 54
-  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i64 %idxprom
+  %arrayidx7 = getelementptr inbounds nuw [1025 x i8], ptr %bar_arr, i64 0, i32 %i.015
   store i8 %1, ptr %arrayidx7, align 1, !tbaa !5
   %inc = add nuw nsw i32 %i.015, 1
   %cmp = icmp ult i32 %inc, %block_size
   br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !8
 }
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(ptr captures(none)) #1
-
-declare void @x(ptr noundef) local_unnamed_addr #2
+declare void @x(ptr noundef) local_unnamed_addr
 
 ; Function Attrs: cold noreturn nounwind memory(inaccessiblemem: write)
-declare void @llvm.trap() #3
+declare void @llvm.trap() #2
+declare void @noreturn(ptr) #2
 
-declare void @noreturn(ptr) #3
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(ptr captures(none)) #1
-
-attributes #0 = { mustprogress uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #0 = { mustprogress  }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #3 = { cold noreturn nounwind memory(inaccessiblemem: write) }
-attributes #4 = { nounwind }
+attributes #2 = { cold noreturn nounwind memory(inaccessiblemem: write) }
+attributes #3 = { nounwind }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
-!llvm.ident = !{!4}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 7, !"PIE Level", i32 2}
 !3 = !{i32 7, !"uwtable", i32 2}
-!4 = !{!"clang version 22.0.0git (/usr/local/google/home/fmayer/large/llvm-project/clang 9bebffa6127aff780f20cc05694c31230580d4ff)"}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}
 !7 = !{!"Simple C++ TBAA"}
 !8 = distinct !{!8, !9}
 !9 = !{!"llvm.loop.mustprogress"}
 ;.
-; CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-; CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-; CHECK: [[META7]] = !{!"Simple C++ TBAA"}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; CHECK: [[META6]] = !{!"Simple C++ TBAA"}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
 ;.

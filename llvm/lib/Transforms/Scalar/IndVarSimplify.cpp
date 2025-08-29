@@ -1839,7 +1839,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
           // reordering is valid.
           // We also could be smarter about atomic, and check whether the
           // local has leaked.
-          if (SI->isAtomic() || SI->isVolatile() ||
+          if (!SI->isSimple() ||
               findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
             return false;
         } else {
