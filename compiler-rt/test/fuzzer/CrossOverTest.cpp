@@ -45,6 +45,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // fprintf(stderr, "ExpectedHash: %x\n", ExpectedHash);
   if (Size == 10 && ExpectedHash == simple_hash(Data, Size))
     *NullPtr = 0;
+  // It's UB to read *Data when Size == 0
+  if (Size == 0)
+    return;
   if (*Data == 'A')
     Sink++;
   if (*Data == 'Z')
