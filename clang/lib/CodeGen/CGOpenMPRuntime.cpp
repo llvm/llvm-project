@@ -6782,8 +6782,7 @@ static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
   assert(LocRHS.isValid() && "RHS expression must have valid source location");
 
   // Compare source locations for deterministic ordering
-  bool result = LocLHS < LocRHS;
-  return result;
+  return LocLHS < LocRHS;
 }
 
 // Utility to handle information from clauses associated with a given
@@ -7090,11 +7089,19 @@ public:
     Address LB = Address::invalid();
     bool IsArraySection = false;
     bool HasCompleteRecord = false;
-    // ATTACH information for delayed processing
+  };
+
+  /// A struct to store the attach pointer and pointee information, to be used
+  /// when emitting an attach entry.
+  struct AttachInfoTy {
     Address AttachPtrAddr = Address::invalid();
     Address AttachPteeAddr = Address::invalid();
     const ValueDecl *AttachPtrDecl = nullptr;
     const Expr *AttachMapExpr = nullptr;
+
+    bool isValid() const {
+      return AttachPtrAddr.isValid() && AttachPteeAddr.isValid();
+    }
   };
 
   /// Check if there's any component list where the attach pointer expression
@@ -8436,9 +8443,8 @@ private:
   /// Returns the address corresponding to \p PointerExpr.
   static Address getAttachPtrAddr(const Expr *PointerExpr,
                                   CodeGenFunction &CGF) {
+    assert(PointerExpr && "Cannot get addr from null attach-ptr expr");
     Address AttachPtrAddr = Address::invalid();
-    if (!PointerExpr)
-      return AttachPtrAddr;
 
     if (auto *DRE = dyn_cast<DeclRefExpr>(PointerExpr)) {
       // If the pointer is a variable, we can use its address directly.
@@ -8457,6 +8463,31 @@ private:
     assert(AttachPtrAddr.isValid() &&
            "Failed to get address for attach pointer expression");
     return AttachPtrAddr;
+  }
+
+  /// Get the address of the attach pointer, and a load from it, to get the
+  /// pointee base address.
+  /// \return A pair containing AttachPtrAddr and AttachPteeBaseAddr. The pair
+  /// contains invalid addresses if \p AttachPtrExpr is null.
+  static std::pair<Address, Address>
+  getAttachPtrAddrAndPteeBaseAddr(const Expr *AttachPtrExpr,
+                                  CodeGenFunction &CGF) {
+
+    if (!AttachPtrExpr)
+      return {Address::invalid(), Address::invalid()};
+
+    Address AttachPtrAddr = getAttachPtrAddr(AttachPtrExpr, CGF);
+    assert(AttachPtrAddr.isValid() && "Invalid attach pointer addr");
+
+    QualType AttachPtrType =
+        OMPClauseMappableExprCommon::getComponentExprElementType(AttachPtrExpr)
+            .getCanonicalType();
+
+    Address AttachPteeBaseAddr = CGF.EmitLoadOfPointer(
+        AttachPtrAddr, AttachPtrType->castAs<PointerType>());
+    assert(AttachPteeBaseAddr.isValid() && "Invalid attach pointee base addr");
+
+    return {AttachPtrAddr, AttachPteeBaseAddr};
   }
 
   /// Returns whether an attach entry should be emitted for a map on
