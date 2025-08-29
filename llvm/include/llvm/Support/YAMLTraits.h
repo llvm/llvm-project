@@ -775,12 +775,19 @@ struct unvalidatedMappingTraits
           bool, has_MappingTraits<T, Context>::value &&
                     !has_MappingValidateTraits<T, Context>::value> {};
 
+enum class IOKind : uint8_t {
+  Outputting,
+  Inputting,
+  GeneratingSchema,
+};
+
 // Base class for Input and Output.
 class LLVM_ABI IO {
 public:
   IO(void *Ctxt = nullptr);
   virtual ~IO();
 
+  virtual IOKind getKind() const = 0;
   virtual bool outputting() const = 0;
 
   virtual unsigned beginSequence() = 0;
@@ -825,15 +832,17 @@ public:
 
   template <typename T>
   void enumCase(T &Val, const char* Str, const T ConstVal) {
-    if ( matchEnumScalar(Str, outputting() && Val == ConstVal) ) {
+    if (matchEnumScalar(Str,
+                        getKind() == IOKind::Outputting && Val == ConstVal)) {
       Val = ConstVal;
     }
   }
 
   // allow anonymous enum values to be used with LLVM_YAML_STRONG_TYPEDEF
   template <typename T>
-  void enumCase(T &Val, const char* Str, const uint32_t ConstVal) {
-    if ( matchEnumScalar(Str, outputting() && Val == static_cast<T>(ConstVal)) ) {
+  void enumCase(T &Val, const char *Str, const uint32_t ConstVal) {
+    if (matchEnumScalar(Str, getKind() == IOKind::Outputting &&
+                                 Val == static_cast<T>(ConstVal))) {
       Val = ConstVal;
     }
   }
@@ -850,8 +859,9 @@ public:
   }
 
   template <typename T>
-  void bitSetCase(T &Val, const char* Str, const T ConstVal) {
-    if ( bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal) ) {
+  void bitSetCase(T &Val, const char *Str, const T ConstVal) {
+    if (bitSetMatch(Str, getKind() == IOKind::Outputting &&
+                             (Val & ConstVal) == ConstVal)) {
       Val = static_cast<T>(Val | ConstVal);
     }
   }
@@ -859,21 +869,24 @@ public:
   // allow anonymous enum values to be used with LLVM_YAML_STRONG_TYPEDEF
   template <typename T>
   void bitSetCase(T &Val, const char* Str, const uint32_t ConstVal) {
-    if ( bitSetMatch(Str, outputting() && (Val & ConstVal) == ConstVal) ) {
+    if (bitSetMatch(Str, getKind() == IOKind::Outputting &&
+                             (Val & ConstVal) == ConstVal)) {
       Val = static_cast<T>(Val | ConstVal);
     }
   }
 
   template <typename T>
   void maskedBitSetCase(T &Val, const char *Str, T ConstVal, T Mask) {
-    if (bitSetMatch(Str, outputting() && (Val & Mask) == ConstVal))
+    if (bitSetMatch(Str, getKind() == IOKind::Outputting &&
+                             (Val & Mask) == ConstVal))
       Val = Val | ConstVal;
   }
 
   template <typename T>
   void maskedBitSetCase(T &Val, const char *Str, uint32_t ConstVal,
                         uint32_t Mask) {
-    if (bitSetMatch(Str, outputting() && (Val & Mask) == ConstVal))
+    if (bitSetMatch(Str, getKind() == IOKind::Outputting &&
+                             (Val & Mask) == ConstVal))
       Val = Val | ConstVal;
   }
 
@@ -938,7 +951,8 @@ private:
                              bool Required, Context &Ctx) {
     void *SaveInfo;
     bool UseDefault;
-    const bool sameAsDefault = outputting() && Val == DefaultValue;
+    const bool sameAsDefault =
+        (getKind() == IOKind::Outputting) && Val == DefaultValue;
     if ( this->preflightKey(Key, Required, sameAsDefault, UseDefault,
                                                                   SaveInfo) ) {
       yamlize(*this, Val, Required, Ctx);
@@ -1000,14 +1014,13 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
 template <typename T>
 std::enable_if_t<has_ScalarTraits<T>::value, void> yamlize(IO &io, T &Val, bool,
                                                            EmptyContext &Ctx) {
-  if ( io.outputting() ) {
+  if (io.getKind() != IOKind::Inputting) {
     SmallString<128> Storage;
     raw_svector_ostream Buffer(Storage);
     ScalarTraits<T>::output(Val, io.getContext(), Buffer);
     StringRef Str = Buffer.str();
     io.scalarString(Str, ScalarTraits<T>::mustQuote(Str));
-  }
-  else {
+  } else {
     StringRef Str;
     io.scalarString(Str, ScalarTraits<T>::mustQuote(Str));
     StringRef Result = ScalarTraits<T>::input(Str, io.getContext(), Val);
@@ -1020,7 +1033,7 @@ std::enable_if_t<has_ScalarTraits<T>::value, void> yamlize(IO &io, T &Val, bool,
 template <typename T>
 std::enable_if_t<has_BlockScalarTraits<T>::value, void>
 yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
-  if (YamlIO.outputting()) {
+  if (YamlIO.getKind() != IOKind::Inputting) {
     std::string Storage;
     raw_string_ostream Buffer(Storage);
     BlockScalarTraits<T>::output(Val, YamlIO.getContext(), Buffer);
@@ -1039,7 +1052,7 @@ yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
 template <typename T>
 std::enable_if_t<has_TaggedScalarTraits<T>::value, void>
 yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
-  if (io.outputting()) {
+  if (io.getKind() != IOKind::Inputting) {
     std::string ScalarStorage, TagStorage;
     raw_string_ostream ScalarBuffer(ScalarStorage), TagBuffer(TagStorage);
     TaggedScalarTraits<T>::output(Val, io.getContext(), ScalarBuffer,
@@ -1081,7 +1094,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
     io.beginFlowMapping();
   else
     io.beginMapping();
-  if (io.outputting()) {
+  if (io.getKind() == IOKind::Outputting) {
     std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty()) {
       errs() << Err << "\n";
@@ -1089,7 +1102,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
     }
   }
   detail::doMapping(io, Val, Ctx);
-  if (!io.outputting()) {
+  if (io.getKind() == IOKind::Inputting) {
     std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty())
       io.setError(Err);
@@ -1134,7 +1147,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
 template <typename T>
 std::enable_if_t<has_CustomMappingTraits<T>::value, void>
 yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
-  if ( io.outputting() ) {
+  if (io.getKind() != IOKind::Inputting) {
     io.beginMapping();
     CustomMappingTraits<T>::output(io, Val);
     io.endMapping();
@@ -1149,8 +1162,9 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
 template <typename T>
 std::enable_if_t<has_PolymorphicTraits<T>::value, void>
 yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
-  switch (io.outputting() ? PolymorphicTraits<T>::getKind(Val)
-                          : io.getNodeKind()) {
+  switch ((io.getKind() == IOKind::Inputting)
+              ? io.getNodeKind()
+              : PolymorphicTraits<T>::getKind(Val)) {
   case NodeKind::Scalar:
     return yamlize(io, PolymorphicTraits<T>::getAsScalar(Val), true, Ctx);
   case NodeKind::Map:
@@ -1171,7 +1185,9 @@ std::enable_if_t<has_SequenceTraits<T>::value, void>
 yamlize(IO &io, T &Seq, bool, Context &Ctx) {
   if ( has_FlowTraits< SequenceTraits<T>>::value ) {
     unsigned incnt = io.beginFlowSequence();
-    unsigned count = io.outputting() ? SequenceTraits<T>::size(io, Seq) : incnt;
+    unsigned count = (io.getKind() == IOKind::Outputting)
+                         ? SequenceTraits<T>::size(io, Seq)
+                         : incnt;
     for(unsigned i=0; i < count; ++i) {
       void *SaveInfo;
       if ( io.preflightFlowElement(i, SaveInfo) ) {
@@ -1183,7 +1199,9 @@ yamlize(IO &io, T &Seq, bool, Context &Ctx) {
   }
   else {
     unsigned incnt = io.beginSequence();
-    unsigned count = io.outputting() ? SequenceTraits<T>::size(io, Seq) : incnt;
+    unsigned count = (io.getKind() == IOKind::Outputting)
+                         ? SequenceTraits<T>::size(io, Seq)
+                         : incnt;
     for(unsigned i=0; i < count; ++i) {
       void *SaveInfo;
       if ( io.preflightElement(i, SaveInfo) ) {
@@ -1350,16 +1368,15 @@ template <typename TNorm, typename TFinal>
 struct MappingNormalization {
   MappingNormalization(IO &i_o, TFinal &Obj)
       : io(i_o), BufPtr(nullptr), Result(Obj) {
-    if ( io.outputting() ) {
+    if (io.getKind() == IOKind::Outputting) {
       BufPtr = new (&Buffer) TNorm(io, Obj);
-    }
-    else {
+    } else {
       BufPtr = new (&Buffer) TNorm(io);
     }
   }
 
   ~MappingNormalization() {
-    if ( ! io.outputting() ) {
+    if (io.getKind() == IOKind::Inputting) {
       Result = BufPtr->denormalize(io);
     }
     BufPtr->~TNorm();
@@ -1382,10 +1399,9 @@ template <typename TNorm, typename TFinal>
 struct MappingNormalizationHeap {
   MappingNormalizationHeap(IO &i_o, TFinal &Obj, BumpPtrAllocator *allocator)
     : io(i_o), Result(Obj) {
-    if ( io.outputting() ) {
+    if (io.getKind() == IOKind::Outputting) {
       BufPtr = new (&Buffer) TNorm(io, Obj);
-    }
-    else if (allocator) {
+    } else if (allocator) {
       BufPtr = allocator->Allocate<TNorm>();
       new (BufPtr) TNorm(io);
     } else {
@@ -1394,10 +1410,9 @@ struct MappingNormalizationHeap {
   }
 
   ~MappingNormalizationHeap() {
-    if ( io.outputting() ) {
+    if (io.getKind() == IOKind::Outputting) {
       BufPtr->~TNorm();
-    }
-    else {
+    } else {
       Result = BufPtr->denormalize(io);
     }
   }
@@ -1444,6 +1459,7 @@ public:
   std::error_code error() override;
 
 private:
+  IOKind getKind() const override;
   bool outputting() const override;
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
@@ -1595,6 +1611,7 @@ public:
   /// anyway.
   void setWriteDefaultValues(bool Write) { WriteDefaultValues = Write; }
 
+  IOKind getKind() const override;
   bool outputting() const override;
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
@@ -1680,8 +1697,8 @@ void IO::processKeyWithDefault(const char *Key, std::optional<T> &Val,
   assert(!DefaultValue && "std::optional<T> shouldn't have a value!");
   void *SaveInfo;
   bool UseDefault = true;
-  const bool sameAsDefault = outputting() && !Val;
-  if (!outputting() && !Val)
+  const bool sameAsDefault = (getKind() == IOKind::Outputting) && !Val;
+  if (!(getKind() == IOKind::Outputting) && !Val)
     Val = T();
   if (Val &&
       this->preflightKey(Key, Required, sameAsDefault, UseDefault, SaveInfo)) {
@@ -1691,7 +1708,7 @@ void IO::processKeyWithDefault(const char *Key, std::optional<T> &Val,
     // was requested, i.e. the DefaultValue will be assigned. The DefaultValue
     // is usually None.
     bool IsNone = false;
-    if (!outputting())
+    if (getKind() == IOKind::Inputting)
       if (const auto *Node =
               dyn_cast<ScalarNode>(((Input *)this)->getCurrentNode()))
         // We use rtrim to ignore possible white spaces that might exist when a
