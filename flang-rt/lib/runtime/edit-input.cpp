@@ -110,7 +110,7 @@ static RT_API_ATTRS bool EditBOZInput(
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
-  std::memset(n, 0, bytes);
+  runtime::memset(n, 0, bytes);
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
@@ -283,18 +283,18 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     auto shft{static_cast<int>(sizeof value - kind)};
     if (!isHostLittleEndian && shft >= 0) {
       auto shifted{value << (8 * shft)};
-      std::memcpy(n, &shifted, kind);
+      runtime::memcpy(n, &shifted, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      runtime::memcpy(n, &value, kind); // a blank field means zero
     }
 #else
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
     // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
       auto l{value.low() << (8 * shft)};
-      std::memcpy(n, &l, kind);
+      runtime::memcpy(n, &l, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      runtime::memcpy(n, &value, kind); // a blank field means zero
     }
 #endif
     io.GotChar(fastField.got());
@@ -1121,7 +1121,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         --skipChars;
       } else {
         char32_t buffer{0};
-        std::memcpy(&buffer, input, chunkBytes);
+        runtime::memcpy(&buffer, input, chunkBytes);
         if ((sizeof *x == 1 && buffer > 0xff) ||
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
@@ -1148,7 +1148,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         chunkBytes = std::min<std::size_t>(remainingChars, readyBytes);
         chunkBytes = std::min<std::size_t>(lengthChars, chunkBytes);
         chunkChars = chunkBytes;
-        std::memcpy(x, input, chunkBytes);
+        runtime::memcpy(x, input, chunkBytes);
         x += chunkBytes;
         lengthChars -= chunkChars;
       }

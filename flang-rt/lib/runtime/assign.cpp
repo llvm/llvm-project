@@ -288,7 +288,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      std::memcpy(
+      runtime::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
@@ -307,7 +307,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       auto descBytes{from_->SizeInBytes()};
       Descriptor &newFrom{tempDescriptor_.descriptor()};
       persist_ = true; // tempDescriptor_ state must outlive child tickets
-      std::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
+      runtime::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
