@@ -557,6 +557,8 @@ When overflow behavior types are used with format string functions (printf-famil
 functions like ``printf``, ``fprintf``, ``sprintf``, etc., and scanf-family
 functions like ``scanf``, ``fscanf``, ``sscanf``, etc.), they are treated based
 on their underlying integer types for format specifier compatibility checking.
+More generally, overflow behavior types are ABI-compatible with their underlying
+types when passed to any varargs function.
 
 .. code-block:: c++
 

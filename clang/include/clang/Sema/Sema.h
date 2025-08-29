@@ -1341,6 +1341,10 @@ public:
   /// whether the next info diagnostic should be immediate.
   bool IsLastErrorImmediate = true;
 
+  /// Track if we're currently analyzing overflow behavior types in assignment
+  /// context.
+  bool InOverflowBehaviorAssignmentContext = false;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {

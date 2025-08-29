@@ -11693,6 +11693,11 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
     }
   }
 
+  // Set context flag for overflow behavior type assignment analysis, use RAII
+  // pattern to handle nested assignments.
+  llvm::SaveAndRestore OBTAssignmentContext(
+      S.InOverflowBehaviorAssignmentContext, true);
+
   AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
 
   // Diagnose implicitly sequentially-consistent atomic assignment.
@@ -13207,11 +13212,11 @@ bool Sema::CheckOverflowBehaviorTypeConversion(Expr *E, QualType T,
           Target->isUnsignedIntegerType()) {
         DiagnoseImpCast(*this, E, T, CC,
                         diag::warn_impcast_overflow_behavior_pedantic);
-      } else if (E->isOverflowBehaviorDiscarded()) {
-        DiagnoseImpCast(*this, E, T, CC,
-                        diag::warn_impcast_overflow_behavior_assignment);
       } else {
-        DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_overflow_behavior);
+        unsigned DiagId = InOverflowBehaviorAssignmentContext
+                              ? diag::warn_impcast_overflow_behavior_assignment
+                              : diag::warn_impcast_overflow_behavior;
+        DiagnoseImpCast(*this, E, T, CC, DiagId);
       }
     }
   }

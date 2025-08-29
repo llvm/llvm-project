@@ -72,7 +72,6 @@ void test_overload2(wrap_int a) {
 void func(__no_wrap int i);
 void func(int i); // Overload, not invalid redeclaration
 
-// TODO: make this diagnostic message more descriptive
 template <typename Ty>
 void func2(__no_wrap Ty i) {} // expected-warning {{'overflow_behavior' attribute cannot be applied to non-integer type 'Ty'; attribute ignored}}
 
