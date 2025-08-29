@@ -19,7 +19,7 @@ typedef _Bool v8b __attribute__((ext_vector_type(8)));
 // CHECK-NEXT:    [[LOAD_BITS2:%.*]] = load i8, ptr [[M_ADDR]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP2]], i32 32, <8 x i1> [[TMP1]], <8 x i32> poison)
+// CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP2]], i32 1, <8 x i1> [[TMP1]], <8 x i32> poison)
 // CHECK-NEXT:    ret <8 x i32> [[MASKED_LOAD]]
 //
 v8i test_load(v8b m, v8i *p) {
@@ -45,7 +45,7 @@ v8i test_load(v8b m, v8i *p) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[T_ADDR]], align 32
-// CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP3]], i32 32, <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
+// CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP3]], i32 1, <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
 // CHECK-NEXT:    ret <8 x i32> [[MASKED_LOAD]]
 //
 v8i test_load_passthru(v8b m, v8i *p, v8i t) {
@@ -97,7 +97,7 @@ v8i test_load_expand(v8b m, v8i *p, v8i t) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP3]], ptr [[TMP4]], i32 32, <8 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP3]], ptr [[TMP4]], i32 1, <8 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_store(v8b m, v8i v, v8i *p) {
