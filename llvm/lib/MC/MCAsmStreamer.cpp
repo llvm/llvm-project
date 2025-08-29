@@ -764,10 +764,18 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
     OS << "\t.extern\t";
     break;
   case MCSA_Weak:           OS << MAI->getWeakDirective(); break;
-  case MCSA_WeakDefinition:
-    OS << "\t.weak_definition\t";
+  case MCSA_WeakDefinition: {
+    // AIX, use the standard weak directive (.weak) instead of
+    //'.weak_definition' because the AIX assembler does not
+    // recognize the '.weak_definition' directive.
+    const llvm::Triple &TT = getContext().getTargetTriple();
+    if (TT.isOSAIX())
+      OS << MAI->getWeakDirective();
+    else
+      OS << "\t.weak_definition\t";
     break;
-      // .weak_reference
+  }
+    // .weak_reference
   case MCSA_WeakReference:  OS << MAI->getWeakRefDirective(); break;
   case MCSA_WeakDefAutoPrivate: OS << "\t.weak_def_can_be_hidden\t"; break;
   case MCSA_Cold:

@@ -72,6 +72,13 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
     Symbol->setStorageClass(XCOFF::C_WEAKEXT);
     Symbol->setExternal(true);
     break;
+  case llvm::MCSA_WeakDefinition:
+    // On AIX/XCOFF, a weak definition symbol should be emitted
+    // as an external weak symbol (C_WEAKEXT), since the assembler
+    // does not support '.weak_definition' directly.
+    Symbol->setStorageClass(XCOFF::C_WEAKEXT);
+    Symbol->setExternal(true);
+    break;
   case llvm::MCSA_Hidden:
     Symbol->setVisibilityType(XCOFF::SYM_V_HIDDEN);
     break;
