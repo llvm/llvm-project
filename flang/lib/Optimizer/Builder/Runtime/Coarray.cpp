@@ -14,6 +14,24 @@
 using namespace Fortran::runtime;
 using namespace Fortran::semantics;
 
+// Most PRIF functions take `errmsg` and `errmsg_alloc` as two optional
+// arguments of intent (out). One is allocatable, the other is not.
+// It is the responsibility of the compiler to ensure that the appropriate
+// optional argument is passed, and at most one must be provided in a given
+// call.
+// Depending on the type of `errmsg`, this function will return the pair
+// corresponding to (`errmsg`, `errmsg_alloc`).
+static std::pair<mlir::Value, mlir::Value>
+genErrmsgPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value errmsg) {
+  bool isAllocatableErrmsg = fir::isAllocatableType(errmsg.getType());
+
+  mlir::Value absent = builder.create<fir::AbsentOp>(loc, PRIF_ERRMSG_TYPE);
+  mlir::Value errMsg = isAllocatableErrmsg ? absent : errmsg;
+  mlir::Value errMsgAlloc = isAllocatableErrmsg ? errmsg : absent;
+  return {errMsg, errMsgAlloc};
+}
+
 /// Generate Call to runtime prif_init
 mlir::Value fir::runtime::genInitCoarray(fir::FirOpBuilder &builder,
                                          mlir::Location loc) {
@@ -24,7 +42,7 @@ mlir::Value fir::runtime::genInitCoarray(fir::FirOpBuilder &builder,
       builder.createFunction(loc, PRIFNAME_SUB("init"), ftype);
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, ftype, result);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
   return builder.create<fir::LoadOp>(loc, result);
 }
 
@@ -38,7 +56,7 @@ mlir::Value fir::runtime::getNumImages(fir::FirOpBuilder &builder,
       builder.createFunction(loc, PRIFNAME_SUB("num_images"), ftype);
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, ftype, result);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
   return builder.create<fir::LoadOp>(loc, result);
 }
 
@@ -63,7 +81,7 @@ mlir::Value fir::runtime::getNumImagesWithTeam(fir::FirOpBuilder &builder,
     team = builder.createBox(loc, team);
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, ftype, team, result);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
   return builder.create<fir::LoadOp>(loc, result);
 }
 
@@ -81,6 +99,67 @@ mlir::Value fir::runtime::getThisImage(fir::FirOpBuilder &builder,
       !team ? builder.create<fir::AbsentOp>(loc, boxTy) : team;
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, ftype, teamArg, result);
-  builder.create<fir::CallOp>(loc, funcOp, args);
+  fir::CallOp::create(builder, loc, funcOp, args);
   return builder.create<fir::LoadOp>(loc, result);
+}
+
+/// Generate call to runtime subroutine prif_sync_all
+void fir::runtime::genSyncAllStatement(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value stat,
+                                       mlir::Value errmsg) {
+  mlir::FunctionType ftype =
+      PRIF_FUNCTYPE(PRIF_STAT_TYPE, PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE);
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, PRIFNAME_SUB("sync_all"), ftype);
+
+  auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
+  fir::CallOp::create(builder, loc, funcOp, args);
+}
+
+/// Generate call to runtime subroutine prif_sync_memory
+void fir::runtime::genSyncMemoryStatement(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Value stat,
+                                          mlir::Value errmsg) {
+  mlir::FunctionType ftype =
+      PRIF_FUNCTYPE(PRIF_STAT_TYPE, PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE);
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, PRIFNAME_SUB("sync_memory"), ftype);
+
+  auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
+  fir::CallOp::create(builder, loc, funcOp, args);
+}
+
+/// Generate call to runtime subroutine prif_sync_images
+void fir::runtime::genSyncImagesStatement(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          mlir::Value imageSet,
+                                          mlir::Value stat,
+                                          mlir::Value errmsg) {
+  mlir::Type imgSetTy = fir::BoxType::get(fir::SequenceType::get(
+      {fir::SequenceType::getUnknownExtent()}, builder.getI32Type()));
+  mlir::FunctionType ftype = PRIF_FUNCTYPE(imgSetTy, PRIF_STAT_TYPE,
+                                           PRIF_ERRMSG_TYPE, PRIF_ERRMSG_TYPE);
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, PRIFNAME_SUB("sync_images"), ftype);
+
+  // If imageSet is scalar, PRIF require to pass an array of size 1.
+  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(imageSet.getType())) {
+    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy())) {
+      mlir::Value one =
+          builder.createIntegerConstant(loc, builder.getI32Type(), 1);
+      mlir::Value shape = fir::ShapeOp::create(builder, loc, one);
+      imageSet = fir::ReboxOp::create(
+          builder, loc,
+          fir::BoxType::get(fir::SequenceType::get({1}, builder.getI32Type())),
+          imageSet, shape, mlir::Value{});
+    }
+  }
+  auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, imageSet, stat, errmsgArg, errmsgAllocArg);
+  fir::CallOp::create(builder, loc, funcOp, args);
 }
