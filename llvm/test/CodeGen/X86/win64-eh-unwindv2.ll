@@ -171,9 +171,44 @@ define dso_local void @large_aligned_alloc() align 16 {
 ; CHECK-NEXT:   retq
 ; CHECK-NEXT:   .seh_endproc
 
+define dso_local void @set_frame_only() local_unnamed_addr {
+  tail call i64 @llvm.x86.flags.read.u64()
+  ret void
+}
+
+; CHECK-LABEL:  set_frame_only:
+; CHECK:        .seh_unwindversion 2
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_setframe %rbp, 0
+; CHECK:        .seh_endprologue
+; CHECK-NOT:    .seh_endproc
+; CHECK:        .seh_startepilogue
+; CHECK-NEXT:   .seh_unwindv2start
+; CHECK-NEXT:   popq    %rbp
+; CHECK-NEXT:   .seh_endepilogue
+; CHECK-NEXT:   retq
+; CHECK-NEXT:   .seh_endproc
+
+attributes #1 = { noreturn }
+define dso_local void @no_return_func() local_unnamed_addr #1 {
+entry:
+  call void @d()
+  unreachable
+}
+; CHECK-LABEL:  no_return_func:
+; CHECK-NOT:    .seh_unwindversion 2
+; CHECK:        .seh_stackalloc
+; CHECK-NEXT:   .seh_endprologue
+; CHECK-NOT:    .seh_startepilogue
+; CHECK-NOT:    .seh_unwindv2start
+; CHECK:        int3
+; CHECK-NEXT:   .seh_endproc
+
+declare i64 @llvm.x86.flags.read.u64()
 declare void @a() local_unnamed_addr
 declare i32 @b() local_unnamed_addr
 declare i32 @c(i32) local_unnamed_addr
+declare void @d() local_unnamed_addr #1
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"winx64-eh-unwindv2", i32 1}
+!0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
