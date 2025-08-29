@@ -12,6 +12,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
+#include <cctype>
 #include <optional>
 #include <tuple>
 
@@ -28,6 +29,30 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
     llvm::consumeError(Uri.takeError());
     return std::nullopt;
   }
+
+  std::string BodyStr = (*Uri).body().str();
+  std::replace(BodyStr.begin(), BodyStr.end(), '\\', '/');
+
+  bool DidPreferEmbeddedDrive = false;
+  if (BodyStr.rfind("/mnt/", 0) == 0 && BodyStr.size() > 6) {
+    for (size_t i = 0; i + 2 < BodyStr.size(); ++i) {
+      if (std::isalpha((unsigned char)BodyStr[i]) && BodyStr[i + 1] == ':' &&
+          BodyStr[i + 2] == '/') {
+        BodyStr = std::string("/") + BodyStr.substr(i);
+        DidPreferEmbeddedDrive = true;
+        break;
+      }
+    }
+  }
+
+  if (Dir == PathMapping::Direction::ClientToServer && DidPreferEmbeddedDrive) {
+    if (BodyStr.size() >= 3 && BodyStr[0] == '/' &&
+        std::isalpha((unsigned char)BodyStr[1]) && BodyStr[2] == ':') {
+      return URI((*Uri).scheme(), (*Uri).authority(), BodyStr).toString();
+    }
+  }
+
+  llvm::StringRef BodyRef(BodyStr);
   for (const auto &Mapping : Mappings) {
     const std::string &From = Dir == PathMapping::Direction::ClientToServer
                                   ? Mapping.ClientPath
@@ -35,13 +60,53 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
     const std::string &To = Dir == PathMapping::Direction::ClientToServer
                                 ? Mapping.ServerPath
                                 : Mapping.ClientPath;
-    llvm::StringRef Body = Uri->body();
-    if (Body.consume_front(From) && (Body.empty() || Body.front() == '/')) {
-      std::string MappedBody = (To + Body).str();
-      return URI(Uri->scheme(), Uri->authority(), MappedBody)
-          .toString();
+    llvm::StringRef Working = BodyRef;
+    if (Working.consume_front(From)) {
+      if (From.empty() || From.back() == '/' || Working.empty() ||
+          Working.front() == '/') {
+        llvm::StringRef Adjusted = Working;
+
+        char MappingDrive = 0;
+        if (To.size() >= 3 && To[0] == '/' &&
+            std::isalpha((unsigned char)To[1]) && To[2] == ':')
+          MappingDrive = To[1];
+        if (MappingDrive) {
+          for (size_t i = 0; i + 2 < (size_t)Working.size(); ++i) {
+            char c = Working[i];
+            if (std::isalpha((unsigned char)c) && Working[i + 1] == ':' &&
+                Working[i + 2] == '/') {
+              if (std::tolower((unsigned char)c) ==
+                  std::tolower((unsigned char)MappingDrive)) {
+                Adjusted = Working.substr(i + 3);
+                break;
+              }
+            }
+          }
+        }
+        std::string MappedBody = (To + Adjusted).str();
+        return URI((*Uri).scheme(), (*Uri).authority(), MappedBody).toString();
+      }
     }
   }
+
+  if (Dir == PathMapping::Direction::ServerToClient) {
+    for (const auto &Mapping : Mappings) {
+      const std::string &From = Mapping.ServerPath;
+      const std::string &To = Mapping.ClientPath;
+      if (From.empty())
+        continue;
+      llvm::StringRef W = BodyRef;
+      if (W.starts_with(From)) {
+        llvm::StringRef Rest = W.substr(From.size());
+        if (Rest.empty() || Rest.front() == '/') {
+          std::string MappedBody = (To + Rest).str();
+          return URI((*Uri).scheme(), (*Uri).authority(), MappedBody)
+              .toString();
+        }
+      }
+    }
+  }
+
   return std::nullopt;
 }
 
