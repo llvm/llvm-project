@@ -11,6 +11,7 @@
 #include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/Pass.h"
+#include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "nanobind/trampoline.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -32,7 +33,10 @@ namespace {
 // ```
 class PyPassBase {
 public:
-  PyPassBase() : callbacks{} {
+  PyPassBase(std::string name, std::string argument, std::string description,
+             std::string opName)
+      : callbacks{}, name(std::move(name)), argument(std::move(argument)),
+        description(std::move(description)), opName(std::move(opName)) {
     callbacks.construct = [](void *) {};
     callbacks.destruct = [](void *) {};
     callbacks.run = [](MlirOperation op, MlirExternalPass, void *obj) {
@@ -58,15 +62,25 @@ public:
   // Also, `*this` must remain alive as long as the returned object is alive.
   MlirPass make() {
     return mlirCreateExternalPass(
-        mlirTypeIDCreate(this),
-        mlirStringRefCreateFromCString("python-example-pass"),
-        mlirStringRefCreateFromCString(""),
-        mlirStringRefCreateFromCString("Python Example Pass"),
-        mlirStringRefCreateFromCString(""), 0, nullptr, callbacks, this);
+        mlirTypeIDCreate(this), mlirStringRefCreate(name.data(), name.length()),
+        mlirStringRefCreate(argument.data(), argument.length()),
+        mlirStringRefCreate(description.data(), description.length()),
+        mlirStringRefCreate(opName.data(), opName.size()), 0, nullptr,
+        callbacks, this);
   }
+
+  const std::string &getName() const { return name; }
+  const std::string &getArgument() const { return argument; }
+  const std::string &getDescription() const { return description; }
+  const std::string &getOpName() const { return opName; }
 
 private:
   MlirExternalPassCallbacks callbacks;
+
+  std::string name;
+  std::string argument;
+  std::string description;
+  std::string opName;
 };
 
 // A trampoline class upon PyPassBase.
@@ -116,9 +130,19 @@ void mlir::python::populatePassSubmodule(nanobind::module_ &m) {
   // Mapping of the Python-defined Pass interface
   //----------------------------------------------------------------------------
   nb::class_<PyPassBase, PyPass>(m, "Pass")
-      .def(nb::init<>(), "Create a new Pass.")
+      .def(nb::init<std::string, std::string, std::string, std::string>(),
+           "name"_a, nb::kw_only(), "argument"_a = "", "description"_a = "",
+           "op_name"_a = "", "Create a new Pass.")
       .def("run", &PyPassBase::run, "operation"_a,
-           "Run the pass on the provided operation.");
+           "Run the pass on the provided operation.")
+      .def_prop_ro("name",
+                   [](const PyPassBase &self) { return self.getName(); })
+      .def_prop_ro("argument",
+                   [](const PyPassBase &self) { return self.getArgument(); })
+      .def_prop_ro("description",
+                   [](const PyPassBase &self) { return self.getDescription(); })
+      .def_prop_ro("op_name",
+                   [](const PyPassBase &self) { return self.getOpName(); });
 }
 
 /// Create the `mlir.passmanager` here.
