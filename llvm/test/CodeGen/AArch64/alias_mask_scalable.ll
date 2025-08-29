@@ -457,8 +457,6 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-; RUN: llc -mtriple=aarch64 -mattr=+sve2 %s -o - | FileCheck %s
-
 define <vscale x 2 x i1> @whilewr_8_widen_extract(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_8_widen_extract:
 ; CHECK:       // %bb.0: // %entry
