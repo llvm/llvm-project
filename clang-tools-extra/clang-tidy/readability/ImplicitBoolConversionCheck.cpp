@@ -41,9 +41,11 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
   return isNULLMacroExpansion(&Node, Finder->getASTContext());
 }
 
-StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
-                                             QualType Type,
-                                             ASTContext &Context) {
+} // namespace
+
+static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
+                                                    QualType Type,
+                                                    ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
     return Type->isUnsignedIntegerType() ? "0u" : "0";
@@ -62,15 +64,15 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
   }
 }
 
-bool isUnaryLogicalNotOperator(const Stmt *Statement) {
+static bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   const auto *UnaryOperatorExpr = dyn_cast<UnaryOperator>(Statement);
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
-                              const ImplicitCastExpr *Cast, const Stmt *Parent,
-                              ASTContext &Context,
-                              bool UseUpperCaseLiteralSuffix) {
+static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
+                                     const ImplicitCastExpr *Cast,
+                                     const Stmt *Parent, ASTContext &Context,
+                                     bool UseUpperCaseLiteralSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
   bool InvertComparison =
@@ -133,8 +135,8 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   Diag << FixItHint::CreateInsertion(EndLoc, EndLocInsertion);
 }
 
-StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
-                                          ASTContext &Context) {
+static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
+                                                 ASTContext &Context) {
   if (isNULLMacroExpansion(Expression, Context)) {
     return "false";
   }
@@ -161,7 +163,7 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
   return {};
 }
 
-bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
+static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
   StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
       CharSourceRange::getCharRange(PrefixRange), Context.getSourceManager(),
@@ -173,9 +175,10 @@ bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
 }
 
-void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
-                                const ImplicitCastExpr *Cast,
-                                ASTContext &Context, StringRef OtherType) {
+static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
+                                       const ImplicitCastExpr *Cast,
+                                       ASTContext &Context,
+                                       StringRef OtherType) {
   if (!Context.getLangOpts().CPlusPlus) {
     Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(),
                                        (Twine("(") + OtherType + ")").str());
@@ -200,8 +203,9 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
   }
 }
 
-StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                                      QualType DestType, ASTContext &Context) {
+static StringRef
+getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
+                            QualType DestType, ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -222,8 +226,8 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   return BoolLiteral->getValue() ? "1" : "0";
 }
 
-bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
-                              ASTContext &Context) {
+static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
+                                     ASTContext &Context) {
   std::queue<const Stmt *> Q;
   Q.push(Cast);
 
@@ -250,8 +254,6 @@ bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   }
   return false;
 }
-
-} // anonymous namespace
 
 ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)

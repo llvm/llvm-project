@@ -15,7 +15,7 @@
 // LLVM_DEBUG() requires the DEBUG_TYPE macro to be defined. Set it to "foo"
 // specify that your debug code belongs to class "foo". Be careful that you only
 // do this after including Debug.h and not around any #include of headers.
-// Headers should define and undef the macro acround the code that needs to use
+// Headers should define and undef the macro around the code that needs to use
 // the LLVM_DEBUG() macro. Then, on the command line, you can specify
 // '-debug-only=foo' to enable JUST the debug information for the foo class.
 //
@@ -43,6 +43,11 @@ class raw_ostream;
 /// If the provided level is not 0 and user specified a level below the provided
 /// level, return false.
 LLVM_ABI bool isCurrentDebugType(const char *Type, int Level = 0);
+
+/// Overload allowing to swap the order of the Type and Level arguments.
+LLVM_ABI inline bool isCurrentDebugType(int Level, const char *Type) {
+  return isCurrentDebugType(Type, Level);
+}
 
 /// setCurrentDebugType - Set the current debug type, as if the -debug-only=X
 /// option were specified.  Note that DebugFlag also needs to be set to true for

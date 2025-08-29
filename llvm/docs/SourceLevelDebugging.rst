@@ -160,15 +160,15 @@ which can have a value, including at least:
    There is no special provision for "true" constants in LLVM today, and
    they are instead treated as local or global variables.
 
-A variable is represented by a `local variable <LangRef.html#dilocalvariable>`_
-or `global variable <LangRef.html#diglobalvariable>`_ metadata node.
+A variable is represented by a :ref:`local variable <dilocalvariable>` or
+:ref:`global variable <diglobalvariable>` metadata node.
 
 A "variable fragment" (or just "fragment") is a contiguous span of bits of a
 variable.
 
-A :ref:`debug record <debug_records>` which refers to a ``DIExpression`` ending
-with a ``DW_OP_LLVM_fragment`` operation describes a fragment of the variable
-it refers to.
+A :ref:`debug record <debug_records>` which refers to a :ref:`diexpression`
+ending with a ``DW_OP_LLVM_fragment`` operation describes a fragment of the
+variable it refers to.
 
 The operands of the ``DW_OP_LLVM_fragment`` operation encode the bit offset of
 the fragment relative to the start of the variable, and the size of the
@@ -205,16 +205,16 @@ debugger to interpret the information.
 To provide basic functionality, the LLVM debugger does have to make some
 assumptions about the source-level language being debugged, though it keeps
 these to a minimum.  The only common features that the LLVM debugger assumes
-exist are `source files <LangRef.html#difile>`_, and `program objects
-<LangRef.html#diglobalvariable>`_.  These abstract objects are used by a
-debugger to form stack traces, show information about local variables, etc.
+exist are :ref:`source files <difile>`, and :ref:`program objects
+<diglobalvariable>`.  These abstract objects are used by a debugger to form
+stack traces, show information about local variables, etc.
 
 This section of the documentation first describes the representation aspects
 common to any source-language.  :ref:`ccxx_frontend` describes the data layout
 conventions used by the C and C++ front-ends.
 
-Debug information descriptors are `specialized metadata nodes
-<LangRef.html#specialized-metadata>`_, first-class subclasses of ``Metadata``.
+Debug information descriptors are :ref:`specialized metadata nodes
+<specialized-metadata>`, first-class subclasses of ``Metadata``.
 
 There are two models for defining the values of source variables at different
 states of the program and tracking these values through optimization and code
@@ -229,7 +229,7 @@ document.
 .. _debug_records:
 
 Debug Records
-----------------------------
+-------------
 
 Debug records define the value that a source variable has during execution of
 the program; they appear interleaved with instructions, although they are not
@@ -256,14 +256,13 @@ comma-separated arguments in parentheses, as with a `call`.
 
     #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
 
-This record provides information about a local element (e.g., variable).
-The first argument is an SSA ``ptr`` value corresponding to a variable address,
-and is typically a static alloca in the function entry block.  The second
-argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
-description of the variable.  The third argument is a `complex expression
-<LangRef.html#diexpression>`_. The fourth argument is a `source location
-<LangRef.html#dilocation>`_. A ``#dbg_declare`` record describes the
-*address* of a source variable.
+This record provides information about a local element (e.g., variable). The
+first argument is an SSA ``ptr`` value corresponding to a variable address, and
+is typically a static ``alloca`` in the function entry block.  The second
+argument is a :ref:`local variable <dilocalvariable>` containing a description
+of the variable.  The third argument is a :ref:`complex expression
+<diexpression>`. The fourth argument is a :ref:`source location <dilocation>`.
+A ``#dbg_declare`` record describes the *address* of a source variable.
 
 .. code-block:: llvm
 
@@ -299,11 +298,10 @@ must agree on the memory location.
     #dbg_value([Value|DIArgList|MDNode], DILocalVariable, DIExpression, DILocation)
 
 This record provides information when a user source variable is set to a new
-value.  The first argument is the new value. The second argument is a `local
-variable <LangRef.html#dilocalvariable>`_ containing a description of the
-variable.  The third argument is a `complex expression
-<LangRef.html#diexpression>`_. The fourth argument is a `source location
-<LangRef.html#dilocation>`_.
+value.  The first argument is the new value. The second argument is a
+:ref:`local variable <dilocalvariable>` containing a description of the
+variable.  The third argument is a :ref:`complex expression <diexpression>`.
+The fourth argument is a :ref:`source location <dilocation>`.
 
 A ``#dbg_value`` record describes the *value* of a source variable
 directly, not its address.  Note that the value operand of this intrinsic may
@@ -311,7 +309,7 @@ be indirect (i.e, a pointer to the source variable), provided that interpreting
 the complex expression derives the direct value.
 
 ``#dbg_assign``
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 .. toctree::
    :hidden:
 
@@ -333,14 +331,20 @@ performs the assignment, and the destination address.
 
 The first three arguments are the same as for a ``#dbg_value``. The fourth
 argument is a ``DIAssignID`` used to reference a store. The fifth is the
-destination of the store, the sixth is a `complex
-expression <LangRef.html#diexpression>`_ that modifies it, and the seventh is a
-`source location <LangRef.html#dilocation>`_.
+destination of the store, the sixth is a :ref:`complex expression
+<diexpression>` that modifies it, and the seventh is a :ref:`source location
+<dilocation>`.
 
 See :doc:`AssignmentTracking` for more info.
 
 Debugger intrinsic functions
 ----------------------------
+
+.. warning::
+
+  These intrinsics are deprecated, please use :ref:`debug records
+  <debug_records>` instead. For more details see `RemoveDIs
+  <RemoveDIsDebugInfo.html>`_.
 
 .. _format_common_intrinsics:
 
@@ -394,12 +398,231 @@ This intrinsic is equivalent to ``#dbg_assign``:
 
 .. code-block:: llvm
 
-      #dbg_assign(i32 %i, !1, !DIExpression(), !2, 
+      #dbg_assign(i32 %i, !1, !DIExpression(), !2,
                   ptr %i.addr, !DIExpression(), !3)
     call void @llvm.dbg.assign(
       metadata i32 %i, metadata !1, metadata !DIExpression(), metadata !2,
       metadata ptr %i.addr, metadata !DIExpression(), metadata !3), !dbg !3
 
+.. _diexpression:
+
+DIExpression
+------------
+
+Debug expressions are represented as :ref:`specialized-metadata`.
+
+Debug expressions are interpreted left-to-right: start by pushing the
+value/address operand of the record onto a stack, then repeatedly push and
+evaluate opcodes from the ``DIExpression`` until the final variable description
+is produced.
+
+The opcodes available in these expressions are described in
+:ref:`dwarf-opcodes` and :ref:`internal-opcodes`.
+
+DWARF specifies three kinds of simple location descriptions: register, memory,
+and implicit location descriptions.  Note that a location description is
+defined over certain ranges of a program, i.e the location of a variable may
+change over the course of the program. Register and memory location
+descriptions describe the *concrete location* of a source variable (in the
+sense that a debugger might modify its value), whereas *implicit locations*
+describe merely the actual *value* of a source variable which might not exist
+in registers or in memory (see ``DW_OP_stack_value``).
+
+A ``#dbg_declare`` record describes an indirect value (the address) of a source
+variable. The first operand of the record must be an address of some kind. A
+``DIExpression`` operand to the record refines this address to produce a
+concrete location for the source variable.
+
+A ``#dbg_value`` record describes the direct value of a source variable. The
+first operand of the record may be a direct or indirect value. A
+``DIExpression`` operand to the record refines the first operand to produce a
+direct value. For example, if the first operand is an indirect value, it may be
+necessary to insert ``DW_OP_deref`` into the ``DIExpression`` in order to
+produce a valid debug record.
+
+.. note::
+
+   A ``DIExpression`` is interpreted in the same way regardless of which kind
+   of debug record it's attached to.
+
+   ``DIExpression``\s are always printed and parsed inline; they can never be
+   referenced by an ID (e.g. ``!1``).
+
+.. _dwarf-opcodes:
+
+DWARF Opcodes
+^^^^^^^^^^^^^
+
+When possible LLVM reuses DWARF opcodes and gives them identical semantics in
+LLVM expressions as in DWARF expressions. The current supported opcode
+vocabulary is limited, but includes at least:
+
+- ``DW_OP_deref`` dereferences the top of the expression stack.
+- ``DW_OP_plus`` pops the last two entries from the expression stack, adds
+  them together and pushes the result to the expression stack.
+- ``DW_OP_minus`` pops the last two entries from the expression stack, subtracts
+  the last entry from the second last entry and appends the result to the
+  expression stack.
+- ``DW_OP_plus_uconst, 93`` adds ``93`` to the value on top of the stack.
+- ``DW_OP_swap`` swaps top two stack entries.
+- ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
+  of the stack is treated as an address. The second stack entry is treated as an
+  address space identifier. The two entries are popped and then an
+  implementation defined value is pushed on the stack.
+- ``DW_OP_stack_value`` may appear at most once in an expression, and must be
+  the last opcode if ``DW_OP_LLVM_fragment`` is not present, or the second last
+  opcode if ``DW_OP_LLVM_fragment`` is present. It pops the top value of the
+  expression stack and makes an implicit value location with that value.
+- ``DW_OP_breg`` (or ``DW_OP_bregx``) represents a content on the provided
+  signed offset of the specified register. The opcode is only generated by the
+  ``AsmPrinter`` pass to describe call site parameter value which requires an
+  expression over two registers.
+- ``DW_OP_push_object_address`` pushes the address of the object which can then
+  serve as a descriptor in subsequent calculation. This opcode can be used to
+  calculate bounds of a Fortran allocatable array which has array descriptors.
+- ``DW_OP_over`` duplicates the entry currently second in the stack at the top
+  of the stack. This opcode can be used to calculate bounds of a Fortran
+  assumed rank array which has rank known at run time and current dimension
+  number is implicitly first element of the stack.
+
+.. _internal-opcodes:
+
+Internal Opcodes
+^^^^^^^^^^^^^^^^
+
+Where the DWARF equivalent is not suitable, or no DWARF equivalent exists, LLVM
+defines internal-only opcodes which have no direct analog in DWARF.
+
+.. note::
+
+   Some opcodes do not influence the final DWARF expression directly, instead
+   encoding information logically belonging to the debug records which use
+   them.
+
+- ``DW_OP_LLVM_fragment, <offset>, <size>`` may appear at most once in an
+  expression, and must be the last opcode. It specifies the bit offset and bit
+  size of the variable fragment being described by the record or intrinsic
+  using the expression. Note that contrary to ``DW_OP_bit_piece``, the offset
+  is describing the location within the described source variable. At DWARF
+  generation time all fragments for the same variable are collected together
+  and DWARF ``DW_OP_piece`` and ``DW_OP_bit_piece`` opcodes are used to
+  describe a composite with pieces corresponding to the fragments. (This does
+  not affect the semantics of the expression containing it.) -
+  ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
+  (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
+  expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
+  that references a base type constructed from the supplied values. -
+  ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
+  optionally applied to the pointer. The memory tag is derived from the given
+  tag offset in an implementation-defined manner. (This does not affect the
+  semantics of the expression containing it.) - ``DW_OP_LLVM_entry_value, N``
+  evaluates a sub-expression as-if it were evaluated upon entry to the current
+  call frame.
+
+  The sub-expression replaces the operations which comprise it, i.e. all such
+  operations are evaluated only in the frame entry context.
+
+  The sub-expression begins with the operation which immediately precedes
+  ``DW_OP_LLVM_entry_value, N`` in the ``DIExpression``. If no such operation
+  exists (i.e. the expression begins with ``DW_OP_LLVM_entry_value, N``), the
+  implicit operation which pushes the first debug argument of the containing
+  marker/pseudo is used instead. The value ``N`` must always be at least ``1``,
+  as this first operation cannot be omitted and is counted in ``N``.
+
+  The rest of the sub-expression comprises the ``(N - 1)`` operations following
+  ``DW_OP_LLVM_entry_value, N`` in the ``DIExpression``.
+
+  Due to framework limitations:
+
+    - ``N`` must not be greater than ``1``. In other words, ``N`` must equal
+      ``1``, and the sub-expression comprises only the operation immediately
+      preceding ``DW_OP_LLVM_entry_value, N``.
+    - ``DW_OP_LLVM_entry_value, N`` must be either the first operation of a
+      ``DIExpression`` or the second operation if the expression begins with
+      ``DW_OP_LLVM_arg, 0``.
+    - The first operation must refer to a register value.
+
+  Taken together, these limitations mean that ``DW_OP_LLVM_entry_value`` can
+  only currently be used to push the value a single register had on entry to
+  the current stack frame.
+
+  For example, ``!DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_entry_value, 1,
+  DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)`` specifies an expression
+  where the entry value of the first argument to the ``DIExpression`` is added
+  to the non-entry value of the second argument, and the result is used as the
+  value for an implicit value location.
+
+  When targeting DWARF, a ``DBG_VALUE(reg, ...,
+  DIExpression(DW_OP_LLVM_entry_value, 1, ...)`` is lowered to
+  ``DW_OP_entry_value [reg], ...``, which pushes the value ``reg`` had upon
+  frame entry onto the DWARF expression stack.
+
+  Because ``DW_OP_LLVM_entry_value`` is currently limited to registers, it is
+  usually used in MIR, but it is also allowed in LLVM IR when targeting a
+  :ref:`swiftasync <swiftasync>` argument. The operation is introduced by:
+
+    - ``LiveDebugValues`` pass, which applies it to function parameters that
+      are unmodified throughout the function. Support is limited to simple
+      register location descriptions, or as indirect locations (e.g.,
+      parameters passed-by-value to a callee via a pointer to a temporary copy
+      made in the caller).
+    - ``AsmPrinter`` pass when a call site parameter value
+      (``DW_AT_call_site_parameter_value``) is represented as entry value of
+      the parameter.
+    - ``CoroSplit`` pass, which may move variables from ``alloca``\s into a
+      coroutine frame. If the coroutine frame is a
+      :ref:`swiftasync <swiftasync>` argument, the variable is described with
+      an ``DW_OP_LLVM_entry_value`` operation.
+
+- ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
+  be used to represent pointer variables which are optimized out but the value
+  it points to is known. This operator is required as it is different than
+  DWARF operator ``DW_OP_implicit_pointer`` in representation and specification
+  (number and types of operands) and later can not be used as multiple level.
+
+  Examples using ``DW_OP_LLVM_implicit_pointer``:
+
+  .. code-block:: text
+
+      IR for "*ptr = 4;"
+      --------------
+        #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
+      !17 = !DILocalVariable(name: "ptr", scope: !12, file: !3, line: 5,
+                             type: !18)
+      !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+      !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !20 = !DILocation(line: 10, scope: !12)
+
+      IR for "**ptr = 4;"
+      --------------
+        #dbg_value(i32 4, !17,
+          !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
+          !21)
+      !17 = !DILocalVariable(name: "ptr", scope: !12, file: !3, line: 5,
+                             type: !18)
+      !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+      !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
+      !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !21 = !DILocation(line: 10, scope: !12)
+
+- ``DW_OP_LLVM_arg, N`` is used in debug intrinsics that refer to more than one
+  value, such as one that calculates the sum of two registers. This is always
+  used in combination with an ordered list of values, such that
+  ``DW_OP_LLVM_arg, N`` refers to the ``N``\ :sup:`th` element in that list.
+  For example, ``!DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1,
+  DW_OP_minus, DW_OP_stack_value)`` used with the list ``(%reg1, %reg2)`` would
+  evaluate to an implicit value location that has the value of
+  ``%reg1 - reg2``. This list of values should be provided by the containing
+  intrinsic/instruction.
+- ``DW_OP_LLVM_extract_bits_sext, 16, 8,`` specifies the offset and size
+  (``16`` and ``8`` here, respectively) of bits that are to be extracted and
+  sign-extended from the value at the top of the expression stack. If the top of
+  the expression stack is a memory location then these bits are extracted from
+  the value pointed to by that memory location. Maps into a ``DW_OP_shl``
+  followed by ``DW_OP_shra``.
+- ``DW_OP_LLVM_extract_bits_zext`` behaves similarly to
+  ``DW_OP_LLVM_extract_bits_sext``, but zero-extends instead of sign-extending.
+  Maps into a ``DW_OP_shl`` followed by ``DW_OP_shr``.
 
 Object lifetimes and scoping
 ============================
@@ -413,7 +636,7 @@ it is non-trivial to model in LLVM, because it has no notion of scoping in this
 sense, and does not want to be tied to a language's scoping rules.
 
 In order to handle this, the LLVM debug format uses the metadata attached to
-llvm instructions to encode line number and scoping information.  Consider the
+LLVM instructions to encode line number and scoping information.  Consider the
 following C fragment, for example:
 
 .. code-block:: c
@@ -506,11 +729,11 @@ scope information for the variable ``X``.
                               isLocal: false, isDefinition: true, scopeLine: 1,
                               isOptimized: false, retainedNodes: !2)
 
-Here ``!13`` is metadata providing `location information
-<LangRef.html#dilocation>`_.  In this example, scope is encoded by ``!4``, a
-`subprogram descriptor <LangRef.html#disubprogram>`_.  This way the location
-information parameter to the records indicates that the variable ``X`` is
-declared at line number 2 at a function level scope in function ``foo``.
+Here ``!13`` is metadata providing :ref:`location information <dilocation>`.
+In this example, scope is encoded by ``!4``, a :ref:`subprogram descriptor
+<disubprogram>`.  This way the location information parameter to the records
+indicates that the variable ``X`` is declared at line number 2 at a function
+level scope in function ``foo``.
 
 Now, let's take another example.
 
@@ -629,9 +852,9 @@ perhaps, be optimized into the following code:
 
 What ``#dbg_value`` records should be placed to represent the original variable
 locations in this code? Unfortunately the second, third, and fourth
-#dbg_values for ``!1`` in the source function have had their operands
-(%tval, %fval, %merge) optimized out. Assuming we cannot recover them, we
-might consider this placement of #dbg_values:
+``#dbg_value``\s for ``!1`` in the source function have had their operands
+(``%tval``, ``%fval``, ``%merge``) optimized out. Assuming we cannot recover
+them, we might consider this placement of ``#dbg_value``\s:
 
 .. code-block:: llvm
 
@@ -651,7 +874,7 @@ However, this will cause ``!3`` to have the return value of ``@gazonk()`` at
 the same time as ``!1`` has the constant value zero -- a pair of assignments
 that never occurred in the unoptimized program. To avoid this, we must terminate
 the range that ``!1`` has the constant value assignment by inserting an poison
-#dbg_value before the #dbg_value for ``!3``:
+``#dbg_value`` before the ``#dbg_value`` for ``!3``:
 
 .. code-block:: llvm
 
@@ -668,7 +891,7 @@ the range that ``!1`` has the constant value assignment by inserting an poison
     ret i32 %toret
   }
 
-There are a few other #dbg_value configurations that mean it terminates
+There are a few other ``#dbg_value`` configurations that mean it terminates
 dominating location definitions without adding a new location. The complete
 list is:
 
@@ -678,17 +901,17 @@ list is:
 * There are no location operands (empty ``DIArgList``) and the ``DIExpression``
   is empty.
 
-This class of #dbg_value that kills variable locations is called a "kill
-#dbg_value" or "kill location", and for legacy reasons the term "undef
-#dbg_value" may be used in existing code. The ``DbgVariableIntrinsic`` methods
-``isKillLocation`` and ``setKillLocation`` should be used where possible rather
-than inspecting location operands directly to check or set whether a #dbg_value
-is a kill location.
+This class of ``#dbg_value`` that kills variable locations is called a "kill
+``#dbg_value``" or "kill location", and for legacy reasons the term "``undef
+#dbg_value``" may be used in existing code. The ``DbgVariableIntrinsic``
+methods ``isKillLocation`` and ``setKillLocation`` should be used where
+possible rather than inspecting location operands directly to check or set
+whether a ``#dbg_value`` is a kill location.
 
-In general, if any #dbg_value has its operand optimized out and cannot be
-recovered, then a kill #dbg_value is necessary to terminate earlier variable
-locations. Additional kill #dbg_values may be necessary when the debugger can
-observe re-ordering of assignments.
+In general, if any ``#dbg_value`` has its operand optimized out and cannot be
+recovered, then a kill ``#dbg_value`` is necessary to terminate earlier
+variable locations. Additional kill ``#dbg_values`` may be necessary when the
+debugger can observe re-ordering of assignments.
 
 How variable location metadata is transformed during CodeGen
 ============================================================
@@ -715,8 +938,8 @@ significantly change the ordering of the program, and occurs in a number of
 different passes.
 
 Some variable locations are not transformed during CodeGen. Stack locations
-specified by ``#dbg_declare`` are valid and unchanging for the entire
-duration of the function, and are recorded in a simple MachineFunction table.
+specified by ``#dbg_declare`` are valid and unchanging for the entire duration
+of the function, and are recorded in a simple ``MachineFunction`` table.
 Location changes in the prologue and epilogue of a function are also ignored:
 frame setup and destruction may take several instructions, require a
 disproportionate amount of debugging information in the output binary to
@@ -727,21 +950,20 @@ Variable locations in Instruction Selection and MIR
 
 Instruction selection creates a MIR function from an IR function, and just as
 it transforms ``intermediate`` instructions into machine instructions, so must
-``intermediate`` variable locations become machine variable locations.
-Within IR, variable locations are always identified by a Value, but in MIR
-there can be different types of variable locations. In addition, some IR
-locations become unavailable, for example if the operation of multiple IR
-instructions are combined into one machine instruction (such as
-multiply-and-accumulate) then intermediate Values are lost. To track variable
-locations through instruction selection, they are first separated into
-locations that do not depend on code generation (constants, stack locations,
-allocated virtual registers) and those that do. For those that do, debug
-metadata is attached to SDNodes in SelectionDAGs. After instruction selection
-has occurred and a MIR function is created, if the SDNode associated with debug
-metadata is allocated a virtual register, that virtual register is used as the
-variable location. If the SDNode is folded into a machine instruction or
-otherwise transformed into a non-register, the variable location becomes
-unavailable.
+``intermediate`` variable locations become machine variable locations. Within
+IR, variable locations are always identified by a Value, but in MIR there can
+be different types of variable locations. In addition, some IR locations become
+unavailable, for example if the operation of multiple IR instructions are
+combined into one machine instruction (such as multiply-and-accumulate) then
+intermediate Values are lost. To track variable locations through instruction
+selection, they are first separated into locations that do not depend on code
+generation (constants, stack locations, allocated virtual registers) and those
+that do. For those that do, debug metadata is attached to ``SDNode``\s in
+``SelectionDAG``\s. After instruction selection has occurred and a MIR function
+is created, if the ``SDNode`` associated with debug metadata is allocated a
+virtual register, that virtual register is used as the variable location. If
+the ``SDNode`` is folded into a machine instruction or otherwise transformed
+into a non-register, the variable location becomes unavailable.
 
 Locations that are unavailable are treated as if they have been optimized out:
 in IR the location would be assigned ``undef`` by a debug record, and in MIR
@@ -761,9 +983,9 @@ And has the following operands:
  * The first operand can record the variable location as a register,
    a frame index, an immediate, or the base address register if the original
    debug record referred to memory. ``$noreg`` indicates the variable
-   location is undefined, equivalent to an ``undef`` #dbg_value operand.
+   location is undefined, equivalent to an ``undef #dbg_value`` operand.
  * The type of the second operand indicates whether the variable location is
-   directly referred to by the DBG_VALUE, or whether it is indirect. The
+   directly referred to by the ``DBG_VALUE``, or whether it is indirect. The
    ``$noreg`` register signifies the former, an immediate operand (0) the
    latter.
  * Operand 3 is the Variable field of the original debug record.
@@ -782,13 +1004,12 @@ And has the following operands:
    location operands, which may take any of the same values as the first
    operand of the ``DBG_VALUE`` instruction above. These variable location
    operands are inserted into the final DWARF Expression in positions indicated
-   by the ``DW_OP_LLVM_arg`` operator in the `DIExpression
-   <LangRef.html#diexpression>`_.
+   by the ``DW_OP_LLVM_arg`` operator in the :ref:`diexpression`.
 
-The position at which the DBG_VALUEs are inserted should correspond to the
-positions of their matching ``#dbg_value`` records in the IR block.  As
-with optimization, LLVM aims to preserve the order in which variable
-assignments occurred in the source program. However, SelectionDAG performs some
+The position at which the ``DBG_VALUE``\s are inserted should correspond to the
+positions of their matching ``#dbg_value`` records in the IR block.  As with
+optimization, LLVM aims to preserve the order in which variable assignments
+occurred in the source program. However, ``SelectionDAG`` performs some
 instruction scheduling, which can reorder assignments (discussed below).
 Function parameter locations are moved to the beginning of the function if
 they're not already, to ensure they're immediately available on function entry.
@@ -859,8 +1080,8 @@ Observe first that there is a ``DBG_VALUE`` instruction for every ``#dbg_value``
 record in the source IR, ensuring no source level assignments go missing.
 Then consider the different ways in which variable locations have been recorded:
 
-* For the first #dbg_value an immediate operand is used to record a zero value.
-* The #dbg_value of the PHI instruction leads to a ``DBG_VALUE`` of virtual register
+* For the first ``#dbg_value`` an immediate operand is used to record a zero value.
+* The ``#dbg_value`` of the PHI instruction leads to a ``DBG_VALUE`` of virtual register
   ``%0``.
 * The first GEP has its effect folded into the first load instruction
   (as a 4-byte offset), but the variable location is salvaged by folding
@@ -868,7 +1089,7 @@ Then consider the different ways in which variable locations have been recorded:
 * The second GEP is also folded into the corresponding load. However, it is
   insufficiently simple to be salvaged, and is emitted as a ``$noreg``
   ``DBG_VALUE``, indicating that the variable takes on an undefined location.
-* The final #dbg_value has its Value placed in virtual register ``%1``.
+* The final ``#dbg_value`` has its Value placed in virtual register ``%1``.
 
 Instruction Scheduling
 ----------------------
@@ -936,22 +1157,22 @@ Variable locations during Register Allocation
 ---------------------------------------------
 
 To avoid debug instructions interfering with the register allocator, the
-LiveDebugVariables pass extracts variable locations from a MIR function and
+``LiveDebugVariables`` pass extracts variable locations from a MIR function and
 deletes the corresponding ``DBG_VALUE`` instructions. Some localized copy
 propagation is performed within blocks. After register allocation, the
-VirtRegRewriter pass re-inserts ``DBG_VALUE`` instructions in their original
-positions, translating virtual register references into their physical
-machine locations. To avoid encoding incorrect variable locations, in this
-pass any ``DBG_VALUE`` of a virtual register that is not live, is replaced by
-the undefined location. The LiveDebugVariables may insert redundant ``DBG_VALUE``'s
-because of virtual register rewriting. These will be subsequently removed by
-the RemoveRedundantDebugValues pass.
+``VirtRegRewriter`` pass re-inserts ``DBG_VALUE`` instructions in their
+original positions, translating virtual register references into their physical
+machine locations. To avoid encoding incorrect variable locations, in this pass
+any ``DBG_VALUE`` of a virtual register that is not live, is replaced by the
+undefined location. The ``LiveDebugVariables`` may insert redundant
+``DBG_VALUE``\s because of virtual register rewriting. These will be
+subsequently removed by the ``RemoveRedundantDebugValues`` pass.
 
-LiveDebugValues expansion of variable locations
------------------------------------------------
+``LiveDebugValues`` expansion of variable locations
+---------------------------------------------------
 
 After all optimizations have run and shortly before emission, the
-LiveDebugValues pass runs to achieve two aims:
+``LiveDebugValue``\s pass runs to achieve two aims:
 
 * To propagate the location of variables through copies and register spills,
 * For every block, to record every valid variable location in that block.
@@ -998,7 +1219,7 @@ Here the difficulties are:
 
 As mentioned above, the ``#dbg_value`` records essentially form an
 imperative program embedded in the IR, with each record defining a variable
-location. This *could* be converted to an SSA form by mem2reg, in the same way
+location. This *could* be converted to an SSA form by ``mem2reg``, in the same way
 that it uses use-def chains to identify control flow merges and insert phi
 nodes for IR Values. However, because debug variable locations are defined for
 every machine instruction, in effect every IR instruction uses every variable
@@ -1009,18 +1230,18 @@ Examining the example above, variable ``!30`` is assigned ``%input`` on both
 conditional paths through the function, while ``!23`` is assigned differing
 constant values on either path. Where control flow merges in ``%bb1`` we would
 want ``!30`` to keep its location (``%input``), but ``!23`` to become undefined
-as we cannot determine at runtime what value it should have in %bb1 without
-inserting a PHI node. mem2reg does not insert the PHI node to avoid changing
-codegen when debugging is enabled, and does not insert the other #dbg_values
+as we cannot determine at runtime what value it should have in ``%bb1`` without
+inserting a PHI node. ``mem2reg`` does not insert the PHI node to avoid changing
+CodeGen when debugging is enabled, and does not insert the other ``#dbg_values``
 to avoid adding very large numbers of records.
 
-Instead, LiveDebugValues determines variable locations when control
+Instead, ``LiveDebugValue``\s determines variable locations when control
 flow merges. A dataflow analysis is used to propagate locations between blocks:
 when control flow merges, if a variable has the same location in all
 predecessors then that location is propagated into the successor. If the
 predecessor locations disagree, the location becomes undefined.
 
-Once LiveDebugValues has run, every block should have all valid variable
+Once ``LiveDebugValue``\s has run, every block should have all valid variable
 locations described by ``DBG_VALUE`` instructions within the block. Very little
 effort is then required by supporting classes (such as
 ``DbgEntityHistoryCalculator``) to build a map of each instruction to every
@@ -1070,7 +1291,7 @@ instruction.  One can extract line number information encoded in LLVM IR using
     bool ImplicitCode = Loc->isImplicitCode();
   }
 
-When the flag ImplicitCode is true then it means that the Instruction has been
+When the flag ``ImplicitCode`` is true then it means that the Instruction has been
 added by the front-end but doesn't correspond to source code written by the user. For example
 
 .. code-block:: c++
@@ -1080,7 +1301,7 @@ added by the front-end but doesn't correspond to source code written by the user
     ...
   }
 
-At the end of the scope the MyObject's destructor is called but it isn't written
+At the end of the scope the ``MyObject``'s destructor is called but it isn't written
 explicitly. This information is useful to avoid having counters on brackets when
 making code coverage.
 
@@ -1189,7 +1410,7 @@ C++ specific debug information
 C++ special member functions information
 ----------------------------------------
 
-DWARF v5 introduces attributes defined to enhance debugging information of C++ programs. LLVM can generate (or omit) these appropriate DWARF attributes. In C++ a special member function Ctors, Dtors, Copy/Move Ctors, assignment operators can be declared with C++11 keyword deleted. This is represented in LLVM using spFlags value DISPFlagDeleted.
+DWARF v5 introduces attributes defined to enhance debugging information of C++ programs. LLVM can generate (or omit) these appropriate DWARF attributes. In C++ a special member function Ctors, Dtors, Copy/Move Ctors, assignment operators can be declared with C++11 keyword deleted. This is represented in LLVM using ``spFlags`` value ``DISPFlagDeleted``.
 
 Given a class declaration with copy constructor declared as deleted:
 
@@ -1222,7 +1443,7 @@ Fortran specific debug information
 Fortran function information
 ----------------------------
 
-There are a few DWARF attributes defined to support client debugging of Fortran programs.  LLVM can generate (or omit) the appropriate DWARF attributes for the prefix-specs of ELEMENTAL, PURE, IMPURE, RECURSIVE, and NON_RECURSIVE.  This is done by using the spFlags values: DISPFlagElemental, DISPFlagPure, and DISPFlagRecursive.
+There are a few DWARF attributes defined to support client debugging of Fortran programs.  LLVM can generate (or omit) the appropriate DWARF attributes for the prefix-specs of ELEMENTAL, PURE, IMPURE, RECURSIVE, and NON_RECURSIVE.  This is done by using the ``spFlags`` values: ``DISPFlagElemental``, ``DISPFlagPure``, and ``DISPFlagRecursive``.
 
 .. code-block:: fortran
 
