@@ -315,8 +315,8 @@ func.func @disjoint_clamp_twice_is_not_single_clamp(%arg0: tensor<4xi8>) -> tens
 // CHECK-LABEL: @clamp_twice_with_nan_propagate_is_single_clamp
 func.func @clamp_twice_with_nan_propagate_is_single_clamp(%arg0: tensor<4xi8>) -> tensor<4xi8> {
   // CHECK: tosa.clamp %arg0 {max_val = 2 : i8, min_val = -2 : i8}
-  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = "PROPAGATE"} :  (tensor<4xi8>) -> tensor<4xi8>
-  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = "PROPAGATE"} :  (tensor<4xi8>) -> tensor<4xi8>
+  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<PROPAGATE>} :  (tensor<4xi8>) -> tensor<4xi8>
+  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = #tosa.nan_mode<PROPAGATE>} :  (tensor<4xi8>) -> tensor<4xi8>
   return %1 : tensor<4xi8>
 }
 
@@ -324,9 +324,9 @@ func.func @clamp_twice_with_nan_propagate_is_single_clamp(%arg0: tensor<4xi8>) -
 
 // CHECK-LABEL: @clamp_twice_with_nan_ignore_is_single_clamp
 func.func @clamp_twice_with_nan_ignore_is_single_clamp(%arg0: tensor<4xi8>) -> tensor<4xi8> {
-  // CHECK: tosa.clamp %arg0 {max_val = 2 : i8, min_val = -2 : i8, nan_mode = "IGNORE"}
-  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = "IGNORE"} :  (tensor<4xi8>) -> tensor<4xi8>
-  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = "IGNORE"} :  (tensor<4xi8>) -> tensor<4xi8>
+  // CHECK: tosa.clamp %arg0 {max_val = 2 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<IGNORE>}
+  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<IGNORE>} :  (tensor<4xi8>) -> tensor<4xi8>
+  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = #tosa.nan_mode<IGNORE>} :  (tensor<4xi8>) -> tensor<4xi8>
   return %1 : tensor<4xi8>
 }
 
@@ -334,9 +334,9 @@ func.func @clamp_twice_with_nan_ignore_is_single_clamp(%arg0: tensor<4xi8>) -> t
 
 // CHECK-LABEL: @clamp_twice_with_nan_ignore_propagate_is_single_clamp
 func.func @clamp_twice_with_nan_ignore_propagate_is_single_clamp(%arg0: tensor<4xi8>) -> tensor<4xi8> {
-  // CHECK: tosa.clamp %arg0 {max_val = 2 : i8, min_val = -2 : i8, nan_mode = "IGNORE"}
-  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = "IGNORE"} :  (tensor<4xi8>) -> tensor<4xi8>
-  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = "PROPAGATE"} :  (tensor<4xi8>) -> tensor<4xi8>
+  // CHECK: tosa.clamp %arg0 {max_val = 2 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<IGNORE>}
+  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<IGNORE>} :  (tensor<4xi8>) -> tensor<4xi8>
+  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = #tosa.nan_mode<PROPAGATE>} :  (tensor<4xi8>) -> tensor<4xi8>
   return %1 : tensor<4xi8>
 }
 
@@ -345,9 +345,9 @@ func.func @clamp_twice_with_nan_ignore_propagate_is_single_clamp(%arg0: tensor<4
 // CHECK: @clamp_twice_with_nan_propagate_ignore_is_not_single_clamp(%[[INPUT:.*]]: tensor<4xi8>)
 func.func @clamp_twice_with_nan_propagate_ignore_is_not_single_clamp(%arg0: tensor<4xi8>) -> tensor<4xi8> {
   // CHECK: %[[CLAMP_1:.*]] = tosa.clamp %[[INPUT]] {max_val = 4 : i8, min_val = -2 : i8} :  (tensor<4xi8>) -> tensor<4xi8>
-  // CHECK-NEXT: tosa.clamp %[[CLAMP_1]] {max_val = 2 : i8, min_val = -4 : i8, nan_mode = "IGNORE"} :  (tensor<4xi8>) -> tensor<4xi8>
-  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = "PROPAGATE"} :  (tensor<4xi8>) -> tensor<4xi8>
-  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = "IGNORE"} :  (tensor<4xi8>) -> tensor<4xi8>
+  // CHECK-NEXT: tosa.clamp %[[CLAMP_1]] {max_val = 2 : i8, min_val = -4 : i8, nan_mode = #tosa.nan_mode<IGNORE>} :  (tensor<4xi8>) -> tensor<4xi8>
+  %0 = tosa.clamp %arg0 {max_val = 4 : i8, min_val = -2 : i8, nan_mode = #tosa.nan_mode<PROPAGATE>} :  (tensor<4xi8>) -> tensor<4xi8>
+  %1 = tosa.clamp %0 {max_val = 2 : i8, min_val = -4 : i8, nan_mode = #tosa.nan_mode<IGNORE>} :  (tensor<4xi8>) -> tensor<4xi8>
   return %1 : tensor<4xi8>
 }
 
@@ -940,7 +940,7 @@ func.func @fold_resize_nearest(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1
   %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
   return %resize : tensor<1x15x13x1xi8>
 }
 
@@ -952,7 +952,7 @@ func.func @fold_resize_bilinear(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x
   %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = #tosa.resize_mode<NEAREST_NEIGHBOR>} : (tensor<1x15x13x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x15x13x1xi8>
   return %resize : tensor<1x15x13x1xi8>
 }
 
@@ -1196,7 +1196,7 @@ func.func @reshape_quant_nofold() -> tensor<1x1x1x1xi32> {
    %shift = "tosa.const"() {values = dense<30> : tensor<1xi8> } : () -> tensor<1xi8>
    %input_zp = "tosa.const"() {values = dense<-128> : tensor<1xi8>} : () -> tensor<1xi8>
    %output_zp = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-   %2 = tosa.rescale %1, %multiplier, %shift, %input_zp, %output_zp {rounding_mode = "DOUBLE_ROUND", scale32 = true, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<1x1x1x1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi32>) -> tensor<1x1x1x1xi32>
+   %2 = tosa.rescale %1, %multiplier, %shift, %input_zp, %output_zp {rounding_mode = #tosa.rounding_mode<DOUBLE_ROUND>, scale32 = true, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<1x1x1x1x!quant.uniform<i8:f32, 3.0757404601899907E-5:-128>>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi32>) -> tensor<1x1x1x1xi32>
    return %2 : tensor<1x1x1x1xi32>
 }
 
