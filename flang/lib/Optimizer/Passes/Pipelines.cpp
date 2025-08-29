@@ -14,7 +14,7 @@
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
-                                        llvm::cl::init(false));
+                                        llvm::cl::init(true));
 
 namespace fir {
 
