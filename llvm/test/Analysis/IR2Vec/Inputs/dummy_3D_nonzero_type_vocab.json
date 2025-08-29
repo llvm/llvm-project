@@ -47,6 +47,7 @@
         "FPTrunc": [0, 0, 0],
         "FPExt": [0, 0, 0],
         "PtrToInt": [0, 0, 0],
+        "PtrToAddr": [0, 0, 0],
         "IntToPtr": [0, 0, 0],
         "BitCast": [0, 0, 0],
         "AddrSpaceCast": [0, 0, 0],

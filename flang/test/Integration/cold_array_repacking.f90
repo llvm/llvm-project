@@ -1,6 +1,6 @@
 ! Check that the branch weights used by the array repacking
 ! are propagated all the way to LLVM IR:
-! RUN: %flang_fc1 -frepack-arrays -emit-llvm %s -o - | FileCheck %s
+! RUN: %flang_fc1 -frepack-arrays -mmlir --force-no-alias=false -emit-llvm %s -o - | FileCheck %s
 
 ! CHECK-LABEL: define void @test_(
 ! CHECK-SAME:      ptr [[TMP0:%.*]])

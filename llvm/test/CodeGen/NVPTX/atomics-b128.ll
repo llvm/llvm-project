@@ -1024,10 +1024,10 @@ define void @test_atomicrmw_xchg_const() {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd1};
-; CHECK-NEXT:    atom.seq_cst.sys.shared.exch.b128 dst, [si128], amt;
+; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [si128], amt;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    ret;
-	%res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 seq_cst
+  %res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 monotonic
   ret void
 }
