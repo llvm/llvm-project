@@ -350,14 +350,7 @@ define void @buildvector_v16i8_subseq_2(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a6, 5
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a7, 6
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $t0, 7
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 9
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 11
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a5, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a6, 13
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a7, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $t0, 15
+; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -388,18 +381,7 @@ define void @buildvector_v16i8_subseq_4(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 3
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 5
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 6
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 7
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 9
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 11
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 13
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 15
+; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -428,20 +410,7 @@ define void @buildvector_v16i8_subseq_8(ptr %dst, i8 %a0, i8 %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 1
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 3
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 5
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 6
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 7
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 9
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 11
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 13
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 15
+; CHECK-NEXT:    vreplvei.h $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -544,10 +513,7 @@ define void @buildvector_v8i16_subseq_2(ptr %dst, i16 %a0, i16 %a1, i16 %a2, i16
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a3, 2
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a4, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a3, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a4, 7
+; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -568,12 +534,7 @@ define void @buildvector_v8i16_subseq_4(ptr %dst, i16 %a0, i16 %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 7
+; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -646,8 +607,7 @@ define void @buildvector_v4i32_subseq_2(ptr %dst, i32 %a0, i32 %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a2, 1
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a2, 3
+; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -764,11 +724,9 @@ define void @buildvector_v4f32_subseq_2(ptr %dst, float %a0, float %a1) nounwind
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; CHECK-NEXT:    vori.b $vr2, $vr0, 0
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 32
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
+; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins0 = insertelement <4 x float> undef, float %a0, i32 0
