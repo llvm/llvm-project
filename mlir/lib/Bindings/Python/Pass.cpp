@@ -11,6 +11,7 @@
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "nanobind/trampoline.h"
 
