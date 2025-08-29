@@ -14,8 +14,6 @@
 // clang-format off
 // REQUIRES: target={{x86_64-.+-linux-gnu}}
 
-// TODO: Figure out why this fails with Memory Sanitizer.
-// XFAIL: msan
 
 // RUN: %{build}
 // RUN: objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
