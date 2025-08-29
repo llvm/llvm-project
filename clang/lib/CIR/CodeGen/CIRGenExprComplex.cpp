@@ -178,6 +178,10 @@ public:
   mlir::Value VisitBinMulAssign(const CompoundAssignOperator *e) {
     return emitCompoundAssign(e, &ComplexExprEmitter::emitBinMul);
   }
+
+  mlir::Value VisitBinDivAssign(const CompoundAssignOperator *e) {
+    return emitCompoundAssign(e, &ComplexExprEmitter::emitBinDiv);
+  }
 };
 } // namespace
 
@@ -865,6 +869,10 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
 
+  // Handle division between two complex values. In the case of complex integer
+  // types mixed with scalar integers, the scalar integer type will always be
+  // promoted to a complex integer value with a zero imaginary component when
+  // the AST is formed.
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
     cir::ComplexRangeKind rangeKind =
@@ -873,8 +881,24 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
                                      rangeKind);
   }
 
-  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinDiv between Complex & Scalar");
-  return {};
+  // The C99 standard (G.5.1) defines division of a complex value by a real
+  // value in the following simplified form.
+  if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
+    assert(mlir::cast<cir::ComplexType>(op.lhs.getType()).getElementType() ==
+           op.rhs.getType());
+    mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
+    mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
+    mlir::Value newReal = builder.createFDiv(op.loc, real, op.rhs);
+    mlir::Value newImag = builder.createFDiv(op.loc, imag, op.rhs);
+    return builder.createComplexCreate(op.loc, newReal, newImag);
+  }
+
+  assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
+  cir::ConstantOp nullValue = builder.getNullValue(op.lhs.getType(), op.loc);
+  mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
+  cir::ComplexRangeKind rangeKind =
+      getComplexRangeAttr(op.fpFeatures.getComplexRange());
+  return cir::ComplexDivOp::create(builder, op.loc, lhs, op.rhs, rangeKind);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
@@ -903,7 +927,7 @@ static CompoundFunc getComplexOp(BinaryOperatorKind op) {
   case BO_MulAssign:
     return &ComplexExprEmitter::emitBinMul;
   case BO_DivAssign:
-    llvm_unreachable("getComplexOp: BO_DivAssign");
+    return &ComplexExprEmitter::emitBinDiv;
   case BO_SubAssign:
     return &ComplexExprEmitter::emitBinSub;
   case BO_AddAssign:
