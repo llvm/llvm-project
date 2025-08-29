@@ -1,0 +1,3 @@
+@echo off
+"@Python3_EXECUTABLE@" "%~dp0@LIT_FILE_NAME@" %*
+exit /b %errorlevel%

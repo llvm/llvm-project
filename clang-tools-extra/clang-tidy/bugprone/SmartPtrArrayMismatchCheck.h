@@ -40,7 +40,7 @@ protected:
   static const char PointerTypeN[];
 
 private:
-  StringRef const SmartPointerName;
+  const StringRef SmartPointerName;
 };
 
 } // namespace clang::tidy::bugprone
