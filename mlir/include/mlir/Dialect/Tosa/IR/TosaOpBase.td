@@ -221,7 +221,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA Spec Section 1.5.
+// TOSA Profiles and extensions
 //
 // Profile:
 // INT : Integer Inference. Integer operations, primarily 8 and 32-bit values.
@@ -292,12 +292,6 @@ def Tosa_ExtensionAttr
 
 def Tosa_ExtensionArrayAttr
     : TypedArrayAttrBase<Tosa_ExtensionAttr, "TOSA extension array attribute">;
-
-def Tosa_LVL_NONE : I32EnumAttrCase<"none", 0>;
-def Tosa_LVL_8K   : I32EnumAttrCase<"eightK", 1, "8k">;
-
-def Tosa_LevelAttr
-    : Tosa_I32EnumAttr<"Level", "supported TOSA levels", "level", [Tosa_LVL_NONE, Tosa_LVL_8K]>;
 
 // The base class for defining op availability dimensions.
 class Availability {
@@ -405,17 +399,40 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Levels
+//===----------------------------------------------------------------------===//
+
+def Tosa_LVL_NONE : I32EnumAttrCase<"none", 0>;
+def Tosa_LVL_8K   : I32EnumAttrCase<"eightK", 1, "8k">;
+
+def Tosa_LevelAttr
+    : Tosa_I32EnumAttr<"Level", "supported TOSA levels", "level", [Tosa_LVL_NONE, Tosa_LVL_8K]>;
+
+//===----------------------------------------------------------------------===//
+// TOSA Specification versions
+//===----------------------------------------------------------------------===//
+
+def Tosa_V_1_0 : I32EnumAttrCase<"V_1_0", 0, "1.0">;
+def Tosa_V_1_1_DRAFT : I32EnumAttrCase<"V_1_1_DRAFT", 1, "1.1.draft">;
+
+def Tosa_SpecificationVersion : Tosa_I32EnumAttr<
+      "SpecificationVersion", "TOSA specification version", "specification_version",
+      [Tosa_V_1_0, Tosa_V_1_1_DRAFT]>;
+
+//===----------------------------------------------------------------------===//
 // TOSA target environment.
 //===----------------------------------------------------------------------===//
 def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
   let summary = "Target environment information.";
   let parameters = ( ins
+    "SpecificationVersion": $specification_version,
     "Level": $level,
     ArrayRefParameter<"Profile">: $profiles,
     ArrayRefParameter<"Extension">: $extensions
   );
 
-  let assemblyFormat = "`<` `level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
+  let assemblyFormat = "`<` `specification_version` `=` $specification_version `,` "
+                       "`level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
                        "`extensions` `=` `[` $extensions `]` `>`";
 }
 
