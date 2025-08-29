@@ -16,9 +16,12 @@ define <vscale x 4 x i32> @bsl(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 define <vscale x 4 x i32> @bsl_add_sub(<vscale x 4 x i32> %pre_cond, <vscale x 4 x i32> %left, <vscale x 4 x i32> %right) #0 {
 ; CHECK-LABEL: bsl_add_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
-; CHECK-NEXT:    bsl z1.d, z1.d, z2.d, z0.d
-; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    sub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    subr z3.s, z3.s, #0 // =0x0
+; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z1.d, z3.d, z1.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %neg_cond = sub <vscale x 4 x i32> zeroinitializer, %pre_cond
   %min_cond = add <vscale x 4 x i32> %pre_cond, splat(i32 -1)
