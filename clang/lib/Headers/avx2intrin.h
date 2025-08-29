@@ -2121,9 +2121,8 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_slli_epi16(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_slli_epi16(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_psllwi256((__v16hi)__a, __count);
 }
 
@@ -2161,9 +2160,8 @@ _mm256_sll_epi16(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_slli_epi32(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_slli_epi32(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_pslldi256((__v8si)__a, __count);
 }
 
@@ -2201,9 +2199,8 @@ _mm256_sll_epi32(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_slli_epi64(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_slli_epi64(__m256i __a, int __count) {
   return __builtin_ia32_psllqi256((__v4di)__a, __count);
 }
 
@@ -2242,9 +2239,8 @@ _mm256_sll_epi64(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srai_epi16(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srai_epi16(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_psrawi256((__v16hi)__a, __count);
 }
 
@@ -2284,9 +2280,8 @@ _mm256_sra_epi16(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srai_epi32(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srai_epi32(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_psradi256((__v8si)__a, __count);
 }
 
@@ -2365,9 +2360,8 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srli_epi16(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srli_epi16(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_psrlwi256((__v16hi)__a, __count);
 }
 
@@ -2405,9 +2399,8 @@ _mm256_srl_epi16(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [8 x i32] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srli_epi32(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srli_epi32(__m256i __a, int __count) {
   return (__m256i)__builtin_ia32_psrldi256((__v8si)__a, __count);
 }
 
@@ -2445,9 +2438,8 @@ _mm256_srl_epi32(__m256i __a, __m128i __count)
 /// \param __count
 ///    An unsigned integer value specifying the shift count (in bits).
 /// \returns A 256-bit vector of [4 x i64] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_srli_epi64(__m256i __a, int __count)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_srli_epi64(__m256i __a, int __count) {
   return __builtin_ia32_psrlqi256((__v4di)__a, __count);
 }
 

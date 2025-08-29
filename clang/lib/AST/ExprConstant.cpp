@@ -11632,7 +11632,38 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
-  case clang::X86::BI__builtin_ia32_psrlv8si:{
+  case clang::X86::BI__builtin_ia32_psrlv8si:
+
+  case clang::X86::BI__builtin_ia32_psllwi128:
+  case clang::X86::BI__builtin_ia32_pslldi128:
+  case clang::X86::BI__builtin_ia32_psllqi128:
+  case clang::X86::BI__builtin_ia32_psllwi256:
+  case clang::X86::BI__builtin_ia32_pslldi256:
+  case clang::X86::BI__builtin_ia32_psllqi256:
+  case clang::X86::BI__builtin_ia32_psllwi512:
+  case clang::X86::BI__builtin_ia32_pslldi512:
+  case clang::X86::BI__builtin_ia32_psllqi512:
+
+  case clang::X86::BI__builtin_ia32_psrlwi128:
+  case clang::X86::BI__builtin_ia32_psrldi128:
+  case clang::X86::BI__builtin_ia32_psrlqi128:
+  case clang::X86::BI__builtin_ia32_psrlwi256:
+  case clang::X86::BI__builtin_ia32_psrldi256:
+  case clang::X86::BI__builtin_ia32_psrlqi256:
+  case clang::X86::BI__builtin_ia32_psrlwi512:
+  case clang::X86::BI__builtin_ia32_psrldi512:
+  case clang::X86::BI__builtin_ia32_psrlqi512:
+
+  case clang::X86::BI__builtin_ia32_psrawi128:
+  case clang::X86::BI__builtin_ia32_psradi128:
+  case clang::X86::BI__builtin_ia32_psraqi128:
+  case clang::X86::BI__builtin_ia32_psrawi256:
+  case clang::X86::BI__builtin_ia32_psradi256:
+  case clang::X86::BI__builtin_ia32_psraqi256:
+  case clang::X86::BI__builtin_ia32_psrawi512:
+  case clang::X86::BI__builtin_ia32_psradi512:
+  case clang::X86::BI__builtin_ia32_psraqi512: {
+
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -11646,6 +11677,64 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+
+      if (SourceRHS.isInt()) {
+        const unsigned LaneBitWidth = LHS.getBitWidth();
+        const unsigned ShiftAmount = SourceRHS.getInt().getZExtValue();
+
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_psllwi128:
+        case clang::X86::BI__builtin_ia32_psllwi256:
+        case clang::X86::BI__builtin_ia32_psllwi512:
+        case clang::X86::BI__builtin_ia32_pslldi128:
+        case clang::X86::BI__builtin_ia32_pslldi256:
+        case clang::X86::BI__builtin_ia32_pslldi512:
+        case clang::X86::BI__builtin_ia32_psllqi128:
+        case clang::X86::BI__builtin_ia32_psllqi256:
+        case clang::X86::BI__builtin_ia32_psllqi512:
+          if (ShiftAmount >= LaneBitWidth) {
+            ResultElements.push_back(
+                APValue(APSInt(APInt::getZero(LaneBitWidth), DestUnsigned)));
+          } else {
+            ResultElements.push_back(
+                APValue(APSInt(LHS.shl(ShiftAmount), DestUnsigned)));
+          }
+          break;
+        case clang::X86::BI__builtin_ia32_psrlwi128:
+        case clang::X86::BI__builtin_ia32_psrlwi256:
+        case clang::X86::BI__builtin_ia32_psrlwi512:
+        case clang::X86::BI__builtin_ia32_psrldi128:
+        case clang::X86::BI__builtin_ia32_psrldi256:
+        case clang::X86::BI__builtin_ia32_psrldi512:
+        case clang::X86::BI__builtin_ia32_psrlqi128:
+        case clang::X86::BI__builtin_ia32_psrlqi256:
+        case clang::X86::BI__builtin_ia32_psrlqi512:
+          if (ShiftAmount >= LaneBitWidth) {
+            ResultElements.push_back(
+                APValue(APSInt(APInt::getZero(LaneBitWidth), DestUnsigned)));
+          } else {
+            ResultElements.push_back(
+                APValue(APSInt(LHS.lshr(ShiftAmount), DestUnsigned)));
+          }
+          break;
+        case clang::X86::BI__builtin_ia32_psrawi128:
+        case clang::X86::BI__builtin_ia32_psrawi256:
+        case clang::X86::BI__builtin_ia32_psrawi512:
+        case clang::X86::BI__builtin_ia32_psradi128:
+        case clang::X86::BI__builtin_ia32_psradi256:
+        case clang::X86::BI__builtin_ia32_psradi512:
+        case clang::X86::BI__builtin_ia32_psraqi128:
+        case clang::X86::BI__builtin_ia32_psraqi256:
+        case clang::X86::BI__builtin_ia32_psraqi512:
+          ResultElements.push_back(
+              APValue(APSInt(LHS.ashr(std::min(ShiftAmount, LaneBitWidth - 1)),
+                             DestUnsigned)));
+          break;
+        default:
+          llvm_unreachable("Unexpected builtin callee");
+        }
+        continue;
+      }
       APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
       switch (E->getBuiltinCallee()) {
       case Builtin::BI__builtin_elementwise_add_sat:

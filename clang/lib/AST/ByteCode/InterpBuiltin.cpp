@@ -2565,10 +2565,34 @@ static bool interp__builtin_elementwise_int_binop(
     return true;
   }
 
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  // Vector + Scalar case.
+  if (!Call->getArg(1)->getType()->isVectorType()) {
+    assert(Call->getArg(1)->getType()->isIntegralOrEnumerationType());
+
+    APSInt RHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
+    const Pointer &LHS = S.Stk.pop<Pointer>();
+    const Pointer &Dst = S.Stk.peek<Pointer>();
+
+    for (unsigned I = 0; I != NumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        Dst.elem<T>(I) = static_cast<T>(
+            APSInt(Fn(LHS.elem<T>(I).toAPSInt(), RHS), DestUnsigned));
+      });
+    }
+    Dst.initializeAllElements();
+    return true;
+  }
+
   // Vector case.
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType() ==
          Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
   assert(VT->getNumElements() ==
@@ -2578,22 +2602,12 @@ static bool interp__builtin_elementwise_int_binop(
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  unsigned NumElems = VT->getNumElements();
   for (unsigned I = 0; I != NumElems; ++I) {
-    APSInt Elem1;
-    APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I).toAPSInt();
+      APSInt Elem1 = LHS.elem<T>(I).toAPSInt();
+      APSInt Elem2 = RHS.elem<T>(I).toAPSInt();
+      Dst.elem<T>(I) = static_cast<T>(APSInt(Fn(Elem1, Elem2), DestUnsigned));
     });
-
-    APSInt Result =
-        APSInt(Fn(Elem1, Elem2),
-               Call->getType()->isUnsignedIntegerOrEnumerationType());
-
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
   }
   Dst.initializeAllElements();
 
@@ -3254,6 +3268,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
   case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllwi128:
+  case clang::X86::BI__builtin_ia32_psllwi256:
+  case clang::X86::BI__builtin_ia32_psllwi512:
+  case clang::X86::BI__builtin_ia32_pslldi128:
+  case clang::X86::BI__builtin_ia32_pslldi256:
+  case clang::X86::BI__builtin_ia32_pslldi512:
+  case clang::X86::BI__builtin_ia32_psllqi128:
+  case clang::X86::BI__builtin_ia32_psllqi256:
+  case clang::X86::BI__builtin_ia32_psllqi512:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
@@ -3264,6 +3287,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrawi128:
+  case clang::X86::BI__builtin_ia32_psrawi256:
+  case clang::X86::BI__builtin_ia32_psrawi512:
+  case clang::X86::BI__builtin_ia32_psradi128:
+  case clang::X86::BI__builtin_ia32_psradi256:
+  case clang::X86::BI__builtin_ia32_psradi512:
+  case clang::X86::BI__builtin_ia32_psraqi128:
+  case clang::X86::BI__builtin_ia32_psraqi256:
+  case clang::X86::BI__builtin_ia32_psraqi512:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
@@ -3276,6 +3308,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
   case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlwi128:
+  case clang::X86::BI__builtin_ia32_psrlwi256:
+  case clang::X86::BI__builtin_ia32_psrlwi512:
+  case clang::X86::BI__builtin_ia32_psrldi128:
+  case clang::X86::BI__builtin_ia32_psrldi256:
+  case clang::X86::BI__builtin_ia32_psrldi512:
+  case clang::X86::BI__builtin_ia32_psrlqi128:
+  case clang::X86::BI__builtin_ia32_psrlqi256:
+  case clang::X86::BI__builtin_ia32_psrlqi512:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
           if (RHS.uge(LHS.getBitWidth())) {
