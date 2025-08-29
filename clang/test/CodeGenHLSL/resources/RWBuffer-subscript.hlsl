@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=DXC,CHECK
-// RUN: %clang_cc1 -triple spirv1.6-pc-vulkan1.3-compute -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=SPIRV,CHECK
+// RUN: %clang_cc1 -triple spirv1.6-pc-vulkan1.3-compute -fspv-use-unknown-image-format -emit-llvm -o - -O0 %s | FileCheck %s --check-prefixes=SPIRV,CHECK
 
 RWBuffer<int> In;
 RWBuffer<int> Out;
