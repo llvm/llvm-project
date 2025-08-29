@@ -1335,9 +1335,12 @@ void TargetInstrInfo::reassociateOps(
   MachineOperand &OpC = Root.getOperand(0);
 
   Register RegA = OpA.getReg();
+  unsigned SubRegA = OpA.getSubReg();
   Register RegB = OpB.getReg();
   Register RegX = OpX.getReg();
+  unsigned SubRegX = OpX.getSubReg();
   Register RegY = OpY.getReg();
+  unsigned SubRegY = OpY.getSubReg();
   Register RegC = OpC.getReg();
 
   if (RegA.isVirtual())
@@ -1355,6 +1358,7 @@ void TargetInstrInfo::reassociateOps(
   // recycling RegB because the MachineCombiner's computation of the critical
   // path requires a new register definition rather than an existing one.
   Register NewVR = MRI.createVirtualRegister(RC);
+  unsigned SubRegNewVR = 0;
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
   auto [NewRootOpc, NewPrevOpc] = getReassociationOpcodes(Pattern, Root, Prev);
@@ -1367,6 +1371,7 @@ void TargetInstrInfo::reassociateOps(
 
   if (SwapPrevOperands) {
     std::swap(RegX, RegY);
+    std::swap(SubRegX, SubRegY);
     std::swap(KillX, KillY);
   }
 
@@ -1419,9 +1424,9 @@ void TargetInstrInfo::reassociateOps(
     if (Idx == 0)
       continue;
     if (Idx == PrevFirstOpIdx)
-      MIB1.addReg(RegX, getKillRegState(KillX));
+      MIB1.addReg(RegX, getKillRegState(KillX), SubRegX);
     else if (Idx == PrevSecondOpIdx)
-      MIB1.addReg(RegY, getKillRegState(KillY));
+      MIB1.addReg(RegY, getKillRegState(KillY), SubRegY);
     else
       MIB1.add(MO);
   }
@@ -1429,6 +1434,7 @@ void TargetInstrInfo::reassociateOps(
 
   if (SwapRootOperands) {
     std::swap(RegA, NewVR);
+    std::swap(SubRegA, SubRegNewVR);
     std::swap(KillA, KillNewVR);
   }
 
@@ -1440,9 +1446,9 @@ void TargetInstrInfo::reassociateOps(
     if (Idx == 0)
       continue;
     if (Idx == RootFirstOpIdx)
-      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA));
+      MIB2 = MIB2.addReg(RegA, getKillRegState(KillA), SubRegA);
     else if (Idx == RootSecondOpIdx)
-      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR));
+      MIB2 = MIB2.addReg(NewVR, getKillRegState(KillNewVR), SubRegNewVR);
     else
       MIB2 = MIB2.add(MO);
   }
@@ -1528,6 +1534,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
       if (IndexedReg.index() == 0)
         continue;
 
+      // FIXME: Losing subregisters
       MachineInstr *Instr = MRI.getUniqueVRegDef(IndexedReg.value());
       MachineInstrBuilder MIB;
       Register AccReg;
