@@ -118,7 +118,12 @@ def configure_dexter_substitutions():
     )
     tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test'))
     if lldb_dap_path is not None:
-        tools.append(ToolSubst("%dexter_lldb_args", f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap'))
+        tools.append(
+            ToolSubst(
+                "%dexter_lldb_args",
+                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap',
+            )
+        )
 
     # For testing other bits of dexter that aren't under the "test" subcommand,
     # have a %dexter_base substitution.
@@ -148,7 +153,10 @@ def configure_dexter_substitutions():
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
 
     tools.append(
-        ToolSubst("%dexter_regression_test_debugger_args", f"--debugger {dexter_regression_test_debugger} {dexter_regression_test_additional_flags}")
+        ToolSubst(
+            "%dexter_regression_test_debugger_args",
+            f"--debugger {dexter_regression_test_debugger} {dexter_regression_test_additional_flags}",
+        )
     )
 
     # Typical command would take the form:
