@@ -18,11 +18,6 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_noal
 ; CHECK-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.off, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.B.1 = getelementptr inbounds i8, ptr %B, i64 %iv.next
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%off + %A) High: (404 + %off + %A))
@@ -31,11 +26,9 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_noal
 ; CHECK-NEXT:          (Low: %A High: (101 + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %B High: (101 + %B))
-; CHECK-NEXT:            Member: {%B,+,1}<nuw><%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (1 + %B)<nuw> High: (102 + %B))
+; CHECK-NEXT:          (Low: %B High: (102 + %B))
 ; CHECK-NEXT:            Member: {(1 + %B)<nuw>,+,1}<nuw><%loop>
+; CHECK-NEXT:            Member: {%B,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -77,6 +70,7 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_maya
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.off, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.B.1 = getelementptr inbounds i8, ptr %B, i64 %iv.next
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -84,33 +78,22 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_maya
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.off, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.B.1 = getelementptr inbounds i8, ptr %B, i64 %iv.next
-; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.B.1 = getelementptr inbounds i8, ptr %B, i64 %iv.next
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.B.1 = getelementptr inbounds i8, ptr %B, i64 %iv.next
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%off + %A) High: (404 + %off + %A))
 ; CHECK-NEXT:            Member: {(%off + %A),+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %B High: (101 + %B))
+; CHECK-NEXT:          (Low: %B High: (102 + %B))
+; CHECK-NEXT:            Member: {(1 + %B)<nuw>,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%B,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (101 + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (1 + %B)<nuw> High: (102 + %B))
-; CHECK-NEXT:            Member: {(1 + %B)<nuw>,+,1}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
