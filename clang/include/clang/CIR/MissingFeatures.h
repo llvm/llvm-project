@@ -149,7 +149,6 @@ struct MissingFeatures {
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
   static bool cxxabiStructorImplicitParam() { return false; }
-  static bool isDiscreteBitFieldABI() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
