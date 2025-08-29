@@ -25,3 +25,39 @@ add_integration_test(
   DEPENDS
     libc.src.__support.threads.thread
 )
+
+add_integration_test(
+  main_exit_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    main_exit_test.cpp
+  DEPENDS
+    libc.src.__support.threads.thread
+)
+
+if (LIBC_CONF_ENABLE_MALLOC_THREAD_CLEANUP)
+  add_integration_test(
+    malloc_cleanup_test
+    SUITE
+      libc-support-threads-integration-tests
+    SRCS
+      malloc_cleanup_test.cpp
+    DEPENDS
+      libc.src.__support.threads.thread
+      libc.src.stdlib.atexit
+      libc.src.stdlib.exit
+      libc.src.stdlib._Exit
+  )
+endif()
+
+add_integration_test(
+  double_exit_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    double_exit_test.cpp
+  DEPENDS
+    libc.src.__support.threads.thread
+    libc.src.stdlib.exit
+)

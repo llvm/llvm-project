@@ -594,6 +594,12 @@ add_header_library(
 )
 endif()
 
+if (LIBC_CONF_ENABLE_MALLOC_THREAD_CLEANUP)
+  set(malloc_cleanup_flags -DLIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP)
+else()
+  set(malloc_cleanup_flags)
+endif()
+
 add_entrypoint_object(
   atexit
   SRCS
@@ -604,6 +610,8 @@ add_entrypoint_object(
     20 # For constinit
   DEPENDS
     .exit_handler
+  COMPILE_OPTIONS
+    ${malloc_cleanup_flags}
 )
 
 add_entrypoint_object(
