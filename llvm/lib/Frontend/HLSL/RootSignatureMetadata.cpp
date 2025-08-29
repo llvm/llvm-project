@@ -330,11 +330,17 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (!ElementText.has_value())
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  Range.RangeType = StringSwitch<dxbc::DescriptorRangeType>(*ElementText)
-                        .Case("CBV", dxbc::DescriptorRangeType::CBV)
-                        .Case("SRV", dxbc::DescriptorRangeType::SRV)
-                        .Case("UAV", dxbc::DescriptorRangeType::UAV)
-                        .Case("Sampler", dxbc::DescriptorRangeType::Sampler);
+  if (*ElementText == "CBV")
+    Range.RangeType = dxbc::DescriptorRangeType::CBV;
+  else if (*ElementText == "SRV")
+    Range.RangeType = dxbc::DescriptorRangeType::SRV;
+  else if (*ElementText == "UAV")
+    Range.RangeType = dxbc::DescriptorRangeType::UAV;
+  else if (*ElementText == "Sampler")
+    Range.RangeType = dxbc::DescriptorRangeType::Sampler;
+  else
+    return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
+                                              RangeDescriptorNode);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
     Range.NumDescriptors = *Val;
