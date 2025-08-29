@@ -1608,10 +1608,10 @@ def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uim
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
-def: Pat<(qc_e_li tglobaladdr:$A),   (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tblockaddress:$A),   (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tjumptable:$A),   (QC_E_LI bare_simm32:$A)>;
-def: Pat<(qc_e_li tconstpool:$A),   (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tglobaladdr:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tblockaddress:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tjumptable:$A), (QC_E_LI bare_simm32:$A)>;
+def: Pat<(qc_e_li tconstpool:$A), (QC_E_LI bare_simm32:$A)>;
 } // Predicates = [HasVendorXqcili, IsRV32]
 
 //===----------------------------------------------------------------------===/i
