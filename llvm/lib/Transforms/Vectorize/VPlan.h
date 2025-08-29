@@ -2437,9 +2437,9 @@ public:
 };
 
 /// A common base class for interleaved memory operations.
-/// Interleaved memory operation is a memory access method that combines
+/// An Interleaved memory operation is a memory access method that combines
 /// multiple strided loads/stores into a single wide load/store with shuffles.
-/// The first operand must be the address. The optional operands are, in order,
+/// The first operand is the start address. The optional operands are, in order,
 /// the stored values and the mask.
 class LLVM_ABI_FOR_TEST VPInterleaveBase : public VPRecipeBase,
                                            public VPIRMetadata {
@@ -2577,7 +2577,7 @@ public:
   }
 };
 
-/// A recipe for interleaved access operations with vector-predication
+/// A recipe for interleaved memory operations with vector-predication
 /// intrinsics. The first operand is the address, the second operand is the
 /// explicit vector length. Stored values and mask are optional operands.
 class LLVM_ABI_FOR_TEST VPInterleaveEVLRecipe final : public VPInterleaveBase {
