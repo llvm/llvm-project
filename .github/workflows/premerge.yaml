@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - depot-ubuntu-24.04-arm-16
+          - depot-ubuntu-24.04-arm-4
           - llvm-premerge-linux-runners
     runs-on: ${{ matrix.runs-on }}
     container:
@@ -99,7 +99,7 @@ jobs:
           mkdir artifacts
           SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
-#          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
+          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not
