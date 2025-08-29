@@ -220,6 +220,26 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
+  // We can first convert the FIR dialect to the Affine dialect, perform
+  // optimizations on top of it, and then lower it to the FIR dialect.
+  // TODO: These optimization passes (e.g., PromoteToAffinePass) are currently
+  // experimental, so it's important to actively identify and address issues.
+  if (enableAffineOpt && pc.OptLevel.isOptimizingForSpeed()) {
+    pm.addPass(fir::createPromoteToAffinePass());
+    pm.addPass(mlir::createCSEPass());
+    pm.addPass(mlir::affine::createAffineLoopInvariantCodeMotionPass());
+    pm.addPass(mlir::affine::createAffineLoopNormalizePass());
+    pm.addPass(mlir::affine::createSimplifyAffineStructuresPass());
+    pm.addPass(mlir::affine::createAffineParallelize(
+        mlir::affine::AffineParallelizeOptions{1, false}));
+    pm.addPass(fir::createAffineDemotionPass());
+    pm.addPass(mlir::createLowerAffinePass());
+    if (pc.EnableOpenMP) {
+      pm.addPass(mlir::createConvertSCFToOpenMPPass());
+      pm.addPass(mlir::createCanonicalizerPass());
+    }
+  }
+
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
   // convert control flow to CFG form

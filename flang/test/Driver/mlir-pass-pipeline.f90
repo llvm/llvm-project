@@ -4,6 +4,7 @@
 ! -O0 is the default:
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL %s
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O2 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O2 %s
+! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -mllvm --enable-affine-opt %s -O2 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O2,AFFINE %s
 
 ! REQUIRES: asserts
 
@@ -110,6 +111,19 @@ end program
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 ! O2-NEXT:  AddAliasTags
+
+! AFFINE-NEXT: 'func.func' Pipeline
+! AFFINE-NEXT:   AffineDialectPromotion
+! AFFINE-NEXT: CSE
+! AFFINE-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
+! AFFINE-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! AFFINE-NEXT: 'func.func' Pipeline
+! AFFINE-NEXT:   AffineLoopInvariantCodeMotion
+! AFFINE-NEXT:   AffineLoopNormalize
+! AFFINE-NEXT:   SimplifyAffineStructures
+! AFFINE-NEXT:   AffineParallelize
+! AFFINE-NEXT:   AffineDialectDemotion
+! AFFINE-NEXT: LowerAffinePass
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:    'fir.global' Pipeline
