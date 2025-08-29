@@ -181,6 +181,11 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
   OFFLOAD_ERR(printDeviceValue<ol_dimensions_t>(
       S, D, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
       "Max Work Group Size Per Dimension"));
+  OFFLOAD_ERR(printDeviceValue<uint32_t>(S, D, OL_DEVICE_INFO_MAX_WORK_SIZE,
+                                         "Max Work Size"));
+  OFFLOAD_ERR(printDeviceValue<ol_dimensions_t>(
+      S, D, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION,
+      "Max Work Size Per Dimension"));
   OFFLOAD_ERR(
       printDeviceValue<uint32_t>(S, D, OL_DEVICE_INFO_VENDOR_ID, "Vendor ID"));
   OFFLOAD_ERR(printDeviceValue<uint32_t>(S, D, OL_DEVICE_INFO_NUM_COMPUTE_UNITS,
