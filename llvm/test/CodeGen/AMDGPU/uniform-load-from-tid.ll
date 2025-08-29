@@ -98,10 +98,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}lshr_threadid_3d:
-; GCN: global_load_dword
+; W64: global_load_dword
+; W32: v_readfirstlane_b32 [[OFFSET:s[0-9]+]], v0
+; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[OFFSET]]
 
 ; OPT-LABEL: @lshr_threadid_3d
-; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
 define amdgpu_kernel void @lshr_threadid_3d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !2 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -110,6 +113,24 @@ entry:
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4
   %load = load i32, ptr addrspace(1) %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %div4
+  store i32 %load, ptr addrspace(1) %arrayidx2, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}high_id_uniform:
+; GCN: v_lshlrev_b32_e32 v0, 2, v2
+; GCN: v_readfirstlane_b32 [[OFFSET:s[0-9]+]], v0
+; GCN: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[OFFSET]]
+
+; OPT-LABEL: @high_id_uniform
+; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %zid.zext, !amdgpu.uniform
+define amdgpu_kernel void @high_id_uniform(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !2 {
+entry:
+  %zid = tail call i32 @llvm.amdgcn.workitem.id.z()
+  %zid.zext = zext nneg i32 %zid to i64
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %zid.zext
+  %load = load i32, ptr addrspace(1) %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %zid.zext
   store i32 %load, ptr addrspace(1) %arrayidx2, align 4
   ret void
 }

@@ -81,8 +81,27 @@ LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
-  if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported.");
+  TMAStoreMode mode = getMode();
+  // We lower through inline-ptx when getPredicate() is true.
+  // a) Only TILE mode is supported
+  // b) Cache-hint is not supported
+  if (getPredicate()) {
+    if (mode != TMAStoreMode::TILE)
+      return emitError("Inline-ptx lowering supported only for Tile mode.");
+    if (getL2CacheHint())
+      return emitError("Inline-ptx lowering unsupported with L2 cache-hint.");
+  }
+
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    if (dims != 5)
+      return emitError("Scatter4 mode expects 5 coordinates");
+  }
   return success();
 }
 
@@ -139,9 +158,17 @@ LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
 }
 
 LogicalResult CpAsyncBulkTensorReduceOp::verify() {
-  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
-                                         getLoc());
+  TMAStoreMode mode = getMode();
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
+  }
+  return success();
 }
 
 LogicalResult ConvertFloatToTF32Op::verify() {
@@ -1517,6 +1544,51 @@ mlir::NVVM::IDArgPair CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
   llvm::Intrinsic::ID id = IDTable[mode][dim];
   if (id == llvm::Intrinsic::not_intrinsic)
     llvm_unreachable("Invalid intrinsic for CpAsyncBulkTensorPrefetchOp.");
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair
+CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+
+  static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
+                "TMAStoreModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable(
+        "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
 
   return {id, std::move(args)};
 }

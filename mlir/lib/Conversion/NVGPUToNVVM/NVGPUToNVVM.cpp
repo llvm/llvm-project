@@ -1026,8 +1026,10 @@ struct NVGPUTmaAsyncStoreOpLowering
       coords[index] = truncToI32(b, value);
     }
 
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(
-        op, adaptor.getTensorMapDescriptor(), dest, coords,
+        op, adaptor.getTensorMapDescriptor(), dest, coords, Value{},
+        NVVM::TMAStoreMode::TILE, // default is TILE mode
         adaptor.getPredicate());
     return success();
   }

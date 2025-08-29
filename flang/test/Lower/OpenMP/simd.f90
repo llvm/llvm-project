@@ -226,6 +226,23 @@ subroutine simdloop_aligned_allocatable()
   end do
 end subroutine
 
+subroutine aligned_non_power_of_two()
+  integer :: i
+  integer, allocatable :: A(:)
+  allocate(A(10))
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!CHECK: omp.simd private
+  !$OMP SIMD ALIGNED(A:257)
+  do i = 1, 10
+    A(i) = i
+  end do
+end subroutine
+
 !CHECK-LABEL: func @_QPsimd_with_nontemporal_clause
 subroutine simd_with_nontemporal_clause(n)
   !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
