@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+Xmipscmov,+xmipscbop,+xmipsexectl  -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl  -M no-aliases -show-encoding \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl < %s \
 # RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl -M no-aliases -d - \
