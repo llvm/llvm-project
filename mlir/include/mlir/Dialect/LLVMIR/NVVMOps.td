@@ -2367,6 +2367,23 @@ def TMAStoreModeAttr : EnumAttr<NVVM_Dialect, TMAStoreMode, "tma_store_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+// Num CTAs in a group participating in the TCGEN05 operation.
+// This corresponds to the "cta_group::1", "cta_group::2"
+// modifiers in the PTX instructions.
+def Tcgen05GroupCTA_1 : I32EnumAttrCase<"CTA_1", 0, "cta_1">;
+def Tcgen05GroupCTA_2 : I32EnumAttrCase<"CTA_2", 1, "cta_2">;
+
+def Tcgen05GroupKind : I32EnumAttr<"Tcgen05GroupKind",
+                            "NVVM Tcgen05 group kind",
+  [Tcgen05GroupCTA_1, Tcgen05GroupCTA_2]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def Tcgen05GroupKindAttr :
+  EnumAttr<NVVM_Dialect, Tcgen05GroupKind, "tcgen05_group"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -2413,26 +2430,20 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
-  Arguments<(ins  LLVM_PointerShared:$dstMem,
-                  LLVM_AnyPointer:$tmaDescriptor,
+  Arguments<(ins  LLVM_PointerSharedCluster:$dstMem,
+                  LLVM_PointerGeneric:$tmaDescriptor,
                   Variadic<I32>:$coordinates,
                   LLVM_PointerShared:$mbar,                  
                   Variadic<I16>:$im2colOffsets,
                   Optional<I16>:$multicastMask,
                   Optional<I64>:$l2CacheHint,
+                  DefaultValuedAttr<TMALoadModeAttr, "TMALoadMode::TILE">:$mode,
+                  OptionalAttr<Tcgen05GroupKindAttr>:$group,
                   PtxPredicate:$predicate)> {
   let description = [{
     Initiates an asynchronous copy operation on the tensor data from global 
-    memory to shared memory. 
-
-    The Op operates has two load modes:
-    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor 
-    layout is preserved at the destination. 
-
-    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
-    the elements in the Bounding Box of the source tensor are rearranged into
-    columns at the destination. In this mode, the tensor has to be at least 
-    3-dimensional. 
+    memory to shared::cluster memory. This Op supports all the load modes
+    specified in `TMALoadMode`.
 
     The `multicastMask` operand is optional. When it is present, the Op copies
     data from global memory to shared memory of multiple CTAs in the cluster.
@@ -2490,6 +2501,20 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     }
   }];
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
 }
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
@@ -3314,23 +3339,6 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
 //===----------------------------------------------------------------------===//
 // NVVM TCGEN05 Ops
 //===----------------------------------------------------------------------===//
-// Num CTAs in a group participating in the TCGEN05 operation.
-// This corresponds to the "cta_group::1", "cta_group::2"
-// modifiers in the PTX instructions.
-def Tcgen05GroupCTA_1 : I32EnumAttrCase<"CTA_1", 0, "cta_1">;
-def Tcgen05GroupCTA_2 : I32EnumAttrCase<"CTA_2", 1, "cta_2">;
-
-def Tcgen05GroupKind : I32EnumAttr<"Tcgen05GroupKind",
-                            "NVVM Tcgen05 group kind",
-  [Tcgen05GroupCTA_1, Tcgen05GroupCTA_2]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def Tcgen05GroupKindAttr :
-  EnumAttr<NVVM_Dialect, Tcgen05GroupKind, "tcgen05_group"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def Tcgen05FenceBefore : I32EnumAttrCase<"BEFORE_THREAD_SYNC", 0, "before">;
 def Tcgen05FenceAfter  : I32EnumAttrCase<"AFTER_THREAD_SYNC",  1, "after">;
 def Tcgen05FenceKind : I32EnumAttr<"Tcgen05FenceKind", "NVVM Tcgen05 fence kind",

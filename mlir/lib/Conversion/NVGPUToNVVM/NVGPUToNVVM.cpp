@@ -1003,9 +1003,13 @@ struct NVGPUTmaAsyncLoadOpLowering
     for (auto [index, value] : llvm::enumerate(coords)) {
       coords[index] = truncToI32(b, value);
     }
+
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
         op, dest, adaptor.getTensorMapDescriptor(), coords, barrier,
         ValueRange{}, adaptor.getMulticastMask(), Value{},
+        NVVM::TMALoadMode::TILE, // default is TILE mode
+        nullptr,                 // default is no cta-group
         adaptor.getPredicate());
     return success();
   }
