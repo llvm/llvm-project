@@ -461,10 +461,11 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
                         return Res;
                       return Op;
                     });
-          UnrolledCost += TTI.getInstructionCost(I, Operands, CostKind);
-          LLVM_DEBUG(dbgs() << "Adding cost of instruction (iteration "
-                            << Iteration << "): ");
-          LLVM_DEBUG(I->dump());
+          InstructionCost Cost = TTI.getInstructionCost(I, Operands, CostKind);
+          LLVM_DEBUG(dbgs()
+                     << "Adding cost " << Cost << " of instruction (iteration "
+                     << Iteration << "): " << *I << "\n");
+          UnrolledCost += Cost;
         }
 
         // We must count the cost of every operand which is not free,
