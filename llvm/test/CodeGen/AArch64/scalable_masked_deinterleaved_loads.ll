@@ -4,12 +4,7 @@
 define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8(<vscale x 16 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip2 p0.b, p0.b, p0.b
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    uzp1 z0.b, z2.b, z1.b
-; CHECK-NEXT:    uzp2 z1.b, z2.b, z1.b
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %wide.masked.vec = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8(ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask, <vscale x 32 x i8> poison)
@@ -20,12 +15,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld2_nxv16i8(<vscale x 16 
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_ld2_nxv8i16(<vscale x 8 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p0.h
-; CHECK-NEXT:    ld1h { z2.h }, p1/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    uzp1 z0.h, z2.h, z1.h
-; CHECK-NEXT:    uzp2 z1.h, z2.h, z1.h
+; CHECK-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
   %wide.masked.vec = call <vscale x 16 x i16> @llvm.masked.load.nxv16i16.p0(ptr %p, i32 2, <vscale x 16 x i1> %interleaved.mask, <vscale x 16 x i16> poison)
@@ -36,12 +26,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_ld2_nxv8i16(<vscale x 8 x
 define { <vscale x 4 x float>, <vscale x 4 x float> } @foo_ld2_nxv4f32(<vscale x 4 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p0.s
-; CHECK-NEXT:    ld1w { z2.s }, p1/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    uzp1 z0.s, z2.s, z1.s
-; CHECK-NEXT:    uzp2 z1.s, z2.s, z1.s
+; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
   %wide.masked.vec = call <vscale x 8 x float> @llvm.masked.load.nxv8f32(ptr %p, i32 4, <vscale x 8 x i1> %interleaved.mask, <vscale x 8 x float> poison)
@@ -52,12 +37,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @foo_ld2_nxv4f32(<vscale x
 define { <vscale x 2 x double>, <vscale x 2 x double> } @foo_ld2_nxv2f64(<vscale x 2 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip1 p1.d, p0.d, p0.d
-; CHECK-NEXT:    zip2 p0.d, p0.d, p0.d
-; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    uzp1 z0.d, z2.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z2.d, z1.d
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.vec = call <vscale x 4 x double> @llvm.masked.load.nxv4f64(ptr %p, i32 8, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x double> poison)
@@ -68,24 +48,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @foo_ld2_nxv2f64(<vscale
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8(<vscale x 16 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p2.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 p1.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 p3.b, p0.b, p0.b
-; CHECK-NEXT:    ld1b { z3.b }, p2/z, [x0, #2, mul vl]
-; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1b { z0.b }, p3/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
-; CHECK-NEXT:    uzp1 z4.b, z3.b, z2.b
-; CHECK-NEXT:    uzp2 z3.b, z3.b, z2.b
-; CHECK-NEXT:    uzp1 z5.b, z1.b, z0.b
-; CHECK-NEXT:    uzp2 z6.b, z1.b, z0.b
-; CHECK-NEXT:    uzp1 z0.b, z5.b, z4.b
-; CHECK-NEXT:    uzp1 z1.b, z6.b, z3.b
-; CHECK-NEXT:    uzp2 z2.b, z5.b, z4.b
-; CHECK-NEXT:    uzp2 z3.b, z6.b, z3.b
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %wide.masked.vec = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %p, i32 1, <vscale x 64 x i1> %interleaved.mask, <vscale x 64 x i8> poison)
@@ -96,24 +59,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_ld4_nxv8i16(<vscale x 8 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p2.h, p1.h, p1.h
-; CHECK-NEXT:    zip2 p1.h, p1.h, p1.h
-; CHECK-NEXT:    zip2 p3.h, p0.h, p0.h
-; CHECK-NEXT:    ld1h { z3.h }, p2/z, [x0, #2, mul vl]
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    ld1h { z2.h }, p1/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p3/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; CHECK-NEXT:    uzp1 z4.h, z3.h, z2.h
-; CHECK-NEXT:    uzp2 z3.h, z3.h, z2.h
-; CHECK-NEXT:    uzp1 z5.h, z1.h, z0.h
-; CHECK-NEXT:    uzp2 z6.h, z1.h, z0.h
-; CHECK-NEXT:    uzp1 z0.h, z5.h, z4.h
-; CHECK-NEXT:    uzp1 z1.h, z6.h, z3.h
-; CHECK-NEXT:    uzp2 z2.h, z5.h, z4.h
-; CHECK-NEXT:    uzp2 z3.h, z6.h, z3.h
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
   %wide.masked.vec = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(ptr %p, i32 2, <vscale x 32 x i1> %interleaved.mask, <vscale x 32 x i16> poison)
@@ -124,24 +70,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @foo_ld4_nxv4f32(<vscale x 4 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p2.s, p1.s, p1.s
-; CHECK-NEXT:    zip2 p1.s, p1.s, p1.s
-; CHECK-NEXT:    zip2 p3.s, p0.s, p0.s
-; CHECK-NEXT:    ld1w { z3.s }, p2/z, [x0, #2, mul vl]
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    ld1w { z2.s }, p1/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p3/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; CHECK-NEXT:    uzp1 z4.s, z3.s, z2.s
-; CHECK-NEXT:    uzp2 z3.s, z3.s, z2.s
-; CHECK-NEXT:    uzp1 z5.s, z1.s, z0.s
-; CHECK-NEXT:    uzp2 z6.s, z1.s, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z5.s, z4.s
-; CHECK-NEXT:    uzp1 z1.s, z6.s, z3.s
-; CHECK-NEXT:    uzp2 z2.s, z5.s, z4.s
-; CHECK-NEXT:    uzp2 z3.s, z6.s, z3.s
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave4.nxv16i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
   %wide.masked.vec = call <vscale x 16 x float> @llvm.masked.load.nxv16f32(ptr %p, i32 4, <vscale x 16 x i1> %interleaved.mask, <vscale x 16 x float> poison)
@@ -152,24 +81,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @foo_ld4_nxv2f64(<vscale x 2 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.d, p0.d, p0.d
-; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    zip1 p2.d, p1.d, p1.d
-; CHECK-NEXT:    zip2 p1.d, p1.d, p1.d
-; CHECK-NEXT:    zip2 p3.d, p0.d, p0.d
-; CHECK-NEXT:    ld1d { z3.d }, p2/z, [x0, #2, mul vl]
-; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p3/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; CHECK-NEXT:    uzp1 z4.d, z3.d, z2.d
-; CHECK-NEXT:    uzp2 z3.d, z3.d, z2.d
-; CHECK-NEXT:    uzp1 z5.d, z1.d, z0.d
-; CHECK-NEXT:    uzp2 z6.d, z1.d, z0.d
-; CHECK-NEXT:    uzp1 z0.d, z5.d, z4.d
-; CHECK-NEXT:    uzp1 z1.d, z6.d, z3.d
-; CHECK-NEXT:    uzp2 z2.d, z5.d, z4.d
-; CHECK-NEXT:    uzp2 z3.d, z6.d, z3.d
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave4.nxv8i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %wide.masked.vec = call <vscale x 8 x double> @llvm.masked.load.nxv8f64(ptr %p, i32 8, <vscale x 8 x i1> %interleaved.mask, <vscale x 8 x double> poison)
@@ -181,28 +93,17 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8_mul_use_of_mask(<vscale x 16 x i1> %mask, ptr %p, ptr %p2) {
 ; CHECK-LABEL: foo_ld4_nxv16i8_mul_use_of_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
 ; CHECK-NEXT:    zip1 p2.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p0.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 p1.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 p3.b, p2.b, p2.b
-; CHECK-NEXT:    ld1b { z3.b }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    zip1 p2.b, p2.b, p2.b
-; CHECK-NEXT:    ld1b { z2.b }, p1/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1b { z0.b }, p3/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1b { z1.b }, p2/z, [x0]
-; CHECK-NEXT:    uzp1 z4.b, z3.b, z2.b
-; CHECK-NEXT:    uzp2 z3.b, z3.b, z2.b
-; CHECK-NEXT:    uzp1 z5.b, z1.b, z0.b
-; CHECK-NEXT:    uzp2 z6.b, z1.b, z0.b
-; CHECK-NEXT:    uzp1 z0.b, z5.b, z4.b
-; CHECK-NEXT:    uzp1 z1.b, z6.b, z3.b
-; CHECK-NEXT:    uzp2 z2.b, z5.b, z4.b
-; CHECK-NEXT:    uzp2 z3.b, z6.b, z3.b
-; CHECK-NEXT:    // fake_use: $p2
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    zip1 p3.b, p2.b, p2.b
+; CHECK-NEXT:    zip2 p0.b, p1.b, p1.b
+; CHECK-NEXT:    zip1 p1.b, p1.b, p1.b
+; CHECK-NEXT:    zip2 p2.b, p2.b, p2.b
 ; CHECK-NEXT:    // fake_use: $p3
-; CHECK-NEXT:    // fake_use: $p0
+; CHECK-NEXT:    // fake_use: $p2
 ; CHECK-NEXT:    // fake_use: $p1
+; CHECK-NEXT:    // fake_use: $p0
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %wide.masked.vec = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %p, i32 4, <vscale x 64 x i1> %interleaved.mask, <vscale x 64 x i8> poison)
@@ -214,18 +115,8 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8_mask_of_interleaved_ones(ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv16i8_mask_of_interleaved_ones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ldr z2, [x0, #3, mul vl]
-; CHECK-NEXT:    ldr z3, [x0, #2, mul vl]
-; CHECK-NEXT:    uzp1 z5.b, z1.b, z0.b
-; CHECK-NEXT:    uzp2 z6.b, z1.b, z0.b
-; CHECK-NEXT:    uzp1 z4.b, z3.b, z2.b
-; CHECK-NEXT:    uzp2 z3.b, z3.b, z2.b
-; CHECK-NEXT:    uzp1 z0.b, z5.b, z4.b
-; CHECK-NEXT:    uzp1 z1.b, z6.b, z3.b
-; CHECK-NEXT:    uzp2 z2.b, z5.b, z4.b
-; CHECK-NEXT:    uzp2 z3.b, z6.b, z3.b
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1))
   %wide.masked.vec = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %p, i32 4, <vscale x 64 x i1> %interleaved.mask, <vscale x 64 x i8> poison)
@@ -236,18 +127,8 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8_mask_of_ones(ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv16i8_mask_of_ones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ldr z2, [x0, #3, mul vl]
-; CHECK-NEXT:    ldr z3, [x0, #2, mul vl]
-; CHECK-NEXT:    uzp1 z5.b, z1.b, z0.b
-; CHECK-NEXT:    uzp2 z6.b, z1.b, z0.b
-; CHECK-NEXT:    uzp1 z4.b, z3.b, z2.b
-; CHECK-NEXT:    uzp2 z3.b, z3.b, z2.b
-; CHECK-NEXT:    uzp1 z0.b, z5.b, z4.b
-; CHECK-NEXT:    uzp1 z1.b, z6.b, z3.b
-; CHECK-NEXT:    uzp2 z2.b, z5.b, z4.b
-; CHECK-NEXT:    uzp2 z3.b, z6.b, z3.b
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %wide.masked.vec = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8(ptr %p, i32 4, <vscale x 64 x i1> splat(i1 1), <vscale x 64 x i8> poison)
   %deinterleaved.vec = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> %wide.masked.vec)
