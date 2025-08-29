@@ -3851,7 +3851,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
                                                 const unsigned MaxTripCount,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
@@ -3875,7 +3876,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,
@@ -3913,10 +3914,11 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
                                                 const VectorizationFactor &B,
-                                                bool HasTail) const {
+                                                bool HasTail,
+                                                bool IsEpilogue) const {
   const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
-  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount,
-                                                    HasTail);
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount, HasTail,
+                                                    IsEpilogue);
 }
 
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
@@ -4329,16 +4331,10 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   if (TTI.getMaxInterleaveFactor(VF) <= 1)
     return false;
 
-  // TODO: PR #108190 introduced a discrepancy between fixed-width and scalable
-  // VFs when deciding profitability.
-  // See related "TODO: extend to support scalable VFs." in
-  // selectEpilogueVectorizationFactor.
-  unsigned Multiplier = VF.isFixed() ? IC : 1;
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
                                 ? EpilogueVectorizationMinVF
                                 : TTI.getEpilogueVectorizationMinVF();
-  return estimateElementCount(VF * Multiplier, VScaleForTuning) >=
-         MinVFThreshold;
+  return estimateElementCount(VF * IC, VScaleForTuning) >= MinVFThreshold;
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
@@ -4442,7 +4438,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking()))
+        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
+                         /*IsEpilogue*/ true))
       Result = NextVF;
   }
 
