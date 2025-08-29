@@ -872,8 +872,7 @@ let Features = "fma|fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<128
   def vfmaddsubpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>)">;
 }
 
-let Features = "fma|fma4",
-    Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "fma|fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def vfmaddsubps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Vector<8, float>)">;
   def vfmaddsubpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Vector<4, double>)">;
 }
@@ -947,21 +946,7 @@ let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
   def vpcomd : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, _Constant char)">;
   def vpcomq : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, _Constant char)">;
   def vpermil2pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, long long int>, _Constant char)">;
-}
-
-let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpermil2pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Vector<4, long long int>, _Constant char)">;
-}
-
-let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def vpermil2ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, int>, _Constant char)">;
-}
-
-let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vpermil2ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Vector<8, int>, _Constant char)">;
-}
-
-let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def vfrczss : X86Builtin<"_Vector<4, float>(_Vector<4, float>)">;
   def vfrczsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
   def vfrczps : X86Builtin<"_Vector<4, float>(_Vector<4, float>)">;
@@ -969,6 +954,8 @@ let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
 }
 
 let Features = "xop", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+  def vpermil2pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Vector<4, long long int>, _Constant char)">;
+  def vpermil2ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Vector<8, int>, _Constant char)">;
   def vfrczps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>)">;
   def vfrczpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>)">;
 }
