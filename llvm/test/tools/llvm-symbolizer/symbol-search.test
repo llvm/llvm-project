@@ -73,7 +73,7 @@ RUN: llvm-addr2line --obj=%p/Inputs/symbols.so +0x1138 | FileCheck --check-prefi
 RUN: llvm-addr2line --obj=%p/Inputs/symbols.so _ZL14static_func_01i | FileCheck --check-prefix=MULTI-CXX %s
 RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so _ZL14static_func_01i | FileCheck --check-prefix=MULTI-CXX %s
 MULTI-CXX: /tmp/dbginfo{{[/\]+}}symbols.part1.cpp:7
-MULTI-CXX: /tmp/dbginfo{{[/\]+}}symbols.part2.cpp:5
+MULTI-CXX: /tmp/dbginfo/symbols.h:19
 
 # Show that containing function name can be printed in mangled form.
 RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so --no-demangle _Z7func_04i | FileCheck --check-prefix=MANGLED %s

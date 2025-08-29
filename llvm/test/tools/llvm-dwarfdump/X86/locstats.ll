@@ -95,7 +95,7 @@
 ; CHECK-NEXT: "#local vars - entry values with [80%,90%) of parent scope covered by DW_AT_location": 1,
 ; CHECK-NEXT: "#local vars - entry values with [90%,100%) of parent scope covered by DW_AT_location": 0,
 ; CHECK-NEXT: "#local vars - entry values with 100% of parent scope covered by DW_AT_location": 1
-; CHECK-NEXT: "#bytes with line information": 51,
+; CHECK-NEXT: "#bytes with line information": 52,
 ; CHECK-NEXT: "#bytes with line-0 locations": 3,
 ; CHECK-NEXT: "#line entries": 7,
 ; CHECK-NEXT: "#line entries (is_stmt)": 5,

@@ -580,8 +580,9 @@ void DWARFDebugLine::ParsingState::appendRowToMatrix() {
   }
   LineTable->appendRow(Row);
   if (Row.EndSequence) {
-    // Record the end of instruction sequence.
-    Sequence.HighPC = Row.Address.Address;
+    // Proposed change, without this the added test will fail. With this
+    // GSYMTest/TestDWARFNoLines will fail
+    Sequence.HighPC = Row.Address.Address + LineTable->Prologue.MinInstLength;
     Sequence.LastRowIndex = RowNumber + 1;
     Sequence.SectionIndex = Row.Address.SectionIndex;
     if (Sequence.isValid())
@@ -1311,7 +1312,7 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   RowIter FirstRow = Rows.begin() + Seq.FirstRowIndex;
   RowIter LastRow = Rows.begin() + Seq.LastRowIndex;
   assert(FirstRow->Address.Address <= Row.Address.Address &&
-         Row.Address.Address < LastRow[-1].Address.Address);
+         Row.Address.Address <= LastRow[-1].Address.Address);
   RowIter RowPos = std::upper_bound(FirstRow + 1, LastRow - 1, Row,
                                     DWARFDebugLine::Row::orderByAddress) -
                    1;

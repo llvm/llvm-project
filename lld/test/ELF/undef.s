@@ -75,7 +75,7 @@
 # Show that a problem in a line table that prevents further parsing of that
 # table means that no line information is displayed in the wardning.
 # CHECK:      error: undefined symbol: zed7
-# CHECK-NEXT: >>> referenced by {{.*}}4.o:(.text+0x10)
+# CHECK-NEXT: >>> referenced by undef-bad-debug.s:21
 
 # Show that a problem with one line table's information doesn't affect getting information from
 # a different one in the same object.
