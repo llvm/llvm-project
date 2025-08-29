@@ -61,8 +61,8 @@ public:
 
     ModuleOp mod = getOperation();
     MLIRContext *ctx = &getContext();
-    const auto targetEnvAttr =
-        TargetEnvAttr::get(ctx, level, selectedProfiles, selectedExtensions);
+    const auto targetEnvAttr = TargetEnvAttr::get(
+        ctx, specificationVersion, level, selectedProfiles, selectedExtensions);
     mod->setAttr(TargetEnvAttr::name, targetEnvAttr);
   }
 

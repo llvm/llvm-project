@@ -137,6 +137,13 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 
   let options = [
+    Option<"specificationVersion", "specification_version", "mlir::tosa::SpecificationVersion",
+              /*default=*/"mlir::tosa::SpecificationVersion::V_1_0",
+              "The specification version that TOSA operators should conform to.",
+              [{::llvm::cl::values(
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_0, "1.0", "TOSA Specification version 1.0"),
+                clEnumValN(mlir::tosa::SpecificationVersion::V_1_1_DRAFT, "1.1.draft", "TOSA Specification version 1.1.draft")
+              )}]>,
     Option<"level", "level", "mlir::tosa::Level",
               /*default=*/"mlir::tosa::Level::eightK",
               "The TOSA level that operators should conform to. A TOSA level defines "
