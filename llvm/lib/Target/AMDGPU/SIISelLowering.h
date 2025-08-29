@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
-#include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUISelLowering.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {

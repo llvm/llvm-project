@@ -551,6 +551,40 @@ class ReshapeOpConversion : public HlfirIntrinsicConversion<hlfir::ReshapeOp> {
   }
 };
 
+class CmpCharOpConversion : public HlfirIntrinsicConversion<hlfir::CmpCharOp> {
+  using HlfirIntrinsicConversion<hlfir::CmpCharOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CmpCharOp cmp,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, cmp.getOperation()};
+    const mlir::Location &loc = cmp->getLoc();
+    hlfir::Entity lhs{cmp.getLchr()};
+    hlfir::Entity rhs{cmp.getRchr()};
+
+    auto [lhsExv, lhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, lhs);
+    auto [rhsExv, rhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, rhs);
+
+    auto resultVal = fir::runtime::genCharCompare(
+        builder, loc, cmp.getPredicate(), lhsExv, rhsExv);
+    if (lhsCleanUp || rhsCleanUp) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(cmp);
+      if (lhsCleanUp)
+        (*lhsCleanUp)();
+      if (rhsCleanUp)
+        (*rhsCleanUp)();
+    }
+    auto resultEntity = hlfir::EntityWithAttributes{resultVal};
+
+    processReturnValue(cmp, resultEntity, /*mustBeFreed=*/false, builder,
+                       rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -558,13 +592,14 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<
-        MatmulOpConversion, MatmulTransposeOpConversion, AllOpConversion,
-        AnyOpConversion, SumOpConversion, ProductOpConversion,
-        TransposeOpConversion, CountOpConversion, DotProductOpConversion,
-        MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
-        MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
-        ArrayShiftOpConversion<hlfir::EOShiftOp>, ReshapeOpConversion>(context);
+    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
+                    AllOpConversion, AnyOpConversion, SumOpConversion,
+                    ProductOpConversion, TransposeOpConversion,
+                    CountOpConversion, DotProductOpConversion,
+                    MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
+                    MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
+                    ArrayShiftOpConversion<hlfir::EOShiftOp>,
+                    ReshapeOpConversion, CmpCharOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass

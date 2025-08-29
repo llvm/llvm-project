@@ -1857,20 +1857,12 @@ TYPE_PARSER(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
-// Assume Construct
-TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
-    verbatim("ASSUME"_tok), Parser<OmpClauseList>{})))
-
-TYPE_PARSER(sourced(construct<OmpEndAssumeDirective>(
-    startOmpLine >> verbatim("END ASSUME"_tok))))
-
-TYPE_PARSER(sourced(
-    construct<OpenMPAssumeConstruct>(Parser<OmpAssumeDirective>{} / endOmpLine,
-        block, maybe(Parser<OmpEndAssumeDirective>{} / endOmpLine))))
+TYPE_PARSER(construct<OpenMPAssumeConstruct>(
+    sourced(OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
 
 // Block Construct
 #define MakeBlockConstruct(dir) \
-  construct<OpenMPBlockConstruct>(OmpBlockConstructParser{dir})
+  construct<OmpBlockConstruct>(OmpBlockConstructParser{dir})
 TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_master) ||
@@ -1935,8 +1927,8 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
         withMessage("expected OpenMP construct"_err_en_US,
             first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPBlockConstruct>{}),
-                // OpenMPBlockConstruct is attempted before
+                construct<OpenMPConstruct>(Parser<OmpBlockConstruct>{}),
+                // OmpBlockConstruct is attempted before
                 // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),

@@ -152,11 +152,16 @@ public:
   Expected<std::string> findBinaryPath(object::BuildIDRef);
 };
 
-struct DebuginfodServer {
+class DebuginfodServer {
+public:
   HTTPServer Server;
-  DebuginfodLog &Log;
-  DebuginfodCollection &Collection;
   DebuginfodServer(DebuginfodLog &Log, DebuginfodCollection &Collection);
+  static Expected<DebuginfodServer> create(DebuginfodLog &Log,
+                                           DebuginfodCollection &Collection);
+
+private:
+  DebuginfodServer() = default;
+  Error init(DebuginfodLog &Log, DebuginfodCollection &Collection);
 };
 
 } // end namespace llvm

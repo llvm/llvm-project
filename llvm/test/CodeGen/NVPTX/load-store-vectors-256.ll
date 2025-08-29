@@ -1506,3 +1506,98 @@ define void @local_volatile_4xdouble(ptr addrspace(5) %a, ptr addrspace(5) %b) {
   store volatile <4 x double> %a.load, ptr addrspace(5) %b
   ret void
 }
+
+define void @test_i256_global(ptr addrspace(1) %a, ptr addrspace(1) %b) {
+; SM90-LABEL: test_i256_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<7>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [test_i256_global_param_0];
+; SM90-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM90-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd6, [test_i256_global_param_1];
+; SM90-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM90-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: test_i256_global(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [test_i256_global_param_0];
+; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
+; SM100-NEXT:    ld.param.b64 %rd6, [test_i256_global_param_1];
+; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
+; SM100-NEXT:    ret;
+  %a.load = load i256, ptr addrspace(1) %a, align 32
+  store i256 %a.load, ptr addrspace(1) %b, align 32
+  ret void
+}
+
+
+define void @test_i256_global_unaligned(ptr addrspace(1) %a, ptr addrspace(1) %b) {
+; CHECK-LABEL: test_i256_global_unaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_i256_global_unaligned_param_0];
+; CHECK-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; CHECK-NEXT:    ld.param.b64 %rd6, [test_i256_global_unaligned_param_1];
+; CHECK-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
+; CHECK-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
+; CHECK-NEXT:    ret;
+  %a.load = load i256, ptr addrspace(1) %a, align 16
+  store i256 %a.load, ptr addrspace(1) %b, align 16
+  ret void
+}
+
+define void @test_i256_generic(ptr %a, ptr %b) {
+; CHECK-LABEL: test_i256_generic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_i256_generic_param_0];
+; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; CHECK-NEXT:    ld.param.b64 %rd6, [test_i256_generic_param_1];
+; CHECK-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
+; CHECK-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
+; CHECK-NEXT:    ret;
+  %a.load = load i256, ptr %a, align 32
+  store i256 %a.load, ptr %b, align 32
+  ret void
+}
+
+define void @test_i256_global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b) {
+; SM90-LABEL: test_i256_global_volatile(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<7>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [test_i256_global_volatile_param_0];
+; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
+; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; SM90-NEXT:    ld.param.b64 %rd6, [test_i256_global_volatile_param_1];
+; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6+16], {%rd4, %rd5};
+; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6], {%rd2, %rd3};
+; SM90-NEXT:    ret;
+;
+; SM100-LABEL: test_i256_global_volatile(
+; SM100:       {
+; SM100-NEXT:    .reg .b64 %rd<7>;
+; SM100-EMPTY:
+; SM100-NEXT:  // %bb.0:
+; SM100-NEXT:    ld.param.b64 %rd1, [test_i256_global_volatile_param_0];
+; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
+; SM100-NEXT:    ld.param.b64 %rd6, [test_i256_global_volatile_param_1];
+; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
+; SM100-NEXT:    ret;
+  %a.load = load volatile i256, ptr addrspace(1) %a, align 32
+  store volatile i256 %a.load, ptr addrspace(1) %b, align 32
+  ret void
+}

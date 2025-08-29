@@ -2517,10 +2517,10 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   else
     std::tie(IndexLo, IndexHi) = DAG.SplitVector(Ops.Index, dl);
 
+  MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      N->getPointerInfo(), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
-      N->getRanges());
+      N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      Alignment, N->getAAInfo(), N->getRanges());
 
   if (auto *MGT = dyn_cast<MaskedGatherSDNode>(N)) {
     SDValue PassThru = MGT->getPassThru();
@@ -4321,10 +4321,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
     std::tie(IndexLo, IndexHi) = DAG.SplitVector(Ops.Index, DL);
 
   SDValue Lo;
+  MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      N->getPointerInfo(), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
-      N->getRanges());
+      N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      Alignment, N->getAAInfo(), N->getRanges());
 
   if (auto *MSC = dyn_cast<MaskedScatterSDNode>(N)) {
     SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Ops.Scale};

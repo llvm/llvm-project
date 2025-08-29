@@ -398,3 +398,6 @@ typedef short v2int16_t __attribute__((ext_vector_type(2)));
 bool issue155507(v2int16_t a, v2int16_t b) {
     return __builtin_bit_cast(unsigned char, __builtin_convertvector(a == b, __vbool2)) == 0b11;
 }
+
+constexpr bool b2 = (bool)nullptr;
+_Static_assert(!b2);

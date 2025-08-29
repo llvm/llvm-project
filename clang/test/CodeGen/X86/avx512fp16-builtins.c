@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -709,6 +715,7 @@ __m512h test_mm512_abs_ph(__m512h a) {
   // CHECK: and <16 x i32>
   return _mm512_abs_ph(a);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_abs_ph((__m512h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0, -17.0, 18.0, -19.0, 20.0, -21.0, 22.0, -23.0, 24.0, -25.0, 26.0, -27.0, 28.0, -29.0, 30.0, -31.0, 32.0}), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0));
 
 __m512h test_mm512_conj_pch(__m512h __A) {
   // CHECK-LABEL: test_mm512_conj_pch

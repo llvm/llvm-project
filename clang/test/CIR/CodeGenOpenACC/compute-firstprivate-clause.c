@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+
+// This encounters NYI errors because of a non-ignored copy of an aggregate.
+// When that is fixed, the 'not' should be removed from the RUN line above.
 
 struct NoCopyConstruct {};
 

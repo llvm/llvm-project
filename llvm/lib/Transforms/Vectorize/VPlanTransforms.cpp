@@ -1084,6 +1084,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // AND x, 0 -> 0
+  if (match(&R, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt()))) {
+    Def->replaceAllUsesWith(R.getOperand(0) == X ? R.getOperand(1)
+                                                 : R.getOperand(0));
+    return;
+  }
+
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
@@ -3635,14 +3642,6 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (R.mayWriteToMemory() && !InterleaveR)
       return;
 
-    // Do not narrow interleave groups if there are VectorPointer recipes and
-    // the plan was unrolled. The recipe implicitly uses VF from
-    // VPTransformState.
-    // TODO: Remove restriction once the VF for the VectorPointer offset is
-    // modeled explicitly as operand.
-    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
-      return;
-
     // All other ops are allowed, but we reject uses that cannot be converted
     // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
@@ -3773,6 +3772,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   Plan.getVF().replaceAllUsesWith(
       Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
+  assert(none_of(*VectorLoop->getEntryBasicBlock(),
+                 IsaPred<VPVectorPointerRecipe>) &&
+         "All VPVectorPointerRecipes should have been removed");
 }
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a

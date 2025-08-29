@@ -2698,6 +2698,24 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// ThrowOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult cir::ThrowOp::verify() {
+  // For the no-rethrow version, it must have at least the exception pointer.
+  if (rethrows())
+    return success();
+
+  if (getNumOperands() != 0) {
+    if (getTypeInfo())
+      return success();
+    return emitOpError() << "'type_info' symbol attribute missing";
+  }
+
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

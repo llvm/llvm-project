@@ -101,12 +101,16 @@ bool llvm::addAssumptions(CallBase &CB,
   return ::addAssumptionsImpl(CB, Assumptions);
 }
 
-StringSet<> llvm::KnownAssumptionStrings({
-    "omp_no_openmp",            // OpenMP 5.1
-    "omp_no_openmp_routines",   // OpenMP 5.1
-    "omp_no_parallelism",       // OpenMP 5.1
-    "omp_no_openmp_constructs", // OpenMP 6.0
-    "ompx_spmd_amenable",       // OpenMPOpt extension
-    "ompx_no_call_asm",         // OpenMPOpt extension
-    "ompx_aligned_barrier",     // OpenMPOpt extension
-});
+StringSet<> &llvm::getKnownAssumptionStrings() {
+  static StringSet<> Object({
+      "omp_no_openmp",            // OpenMP 5.1
+      "omp_no_openmp_routines",   // OpenMP 5.1
+      "omp_no_parallelism",       // OpenMP 5.1
+      "omp_no_openmp_constructs", // OpenMP 6.0
+      "ompx_spmd_amenable",       // OpenMPOpt extension
+      "ompx_no_call_asm",         // OpenMPOpt extension
+      "ompx_aligned_barrier",     // OpenMPOpt extension
+  });
+
+  return Object;
+}

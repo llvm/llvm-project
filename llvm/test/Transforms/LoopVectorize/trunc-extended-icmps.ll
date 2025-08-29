@@ -129,16 +129,8 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i16> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[SRC_2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP4]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[WIDE_LOAD1]] to <4 x i16>
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP3]], <4 x i16> zeroinitializer, <4 x i16> [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i16> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP9]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

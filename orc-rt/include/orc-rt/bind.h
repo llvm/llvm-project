@@ -25,7 +25,7 @@ template <typename Fn, typename... BoundArgTs> class BoundFn {
 private:
   template <size_t... Is, typename... ArgTs>
   auto callExpandingBound(std::index_sequence<Is...>, ArgTs &&...Args) {
-    return F(std::get<Is>(BoundArgs)..., std::move(Args)...);
+    return F(std::get<Is>(BoundArgs)..., std::forward<ArgTs>(Args)...);
   }
 
 public:

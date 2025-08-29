@@ -1968,7 +1968,8 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
   }
 
   auto IsValidMemberOfComposite = [](QualType Ty) {
-    return Ty->isDependentType() || Ty->isScalarType();
+    return Ty->isDependentType() ||
+           (Ty->isScalarType() && !Ty->isPointerType());
   };
 
   auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {

@@ -260,7 +260,7 @@ static const std::vector<TensorSpec> TrainingOnlyFeatures{
 
 static const std::vector<TensorSpec> getInputFeatures() {
   std::vector<TensorSpec> InputSpecs;
-  for (const auto &Feature : FeatureMap)
+  for (const auto &Feature : getFeatureMap())
     InputSpecs.push_back(TensorSpec(TFFeedPrefix + Feature.name(), Feature));
   append_range(InputSpecs, TrainingOnlyFeatures);
   return InputSpecs;
@@ -272,7 +272,7 @@ TrainingLogger::TrainingLogger(StringRef LogFileName,
                                const ModelUnderTrainingRunner *MUTR)
     : LogFileName(LogFileName), MUTR(MUTR) {
   // The first output is the inlining decision.
-  std::vector<TensorSpec> FT(FeatureMap.begin(), FeatureMap.end());
+  std::vector<TensorSpec> FT(getFeatureMap().begin(), getFeatureMap().end());
 
   if (MUTR)
     append_range(FT, MUTR->extraOutputsForLoggingSpecs());
@@ -298,7 +298,7 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
                                     const MLModelRunner &ModelRunner) {
   L->startObservation();
   size_t CurrentFeature = 0;
-  size_t FeatureMapSize = FeatureMap.size();
+  size_t FeatureMapSize = getFeatureMap().size();
   for (; CurrentFeature < FeatureMapSize; ++CurrentFeature)
     L->logTensorValue(CurrentFeature,
                       reinterpret_cast<const char *>(

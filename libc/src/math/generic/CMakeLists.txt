@@ -53,6 +53,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  canonicalizebf16
+  SRCS
+    canonicalizebf16.cpp
+  HDRS
+    ../canonicalizebf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_entrypoint_object(
   iscanonical
   SRCS
     iscanonical.cpp
@@ -94,6 +108,20 @@ add_entrypoint_object(
     ../iscanonicalf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  iscanonicalbf16
+  SRCS
+    iscanonicalbf16.cpp
+  HDRS
+    ../iscanonicalbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_entrypoint_object(
@@ -1746,6 +1774,22 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  copysignbf16
+  SRCS
+    copysignbf16.cpp
+  HDRS
+    ../copysignbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
 )
 
 add_entrypoint_object(
@@ -3428,6 +3472,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdimbf16
+  SRCS
+    fdimbf16.cpp
+  HDRS
+    ../fdimbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_entrypoint_object(
   fdiv
   SRCS
     fdiv.cpp
@@ -3541,6 +3599,20 @@ add_entrypoint_object(
     ../issignalingf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  issignalingbf16
+  SRCS
+    issignalingbf16.cpp
+  HDRS
+    ../issignalingbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_entrypoint_object(
@@ -4575,6 +4647,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scalblnbf16
+  SRCS
+    scalblnbf16.cpp
+  HDRS
+    ../scalblnbf16.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   scalbn
   SRCS
     scalbn.cpp
@@ -4628,6 +4715,21 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.float_macros
     libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  scalbnbf16
+  SRCS
+    scalbnbf16.cpp
+  HDRS
+    ../scalblnbf16.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -4712,6 +4814,21 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.properties.types
 )
+
+add_entrypoint_object(
+  totalorderbf16
+  SRCS
+    totalorderbf16.cpp
+  HDRS
+    ../totalorderbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+)
+
 add_entrypoint_object(
   totalordermag
   SRCS
@@ -4761,6 +4878,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  totalordermagbf16
+  SRCS
+    totalordermagbf16.cpp
+  HDRS
+    ../totalordermagbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_entrypoint_object(

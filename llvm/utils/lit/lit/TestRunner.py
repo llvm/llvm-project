@@ -98,9 +98,10 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env):
+    def __init__(self, cwd, env, umask=-1):
         self.cwd = cwd
         self.env = dict(env)
+        self.umask = umask
         self.dirStack = []
 
     def change_dir(self, newdir):
@@ -582,6 +583,20 @@ def executeBuiltinRm(cmd, cmd_shenv):
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
 
+def executeBuiltinUmask(cmd, shenv):
+    """executeBuiltinUmask - Change the current umask."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'umask' not supported on this system")
+    if len(cmd.args) != 2:
+        raise InternalShellError(cmd, "'umask' supports only one argument")
+    try:
+        # Update the umask in the parent environment.
+        shenv.umask = int(cmd.args[1], 8)
+    except ValueError as err:
+        raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+
 def executeBuiltinColon(cmd, cmd_shenv):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)
@@ -736,6 +751,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
+        "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
     # To avoid deadlock, we use a single stderr stream for piped
@@ -757,7 +773,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
                 #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
                 if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
+                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
                     # Return the environment variables if no argument is provided.
@@ -902,6 +918,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             args = quote_windows_command(args)
 
         try:
+            # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
+            # os.umask as the umask argument in subprocess.Popen is not
+            # available before Python 3.9. Once LLVM requires at least Python
+            # 3.9, this code should be updated to use umask argument.
+            old_umask = -1
+            if cmd_shenv.umask != -1:
+                old_umask = os.umask(cmd_shenv.umask)
             procs.append(
                 subprocess.Popen(
                     args,
@@ -916,6 +939,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     errors="replace",
                 )
             )
+            if old_umask != -1:
+                os.umask(old_umask)
             proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])

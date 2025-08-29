@@ -56,6 +56,8 @@ public:
                           bool delegating, Address thisAddr,
                           QualType thisTy) override;
 
+  void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
+
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -352,6 +354,44 @@ void CIRGenItaniumCXXABI::emitDestructorCall(
                             vttTy, nullptr);
 }
 
+// The idea here is creating a separate block for the throw with an
+// `UnreachableOp` as the terminator. So, we branch from the current block
+// to the throw block and create a block for the remaining operations.
+static void insertThrowAndSplit(mlir::OpBuilder &builder, mlir::Location loc,
+                                mlir::Value exceptionPtr = {},
+                                mlir::FlatSymbolRefAttr typeInfo = {},
+                                mlir::FlatSymbolRefAttr dtor = {}) {
+  mlir::Block *currentBlock = builder.getInsertionBlock();
+  mlir::Region *region = currentBlock->getParent();
+
+  if (currentBlock->empty()) {
+    cir::ThrowOp::create(builder, loc, exceptionPtr, typeInfo, dtor);
+    cir::UnreachableOp::create(builder, loc);
+  } else {
+    mlir::Block *throwBlock = builder.createBlock(region);
+
+    cir::ThrowOp::create(builder, loc, exceptionPtr, typeInfo, dtor);
+    cir::UnreachableOp::create(builder, loc);
+
+    builder.setInsertionPointToEnd(currentBlock);
+    cir::BrOp::create(builder, loc, throwBlock);
+  }
+
+  (void)builder.createBlock(region);
+}
+
+void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
+  // void __cxa_rethrow();
+  if (isNoReturn) {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    assert(cgf.currSrcLoc && "expected source location");
+    mlir::Location loc = *cgf.currSrcLoc;
+    insertThrowAndSplit(builder, loc);
+  } else {
+    cgm.errorNYI("emitRethrow with isNoReturn false");
+  }
+}
+
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   switch (cgm.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
@@ -487,9 +527,10 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
     CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
     clang::BaseSubobject base, const clang::CXXRecordDecl *nearestVBase) {
 
-  if (base.getBase()->getNumVBases()) {
+  if ((base.getBase()->getNumVBases() || nearestVBase != nullptr) &&
+      needsVTTParameter(cgf.curGD)) {
     cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                 "getVTableAddressPointInStructor: virtual base");
+                 "getVTableAddressPointInStructorWithVTT");
   }
   return getVTableAddressPoint(base, vtableClass);
 }

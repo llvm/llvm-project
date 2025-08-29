@@ -10421,41 +10421,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
-  case Intrinsic::amdgcn_s_barrier:
-  case Intrinsic::amdgcn_s_barrier_signal:
-  case Intrinsic::amdgcn_s_barrier_wait: {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
-      unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
-      if (WGSize <= ST.getWavefrontSize()) {
-        // If the workgroup fits in a wave, remove s_barrier_signal and lower
-        // s_barrier/s_barrier_wait to wave_barrier.
-        if (IntrinsicID == Intrinsic::amdgcn_s_barrier_signal)
-          return Op.getOperand(0);
-        else
-          return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL,
-                                            MVT::Other, Op.getOperand(0)),
-                         0);
-      }
-    }
-
-    if (ST.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
-      // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-      SDValue K =
-          DAG.getSignedTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
-      SDValue BarSignal =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
-                                     MVT::Other, K, Op.getOperand(0)),
-                  0);
-      SDValue BarWait =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other, K,
-                                     BarSignal.getValue(0)),
-                  0);
-      return BarWait;
-    }
-
-    return SDValue();
-  };
 
   case Intrinsic::amdgcn_struct_tbuffer_store:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
@@ -17823,7 +17788,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       DL.getTypeSizeInBits(RMW->getType()) == 64 &&
       flatInstrMayAccessPrivate(RMW))
-    return AtomicExpansionKind::Expand;
+    return AtomicExpansionKind::CustomExpand;
 
   auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -17898,7 +17863,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // does. InstCombine transforms these with 0 to or, so undo that.
         if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
             ConstVal && ConstVal->isNullValue())
-          return AtomicExpansionKind::Expand;
+          return AtomicExpansionKind::CustomExpand;
       }
 
       // If the allocation could be in remote, fine-grained memory, the rmw
@@ -18027,9 +17992,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // fadd.
         if (Subtarget->hasLDSFPAtomicAddF32()) {
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
         }
       }
     }
@@ -18109,7 +18074,7 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
 
   // If a 64-bit flat atomic may alias private, we need to avoid using the
   // atomic in the private case.
-  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::CustomExpand
                                            : AtomicExpansionKind::None;
 }
 

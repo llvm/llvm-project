@@ -93,6 +93,7 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
+  static bool opCallSideEffect() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
@@ -195,6 +196,7 @@ struct MissingFeatures {
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupsToDeactivate() { return false; }
+  static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
