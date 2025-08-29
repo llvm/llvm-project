@@ -1122,6 +1122,7 @@ class EscapeTrackedCallback final : public SymbolVisitor {
 
   explicit EscapeTrackedCallback(ProgramStateRef S) : State(std::move(S)) {}
 
+public:
   bool VisitSymbol(SymbolRef Sym) override {
     if (const RefState *RS = State->get<RegionState>(Sym)) {
       if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
@@ -1131,7 +1132,6 @@ class EscapeTrackedCallback final : public SymbolVisitor {
     return true;
   }
 
-public:
   /// Escape tracked regions reachable from the given roots.
   static ProgramStateRef
   EscapeTrackedRegionsReachableFrom(ArrayRef<const MemRegion *> Roots,
