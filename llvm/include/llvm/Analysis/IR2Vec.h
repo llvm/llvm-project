@@ -227,7 +227,7 @@ public:
   /// or OperandKind in the vocabulary.
   LLVM_ABI static unsigned getSlotIndex(unsigned Opcode);
   LLVM_ABI static unsigned getSlotIndex(Type::TypeID TypeID);
-  LLVM_ABI static unsigned getSlotIndex(const Value *Op);
+  LLVM_ABI static unsigned getSlotIndex(const Value &Op);
 
   /// Accessors to get the embedding for a given entity.
   LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const;
