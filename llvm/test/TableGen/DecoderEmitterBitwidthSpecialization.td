@@ -20,7 +20,7 @@ let Namespace = "arch" in {
 def Regs : RegisterClass<"Regs", [i32], 32, (add R0, R1, R2, R3)>;
 
 // Bit 0 of the encoding determines the size (8 or 16 bits).
-// Bits {3..1} define the number define the number of operands encoded.
+// Bits {3..1} define the number of operands encoded.
 class Instruction8Bit<int NumOps> : Instruction {
   let Size = 1;
   let OutOperandList = (outs);
