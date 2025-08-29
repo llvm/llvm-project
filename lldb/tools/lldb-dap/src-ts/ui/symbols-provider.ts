@@ -61,18 +61,18 @@ export class SymbolsProvider extends DisposableContext {
       return;
     }
 
-    this.showSymbolsForModule(session, selectedModule.module);
+    await this.showSymbolsForModule(session, selectedModule.module);
   }
 
   private async showSymbolsForModule(session: vscode.DebugSession, module: DebugProtocol.Module) {
     try {
       const symbols = await this.getSymbolsForModule(session, module.id.toString());
-      this.showSymbolsInNewTab(module.name.toString(), symbols);
+      await this.showSymbolsInNewTab(module.name.toString(), symbols);
     } catch (error) {
       if (error instanceof Error) {
-        vscode.window.showErrorMessage("Failed to retrieve symbols: " + error.message);
+        await vscode.window.showErrorMessage("Failed to retrieve symbols: " + error.message);
       } else {
-        vscode.window.showErrorMessage("Failed to retrieve symbols due to an unknown error.");
+        await vscode.window.showErrorMessage("Failed to retrieve symbols due to an unknown error.");
       }
       
       return;
@@ -106,7 +106,7 @@ export class SymbolsProvider extends DisposableContext {
     const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
     panel.webview.html = getSymbolsTableHTMLContent(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath);
-    panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
+    await panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
   }
 
   private getExtensionResourcePath(): vscode.Uri {
