@@ -214,7 +214,7 @@ void LinkerDriver::parseSection(StringRef s) {
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
 }
 
-// Parses /sectionlayout:@ option argument.
+// Parses /sectionlayout: option argument.
 void LinkerDriver::parseSectionLayout(StringRef path) {
   if (path.starts_with("@"))
     path = path.substr(1);
