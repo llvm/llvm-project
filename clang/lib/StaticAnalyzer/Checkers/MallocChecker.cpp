@@ -3152,19 +3152,64 @@ static bool isSmartOwningPtrType(QualType QT) {
   return false;
 }
 
+/// Helper struct for collecting smart owning pointer field regions.
+/// This allows both hasSmartOwningPtrField and
+/// collectSmartOwningPtrFieldRegions to share the same traversal logic,
+/// ensuring consistency.
+struct FieldConsumer {
+  const MemRegion *Base;
+  CheckerContext *C;
+  llvm::SmallPtrSetImpl<const MemRegion *> *Out;
+
+  FieldConsumer(const MemRegion *Base, CheckerContext &C,
+                llvm::SmallPtrSetImpl<const MemRegion *> &Out)
+      : Base(Base), C(&C), Out(&Out) {}
+
+  void consume(const FieldDecl *FD) {
+    SVal L = C->getState()->getLValue(FD, loc::MemRegionVal(Base));
+    if (const MemRegion *FR = L.getAsRegion())
+      Out->insert(FR);
+  }
+
+  std::optional<FieldConsumer> switchToBase(const CXXRecordDecl *BaseDecl,
+                                            bool IsVirtual) {
+    // Get the base class region
+    SVal BaseL =
+        C->getState()->getLValue(BaseDecl, Base->getAs<SubRegion>(), IsVirtual);
+    if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
+      // Return a consumer for the base class
+      return FieldConsumer{BaseRegion, *C, *Out};
+    }
+    return std::nullopt;
+  }
+};
+
 /// Check if a record type has smart owning pointer fields (directly or in base
-/// classes).
-static bool hasSmartOwningPtrField(const CXXRecordDecl *CRD) {
+/// classes). When FC is provided, also collect the field regions.
+static bool
+hasSmartOwningPtrField(const CXXRecordDecl *CRD,
+                       std::optional<FieldConsumer> FC = std::nullopt) {
   // Check direct fields
-  if (llvm::any_of(CRD->fields(), [](const FieldDecl *FD) {
-        return isSmartOwningPtrType(FD->getType());
-      }))
-    return true;
+  for (const FieldDecl *FD : CRD->fields()) {
+    if (isSmartOwningPtrType(FD->getType())) {
+      if (!FC)
+        return true;
+      FC->consume(FD);
+    }
+  }
 
   // Check fields from base classes
-  for (const CXXBaseSpecifier &Base : CRD->bases()) {
-    if (const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {
-      if (hasSmartOwningPtrField(BaseDecl))
+  for (const CXXBaseSpecifier &BaseSpec : CRD->bases()) {
+    if (const CXXRecordDecl *BaseDecl =
+            BaseSpec.getType()->getAsCXXRecordDecl()) {
+      std::optional<FieldConsumer> NewFC;
+      if (FC) {
+        NewFC = FC->switchToBase(BaseDecl, BaseSpec.isVirtual());
+        if (!NewFC)
+          continue;
+      }
+      bool Found = hasSmartOwningPtrField(BaseDecl, NewFC);
+      if (Found && !FC)
         return true;
     }
   }
@@ -3229,38 +3274,20 @@ static bool isSmartOwningPtrCall(const CallEvent &Call) {
   return false;
 }
 
+/// Collect memory regions of smart owning pointer fields from a record type
+/// (including fields from base classes).
 static void collectSmartOwningPtrFieldRegions(
     const MemRegion *Base, QualType RecQT, CheckerContext &C,
     llvm::SmallPtrSetImpl<const MemRegion *> &Out) {
   if (!Base)
     return;
+
   const auto *CRD = RecQT->getAsCXXRecordDecl();
   if (!CRD)
     return;
 
-  // Collect direct fields
-  for (const FieldDecl *FD : CRD->fields()) {
-    if (!isSmartOwningPtrType(FD->getType()))
-      continue;
-    SVal L = C.getState()->getLValue(FD, loc::MemRegionVal(Base));
-    if (const MemRegion *FR = L.getAsRegion())
-      Out.insert(FR);
-  }
-
-  // Collect fields from base classes
-  for (const CXXBaseSpecifier &BaseSpec : CRD->bases()) {
-    if (const CXXRecordDecl *BaseDecl =
-            BaseSpec.getType()->getAsCXXRecordDecl()) {
-      // Get the base class region
-      SVal BaseL = C.getState()->getLValue(BaseDecl, Base->getAs<SubRegion>(),
-                                           BaseSpec.isVirtual());
-      if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
-        // Recursively collect fields from this base class
-        collectSmartOwningPtrFieldRegions(BaseRegion, BaseSpec.getType(), C,
-                                          Out);
-      }
-    }
-  }
+  FieldConsumer FC{Base, C, Out};
+  hasSmartOwningPtrField(CRD, FC);
 }
 
 /// Handle smart pointer constructor calls by escaping allocated symbols
