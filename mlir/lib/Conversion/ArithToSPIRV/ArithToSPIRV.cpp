@@ -611,7 +611,7 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// Converts arith.index_cast to spirv.Select if the target type is i1.
+// Converts arith.index_cast to spirv.INotEqual if the target type is i1.
 struct IndexCastIndexI1Pattern final
     : public OpConversionPattern<arith::IndexCastOp> {
   using OpConversionPattern::OpConversionPattern;
