@@ -26,7 +26,6 @@
 
 #include <optional>
 
-
 using namespace lldb_private;
 using namespace lldb_private::npdb;
 using namespace llvm;
