@@ -51,3 +51,21 @@ end:
 }
 
 declare void @free_object()
+
+; Check TEST instruction would not be combined with CMP.
+define i1 @pr155586(i8 %0) {
+; CHECK-LABEL: pr155586:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpb $1, %dil
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    retq
+entry:
+  %cmp88.not = icmp eq i8 %0, 1
+  %1 = and i8 %0, 1
+  %tobool161.not = icmp eq i8 %1, 0
+  %common.ret.op = select i1 %cmp88.not, i1 false, i1 %tobool161.not
+  ret i1 %common.ret.op
+}
