@@ -151,8 +151,8 @@ def TileZeroOp : AMX_Op<"tile_zero", [
     Zeroes the destination tile, with the shape defined by the 2-dim
     vector type of the result. This is eventually lowered into the
     "tilezero" instruction with the corresponding tile configuration.
-    It includes memory effects and CSE doesn't eliminate multiple
-    "tilezero" instructions.
+    With memory-effects, each "tilezero" operation serves as a compilation 
+    hint to use a separate tile register.
 
     Example:
 
@@ -191,8 +191,8 @@ def TileLoadOp : AMX_Op<"tile_load", [
     Loads a tile from memory defined by a base and indices, with the
     shape defined by the 2-dim vector type of the result. This is
     eventually lowered into the "tileloadd" instruction with the
-    corresponding tile configuration. It includes memory effects and 
-    CSE doesn't eliminate multiple "tileload" instructions.
+    corresponding tile configuration. With memory-effects, each "tileload" 
+    operation serves as a compilation hint to use a separate tile register.
 
     Example:
 

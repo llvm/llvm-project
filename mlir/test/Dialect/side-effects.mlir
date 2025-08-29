@@ -1,13 +1,15 @@
 // RUN: mlir-opt %s -cse -convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
 
-// CHECK-LABEL: mem_effect(
+// With inclusion of memory side-effects, it is expected CSE not to fold multiple 
+// "tileload" and "tilezero".
+// CHECK-LABEL: do_not_fold_tiles(
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
-func.func @mem_effect(%arg0: memref<2x32x32xbf16>, %arg1: memref<2x16x32xbf16>) -> memref<16x32xf32> {
+func.func @do_not_fold_tiles(%arg0: memref<2x32x32xbf16>, %arg1: memref<2x16x32xbf16>) -> memref<16x32xf32> {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
