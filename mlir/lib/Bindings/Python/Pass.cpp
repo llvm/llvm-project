@@ -9,12 +9,10 @@
 #include "Pass.h"
 
 #include "IRModule.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/Pass.h"
-#include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "nanobind/trampoline.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 
 namespace nb = nanobind;
 using namespace nb::literals;
