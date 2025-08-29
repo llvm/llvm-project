@@ -530,13 +530,14 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:  EMIT branch-on-cond ir<false>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add>
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
 ; CHECK-NEXT:   WIDEN ir<%load.a> = load ir<%gep.a>
@@ -551,11 +552,11 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%2> = compute-reduction-result ir<%accum>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, ir<%add>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%2> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[RED_RESULT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
