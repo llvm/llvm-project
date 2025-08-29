@@ -72,32 +72,35 @@ analyzeModule(Module &M) {
   if (RootSignatureNode == nullptr)
     return RSDMap;
 
-  auto HandleNode = [&Ctx, &RSDMap](MDNode *RSDefNode) {
+  auto HandleNode = [&Ctx, &RSDMap](MDNode *RSDefNode, bool NullFunc = false) {
     if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid Root Signature metadata - expected function, "
                        "signature, and version.");
       return;
     }
 
-    // Function was pruned during compilation.
-    const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
-    if (FunctionPointerMdNode == nullptr) {
-      reportError(
-          Ctx, "Function associated with Root Signature definition is null.");
-      return;
-    }
+    Function *F = nullptr;
+    if (!NullFunc) {
+      // Function was pruned during compilation.
+      const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
+      if (FunctionPointerMdNode == nullptr) {
+        reportError(
+            Ctx, "Function associated with Root Signature definition is null.");
+        return;
+      }
 
-    ValueAsMetadata *VAM =
-        llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
-    if (VAM == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Value");
-      return;
-    }
+      ValueAsMetadata *VAM =
+          llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
+      if (VAM == nullptr) {
+        reportError(Ctx, "First element of root signature is not a Value");
+        return;
+      }
 
-    Function *F = dyn_cast<Function>(VAM->getValue());
-    if (F == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Function");
-      return;
+      F = dyn_cast<Function>(VAM->getValue());
+      if (F == nullptr) {
+        reportError(Ctx, "First element of root signature is not a Function");
+        return;
+      }
     }
 
     Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
@@ -141,6 +144,13 @@ analyzeModule(Module &M) {
 
     RSDMap.insert(std::make_pair(F, RSD));
   };
+
+  if (M.getTargetTriple().getEnvironment() ==
+      Triple::EnvironmentType::RootSignature) {
+    assert(RootSignatureNode->getNumOperands() == 1);
+    MDNode *RSDefNode = RootSignatureNode->getOperand(0);
+    HandleNode(RSDefNode, true);
+    return RSDMap;
   }
 
   for (MDNode *RSDefNode : RootSignatureNode->operands())
