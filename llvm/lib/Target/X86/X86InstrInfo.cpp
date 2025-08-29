@@ -984,14 +984,113 @@ bool X86InstrInfo::expandCtSelectI386(MachineInstr &MI) const {
 
   // Step 7: Apply inverted mask to false value - reuse mask register directly
   BuildMI(*MBB, MI, DL, get(AndOp), TmpMaskReg)
-      .addReg(Src2Reg)
       .addReg(TmpMaskReg)
+      .addReg(Src2Reg)
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
   auto LastInstr = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
                        .addReg(DstReg)
                        .addReg(TmpMaskReg)
+                       .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Bundle all generated instructions for atomic execution
+  auto BundleStart = FirstInstr.getInstr()->getIterator();
+  auto BundleEnd = LastInstr.getInstr()->getIterator();
+  finalizeBundle(*MBB, BundleStart, std::next(BundleEnd));
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
+  return true;
+}
+
+/// Expand VR64-specific CTSELECT pseudo instructions (post-RA, constant-time)
+bool X86InstrInfo::expandCtSelectI386VR64(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // CTSELECT_I386_VR64rr has operands: (outs dst, tmp_byte, tmp_mask),
+  // (ins src1, src2, cond)
+  Register DstReg = MI.getOperand(0).getReg();
+  Register TmpByteReg = MI.getOperand(1).getReg();
+  Register TmpMaskReg = MI.getOperand(2).getReg();
+  Register Src1Reg = MI.getOperand(3).getReg();
+  Register Src2Reg = MI.getOperand(4).getReg();
+  X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(5).getImm());
+  X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
+
+  // VR64-specific constant-time selection using MMX operations
+  // result = (true_val & mask) | (false_val & ~mask)
+
+  // Step 1: Create condition byte using SETCC (opposite condition)
+  auto FirstInstr = BuildMI(*MBB, MI, DL, get(X86::SETCCr), TmpByteReg)
+                       .addImm(OppCC)
+                       .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 2: Move byte to 32-bit register to prepare for MMX conversion
+  // We need a temporary GPR32 register - allocate one or reuse
+  MachineFunction *MF = MBB->getParent();
+  Register TmpGPRReg = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+
+  BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPRReg)
+      .addReg(TmpByteReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 3: Negate to create 0xFFFFFFFF or 0x00000000 mask
+  BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPRReg)
+      .addReg(TmpGPRReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 4: Move 32-bit mask to MMX register
+  BuildMI(*MBB, MI, DL, get(X86::MMX_MOVD64rr), TmpMaskReg)
+      .addReg(TmpGPRReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 5: Replicate 32-bit mask to full 64-bit (PUNPCKLDQ)
+  BuildMI(*MBB, MI, DL, get(X86::MMX_PUNPCKLDQrr), TmpMaskReg)
+      .addReg(TmpMaskReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 6: Apply mask to true value - copy src1 to dest, then AND with mask
+  BuildMI(*MBB, MI, DL, get(X86::MMX_MOVQ64rr), DstReg)
+      .addReg(Src1Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(X86::MMX_PANDrr), DstReg)
+      .addReg(DstReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 7: Create inverted mask by XORing with all-ones
+  // First create all-ones mask by comparing TmpMaskReg with itself
+  Register AllOnesReg = MF->getRegInfo().createVirtualRegister(&X86::VR64RegClass);
+  BuildMI(*MBB, MI, DL, get(X86::MMX_PCMPEQDrr), AllOnesReg)
+      .addReg(TmpMaskReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // XOR the original mask with all-ones to create inverted mask
+  BuildMI(*MBB, MI, DL, get(X86::MMX_PXORrr), TmpMaskReg)
+      .addReg(AllOnesReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 8: Apply inverted mask to false value - first copy src2 to temp, then AND
+  Register Src2TempReg = MF->getRegInfo().createVirtualRegister(&X86::VR64RegClass);
+  BuildMI(*MBB, MI, DL, get(X86::MMX_MOVQ64rr), Src2TempReg)
+      .addReg(Src2Reg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(X86::MMX_PANDrr), Src2TempReg)
+      .addReg(Src2TempReg)
+      .addReg(TmpMaskReg)
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // Step 9: Final result: (src1 & mask) | (src2 & ~mask)
+  auto LastInstr = BuildMI(*MBB, MI, DL, get(X86::MMX_PORrr), DstReg)
+                       .addReg(DstReg)
+                       .addReg(Src2TempReg)
                        .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Bundle all generated instructions for atomic execution
@@ -6934,6 +7033,10 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT_I386_GR16rr:
   case X86::CTSELECT_I386_GR32rr:
     return expandCtSelectI386(MI);
+
+  // VR64-specific CTSELECT expansion (post-RA, constant-time)
+  case X86::CTSELECT_I386_VR64rr:
+    return expandCtSelectI386VR64(MI);
   }
   return false;
 }

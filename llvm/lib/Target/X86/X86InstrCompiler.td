@@ -705,6 +705,18 @@ let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
     }
   }
 
+  // VR64-specific CTSELECT for i386 (needs different temporary register strategy)
+  multiclass CTSELECT_I386_VR64<RegisterClass RC> {
+    let hasNoSchedulingInfo = 1 in {
+      def rr : PseudoI<(outs RC:$dst, GR8:$tmp_byte, RC:$tmp_mask),
+                       (ins RC:$src1, RC:$src2, i8imm:$cond), []> {
+        let Constraints =
+            "@earlyclobber $dst,@earlyclobber $tmp_byte,@earlyclobber "
+            "$tmp_mask";
+      }
+    }
+  }
+
   // Legacy CTSELECT for other targets (unchanged)
   multiclass CTSELECT_NOCMOV<RegisterClass RC, ValueType VT> {
     let hasNoSchedulingInfo = 1 in {
@@ -720,6 +732,9 @@ let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
   let Predicates = [NoCMOV] in {
     defm CTSELECT_I386_GR16 : CTSELECT_I386<GR16, GR8>;
     defm CTSELECT_I386_GR32 : CTSELECT_I386<GR32, GR8>;
+  }
+  let Predicates = [NoCMOV, HasMMX] in {
+    defm CTSELECT_I386_VR64 : CTSELECT_I386_VR64<VR64>;
   }
 }
 
@@ -756,6 +771,12 @@ let Predicates = [NoCMOV, Not64BitMode] in {
             (CTSELECT_I386_GR32rr GR32:$src1, GR32:$src2, timm:$cond)>;
 
   // i64 patterns handled automatically by type legalization
+}
+
+// Pattern matching for VR64 CTSELECT on i386 without CMOV (routes to post-RA expansion)
+let Predicates = [NoCMOV, Not64BitMode, HasMMX] in {
+  def : Pat<(x86mmx(X86ctselect VR64:$src1, VR64:$src2, timm:$cond, EFLAGS)),
+            (CTSELECT_I386_VR64rr VR64:$src1, VR64:$src2, timm:$cond)>;
 }
 
 //===----------------------------------------------------------------------===//

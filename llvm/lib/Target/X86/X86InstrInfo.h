@@ -690,6 +690,9 @@ private:
   /// Expand i386-specific CTSELECT pseudo instructions (post-RA, constant-time)
   bool expandCtSelectI386(MachineInstr &MI) const;
 
+  /// Expand VR64-specific CTSELECT pseudo instructions (post-RA, constant-time)
+  bool expandCtSelectI386VR64(MachineInstr &MI) const;
+
   /// Returns true iff the routine could find two commutable operands in the
   /// given machine instruction with 3 vector inputs.
   /// The 'SrcOpIdx1' and 'SrcOpIdx2' are INPUT and OUTPUT arguments. Their
