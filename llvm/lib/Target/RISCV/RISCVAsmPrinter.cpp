@@ -1178,7 +1178,21 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   if (lowerRISCVVMachineInstrToMCInst(MI, OutMI, STI))
     return false;
 
-  OutMI.setOpcode(MI->getOpcode());
+  unsigned Opcode = MI->getOpcode();
+  // If we have a disjoint OR which isn't compressible as an c.or, we can
+  // convert it to a c.add which doesn't have the gprc register restriction.
+  if (STI->hasStdExtZca() && Opcode == RISCV::OR &&
+      MI->getFlag(MachineInstr::Disjoint)) {
+    Register Rd = MI->getOperand(0).getReg();
+    Register Rs1 = MI->getOperand(1).getReg();
+    Register Rs2 = MI->getOperand(2).getReg();
+    if ((Rd == Rs1 || Rd == Rs2) &&
+        !(RISCV::GPRCRegClass.contains(Rd) &&
+          RISCV::GPRCRegClass.contains(Rs1) &&
+          RISCV::GPRCRegClass.contains(Rs2)))
+      Opcode = RISCV::ADD;
+  }
+  OutMI.setOpcode(Opcode);
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
