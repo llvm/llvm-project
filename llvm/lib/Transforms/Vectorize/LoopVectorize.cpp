@@ -8567,14 +8567,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   VPlanTransforms::createLoopRegions(*Plan);
 
-  // Don't use getDecisionAndClampRange here, because we don't know the UF
-  // so this function is better to be conservative, rather than to split
-  // it up into different VPlans.
-  // TODO: Consider using getDecisionAndClampRange here to split up VPlans.
-  bool IVUpdateMayOverflow = false;
-  for (ElementCount VF : Range)
-    IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
-
+  bool IVUpdateMayOverflow = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [this](ElementCount VF) {
+        return !isIndvarOverflowCheckKnownFalse(&CM, VF);
+      },
+      Range);
   TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
