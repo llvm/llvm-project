@@ -16,4 +16,6 @@ add_mlir_library(MLIRPass
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRIR
+  PRIVATE
+  ${LLVM_ATOMIC_LIB}
   )
