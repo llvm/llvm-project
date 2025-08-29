@@ -1466,7 +1466,7 @@ class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
 
-  static bool NeedsScope(const parser::OpenMPBlockConstruct &);
+  static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) { //
@@ -1483,8 +1483,8 @@ public:
     AddOmpSourceRange(x.source);
     return true;
   }
-  bool Pre(const parser::OpenMPBlockConstruct &);
-  void Post(const parser::OpenMPBlockConstruct &);
+  bool Pre(const parser::OmpBlockConstruct &);
+  void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
     AddOmpSourceRange(x.source);
     // Manually resolve names in CRITICAL directives. This is because these
@@ -1729,7 +1729,7 @@ private:
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
 
-bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
+bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
   switch (x.BeginDir().DirId()) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
@@ -1750,14 +1750,14 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
-bool OmpVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
+bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
     PushScope(Scope::Kind::OtherConstruct, nullptr);
   }
   return true;
 }
 
-void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
+void OmpVisitor::Post(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
     PopScope();
   }

@@ -36,7 +36,7 @@ Remote system
 *************
 
 On Linux and Android, all required remote functionality is contained in the
-``lldb-server binary``. This binary combines the functionality of the platform and
+``lldb-server`` binary. This binary combines the functionality of the platform and
 gdb-remote stub. A single binary facilitates deployment and reduces code size,
 since the two functions share a lot of code. The ``lldb-server`` binary is also
 statically linked with the rest of LLDB (unlike ``lldb``, which dynamically links

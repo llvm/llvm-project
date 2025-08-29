@@ -409,7 +409,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
         common::visitors{
-            [&](const parser::OpenMPBlockConstruct &ompConstruct) {
+            [&](const parser::OmpBlockConstruct &ompConstruct) {
               beginClauseList = &ompConstruct.BeginDir().Clauses();
               if (auto &endSpec = ompConstruct.EndDir())
                 endClauseList = &endSpec->Clauses();
@@ -3789,7 +3789,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPBlockConstruct &blockConstruct) {
+                   const parser::OmpBlockConstruct &blockConstruct) {
   const parser::OmpDirectiveSpecification &beginSpec =
       blockConstruct.BeginDir();
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
@@ -4150,7 +4150,7 @@ void Fortran::lower::genDeclareTargetIntGlobal(
 bool Fortran::lower::isOpenMPTargetConstruct(
     const parser::OpenMPConstruct &omp) {
   llvm::omp::Directive dir = llvm::omp::Directive::OMPD_unknown;
-  if (const auto *block = std::get_if<parser::OpenMPBlockConstruct>(&omp.u)) {
+  if (const auto *block = std::get_if<parser::OmpBlockConstruct>(&omp.u)) {
     dir = block->BeginDir().DirId();
   } else if (const auto *loop =
                  std::get_if<parser::OpenMPLoopConstruct>(&omp.u)) {
