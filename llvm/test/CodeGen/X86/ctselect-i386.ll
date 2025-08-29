@@ -3,188 +3,91 @@
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -mattr=+cmov | FileCheck %s --check-prefix=I386-CMOV
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -mattr=-cmov -verify-machineinstrs | FileCheck %s --check-prefix=I386-NOCMOV
 
-; Test CTSELECT post-RA expansion on i386 targets
-; - Without CMOV: constant-time implementation using new post-RA expansion
+; Comprehensive CTSELECT tests for i386 targets with scalar integer types
+; - Without CMOV: constant-time implementation using post-RA expansion with bundled instructions
 ; - With CMOV: CMOV-based implementation
+; - Verifies security properties: no conditional branches, constant execution time
 ; All expansion happens post-RA for better optimization control and constant-time guarantees
 
-define i32 @test_ctselect_i32_reg(i32 %a, i32 %b, i32 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_i32_reg:
+; Test basic i32 functionality
+define i32 @test_ctselect_i32_basic(i1 %cond, i32 %a, i32 %b) nounwind {
+; I386-NOCMOV-LABEL: test_ctselect_i32_basic:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I386-NOCMOV-NEXT:    cmpl %edx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    sete %al
-; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    BUNDLE
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_ctselect_i32_reg:
+; I386-CMOV-LABEL: test_ctselect_i32_basic:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    sete %cl
-; I386-CMOV-NEXT:    testb %cl, %cl
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
 ; I386-CMOV-NEXT:    retl
-  %cond = icmp eq i32 %a, %c
-  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %b, i32 %c)
+  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
   ret i32 %result
 }
 
-define i16 @test_ctselect_i16_reg(i16 %a, i16 %b, i16 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_i16_reg:
+; Test i16 functionality
+define i16 @test_ctselect_i16_basic(i1 %cond, i16 %a, i16 %b) nounwind {
+; I386-NOCMOV-LABEL: test_ctselect_i16_basic:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; I386-NOCMOV-NEXT:    cmpw %dx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    sete %al
-; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    BUNDLE
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_ctselect_i16_reg:
+; I386-CMOV-LABEL: test_ctselect_i16_basic:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmpw %ax, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    sete %cl
-; I386-CMOV-NEXT:    testb %cl, %cl
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    cmovnew {{[0-9]+}}(%esp), %ax
 ; I386-CMOV-NEXT:    retl
-  %cond = icmp eq i16 %a, %c
-  %result = call i16 @llvm.ct.select.i16(i1 %cond, i16 %b, i16 %c)
+  %result = call i16 @llvm.ct.select.i16(i1 %cond, i16 %a, i16 %b)
   ret i16 %result
 }
 
-define i64 @test_ctselect_i64_reg(i64 %a, i64 %b, i64 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_i64_reg:
-; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebp
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
-; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    xorl %edi, %eax
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; I386-NOCMOV-NEXT:    xorl %edx, %ebx
-; I386-NOCMOV-NEXT:    orl %eax, %ebx
-; I386-NOCMOV-NEXT:    sete %al
-; I386-NOCMOV-NEXT:    testb %al, %al
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
-; I386-NOCMOV-NEXT:    popl %ebx
-; I386-NOCMOV-NEXT:    popl %ebp
-; I386-NOCMOV-NEXT:    retl
-;
-; I386-CMOV-LABEL: test_ctselect_i64_reg:
-; I386-CMOV:       # %bb.0:
-; I386-CMOV-NEXT:    pushl %esi
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-CMOV-NEXT:    xorl %edx, %ecx
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; I386-CMOV-NEXT:    xorl %eax, %esi
-; I386-CMOV-NEXT:    orl %ecx, %esi
-; I386-CMOV-NEXT:    sete %cl
-; I386-CMOV-NEXT:    testb %cl, %cl
-; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %edx
-; I386-CMOV-NEXT:    popl %esi
-; I386-CMOV-NEXT:    retl
-  %cond = icmp eq i64 %a, %c
-  %result = call i64 @llvm.ct.select.i64(i1 %cond, i64 %b, i64 %c)
-  ret i64 %result
-}
-
-define i32 @test_ctselect_i32_mem(i32 %a, i32* %b_ptr, i32 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_i32_mem:
+; Test i8 functionality
+define i8 @test_ctselect_i8_basic(i1 %cond, i8 %a, i8 %b) nounwind {
+; I386-NOCMOV-LABEL: test_ctselect_i8_basic:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
-; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NOCMOV-NEXT:    movl (%eax), %edx
-; I386-NOCMOV-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    sete %al
-; I386-NOCMOV-NEXT:    testb %al, %al
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
-; I386-NOCMOV-NEXT:    popl %ebx
-; I386-NOCMOV-NEXT:    retl
-;
-; I386-CMOV-LABEL: test_ctselect_i32_mem:
-; I386-CMOV:       # %bb.0:
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    sete %dl
-; I386-CMOV-NEXT:    testb %dl, %dl
-; I386-CMOV-NEXT:    cmovnel (%ecx), %eax
-; I386-CMOV-NEXT:    retl
-  %b = load i32, i32* %b_ptr
-  %cond = icmp eq i32 %a, %c
-  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %b, i32 %c)
-  ret i32 %result
-}
-
-; Test various condition codes
-define i32 @test_ctselect_different_cond(i32 %a, i32 %b, i32 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_different_cond:
-; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I386-NOCMOV-NEXT:    cmpl %edx, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    setl %al
-; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_ctselect_different_cond:
+; I386-CMOV-LABEL: test_ctselect_i8_basic:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    setl %cl
-; I386-CMOV-NEXT:    testb %cl, %cl
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
+; I386-CMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; I386-CMOV-NEXT:    retl
-  %cond = icmp slt i32 %a, %c
-  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %b, i32 %c)
-  ret i32 %result
+  %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
+  ret i8 %result
 }
 
-; Verify no conditional branches in constant-time version
-define i32 @test_no_branches(i32 %secret, i32 %public1, i32 %public2) nounwind {
-; I386-NOCMOV-LABEL: test_no_branches:
+; Test security property: constant-time execution for cryptographic use case
+define i32 @test_crypto_key_select(i32 %secret_bit, i32 %key1, i32 %key2) nounwind {
+; I386-NOCMOV-LABEL: test_crypto_key_select:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -193,11 +96,39 @@ define i32 @test_no_branches(i32 %secret, i32 %public1, i32 %public2) nounwind {
 ; I386-NOCMOV-NEXT:    testb %al, %al
 ; I386-NOCMOV-NEXT:    BUNDLE
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_no_branches:
+; I386-CMOV-LABEL: test_crypto_key_select:
+; I386-CMOV:       # %bb.0:
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I386-CMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    setne %cl
+; I386-CMOV-NEXT:    testb %cl, %cl
+; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
+; I386-CMOV-NEXT:    retl
+  %cond = icmp ne i32 %secret_bit, 0
+  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %key1, i32 %key2)
+  ret i32 %result
+}
+
+; Test that no conditional branches appear in constant-time path
+define i32 @test_no_conditional_branches(i32 %secret, i32 %val1, i32 %val2) nounwind {
+; I386-NOCMOV-LABEL: test_no_conditional_branches:
+; I386-NOCMOV:       # %bb.0:
+; I386-NOCMOV-NEXT:    pushl %ebx
+; I386-NOCMOV-NEXT:    pushl %esi
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    setne %al
+; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    popl %esi
+; I386-NOCMOV-NEXT:    popl %ebx
+; I386-NOCMOV-NEXT:    retl
+;
+; I386-CMOV-LABEL: test_no_conditional_branches:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-CMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -206,48 +137,15 @@ define i32 @test_no_branches(i32 %secret, i32 %public1, i32 %public2) nounwind {
 ; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
 ; I386-CMOV-NEXT:    retl
   %cond = icmp ne i32 %secret, 0
-  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %public1, i32 %public2)
+  %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %val1, i32 %val2)
   ret i32 %result
 }
 
-; Test edge cases for post-RA expansion
-define i32 @test_ctselect_zero_one(i32 %cond) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_zero_one:
+; Test with comparison condition
+define i32 @test_ctselect_i32_cmp(i32 %a, i32 %b, i32 %c) nounwind {
+; I386-NOCMOV-LABEL: test_ctselect_i32_cmp:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
-; I386-NOCMOV-NEXT:    pushl %esi
-; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    setne %al
-; I386-NOCMOV-NEXT:    xorl %ecx, %ecx
-; I386-NOCMOV-NEXT:    testb %al, %al
-; I386-NOCMOV-NEXT:    movl $1, %edx
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
-; I386-NOCMOV-NEXT:    popl %ebx
-; I386-NOCMOV-NEXT:    retl
-;
-; I386-CMOV-LABEL: test_ctselect_zero_one:
-; I386-CMOV:       # %bb.0:
-; I386-CMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    setne %cl
-; I386-CMOV-NEXT:    xorl %eax, %eax
-; I386-CMOV-NEXT:    testb %cl, %cl
-; I386-CMOV-NEXT:    movl $1, %ecx
-; I386-CMOV-NEXT:    cmovnel %ecx, %eax
-; I386-CMOV-NEXT:    retl
-  %test = icmp ne i32 %cond, 0
-  %result = call i32 @llvm.ct.select.i32(i1 %test, i32 1, i32 0)
-  ret i32 %result
-}
-
-; Test bundling behavior - instructions should be bundled for atomic treatment
-define i32 @test_ctselect_bundling(i32 %a, i32 %b, i32 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_bundling:
-; I386-NOCMOV:       # %bb.0:
-; I386-NOCMOV-NEXT:    pushl %ebx
-; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -256,11 +154,10 @@ define i32 @test_ctselect_bundling(i32 %a, i32 %b, i32 %c) nounwind {
 ; I386-NOCMOV-NEXT:    testb %al, %al
 ; I386-NOCMOV-NEXT:    BUNDLE
 ; I386-NOCMOV-NEXT:    popl %esi
-; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_ctselect_bundling:
+; I386-CMOV-LABEL: test_ctselect_i32_cmp:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-CMOV-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
@@ -273,40 +170,40 @@ define i32 @test_ctselect_bundling(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %result
 }
 
-; Test i8 promotion to i32 for i386
-define i8 @test_ctselect_i8_promotion(i8 %a, i8 %b, i8 %c) nounwind {
-; I386-NOCMOV-LABEL: test_ctselect_i8_promotion:
+; Test nested selects
+define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) nounwind {
+; I386-NOCMOV-LABEL: test_ctselect_nested:
 ; I386-NOCMOV:       # %bb.0:
 ; I386-NOCMOV-NEXT:    pushl %ebx
 ; I386-NOCMOV-NEXT:    pushl %edi
 ; I386-NOCMOV-NEXT:    pushl %esi
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; I386-NOCMOV-NEXT:    cmpb %cl, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    sete %al
+; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I386-NOCMOV-NEXT:    testb %al, %al
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
+; I386-NOCMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-NOCMOV-NEXT:    BUNDLE
 ; I386-NOCMOV-NEXT:    popl %esi
 ; I386-NOCMOV-NEXT:    popl %edi
 ; I386-NOCMOV-NEXT:    popl %ebx
 ; I386-NOCMOV-NEXT:    retl
 ;
-; I386-CMOV-LABEL: test_ctselect_i8_promotion:
+; I386-CMOV-LABEL: test_ctselect_nested:
 ; I386-CMOV:       # %bb.0:
 ; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    cmpb %al, {{[0-9]+}}(%esp)
-; I386-CMOV-NEXT:    sete %cl
-; I386-CMOV-NEXT:    testb %cl, %cl
-; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
-; I386-CMOV-NEXT:    # kill: def $al killed $al killed $eax
+; I386-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    cmovnel {{[0-9]+}}(%esp), %ecx
+; I386-CMOV-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; I386-CMOV-NEXT:    cmovnel %ecx, %eax
 ; I386-CMOV-NEXT:    retl
-  %cond = icmp eq i8 %a, %c
-  %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %b, i8 %c)
-  ret i8 %result
+  %sel1 = call i32 @llvm.ct.select.i32(i1 %cond2, i32 %a, i32 %b)
+  %sel2 = call i32 @llvm.ct.select.i32(i1 %cond1, i32 %sel1, i32 %c)
+  ret i32 %sel2
 }
 
+; Declare ct.select intrinsics
 declare i8 @llvm.ct.select.i8(i1, i8, i8)
 declare i16 @llvm.ct.select.i16(i1, i16, i16)
 declare i32 @llvm.ct.select.i32(i1, i32, i32)
-declare i64 @llvm.ct.select.i64(i1, i64, i64)

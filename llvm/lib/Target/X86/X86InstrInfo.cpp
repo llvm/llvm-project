@@ -7003,6 +7003,10 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT_I386_GR16rr:
   case X86::CTSELECT_I386_GR32rr:
     return expandCtSelectI386(MI);
+
+  // VR64-specific CTSELECT expansion (post-RA, constant-time)
+  case X86::CTSELECT_I386_VR64rr:
+    return expandCtSelectI386VR64(MI);
   }
   return false;
 }
