@@ -15,6 +15,7 @@
 #include "OmptTesterStandalone.h"
 #include "OmptCallbackHandler.h"
 
+#include <algorithm>
 #include <cassert>
 #include <iomanip>
 #include <iostream>
@@ -86,11 +87,21 @@ std::vector<TestSuite> TestRegistrar::getTestSuites() {
   return TSs;
 }
 
-void TestRegistrar::addCaseToSuite(TestCase *TC, std::string TSName) {
-  auto &TS = Tests[TSName];
-  if (TS.Name.empty())
-    TS.Name = TSName;
-  TS.TestCases.emplace_back(TC);
+void TestRegistrar::addCaseToSuite(TestCase *TC, const std::string &TSName) {
+  // Search the test suites for a matching name
+  auto It = std::find_if(Tests.begin(), Tests.end(),
+                         [&](const auto &P) { return P.first == TSName; });
+
+  if (It != Tests.end()) {
+    // Test suite exists: add the test case
+    It->second.TestCases.emplace_back(TC);
+  } else {
+    // Test suite does not exist: construct it and add the test case
+    TestSuite TS(TSName);
+    TS.TestCases.emplace_back(TC);
+    // Move and emplace the suite
+    Tests.emplace_back(TSName, std::move(TS));
+  }
 }
 
 Registerer::Registerer(TestCase *TC, const std::string SuiteName) {

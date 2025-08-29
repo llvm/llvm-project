@@ -173,7 +173,6 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 ; GFX8-NOOPT-NEXT:    v_add_u32_e64 v2, s[0:1], v0, v1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v4, v0
@@ -267,7 +266,6 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -293,8 +291,6 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -364,7 +360,6 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -390,8 +385,6 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -461,7 +454,6 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -487,8 +479,6 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -558,7 +548,6 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -584,8 +573,6 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -655,7 +642,6 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s2, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -681,8 +667,6 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -900,7 +884,6 @@ define amdgpu_kernel void @update_dppi64_imm_old_test(ptr addrspace(1) %arg, i64
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s0, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -930,8 +913,6 @@ define amdgpu_kernel void @update_dppi64_imm_old_test(ptr addrspace(1) %arg, i64
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -999,7 +980,6 @@ define amdgpu_kernel void @update_dppf64_imm_old_test(ptr addrspace(1) %arg, dou
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 3
 ; GFX8-NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s0, v0
 ; GFX8-NOOPT-NEXT:    s_mov_b32 s0, 0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, v0
@@ -1029,8 +1009,6 @@ define amdgpu_kernel void @update_dppf64_imm_old_test(ptr addrspace(1) %arg, dou
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX8-NOOPT-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -1121,8 +1099,6 @@ define amdgpu_kernel void @update_dppi64_imm_src_test(ptr addrspace(1) %out, i64
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr4
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -1211,8 +1187,6 @@ define amdgpu_kernel void @update_dppf64_imm_src_test(ptr addrspace(1) %out, dou
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX8-NOOPT-NEXT:    s_nop 1
 ; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr4
-; GFX8-NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; GFX8-NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX8-NOOPT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0

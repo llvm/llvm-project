@@ -1003,7 +1003,7 @@ EOF
     ppcle:Linux:*:*)
 	echo powerpcle-unknown-linux-gnu
 	exit ;;
-    riscv32:Linux:*:* | riscv64:Linux:*:*)
+    riscv32:Linux:*:* | riscv64:Linux:*:* | riscv32be:Linux:*:* | riscv64be:Linux:*:*)
 	LIBC=gnu
 	eval $set_cc_for_build
 	# Do not check for __GLIBC__ because uclibc defines it too
