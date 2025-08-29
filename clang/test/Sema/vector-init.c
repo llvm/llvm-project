@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all %s -fsyntax-only -verify
 
 //typedef __attribute__(( ext_vector_type(4) ))  float float4;
 typedef float float4 __attribute__((vector_size(16)));
