@@ -786,9 +786,12 @@ struct WgToSgLoadGatherOpWithOffset
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
 
     // The offsets need to be distributed
-    if (dyn_cast<VectorType>(adaptor.getOffsets().front().getType())
-            .getShape() !=
-        dyn_cast<VectorType>(adaptor.getMask().front().getType()).getShape()) {
+    auto offsetsVecType =
+        dyn_cast<VectorType>(adaptor.getOffsets().front().getType());
+    auto maskVecType =
+        dyn_cast<VectorType>(adaptor.getMask().front().getType());
+    if (!offsetsVecType || !maskVecType ||
+        offsetsVecType.getShape() != maskVecType.getShape()) {
       return rewriter.notifyMatchFailure(op,
                                          "offsets have not been distributed");
     }
@@ -833,9 +836,12 @@ struct WgToSgStoreScatterOpWithOffset
       return failure();
 
     // The offsets need to be distributed
-    if (dyn_cast<VectorType>(adaptor.getOffsets().front().getType())
-            .getShape() !=
-        dyn_cast<VectorType>(adaptor.getMask().front().getType()).getShape()) {
+    auto offsetsVecType =
+        dyn_cast<VectorType>(adaptor.getOffsets().front().getType());
+    auto maskVecType =
+        dyn_cast<VectorType>(adaptor.getMask().front().getType());
+    if (!offsetsVecType || !maskVecType ||
+        offsetsVecType.getShape() != maskVecType.getShape()) {
       return rewriter.notifyMatchFailure(op,
                                          "offsets have not been distributed");
     }
