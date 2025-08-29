@@ -21813,15 +21813,6 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
 
-  APInt Imm;
-  if (N->getValueType(0).isScalableVector() &&
-      ISD::isConstantSplatVector(N->getOperand(1).getNode(), Imm) &&
-      Imm.isNegative() && ((-Imm & ~0xff) == 0 || (-Imm & ~0xff00) == 0))
-    return DCI.DAG.getNode(
-        N->getOpcode() == ISD::ADD ? ISD::SUB : ISD::ADD, SDLoc(N),
-        N->getValueType(0), N->getOperand(0),
-        DCI.DAG.getConstant(-Imm, SDLoc(N), N->getValueType(0)));
-
   return performAddSubLongCombine(N, DCI);
 }
 

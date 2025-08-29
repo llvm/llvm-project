@@ -51,10 +51,9 @@ define void @masked_scatter_base_plus_stride_v8f32(ptr %dst, ptr %src) #0 {
 define void @masked_scatter_base_plus_stride_v4f64(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: masked_scatter_base_plus_stride_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.d, #0, #3
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    index z0.d, #-2, #3
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    sub z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x0, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
   %data = load <4 x double>, ptr %src, align 8
