@@ -246,7 +246,7 @@ public:
     return false;
   }
 
-  template<MVT::SimpleValueType VT, bool Negate>
+  template <MVT::SimpleValueType VT, bool Negate>
   bool SelectSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift) {
     return SelectSVEAddSubImm(N, VT, Imm, Shift, Negate);
   }
@@ -489,7 +489,8 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
-  bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift, bool Negate);
+  bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
+                          bool Negate);
   bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                               bool Negate);
   bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);

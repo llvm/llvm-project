@@ -23,8 +23,7 @@ define void @masked_gather_base_plus_stride_v4f64(ptr %dst, ptr %src) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    index z0.d, #0, x8
-; CHECK-NEXT:    sub z0.d, z0.d, #2 // =0x2
+; CHECK-NEXT:    index z0.d, #-2, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1, z0.d, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
