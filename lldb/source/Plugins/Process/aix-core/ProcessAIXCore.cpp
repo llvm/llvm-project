@@ -198,31 +198,52 @@ lldb_private::DynamicLoader *ProcessAIXCore::GetDynamicLoader() {
 void ProcessAIXCore::ParseAIXCoreFile() {
     
     Log *log = GetLog(LLDBLog::Process);
-    AIXSigInfo siginfo;
-    ThreadData thread_data;
     
     const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
     const ArchSpec &arch = GetArchitecture();
     
-    siginfo.Parse(m_aixcore_header, arch, unix_signals);
-    thread_data.siginfo = siginfo;
+    const uint32_t num_threads = m_aixcore_header.NumberOfThreads;
     SetID(m_aixcore_header.User.process.pi_pid);
-    
-    thread_data.name.assign (m_aixcore_header.User.process.pi_comm,
-            strnlen (m_aixcore_header.User.process.pi_comm,
-                sizeof (m_aixcore_header.User.process.pi_comm)));
-    
-    lldb::DataBufferSP data_buffer_sp(new lldb_private::DataBufferHeap(sizeof(m_aixcore_header.Fault.context), 0));
-    
-    memcpy(static_cast<void *>(const_cast<uint8_t *>(data_buffer_sp->GetBytes())),
-            &m_aixcore_header.Fault.context, sizeof(m_aixcore_header.Fault.context));
-    
-    lldb_private::DataExtractor data(data_buffer_sp, lldb::eByteOrderBig, 8);
+    m_thread_data.clear();
+    m_thread_data.reserve(num_threads > 0 ? (num_threads + 1) : 1);
 
-    thread_data.gpregset = DataExtractor(data, 0, sizeof(m_aixcore_header.Fault.context));
-    m_thread_data.push_back(thread_data);
-    LLDB_LOGF(log, "ProcessAIXCore: Parsing Complete!");
+    for (uint32_t i = 0; i <= num_threads; i++) {
+    
+        AIXSigInfo siginfo;
+        ThreadData thread_data;
+        size_t regs_size;
 
+        std::string base_name(m_aixcore_header.User.process.pi_comm,
+                          strnlen (m_aixcore_header.User.process.pi_comm,
+                             sizeof (m_aixcore_header.User.process.pi_comm)));
+
+        regs_size = (i == 0) ? sizeof(m_aixcore_header.Fault.context)
+            : sizeof(m_aixcore_header.threads[i-1].context); 
+        
+        lldb::DataBufferSP regs_buf_sp(new lldb_private::DataBufferHeap(regs_size, 0));
+        if (i == 0) { // The crash thread
+            thread_data.tid = m_aixcore_header.Fault.thread.ti_tid;
+            thread_data.name = base_name;
+            memcpy(static_cast<void *>(const_cast<uint8_t *>(regs_buf_sp->GetBytes())),
+                   &m_aixcore_header.Fault.context, regs_size);
+            thread_data.siginfo.Parse(m_aixcore_header, arch, unix_signals);
+        }
+        else { // Other threads
+            thread_data.tid = m_aixcore_header.threads[i-1].thread.ti_tid;
+            thread_data.name = base_name + "-*thread-" + std::to_string(i) + "*";
+
+            memcpy(static_cast<void *>(const_cast<uint8_t *>(regs_buf_sp->GetBytes())),
+                   &m_aixcore_header.threads[i-1].context, regs_size);
+        }
+        lldb_private::DataExtractor regs_data(regs_buf_sp, lldb::eByteOrderBig, 8);
+        thread_data.gpregset = DataExtractor(regs_data, 0, regs_size);
+
+        thread_data.prstatus_sig = 0;
+    
+        m_thread_data.push_back(std::move(thread_data));
+
+        LLDB_LOGF(log, "ProcessAIXCore: Parsing Complete! tid %d\n",i);
+    }
 }
 
 void ProcessAIXCore::ParseAIXCore32File() {
@@ -233,25 +254,49 @@ void ProcessAIXCore::ParseAIXCore32File() {
     
     const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
     const ArchSpec &arch = GetArchitecture();
-    
-    siginfo.Parse(m_aixcore32_header, arch, unix_signals);
-    thread_data.siginfo = siginfo;
-    SetID(m_aixcore32_header.User.process.pi_pid);
-    
-    thread_data.name.assign (m_aixcore32_header.User.process.pi_comm,
-            strnlen (m_aixcore32_header.User.process.pi_comm,
-                sizeof (m_aixcore32_header.User.process.pi_comm)));
-    
-    lldb::DataBufferSP data_buffer_sp(new lldb_private::DataBufferHeap(sizeof(m_aixcore32_header.Fault.context), 0));
-    
-    memcpy(static_cast<void *>(const_cast<uint8_t *>(data_buffer_sp->GetBytes())),
-            &m_aixcore32_header.Fault.context, sizeof(m_aixcore32_header.Fault.context));
-    
-    lldb_private::DataExtractor data(data_buffer_sp, lldb::eByteOrderBig, 8);
+   
+    const uint32_t num_threads = m_aixcore32_header.NumberOfThreads;              
+    SetID(m_aixcore32_header.User.process.pi_pid);                                
+    m_thread_data.clear();                                                      
+    m_thread_data.reserve(num_threads > 0 ? (num_threads + 1) : 1); 
 
-    thread_data.gpregset = DataExtractor(data, 0, sizeof(m_aixcore32_header.Fault.context));
-    m_thread_data.push_back(thread_data);
-    LLDB_LOGF(log, "ProcessAIXCore: Parsing Complete!");
+    for (uint32_t i = 0; i <= num_threads; i++) {                               
+                                                                                
+        AIXSigInfo siginfo;                                                     
+        ThreadData thread_data;                                                 
+        size_t regs_size;                                                       
+                                                                                
+        std::string base_name(m_aixcore32_header.User.process.pi_comm,            
+                          strnlen (m_aixcore32_header.User.process.pi_comm,          
+                             sizeof (m_aixcore32_header.User.process.pi_comm)));  
+                                                                                
+        regs_size = (i == 0) ? sizeof(m_aixcore32_header.Fault.context)           
+            : sizeof(m_aixcore32_header.threads[i-1].context);                    
+                                                                                
+        lldb::DataBufferSP regs_buf_sp(new lldb_private::DataBufferHeap(regs_size, 0));
+        if (i == 0) { // The crash thread                                       
+            thread_data.tid = m_aixcore32_header.Fault.thread.ti_tid;             
+            thread_data.name = base_name;                                       
+            memcpy(static_cast<void *>(const_cast<uint8_t *>(regs_buf_sp->GetBytes())),
+                   &m_aixcore32_header.Fault.context, regs_size);                 
+            thread_data.siginfo.Parse(m_aixcore32_header, arch, unix_signals);       
+        }                                                                       
+        else { // Other threads                                                 
+            thread_data.tid = m_aixcore32_header.threads[i-1].thread.ti_tid;         
+            thread_data.name = base_name + "-*thread-" + std::to_string(i) + "*";
+                                                                                
+            memcpy(static_cast<void *>(const_cast<uint8_t *>(regs_buf_sp->GetBytes())),
+                   &m_aixcore32_header.threads[i-1].context, regs_size);          
+        }
+        lldb_private::DataExtractor regs_data(regs_buf_sp, lldb::eByteOrderBig, 8);
+        thread_data.gpregset = DataExtractor(regs_data, 0, regs_size);          
+                                                                                
+        thread_data.prstatus_sig = 0;                                           
+                                                                                
+        m_thread_data.push_back(std::move(thread_data));                        
+                                                                                
+        LLDB_LOGF(log, "ProcessAIXCore: Parsing Complete! tid %d\n",i); 
+    }
 
 }
 // Process Control
@@ -337,12 +382,20 @@ Status ProcessAIXCore::DoLoadCore() {
 bool ProcessAIXCore::DoUpdateThreadList(ThreadList &old_thread_list,
                                         ThreadList &new_thread_list) 
 {
-    const ThreadData &td = m_thread_data[0];
-    
-    lldb::ThreadSP thread_sp = 
-        std::make_shared<ThreadAIXCore>(*this, td);
-    new_thread_list.AddThread(thread_sp);
-    
+    Log *log = GetLog(LLDBLog::Process);
+    const uint32_t num_threads = m_is64bit ? m_aixcore_header.NumberOfThreads :
+                                            m_aixcore32_header.NumberOfThreads;
+    LLDB_LOGF(log,"Number Of Threads %d\n", num_threads);
+    for (lldb::tid_t tid = 0; tid <= num_threads; ++tid) {
+        const ThreadData &td = m_thread_data[tid];
+        lldb::ThreadSP thread_sp = 
+            std::make_shared<ThreadAIXCore>(*this, td);
+        if(!thread_sp) {
+            LLDB_LOGF(log,"Thread not added %d\n", tid);
+            continue;
+        }
+        new_thread_list.AddThread(thread_sp);
+    }
     return true;
 } 
 

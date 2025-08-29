@@ -84,6 +84,8 @@ bool AIXCore32Header::ParseUserData(lldb_private::DataExtractor &data,
 
 bool AIXCore32Header::ParseCoreHeader(lldb_private::DataExtractor &data,
                             lldb::offset_t *offset) {
+    Log *log = GetLog(LLDBLog::Process);
+
     SignalNum = data.GetU8(offset);  
     Flag = data.GetU8(offset);  
     Entries = data.GetU16(offset);  
@@ -110,6 +112,19 @@ bool AIXCore32Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     int ret = 0;
     ret = ParseThreadContext(data, offset);
     ret = ParseUserData(data, &offset_to_user);
+    
+    lldb::offset_t offset_to_threads = ThreadContextOffset;
+    for (int i = 0; i < NumberOfThreads; i++) {
+        offset_to_threads = ThreadContextOffset + ((sizeof(mstsave32) +
+                                                    sizeof(thrdsinfo64)) * i);
+        LLDB_LOGF(log, "Multi-threaded parsing, offset %x\n", offset_to_threads);
+        AIXCore32Header temp_header;
+        ThreadContext32 thread;
+        temp_header.ParseThreadContext(data, &offset_to_threads);
+        memcpy(&thread, &temp_header.Fault, sizeof(ThreadContext64));
+        threads.push_back(std::move(thread));
+    }
+
     return true;
 }
 
@@ -170,6 +185,8 @@ bool AIXCore64Header::ParseUserData(lldb_private::DataExtractor &data,
 
 bool AIXCore64Header::ParseCoreHeader(lldb_private::DataExtractor &data,
                             lldb::offset_t *offset) {
+    Log *log = GetLog(LLDBLog::Process);
+
     SignalNum = data.GetU8(offset);  
     Flag = data.GetU8(offset);  
     Entries = data.GetU16(offset);  
@@ -200,6 +217,18 @@ bool AIXCore64Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     int ret = 0;
     ret = ParseThreadContext(data, offset);
     ret = ParseUserData(data, &offset_to_user);
+
+    lldb::offset_t offset_to_threads = ThreadContextOffset;
+    for (int i = 0; i < NumberOfThreads; i++) {
+        offset_to_threads = ThreadContextOffset + ((sizeof(__context64) +
+                                                    sizeof(thrdentry64)) * i);
+        LLDB_LOGF(log, "Multi-threaded parsing, offset %x\n", offset_to_threads);
+        AIXCore64Header temp_header;
+        ThreadContext64 thread;
+        temp_header.ParseThreadContext(data, &offset_to_threads);
+        memcpy(&thread, &temp_header.Fault, sizeof(ThreadContext64));
+        threads.push_back(std::move(thread));
+    }
 
     return ret;
 

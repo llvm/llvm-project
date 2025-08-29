@@ -101,6 +101,7 @@ public:
 
 protected:
   // Member variables.
+  ThreadData m_td;
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 
