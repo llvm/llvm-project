@@ -307,7 +307,14 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
 
   // Move instructions to new block.
   BasicBlock *Old = IP.getBlock();
-  if (!Old->empty() || !New->empty())
+  // If the Old block is empty then there are no instructions to move. But in
+  // the new debug scheme, it could have trailing debug records which will be
+  // moved to New in spliceDebugInfoEmptyBlock. We dont want that for 2 reasons:
+  // 1. If New is also empty, it could cause a crash.
+  // 2. Even if New is not empty, we want to keep those debug records in the
+  // Old as that was the behavior with the old scheme (debug intrinsics).
+  // So we call BasicBlock::splice only when Old is not empty.
+  if (!Old->empty())
     New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
   if (CreateBranch) {
