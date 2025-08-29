@@ -9033,6 +9033,14 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
+static bool isTailCall(const CallInst *CI, const SelectionDAG *SelDAG,
+                       bool IsLowerToLibCall) {
+  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+  return CI && CI->isTailCall() &&
+         isInTailCallPosition(*CI, SelDAG->getTarget(),
+                              ReturnsFirstArg && IsLowerToLibCall);
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
@@ -9047,10 +9055,7 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
       {Size, getDataLayout().getIntPtrType(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall = false;
-  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-  IsTailCall = CI && CI->isTailCall() &&
-               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+  bool IsTailCall = isTailCall(CI, this, /*LowerToLibCall*/ true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -9128,10 +9133,7 @@ SDValue SelectionDAG::getMemcpy(
     IsTailCall = *OverrideTailCall;
   } else {
     bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemcpy);
+    IsTailCall = isTailCall(CI, this, LowersToMemcpy);
   }
 
   CLI.setDebugLoc(dl)
@@ -9235,10 +9237,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     bool LowersToMemmove =
         TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemmove);
+    IsTailCall = isTailCall(CI, this, LowersToMemmove);
   }
 
   CLI.setDebugLoc(dl)
