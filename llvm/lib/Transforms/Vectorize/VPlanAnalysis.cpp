@@ -187,7 +187,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
-  assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
+  assert((isa<VPWidenLoadRecipe, VPWidenFFLoadRecipe, VPWidenFFLoadEVLRecipe,
+              VPWidenLoadEVLRecipe>(R)) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
