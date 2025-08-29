@@ -2548,9 +2548,9 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
-                                                  const CallExpr *Call,
-                                                  unsigned BuiltinID) {
+static bool interp__builtin_elementwise_int_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned BuiltinID,
+    llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
@@ -2560,15 +2560,7 @@ static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
         S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
     APSInt LHS = popToAPSInt(
         S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
-    APInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
-      Result = LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
-      Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
-    } else {
-      llvm_unreachable("Wrong builtin ID");
-    }
-
+    APInt Result = Fn(LHS, RHS);
     pushInteger(S, APSInt(std::move(Result), !LHS.isSigned()), Call->getType());
     return true;
   }
@@ -2587,8 +2579,6 @@ static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  bool DestUnsigned =
-      VT->getElementType()->isUnsignedIntegerOrEnumerationType();
   unsigned NumElems = VT->getNumElements();
   for (unsigned I = 0; I != NumElems; ++I) {
     APSInt Elem1;
@@ -2598,61 +2588,9 @@ static bool interp__builtin_elementwise_int_binop(InterpState &S, CodePtr OpPC,
       Elem2 = RHS.elem<T>(I).toAPSInt();
     });
 
-    APSInt Result;
-    switch (BuiltinID) {
-    case Builtin::BI__builtin_elementwise_add_sat:
-      Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
-                                       : Elem1.uadd_sat(Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-      break;
-    case Builtin::BI__builtin_elementwise_sub_sat:
-      Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
-                                       : Elem1.usub_sat(Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-      break;
-    case clang::X86::BI__builtin_ia32_pmulhuw128:
-    case clang::X86::BI__builtin_ia32_pmulhuw256:
-    case clang::X86::BI__builtin_ia32_pmulhuw512:
-      Result = APSInt(llvm::APIntOps::mulhu(Elem1, Elem2),
-                      /*isUnsigned=*/true);
-      break;
-    case clang::X86::BI__builtin_ia32_pmulhw128:
-    case clang::X86::BI__builtin_ia32_pmulhw256:
-    case clang::X86::BI__builtin_ia32_pmulhw512:
-      Result = APSInt(llvm::APIntOps::mulhs(Elem1, Elem2),
-                      /*isUnsigned=*/false);
-      break;
-    case clang::X86::BI__builtin_ia32_psllv2di:
-    case clang::X86::BI__builtin_ia32_psllv4di:
-    case clang::X86::BI__builtin_ia32_psllv4si:
-    case clang::X86::BI__builtin_ia32_psllv8si:
-      if (Elem2.uge(Elem2.getBitWidth())) {
-        Result = APSInt(APInt::getZero(Elem2.getBitWidth()), DestUnsigned);
-        break;
-      }
-      Result = APSInt(Elem1.shl(Elem2.getZExtValue()), DestUnsigned);
-      break;
-    case clang::X86::BI__builtin_ia32_psrav4si:
-    case clang::X86::BI__builtin_ia32_psrav8si:
-      if (Elem2.uge(Elem2.getBitWidth())) {
-        Result = APSInt(Elem1.ashr(Elem2.getBitWidth() - 1), DestUnsigned);
-        break;
-      }
-      Result = APSInt(Elem1.ashr(Elem2.getZExtValue()), DestUnsigned);
-      break;
-    case clang::X86::BI__builtin_ia32_psrlv2di:
-    case clang::X86::BI__builtin_ia32_psrlv4di:
-    case clang::X86::BI__builtin_ia32_psrlv4si:
-    case clang::X86::BI__builtin_ia32_psrlv8si:
-      if (Elem2.uge(Elem2.getBitWidth())) {
-        Result = APSInt(APInt::getZero(Elem2.getBitWidth()), DestUnsigned);
-        break;
-      }
-      Result = APSInt(Elem1.lshr(Elem2.getZExtValue()), DestUnsigned);
-      break;
-    default:
-      llvm_unreachable("Wrong builtin ID");
-    }
+    APSInt Result =
+        APSInt(Fn(Elem1, Elem2),
+               Call->getType()->isUnsignedIntegerOrEnumerationType());
 
     INT_TYPE_SWITCH_NO_BOOL(ElemT,
                             { Dst.elem<T>(I) = static_cast<T>(Result); });
@@ -3289,24 +3227,62 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_is_within_lifetime(S, OpPC, Call);
 
   case Builtin::BI__builtin_elementwise_add_sat:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
+        });
+
   case Builtin::BI__builtin_elementwise_sub_sat:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+        });
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+                                                 llvm::APIntOps::mulhu);
+
   case clang::X86::BI__builtin_ia32_pmulhw128:
   case clang::X86::BI__builtin_ia32_pmulhw256:
   case clang::X86::BI__builtin_ia32_pmulhw512:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID,
+                                                 llvm::APIntOps::mulhs);
+
   case clang::X86::BI__builtin_ia32_psllv2di:
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
   case clang::X86::BI__builtin_ia32_psllv8si:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(RHS.getBitWidth())) {
+            return APInt::getZero(RHS.getBitWidth());
+          }
+          return LHS.shl(RHS.getZExtValue());
+        });
+
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8si:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(RHS.getBitWidth())) {
+            return LHS.ashr(RHS.getBitWidth() - 1);
+          }
+          return LHS.ashr(RHS.getZExtValue());
+        });
+
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
   case clang::X86::BI__builtin_ia32_psrlv8si:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call, BuiltinID);
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID, [](const APSInt &LHS, const APSInt &RHS) {
+          if (RHS.uge(RHS.getBitWidth())) {
+            return APInt::getZero(RHS.getBitWidth());
+          }
+          return LHS.lshr(RHS.getZExtValue());
+        });
 
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
