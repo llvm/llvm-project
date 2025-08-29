@@ -62,8 +62,6 @@ void ObjectFileXCOFF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
-
 ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                             DataBufferSP data_sp,
                                             lldb::offset_t data_offset,
@@ -97,7 +95,6 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_up->ParseHeader())
     return nullptr;
 
-  UGLY_FLAG_FOR_AIX = true;
   return objfile_up.release();
 }
 
@@ -517,7 +514,10 @@ lldb_private::Address ObjectFileXCOFF::GetEntryPointAddress() {
       section_list->FindSectionContainingFileAddress(vm_addr));
   if (section_sp) {
     lldb::offset_t offset_ptr = section_sp->GetFileOffset() + (vm_addr - section_sp->GetFileAddress());
-    vm_addr = m_data.GetU64(&offset_ptr);
+    if(m_binary->is64Bit())
+        vm_addr = m_data.GetU64(&offset_ptr);
+    else
+        vm_addr = m_data.GetU32(&offset_ptr);
   }
 
   if (!section_list)

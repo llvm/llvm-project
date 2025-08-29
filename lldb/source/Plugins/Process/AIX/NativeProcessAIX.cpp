@@ -1729,13 +1729,20 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
 
 static void GetRegister(lldb::pid_t pid, long long addr, void *buf) {
   uint64_t val = 0;
-  ptrace64(PT_READ_GPR, pid, addr, 0, (int *)&val);
+  uint32_t ret = 0;
+  ret = ptrace64(PT_READ_GPR, pid, addr, 0, (int *)&val);
+  // For 32bit application, ptrace64() return the value and val parameter
+  // of no use 
+  if(val == 0)
+      val = ret;
   *(uint64_t *)buf = llvm::byteswap<uint64_t>(val);
 }
 
 static void SetRegister(lldb::pid_t pid, long long addr, void *buf) {
   uint64_t val = llvm::byteswap<uint64_t>(*(uint64_t *)buf);
-  ptrace64(PT_WRITE_GPR, pid, addr, 0, (int *)&val);
+  // For 32bit, ptrace64() expects the value as the 4th arg(data)
+  // For 64bit, ptrace64() expects the value as the 5th arg(pointer to the buffer)
+  ptrace64(PT_WRITE_GPR, pid, addr, val, (int *)&val);
 }
 
 static void GetFPRegister(lldb::pid_t pid, long long addr, void *buf) {
