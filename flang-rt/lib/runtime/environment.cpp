@@ -98,7 +98,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (0 != nPreConfigEnvCallback) {
     // Run an optional callback function after the core of the
     // ExecutionEnvironment() logic.
-    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
+    for (int i{0}; i != nPreConfigEnvCallback; ++i) {
       PreConfigEnvCallback[i](ac, av, env, envDefaults);
     }
   }
