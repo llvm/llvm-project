@@ -11,7 +11,7 @@
 include(ExtendPath)
 
 # The generated headers will be placed in clang's resource directory if present.
-if(NOT LLVM_TREE_AVAILABLE)
+if(NOT LLVM_TREE_AVAILABLE OR NOT Clang_DIR)
   set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 else()
   set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
