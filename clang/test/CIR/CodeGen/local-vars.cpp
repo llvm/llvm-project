@@ -137,34 +137,45 @@ void value_init() {
   float f{};
   bool b{};
   int i{};
+
+  bool scalar_value_init_expr = int() == 0;
 }
 
 // CIR: cir.func{{.*}} @_Z10value_initv()
 // CIR:   %[[F_PTR:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
 // CIR:   %[[B_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
 // CIR:   %[[I_PTR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[S_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["scalar_value_init_expr", init]
 // CIR:   %[[ZEROF:.+]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR:   cir.store {{.*}} %[[ZEROF]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR:   %[[FALSE:.+]] = cir.const #false
 // CIR:   cir.store {{.*}} %[[FALSE]], %[[B_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:   %[[ZEROI:.+]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store {{.*}} %[[ZEROI]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[ZEROI2:.+]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[ZEROI3:.+]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[CMP:.+]] = cir.cmp(eq, %[[ZEROI2]], %[[ZEROI3]]) : !s32i, !cir.bool
+// CIR:   cir.store {{.*}} %[[CMP]], %[[S_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:   cir.return
 
-// LLVM: define dso_local void @_Z10value_initv()
+// LLVM: define{{.*}} void @_Z10value_initv()
 // LLVM:   %[[F_PTR:.+]] = alloca float
 // LLVM:   %[[B_PTR:.+]] = alloca i8
 // LLVM:   %[[I_PTR:.+]] = alloca i32
+// LLVM:   %[[S_PTR:.+]] = alloca i8
 // LLVM:   store float 0.000000e+00, ptr %[[F_PTR]]
 // LLVM:   store i8 0, ptr %[[B_PTR]]
 // LLVM:   store i32 0, ptr %[[I_PTR]]
+// LLVM:   store i8 1, ptr %[[S_PTR]]
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z10value_initv()
+// OGCG: define{{.*}} void @_Z10value_initv()
 // OGCG:   %[[F_PTR:.+]] = alloca float
 // OGCG:   %[[B_PTR:.+]] = alloca i8
 // OGCG:   %[[I_PTR:.+]] = alloca i32
+// OGCG:   %[[S_PTR:.+]] = alloca i8
 // OGCG:   store float 0.000000e+00, ptr %[[F_PTR]]
 // OGCG:   store i8 0, ptr %[[B_PTR]]
 // OGCG:   store i32 0, ptr %[[I_PTR]]
+// OGCG:   store i8 1, ptr %[[S_PTR]]
 // OGCG:   ret void

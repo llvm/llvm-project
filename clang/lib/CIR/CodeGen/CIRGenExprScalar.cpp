@@ -186,6 +186,13 @@ public:
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
+  mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *e) {
+    if (e->getType()->isVoidType())
+      return {};
+
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
+  }
+
   mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
 
