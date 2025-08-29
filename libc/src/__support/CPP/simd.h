@@ -25,10 +25,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_SIMD_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_SIMD_H
 
+#if LIBC_HAS_VECTOR_TYPE
+
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
-
-static_assert(LIBC_HAS_VECTOR_TYPE, "compiler does not support vector types");
 
 namespace internal {
 
@@ -223,4 +223,5 @@ LIBC_INLINE constexpr simd<T, N> select(simd<bool, N> m, simd<T, N> x,
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 
+#endif // LIBC_HAS_VECTOR_TYPE
 #endif
