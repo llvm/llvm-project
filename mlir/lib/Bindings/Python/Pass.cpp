@@ -26,8 +26,11 @@ namespace {
 // Users are expected to subclass this and implement the `run` method, e.g.
 // ```
 // class MyPass(mlir.passmanager.Pass):
+//   def __init__(self):
+//     super().__init__("MyPass", ..)
+//     # other init stuff..
 //   def run(self, operation):
-//     # do something with operation
+//     # do something with operation..
 //     pass
 // ```
 class PyPassBase {
@@ -60,7 +63,6 @@ public:
   // Make an MlirPass instance on-the-fly that wraps this object.
   // Note that passmanager will take the ownership of the returned
   // object and release it when appropriate.
-  // Also, `*this` must remain alive as long as the returned object is alive.
   MlirPass make() {
     auto *obj = nb::find(this).release().ptr();
     return mlirCreateExternalPass(
