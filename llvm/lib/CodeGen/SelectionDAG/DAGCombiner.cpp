@@ -10128,8 +10128,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
         CC = ISD::SETUGT;
         break;
       }
-      SDValue Cmp = DAG.getSetCC(DL, CCVT, Op0, N1, CC);
-      SDValue XorXC = DAG.getNode(ISD::XOR, DL, VT, Op0, N1);
+      SDValue FN1 = DAG.getFreeze(N1);
+      SDValue Cmp = DAG.getSetCC(DL, CCVT, Op0, FN1, CC);
+      SDValue XorXC = DAG.getNode(ISD::XOR, DL, VT, Op0, FN1);
       SDValue Zero = DAG.getConstant(0, DL, VT);
       return DAG.getSelect(DL, VT, Cmp, XorXC, Zero);
     }
