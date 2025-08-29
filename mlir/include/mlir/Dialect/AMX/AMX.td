@@ -151,6 +151,8 @@ def TileZeroOp : AMX_Op<"tile_zero", [
     Zeroes the destination tile, with the shape defined by the 2-dim
     vector type of the result. This is eventually lowered into the
     "tilezero" instruction with the corresponding tile configuration.
+    It includes memory effects and CSE doesn't eliminate multiple
+    "tilezero" instructions.
 
     Example:
 
@@ -180,15 +182,17 @@ def TileZeroOp : AMX_Op<"tile_zero", [
 // Tile memory operations.
 //
 
-def TileLoadOp : AMX_Op<"tile_load", [Pure,
-    AMXIntrinsicOpInterface
+def TileLoadOp : AMX_Op<"tile_load", [
+    AMXIntrinsicOpInterface,
+    MemoryEffects<[MemWrite]>
   ]> {
   let summary = "tile load operation";
   let description = [{
     Loads a tile from memory defined by a base and indices, with the
     shape defined by the 2-dim vector type of the result. This is
     eventually lowered into the "tileloadd" instruction with the
-    corresponding tile configuration.
+    corresponding tile configuration. It includes memory effects and 
+    CSE doesn't eliminate multiple "tileload" instructions.
 
     Example:
 
