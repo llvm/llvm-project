@@ -81,7 +81,17 @@ enum NodeType : unsigned {
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
 
   FIRST_MEMORY_OPCODE,
-  LoadV2 = FIRST_MEMORY_OPCODE,
+
+  /// These nodes are used to lower atomic instructions with i128 type. They are
+  /// similar to the generic nodes, but the input and output values are split
+  /// into two 64-bit values.
+  /// ValLo, ValHi, OUTCHAIN = ATOMIC_CMP_SWAP_B128(INCHAIN, ptr, cmpLo, cmpHi,
+  ///                                               swapLo, swapHi)
+  /// ValLo, ValHi, OUTCHAIN = ATOMIC_SWAP_B128(INCHAIN, ptr, amtLo, amtHi)
+  ATOMIC_CMP_SWAP_B128 = FIRST_MEMORY_OPCODE,
+  ATOMIC_SWAP_B128,
+
+  LoadV2,
   LoadV4,
   LoadV8,
   LDUV2, // LDU.v2
