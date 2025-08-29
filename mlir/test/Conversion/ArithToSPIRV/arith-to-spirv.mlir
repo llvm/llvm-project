@@ -743,6 +743,35 @@ func.func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
   return
 }
 
+// CHECK-LABEL: @unrealized_conversion_cast
+func.func @unrealized_conversion_cast(%arg0: vector<3xi64>, %arg1: i16, %arg2: f32) {
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : vector<3xi64> to vector<3xui64>
+  %0 = builtin.unrealized_conversion_cast %arg0 : vector<3xi64> to vector<3xui64>
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : i16 to ui16
+  %1 = builtin.unrealized_conversion_cast %arg1 : i16 to ui16
+
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : vector<3xi64> to vector<3xui64>
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : i16 to ui16
+  %2:2 = builtin.unrealized_conversion_cast %arg0, %arg1 : vector<3xi64>, i16 to vector<3xui64>, ui16
+
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : i16 to ui16
+  %3:2 = builtin.unrealized_conversion_cast %arg0, %arg1 : vector<3xi64>, i16 to vector<3xi64>, ui16
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : vector<3xi64> to vector<3xui64>
+  %4:2 = builtin.unrealized_conversion_cast %arg0, %arg1 : vector<3xi64>, i16 to vector<3xui64>, i16
+
+  // bitcast from float to int should be represented using arith.bitcast
+  // CHECK-NEXT: builtin.unrealized_conversion_cast %{{.+}} : f32 to i32
+  %5 = builtin.unrealized_conversion_cast %arg2 : f32 to i32
+
+  // test mixed signedness and non-signedness cast
+  // CHECK-NEXT: builtin.unrealized_conversion_cast %{{.+}} : f32 to f16
+  // CHECK-NEXT: spirv.Bitcast %{{.+}} : i32 to ui32
+  %6:2 = builtin.unrealized_conversion_cast %5, %arg2 : i32, f32 to ui32, f16
+
+  // CHECK-NEXT: return
+  return
+}
+
 // CHECK-LABEL: @fpext1
 func.func @fpext1(%arg0: f16) -> f64 {
   // CHECK: spirv.FConvert %{{.*}} : f16 to f64
