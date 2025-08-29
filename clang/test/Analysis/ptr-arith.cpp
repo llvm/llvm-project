@@ -166,16 +166,18 @@ unsigned long ptr_arithmetic(void *p) {
   return __builtin_bit_cast(unsigned long, p) + 1; // no-crash
 }
 
-
-void escape(int*);
-
 struct AllocOpaqueFlag {};
 
-void* operator new(unsigned long, void *ptr) noexcept { return ptr; }
-void* operator new(unsigned long, void *ptr, AllocOpaqueFlag const&) noexcept { return ptr; }
+void *operator new(unsigned long, void *ptr) noexcept { return ptr; }
+void *operator new(unsigned long, void *ptr, AllocOpaqueFlag const &) noexcept {
+  return ptr;
+}
 
-void* operator new[](unsigned long, void* ptr) noexcept { return ptr; }
-void* operator new[](unsigned long, void* ptr, AllocOpaqueFlag const&);
+void *operator new[](unsigned long, void *ptr) noexcept { return ptr; }
+void *operator new[](unsigned long, void *ptr,
+                     AllocOpaqueFlag const &) noexcept {
+  return ptr;
+}
 
 struct Buffer {
   char buf[100];
@@ -184,64 +186,56 @@ struct Buffer {
 
 void checkPlacementNewArryInObject() {
   Buffer buffer;
-  int* array = new (&buffer) int[10];
-  escape(array);
+  int *array = new (&buffer) int[10];
   ++array; // no warning
   (void)*array;
 }
 
 void checkPlacementNewArrayInObjectOpaque() {
   Buffer buffer;
-  int* array = new (&buffer, AllocOpaqueFlag{}) int[10];
-  escape(array);
+  int *array = new (&buffer, AllocOpaqueFlag{}) int[10];
   ++array; // no warning
   (void)*array;
 }
 
 void checkPlacementNewArrayInArray() {
   char buffer[100];
-  int* array = new (buffer) int[10];
-  escape(array);
+  int *array = new (buffer) int[10];
   ++array; // no warning
   (void)*array;
 }
 
 void checkPlacementNewArrayInArrayOpaque() {
   char buffer[100];
-  int* array = new (buffer, AllocOpaqueFlag{}) int;
-  escape(array);
+  int *array = new (buffer, AllocOpaqueFlag{}) int;
   ++array; // no warning
   (void)*array;
 }
 
 void checkPlacementNewObjectInObject() {
   Buffer buffer;
-  int* array = new (&buffer) int;
-  escape(array);
+  int *array = new (&buffer) int;
   ++array; // expected-warning{{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
   (void)*array;
 }
 
 void checkPlacementNewObjectInObjectOpaque() {
   Buffer buffer;
-  int* array = new (&buffer, AllocOpaqueFlag{}) int;
-  escape(array);
-  ++array;  // expected-warning{{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
+  int *array = new (&buffer, AllocOpaqueFlag{}) int;
+  ++array; // expected-warning{{Pointer arithmetic on non-array variables relies on memory layout, which is dangerous}}
   (void)*array;
 }
 
 void checkPlacementNewObjectInArray() {
   char buffer[sizeof(int)];
-  int* array = new (buffer) int;
-  escape(array);
+  int *array = new (buffer) int;
   ++array; // no warning (FN)
   (void)*array;
 }
 
 void checkPlacementNewObjectInArrayOpaque() {
   char buffer[sizeof(int)];
-  int* array = new (buffer, AllocOpaqueFlag{}) int;
-  escape(array);
+  int *array = new (buffer, AllocOpaqueFlag{}) int;
   ++array; // no warning (FN)
   (void)*array;
 }
@@ -255,26 +249,25 @@ void checkPlacementNewSlices() {
     *ptr = i;
   }
   ++start; // no warning
-  (void*)start;
+  (void *)start;
 }
 
 class BumpAlloc {
   char *buffer;
   char *offset;
-public:
-  BumpAlloc(int n): buffer(new char[n]), offset{buffer} {}
-  ~BumpAlloc() {delete [] buffer;}
 
-  void* alloc(unsigned long size) {
-    auto* ptr = offset;
+public:
+  BumpAlloc(int n) : buffer(new char[n]), offset{buffer} {}
+  ~BumpAlloc() { delete[] buffer; }
+
+  void *alloc(unsigned long size) {
+    auto *ptr = offset;
     offset += size;
     return ptr;
   }
 };
 
-void* operator new(unsigned long size, BumpAlloc &ba) {
-  return ba.alloc(size);
-}
+void *operator new(unsigned long size, BumpAlloc &ba) { return ba.alloc(size); }
 
 void checkPlacementSlab() {
   BumpAlloc bump{10};

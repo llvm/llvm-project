@@ -74,14 +74,12 @@ public:
 
 REGISTER_MAP_WITH_PROGRAMSTATE(RegionState, const MemRegion *, AllocKind)
 
-namespace {
-
-bool isArrayPlacementNew(const CXXNewExpr *NE) {
+static bool isArrayPlacementNew(const CXXNewExpr *NE) {
   return NE->isArray() && NE->getNumPlacementArgs() > 0;
 }
 
-ProgramStateRef markSuperRegionReinterpreted(ProgramStateRef State,
-                                             const MemRegion *Region) {
+static ProgramStateRef markSuperRegionReinterpreted(ProgramStateRef State,
+                                                    const MemRegion *Region) {
   while (const auto *BaseRegion = dyn_cast<CXXBaseObjectRegion>(Region)) {
     Region = BaseRegion->getSuperRegion();
   }
@@ -91,8 +89,6 @@ ProgramStateRef markSuperRegionReinterpreted(ProgramStateRef State,
   }
   return State;
 }
-
-} // namespace
 
 void PointerArithChecker::checkDeadSymbols(SymbolReaper &SR,
                                            CheckerContext &C) const {
