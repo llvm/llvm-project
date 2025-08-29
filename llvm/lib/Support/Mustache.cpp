@@ -168,7 +168,7 @@ private:
 
   void indentTextNode(std::string &Body, size_t Indentation, bool FinalNode);
 
-  void indentNodes(ASTNode *Node, bool isPartial);
+  void indentNodes(ASTNode *Node, bool IsPartial);
 
   void renderPartial(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
                      ASTNode *Partial);
@@ -687,40 +687,41 @@ void ASTNode::renderChild(const json::Value &Contexts, llvm::raw_ostream &OS) {
 
 void ASTNode::indentTextNode(std::string &Body, size_t Indentation,
                              bool FinalNode) {
-  std::string spaces(Indentation, ' ');
-  size_t pos = 0;
+  std::string Spaces(Indentation, ' ');
+  size_t Pos = 0;
   size_t LastChar = std::string::npos;
 
   if (FinalNode)
-    // body.erase(body.find_last_not_of(" \t\r\f\v") + 1);
     LastChar = Body.find_last_not_of(" \t\r\f\v");
 
   while ((pos = Body.find('\n', pos)) != std::string::npos) {
-    if ((!FinalNode) || (pos != LastChar)) {
-      Body.insert(pos + 1, spaces);
-      pos += 1 + Indentation;
-    } else {
+    if (FinalNode && (pos == LastChar))
       break;
-    }
+
+    Body.insert(pos + 1, Spaces);
+    pos += 1 + Indentation;
   }
 }
 
-void ASTNode::indentNodes(ASTNode *Node, bool isPartial) {
-  size_t size = Node->Children.size();
+void ASTNode::indentNodes(ASTNode *Node, bool IsPartial) {
+  size_t Size = Node->Children.size();
 
-  for (size_t i = 0; i < size; ++i) {
-    ASTNode *child = Node->Children[i].get();
-    switch (child->Ty) {
+  for (size_t i = 0; i < Size; ++i) {
+    ASTNode *Child = Node->Children[i].get();
+    switch (Child->Ty) {
     case ASTNode::Text: {
-      indentTextNode(child->Body, Indentation, ((i == size - 1) && isPartial));
+      // Only track the final node for partials.
+      bool IsFinalNode = ((i == Size - 1) && IsPartial);
+      indentTextNode(Child->Body, Indentation, IsFinalNode);
       break;
     }
     case ASTNode::Section: {
-      indentNodes(child, false);
+      indentNodes(Child, false);
       break;
     }
     case ASTNode::Partial: {
-      indentNodes(child, true);
+      indentNodes(Child, true);
+      break;
     }
     case ASTNode::Root:
     case ASTNode::Variable:
