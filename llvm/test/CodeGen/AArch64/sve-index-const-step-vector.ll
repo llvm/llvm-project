@@ -84,8 +84,7 @@ define <4 x i32> @v4i32_non_zero_non_one() #0 {
 define <4 x i32> @v4i32_neg_immediates() #0 {
 ; CHECK-LABEL: v4i32_neg_immediates:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z0.s, #0, #-2
-; CHECK-NEXT:    sub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    index z0.s, #-1, #-2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   ret <4 x i32> <i32 -1, i32 -3, i32 -5, i32 -7>

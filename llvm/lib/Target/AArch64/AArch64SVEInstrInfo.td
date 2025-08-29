@@ -657,6 +657,12 @@ let Predicates = [HasSVE_or_SME] in {
   defm SQSUB_ZI : sve_int_arith_imm0_ssat<0b110, "sqsub", ssubsat, saddsat>;
   defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub", usubsat>;
 
+  // Extra patterns for add(x, splat(-ve)) -> sub(x, +ve). There is no i8
+  // pattern as all i8 constants can be handled by an add.
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, add, ZPR16, i32, SVEAddSubNegImm16Pat, SUB_ZI_H>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, add, ZPR32, i32, SVEAddSubNegImm32Pat, SUB_ZI_S>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, add, ZPR64, i64, SVEAddSubNegImm64Pat, SUB_ZI_D>;
+
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1, "MLA_ZPZZZ", "MAD_ZPmZZ">;
