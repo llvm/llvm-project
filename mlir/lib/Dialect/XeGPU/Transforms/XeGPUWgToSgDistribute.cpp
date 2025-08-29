@@ -467,6 +467,7 @@ struct WgToSgVectorBroadcastOp
   LogicalResult
   matchAndRewrite(vector::BroadcastOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
     VectorType resultType = op.getResult().getType();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
@@ -475,33 +476,13 @@ struct WgToSgVectorBroadcastOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    // TODO: Currently only supports cases where the source and result ranks
-    // are the same.
-    auto srcType =
-        dyn_cast<VectorType>(adaptor.getOperands().front()[0].getType());
-    if (!srcType || srcType.getRank() != resultType.getRank())
-      return failure();
-
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
-    // Check if the output layout is distributable
-    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt();
-    if (sgLayout.empty())
-      return failure();
 
     if (!xegpu::XeGPUDialect::isEvenlyDistributable(wgShape, layout))
       return failure();
-
-    // Check if the srcShape has unit dim in dimensions being broadcasted,
-    // and the other dimensions are the same as the destination type
-    // TODO: Generalize it
-    auto srcShape = srcType.getShape();
-    for (size_t i = 0; i < srcShape.size(); ++i) {
-      if (srcShape[i] != 1 && srcShape[i] != sgShape[i])
-        return failure();
-    }
 
     SmallVector<Value> newBroadcastOps;
     for (auto operand : adaptor.getOperands().front()) {
@@ -518,7 +499,6 @@ struct WgToSgVectorBroadcastOp
       }
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
-
     rewriter.replaceOpWithMultiple(op, {newBroadcastOps});
     return success();
   }
