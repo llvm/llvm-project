@@ -2403,11 +2403,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertUnresolvedBlockAddress()))
     return nullptr;
 
-  // Once we've finished constructing elements in the module, we should convert
-  // it to use the debug info format desired by LLVM.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->convertToNewDbgValues();
-
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
