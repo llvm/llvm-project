@@ -7768,13 +7768,8 @@ private:
 
     // Get the pointer-attachment base-pointer for the given list, if any.
     const Expr *AttachPtrExpr = getAttachPtrExpr(Components);
-    Address AttachPtrAddr = getAttachPtrAddr(AttachPtrExpr, CGF);
-    Address AttachPteeBaseAddr =
-        !AttachPtrAddr.isValid()
-            ? Address::invalid()
-            : CGF.EmitLoadOfPointer(
-                  AttachPtrAddr,
-                  CGF.getContext().VoidPtrTy.castAs<PointerType>());
+    auto [AttachPtrAddr, AttachPteeBaseAddr] =
+        getAttachPtrAddrAndPteeBaseAddr(AttachPtrExpr, CGF);
 
     bool HasAttachPtr = AttachPtrExpr != nullptr;
     bool FirstComponentIsForAttachPtr = AssocExpr == AttachPtrExpr;
@@ -8557,9 +8552,8 @@ private:
   /// Returns the address corresponding to \p PointerExpr.
   static Address getAttachPtrAddr(const Expr *PointerExpr,
                                   CodeGenFunction &CGF) {
+    assert(PointerExpr && "Cannot get addr from null attach-ptr expr");
     Address AttachPtrAddr = Address::invalid();
-    if (!PointerExpr)
-      return AttachPtrAddr;
 
     if (auto *DRE = dyn_cast<DeclRefExpr>(PointerExpr)) {
       // If the pointer is a variable, we can use its address directly.
@@ -8578,6 +8572,31 @@ private:
     assert(AttachPtrAddr.isValid() &&
            "Failed to get address for attach pointer expression");
     return AttachPtrAddr;
+  }
+
+  /// Get the address of the attach pointer, and a load from it, to get the
+  /// pointee base address.
+  /// \return A pair containing AttachPtrAddr and AttachPteeBaseAddr. The pair
+  /// contains invalid addresses if \p AttachPtrExpr is null.
+  static std::pair<Address, Address>
+  getAttachPtrAddrAndPteeBaseAddr(const Expr *AttachPtrExpr,
+                                  CodeGenFunction &CGF) {
+
+    if (!AttachPtrExpr)
+      return {Address::invalid(), Address::invalid()};
+
+    Address AttachPtrAddr = getAttachPtrAddr(AttachPtrExpr, CGF);
+    assert(AttachPtrAddr.isValid() && "Invalid attach pointer addr");
+
+    QualType AttachPtrType =
+        OMPClauseMappableExprCommon::getComponentExprElementType(AttachPtrExpr)
+            .getCanonicalType();
+
+    Address AttachPteeBaseAddr = CGF.EmitLoadOfPointer(
+        AttachPtrAddr, AttachPtrType->castAs<PointerType>());
+    assert(AttachPteeBaseAddr.isValid() && "Invalid attach pointee base addr");
+
+    return {AttachPtrAddr, AttachPteeBaseAddr};
   }
 
   /// Returns whether an attach entry should be emitted for a map on
