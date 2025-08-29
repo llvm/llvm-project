@@ -1941,6 +1941,9 @@ let TargetPrefix = "riscv" in {
   defm psslai_h : RVPBinaryAABIntrinsics;
   defm psslai_w : RVPBinaryAABIntrinsics;
   defm sslai    : RVPBinaryAABIntrinsics;
+  defm psrli_b  : RVPBinaryAABIntrinsics;
+  defm psrli_h  : RVPBinaryAABIntrinsics;
+  defm psrli_w  : RVPBinaryAABIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions

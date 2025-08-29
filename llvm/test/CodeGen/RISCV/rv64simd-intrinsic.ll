@@ -188,3 +188,36 @@ define i64 @shar(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.shar.i64(i64 %a, i64 %b)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psrli.b.i64.i64(i64, i64)
+
+define i64 @psrli_b(i64 %a, i64 %b) {
+; RV64P-LABEL: psrli_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrli.b a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrli.b.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrli.h.i64.i64(i64, i64)
+
+define i64 @psrli_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psrli_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrli.h a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrli.h.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrli.w.i64.i64(i64, i64)
+
+define i64 @psrli_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psrli_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrli.w a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrli.w.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}

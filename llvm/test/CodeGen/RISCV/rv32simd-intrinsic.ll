@@ -134,6 +134,28 @@ define i32 @sshar(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.psrli.b.i32.i32(i32, i32)
+
+define i32 @psrli_b(i32 %a, i32 %b) {
+; RV32P-LABEL: psrli_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrli.b a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrli.b.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psrli.h.i32.i32(i32, i32)
+
+define i32 @psrli_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psrli_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrli.h a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrli.h.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {
