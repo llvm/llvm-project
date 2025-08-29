@@ -24834,12 +24834,12 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
 /// Check if \p AssumptionStr is a known assumption and warn if not.
 static void checkOMPAssumeAttr(Sema &S, SourceLocation Loc,
                                StringRef AssumptionStr) {
-  if (llvm::KnownAssumptionStrings.count(AssumptionStr))
+  if (llvm::getKnownAssumptionStrings().count(AssumptionStr))
     return;
 
   unsigned BestEditDistance = 3;
   StringRef Suggestion;
-  for (const auto &KnownAssumptionIt : llvm::KnownAssumptionStrings) {
+  for (const auto &KnownAssumptionIt : llvm::getKnownAssumptionStrings()) {
     unsigned EditDistance =
         AssumptionStr.edit_distance(KnownAssumptionIt.getKey());
     if (EditDistance < BestEditDistance) {
