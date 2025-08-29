@@ -4898,6 +4898,16 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     CmpMask = ~0;
     CmpValue = 0;
     return true;
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = 0;
+    // Force identical compare.
+    CmpMask = 0;
+    CmpValue = 0;
+    return true;
   }
   return false;
 }
@@ -4937,6 +4947,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
   CASE_ND(SUB64ri32)
   CASE_ND(SUB32ri)
   CASE_ND(SUB16ri)
