@@ -36,6 +36,8 @@ OL_DEVICE_INFO_SIZE_TEST_NONZERO(Vendor, OL_DEVICE_INFO_VENDOR);
 OL_DEVICE_INFO_SIZE_TEST_NONZERO(DriverVersion, OL_DEVICE_INFO_DRIVER_VERSION);
 OL_DEVICE_INFO_SIZE_TEST_EQ(MaxWorkGroupSize, uint32_t,
                             OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE);
+OL_DEVICE_INFO_SIZE_TEST_EQ(MaxWorkSize, uint32_t,
+                            OL_DEVICE_INFO_MAX_WORK_SIZE);
 OL_DEVICE_INFO_SIZE_TEST_EQ(VendorId, uint32_t, OL_DEVICE_INFO_VENDOR_ID);
 OL_DEVICE_INFO_SIZE_TEST_EQ(NumComputeUnits, uint32_t,
                             OL_DEVICE_INFO_NUM_COMPUTE_UNITS);
@@ -73,6 +75,14 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetDeviceInfoSize(
       Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION, &Size));
+  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
+  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkSizePerDimension) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION, &Size));
   ASSERT_EQ(Size, sizeof(ol_dimensions_t));
   ASSERT_EQ(Size, sizeof(uint32_t) * 3);
 }
