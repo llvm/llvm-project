@@ -63,6 +63,7 @@ enum class IR2VecKind { Symbolic, FlowAware };
 
 namespace ir2vec {
 
+extern llvm::cl::OptionCategory IR2VecCategory;
 LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
