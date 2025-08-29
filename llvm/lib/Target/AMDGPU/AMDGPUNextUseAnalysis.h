@@ -14,9 +14,9 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
-#include "SIRegisterInfo.h"
-#include "GCNSubtarget.h"
 #include "AMDGPUSSARAUtils.h"
+#include "GCNSubtarget.h"
+#include "SIRegisterInfo.h"
 #include "VRegMaskPair.h"
 
 #include <algorithm>
@@ -26,7 +26,6 @@
 using namespace llvm;
 
 // namespace {
-
 
 class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
@@ -53,8 +52,9 @@ class NextUseResult {
       }
     };
 
-public:
+  public:
     using SortedRecords = std::set<Record, CompareByDist>;
+
   private:
     DenseMap<unsigned, SortedRecords> NextUseMap;
 
@@ -81,9 +81,7 @@ public:
       return Keys;
     }
 
-    bool contains(unsigned Key) {
-      return NextUseMap.contains(Key);
-    }
+    bool contains(unsigned Key) { return NextUseMap.contains(Key); }
 
     bool insert(VRegMaskPair VMP, unsigned Dist) {
       Record R(VMP.getLaneMask(), Dist);
@@ -115,15 +113,16 @@ public:
     void clear(VRegMaskPair VMP) {
       if (NextUseMap.contains(VMP.getVReg())) {
         auto &Dists = NextUseMap[VMP.getVReg()];
-        std::erase_if(Dists,
-                  [&](Record R) { return (R.first &= ~VMP.getLaneMask()).none(); });
+        std::erase_if(Dists, [&](Record R) {
+          return (R.first &= ~VMP.getLaneMask()).none();
+        });
         if (Dists.empty())
           NextUseMap.erase(VMP.getVReg());
       }
     }
 
-    bool operator == (const VRegDistances Other) const {
-      
+    bool operator==(const VRegDistances Other) const {
+
       if (Other.size() != size())
         return false;
 
@@ -181,7 +180,7 @@ public:
   };
   class NextUseInfo {
     // FIXME: need to elaborate proper class interface!
-    public:
+  public:
     VRegDistances Bottom;
     DenseMap<const MachineInstr *, VRegDistances> InstrDist;
   };
@@ -189,8 +188,6 @@ public:
   DenseMap<unsigned, NextUseInfo> NextUseMap;
 
 public:
-  
-
 private:
   DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;
   DenseMap<int, int> LoopExits;
@@ -247,9 +244,8 @@ public:
   getSortedSubregUses(const MachineBasicBlock::iterator I,
                       const VRegMaskPair VMP);
 
-  SmallVector<VRegMaskPair>
-  getSortedSubregUses(const MachineBasicBlock &MBB,
-                      const VRegMaskPair VMP);
+  SmallVector<VRegMaskPair> getSortedSubregUses(const MachineBasicBlock &MBB,
+                                                const VRegMaskPair VMP);
 
   bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
               const VRegMaskPair VMP) {
@@ -270,7 +266,7 @@ public:
                           : getNextUseDistance(I, VMP) == Infinity;
   }
 
-  SetVector<VRegMaskPair>& usedInBlock(MachineBasicBlock &MBB) {
+  SetVector<VRegMaskPair> &usedInBlock(MachineBasicBlock &MBB) {
     return UsedInBlock[MBB.getNumber()];
   }
 
