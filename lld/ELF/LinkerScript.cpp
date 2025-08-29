@@ -1037,10 +1037,16 @@ void LinkerScript::addOrphanSections() {
     if (ctx.arg.relocatable && (isec->flags & SHF_LINK_ORDER))
       continue;
 
-    if (auto *sec = dyn_cast<InputSection>(isec))
-      if (InputSectionBase *rel = sec->getRelocatedSection())
-        if (auto *relIS = dyn_cast_or_null<InputSectionBase>(rel->parent))
+    if (auto *sec = dyn_cast<InputSection>(isec)) {
+      if (InputSectionBase *relocated = sec->getRelocatedSection()) {
+        // Ensure creation of OutputSection for relocated section before
+        // relocation section
+        if (auto *relIS = dyn_cast_or_null<InputSectionBase>(relocated))
           add(relIS);
+        if (auto *relIS = dyn_cast_or_null<InputSectionBase>(relocated->parent))
+          add(relIS);
+      }
+    }
     add(isec);
     if (ctx.arg.relocatable)
       for (InputSectionBase *depSec : isec->dependentSections)
