@@ -7,6 +7,7 @@ from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import pdl
 from mlir.rewrite import *
 
+
 def log(*args):
     print(*args, file=sys.stderr)
     sys.stderr.flush()
@@ -17,6 +18,7 @@ def run(f):
     f()
     gc.collect()
     assert Context._get_live_count() == 0
+
 
 def make_pdl_module():
     with Location.unknown():
@@ -42,6 +44,7 @@ def make_pdl_module():
                     pdl.ReplaceOp(op0, with_op=newOp)
 
         return pdl_module
+
 
 # CHECK-LABEL: TEST: testCustomPass
 @run
