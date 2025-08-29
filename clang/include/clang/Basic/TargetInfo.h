@@ -1212,7 +1212,13 @@ public:
       // Don't copy Name or constraint string.
     }
 
-    // Output operand bounds can be set by target.
+    // For output operand constraints, the target can set bounds to indicate
+    // that the result value is guaranteed to fall within a certain range.
+    // This will cause corresponding assertions to be emitted that will allow
+    // for potential optimization based of that guarantee.
+    //
+    // NOTE: This re-uses the `ImmRange` fields to store the range, which are
+    // otherwise unused for constraint types used for output operands.
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       ImmRange.Min = Min;
       ImmRange.Max = Max;

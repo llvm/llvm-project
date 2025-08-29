@@ -2725,6 +2725,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     if ((i < OutputOperandBounds.size()) &&
         OutputOperandBounds[i].has_value()) {
       const auto [LowerBound, UpperBound] = OutputOperandBounds[i].value();
+      // FIXME: Support for nonzero lower bounds not yet implemented.
       assert(LowerBound == 0 && "Output operand lower bound is not zero.");
       llvm::Constant *UpperBoundConst =
           llvm::ConstantInt::get(Tmp->getType(), UpperBound);
