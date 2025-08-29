@@ -950,6 +950,11 @@ argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
 takes an optional third vector argument that will be used for the result of the
 masked-off lanes. These builtins assume the memory is always aligned.
 
+The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
+builtins have the same interface but store the result in consecutive indices.
+Effectively this performs the ``if (cond.i) v.i = a[j++]`` and ``if (cond.i)
+a[j++] = v.i`` pattern respectively.
+
 Example:
 
 .. code-block:: c++
@@ -959,7 +964,13 @@ Example:
 
     v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
 
+    v8i load_expand(v8b m, v8i *p) { return __builtin_masked_expand_load(m, p); }
+    
     void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+
+    void store_compress(v8b m, v8i v, v8i *p) {
+      __builtin_masked_compress_store(m, v, p);
+    }
 
 
 Matrix Types
