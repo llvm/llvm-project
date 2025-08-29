@@ -952,8 +952,8 @@ masked-off lanes. These builtins assume the memory is always aligned.
 
 The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
 builtins have the same interface but store the result in consecutive indices.
-Effectively this performs the ``if (cond.i) v.i = a[j++]`` and ``if (cond.i)
-a[j++] = v.i`` pattern respectively.
+Effectively this performs the ``if (m[i]) v[i] = p[j++]`` and ``if (m[i])
+p[j++] = v[i]`` pattern respectively.
 
 Example:
 

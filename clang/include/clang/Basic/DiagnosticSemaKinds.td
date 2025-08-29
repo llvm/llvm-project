@@ -11016,7 +11016,7 @@ def err_sizeless_nonlocal : Error<
 def err_vec_masked_load_store_ptr : Error<
  "%ordinal0 argument must be a %1">;
 def err_vec_masked_load_store_size : Error<
- "all arguments must have the same number of elements (was %0 and %1)">;
+ "all arguments to %0 must have the same number of elements (was %1 and %2)">;
 
 def err_vec_builtin_non_vector : Error<
  "%select{first two|all}1 arguments to %0 must be vectors">;
