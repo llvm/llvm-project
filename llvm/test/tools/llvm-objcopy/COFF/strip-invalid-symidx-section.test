@@ -8,9 +8,9 @@
 ## In this case, the symbol .gfids$y is not present at all.
 
 # RUN: yaml2obj %s --docnum=1 -o %t1.in.o
-# RUN: not llvm-objcopy --strip-debug %t1.in.o %t1.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-NOSYM
+# RUN: not llvm-objcopy --strip-debug %t1.in.o %t1.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-NOSYM -DFILE=%t1.out.o
 
-# ERROR-NOSYM: section '.gfids$y' does not have the corresponding symbol or the symbol has unexpected format
+# ERROR-NOSYM: error: '[[FILE]]': section '.gfids$y' does not have the corresponding symbol or the symbol has unexpected format
 
 --- !COFF
 header:
@@ -55,9 +55,9 @@ symbols:
 ## In this case, the symbol .giats$y has a non-zero offset.
 
 # RUN: yaml2obj %s --docnum=2 -o %t2.in.o
-# RUN: not llvm-objcopy --strip-debug %t2.in.o %t2.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-OFFSET
+# RUN: not llvm-objcopy --strip-debug %t2.in.o %t2.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-OFFSET -DFILE=%t2.out.o
 
-# ERROR-OFFSET: section '.giats$y' does not have the corresponding symbol or the symbol has unexpected format
+# ERROR-OFFSET: error: '[[FILE]]': section '.giats$y' does not have the corresponding symbol or the symbol has unexpected format
 
 --- !COFF
 header:
@@ -114,9 +114,9 @@ symbols:
 ## In this case, the symbol .gljmp$y has a non-static storage class.
 
 # RUN: yaml2obj %s --docnum=3 -o %t3.in.o
-# RUN: not llvm-objcopy --strip-debug %t3.in.o %t3.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-EXTERNAL
+# RUN: not llvm-objcopy --strip-debug %t3.in.o %t3.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-EXTERNAL -DFILE=%t3.out.o
 
-# ERROR-EXTERNAL: section '.gljmp$y' does not have the corresponding symbol or the symbol has unexpected format
+# ERROR-EXTERNAL: error: '[[FILE]]': section '.gljmp$y' does not have the corresponding symbol or the symbol has unexpected format
 
 --- !COFF
 header:
@@ -169,9 +169,9 @@ symbols:
 ## of .symidx directives, e.g .giats$y, .gljmp$y and .gehcont$y.
 
 # RUN: yaml2obj %s --docnum=4 -o %t4.in.o
-# RUN: not llvm-objcopy --strip-debug %t4.in.o %t4.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-SYMIDX
+# RUN: not llvm-objcopy --strip-debug %t4.in.o %t4.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-SYMIDX  -DFILE=%t4.out.o
 
-# ERROR-SYMIDX: section '.gfids$y' contains a .symidx (16) that is incorrect or was stripped
+# ERROR-SYMIDX: error: '[[FILE]]': section '.gfids$y' contains a .symidx (16) that is incorrect or was stripped
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64

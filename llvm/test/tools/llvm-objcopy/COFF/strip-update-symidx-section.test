@@ -5,7 +5,36 @@
 # RUN: yaml2obj %s -o %t.in.o
 
 # RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
-# RUN: llvm-readobj -x '.gehcont$y' -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.out.o | FileCheck %s
+# RUN: llvm-readobj -s -x '.gehcont$y' -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.out.o | FileCheck %s
+
+# CHECK: Symbols [
+# CHECK:     Name: .text
+# CHECK:     Name: .data
+# CHECK:     Name: .bss
+# CHECK:     Name: .text
+# CHECK:     Name: ?foo@@YAXXZ
+# CHECK:     Name: .data
+# CHECK:     Name: .drectve
+# CHECK:     Name: .gehcont$y
+# CHECK:     AuxSectionDef {
+# CHECK:       Checksum: 0x20BA8B48
+# CHECK:     }
+# CHECK:     Name: ?foo2@@YAXXZ
+# CHECK:     Name: $ehgcr_0_1
+# CHECK:     Name: .gfids$y
+# CHECK:     AuxSectionDef {
+# CHECK:       Checksum: 0x5B6F2027
+# CHECK:     }
+# CHECK:     Name: .giats$y
+# CHECK:     AuxSectionDef {
+# CHECK:       Checksum: 0x95AD7F70
+# CHECK:     }
+# CHECK:     Name: .gljmp$y
+# CHECK:     AuxSectionDef {
+# CHECK:       Checksum: 0xFACF36F8
+# CHECK:     }
+# CHECK:     Name: foo
+# CHECK: ]
 
 # CHECK:      Hex dump of section '.gehcont$y':
 # CHECK-NEXT: 0x00000000 10000000 10000000 10000000
@@ -193,7 +222,7 @@ symbols:
       Length:          12
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        820498156
+      CheckSum:        0x30E7CEEC
       Number:          8
   - Name:            '?foo2@@YAXXZ'
     Value:           0
@@ -217,7 +246,7 @@ symbols:
       Length:          8
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        1167279533
+      CheckSum:        0x459345AD
       Number:          9
   - Name:            '.giats$y'
     Value:           0
@@ -229,7 +258,7 @@ symbols:
       Length:          8
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        830808662
+      CheckSum:        0x31852256
       Number:          10
   - Name:            '.gljmp$y'
     Value:           0
@@ -241,7 +270,7 @@ symbols:
       Length:          16
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        3322439691
+      CheckSum:        0xC608680B
       Number:          11
   - Name:            foo
     Value:           0
