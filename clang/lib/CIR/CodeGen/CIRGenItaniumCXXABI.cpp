@@ -487,9 +487,10 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
     CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
     clang::BaseSubobject base, const clang::CXXRecordDecl *nearestVBase) {
 
-  if (base.getBase()->getNumVBases()) {
+  if ((base.getBase()->getNumVBases() || nearestVBase != nullptr) &&
+      needsVTTParameter(cgf.curGD)) {
     cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                 "getVTableAddressPointInStructor: virtual base");
+                 "getVTableAddressPointInStructorWithVTT");
   }
   return getVTableAddressPoint(base, vtableClass);
 }
