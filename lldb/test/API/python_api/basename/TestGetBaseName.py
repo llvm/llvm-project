@@ -12,30 +12,16 @@ class GetBaseNameTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
-        # Call super's setUp().
         TestBase.setUp(self)
-        # Find the line number to break on.
-        self.line1 = line_number(
-            "main.cpp", "// Find the line number for breakpoint 1 here."
-        )
+        self.main_source_file = lldb.SBFileSpec("main.cpp")
 
     def test(self):
         """Test SBFunction.GetBaseName() and SBSymbol.GetBaseName()"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Create a breakpoint inside the C++ namespaced function.
-        breakpoint1 = target.BreakpointCreateByLocation("main.cpp", self.line1)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        # Get stopped thread and frame
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         # Get both function and symbol
@@ -48,6 +34,3 @@ class GetBaseNameTestCase(TestBase):
 
         self.assertEqual(function_basename, "templateFunc")
         self.assertEqual(symbol_basename, "templateFunc")
-
-        self.trace("Function basename:", function_basename)
-        self.trace("Symbol basename:", symbol_basename)

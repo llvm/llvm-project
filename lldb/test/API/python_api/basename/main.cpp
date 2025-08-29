@@ -4,8 +4,7 @@ namespace ns {
 template <typename T> class MyClass {
 public:
   void templateFunc() {
-    std::cout << "In templateFunc"
-              << std::endl; // Find the line number for breakpoint 1 here.
+    std::cout << "In templateFunc" << std::endl; // Set a breakpoint here
   }
 };
 } // namespace ns
