@@ -100,8 +100,15 @@ extractThreeVariablesAndInstructions(
     Value *Root, SmallVectorImpl<Instruction *> &Instructions) {
   SmallPtrSet<Value *, 3> Variables;
   SmallPtrSet<Value *, 32> Visited;
+  SmallPtrSet<Value *, 8> RootOperands;
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
+
+  // Traverse root operands to avoid treating them as leaf variables to prevent
+  // infinite cycles.
+  if (auto *RootInst = dyn_cast<Instruction>(Root))
+    for (Use &U : RootInst->operands())
+      RootOperands.insert(U.get());
 
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
@@ -124,7 +131,8 @@ extractThreeVariablesAndInstructions(
       if (!BO->isBitwiseLogicOp()) {
         if (V == Root)
           return {nullptr, nullptr, nullptr};
-        Variables.insert(V);
+        if (!RootOperands.count(V))
+          Variables.insert(V);
         continue;
       }
 
@@ -135,7 +143,8 @@ extractThreeVariablesAndInstructions(
         Worklist.push_back(BO->getOperand(1));
       }
     } else if ((isa<Argument>(V) || isa<Instruction>(V)) && V != Root) {
-      Variables.insert(V);
+      if (!RootOperands.count(V))
+        Variables.insert(V);
     }
   }
 
@@ -242,7 +251,7 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
 }
 
 // Entry point for the 3-variable boolean expression folding. Handles early
-// returns and checks for infinite cycles.
+// returns.
 static Value *foldThreeVarBoolExpr(Instruction &Root,
                                    InstCombiner::BuilderTy &Builder) {
 
@@ -262,15 +271,6 @@ static Value *foldThreeVarBoolExpr(Instruction &Root,
   auto Table = evaluateBooleanExpression(&Root, Op0, Op1, Op2, Instructions);
   if (!Table)
     return nullptr;
-
-  // Prevent infinite cycles by checking for structurally similar instructions:
-  // early return if extracted variables overlap with root operands.
-  auto *RootBO = cast<BinaryOperator>(&Root);
-  for (unsigned i = 0; i < RootBO->getNumOperands(); ++i) {
-    Value *RootOp = RootBO->getOperand(i);
-    if (RootOp == Op0 || RootOp == Op1 || RootOp == Op2)
-      return nullptr;
-  }
 
   return createLogicFromTable3Var(*Table, Op0, Op1, Op2, &Root, Builder);
 }
