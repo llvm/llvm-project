@@ -4,7 +4,7 @@
 ; https://bugs.llvm.org/show_bug.cgi?id=52037 for the gory details.
 ;
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70 -O3 -o - %s | FileCheck %s
-; RUN: %if ptxas-sm_70 %{ llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70 -O3 -o - %s | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70 -O3 -o - %s | %ptxas-verify -arch=sm_70 %}
 
 ; CHECK-LABEL: .visible .entry barney(
 ; CHECK-NOT:  .local{{.*}}__local_depot
