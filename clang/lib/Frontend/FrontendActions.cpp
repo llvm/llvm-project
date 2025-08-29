@@ -1296,6 +1296,9 @@ public:
 
 void HLSLFrontendAction::ExecuteAction() {
   // Pre-requisites to invoke
+  if (getCurrentFileKind().getLanguage() != Language::HLSL)
+    return WrapperFrontendAction::ExecuteAction();
+
   CompilerInstance &CI = getCompilerInstance();
   if (!CI.hasASTContext() || !CI.hasPreprocessor())
     return WrapperFrontendAction::ExecuteAction();
@@ -1309,6 +1312,10 @@ void HLSLFrontendAction::ExecuteAction() {
                   /*CodeCompleteConsumer=*/nullptr);
   Sema &S = CI.getSema();
 
+  auto &TargetInfo = CI.getASTContext().getTargetInfo();
+  bool IsRootSignatureTarget =
+      TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+
   // Register HLSL specific callbacks
   auto LangOpts = CI.getLangOpts();
   auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
@@ -1317,8 +1324,11 @@ void HLSLFrontendAction::ExecuteAction() {
   Preprocessor &PP = CI.getPreprocessor();
   PP.addPPCallbacks(std::move(MacroCallback));
 
-  // Invoke as normal
-  WrapperFrontendAction::ExecuteAction();
+  // If we are targeting a root signature, invoke custom handling
+  if (IsRootSignatureTarget)
+    return hlsl::HandleRootSignatureTarget(S);
+  else // otherwise, invoke as normal
+    return WrapperFrontendAction::ExecuteAction();
 }
 
 HLSLFrontendAction::HLSLFrontendAction(
