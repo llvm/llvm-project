@@ -1977,10 +1977,9 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         cgf.getLoc(e->getSourceRange()), vectorType, elements);
   }
 
-  if (numInitElements == 0) {
-    // C++11 value-initialization for the scalar.
+  // C++11 value-initialization for the scalar.
+  if (numInitElements == 0)
     return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
-  }
 
   return Visit(e->getInit(0));
 }

@@ -138,6 +138,10 @@ void value_init() {
   bool b{};
   int i{};
 
+  float f2 = {};
+  bool b2 = {};
+  int i2 = {};
+
   bool scalar_value_init_expr = int() == 0;
 }
 
@@ -145,27 +149,42 @@ void value_init() {
 // CIR:   %[[F_PTR:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
 // CIR:   %[[B_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
 // CIR:   %[[I_PTR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[F2_PTR:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f2", init]
+// CIR:   %[[B2_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b2", init]
+// CIR:   %[[I2_PTR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i2", init]
 // CIR:   %[[S_PTR:.+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["scalar_value_init_expr", init]
-// CIR:   %[[ZEROF:.+]] = cir.const #cir.fp<0.000000e+00> : !cir.float
-// CIR:   cir.store {{.*}} %[[ZEROF]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
-// CIR:   %[[FALSE:.+]] = cir.const #false
-// CIR:   cir.store {{.*}} %[[FALSE]], %[[B_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:   %[[ZEROI:.+]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.store {{.*}} %[[ZEROI]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[ZEROF1:.+]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR:   cir.store{{.*}} %[[ZEROF1]], %[[F_PTR]] : !cir.float, !cir.ptr<!cir.float>
+// CIR:   %[[FALSE1:.+]] = cir.const #false
+// CIR:   cir.store{{.*}} %[[FALSE1]], %[[B_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:   %[[ZEROI1:.+]] = cir.const #cir.int<0> : !s32i
+// CIR:   cir.store{{.*}} %[[ZEROI1]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[ZEROF2:.+]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR:   cir.store{{.*}} %[[ZEROF2]], %[[F2_PTR]] : !cir.float, !cir.ptr<!cir.float>
+// CIR:   %[[FALSE2:.+]] = cir.const #false
+// CIR:   cir.store{{.*}} %[[FALSE2]], %[[B2_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:   %[[ZEROI2:.+]] = cir.const #cir.int<0> : !s32i
-// CIR:   %[[ZEROI3:.+]] = cir.const #cir.int<0> : !s32i
-// CIR:   %[[CMP:.+]] = cir.cmp(eq, %[[ZEROI2]], %[[ZEROI3]]) : !s32i, !cir.bool
-// CIR:   cir.store {{.*}} %[[CMP]], %[[S_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:   cir.store{{.*}} %[[ZEROI2]], %[[I2_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[ZEROI_LHS:.+]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[ZEROI_RHS:.+]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[CMP:.+]] = cir.cmp(eq, %[[ZEROI_LHS]], %[[ZEROI_RHS]]) : !s32i, !cir.bool
+// CIR:   cir.store{{.*}} %[[CMP]], %[[S_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:   cir.return
 
 // LLVM: define{{.*}} void @_Z10value_initv()
 // LLVM:   %[[F_PTR:.+]] = alloca float
 // LLVM:   %[[B_PTR:.+]] = alloca i8
 // LLVM:   %[[I_PTR:.+]] = alloca i32
+// LLVM:   %[[F2_PTR:.+]] = alloca float
+// LLVM:   %[[B2_PTR:.+]] = alloca i8
+// LLVM:   %[[I2_PTR:.+]] = alloca i32
 // LLVM:   %[[S_PTR:.+]] = alloca i8
 // LLVM:   store float 0.000000e+00, ptr %[[F_PTR]]
 // LLVM:   store i8 0, ptr %[[B_PTR]]
 // LLVM:   store i32 0, ptr %[[I_PTR]]
+// LLVM:   store float 0.000000e+00, ptr %[[F2_PTR]]
+// LLVM:   store i8 0, ptr %[[B2_PTR]]
+// LLVM:   store i32 0, ptr %[[I2_PTR]]
 // LLVM:   store i8 1, ptr %[[S_PTR]]
 // LLVM:   ret void
 
@@ -173,9 +192,15 @@ void value_init() {
 // OGCG:   %[[F_PTR:.+]] = alloca float
 // OGCG:   %[[B_PTR:.+]] = alloca i8
 // OGCG:   %[[I_PTR:.+]] = alloca i32
+// OGCG:   %[[F2_PTR:.+]] = alloca float
+// OGCG:   %[[B2_PTR:.+]] = alloca i8
+// OGCG:   %[[I2_PTR:.+]] = alloca i32
 // OGCG:   %[[S_PTR:.+]] = alloca i8
 // OGCG:   store float 0.000000e+00, ptr %[[F_PTR]]
 // OGCG:   store i8 0, ptr %[[B_PTR]]
 // OGCG:   store i32 0, ptr %[[I_PTR]]
+// OGCG:   store float 0.000000e+00, ptr %[[F2_PTR]]
+// OGCG:   store i8 0, ptr %[[B2_PTR]]
+// OGCG:   store i32 0, ptr %[[I2_PTR]]
 // OGCG:   store i8 1, ptr %[[S_PTR]]
 // OGCG:   ret void
