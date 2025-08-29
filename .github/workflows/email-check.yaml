@@ -17,27 +17,37 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
 
-      - name: Extract author email
-        id: author
-        run: |
-          git log -1
-          echo "EMAIL=$(git show -s --format='%ae' HEAD~0)" >> $GITHUB_OUTPUT
-          # Create empty comment file
-          echo "[]" > comments
+      - name: Fetch email check utils
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.base_ref }}
+          sparse-checkout: |
+            llvm/utils/git/requirements_formatting.txt
+            llvm/utils/git/email-check-helper.py
+          sparse-checkout-cone-mode: false
+          path: email-check-tools
+
+      - name: Setup Python env
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+
+      - name: Install python dependencies
+        run: pip install -r email-check-tools/llvm/utils/git/requirements_formatting.txt
 
       - name: Validate author email
-        if: ${{ endsWith(steps.author.outputs.EMAIL, 'noreply.github.com')  }}
         env:
-          COMMENT: >-
-            ⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.<br/>
-            Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.<br/>
-            See [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#email-addresses) and
-            [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          cat << EOF > comments
-          [{"body" : "$COMMENT"}]
-          EOF
+          echo "[]" > comments &&
+          python ./email-check-tools/llvm/utils/git/email-check-helper.py \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --pr-author "$PR_AUTHOR"
 
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
         if: always()
