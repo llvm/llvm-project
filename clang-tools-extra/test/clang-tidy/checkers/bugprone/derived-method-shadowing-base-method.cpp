@@ -105,3 +105,20 @@ public:
     // TODO:  Templates are not handled yet
     template<> void methodWithArg<int>(int I);
 };
+
+namespace std{
+    struct thread{
+        void join();
+    };
+}
+
+struct O: public std::thread{
+    void join();
+};
+
+struct P: public std::thread, Base{
+    void join();
+    void method();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'P::method' hides same method in 'Base' [bugprone-derived-method-shadowing-base-method]
+
+};

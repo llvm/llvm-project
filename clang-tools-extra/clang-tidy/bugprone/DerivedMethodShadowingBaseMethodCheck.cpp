@@ -61,6 +61,11 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
       if (!CurrentRecord)
         continue;
 
+      // For multiple inheritance, we ignore only the bases that come from the
+      // std:: namespace
+      if (CurrentRecord->isInStdNamespace())
+        continue;
+
       for (const auto &BaseMethod : CurrentRecord->methods()) {
         if (namesCollide(*BaseMethod, Node)) {
           ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
@@ -97,8 +102,7 @@ void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
                        // Templates are not handled yet
                        ast_matchers::isTemplateInstantiation(),
                        ast_matchers::isExplicitTemplateSpecialization())),
-          ofClass(cxxRecordDecl(
-                      isDerivedFrom(cxxRecordDecl(unless(isInStdNamespace()))))
+          ofClass(cxxRecordDecl(isDerivedFrom(cxxRecordDecl()))
                       .bind("derived_class")),
           nameCollidesWithMethodInBase())
           .bind("shadowing_method"),
