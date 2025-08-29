@@ -543,6 +543,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINNUM_IEEE:
     case ISD::FMAXIMUM:
     case ISD::FMINIMUM:
+    case ISD::FMAXIMUMNUM:
+    case ISD::FMINIMUMNUM:
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
     case ISD::FEXP2:
@@ -989,7 +991,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
     AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
 
-  for (const auto &Op : {ISD::FMINNUM, ISD::FMAXNUM}) {
+  for (const auto &Op :
+       {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}) {
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setFP16OperationAction(Op, MVT::f16, Legal, Promote);
