@@ -8547,7 +8547,6 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
-  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getMessageString());
   Record.AddSourceLocation(C->getLParenLoc());
 }

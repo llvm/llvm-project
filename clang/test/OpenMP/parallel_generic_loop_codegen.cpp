@@ -2,15 +2,9 @@
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp %s
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 
-// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=IR-OMP60
-
 // Check same results after serialization round-trip
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
 // RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR-PCH
-
-// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp-version=60 -verify -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR-PCH-OMP60
 
 // expected-no-diagnostics
 
@@ -22,11 +16,7 @@ int foo() {
   int x = 0;
   int result[N] = {0};
 
- #ifdef OMP60
- #pragma omp parallel loop num_threads(strict: N) severity(fatal) message("msg") allocate(x) private(x) collapse(2)
- #else
  #pragma omp parallel loop num_threads(N) allocate(x) private(x) collapse(2)
- #endif
   for (int i = 0; i < N; i++)
     for (int j = 0; j < N; j++)
       result[i] = i + j + x;
@@ -64,7 +54,7 @@ int foo() {
 // IR-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8
 // IR-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -133,106 +123,6 @@ int foo() {
 // IR-NEXT:    ret void
 //
 //
-// IR-OMP60-LABEL: define {{[^@]+}}@_Z3foov
-// IR-OMP60-SAME: () #[[ATTR0:[0-9]+]] {
-// IR-OMP60-NEXT:  entry:
-// IR-OMP60-NEXT:    [[X:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[RESULT:%.*]] = alloca [64 x i32], align 16
-// IR-OMP60-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
-// IR-OMP60-NEXT:    store i32 0, ptr [[X]], align 4
-// IR-OMP60-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[RESULT]], i8 0, i64 256, i1 false)
-// IR-OMP60-NEXT:    call void @__kmpc_push_num_threads_strict(ptr @[[GLOB2]], i32 [[TMP0]], i32 64, i32 2, ptr @.str)
-// IR-OMP60-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @_Z3foov.omp_outlined, ptr [[RESULT]])
-// IR-OMP60-NEXT:    ret i32 0
-//
-//
-// IR-OMP60-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
-// IR-OMP60-NEXT:  entry:
-// IR-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// IR-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// IR-OMP60-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8
-// IR-OMP60-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    [[J:%.*]] = alloca i32, align 4
-// IR-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// IR-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// IR-OMP60-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
-// IR-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-// IR-OMP60-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
-// IR-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-// IR-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// IR-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// IR-OMP60-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// IR-OMP60-NEXT:    [[DOTX__VOID_ADDR:%.*]] = call ptr @__kmpc_alloc(i32 [[TMP2]], i64 4, ptr null)
-// IR-OMP60-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP2]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// IR-OMP60-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-OMP60-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 4095
-// IR-OMP60-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// IR-OMP60:       cond.true:
-// IR-OMP60-NEXT:    br label [[COND_END:%.*]]
-// IR-OMP60:       cond.false:
-// IR-OMP60-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-OMP60-NEXT:    br label [[COND_END]]
-// IR-OMP60:       cond.end:
-// IR-OMP60-NEXT:    [[COND:%.*]] = phi i32 [ 4095, [[COND_TRUE]] ], [ [[TMP4]], [[COND_FALSE]] ]
-// IR-OMP60-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-// IR-OMP60-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-// IR-OMP60-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
-// IR-OMP60:       omp.inner.for.cond:
-// IR-OMP60-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-OMP60-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP6]], [[TMP7]]
-// IR-OMP60-NEXT:    br i1 [[CMP2]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
-// IR-OMP60:       omp.inner.for.cond.cleanup:
-// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
-// IR-OMP60:       omp.inner.for.body:
-// IR-OMP60-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP8]], 64
-// IR-OMP60-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], 1
-// IR-OMP60-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// IR-OMP60-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
-// IR-OMP60-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    [[DIV3:%.*]] = sdiv i32 [[TMP10]], 64
-// IR-OMP60-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[DIV3]], 64
-// IR-OMP60-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP9]], [[MUL4]]
-// IR-OMP60-NEXT:    [[MUL5:%.*]] = mul nsw i32 [[SUB]], 1
-// IR-OMP60-NEXT:    [[ADD6:%.*]] = add nsw i32 0, [[MUL5]]
-// IR-OMP60-NEXT:    store i32 [[ADD6]], ptr [[J]], align 4
-// IR-OMP60-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
-// IR-OMP60-NEXT:    [[TMP12:%.*]] = load i32, ptr [[J]], align 4
-// IR-OMP60-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
-// IR-OMP60-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTX__VOID_ADDR]], align 4
-// IR-OMP60-NEXT:    [[ADD8:%.*]] = add nsw i32 [[ADD7]], [[TMP13]]
-// IR-OMP60-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
-// IR-OMP60-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP14]] to i64
-// IR-OMP60-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i32], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
-// IR-OMP60-NEXT:    store i32 [[ADD8]], ptr [[ARRAYIDX]], align 4
-// IR-OMP60-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
-// IR-OMP60:       omp.body.continue:
-// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
-// IR-OMP60:       omp.inner.for.inc:
-// IR-OMP60-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP15]], 1
-// IR-OMP60-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4
-// IR-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// IR-OMP60:       omp.inner.for.end:
-// IR-OMP60-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
-// IR-OMP60:       omp.loop.exit:
-// IR-OMP60-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
-// IR-OMP60-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr null)
-// IR-OMP60-NEXT:    ret void
-//
-//
 // IR-PCH-LABEL: define {{[^@]+}}@_Z3foov
 // IR-PCH-SAME: () #[[ATTR0:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
@@ -264,7 +154,7 @@ int foo() {
 // IR-PCH-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8
 // IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-PCH-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -331,104 +221,4 @@ int foo() {
 // IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
 // IR-PCH-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr null)
 // IR-PCH-NEXT:    ret void
-//
-//
-// IR-PCH-OMP60-LABEL: define {{[^@]+}}@_Z3foov
-// IR-PCH-OMP60-SAME: () #[[ATTR0:[0-9]+]] {
-// IR-PCH-OMP60-NEXT:  entry:
-// IR-PCH-OMP60-NEXT:    [[X:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[RESULT:%.*]] = alloca [64 x i32], align 16
-// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
-// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[X]], align 4
-// IR-PCH-OMP60-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[RESULT]], i8 0, i64 256, i1 false)
-// IR-PCH-OMP60-NEXT:    call void @__kmpc_push_num_threads_strict(ptr @[[GLOB2]], i32 [[TMP0]], i32 64, i32 2, ptr @.str)
-// IR-PCH-OMP60-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @_Z3foov.omp_outlined, ptr [[RESULT]])
-// IR-PCH-OMP60-NEXT:    ret i32 0
-//
-//
-// IR-PCH-OMP60-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-PCH-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
-// IR-PCH-OMP60-NEXT:  entry:
-// IR-PCH-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// IR-PCH-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// IR-PCH-OMP60-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8
-// IR-PCH-OMP60-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[I:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    [[J:%.*]] = alloca i32, align 4
-// IR-PCH-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// IR-PCH-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// IR-PCH-OMP60-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
-// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-// IR-PCH-OMP60-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
-// IR-PCH-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-// IR-PCH-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// IR-PCH-OMP60-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// IR-PCH-OMP60-NEXT:    [[DOTX__VOID_ADDR:%.*]] = call ptr @__kmpc_alloc(i32 [[TMP2]], i64 4, ptr null)
-// IR-PCH-OMP60-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP2]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// IR-PCH-OMP60-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-PCH-OMP60-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 4095
-// IR-PCH-OMP60-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// IR-PCH-OMP60:       cond.true:
-// IR-PCH-OMP60-NEXT:    br label [[COND_END:%.*]]
-// IR-PCH-OMP60:       cond.false:
-// IR-PCH-OMP60-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-PCH-OMP60-NEXT:    br label [[COND_END]]
-// IR-PCH-OMP60:       cond.end:
-// IR-PCH-OMP60-NEXT:    [[COND:%.*]] = phi i32 [ 4095, [[COND_TRUE]] ], [ [[TMP4]], [[COND_FALSE]] ]
-// IR-PCH-OMP60-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-// IR-PCH-OMP60-NEXT:    store i32 [[TMP5]], ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
-// IR-PCH-OMP60:       omp.inner.for.cond:
-// IR-PCH-OMP60-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// IR-PCH-OMP60-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP6]], [[TMP7]]
-// IR-PCH-OMP60-NEXT:    br i1 [[CMP2]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
-// IR-PCH-OMP60:       omp.inner.for.cond.cleanup:
-// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
-// IR-PCH-OMP60:       omp.inner.for.body:
-// IR-PCH-OMP60-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP8]], 64
-// IR-PCH-OMP60-NEXT:    [[MUL:%.*]] = mul nsw i32 [[DIV]], 1
-// IR-PCH-OMP60-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// IR-PCH-OMP60-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    [[DIV3:%.*]] = sdiv i32 [[TMP10]], 64
-// IR-PCH-OMP60-NEXT:    [[MUL4:%.*]] = mul nsw i32 [[DIV3]], 64
-// IR-PCH-OMP60-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP9]], [[MUL4]]
-// IR-PCH-OMP60-NEXT:    [[MUL5:%.*]] = mul nsw i32 [[SUB]], 1
-// IR-PCH-OMP60-NEXT:    [[ADD6:%.*]] = add nsw i32 0, [[MUL5]]
-// IR-PCH-OMP60-NEXT:    store i32 [[ADD6]], ptr [[J]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
-// IR-PCH-OMP60-NEXT:    [[TMP12:%.*]] = load i32, ptr [[J]], align 4
-// IR-PCH-OMP60-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
-// IR-PCH-OMP60-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTX__VOID_ADDR]], align 4
-// IR-PCH-OMP60-NEXT:    [[ADD8:%.*]] = add nsw i32 [[ADD7]], [[TMP13]]
-// IR-PCH-OMP60-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
-// IR-PCH-OMP60-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP14]] to i64
-// IR-PCH-OMP60-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i32], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
-// IR-PCH-OMP60-NEXT:    store i32 [[ADD8]], ptr [[ARRAYIDX]], align 4
-// IR-PCH-OMP60-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
-// IR-PCH-OMP60:       omp.body.continue:
-// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
-// IR-PCH-OMP60:       omp.inner.for.inc:
-// IR-PCH-OMP60-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP15]], 1
-// IR-PCH-OMP60-NEXT:    store i32 [[ADD9]], ptr [[DOTOMP_IV]], align 4
-// IR-PCH-OMP60-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// IR-PCH-OMP60:       omp.inner.for.end:
-// IR-PCH-OMP60-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
-// IR-PCH-OMP60:       omp.loop.exit:
-// IR-PCH-OMP60-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP2]])
-// IR-PCH-OMP60-NEXT:    call void @__kmpc_free(i32 [[TMP2]], ptr [[DOTX__VOID_ADDR]], ptr null)
-// IR-PCH-OMP60-NEXT:    ret void
 //
