@@ -71,11 +71,6 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   uint32_t frame_id = 0;
 
   vars.ReadyFrame(frame_id, frame);
-  vars.SwitchFrame(frame_id);
-
-  vars.locals.Append(lldb::SBValue());
-  vars.globals.Append(lldb::SBValue());
-  vars.registers.Append(lldb::SBValue());
 
   int64_t locals_ref = vars.GetNewVariableReference(false);
   vars.AddScopeKind(locals_ref, ScopeKind::Locals, frame_id);
@@ -86,9 +81,12 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   int64_t registers_ref = vars.GetNewVariableReference(false);
   vars.AddScopeKind(registers_ref, ScopeKind::Registers, frame_id);
 
-  EXPECT_EQ(vars.GetTopLevelScope(locals_ref), &vars.locals);
-  EXPECT_EQ(vars.GetTopLevelScope(globals_ref), &vars.globals);
-  EXPECT_EQ(vars.GetTopLevelScope(registers_ref), &vars.registers);
+  EXPECT_EQ(vars.GetTopLevelScope(locals_ref),
+            &vars.GetScope(frame_id, lldb_dap::ScopeKind::Locals));
+  EXPECT_EQ(vars.GetTopLevelScope(globals_ref),
+            &vars.GetScope(frame_id, lldb_dap::ScopeKind::Globals));
+  EXPECT_EQ(vars.GetTopLevelScope(registers_ref),
+            &vars.GetScope(frame_id, lldb_dap::ScopeKind::Registers));
   EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
 }
 
@@ -97,10 +95,6 @@ TEST_F(VariablesTest, FindVariable_LocalsByName) {
   uint32_t frame_id = 0;
 
   vars.ReadyFrame(frame_id, frame);
-  vars.SwitchFrame(frame_id);
-
-  lldb::SBValue dummy;
-  vars.locals.Append(dummy);
 
   int64_t locals_ref = vars.GetNewVariableReference(false);
   vars.AddScopeKind(locals_ref, ScopeKind::Locals, frame_id);
