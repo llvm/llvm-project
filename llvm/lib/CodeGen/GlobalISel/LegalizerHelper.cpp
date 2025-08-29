@@ -4773,6 +4773,15 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerVectorReduction(MI);
   case G_VAARG:
     return lowerVAArg(MI);
+  case G_ATOMICRMW_SUB: {
+    auto [Ret, RetLLT, Mem, MemLLT, Val, ValLLT] = MI.getFirst3RegLLTs();
+    MachineMemOperand *MMO = *MI.memoperands_begin();
+
+    auto VNeg = MIRBuilder.buildNeg(ValLLT, Val);
+    MIRBuilder.buildAtomicRMW(G_ATOMICRMW_ADD, Ret, Mem, VNeg, *MMO);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
