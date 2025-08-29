@@ -265,6 +265,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     llvm_unreachable("already handled!");
 
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load: {
     cir::LoadOp load =
         builder.createLoad(loc, ptr, /*isVolatile=*/expr->isVolatile());
@@ -278,6 +279,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   }
 
   case AtomicExpr::AO__c11_atomic_store:
+  case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__atomic_store: {
     cir::LoadOp loadVal1 = builder.createLoad(loc, val1);
 
@@ -305,13 +307,11 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
-  case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load:
 
   case AtomicExpr::AO__opencl_atomic_store:
   case AtomicExpr::AO__hip_atomic_store:
-  case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
 
@@ -450,6 +450,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__c11_atomic_init:
     llvm_unreachable("already handled above with emitAtomicInit");
 
+  case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__c11_atomic_load:
     break;
 
@@ -461,6 +462,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     val1 = emitPointerWithAlignment(e->getVal1());
     break;
 
+  case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__c11_atomic_store:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
@@ -507,9 +509,20 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   }
 
   bool isStore = e->getOp() == AtomicExpr::AO__c11_atomic_store ||
-                 e->getOp() == AtomicExpr::AO__atomic_store;
+                 e->getOp() == AtomicExpr::AO__opencl_atomic_store ||
+                 e->getOp() == AtomicExpr::AO__hip_atomic_store ||
+                 e->getOp() == AtomicExpr::AO__atomic_store ||
+                 e->getOp() == AtomicExpr::AO__atomic_store_n ||
+                 e->getOp() == AtomicExpr::AO__scoped_atomic_store ||
+                 e->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+                 e->getOp() == AtomicExpr::AO__atomic_clear;
   bool isLoad = e->getOp() == AtomicExpr::AO__c11_atomic_load ||
-                e->getOp() == AtomicExpr::AO__atomic_load;
+                e->getOp() == AtomicExpr::AO__opencl_atomic_load ||
+                e->getOp() == AtomicExpr::AO__hip_atomic_load ||
+                e->getOp() == AtomicExpr::AO__atomic_load ||
+                e->getOp() == AtomicExpr::AO__atomic_load_n ||
+                e->getOp() == AtomicExpr::AO__scoped_atomic_load ||
+                e->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
 
   if (!order) {
     // We have evaluated the memory order as an integer constant in orderConst.

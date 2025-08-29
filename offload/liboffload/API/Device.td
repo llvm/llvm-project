@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Enum {
-  let name = "ol_device_type_t";
+def ol_device_type_t : Enum {
   let desc = "Supported device types.";
   let etors =[
     Etor<"DEFAULT", "The default device type as preferred by the runtime">,
@@ -22,14 +21,14 @@ def : Enum {
   ];
 }
 
-def DeviceInfo : Enum {
-  let name = "ol_device_info_t";
+def ol_device_info_t : Enum {
   let desc = "Supported device info.";
   let is_typed = 1;
   list<TaggedEtor> basic_etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
     TaggedEtor<"NAME", "char[]", "Device name">,
+    TaggedEtor<"PRODUCT_NAME", "char[]", "Device user-facing marketing name">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
     TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
     TaggedEtor<"MAX_WORK_GROUP_SIZE", "uint32_t", "Maximum total work group size in work items">,
@@ -47,8 +46,7 @@ def DeviceInfo : Enum {
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths);
 }
 
-def : Enum {
-  let name = "ol_device_fp_capability_flag_t";
+def ol_device_fp_capability_flag_t : Enum {
   let desc = "Device floating-point capability flags";
   let is_bit_field = 1;
   let etors =[
@@ -63,14 +61,12 @@ def : Enum {
   ];
 }
 
-def : Typedef {
-  let name = "ol_device_fp_capability_flags_t";
+def ol_device_fp_capability_flags_t : Typedef {
   let desc = "Device floating-point capability flags";
   let value = "uint32_t";
 }
 
-def : FptrTypedef {
-  let name = "ol_device_iterate_cb_t";
+def ol_device_iterate_cb_t : FptrTypedef {
   let desc = "User-provided function to be used with `olIterateDevices`";
   let params = [
     Param<"ol_device_handle_t", "Device", "the device handle of the current iteration", PARAM_IN>,
@@ -79,8 +75,7 @@ def : FptrTypedef {
   let return = "bool";
 }
 
-def : Function {
-  let name = "olIterateDevices";
+def olIterateDevices : Function {
   let desc = "Iterates over all available devices, calling the callback for each device.";
   let details = [
     "If the user-provided callback returns `false`, the iteration is stopped."
@@ -94,8 +89,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceInfo";
+def olGetDeviceInfo : Function {
   let desc = "Queries the given property of the device.";
   let details = [];
   let params = [
@@ -118,8 +112,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceInfoSize";
+def olGetDeviceInfoSize : Function {
   let desc = "Returns the storage size of the given device query.";
   let details = [];
   let params = [

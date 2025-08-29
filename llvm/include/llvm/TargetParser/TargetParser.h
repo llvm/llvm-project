@@ -183,15 +183,11 @@ LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 
-/// Fills Features map with default values for given target GPU
-LLVM_ABI void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
-                                   StringMap<bool> &Features);
-
-/// Inserts wave size feature for given GPU into features map
+/// Fills Features map with default values for given target GPU.
+/// \p Features contains overriding target features and this function returns
+/// default target features with entries overridden by \p Features.
 LLVM_ABI std::pair<FeatureError, StringRef>
-insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                      StringMap<bool> &Features);
-
+fillAMDGPUFeatureMap(StringRef GPU, const Triple &T, StringMap<bool> &Features);
 } // namespace AMDGPU
 
 struct BasicSubtargetFeatureKV {

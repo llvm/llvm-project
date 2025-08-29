@@ -11097,22 +11097,27 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
-  const OMPSeverityClause *SeverityC =
-      OMPExecutableDirective::getSingleClause<OMPSeverityClause>(Clauses);
-  const OMPMessageClause *MessageC =
-      OMPExecutableDirective::getSingleClause<OMPMessageClause>(Clauses);
-  Expr *ME = MessageC ? MessageC->getMessageString() : nullptr;
-
   if (!AtC || AtC->getAtKind() == OMPC_AT_compilation) {
+    const OMPSeverityClause *SeverityC =
+        OMPExecutableDirective::getSingleClause<OMPSeverityClause>(Clauses);
+    const OMPMessageClause *MessageC =
+        OMPExecutableDirective::getSingleClause<OMPMessageClause>(Clauses);
+    std::optional<std::string> SL =
+        MessageC ? MessageC->tryEvaluateString(getASTContext()) : std::nullopt;
+
+    if (MessageC && !SL)
+      Diag(MessageC->getMessageString()->getBeginLoc(),
+           diag::warn_clause_expected_string)
+          << getOpenMPClauseNameForDiag(OMPC_message) << 1;
     if (SeverityC && SeverityC->getSeverityKind() == OMPC_SEVERITY_warning)
       Diag(SeverityC->getSeverityKindKwLoc(), diag::warn_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "WARNING");
+          << SL.value_or("WARNING");
     else
-      Diag(StartLoc, diag::err_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "ERROR");
+      Diag(StartLoc, diag::err_diagnose_if_succeeded) << SL.value_or("ERROR");
     if (!SeverityC || SeverityC->getSeverityKind() != OMPC_SEVERITY_warning)
       return StmtError();
   }
+
   return OMPErrorDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses);
 }
 
@@ -16464,13 +16469,32 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation LParenLoc,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
-  if (!isa<StringLiteral>(ME)) {
+  QualType Type = ME->getType();
+  if ((!Type->isPointerType() && !Type->isArrayType()) ||
+      !Type->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
-        << getOpenMPClauseNameForDiag(OMPC_message);
+        << getOpenMPClauseNameForDiag(OMPC_message) << 0;
     return nullptr;
   }
-  return new (getASTContext())
-      OMPMessageClause(ME, StartLoc, LParenLoc, EndLoc);
+
+  Stmt *HelperValStmt = nullptr;
+
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
+      DKind, OMPC_message, getLangOpts().OpenMP);
+  if (CaptureRegion != OMPD_unknown &&
+      !SemaRef.CurContext->isDependentContext()) {
+    ME = SemaRef.MakeFullExpr(ME).get();
+    llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
+    ME = tryBuildCapture(SemaRef, ME, Captures).get();
+    HelperValStmt = buildPreInits(getASTContext(), Captures);
+  }
+
+  // Convert array type to pointer type if needed.
+  ME = SemaRef.DefaultFunctionArrayLvalueConversion(ME).get();
+
+  return new (getASTContext()) OMPMessageClause(
+      ME, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(
@@ -18628,12 +18652,12 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
   //        the set of member candidates is empty.
   LookupResult Lookup(SemaRef, ReductionId, Sema::LookupOMPReductionName);
   Lookup.suppressDiagnostics();
-  if (const auto *TyRec = Ty->getAs<RecordType>()) {
+  if (Ty->isRecordType()) {
     // Complete the type if it can be completed.
     // If the type is neither complete nor being defined, bail out now.
     bool IsComplete = SemaRef.isCompleteType(Loc, Ty);
-    RecordDecl *RD = TyRec->getOriginalDecl()->getDefinition();
-    if (IsComplete || RD) {
+    auto *RD = Ty->castAsRecordDecl();
+    if (IsComplete || RD->isBeingDefined()) {
       Lookup.clear();
       SemaRef.LookupQualifiedName(Lookup, RD);
       if (Lookup.empty()) {
