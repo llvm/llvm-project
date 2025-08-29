@@ -3183,7 +3183,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
                                    /*shouldCollectPreDeterminedSymbols=*/true,
                                    /*useDelayedPrivatization=*/true, symTable);
   simdItemDSP.processStep1();
-  simdItemDSP.processStep2(&simdClauseOps);
+  simdItemDSP.processStep2(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
