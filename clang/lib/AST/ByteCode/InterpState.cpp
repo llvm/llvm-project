@@ -62,11 +62,7 @@ void InterpState::cleanup() {
   Alloc.cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller)
-    return Current;
-  return Parent.getCurrentFrame();
-}
+Frame *InterpState::getCurrentFrame() { return Current; }
 
 bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
   QualType Type = E->getType();
