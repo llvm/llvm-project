@@ -37,6 +37,14 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    }),
                                    cl::desc("Maximum optimization to perform"));
 
+static cl::list<int>
+    OptDisableIndices("opt-disable-indices", cl::Hidden, cl::CommaSeparated,
+                      cl::Optional, cl::cb<void, int>([](int Index) {
+                        getOptBisector().disablePassAtIndex(Index);
+                      }),
+                      cl::desc("Disable passes at the given indices in the "
+                               "optimization pipeline (comma-separated list)"));
+
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
     cl::desc("Show verbose output when opt-bisect-limit is set"), cl::Hidden,
@@ -66,7 +74,9 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
-  bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
+  bool ShouldRun = (BisectLimit == -1 || BisectLimit == Disabled ||
+                    CurBisectNum <= BisectLimit) &&
+                   !BisectSkipNumbers.contains(CurBisectNum);
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
