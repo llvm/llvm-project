@@ -92,7 +92,7 @@ public:
   Embedding(std::vector<double> &&V) : Data(std::move(V)) {}
   Embedding(std::initializer_list<double> IL) : Data(IL) {}
 
-  explicit Embedding(size_t Size) : Data(Size) {}
+  explicit Embedding(size_t Size) : Data(Size, 0.0) {}
   Embedding(size_t Size, double InitialValue) : Data(Size, InitialValue) {}
 
   size_t size() const { return Data.size(); }
