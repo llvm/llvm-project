@@ -8,6 +8,8 @@
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include <utility>
 
@@ -317,14 +319,53 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
+std::optional<bool> mlir::isZeroTrip(mlir::LoopLikeOpInterface &loop) {
+  auto lbs = loop.getLoopLowerBounds();
+  auto ubs = loop.getLoopUpperBounds();
+  auto steps = loop.getLoopSteps();
+
+  if (!lbs || !ubs || !steps)
+    return std::nullopt;
+
+  if (lbs->size() != ubs->size() || ubs->size() != steps->size())
+    return std::nullopt;
+
+  for (size_t i = 0; i < steps->size(); ++i) {
+    auto lb = getConstantIntValue((*lbs)[i]);
+    auto ub = getConstantIntValue((*ubs)[i]);
+    auto st = getConstantIntValue((*steps)[i]);
+
+    if (!lb || !ub || !st)
+      return std::nullopt; // non-constant -> unknown
+
+    if (*st >= 0 && *lb >= *ub)
+      return true;
+    if (*st < 0 && *lb <= *ub)
+      return true;
+  }
+  return false;
+}
+
+bool mlir::isMemoryEffectMovable(Operation *op) {
+  if (isMemoryEffectFree(op))
+    return true;
+
+  if (isMemoryEffectConflictFree(op))
+    return true;
+
+  return false;
+}
+
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect())
       return false;
+    
     // If the op does not have recursive side effects, then it is memory effect
     // free.
     if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
       return true;
+    
   } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // Otherwise, if the op does not implement the memory effect interface and
     // it does not have recursive side effects, then it cannot be known that the
@@ -338,7 +379,103 @@ bool mlir::isMemoryEffectFree(Operation *op) {
     for (Operation &op : region.getOps())
       if (!isMemoryEffectFree(&op))
         return false;
+
   return true;
+}
+
+bool mlir::isMemoryEffectConflictFree(Operation *op) {
+  auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
+  // op does not implement the memory effect op interface
+  // shouldn't be flagged as movable to be conservative
+  if (!memInterface) return false;
+
+  // check parent loop to make sure it's not dead
+  Operation *parent = op->getParentOp();
+  if (!parent)
+    return false;
+
+  auto loopInterface = dyn_cast<LoopLikeOpInterface>(parent);
+  if (!loopInterface)
+    return false;
+
+  auto isDead = isZeroTrip(loopInterface);
+  if (!isDead.has_value() || isDead.value())
+    return false;
+
+  // gather all effects on op
+  llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+  memInterface.getEffects(effects);
+
+  // op has interface but no effects, be conservative
+  if (effects.empty()) return false;
+
+  DenseMap<TypeID, int> resourceCounts;
+
+  // ensure op only has Write effects and gather unique
+  // resource names
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (!isa<MemoryEffects::Write>(effect.getEffect()))
+      return false;
+
+    resourceCounts.try_emplace(effect.getResource()->getResourceID(), 0);
+  }
+
+  mlir::DominanceInfo dom(parent);
+
+  for (Region &region : parent->getRegions())
+    for (Operation &opI : region.getOps())
+      if (hasMemoryEffectConflict(op, &opI, dom, resourceCounts))
+        return false;
+
+  return true;
+}
+
+bool mlir::hasMemoryEffectConflict(
+    Operation *mainOp, Operation *op,
+    mlir::DominanceInfo &dom, DenseMap<TypeID, int> &resourceCounts) {
+
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    
+    llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+    memInterface.getEffects(effects);
+
+    bool isDominated = dom.properlyDominates(mainOp, op);
+
+    // ensure op only has Write or dominated Read effects
+    // check used resources
+    for (const MemoryEffects::EffectInstance &effect : effects) {
+      auto resourceID = effect.getResource()->getResourceID();
+
+      if (resourceCounts.contains(resourceID)) {
+        if (isa<MemoryEffects::Read>(effect.getEffect())) {
+          if (isDominated)
+            continue; // skip dominated reads
+        }
+        else if (!isa<MemoryEffects::Write>(effect.getEffect())) {
+          return true; // count alloc/free in same region as conflict, be conservative
+        }
+        
+        // update write counts, should always be <=1 per resource in region
+        if (++resourceCounts[resourceID] > 1) {
+          return true;
+        }
+      }
+    }
+  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is conflicting or not.
+    return true;
+  }
+
+  // Recurse into the regions and ensure that nested ops don't
+  // conflict with each other's MemWrites
+  for (Region &region : op->getRegions())
+    for (Operation &opI : region.getOps()) 
+      if (hasMemoryEffectConflict(mainOp, &opI, dom, resourceCounts))
+        return true;
+      
+  return false;
 }
 
 // the returned vector may contain duplicate effects

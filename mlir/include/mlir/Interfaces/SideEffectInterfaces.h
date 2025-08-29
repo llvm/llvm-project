@@ -14,7 +14,9 @@
 #ifndef MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {
 namespace SideEffects {
@@ -459,6 +461,26 @@ bool isOpTriviallyDead(Operation *op);
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
 
+/// Returns TRUE if the loop is dead/zero-trip,
+/// FALSE if loop has constant bounds/steps and has at least 1 iteration
+/// on every dimension, returns nullopt otherwise
+///
+/// Can only infer if loop is dead if it has constant loop bounds/steps.
+/// Otherwise we assume that it's dead to be conservative.
+///
+std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface &loop);
+
+/// Returns true if the given operation is allowed to be moved under the
+/// memory effects interface.
+///
+/// An operation is movable if either case is true:
+/// (a) free of memory effects as defined in isMemoryEffectFree()
+/// (b) if the operation does have memory effects, it must be conflict-free
+/// as defined in isMemoryEffectConflictFree()
+///
+/// If the operation meets either criteria, then it is movable under memory effects
+bool isMemoryEffectMovable(Operation *op);
+
 /// Returns true if the given operation is free of memory effects.
 ///
 /// An operation is free of memory effects if its implementation of
@@ -470,6 +492,35 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// If the operation has both, then it is free of memory effects if both
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
+
+/// Returns true if the given operation has conflict-free write effects
+///
+/// An operation is conflict free:
+/// (1) Parent is a loop with the LoopLikeOpInterface
+/// (2) Parent loop is not a zero trip loop and has constant bounds/steps
+/// (3) all of the op's memory effects are of type Write
+/// (4) there are no other ops with Alloc/Free/Write effects on the same
+/// resources within the op's parent loop region
+/// (5) all ops in the parent loop region with Read effects on the same
+/// resources are dominated by the operation
+///
+/// If the operation meets all criteria, then it is conflict free
+bool isMemoryEffectConflictFree(Operation *op);
+
+/// Returns true if op and/or any operations within its nested regions
+/// have a memory effect conflict with mainOp as defined below:
+///
+/// op has a memory effect conflict with mainOp if op and/or any of 
+/// the operations in its nested regions meet any of these criteria:
+/// (a) they have any Alloc/Free/Write effects on the resources used by mainOp 
+/// (b) they dominate mainOp and have any read effect on the resources used by mainOp
+///
+/// Function mutates resources map
+///
+/// If none of the critera above are met, mainOp and op are conflict free
+bool hasMemoryEffectConflict(
+    Operation *mainOp, Operation *op, 
+    mlir::DominanceInfo &dom, DenseMap<TypeID, int> &resourceCounts);
 
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.
