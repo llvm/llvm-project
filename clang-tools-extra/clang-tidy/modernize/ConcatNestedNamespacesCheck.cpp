@@ -152,14 +152,14 @@ void ConcatNestedNamespacesCheck::reportDiagnostic(
       ConcatNameSpace.append("::");
   }
 
-  for (SourceRange const &Front : Fronts)
+  for (const SourceRange &Front : Fronts)
     DB << FixItHint::CreateRemoval(Front);
   DB << FixItHint::CreateReplacement(
       Namespaces.back().getReplacedNamespaceFrontRange(), ConcatNameSpace);
   if (LastRBrace != Namespaces.back().getDefaultNamespaceBackRange())
     DB << FixItHint::CreateReplacement(LastRBrace,
                                        ("} // " + ConcatNameSpace).str());
-  for (SourceRange const &Back : llvm::reverse(Backs))
+  for (const SourceRange &Back : llvm::reverse(Backs))
     DB << FixItHint::CreateRemoval(Back);
 }
 
