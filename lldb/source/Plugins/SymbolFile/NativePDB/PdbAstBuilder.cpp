@@ -601,20 +601,26 @@ PdbAstBuilder::CreateModifierType(const ModifierRecord &modifier) {
 }
 
 clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
-                                                const TagRecord &record) {
+                                                const CVTagRecord &record) {
   clang::DeclContext *context = nullptr;
   std::string uname;
-  std::tie(context, uname) = CreateDeclInfoForType(record, id.index);
+  std::tie(context, uname) = CreateDeclInfoForType(record.asTag(), id.index);
   if (!context)
     return {};
 
-  clang::TagTypeKind ttk = TranslateUdtKind(record);
+  clang::TagTypeKind ttk = TranslateUdtKind(record.asTag());
   lldb::AccessType access = (ttk == clang::TagTypeKind::Class)
                                 ? lldb::eAccessPrivate
                                 : lldb::eAccessPublic;
 
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
+  // If a class has a vtable, it is dynamic.
+  // Otherwise, we wait until the record is completed - it might have virtual
+  // bases.
+  if (record.contextKind() == CompilerContextKind::ClassOrStruct &&
+      !record.asClass().getVTableShape().isNoneType())
+    metadata.SetIsDynamicCXXType(true);
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
@@ -779,11 +785,9 @@ clang::QualType PdbAstBuilder::CreateType(PdbTypeSymId type) {
 
   if (IsTagRecord(cvt)) {
     CVTagRecord tag = CVTagRecord::create(cvt);
-    if (tag.kind() == CVTagRecord::Union)
-      return CreateRecordType(type.index, tag.asUnion());
     if (tag.kind() == CVTagRecord::Enum)
       return CreateEnumType(type.index, tag.asEnum());
-    return CreateRecordType(type.index, tag.asClass());
+    return CreateRecordType(type.index, tag);
   }
 
   if (cvt.kind() == LF_ARRAY) {
