@@ -94,16 +94,10 @@ define double @scvtf_f64i32_neg(<4 x i32> %x) {
  ret double %conv
 }
 
-; This test does not give the indended result of scvtf d0, s0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
 define <1 x double> @scvtf_f64i32_simple(<1 x i32> %x) {
 ; CHECK-LABEL: scvtf_f64i32_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    scvtf d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: scvtf_f64i32_simple:
@@ -202,10 +196,8 @@ define float @scvtf_f32i64_neg(<2 x i64> %x) {
  ret float %conv
 }
 
-; This test does not give the indended result of scvtf s0, d0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
+; <1 x float> is illegal on AArch64 and is widened to <2 x float>.
+; This widening introduces the extra insert/extract/zeroing instructions.
 define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
@@ -315,16 +307,10 @@ define double @ucvtf_f64i32_neg(<4 x i32> %x) {
  ret double %conv
 }
 
-; This test does not give the indended result of ucvtf d0, s0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
 define <1 x double> @ucvtf_f64i32_simple(<1 x i32> %x) {
 ; CHECK-LABEL: ucvtf_f64i32_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ucvtf d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: ucvtf_f64i32_simple:
