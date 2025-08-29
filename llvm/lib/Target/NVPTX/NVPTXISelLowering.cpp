@@ -841,10 +841,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
-                       ISD::STORE, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND});
+  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::BITCAST,
+                       ISD::EXTRACT_VECTOR_ELT, ISD::FADD, ISD::MUL, ISD::SHL,
+                       ISD::SREM, ISD::UREM, ISD::VSELECT, ISD::BUILD_VECTOR,
+                       ISD::ADDRSPACECAST, ISD::LOAD, ISD::STORE,
+                       ISD::ZERO_EXTEND, ISD::SIGN_EXTEND});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5316,6 +5317,24 @@ static SDValue PerformFADDCombine(SDNode *N,
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
+static SDValue combineBitcast(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  const SDValue &Input = N->getOperand(0);
+  const EVT FromVT = Input.getValueType();
+  const EVT ToVT = N->getValueType(0);
+
+  if (Input.getOpcode() == ISD::BUILD_VECTOR && ToVT == MVT::v2f32 &&
+      FromVT == MVT::v2i32) {
+    // Pull in v2i32 build_vector through v2f32 bitcast to avoid legalizing the
+    // build_vector as bitwise ops.
+    return DCI.DAG.getBuildVector(
+        MVT::v2f32, SDLoc(N),
+        {DCI.DAG.getBitcast(MVT::f32, Input.getOperand(0)),
+         DCI.DAG.getBitcast(MVT::f32, Input.getOperand(1))});
+  }
+
+  return SDValue();
+}
+
 static SDValue PerformREMCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
@@ -5987,6 +6006,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformADDCombine(N, DCI, OptLevel);
   case ISD::ADDRSPACECAST:
     return combineADDRSPACECAST(N, DCI);
+  case ISD::BITCAST:
+    return combineBitcast(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return combineMulWide(N, DCI, OptLevel);
