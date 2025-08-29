@@ -14,6 +14,7 @@ define i32 @map0(ptr nocapture noundef readonly %a, i64 noundef %b) {
   ; SSE-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 4, [[COPY]], 0, $noreg :: (load (s32) from %ir.add.ptr)
   ; SSE-NEXT:   $eax = COPY [[MOV32rm]]
   ; SSE-NEXT:   RET 0, $eax
+  ;
   ; AVX-LABEL: name: map0
   ; AVX: bb.0.entry:
   ; AVX-NEXT:   liveins: $rdi, $rsi
@@ -38,12 +39,13 @@ define i32 @map1_or_vex(<2 x double> noundef %a) {
   ; SSE-NEXT:   [[CVTSD2SIrr_Int:%[0-9]+]]:gr32 = nofpexcept CVTSD2SIrr_Int [[COPY]], implicit $mxcsr
   ; SSE-NEXT:   $eax = COPY [[CVTSD2SIrr_Int]]
   ; SSE-NEXT:   RET 0, $eax
+  ;
   ; AVX-LABEL: name: map1_or_vex
   ; AVX: bb.0.entry:
   ; AVX-NEXT:   liveins: $xmm0
   ; AVX-NEXT: {{  $}}
   ; AVX-NEXT:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
-  ; AVX-NEXT:   [[VCVTSD2SIrr_Int:%[0-9]+]]:gr32_norex2 = nofpexcept VCVTSD2SIrr_Int [[COPY]], implicit $mxcsr
+  ; AVX-NEXT:   [[VCVTSD2SIrr_Int:%[0-9]+]]:gr32 = nofpexcept VCVTSD2SIrr_Int [[COPY]], implicit $mxcsr
   ; AVX-NEXT:   $eax = COPY [[VCVTSD2SIrr_Int]]
   ; AVX-NEXT:   RET 0, $eax
 entry:
@@ -56,17 +58,18 @@ define <2 x i64> @map2_or_vex(ptr nocapture noundef readonly %b, i64 noundef %c)
   ; SSE: bb.0.entry:
   ; SSE-NEXT:   liveins: $rdi, $rsi
   ; SSE-NEXT: {{  $}}
-  ; SSE-NEXT:   [[COPY:%[0-9]+]]:gr64_norex2_nosp = COPY $rsi
-  ; SSE-NEXT:   [[COPY1:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; SSE-NEXT:   [[COPY:%[0-9]+]]:gr64_nosp = COPY $rsi
+  ; SSE-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; SSE-NEXT:   [[PABSBrm:%[0-9]+]]:vr128 = PABSBrm [[COPY1]], 4, [[COPY]], 0, $noreg :: (load (s128) from %ir.add.ptr)
   ; SSE-NEXT:   $xmm0 = COPY [[PABSBrm]]
   ; SSE-NEXT:   RET 0, $xmm0
+  ;
   ; AVX-LABEL: name: map2_or_vex
   ; AVX: bb.0.entry:
   ; AVX-NEXT:   liveins: $rdi, $rsi
   ; AVX-NEXT: {{  $}}
-  ; AVX-NEXT:   [[COPY:%[0-9]+]]:gr64_norex2_nosp = COPY $rsi
-  ; AVX-NEXT:   [[COPY1:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; AVX-NEXT:   [[COPY:%[0-9]+]]:gr64_nosp = COPY $rsi
+  ; AVX-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; AVX-NEXT:   [[VPABSBrm:%[0-9]+]]:vr128 = VPABSBrm [[COPY1]], 4, [[COPY]], 0, $noreg :: (load (s128) from %ir.add.ptr)
   ; AVX-NEXT:   $xmm0 = COPY [[VPABSBrm]]
   ; AVX-NEXT:   RET 0, $xmm0
