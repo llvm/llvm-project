@@ -30,7 +30,7 @@ void UnitMap::Initialize() {
 ExternalFileUnit &UnitMap::NewUnit(const Terminator &terminator) {
   CriticalSection critical{lock_};
   Initialize();
-  Fortran::common::optional<int> n{freeNewUnits_.PopValue()};
+  common::optional<int> n{freeNewUnits_.PopValue()};
   if (!n) {
     n = emergencyNewUnit_++;
   }

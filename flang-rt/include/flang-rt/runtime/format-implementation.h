@@ -302,7 +302,7 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
     }
   }
   while (true) {
-    Fortran::common::optional<int> repeat;
+    common::optional<int> repeat;
     bool unlimited{false};
     auto maybeReversionPoint{offset_};
     CharType ch{GetNextChar(context)};
@@ -498,8 +498,8 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-RT_API_ATTRS Fortran::common::optional<DataEdit>
-FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
+RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
+    Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
   DataEdit edit;
@@ -530,7 +530,7 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
         }
         if (edit.ioTypeChars >= edit.maxIoTypeChars) {
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
-          return Fortran::common::nullopt;
+          return common::nullopt;
         }
         edit.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
@@ -539,7 +539,7 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
     }
     if (PeekNext() == '(') {
@@ -554,7 +554,7 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
         }
         if (edit.vListEntries >= edit.maxVListEntries) {
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
-          return Fortran::common::nullopt;
+          return common::nullopt;
         }
         edit.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
@@ -565,7 +565,7 @@ FormatControl<CONTEXT>::GetNextDataEdit(Context &context, int maxRepeat) {
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
     }
   } else { // not DT'iotype'
