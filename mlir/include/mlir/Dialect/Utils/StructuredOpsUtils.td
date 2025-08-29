@@ -20,4 +20,16 @@ def IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
     let cppNamespace = "::mlir::utils";
 }
 
+def GroupedConvDim : I32EnumAttr<"GroupedConvDim", "Convolution dim",
+  [
+    I32EnumAttrCase<"n", 0>, // batch
+    I32EnumAttrCase<"g", 1>, // group
+    I32EnumAttrCase<"f", 2>, // feature (output channel)
+    I32EnumAttrCase<"s", 3>, // spatial
+    I32EnumAttrCase<"c", 4> // channel (input channel)
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::utils";
+}
+
 #endif // STRUCTURED_OPS_UTILS
