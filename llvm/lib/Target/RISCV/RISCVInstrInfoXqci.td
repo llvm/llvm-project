@@ -1743,7 +1743,7 @@ def : CompressPat<(QC_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, uimm5:$imm5)>;
 }
 
-let Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {
+let isCompressOnly = true, Predicates = [HasVendorXqciac, HasStdExtZba, IsRV32] in {
 def : CompressPat<(SH1ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
                   (QC_C_MULIADD GPRC:$rd, GPRC:$rs1, 2)>;
 def : CompressPat<(SH2ADD GPRC:$rd, GPRC:$rs1, GPRC:$rd),
