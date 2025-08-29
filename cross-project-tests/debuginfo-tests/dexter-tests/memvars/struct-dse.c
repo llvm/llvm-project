@@ -5,7 +5,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
+// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
 //
 //// Check debug-info for the escaped struct variable num is reasonable.
 
