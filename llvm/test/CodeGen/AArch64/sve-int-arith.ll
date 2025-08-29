@@ -598,9 +598,9 @@ define <vscale x 8 x i16> @muladd_i16_positiveAddend(<vscale x 8 x i16> %a, <vsc
 define <vscale x 8 x i16> @muladd_i16_negativeAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK-LABEL: muladd_i16_negativeAddend:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #-255 // =0xffffffffffffff01
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    sub z0.h, z0.h, #255 // =0xff
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
@@ -624,9 +624,9 @@ define <vscale x 16 x i8> @muladd_i8_positiveAddend(<vscale x 16 x i8> %a, <vsca
 define <vscale x 16 x i8> @muladd_i8_negativeAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: muladd_i8_negativeAddend:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #-15 // =0xfffffffffffffff1
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mad z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    sub z0.b, z0.b, #15 // =0xf
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b
@@ -707,10 +707,9 @@ define <vscale x 8 x i16> @mulsub_i16_positiveAddend(<vscale x 8 x i16> %a, <vsc
 define <vscale x 8 x i16> @mulsub_i16_negativeAddend(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK-LABEL: mulsub_i16_negativeAddend:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.h, #255 // =0xff
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    mov z1.h, #-255 // =0xffffffffffffff01
-; CHECK-NEXT:    sub z0.h, z0.h, z1.h
+; CHECK-NEXT:    mad z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 8 x i16> %a, %b
@@ -734,9 +733,9 @@ define <vscale x 16 x i8> @mulsub_i8_positiveAddend(<vscale x 16 x i8> %a, <vsca
 define <vscale x 16 x i8> @mulsub_i8_negativeAddend(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: mulsub_i8_negativeAddend:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.b, #15 // =0xf
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    sub z0.b, z0.b, #241 // =0xf1
+; CHECK-NEXT:    mad z0.b, p0/m, z1.b, z2.b
 ; CHECK-NEXT:    ret
 {
   %1 = mul <vscale x 16 x i8> %a, %b

@@ -44,7 +44,8 @@ define void @build_vector_minus2_dec32_v4i64(ptr %a) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    index z0.d, #-2, x8
+; VBITS_GE_256-NEXT:    index z0.d, #0, x8
+; VBITS_GE_256-NEXT:    sub z0.d, z0.d, #2 // =0x2
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <4 x i64> <i64 -2, i64 -34, i64 -66, i64 -98>, ptr %a, align 8
