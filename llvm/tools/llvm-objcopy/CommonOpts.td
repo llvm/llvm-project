@@ -69,6 +69,11 @@ def strip_sections
     : Flag<["--"], "strip-sections">,
       HelpText<"Remove all section headers and all section data not within segments">;
 
+defm extract_section
+    : Eq<"extract-section",
+         "Extract section named <section> into standalone object in file <file>">,
+      MetaVarName<"section=file">;
+
 defm strip_symbol : Eq<"strip-symbol", "Strip <symbol>">,
                     MetaVarName<"symbol">;
 def N : JoinedOrSeparate<["-"], "N">,
