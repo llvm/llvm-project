@@ -7,8 +7,8 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (10 successful inlines out of 14 total calls)
-# CHECK-INLINE: BOLT-INFO: inlined 10 memcpy() calls
+# Verify BOLT reports that it inlined memcpy calls (12 successful inlines out of 16 total calls)
+# CHECK-INLINE: BOLT-INFO: inlined 12 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
 
@@ -95,6 +95,24 @@
 # CHECK-ASM: str{{.*}}w9, [x0]
 # CHECK-ASM: add{{.*}}x0, x0, #0x4
 # CHECK-ASM-NOT: bl{{.*}}<_memcpy8
+
+# Complex function with caller-saved X9 should inline 8-byte memcpy using X9 as temp register
+# CHECK-ASM-LABEL: <complex_operation>:
+# CHECK-ASM: ldr{{.*}}x9, [x1]
+# CHECK-ASM: str{{.*}}x9, [x0]
+# CHECK-ASM-NOT: bl{{.*}}<memcpy
+
+# Complex function with caller-saved Q16/Q17 should inline 64-byte memcpy using Q16 as temp register
+# CHECK-ASM-LABEL: <complex_fp_operation>:
+# CHECK-ASM: ldr{{.*}}q16, [x1]
+# CHECK-ASM: str{{.*}}q16, [x0]
+# CHECK-ASM: ldr{{.*}}q16, [x1, #0x10]
+# CHECK-ASM: str{{.*}}q16, [x0, #0x10]
+# CHECK-ASM: ldr{{.*}}q16, [x1, #0x20]
+# CHECK-ASM: str{{.*}}q16, [x0, #0x20]
+# CHECK-ASM: ldr{{.*}}q16, [x1, #0x30]
+# CHECK-ASM: str{{.*}}q16, [x0, #0x30]
+# CHECK-ASM-NOT: bl{{.*}}<memcpy
 
 	.text
 	.globl	test_1_byte_direct                
@@ -297,10 +315,80 @@ _memcpy8:
 	ret
 	.size	_memcpy8, .-_memcpy8
 
+	.globl	complex_operation
+	.type	complex_operation,@function
+complex_operation:
+	stp     x29, x30, [sp, #-32]!
+	str     x19, [sp, #16]
+	mov     x29, sp
+	ldp     x9, x10, [x0]
+	ldp     x11, x12, [x0, #16]
+	mov     x19, x1
+	mov     x8, x0
+	add     x0, x1, #32
+	madd    x9, x9, x2, x3
+	and     x10, x10, x4
+	asr     x12, x12, #2
+	mov     w2, #8
+	orr     x11, x12, x11, lsl #3
+	eor     x12, x9, x10
+	mul     x10, x11, x10
+	eor     x12, x12, x11
+	add     x13, x12, x9
+	add     x9, x11, x9, asr #4
+	stp     x13, x10, [x1]
+	mov     w10, w12
+	stp     x9, x10, [x1, #16]
+	add     x1, x8, #32
+	bl      memcpy
+	ldr     x0, [x19, #16]
+	ldr     x19, [sp, #16]
+	ldp     x29, x30, [sp], #32
+	b       use
+	.size	complex_operation, .-complex_operation
+
+	.globl	use
+	.type	use,@function
+use:
+	ret
+	.size	use, .-use
+
+# Same as above but using FP caller-saved registers (Q16/17)
+	.globl	complex_fp_operation
+	.type	complex_fp_operation,@function
+complex_fp_operation:
+	stp     x29, x30, [sp, #-48]!
+	stp     q8, q9, [sp, #16]
+	mov     x29, sp
+	ldr     q16, [x0]
+	ldr     q17, [x0, #16]
+	mov     x8, x0
+	add     x0, x1, #32
+	fadd    v16.4s, v16.4s, v17.4s
+	fmul    v17.4s, v16.4s, v17.4s
+	fsub    v16.2d, v16.2d, v17.2d
+	mov     w2, #64
+	fmax    v17.4s, v16.4s, v17.4s
+	fmin    v16.2d, v16.2d, v17.2d
+	str     q16, [x1]
+	str     q17, [x1, #16]
+	add     x1, x8, #32
+	bl      memcpy
+	ldp     q8, q9, [sp, #16]
+	ldp     x29, x30, [sp], #48
+	b       use_fp
+	.size	complex_fp_operation, .-complex_fp_operation
+
+	.globl	use_fp
+	.type	use_fp,@function
+use_fp:
+	ret
+	.size	use_fp, .-use_fp
+
 	.globl	main
 	.type	main,@function
 main:
-	stp	x29, x30, [sp, #-16]!
+	stp	x29, x30, [sp, #-208]!
 	mov	x29, sp
 	
 	bl	test_1_byte_direct
@@ -318,7 +406,18 @@ main:
 	bl	test_register_size_negative
 	bl	test_memcpy8_4_byte
 	
+	add     x0, sp, #32
+	add     x1, sp, #96
+	mov     x2, #10
+	mov     x3, #20
+	mov     x4, #0xFF
+	bl      complex_operation
+	
+	add     x0, sp, #160
+	add     x1, sp, #96
+	bl      complex_fp_operation
+	
 	mov	w0, #0
-	ldp	x29, x30, [sp], #16
+	ldp	x29, x30, [sp], #208
 	ret
 	.size	main, .-main

@@ -2604,10 +2604,11 @@ public:
 
   std::optional<uint64_t>
   extractMoveImmediate(const MCInst &Inst, MCPhysReg TargetReg) const override {
-    // Match MOVZXi with the target register and no shift.
-    if (Inst.getOpcode() == AArch64::MOVZXi &&
-        Inst.getOperand(0).getReg() == TargetReg &&
-        Inst.getOperand(2).getImm() == 0)
+    // Match MOVZ instructions (both X and W register variants) with no shift.
+    if ((Inst.getOpcode() == AArch64::MOVZXi ||
+         Inst.getOpcode() == AArch64::MOVZWi) &&
+        Inst.getOperand(2).getImm() == 0 &&
+        getAliases(TargetReg)[Inst.getOperand(0).getReg()])
       return Inst.getOperand(1).getImm();
     return std::nullopt;
   }
@@ -2617,16 +2618,17 @@ public:
                         BinaryBasicBlock::iterator CallInst) const override {
     BitVector WrittenRegs(RegInfo->getNumRegs());
     MCPhysReg SizeReg = getIntArgRegister(2);
-    std::optional<uint64_t> ExtractedSize;
+    const BitVector &SizeRegAliases = getAliases(SizeReg);
 
     for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
       const MCInst &Inst = *InstIt;
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);
 
-      if (SizeReg != getNoRegister() && WrittenRegs[SizeReg] &&
-          (ExtractedSize = extractMoveImmediate(Inst, SizeReg)))
-        return *ExtractedSize;
+      if (SizeReg != getNoRegister() && WrittenRegs.anyCommon(SizeRegAliases)) {
+        if (auto ExtractedSize = extractMoveImmediate(Inst, SizeReg))
+          return *ExtractedSize;
+      }
     }
     return std::nullopt;
   }
