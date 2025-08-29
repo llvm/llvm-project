@@ -320,9 +320,12 @@ def sort_stopped_threads(
 # ==================================================
 
 g_use_break_add = True
+
+
 def set_use_break_add(use_it):
     global g_use_break_add
     g_use_break_add = use_it
+
 
 def get_use_break_add():
     global g_use_break_add
@@ -423,7 +426,7 @@ def run_break_set_by_symbol(
         command += " " + extra_options
 
     if get_use_break_add():
-        command += f" -- '{symbol}'" 
+        command += f" -- '{symbol}'"
 
     break_results = run_break_set_command(test, command)
 
@@ -451,7 +454,7 @@ def run_break_set_by_selector(
     if get_use_break_add():
         command = f"breakpoint add name --match-style selector '{selector}'"
     else:
-      command = 'breakpoint set -S "%s"' % (selector)
+        command = 'breakpoint set -S "%s"' % (selector)
 
     if module_name:
         command += ' --shlib "%s"' % (module_name)

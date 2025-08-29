@@ -156,17 +156,23 @@ static constexpr OptionEnumValueElement g_running_mode[] = {
 
 static constexpr OptionEnumValueElement g_exception_stage[] = {
     {lldb::eExceptionStageThrow, "throw", "Stop when the exception is thrown."},
-    {lldb::eExceptionStageReThrow, "re-throw", "Stop when the exception is re-thrown."},
+    {lldb::eExceptionStageReThrow, "re-throw",
+     "Stop when the exception is re-thrown."},
     {lldb::eExceptionStageCatch, "catch", "Stop when the exception is caught."},
 };
 
 static constexpr OptionEnumValueElement g_name_match_style[] = {
-    {lldb::eNameMatchStyleAuto, "auto", "Match against the leaf nodes of the identifier, or against methods or selectors."},
+    {lldb::eNameMatchStyleAuto, "auto",
+     "Match against the leaf nodes of the identifier, or against methods or "
+     "selectors."},
     {lldb::eNameMatchStyleFull, "full", "Match the full identifier name."},
-    {lldb::eNameMatchStyleBase, "base", "Match against the leaf node of the identifier."},
+    {lldb::eNameMatchStyleBase, "base",
+     "Match against the leaf node of the identifier."},
     {lldb::eNameMatchStyleMethod, "method", "Match only against method names."},
-    {lldb::eNameMatchStyleSelector, "selector", "Match only against selector names."},
-    {lldb::eNameMatchStyleRegex, "regex", "Match the identifier using a regular expression."},
+    {lldb::eNameMatchStyleSelector, "selector",
+     "Match only against selector names."},
+    {lldb::eNameMatchStyleRegex, "regex",
+     "Match the identifier using a regular expression."},
 };
 
 static constexpr OptionEnumValueElement g_completion_type[] = {
