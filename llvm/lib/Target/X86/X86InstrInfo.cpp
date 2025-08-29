@@ -783,6 +783,15 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       // set DidSaveXMM0 to true to indicate that we saved XMM0 into Dst
       // register
       DidSaveXMM0 = true;
+    } else if (MaskReg != X86::XMM0 && Dst != X86::XMM0) {
+
+      // if XMM0 is not allocated for any of the register, we stil need to save
+      // and restore it after using as mask register
+      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+          .addReg(X86::XMM0)
+          .setMIFlags(MachineInstr::MIFlag::NoMerge);
+      SavedXMM0 = Dst;
+      DidSaveXMM0 = true;
     }
 
     if (MaskReg != X86::XMM0) {
