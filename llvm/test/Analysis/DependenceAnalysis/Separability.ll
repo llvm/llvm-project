@@ -26,7 +26,7 @@ define void @sep0(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx15, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.31, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -108,7 +108,7 @@ define void @sep1(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx15, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.31, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -190,7 +190,7 @@ define void @sep2(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx19, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.31, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -272,7 +272,7 @@ define void @sep3(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx20, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.31, align 4 --> Dst: store i32 %0, ptr %B.addr.31, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader

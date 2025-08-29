@@ -3310,10 +3310,23 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
 
 namespace {
 
+/// The type of signed monotonicity of a SCEV expression. This property is
+/// defined with respect to the outermost loop that DA is analyzing. Invariant
+/// and MultiMonotonic mutually exclusive, and both imply NoSignedWrap.
+///
+/// This is designed to classify the behavior of AddRec expressions, and does
+/// not care about other SCEVs. For example, given the two loop invariants `A`
+/// and `B`, `A + B` is treated as Invariant even if the addition may wrap. On
+/// the other hand, if either `A` or `B` is an AddRec and we cannot prove the
+/// addition doesn't wrap, the result is classified as Unknown.
 enum class MonotonicityType {
-  Unknown,   ///< The expression contains some non loop-invariant SCEVUnknown or
-             ///< arithmetic operations that may cause signed wrap.
-  Invariant, ///< The expression is a loop-invariant.
+  Unknown, ///< The expression contains some non loop-invariant SCEVUnknown or
+           ///< arithmetic operation that has some AddRec as its subexpression
+           ///< and may cause signed wrap.
+  NoSignedWrap, ///< The expression doesn't contain any AddRecs that may wrap.
+                ///< This is a weaker property than Invariant or MultiMonotonic.
+                ///< Invariant and MultiMonotonic imply NoSignedWrap.
+  Invariant,    ///< The expression is a loop-invariant.
   MultiMonotonic, ///< The expression is monotonically increasing or decreasing
                   ///< with respect to each loop. This is exclusive of
                   ///< Invariant. That is, we say an SCEV is MultiMonotonic only
@@ -3385,11 +3398,10 @@ struct SCEVSignedMonotonicityChecker
 private:
   ScalarEvolution *SE;
   const Loop *OutermostLoop;
-  const Value *Ptr = nullptr;
+  bool NoWrapFromGEP = false;
 
   SCEVSignedMonotonicityChecker(ScalarEvolution *SE, const Loop *OutermostLoop,
-                                const Value *Ptr)
-      : SE(SE), OutermostLoop(OutermostLoop), Ptr(Ptr) {}
+                                const Value *Ptr);
 
   MonotonicityType visitNAryHelper(const SCEVNAryExpr *Expr);
   MonotonicityType unknownMonotonicity(const SCEV *Expr);
@@ -3398,21 +3410,54 @@ private:
 
 } // anonymous namespace
 
+SCEVSignedMonotonicityChecker::SCEVSignedMonotonicityChecker(
+    ScalarEvolution *SE, const Loop *OutermostLoop, const Value *Ptr)
+    : SE(SE), OutermostLoop(OutermostLoop) {
+  if (Ptr) {
+    // TODO: This seems incorrect. Maybe we should check the reachability from
+    // the GEP to the target instruction. E.g., in the following case, maybe
+    // no-wrap is not guaranteed:
+    //
+    //  entry:
+    //    ...
+    //    %gep = getelementptr inbounds i32, ptr %ptr, i32 %addrec
+    //    br i1 %cond, label %store, label %sink
+    //
+    //   store:
+    //     store i32 42, ptr %ptr
+    //     br label %sink
+    //
+    //   sink:
+    //     ...
+    //
+    auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    if (GEP && GEP->hasNoUnsignedSignedWrap())
+      NoWrapFromGEP = true;
+  }
+}
+
 MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
     ScalarEvolution *SE, const SCEV *Expr, const Loop *OutermostLoop,
     const Value *Ptr) {
   SCEVSignedMonotonicityChecker Checker(SE, OutermostLoop, Ptr);
   MonotonicityType MT = Checker.visit(Expr);
+  if (MT == MonotonicityType::Unknown && Checker.NoWrapFromGEP)
+    MT = MonotonicityType::NoSignedWrap;
 
 #ifndef NDEBUG
   switch (MT) {
   case MonotonicityType::Unknown:
+    LLVM_DEBUG(dbgs() << "Monotonicity: Unknown expr: " << *Expr << "\n");
+    break;
+  case MonotonicityType::NoSignedWrap:
+    LLVM_DEBUG(dbgs() << "Monotonicity: No signed wrap expr: " << *Expr
+                      << "\n");
     break;
   case MonotonicityType::Invariant:
-    LLVM_DEBUG(dbgs() << "Invariant expr: " << *Expr << "\n");
+    LLVM_DEBUG(dbgs() << "Monotonicity: Invariant expr: " << *Expr << "\n");
     break;
   case MonotonicityType::MultiMonotonic:
-    LLVM_DEBUG(dbgs() << "Monotonic expr: " << *Expr << "\n");
+    LLVM_DEBUG(dbgs() << "Monotonicity: Monotonic expr: " << *Expr << "\n");
     break;
   }
 #endif
@@ -3421,28 +3466,49 @@ MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
 
 MonotonicityType
 SCEVSignedMonotonicityChecker::visitNAryHelper(const SCEVNAryExpr *Expr) {
+  assert((isa<SCEVAddExpr>(Expr) || isa<SCEVMulExpr>(Expr)) &&
+         "Unexpected SCEV");
+
   if (isLoopInvariant(Expr))
     return MonotonicityType::Invariant;
 
-  if (!Expr->hasNoSignedWrap())
-    return unknownMonotonicity(Expr);
-
   MonotonicityType Result = MonotonicityType::Invariant;
   for (const SCEV *Op : Expr->operands()) {
+    assert(Result != MonotonicityType::Unknown && "Unexpected state");
     switch (visit(Op)) {
     case MonotonicityType::Unknown:
       return unknownMonotonicity(Expr);
+    case MonotonicityType::NoSignedWrap:
+      Result = MonotonicityType::NoSignedWrap;
+      break;
     case MonotonicityType::Invariant:
       break;
-    case MonotonicityType::MultiMonotonic:
-      // Monotonic + Monotonic might be a loop invariant, e.g., {0,+,1}<%loop> +
-      // {0,+,-1}<%loop>.
-      // TODO: It would be better to record visited loops and return Unknown
-      // only when the same loop is visited multiple times.
-      if (Result == MonotonicityType::MultiMonotonic)
-        return unknownMonotonicity(Expr);
-      Result = MonotonicityType::MultiMonotonic;
-      break;
+    case MonotonicityType::MultiMonotonic: {
+      switch (Result) {
+      case MonotonicityType::Unknown:
+        llvm_unreachable("should have been handled above");
+      case MonotonicityType::NoSignedWrap:
+        break;
+      case MonotonicityType::Invariant:
+        if (!Expr->hasNoSignedWrap())
+          return unknownMonotonicity(Expr);
+        Result = MonotonicityType::MultiMonotonic;
+        break;
+      case MonotonicityType::MultiMonotonic:
+        if (!Expr->hasNoSignedWrap())
+          return unknownMonotonicity(Expr);
+        if (!isa<SCEVAddExpr>(Expr))
+          return unknownMonotonicity(Expr);
+        // Monotonic + Monotonic might be a loop invariant, e.g., the following
+        // SCEV:
+        //
+        //   {0,+,1}<%loop> + {0,+,-1}<%loop>
+        //
+        // In that case, relax the property to NoSignedWrap.
+        Result = MonotonicityType::NoSignedWrap;
+        break;
+      }
+    } break;
     }
   }
   return Result;
@@ -3466,44 +3532,17 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   const SCEV *Start = Expr->getStart();
   const SCEV *Step = Expr->getStepRecurrence(*SE);
 
+  bool IsNSW = Expr->hasNoSignedWrap();
+
   MonotonicityType StartRes = visit(Start);
   if (StartRes == MonotonicityType::Unknown)
     return unknownMonotonicity(Expr);
 
   MonotonicityType StepRes = visit(Step);
-  if (StepRes != MonotonicityType::Invariant || !SE->isKnownNonZero(Step))
+  if (StepRes != MonotonicityType::Invariant)
     return unknownMonotonicity(Expr);
 
-  bool IsNSW = [&] {
-    if (Expr->hasNoSignedWrap())
-      return true;
-
-    if (Ptr) {
-      // TODO: This seems incorrect. Maybe we should check the reachability from
-      // the GEP to the target instruction. E.g., in the following case, maybe
-      // no-wrap is not guaranteed:
-      //
-      //  entry:
-      //    ...
-      //    %gep = getelementptr inbounds i32, ptr %ptr, i32 %addrec
-      //    br i1 %cond, label %store, label %sink
-      //
-      //   store:
-      //     store i32 42, ptr %ptr
-      //     br label %sink
-      //
-      //   sink:
-      //     ...
-      //
-      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-      if (GEP && GEP->hasNoUnsignedSignedWrap())
-        return true;
-    }
-
-    return false;
-  }();
-
-  // TODO: Is this additional check necessary?
+  // TODO: Enhance the inference here.
   if (!IsNSW) {
     if (!SE->isKnownNegative(Step))
       // If the coefficient can be positive value, ensure that the AddRec is
@@ -3518,7 +3557,21 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
         return unknownMonotonicity(Expr);
   }
 
-  return MonotonicityType::MultiMonotonic;
+  bool IsKnownNonZero = SE->isKnownNonZero(Step);
+  switch (StartRes) {
+  case MonotonicityType::Unknown:
+    llvm_unreachable("should have been handled above");
+  case MonotonicityType::NoSignedWrap:
+    return MonotonicityType::NoSignedWrap;
+  case MonotonicityType::Invariant:
+    return IsKnownNonZero ? MonotonicityType::MultiMonotonic
+                          : MonotonicityType::NoSignedWrap;
+  case MonotonicityType::MultiMonotonic:
+    // TODO: Should handle SCEV like `{{0,+,-1}<%loop>,+,1}<%loop>`?
+    return IsKnownNonZero ? MonotonicityType::MultiMonotonic
+                          : MonotonicityType::NoSignedWrap;
+  }
+  llvm_unreachable("unhandled MonotonicityType");
 }
 
 MonotonicityType SCEVSignedMonotonicityChecker::visitZeroExtendExpr(
@@ -3733,6 +3786,15 @@ bool DependenceInfo::tryDelinearizeParametricSize(
       const Loop *OutermostLoop =
           LI->getLoopFor(Src->getParent())->getOutermostLoop();
 
+      // TODO: In general, reasoning about monotonicity of a subscript from the
+      // base pointer would not be allowed. Probably we need to check the loops
+      // associated with this subscript are disjoint from those associated with
+      // the other subscripts. The validation would be something like:
+      //
+      //   LoopsI = collectCommonLoops(SrcSubscripts[I])
+      //   LoopsOthers = collectCommonLoops(SrcSCEV - SrcSubscripts[I])
+      //   CanUsePtr = (LoopsI intersect LoopsOthers) is empty.
+      //
       MonotonicityType SrcMonotonicity =
           SCEVSignedMonotonicityChecker::checkMonotonicity(
               SE, SrcSubscripts[I], OutermostLoop, SrcPtr);
@@ -3939,6 +4001,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
+    // TODO: Check that the original offsets are monotonic when delinearization
+    // fails.
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {

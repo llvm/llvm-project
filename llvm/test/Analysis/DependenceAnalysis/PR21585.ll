@@ -70,11 +70,11 @@ for.end:
 define void @i16_wrap(ptr %a) {
 ; CHECK-LABEL: 'i16_wrap'
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %idx, align 4 --> Dst: %0 = load i64, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %idx, align 4 --> Dst: store i64 %1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - anti [*|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %1, ptr %idx, align 4 --> Dst: store i64 %1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.body
