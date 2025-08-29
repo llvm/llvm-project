@@ -514,8 +514,9 @@ private:
             << "failed attribute check: rounding_mode = DOUBLE_ROUND "
             << "requires extension [doubleround]";
         return false;
-      } else if (rescale.getRoundingMode() == RoundingMode::INEXACT_ROUND &&
-                 !targetEnv.allows(Extension::inexactround)) {
+      }
+      if (rescale.getRoundingMode() == RoundingMode::INEXACT_ROUND &&
+          !targetEnv.allows(Extension::inexactround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = INEXACT_ROUND "
             << "requires extension [inexactround]";

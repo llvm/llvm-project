@@ -57,6 +57,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,6 +110,9 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -299,6 +303,9 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -336,6 +343,9 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -371,6 +381,7 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,6 +429,9 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -501,6 +515,7 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,6 +575,8 @@ def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -589,6 +606,8 @@ def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,6 +652,8 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -662,6 +683,8 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -690,6 +713,8 @@ def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -718,6 +743,8 @@ def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -746,6 +773,8 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -777,6 +806,8 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -805,6 +836,8 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -833,6 +866,8 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -861,6 +896,8 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -889,6 +926,8 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -917,6 +956,8 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -946,6 +987,7 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -975,6 +1017,8 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1041,6 +1085,8 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1069,6 +1115,8 @@ def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1113,6 +1161,9 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   }];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1149,6 +1200,8 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1173,6 +1226,8 @@ def Tosa_BitwiseNotOp : Tosa_ElementwiseUnaryOp<"bitwise_not"> {
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1197,6 +1252,8 @@ def Tosa_CeilOp : Tosa_ElementwiseUnaryOp<"ceil"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1221,6 +1278,8 @@ def Tosa_ClzOp : Tosa_ElementwiseUnaryOp<"clz"> {
     Profile<[Tosa_PRO_INT]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1245,6 +1304,8 @@ def Tosa_CosOp : Tosa_ElementwiseUnaryOp<"cos"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1271,6 +1332,8 @@ def Tosa_ExpOp : Tosa_ElementwiseUnaryOp<"exp"> {
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1295,6 +1358,8 @@ def Tosa_FloorOp : Tosa_ElementwiseUnaryOp<"floor"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1321,6 +1386,8 @@ def Tosa_LogOp : Tosa_ElementwiseUnaryOp<"log"> {
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1345,6 +1412,8 @@ def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1424,6 +1493,8 @@ def Tosa_ReciprocalOp : Tosa_ElementwiseUnaryOp<"reciprocal"> {
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1449,6 +1520,8 @@ def Tosa_RsqrtOp : Tosa_ElementwiseUnaryOp<"rsqrt"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1473,6 +1546,8 @@ def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1519,6 +1594,8 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
     ::mlir::TypedValue<::mlir::TensorType> getOnTrue() { return getInput2(); }
     ::mlir::TypedValue<::mlir::TensorType> getOnFalse() { return getInput3(); }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1559,6 +1636,8 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
   }];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1586,6 +1665,8 @@ def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1614,6 +1695,8 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
   ];
 
   let hasFolder = 1;
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1657,6 +1740,8 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
       return leftOperand & rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1696,6 +1781,8 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
       return leftOperand | rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1736,6 +1823,8 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
       return (leftOperand.sge(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1776,6 +1865,8 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
       return (leftOperand.sle(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1815,6 +1906,8 @@ def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
       return leftOperand * rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1854,6 +1947,8 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
       return leftOperand + rightOperand;
     }
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1894,6 +1989,8 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
     /// Method used by InferTypeOpInterface.
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1943,6 +2040,9 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2047,6 +2147,9 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2078,6 +2181,9 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2111,6 +2217,9 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2145,6 +2254,9 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
   ];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2180,6 +2292,9 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
   ];
 
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2238,6 +2353,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2397,8 +2513,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
   }];
 
   let hasVerifier = 1;
-
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
