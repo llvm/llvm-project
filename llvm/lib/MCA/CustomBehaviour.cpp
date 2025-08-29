@@ -13,7 +13,6 @@
 
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/Instruction.h"
-#include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
 namespace mca {

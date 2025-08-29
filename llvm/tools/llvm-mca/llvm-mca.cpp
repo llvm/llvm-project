@@ -514,12 +514,11 @@ int main(int argc, char **argv) {
     IM = std::unique_ptr<mca::InstrumentManager>(
         TheTarget->createInstrumentManager(*STI, *MCII));
     if (!IM) {
-      // If the target doesn't have its own IM implemented we use base class with
-      // instruments enabled.
+      // If the target doesn't have its own IM implemented we use base class
+      // with instruments enabled.
       IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, true);
     }
-  }
-  else {
+  } else {
     // If the -disable-cb flag is set then we use the default base class
     // implementation (which does nothing).
     IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
