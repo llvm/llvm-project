@@ -2307,7 +2307,8 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getName(TheCall->getBuiltinCallee())
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
         << MaskTy << PointeeTy);
 
   TheCall->setType(PointeeTy);
@@ -2342,7 +2343,8 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
       MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getName(TheCall->getBuiltinCallee())
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
         << MaskTy << PointeeTy);
 
   if (!S.Context.hasSameType(ValTy, PointeeTy))
