@@ -2532,6 +2532,7 @@ Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
   case BroadcastType::any_lane:
     LLVM_FALLTHROUGH;
   case BroadcastType::specific_lane:
+    // Speculation should be safe as long as we inside structured control flow.
     return Speculation::Speculatable;
   }
 }
