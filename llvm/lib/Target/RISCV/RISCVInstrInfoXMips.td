@@ -181,7 +181,7 @@ def : Pat<(select (XLenVT GPR:$rs2), (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
 }
 
 let Predicates = [HasVendorXMIPSLSP], hasSideEffects = 0,
-                 DecoderNamespace = "XMIPS" in {
+    DecoderNamespace = "XMIPS" in {
 let mayLoad = 1, mayStore = 0 in {
 def MIPS_LWP : LWPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb00:$imm7),
                          "mips.lwp", "$rd1, $rd2, ${imm7}(${rs1})">,
