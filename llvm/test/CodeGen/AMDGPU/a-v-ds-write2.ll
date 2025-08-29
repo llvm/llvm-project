@@ -24,8 +24,8 @@ define void @ds_write2_b32_a_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, a1 offset:96
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %a0 = call i32 asm "; def $0", "=a"()
   %a1 = call i32 asm "; def $0", "=a"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -47,8 +47,8 @@ define void @ds_write2_b32_a_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, v1 offset:96
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %a0 = call i32 asm "; def $0", "=a"()
   %v0 = call i32 asm "; def $0", "=v"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -70,8 +70,8 @@ define void @ds_write2_b32_v_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, v1 offset:96
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %v0 = call i32 asm "; def $0", "=v"()
   %a0 = call i32 asm "; def $0", "=a"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -92,8 +92,8 @@ define void @ds_write2_b32_v_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %v0 = call i32 asm "; def $0", "=v"()
   %v1 = call i32 asm "; def $0", "=v"()
   store i32 %v0, ptr addrspace(3) %gep.0
@@ -114,8 +114,8 @@ define void @ds_write2_b32_av_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i32 asm "; def $0", "=^VA"()
   %av1 = call i32 asm "; def $0", "=^VA"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -137,8 +137,8 @@ define void @ds_write2_b32_av_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i32 asm "; def $0", "=^VA"()
   %v0 = call i32 asm "; def $0", "=v"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -160,8 +160,8 @@ define void @ds_write2_b32_v_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %v0 = call i32 asm "; def $0", "=v"()
   %av0 = call i32 asm "; def $0", "=^VA"()
   store i32 %v0, ptr addrspace(3) %gep.0
@@ -184,8 +184,8 @@ define void @ds_write2_b32_av_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, a0 offset:96
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i32 asm "; def $0", "=^VA"()
   %a0 = call i32 asm "; def $0", "=a"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -208,8 +208,8 @@ define void @ds_write2_b32_a_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, v1 offset:96
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %a0 = call i32 asm "; def $0", "=a"()
   %av0 = call i32 asm "; def $0", "=^VA"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -231,8 +231,8 @@ define void @ds_write2st64_b32_a_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, a1 offset:1024
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i32 asm "; def $0", "=a"()
   %a1 = call i32 asm "; def $0", "=a"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -254,8 +254,8 @@ define void @ds_write2st64_b32_a_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, v1 offset:1024
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i32 asm "; def $0", "=a"()
   %v0 = call i32 asm "; def $0", "=v"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -277,8 +277,8 @@ define void @ds_write2st64_b32_v_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, a0 offset:1024
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i32 asm "; def $0", "=a"()
   %a0 = call i32 asm "; def $0", "=v"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -299,8 +299,8 @@ define void @ds_write2st64_b32_v_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2st64_b32 v0, v1, v2 offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i32 asm "; def $0", "=v"()
   %v1 = call i32 asm "; def $0", "=v"()
   store i32 %v0, ptr addrspace(3) %gep.0
@@ -321,8 +321,8 @@ define void @ds_write2st64_b32_av_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2st64_b32 v0, v1, v2 offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i32 asm "; def $0", "=^VA"()
   %av1 = call i32 asm "; def $0", "=^VA"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -343,8 +343,8 @@ define void @ds_write2st64_b32_av_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2st64_b32 v0, v1, v2 offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i32 asm "; def $0", "=^VA"()
   %v0 = call i32 asm "; def $0", "=v"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -366,8 +366,8 @@ define void @ds_write2st64_b32_v_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write2st64_b32 v0, v1, v2 offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i32 asm "; def $0", "=v"()
   %av1 = call i32 asm "; def $0", "=^VA"()
   store i32 %v0, ptr addrspace(3) %gep.0
@@ -389,8 +389,8 @@ define void @ds_write2st64_b32_av_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, a0 offset:1024
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i32 asm "; def $0", "=^VA"()
   %a0 = call i32 asm "; def $0", "=a"()
   store i32 %av0, ptr addrspace(3) %gep.0
@@ -413,8 +413,8 @@ define void @ds_write2st64_b32_a_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ds_write_b32 v0, v1 offset:1024
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i32 asm "; def $0", "=a"()
   %av1 = call i32 asm "; def $0", "=^VA"()
   store i32 %a0, ptr addrspace(3) %gep.0
@@ -543,8 +543,8 @@ define void @ds_write2_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_read_b32 v40, a3 ; Reload Reuse
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i32 asm sideeffect "; def $0", "=^VA"()
   %av1 = call i32 asm sideeffect "; def $0", "=^VA"()
   %vgpr.def = call { <32 x i32>, <32 x i32> }  asm sideeffect "; def $0", "=${v[0:31]},=${v[32:63]}"()
@@ -571,12 +571,12 @@ define void @ds_write2_b64_a_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def a[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:40
-; GCN-NEXT:    ds_write_b64 v0, a[2:3] offset:96
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:80
+; GCN-NEXT:    ds_write_b64 v0, a[2:3] offset:192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %a0 = call i64 asm "; def $0", "=a"()
   %a1 = call i64 asm "; def $0", "=a"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -594,12 +594,12 @@ define void @ds_write2_b64_a_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:40
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:96
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:80
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %a0 = call i64 asm "; def $0", "=a"()
   %v0 = call i64 asm "; def $0", "=v"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -617,12 +617,12 @@ define void @ds_write2_b64_v_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:40
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:96
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:80
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %v0 = call i64 asm "; def $0", "=v"()
   %a0 = call i64 asm "; def $0", "=a"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -640,11 +640,11 @@ define void @ds_write2_b64_v_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:5 offset1:12
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %v0 = call i64 asm "; def $0", "=v"()
   %v1 = call i64 asm "; def $0", "=v"()
   store i64 %v0, ptr addrspace(3) %gep.0
@@ -662,11 +662,11 @@ define void @ds_write2_b64_av_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:5 offset1:12
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i64 asm "; def $0", "=^VA"()
   %av1 = call i64 asm "; def $0", "=^VA"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -685,11 +685,11 @@ define void @ds_write2_b64_av_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:5 offset1:12
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 24
   %av0 = call i64 asm "; def $0", "=^VA"()
   %v0 = call i64 asm "; def $0", "=v"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -708,11 +708,11 @@ define void @ds_write2_b64_v_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:5 offset1:12
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 24
   %v0 = call i64 asm "; def $0", "=v"()
   %av0 = call i64 asm "; def $0", "=^VA"()
   store i64 %v0, ptr addrspace(3) %gep.0
@@ -731,12 +731,12 @@ define void @ds_write2_b64_av_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def a[0:1]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:40
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:96
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:80
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 24
   %av0 = call i64 asm "; def $0", "=^VA"()
   %a0 = call i64 asm "; def $0", "=a"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -755,12 +755,12 @@ define void @ds_write2_b64x_a_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:40
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:96
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:80
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:192
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i64 0, i64 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i64 0, i64 24
   %a0 = call i64 asm "; def $0", "=a"()
   %av0 = call i64 asm "; def $0", "=^VA"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -778,12 +778,12 @@ define void @ds_write2st64_b64_a_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def a[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:256
-; GCN-NEXT:    ds_write_b64 v0, a[2:3] offset:1024
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:512
+; GCN-NEXT:    ds_write_b64 v0, a[2:3] offset:2048
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i64 asm "; def $0", "=a"()
   %a1 = call i64 asm "; def $0", "=a"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -801,12 +801,12 @@ define void @ds_write2st64_b64_a_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:256
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:1024
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:512
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:2048
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i64 asm "; def $0", "=a"()
   %v0 = call i64 asm "; def $0", "=v"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -824,12 +824,12 @@ define void @ds_write2st64_b64_v_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def a[0:1]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:256
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:1024
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:512
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:2048
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i64 asm "; def $0", "=a"()
   %a0 = call i64 asm "; def $0", "=v"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -847,11 +847,11 @@ define void @ds_write2st64_b64_v_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:32 offset1:128
+; GCN-NEXT:    ds_write2st64_b64 v0, v[2:3], v[4:5] offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i64 asm "; def $0", "=v"()
   %v1 = call i64 asm "; def $0", "=v"()
   store i64 %v0, ptr addrspace(3) %gep.0
@@ -869,11 +869,11 @@ define void @ds_write2st64_b64_av_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:32 offset1:128
+; GCN-NEXT:    ds_write2st64_b64 v0, v[2:3], v[4:5] offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i64 asm "; def $0", "=^VA"()
   %av1 = call i64 asm "; def $0", "=^VA"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -891,11 +891,11 @@ define void @ds_write2st64_b64_av_v(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:32 offset1:128
+; GCN-NEXT:    ds_write2st64_b64 v0, v[2:3], v[4:5] offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i64 asm "; def $0", "=^VA"()
   %v0 = call i64 asm "; def $0", "=v"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -913,11 +913,11 @@ define void @ds_write2st64_b64_v_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[4:5]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:32 offset1:128
+; GCN-NEXT:    ds_write2st64_b64 v0, v[2:3], v[4:5] offset0:1 offset1:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %v0 = call i64 asm "; def $0", "=v"()
   %av0 = call i64 asm "; def $0", "=^VA"()
   store i64 %v0, ptr addrspace(3) %gep.0
@@ -935,12 +935,12 @@ define void @ds_write2st64_b64_av_a(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def a[0:1]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:256
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:1024
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:512
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:2048
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %av0 = call i64 asm "; def $0", "=^VA"()
   %a0 = call i64 asm "; def $0", "=a"()
   store i64 %av0, ptr addrspace(3) %gep.0
@@ -958,12 +958,12 @@ define void @ds_write2st64_b64_a_av(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v[2:3]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:256
-; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:1024
+; GCN-NEXT:    ds_write_b64 v0, a[0:1] offset:512
+; GCN-NEXT:    ds_write_b64 v0, v[2:3] offset:2048
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 64
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 256
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 64
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 256
   %a0 = call i64 asm "; def $0", "=a"()
   %av0 = call i64 asm "; def $0", "=^VA"()
   store i64 %a0, ptr addrspace(3) %gep.0
@@ -1029,7 +1029,7 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    v_accvgpr_read_b32 v5, a5
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:5 offset1:12
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v21 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, v22 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, v23 ; Reload Reuse
@@ -1094,8 +1094,8 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_read_b32 v40, a1 ; Reload Reuse
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 10
-  %gep.1 = getelementptr inbounds [512 x float], ptr addrspace(3) %lds, i32 0, i32 24
+  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 10
+  %gep.1 = getelementptr inbounds [512 x i64], ptr addrspace(3) %lds, i32 0, i32 24
   %av0 = call i64 asm sideeffect "; def $0", "=^VA"()
   %av1 = call i64 asm sideeffect "; def $0", "=^VA"()
   %vgpr.def = call { <32 x i32>, <32 x i32> }  asm sideeffect "; def $0", "=${v[0:31]},=${v[32:63]}"()
