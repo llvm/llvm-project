@@ -184,8 +184,10 @@ def : PatFPSetcc<SETUO,  FCMP_CUN_D,  FPR64>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_D,  FPR64>;
 
 defm : PatFPBrcond<SETOEQ, FCMP_CEQ_D, FPR64>;
+defm : PatFPBrcond<SETEQ,  FCMP_CEQ_D, FPR64>;
 defm : PatFPBrcond<SETOLT, FCMP_CLT_D, FPR64>;
 defm : PatFPBrcond<SETOLE, FCMP_CLE_D, FPR64>;
+defm : PatFPBrcond<SETLE,  FCMP_CLE_D, FPR64>;
 defm : PatFPBrcond<SETONE, FCMP_CNE_D, FPR64>;
 defm : PatFPBrcond<SETO,   FCMP_COR_D, FPR64>;
 defm : PatFPBrcond<SETUEQ, FCMP_CUEQ_D, FPR64>;
