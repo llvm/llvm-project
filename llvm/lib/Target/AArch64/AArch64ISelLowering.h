@@ -850,8 +850,6 @@ private:
   void ReplaceExtractSubVectorResults(SDNode *N,
                                       SmallVectorImpl<SDValue> &Results,
                                       SelectionDAG &DAG) const;
-  void ReplaceFcvtFpToI16Intrinsic(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                                   SelectionDAG &DAG, unsigned Opcode) const;
   void ReplaceGetActiveLaneMaskResults(SDNode *N,
                                        SmallVectorImpl<SDValue> &Results,
                                        SelectionDAG &DAG) const;

@@ -5,24 +5,17 @@
 ; Should be merged with fp16_intrinsic_scalar_1op.ll once there is
 ; support in GlSel.
 
-declare i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half)
+declare i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtas.i16.f16(half)
+declare i16 @llvm.aarch64.neon.fcvtau.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtms.i16.f16(half)
+declare i16 @llvm.aarch64.neon.fcvtmu.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtns.i16.f16(half)
+declare i16 @llvm.aarch64.neon.fcvtnu.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtps.i16.f16(half)
+declare i16 @llvm.aarch64.neon.fcvtpu.i16.f16(half)
 
-
-define i16 @fcvtzu_intrinsic_i16(half %a) {
-; CHECK-LABEL: fcvtzu_intrinsic_i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu h0, h0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
-entry:
-  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
-  ret i16 %fcvt
-}
 
 define i16 @fcvtzs_intrinsic_i16(half %a) {
 ; CHECK-LABEL: fcvtzs_intrinsic_i16:
@@ -32,6 +25,17 @@ define i16 @fcvtzs_intrinsic_i16(half %a) {
 ; CHECK-NEXT:    ret
 entry:
   %fcvt = tail call i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
+define i16 @fcvtzu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtzu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
   ret i16 %fcvt
 }
 
@@ -46,6 +50,17 @@ entry:
   ret i16 %fcvt
 }
 
+define i16 @fcvtau_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtau_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtau.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define i16 @fcvtms_intrinsic_i16(half %a) {
 ; CHECK-LABEL: fcvtms_intrinsic_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -54,6 +69,17 @@ define i16 @fcvtms_intrinsic_i16(half %a) {
 ; CHECK-NEXT:    ret
 entry:
   %fcvt = tail call i16 @llvm.aarch64.neon.fcvtms.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
+define i16 @fcvtmu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtmu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtmu.i16.f16(half %a)
   ret i16 %fcvt
 }
 
@@ -68,6 +94,17 @@ entry:
   ret i16 %fcvt
 }
 
+define i16 @fcvtnu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtnu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtnu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtnu.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define i16 @fcvtps_intrinsic_i16(half %a) {
 ; CHECK-LABEL: fcvtps_intrinsic_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -76,5 +113,16 @@ define i16 @fcvtps_intrinsic_i16(half %a) {
 ; CHECK-NEXT:    ret
 entry:
   %fcvt = tail call i16 @llvm.aarch64.neon.fcvtps.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
+define i16 @fcvtpu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtpu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtpu.i16.f16(half %a)
   ret i16 %fcvt
 }

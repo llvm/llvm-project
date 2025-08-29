@@ -1290,8 +1290,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i16, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i16, Custom);
-
-      setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
     } else {
       // when AArch64 doesn't have fullfp16 support, promote the input
       // to i32 first.
@@ -22191,6 +22189,17 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
                      Zero);
 }
 
+static SDValue tryCombineNeonFcvtFP16ToI16(SDNode *N, unsigned Opcode,
+                                           SelectionDAG &DAG) {
+  if (N->getValueType(0).getScalarType() != MVT::i16)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue CVT = DAG.getNode(Opcode, DL, MVT::f32, N->getOperand(1));
+  SDValue Bitcast = DAG.getBitcast(MVT::i32, CVT);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Bitcast);
+}
+
 // If a merged operation has no inactive lanes we can relax it to a predicated
 // or unpredicated operation, which potentially allows better isel (perhaps
 // using immediate forms) or relaxing register reuse requirements.
@@ -22444,6 +22453,26 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_uabd:
     return DAG.getNode(ISD::ABDU, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtas:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtau:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtms:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtmu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtns:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtnu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtps:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtpu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPU_HALF, DAG);
   case Intrinsic::aarch64_crc32b:
   case Intrinsic::aarch64_crc32cb:
     return tryCombineCRC32(0xff, N, DAG);
@@ -27804,18 +27833,6 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Half));
 }
 
-void AArch64TargetLowering::ReplaceFcvtFpToI16Intrinsic(
-    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG,
-    unsigned Opcode) const {
-  if (N->getValueType(0).getScalarType() != MVT::i16)
-    return;
-
-  SDLoc DL(N);
-  SDValue CVT = DAG.getNode(Opcode, DL, MVT::f32, N->getOperand(1));
-  SDValue Bitcast = DAG.getBitcast(MVT::i32, CVT);
-  Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Bitcast));
-}
-
 void AArch64TargetLowering::ReplaceGetActiveLaneMaskResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   assert((Subtarget->hasSVE2p1() ||
@@ -28304,30 +28321,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
       SDLoc DL(N);
       auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtzs: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTZS_HALF);
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtzu: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTZU_HALF);
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtas: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTAS_HALF);
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtms: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTMS_HALF);
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtns: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTNS_HALF);
-      return;
-    }
-    case Intrinsic::aarch64_neon_fcvtps: {
-      ReplaceFcvtFpToI16Intrinsic(N, Results, DAG, AArch64ISD::FCVTPS_HALF);
       return;
     }
     }
