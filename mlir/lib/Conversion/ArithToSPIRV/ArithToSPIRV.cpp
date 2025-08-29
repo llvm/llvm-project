@@ -625,16 +625,9 @@ struct IndexCastIndexI1Pattern final
     if (srcType != indexType || !op.getType().isInteger(1))
       return failure();
 
-    Type dstType = rewriter.getI1Type();
     Location loc = op.getLoc();
-    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
-    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     Value zeroIdx = spirv::ConstantOp::getZero(srcType, loc, rewriter);
-    auto isZero = spirv::IEqualOp::create(rewriter, loc, dstType, zeroIdx,
-                                          adaptor.getOperands().front());
-    // spriv.IEqual outputs i32, spirv.Select is used to truncate to i1:
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, isZero, zero,
-                                                 one);
+    rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, rewriter.getI1Type(), zeroIdx, adaptor.getOperands().front());
     return success();
   }
 };

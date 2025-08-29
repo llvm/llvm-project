@@ -736,11 +736,8 @@ func.func @index_castui4(%arg0: index) {
 
 // CHECK-LABEL: index_castindexi1
 func.func @index_castindexi1(%arg0 : index) {
-  // CHECK: %[[FALSE:.+]] = spirv.Constant false
-  // CHECK: %[[TRUE:.+]] = spirv.Constant true
   // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
-  // CHECK: %[[IS_ZERO:.+]] = spirv.IEqual %[[ZERO]], %{{.+}} : i32
-  // CHECK: spirv.Select %[[IS_ZERO]], %[[FALSE]], %[[TRUE]] : i1, i1
+  // CHECK: spirv.INotEqual %[[ZERO]], %{{.+}} : i32
   %0 = arith.index_cast %arg0 : index to i1
   return
 }
