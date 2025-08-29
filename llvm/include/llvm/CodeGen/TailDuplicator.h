@@ -121,9 +121,10 @@ private:
                      SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                      SmallVectorImpl<MachineInstr *> &Copies,
                      SmallVectorImpl<MachineBasicBlock *> *CandidatePtr);
-  void appendCopies(MachineBasicBlock *MBB,
-                 SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
-                 SmallVectorImpl<MachineInstr *> &Copies);
+  void
+  appendCopies(MachineBasicBlock *MBB, MachineBasicBlock *SuccMBB,
+               SmallVectorImpl<std::pair<Register, RegSubRegPair>> &CopyInfos,
+               SmallVectorImpl<MachineInstr *> &Copies);
 
   void removeDeadBlock(
       MachineBasicBlock *MBB,
