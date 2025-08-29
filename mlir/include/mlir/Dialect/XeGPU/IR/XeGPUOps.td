@@ -1242,8 +1242,8 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
       the IR is lowered to WI level because that is the end result of all distributions.
     }];
     let arguments = (ins XeGPU_VectorType: $source,
-                         XeGPU_LayoutAttr: $input_layout,
-                         XeGPU_LayoutAttr: $target_layout);
+                         DistributeLayoutAttr: $input_layout,
+                         DistributeLayoutAttr: $target_layout);
     let results = (outs XeGPU_VectorType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
