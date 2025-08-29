@@ -1411,11 +1411,11 @@ def HasVendorXMIPSCBOP
                          "'Xmipscbop' (MIPS hardware prefetch)">;
 def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
-def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS extensions">;
+def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
 def HasVendorXMIPSEXECTL
     : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
-                         "'Xmipsexectl' (Mips extensions)">;
+                         "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
