@@ -306,6 +306,22 @@ INTERCEPTOR(long long, atoll, const char *nptr) {
   return result;
 }
 
+#if SANITIZER_INTERCEPT_MEMCCPY
+INTERCEPTOR(void *, memccpy, void *dest, const void *src, int c, usize size) {
+  void *ctx;
+  MEMPROF_INTERCEPTOR_ENTER(ctx, memccpy);
+  if (UNLIKELY(!memprof_inited))
+    return internal_memccpy(dest, src, c, size);
+  ENSURE_MEMPROF_INITED();
+  void *res = REAL(memccpy)(dest, src, c, size);
+  if (res != nullptr)
+    size = static_cast<char *>(res) - static_cast<char *>(dest);
+  MEMPROF_READ_RANGE(src, size);
+  MEMPROF_WRITE_RANGE(dest, size);
+  return res;
+}
+#endif
+
 // ---------------------- InitializeMemprofInterceptors ---------------- {{{1
 namespace __memprof {
 void InitializeMemprofInterceptors() {
@@ -332,6 +348,10 @@ void InitializeMemprofInterceptors() {
   // Intercept threading-related functions
   MEMPROF_INTERCEPT_FUNC(pthread_create);
   MEMPROF_INTERCEPT_FUNC(pthread_join);
+
+#if SANITIZER_INTERCEPT_MEMCCPY
+  MEMPROF_INTERCEPT_FUNC(memccpy);
+#endif
 
   InitializePlatformInterceptors();
 
