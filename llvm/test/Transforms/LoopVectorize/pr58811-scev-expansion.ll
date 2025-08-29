@@ -13,7 +13,7 @@ define void @test1_pr58811() {
 ; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], [[LOOP_1]] ], [ [[TMP0]], [[LOOP_1_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], [[LOOP_1]] ], [ [[IV_1_PH]], [[LOOP_1_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], [[LOOP_1]] ], [ 0, [[LOOP_1_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_2]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[IV_2]], -1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_2]], [[IV_1]]
 ; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
@@ -107,7 +107,7 @@ define void @test2_pr58811() {
 ; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], [[LOOP_2]] ], [ [[TMP0]], [[LOOP_1_HEADER]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[P_1]], [[LOOP_1_HEADER]] ], [ [[ADD101:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ 0, [[LOOP_1_HEADER]] ], [ [[SUB93:%.*]], [[LOOP_2]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_3]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[IV_3]], -1
 ; CHECK-NEXT:    [[SUB93]] = add i32 [[IV_3]], 1
 ; CHECK-NEXT:    [[ADD101]] = add i32 [[IV_3]], [[IV_2]]
 ; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
