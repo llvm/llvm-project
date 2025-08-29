@@ -251,6 +251,7 @@ __m128i test_mm_roti_epi32(__m128i a) {
   // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> splat (i32 226))
   return _mm_roti_epi32(a, -30);
 }
+TEST_CONSTEXPR(match_v4si(_mm_roti_epi32(((__m128i)(__v4si){1, -2, 3, -4}), 5), 32, -33, 96, -97));
 
 __m128i test_mm_roti_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi64

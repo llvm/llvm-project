@@ -5666,6 +5666,7 @@ __m128i test_mm_rol_epi32(__m128i __A) {
   // CHECK: @llvm.fshl.v4i32
   return _mm_rol_epi32(__A, 5); 
 }
+TEST_CONSTEXPR(match_v4si(_mm_rol_epi32(((__m128i)(__v4si){1, -2, 3, -4}), 5), 32, -33, 96, -97));
 
 __m128i test_mm_mask_rol_epi32(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_rol_epi32
