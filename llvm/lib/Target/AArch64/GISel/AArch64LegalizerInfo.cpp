@@ -879,8 +879,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2s32, v2s32},
                  {v4s32, v4s32},
                  {v2s64, v2s64}})
-      .legalFor(HasFP16,
-                {{s32, s16}, {s64, s16}, {v4s16, v4s16}, {v8s16, v8s16}})
+      .legalFor(
+          HasFP16,
+          {{s16, s16}, {s32, s16}, {s64, s16}, {v4s16, v4s16}, {v8s16, v8s16}})
       // Handle types larger than i64 by scalarizing/lowering.
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
