@@ -143,7 +143,7 @@ let Predicates = [HasVendorXMIPSEXECTL], DecoderNamespace = "XMIPS" in {
   def MIPS_PAUSE : MIPSExtInst_ri<0b000101, "mips.pause">;
 }
 
-let Predicates = [HasVendorXMIPSCBOP] ,DecoderNamespace = "XMIPS" in {
+let Predicates = [HasVendorXMIPSCBOP], DecoderNamespace = "XMIPS" in {
   def MIPS_PREF : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
                                     "mips.pref", "$hint, ${imm9}(${rs1})">,
                    Sched<[]>;
