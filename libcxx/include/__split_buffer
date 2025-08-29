@@ -73,7 +73,9 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __front_cap() _NOEXCEPT { return __front_cap_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT { return __front_cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT {
+    return __front_cap_;
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -101,8 +103,12 @@ public:
 
   // Returns the sentinel object directly. Should be used in conjunction with automatic type deduction,
   // not explicit types.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT { return __end_; }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT { return __back_cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT {
+    return __end_;
+  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT {
+    return __back_cap_;
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_data(pointer __new_first) _NOEXCEPT {
     __front_cap_ = __new_first;
@@ -121,7 +127,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(pointer __new_end) _NOEXCEPT {
-    _LIBCPP_ASSERT_INTERNAL(__data_ <= __new_end, "__new_end cannot precede __data_");
+    _LIBCPP_ASSERT_INTERNAL(__front_cap_ <= __new_end, "__new_end cannot precede __front_cap_");
     __end_ = __new_end;
   }
 
@@ -163,25 +169,25 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __front_cap_  = nullptr;
-    __begin_ = nullptr;
-    __end_   = nullptr;
-    __back_cap_   = nullptr;
+    __front_cap_ = nullptr;
+    __begin_     = nullptr;
+    __end_       = nullptr;
+    __back_cap_  = nullptr;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_pointer_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __front_cap_  = __other.__front_cap_;
-    __begin_ = __other.__begin_;
-    __end_   = __other.__end_;
-    __back_cap_   = __other.__back_cap_;
+    __front_cap_ = __other.__front_cap_;
+    __begin_     = __other.__begin_;
+    __end_       = __other.__end_;
+    __back_cap_  = __other.__back_cap_;
   }
 
 private:
-  pointer __front_cap_  = nullptr;
-  pointer __begin_ = nullptr;
-  pointer __end_   = nullptr;
+  pointer __front_cap_ = nullptr;
+  pointer __begin_     = nullptr;
+  pointer __end_       = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __back_cap_ = nullptr, allocator_type, __alloc_);
 
   template <class, class, class>
@@ -213,7 +219,9 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __front_cap() _NOEXCEPT { return __front_cap_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT { return __front_cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __front_cap() const _NOEXCEPT {
+    return __front_cap_;
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -237,8 +245,12 @@ public:
 
   // Returns the sentinel object directly. Should be used in conjunction with automatic type deduction,
   // not explicit types.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT { return __size_; }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT { return __cap_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_sentinel() const _NOEXCEPT {
+    return __size_;
+  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __raw_capacity() const _NOEXCEPT {
+    return __cap_;
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_data(pointer __new_first) _NOEXCEPT {
     __front_cap_ = __new_first;
@@ -263,7 +275,7 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(pointer __new_end) _NOEXCEPT {
-    _LIBCPP_ASSERT_INTERNAL(__data_ <= __new_end, "__new_end cannot precede __data_");
+    _LIBCPP_ASSERT_INTERNAL(__front_cap_ <= __new_end, "__new_end cannot precede __front_cap_");
     __size_ += __new_end - end();
   }
 
@@ -297,7 +309,7 @@ public:
 
   template <class _Data2>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(_Data2& __other) _NOEXCEPT {
-    std::swap(__front_cap_, __other.__data_);
+    std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
     std::swap(__size_, __other.__size_);
@@ -309,26 +321,26 @@ public:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
-    __front_cap_  = nullptr;
-    __begin_ = nullptr;
-    __size_  = 0;
-    __cap_   = 0;
+    __front_cap_ = nullptr;
+    __begin_     = nullptr;
+    __size_      = 0;
+    __cap_       = 0;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __copy_without_alloc(__split_buffer_size_layout const& __other)
       _NOEXCEPT_(is_nothrow_copy_assignable<pointer>::value) {
-    __front_cap_  = __other.__front_cap_;
-    __begin_ = __other.__begin_;
-    __cap_   = __other.__cap_;
-    __size_  = __other.__size_;
+    __front_cap_ = __other.__front_cap_;
+    __begin_     = __other.__begin_;
+    __cap_       = __other.__cap_;
+    __size_      = __other.__size_;
   }
 
 private:
-  pointer __front_cap_   = nullptr;
-  pointer __begin_  = nullptr;
-  size_type __size_ = 0;
-  size_type __cap_  = 0;
+  pointer __front_cap_ = nullptr;
+  pointer __begin_     = nullptr;
+  size_type __size_    = 0;
+  size_type __cap_     = 0;
   _LIBCPP_NO_UNIQUE_ADDRESS allocator_type __alloc_;
 
   template <class, class, class>
