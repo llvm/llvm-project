@@ -11,17 +11,17 @@
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 0
-# CHECK-ALIAS: qc.muliadd    a0, a1, 0
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 0
 # CHECK-ENC: encoding: [0x8a,0x21]
 qc.c.muliadd x10, x11, 0
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 31
-# CHECK-ALIAS: qc.muliadd    a0, a1, 31
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 31
 # CHECK-ENC: encoding: [0xea,0x3d]
 qc.c.muliadd x10, x11, 31
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 16
-# CHECK-ALIAS: qc.muliadd    a0, a1, 16
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 16
 # CHECK-ENC: encoding: [0xaa,0x21]
 qc.c.muliadd x10, x11, 16
 
@@ -54,21 +54,21 @@ qc.shladd x10, x11, x12, 31
 # Check that compress pattern for qc.muliadd works
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 16
-# CHECK-ALIAS: qc.muliadd    a0, a1, 16
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 16
 # CHECK-ENC: encoding: [0xaa,0x21]
 qc.muliadd x10, x11, 16
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 2
-# CHECK-ALIAS: qc.muliadd    a0, a1, 2
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 2
 # CHECK-ENC: encoding: [0x8a,0x25]
 sh1add x10, x11, x10
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 4
-# CHECK-ALIAS: qc.muliadd    a0, a1, 4
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 4
 # CHECK-ENC: encoding: [0x8a,0x29]
 sh2add x10, x11, x10
 
 # CHECK-NOALIAS: qc.c.muliadd    a0, a1, 8
-# CHECK-ALIAS: qc.muliadd    a0, a1, 8
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 8
 # CHECK-ENC: encoding: [0x8a,0x31]
 sh3add x10, x11, x10
