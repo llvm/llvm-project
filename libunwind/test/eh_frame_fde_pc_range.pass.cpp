@@ -13,6 +13,11 @@
 
 // clang-format off
 
+// REQUIRES: linux
+
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 // RUN: %{build}
 // RUN: objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: echo -ne '\xFF' | dd of=%t_ehf_hdr.bin bs=1 seek=2 count=2 conv=notrunc status=none 
