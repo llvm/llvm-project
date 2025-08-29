@@ -1,6 +1,6 @@
 # REQUIRES: system-linux
 
-## Check that BOLT correctly prints generates debug line comments for DWARF-5.
+## Check that BOLT correctly prints debug line comments for DWARF-5.
 
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
