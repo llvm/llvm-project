@@ -749,31 +749,27 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char, "
-                "std::__[[:alnum:]]+::char_traits<char>, "
-                "std::__[[:alnum:]]+::allocator<char> >$",
+                "std::__[[:alnum:]]+::char_traits<char>,.*>$",
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderASCII,
                 "std::string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<unsigned char, "
-                "std::__[[:alnum:]]+::char_traits<unsigned char>, "
-                "std::__[[:alnum:]]+::allocator<unsigned char> >$",
+                "std::__[[:alnum:]]+::char_traits<unsigned char>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
                 "std::u16string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char16_t, "
-                "std::__[[:alnum:]]+::char_traits<char16_t>, "
-                "std::__[[:alnum:]]+::allocator<char16_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char16_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
                 "std::u32string summary provider",
                 "^std::__[[:alnum:]]+::basic_string<char32_t, "
-                "std::__[[:alnum:]]+::char_traits<char32_t>, "
-                "std::__[[:alnum:]]+::allocator<char32_t> >$",
+                "std::__[[:alnum:]]+::char_traits<char32_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
@@ -784,8 +780,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxWStringSummaryProvider,
                 "std::wstring summary provider",
                 "^std::__[[:alnum:]]+::basic_string<wchar_t, "
-                "std::__[[:alnum:]]+::char_traits<wchar_t>, "
-                "std::__[[:alnum:]]+::allocator<wchar_t> >$",
+                "std::__[[:alnum:]]+::char_traits<wchar_t>,.*>$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
