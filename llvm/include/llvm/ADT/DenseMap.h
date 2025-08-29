@@ -578,7 +578,6 @@ private:
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
       LookupBucketFor(Lookup, TheBucket);
-      NumBuckets = getNumBuckets();
     } else if (LLVM_UNLIKELY(NumBuckets -
                                  (NewNumEntries + getNumTombstones()) <=
                              NumBuckets / 8)) {
