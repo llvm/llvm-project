@@ -18,6 +18,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -356,6 +357,16 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
         convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
         flagAttr.getKey().getValue(), valueMetadata);
   }
+}
+
+static llvm::DILocalScope *
+getLocalScopeFromLoc(llvm::IRBuilderBase &builder, Location loc,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  if (auto scopeLoc = loc->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
+    if (auto *localScope = llvm::dyn_cast<llvm::DILocalScope>(
+            moduleTranslation.translateDebugInfo(scopeLoc.getMetadata())))
+      return localScope;
+  return builder.GetInsertBlock()->getParent()->getSubprogram();
 }
 
 static LogicalResult
