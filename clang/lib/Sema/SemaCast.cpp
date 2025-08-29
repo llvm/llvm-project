@@ -863,7 +863,7 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
-  const RecordType *DestRecord = DestPointee->getAs<RecordType>();
+  const auto *DestRecord = DestPointee->getAsCanonical<RecordType>();
   if (DestPointee->isVoidType()) {
     assert(DestPointer && "Reference to void is not possible");
   } else if (DestRecord) {
@@ -910,7 +910,7 @@ void CastOperation::CheckDynamicCast() {
     SrcPointee = SrcType;
   }
 
-  const RecordType *SrcRecord = SrcPointee->getAs<RecordType>();
+  const auto *SrcRecord = SrcPointee->getAsCanonical<RecordType>();
   if (SrcRecord) {
     if (Self.RequireCompleteType(OpRange.getBegin(), SrcPointee,
                                  diag::err_bad_cast_incomplete,
@@ -1484,8 +1484,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
     if (SrcType->isIntegralOrEnumerationType()) {
       // [expr.static.cast]p10 If the enumeration type has a fixed underlying
       // type, the value is first converted to that type by integral conversion
-      const EnumType *Enum = DestType->castAs<EnumType>();
-      const EnumDecl *ED = Enum->getOriginalDecl()->getDefinitionOrSelf();
+      const auto *ED = DestType->castAsEnumDecl();
       Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
                  ? CK_IntegralToBoolean
                  : CK_IntegralCast;
@@ -3095,7 +3094,8 @@ void CastOperation::CheckCStyleCast() {
 
   if (!DestType->isScalarType() && !DestType->isVectorType() &&
       !DestType->isMatrixType()) {
-    if (const RecordType *DestRecordTy = DestType->getAs<RecordType>()) {
+    if (const RecordType *DestRecordTy =
+            DestType->getAsCanonical<RecordType>()) {
       if (Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
         // GCC struct/union extension: allow cast to self.
         Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)
@@ -3171,7 +3171,12 @@ void CastOperation::CheckCStyleCast() {
       SrcExpr = ExprError();
       return;
     }
-    if (!DestType->isNullPtrType()) {
+    if (DestType->isBooleanType()) {
+      SrcExpr = ImplicitCastExpr::Create(
+          Self.Context, DestType, CK_PointerToBoolean, SrcExpr.get(), nullptr,
+          VK_PRValue, Self.CurFPFeatureOverrides());
+
+    } else if (!DestType->isNullPtrType()) {
       // Implicitly cast from the null pointer type to the type of the
       // destination.
       CastKind CK = DestType->isPointerType() ? CK_NullToPointer : CK_BitCast;

@@ -39,15 +39,19 @@ namespace llvm {
 // The `level` argument can be a literal integer, or a macro that evaluates to
 // an integer.
 //
+// An optional `type` argument can be provided to control the debug type. The
+// default type is DEBUG_TYPE. The `type` argument can be a literal string, or a
+// macro that evaluates to a string.
 #define LDBG(...) _GET_LDBG_MACRO(__VA_ARGS__)(__VA_ARGS__)
 
 // Helper macros to choose the correct macro based on the number of arguments.
-#define LDBG_FUNC_CHOOSER(_f1, _f2, ...) _f2
+#define LDBG_FUNC_CHOOSER(_f1, _f2, _f3, ...) _f3
 #define LDBG_FUNC_RECOMPOSER(argsWithParentheses)                              \
   LDBG_FUNC_CHOOSER argsWithParentheses
 #define LDBG_CHOOSE_FROM_ARG_COUNT(...)                                        \
-  LDBG_FUNC_RECOMPOSER((__VA_ARGS__, LDBG_LOG_LEVEL, ))
-#define LDBG_NO_ARG_EXPANDER() , LDBG_LOG_LEVEL_1
+  LDBG_FUNC_RECOMPOSER(                                                        \
+      (__VA_ARGS__, LDBG_LOG_LEVEL_WITH_TYPE, LDBG_LOG_LEVEL, ))
+#define LDBG_NO_ARG_EXPANDER() , , LDBG_LOG_LEVEL_1
 #define _GET_LDBG_MACRO(...)                                                   \
   LDBG_CHOOSE_FROM_ARG_COUNT(LDBG_NO_ARG_EXPANDER __VA_ARGS__())
 
@@ -55,6 +59,12 @@ namespace llvm {
 #define LDBG_LOG_LEVEL(LEVEL)                                                  \
   DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), LEVEL, DEBUG_TYPE)
 #define LDBG_LOG_LEVEL_1() LDBG_LOG_LEVEL(1)
+// This macro is a helper when LDBG() is called with 2 arguments.
+// In this case we want to allow the order of the arguments to be swapped.
+// We rely on the fact that the `level` argument is an integer, and the `type`
+// is a string and dispatch to a C++ API that is overloaded.
+#define LDBG_LOG_LEVEL_WITH_TYPE(LEVEL_OR_TYPE, TYPE_OR_LEVEL)                 \
+  DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), (LEVEL_OR_TYPE), (TYPE_OR_LEVEL))
 
 // We want the filename without the full path. We are using the __FILE__ macro
 // and a constexpr function to strip the path prefix. We can avoid the frontend
@@ -171,6 +181,12 @@ computePrefix(const char *DebugType, const char *File, int Line, int Level) {
   OsPrefix << File << ":" << Line << " ";
   return OsPrefix.str();
 }
+/// Overload allowing to swap the order of the DebugType and Level arguments.
+static LLVM_ATTRIBUTE_UNUSED std::string
+computePrefix(int Level, const char *File, int Line, const char *DebugType) {
+  return computePrefix(DebugType, File, Line, Level);
+}
+
 } // end namespace impl
 #else
 // As others in Debug, When compiling without assertions, the -debug-* options
