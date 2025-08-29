@@ -970,7 +970,10 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
   }];
 
   let dependentDialects = [
-    "NVVM::NVVMDialect",
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "NVVM::NVVMDialect"
   ];
 }
 

@@ -396,11 +396,6 @@ struct ConvertNVGPUToNVVMPass
     : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
   using Base::Base;
 
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, LLVM::LLVMDialect, NVVM::NVVMDialect,
-                    arith::ArithDialect>();
-  }
-
   void runOnOperation() override {
     LowerToLLVMOptions options(&getContext());
     RewritePatternSet patterns(&getContext());
