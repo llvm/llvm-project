@@ -3439,8 +3439,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
+    // Demand any elements from the subvector and the remainder from the src it
+    // is inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
     uint64_t Idx = Op.getConstantOperandVal(2);
@@ -3448,6 +3448,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+
+    // If none of the sub operand elements are demanded, bypass the insert.
+    if (!DemandedSubElts)
+      return TLO.CombineTo(Op, Src);
 
     APInt SubUndef, SubZero;
     if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, SubUndef, SubZero, TLO,
