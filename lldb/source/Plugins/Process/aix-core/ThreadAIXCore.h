@@ -49,6 +49,10 @@ struct AIXSigInfo {
                              const lldb_private::ArchSpec &arch,
                              const lldb_private::UnixSignals &unix_signals);
 
+  void Parse(const AIXCORE::AIXCore32Header data,
+                             const lldb_private::ArchSpec &arch,
+                             const lldb_private::UnixSignals &unix_signals);
+
   std::string
   GetDescription(const lldb_private::UnixSignals &unix_signals) const;
 

@@ -126,8 +126,6 @@ static bool AIXCoreHeaderCheckFromMagic(uint32_t magic) {
     bool ret = false;
     switch (magic) {
         case AIXCORE32: 
-            LLDB_LOGF(log, "ObjectFileAIXCore: 32-bit not supported");
-            break;
         case AIXCORE64:
             m_is_core = true;
             ret = true; 

@@ -54,28 +54,40 @@ void ProcessAIXCore::Terminate() {
 }
 
 lldb::ProcessSP ProcessAIXCore::CreateInstance(lldb::TargetSP target_sp,
-                                               lldb::ListenerSP listener_sp,
-                                               const FileSpec *crash_file,
-                                               bool can_connect) {
-  lldb::ProcessSP process_sp;
-  if (crash_file && !can_connect) {
-      const size_t header_size = sizeof(AIXCORE::AIXCore64Header);
+        lldb::ListenerSP listener_sp,
+        const FileSpec *crash_file,
+        bool can_connect) {
+    lldb::ProcessSP process_sp;
+    if (crash_file && !can_connect) {
+        const size_t header_size = 
+            std::max(sizeof(AIXCORE::AIXCore64Header), sizeof(AIXCORE::AIXCore32Header));
 
-      auto data_sp = FileSystem::Instance().CreateDataBuffer(
-              crash_file->GetPath(), header_size, 0);
+        auto data_sp = FileSystem::Instance().CreateDataBuffer(
+                crash_file->GetPath(), header_size, 0);
 
-      if (data_sp && data_sp->GetByteSize() == header_size) {
-          AIXCORE::AIXCore64Header aixcore_header;
-          DataExtractor data(data_sp, lldb::eByteOrderBig, 4);
-          lldb::offset_t data_offset = 0;
-          if(aixcore_header.ParseCoreHeader(data, &data_offset)) {
-              process_sp = std::make_shared<ProcessAIXCore>(target_sp, listener_sp,
-                      *crash_file);
-          }
-      }
+        if (data_sp && data_sp->GetByteSize()) {
+            DataExtractor data(data_sp, lldb::eByteOrderBig, 4);
+            lldb::offset_t offset = 0;
+            offset += 4; // Skipping to the coredump version
+            uint32_t magic = data.GetU32(&offset);
+            if (magic == 0xfeeddb1) {
+                AIXCORE::AIXCore32Header aixcore_header;
+                if(aixcore_header.ParseCoreHeader(data, &offset)) {
+                    process_sp = std::make_shared<ProcessAIXCore>(target_sp, listener_sp,
+                            *crash_file);
+                }
+            }
+            else if (magic == 0xfeeddb2) {
+                AIXCORE::AIXCore64Header aixcore_header;
+                if(aixcore_header.ParseCoreHeader(data, &offset)) {
+                    process_sp = std::make_shared<ProcessAIXCore>(target_sp, listener_sp,
+                            *crash_file);
+                }
+            }
+        }
 
-  }
-  return process_sp;
+    }
+    return process_sp;
 }
 
 // ProcessAIXCore constructor
@@ -95,6 +107,32 @@ ProcessAIXCore::~ProcessAIXCore() {
 }
 
 lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
+  const lldb::addr_t addr = header.StackBaseAddr;
+  FileRange file_range(header.StackOffset, header.StackSize);
+  VMRangeToFileOffset::Entry range_entry(addr, header.StackSize, file_range);
+
+  if (header.StackSize > 0) {
+    VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
+    if (last_entry &&
+        last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
+        last_entry->data.GetRangeEnd() == range_entry.data.GetRangeBase() &&
+        last_entry->GetByteSize() == last_entry->data.GetByteSize()) {
+        last_entry->SetRangeEnd(range_entry.GetRangeEnd());
+        last_entry->data.SetRangeEnd(range_entry.data.GetRangeEnd());
+    } else {
+        m_core_aranges.Append(range_entry);
+    }
+  }
+
+  const uint32_t permissions = lldb::ePermissionsReadable |
+      lldb::ePermissionsWritable;
+
+  m_core_range_infos.Append(
+      VMRangeToPermissions::Entry(addr, header.StackSize, permissions));
+
+  return addr;
+}
+lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
   const lldb::addr_t addr = header.StackBaseAddr;
   FileRange file_range(header.StackOffset, header.StackSize);
   VMRangeToFileOffset::Entry range_entry(addr, header.StackSize, file_range);
@@ -187,6 +225,35 @@ void ProcessAIXCore::ParseAIXCoreFile() {
 
 }
 
+void ProcessAIXCore::ParseAIXCore32File() {
+    
+    Log *log = GetLog(LLDBLog::Process);
+    AIXSigInfo siginfo;
+    ThreadData thread_data;
+    
+    const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
+    const ArchSpec &arch = GetArchitecture();
+    
+    siginfo.Parse(m_aixcore32_header, arch, unix_signals);
+    thread_data.siginfo = siginfo;
+    SetID(m_aixcore32_header.User.process.pi_pid);
+    
+    thread_data.name.assign (m_aixcore32_header.User.process.pi_comm,
+            strnlen (m_aixcore32_header.User.process.pi_comm,
+                sizeof (m_aixcore32_header.User.process.pi_comm)));
+    
+    lldb::DataBufferSP data_buffer_sp(new lldb_private::DataBufferHeap(sizeof(m_aixcore32_header.Fault.context), 0));
+    
+    memcpy(static_cast<void *>(const_cast<uint8_t *>(data_buffer_sp->GetBytes())),
+            &m_aixcore32_header.Fault.context, sizeof(m_aixcore32_header.Fault.context));
+    
+    lldb_private::DataExtractor data(data_buffer_sp, lldb::eByteOrderBig, 8);
+
+    thread_data.gpregset = DataExtractor(data, 0, sizeof(m_aixcore32_header.Fault.context));
+    m_thread_data.push_back(thread_data);
+    LLDB_LOGF(log, "ProcessAIXCore: Parsing Complete!");
+
+}
 // Process Control
 Status ProcessAIXCore::DoLoadCore() {
     
@@ -200,22 +267,35 @@ Status ProcessAIXCore::DoLoadCore() {
     Log *log = GetLog(LLDBLog::Process);
     
     if (file) {
-        const size_t header_size = sizeof(AIXCORE::AIXCore64Header);
         auto data_sp = FileSystem::Instance().CreateDataBuffer(
                 file.GetPath(), -1, 0);
-        if (data_sp && data_sp->GetByteSize() != 0) {
-            
+        if (data_sp && data_sp->GetByteSize()) {
             DataExtractor data(data_sp, lldb::eByteOrderBig, 4);
-            lldb::offset_t data_offset = 0;
-            m_aixcore_header.ParseCoreHeader(data, &data_offset);
-            lldb::addr_t addr = AddAddressRanges(m_aixcore_header);
-            if (addr == LLDB_INVALID_ADDRESS)
-                LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
-            auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
-            dyld->FillCoreLoaderData(data, m_aixcore_header.LoaderOffset,
-                    m_aixcore_header.LoaderSize);
-
-        } else {
+            lldb::offset_t offset = 0;
+            offset += 4; // Skipping to the coredump version
+            uint32_t magic = data.GetU32(&offset);
+            offset = 0;
+            if (magic == 0xfeeddb1) {
+                m_is64bit = false;
+                m_aixcore32_header.ParseCoreHeader(data, &offset);
+                lldb::addr_t addr = AddAddressRanges(m_aixcore32_header);
+                if (addr == LLDB_INVALID_ADDRESS)
+                    LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
+                auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
+                dyld->FillCoreLoader32Data(data, m_aixcore32_header.LoaderOffset,
+                        m_aixcore32_header.LoaderSize);
+            }
+            else if (magic == 0xfeeddb2) {
+                m_aixcore_header.ParseCoreHeader(data, &offset);
+                lldb::addr_t addr = AddAddressRanges(m_aixcore_header);
+                if (addr == LLDB_INVALID_ADDRESS)
+                    LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
+                auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
+                dyld->FillCoreLoaderData(data, m_aixcore_header.LoaderOffset,
+                        m_aixcore_header.LoaderSize);
+            }
+        }
+        else {
             error = Status::FromErrorString("invalid data");
             return error;
         }
@@ -225,9 +305,11 @@ Status ProcessAIXCore::DoLoadCore() {
     }
 
     m_thread_data_valid = true;
-    ParseAIXCoreFile();
+    if (m_is64bit)
+        ParseAIXCoreFile();
+    else
+        ParseAIXCore32File();
     ArchSpec arch(m_core_module_sp->GetArchitecture());
-
     ArchSpec target_arch = GetTarget().GetArchitecture();
     ArchSpec core_arch(m_core_module_sp->GetArchitecture());
     target_arch.MergeFrom(core_arch);
@@ -237,8 +319,12 @@ Status ProcessAIXCore::DoLoadCore() {
     if (!exe_module_sp) {
         ModuleSpec exe_module_spec;
         exe_module_spec.GetArchitecture() = arch;
-        exe_module_spec.GetFileSpec().SetFile(m_aixcore_header.User.process.pi_comm,
-                FileSpec::Style::native);
+        if(m_is64bit)
+            exe_module_spec.GetFileSpec().SetFile(m_aixcore_header.User.process.pi_comm,
+                    FileSpec::Style::native);
+        else
+            exe_module_spec.GetFileSpec().SetFile(m_aixcore32_header.User.process.pi_comm,
+                    FileSpec::Style::native);
         exe_module_sp = 
             GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
         if (exe_module_sp)

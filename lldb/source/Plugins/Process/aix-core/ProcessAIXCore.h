@@ -84,8 +84,11 @@ public:
           lldb_private::Status &error) override; 
 
   void ParseAIXCoreFile();
+  void ParseAIXCore32File();
 
   lldb::addr_t AddAddressRanges(AIXCORE::AIXCore64Header header); 
+  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore32Header header);
+  bool m_is64bit = true;
 
 private:
   lldb::ModuleSP m_core_module_sp;
@@ -104,6 +107,7 @@ private:
   // True if m_thread_contexts contains valid entries
   bool m_thread_data_valid = false;
   AIXCORE::AIXCore64Header m_aixcore_header;
+  AIXCORE::AIXCore32Header m_aixcore32_header;
 
   std::vector<ThreadData> m_thread_data;
 };

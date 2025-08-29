@@ -113,6 +113,12 @@ void AIXSigInfo::Parse(const AIXCORE::AIXCore64Header data, const ArchSpec &arch
     sigfault.si_addr = data.Fault.context.pc;
 }
 
+void AIXSigInfo::Parse(const AIXCORE::AIXCore32Header data, const ArchSpec &arch,
+                              const lldb_private::UnixSignals &unix_signals) {
+    si_signo = data.SignalNum;
+    sigfault.si_addr = data.Fault.context.pc;
+}
+
 AIXSigInfo::AIXSigInfo() { memset(this, 0, sizeof(AIXSigInfo)); }
 
 size_t AIXSigInfo::GetSize(const lldb_private::ArchSpec &arch) {

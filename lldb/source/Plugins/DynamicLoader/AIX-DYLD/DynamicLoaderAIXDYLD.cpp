@@ -289,6 +289,59 @@ void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
     }
 }
 
+void DynamicLoaderAIXDYLD::FillCoreLoader32Data(lldb_private::DataExtractor &data,
+        uint64_t loader_offset, uint64_t loader_size ) {
+    
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
+    static char *buffer = (char *)malloc(loader_size);
+    if (buffer == NULL) {
+        LLDB_LOG(log, "Buffer allocation failed error: {0}", std::strerror(errno));
+        return;
+    }
+    char *ptr = buffer, filename[PATH_MAX], membername[32];
+    uint64_t dataorg, textorg, datasize, textsize, core_offset;
+    int next = 1;
+    lldb::offset_t base_offset = loader_offset;
+    while (next != 0)
+    {
+        lldb::offset_t offset = base_offset;
+        next = data.GetU32(&offset);
+        core_offset = data.GetU32(&offset);
+        textorg = data.GetU32(&offset);
+        textsize = data.GetU32(&offset);
+        dataorg = data.GetU32(&offset);
+        datasize = data.GetU32(&offset);
+
+        size_t s1_index = 0, s2_index = 0;
+        uint8_t byte;
+
+        while ((byte = data.GetU8(&offset)) != '\0') {
+            filename[s1_index++] = static_cast<char>(byte);
+        }
+        filename[s1_index] = '\0';
+        while ((byte = data.GetU8(&offset)) != '\0') {
+            membername[s2_index++] = static_cast<char>(byte);
+        }
+        membername[s2_index] = '\0';
+        base_offset += next;
+        char pathWithMember[PATH_MAX] = {0};
+        if (strlen(membername) > 0) {
+            sprintf(pathWithMember, "%s(%s)", filename, membername);
+        } else {
+            sprintf(pathWithMember, "%s", filename);
+        }
+        
+        FileSpec file(pathWithMember);
+        ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());
+        if (ModuleSP module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, true /* notify */)) {
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)textorg, false, 1);
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)dataorg, false, 2);
+            // FIXME: .tdata, .bss
+        }
+    }
+}
+
 void DynamicLoaderAIXDYLD::DidAttach() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);

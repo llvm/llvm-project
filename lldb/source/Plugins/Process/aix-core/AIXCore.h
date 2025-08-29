@@ -21,6 +21,7 @@
 
 namespace AIXCORE {
 
+enum CoreVersion : uint64_t {AIXCORE32 = 0xFEEDDB1, AIXCORE64 = 0xFEEDDB2};
 struct RegContext {
     // The data is arranged in order as filled by AIXCore.cpp in this coredump file
     // so we have to fetch in that exact order, refer there. 
@@ -52,9 +53,18 @@ struct RegContext {
         struct RegContext context;
     };
 
-    struct UserData {
+    struct ThreadContext32 {
+        struct thrdsinfo64 thread;
+        struct RegContext context; // This one saves mstsave32 and not context64
+    };
 
+    struct UserData {
         struct procentry64 process;
+        unsigned long long reserved[16];
+    };
+
+    struct UserData32 {
+        struct procsinfo64 process;
         unsigned long long reserved[16];
     };
 
@@ -119,6 +129,66 @@ struct RegContext {
 
     };
 
+    struct AIXCore32Header {
+
+        int8_t   SignalNum;     /* signal number (cause of error) */    
+        int8_t   Flag;      /* flag to describe core dump type */   
+        uint16_t Entries;   /* number of core dump modules */           
+        uint32_t Version;   /* core file format number */           
+        uint64_t FDInfo;  /* offset to fd region in file */
+
+        uint64_t LoaderOffset;    /* offset to loader region in file */
+        uint64_t LoaderSize;     /* size of loader region */
+
+        uint32_t NumberOfThreads ;     /* number of elements in thread table */
+        uint32_t Reserved0; /* Padding                            */
+        uint64_t ThreadContextOffset;       /* offset to thread context table */
+
+        uint64_t NumSegRegion;      /* n of elements in segregion */
+        uint64_t SegRegionOffset; /* offset to start of segregion table */
+
+        uint64_t StackOffset;     /* offset of user stack in file */
+        uint64_t StackBaseAddr;  /* base address of user stack region */
+        uint64_t StackSize;      /* size of user stack region */
+
+        uint64_t DataRegionOffset;      /* offset to user data region */
+        uint64_t DataBaseAddr;   /* base address of user data region */
+        uint64_t DataSize;  /* size of user data region */
+        uint64_t SDataBase;     /* base address of sdata region */
+        uint64_t SDataSize;    /* size of sdata region */
+
+        uint64_t NumVMRegions; /* number of anonymously mapped areas */
+        uint64_t VMOffset;       /* offset to start of vm_infox table */
+
+        int32_t  ProcessorImplementation;      /* processor implementation */
+        uint32_t NumElementsCTX;  /* n of elements in extended ctx table*/
+        uint64_t CPRSOffset;      /* Checkpoint/Restart offset */
+        uint64_t ExtendedContextOffset;    /* extended context offset */
+        uint64_t OffsetUserKey;   /* Offset to user-key exception data */
+        uint64_t OffsetLoaderTLS;   /* offset to the loader region in file
+                                 when a process uses TLS data */
+        uint64_t TLSLoaderSize;    /* size of the above loader region */
+        uint64_t ExtendedProcEntry;   /* Extended procentry64 information */
+        uint64_t Reserved[2];
+
+        struct ThreadContext32 Fault;
+
+        struct UserData32 User;
+
+        AIXCore32Header();
+
+        bool ParseCoreHeader(lldb_private::DataExtractor &data,
+                lldb::offset_t *offset);
+        bool ParseThreadContext(lldb_private::DataExtractor &data,
+                lldb::offset_t *offset);
+        bool ParseUserData(lldb_private::DataExtractor &data,
+                lldb::offset_t *offset);
+        bool ParseRegisterContext(lldb_private::DataExtractor &data,
+                lldb::offset_t *offset);
+        bool ParseLoaderData(lldb_private::DataExtractor &data,
+                lldb::offset_t *offset);
+
+    };
 
 }
 

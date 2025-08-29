@@ -35,6 +35,8 @@ public:
 
   void FillCoreLoaderData(lldb_private::DataExtractor &data,
           uint64_t loader_offset, uint64_t loader_size); 
+  void FillCoreLoader32Data(lldb_private::DataExtractor &data,
+          uint64_t loader_offset, uint64_t loader_size); 
 
   void DidAttach() override;
   void DidLaunch() override;
