@@ -3871,12 +3871,8 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 def CIR_ThrowOp : CIR_Op<"throw"> {
   let summary = "(Re)Throws an exception";
   let description = [{
-    It's equivalent __cxa_throw:
-
-    ```
-    void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
-                     void (*dest) (void *));
-    ```
+    This operation is equivalent to either __cxa_throw or __cxa_rethrow,
+    depending on the arguments.
 
     The absense of arguments for `cir.throw` means it rethrows.
 
@@ -3886,12 +3882,16 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
     part of this operation.
 
     Example:
+
     ```mlir
-    // throw;
+    // re-throw;
     cir.throw
 
     // if (b == 0)
     //   throw "Division by zero condition!";
+
+    // Type info for char const*
+    cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
     cir.if %cond {
       %exception_addr = cir.alloc_exception 8 -> !cir.ptr<!void>
       ...
@@ -3899,7 +3899,7 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
       cir.store %string_addr, %exception_addr : !cir.ptr<!s8i>,
         !cir.ptr<!cir.ptr<!s8i>>
       cir.throw %exception_addr : !cir.ptr<!cir.ptr<!u8i>>,
-        @"typeinfo for char const*"
+        @_ZTIPKc
     ```
   }];
 
