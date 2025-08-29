@@ -3490,9 +3490,9 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     S.Stk.push<Pointer>(0, nullptr);
     return true;
   }
-  if (!NumElements.isPositive()) {
+  if (NumElements.isNegative()) {
     if (!IsNoThrow) {
-      S.FFDiag(Source, diag::note_constexpr_new_negative)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
           << NumElements.toDiagnosticString(S.getASTContext());
       return false;
     }

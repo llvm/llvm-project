@@ -1071,12 +1071,10 @@ namespace BaseCompare {
 
 
 namespace NegativeArraySize { 
-
-constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
-  int x = -1;
-  int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
-}
-
+  constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+  }
 } // namespace NegativeArraySize
 
 namespace NewNegSizeNothrow {
