@@ -8,8 +8,6 @@
 
 #include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include <optional>
 
 using namespace llvm;
 using namespace hlsl;
@@ -32,18 +30,6 @@ BindingInfo::BindingSpaces::getOrInsertSpace(uint32_t Space) {
     return *Spaces.insert(It, Space);
   }
   return Spaces.emplace_back(Space);
-}
-
-std::optional<const BindingInfo::RegisterSpace *>
-BindingInfo::BindingSpaces::contains(uint32_t Space) const {
-  const BindingInfo::RegisterSpace *It = Spaces.begin();
-  for (auto *End = Spaces.end(); It != End; ++It) {
-    if (It->Space == Space)
-      break;
-  }
-  if (It == Spaces.end())
-    return std::nullopt;
-  return It;
 }
 
 std::optional<uint32_t>
@@ -78,29 +64,6 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
   }
 
   return std::nullopt;
-}
-
-bool BindingInfo::RegisterSpace::isBound(const BindingRange &Range) const {
-  const BindingRange *It = llvm::lower_bound(
-      FreeRanges, Range.LowerBound,
-      [](const BindingRange &R, uint32_t Val) { return R.UpperBound <= Val; });
-
-  if (It != FreeRanges.end()) {
-    // Check if B is fully contained in the found range
-    if (Range.LowerBound >= It->LowerBound &&
-        Range.UpperBound <= It->UpperBound)
-      return false;
-  }
-  return true;
-}
-
-bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
-                          const BindingRange &Range) const {
-  const BindingSpaces &BS = getBindingSpaces(RC);
-  std::optional<const BindingInfo::RegisterSpace *> RS = BS.contains(Space);
-  if (!RS)
-    return false;
-  return RS.value()->isBound(Range);
 }
 
 BindingInfo BindingInfoBuilder::calculateBindingInfo(

@@ -122,9 +122,10 @@ static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
                                        ResourceInfo::ResourceBinding Binding) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << getResourceClassName(RC) << " at register " << Binding.LowerBound << " and space "
-     << Binding.Space << " is bound to a texture or typed buffer. " <<
-     "SRV or UAV root descriptors can only be Raw or Structured buffers.";
+  StringRef RCName = getResourceClassName(RC);
+  OS << RCName << " at register " << Binding.LowerBound << " and space "
+     << Binding.Space << " is bound to a texture or typed buffer. " << RCName
+     << " root descriptors can only be Raw or Structured buffers.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -242,22 +243,18 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-
   const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
-
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
     dxil::ResourceClass RC = RTI.getResourceClass();
     dxil::ResourceKind RK = RTI.getResourceKind();
     if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
-                           Binding.LowerBound + Binding.Size - 1))
+                           Binding.LowerBound + Binding.Size - 1)) {
       reportRegNotBound(M, RC, Binding);
-    else {
-
+    } else {
       const llvm::hlsl::Binding *Reg =
-          BoundRegs.getReg(RC, Binding.Space, Binding.LowerBound,
-                           Binding.LowerBound + Binding.Size - 1);
+          BoundRegs.getReg(RC, Binding.Space, Binding.LowerBound);
       const mcdxbc::RootParameterInfo *ParamInfo = static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
       if((RC == ResourceClass::SRV || RC == ResourceClass::UAV) && 
@@ -265,7 +262,6 @@ static void validateRootSignature(Module &M,
            !(RK == ResourceKind::RawBuffer || RK == ResourceKind::StructuredBuffer))
             reportInvalidHandleTyError(M, RC, Binding);
     }
-
   }
 }
 
@@ -332,7 +328,6 @@ public:
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
@@ -343,7 +338,6 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
-    AU.addPreserved<DXILResourceTypeWrapperPass>();
   }
 };
 char DXILPostOptimizationValidationLegacy::ID = 0;
