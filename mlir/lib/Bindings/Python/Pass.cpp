@@ -11,8 +11,8 @@
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "nanobind/trampoline.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "nanobind/trampoline.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
