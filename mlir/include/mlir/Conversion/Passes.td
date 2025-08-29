@@ -1457,7 +1457,9 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "operations instead of the alignment of the element type of the "
            "memref. This flag is intended for use with hardware which requires"
            "vector alignment, or in application contexts where it is known all "
-           "vector access are naturally aligned. ">,
+           "vector access are naturally aligned. If operations have an "
+           "alignment attribute set, the alignment attribute takes priority "
+           "over this option ">,
     Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "
