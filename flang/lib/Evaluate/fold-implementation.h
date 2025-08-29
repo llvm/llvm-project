@@ -1785,7 +1785,7 @@ common::IfNoLvalue<std::optional<TO>, FROM> ConvertString(FROM &&s) {
       if (static_cast<std::uint64_t>(*iter) > 127) {
         return std::nullopt;
       }
-      str.push_back(*iter);
+      str.push_back(static_cast<typename TO::value_type>(*iter));
     }
     return std::make_optional<TO>(std::move(str));
   }
