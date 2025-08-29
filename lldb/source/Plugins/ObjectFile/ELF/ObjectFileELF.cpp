@@ -2096,6 +2096,19 @@ static char FindArmAarch64MappingSymbol(const char *symbol_name) {
   return '\0';
 }
 
+static char FindRISCVMappingSymbol(const char *symbol_name) {
+  if (!symbol_name)
+    return '\0';
+
+  if (strcmp(symbol_name, "$d") == 0) {
+    return 'd';
+  }
+  if (strcmp(symbol_name, "$x") == 0) {
+    return 'x';
+  }
+  return '\0';
+}
+
 #define STO_MIPS_ISA (3 << 6)
 #define STO_MICROMIPS (2 << 6)
 #define IS_MICROMIPS(ST_OTHER) (((ST_OTHER)&STO_MIPS_ISA) == STO_MICROMIPS)
@@ -2161,6 +2174,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol_name)
       symbol_name = "";
 
+    // Skip local symbols starting with ".L" because these are compiler
+    // generated local labels used for internal purposes (e.g. debugging,
+    // optimization) and are not relevant for symbol resolution or external
+    // linkage.
+    if (llvm::StringRef(symbol_name).starts_with(".L"))
+      continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
@@ -2249,7 +2268,6 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     int64_t symbol_value_offset = 0;
     uint32_t additional_flags = 0;
-
     if (arch.IsValid()) {
       if (arch.GetMachine() == llvm::Triple::arm) {
         if (symbol.getBinding() == STB_LOCAL) {
@@ -2287,6 +2305,27 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
+              address_class_map[symbol.st_value] = AddressClass::eData;
+              break;
+            }
+          }
+          if (mapping_symbol)
+            continue;
+        }
+      } else if (arch.GetTriple().isRISCV()) {
+        if (symbol.getBinding() == STB_LOCAL) {
+          char mapping_symbol = FindRISCVMappingSymbol(symbol_name);
+          if (symbol_type == eSymbolTypeCode) {
+            // Only handle $d and $x mapping symbols.
+            // Other mapping symbols are ignored as they don't affect address
+            // classification.
+            switch (mapping_symbol) {
+            case 'x':
+              // $x - marks a RISCV instruction sequence
+              address_class_map[symbol.st_value] = AddressClass::eCode;
+              break;
+            case 'd':
+              // $d - marks a RISCV data item sequence
               address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }

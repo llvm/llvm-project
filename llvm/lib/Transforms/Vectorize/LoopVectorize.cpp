@@ -543,19 +543,14 @@ public:
 protected:
   friend class LoopVectorizationPlanner;
 
-  /// Create a new IR basic block for the scalar preheader whose name is
-  /// prefixed with \p Prefix.
-  void createScalarPreheader(StringRef Prefix);
+  /// Create and return a new IR basic block for the scalar preheader whose name
+  /// is prefixed with \p Prefix.
+  BasicBlock *createScalarPreheader(StringRef Prefix);
 
   /// Allow subclasses to override and print debug traces before/after vplan
   /// execution, when trace information is requested.
   virtual void printDebugTracesAtStart() {}
   virtual void printDebugTracesAtEnd() {}
-
-  /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
-  /// vector preheader and its predecessor, also connecting the new block to the
-  /// scalar preheader.
-  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
 
   /// The original loop.
   Loop *OrigLoop;
@@ -593,14 +588,8 @@ protected:
   /// The vector-loop preheader.
   BasicBlock *LoopVectorPreHeader = nullptr;
 
-  /// The scalar-loop preheader.
-  BasicBlock *LoopScalarPreHeader = nullptr;
-
   /// Trip count of the original loop.
   Value *TripCount = nullptr;
-
-  /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
-  Value *VectorTripCount = nullptr;
 
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
@@ -702,6 +691,11 @@ public:
   BasicBlock *createVectorizedLoopSkeleton() final;
 
 protected:
+  /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
+  /// vector preheader and its predecessor, also connecting the new block to the
+  /// scalar preheader.
+  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
+
   // Create a check to see if the main vector loop should be executed
   Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
 
@@ -2257,7 +2251,8 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
   return TTI.enableMaskedInterleavedAccessVectorization();
 }
 
-void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
+void EpilogueVectorizerMainLoop::introduceCheckBlockInVPlan(
+    BasicBlock *CheckIRBB) {
   // Note: The block with the minimum trip-count check is already connected
   // during earlier VPlan construction.
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
@@ -2373,20 +2368,19 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
   return IRVPBB;
 }
 
-void InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
+BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   assert(LoopVectorPreHeader && "Invalid loop structure");
   assert((OrigLoop->getUniqueLatchExitBlock() ||
           Cost->requiresScalarEpilogue(VF.isVector())) &&
          "loops not exiting via the latch without required epilogue?");
 
-  LoopScalarPreHeader =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-                 LI, nullptr, Twine(Prefix) + "scalar.ph");
   // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
-  // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
-  // preheader may be unreachable at this point. Instead it is replaced in
-  // executePlan.
+  // wrapping the newly created scalar preheader here at the moment, because the
+  // Plan's scalar preheader may be unreachable at this point. Instead it is
+  // replaced in executePlan.
+  return SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(),
+                    DT, LI, nullptr, Twine(Prefix) + "scalar.ph");
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -2428,8 +2422,8 @@ static void addFullyUnrolledInstructionsToIgnore(
 
 BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Create a new IR basic block for the scalar preheader.
-  createScalarPreheader("");
-  return LoopVectorPreHeader;
+  BasicBlock *ScalarPH = createScalarPreheader("");
+  return ScalarPH->getSinglePredecessor();
 }
 
 namespace {
@@ -7399,12 +7393,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
-  createScalarPreheader("");
+  BasicBlock *ScalarPH = createScalarPreheader("");
 
   // Generate the code to check the minimum iteration count of the vector
   // epilogue (see below).
-  EPI.EpilogueIterationCountCheck =
-      emitIterationCountCheck(LoopScalarPreHeader, true);
+  EPI.EpilogueIterationCountCheck = emitIterationCountCheck(ScalarPH, true);
   EPI.EpilogueIterationCountCheck->setName("iter.check");
 
   // Generate the iteration count check for the main loop, *after* the check
@@ -7413,8 +7406,7 @@ BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
   // the main loop is compensated for, by the gain from vectorizing the larger
   // trip count. Note: the branch will get updated later on when we vectorize
   // the epilogue.
-  EPI.MainLoopIterationCountCheck =
-      emitIterationCountCheck(LoopScalarPreHeader, false);
+  EPI.MainLoopIterationCountCheck = emitIterationCountCheck(ScalarPH, false);
 
   return LoopVectorPreHeader;
 }
@@ -7485,7 +7477,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
-  createScalarPreheader("vec.epilog.");
+  BasicBlock *ScalarPH = createScalarPreheader("vec.epilog.");
 
   // Now, compare the remaining count and if there aren't enough iterations to
   // execute the vectorized epilogue skip to the scalar part.
@@ -7495,7 +7487,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
                  nullptr, "vec.epilog.iter.check", true);
   VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
 
-  emitMinimumVectorEpilogueIterCountCheck(LoopScalarPreHeader,
+  emitMinimumVectorEpilogueIterCountCheck(ScalarPH,
                                           VecEpilogueIterationCountCheck);
   AdditionalBypassBlock = VecEpilogueIterationCountCheck;
 
@@ -7507,20 +7499,19 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
       VecEpilogueIterationCountCheck, LoopVectorPreHeader);
 
   EPI.EpilogueIterationCountCheck->getTerminator()->replaceUsesOfWith(
-      VecEpilogueIterationCountCheck, LoopScalarPreHeader);
+      VecEpilogueIterationCountCheck, ScalarPH);
 
   // Adjust the terminators of runtime check blocks and phis using them.
   BasicBlock *SCEVCheckBlock = RTChecks.getSCEVChecks().second;
   BasicBlock *MemCheckBlock = RTChecks.getMemRuntimeChecks().second;
   if (SCEVCheckBlock)
     SCEVCheckBlock->getTerminator()->replaceUsesOfWith(
-        VecEpilogueIterationCountCheck, LoopScalarPreHeader);
+        VecEpilogueIterationCountCheck, ScalarPH);
   if (MemCheckBlock)
     MemCheckBlock->getTerminator()->replaceUsesOfWith(
-        VecEpilogueIterationCountCheck, LoopScalarPreHeader);
+        VecEpilogueIterationCountCheck, ScalarPH);
 
-  DT->changeImmediateDominator(LoopScalarPreHeader,
-                               EPI.EpilogueIterationCountCheck);
+  DT->changeImmediateDominator(ScalarPH, EPI.EpilogueIterationCountCheck);
 
   // The vec.epilog.iter.check block may contain Phi nodes from inductions or
   // reductions which merge control-flow from the latch block and the middle
