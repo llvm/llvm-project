@@ -157,6 +157,9 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The namespace in which this encoding exists.
+  StringRef DecoderNamespace;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
@@ -189,6 +192,9 @@ public:
 
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
+
+  /// Returns the namespace in which this encoding exists.
+  StringRef getDecoderNamespace() const { return DecoderNamespace; }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -2054,6 +2060,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     Name = (EncodingDef->getName() + Twine(':')).str();
   Name.append(InstDef->getName());
 
+  DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2339,8 +2346,7 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-    StringRef DecoderNamespace = InstDef->getValueAsString("DecoderNamespace");
+    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2513,8 +2519,7 @@ namespace {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
       EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }
