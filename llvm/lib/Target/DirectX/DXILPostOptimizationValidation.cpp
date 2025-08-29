@@ -251,8 +251,8 @@ static void validateRootSignature(Module &M,
     dxil::ResourceKind RK = RTI.getResourceKind();
 
     std::optional<const llvm::hlsl::Binding *> Reg =
-        BoundRegs.getBoundRegister(RC, Binding.Space, Binding.LowerBound,
-                                   Binding.LowerBound + Binding.Size - 1);
+        BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
+                               Binding.LowerBound + Binding.Size - 1);
 
     if (Reg.has_value()) {
       const auto *ParamInfo =

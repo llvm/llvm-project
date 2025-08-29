@@ -133,10 +133,10 @@ class BoundRegs {
 public:
   BoundRegs(SmallVector<Binding> &&Bindings) : Bindings(std::move(Bindings)) {}
 
-  std::optional<const Binding *> getBoundRegister(dxil::ResourceClass RC,
-                                                  uint32_t Space,
-                                                  uint32_t LowerBound,
-                                                  uint32_t UpperBound) const {
+  std::optional<const Binding *> findBoundReg(dxil::ResourceClass RC,
+                                              uint32_t Space,
+                                              uint32_t LowerBound,
+                                              uint32_t UpperBound) const {
     // UpperBound and Cookie are given dummy values, since they aren't
     // interesting for operator<
     const Binding *It =
