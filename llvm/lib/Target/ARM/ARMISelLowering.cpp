@@ -20071,16 +20071,19 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     unsigned Encoded = Op.getConstantOperandVal(1);
     unsigned DecEltBits = 0;
     uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, DecEltBits);
+    bool IsVORR = Op.getOpcode() == ARMISD::VORRIMM;
 
     if (Op.getScalarValueSizeInBits() == DecEltBits) {
-      bool IsVORR = Op.getOpcode() == ARMISD::VORRIMM;
       APInt Imm(DecEltBits, DecodedVal);
       Known.One = IsVORR ? (KnownLHS.One | Imm) : (KnownLHS.One & ~Imm);
       Known.Zero = IsVORR ? (KnownLHS.Zero & ~Imm) : (KnownLHS.Zero | Imm);
     } else {
-      Known = KnownLHS;
+      if (IsVORR)
+        Known.One = KnownLHS.One;
+      else
+        Known.Zero = KnownLHS.Zero;
     }
-    return;
+    break;
   }
   }
 }
