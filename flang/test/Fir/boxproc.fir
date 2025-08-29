@@ -82,12 +82,8 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         store [1 x i8] c" ", ptr %[[VAL_18]], align 1
 // CHECK:         call void @llvm.init.trampoline(ptr %[[VAL_20]], ptr @_QFtest_proc_dummy_charPgen_message, ptr %[[VAL_2]])
 // CHECK:         %[[VAL_23:.*]] = call ptr @llvm.adjust.trampoline(ptr %[[VAL_20]])
-// CHECK:         %[[VAL_25:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_23]], 0
-// CHECK:         %[[VAL_26:.*]] = insertvalue { ptr, i64 } %[[VAL_25]], i64 10, 1
 // CHECK:         %[[VAL_27:.*]] = call ptr @llvm.stacksave.p0()
-// CHECK:         %[[VAL_28:.*]] = extractvalue { ptr, i64 } %[[VAL_26]], 0
-// CHECK:         %[[VAL_29:.*]] = extractvalue { ptr, i64 } %[[VAL_26]], 1
-// CHECK:         %[[VAL_30:.*]] = call { ptr, i64 } @_QPget_message(ptr %[[VAL_0]], i64 40, ptr %[[VAL_28]], i64 %[[VAL_29]])
+// CHECK:         %[[VAL_30:.*]] = call { ptr, i64 } @_QPget_message(ptr %[[VAL_0]], i64 40, ptr %[[VAL_23]], i64 10)
 // CHECK:         %[[VAL_32:.*]] = call i1 @_FortranAioOutputAscii(ptr %{{.*}}, ptr %[[VAL_0]], i64 40)
 // CHECK:         call void @llvm.stackrestore.p0(ptr %[[VAL_27]])
 
@@ -115,14 +111,10 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK-LABEL: define { ptr, i64 } @_QPget_message(ptr
 // CHECK-SAME:                  %[[VAL_0:.*]], i64 %[[VAL_1:.*]], ptr %[[VAL_2:.*]], i64
 // CHECK-SAME:                                                 %[[VAL_3:.*]])
-// CHECK:         %[[VAL_4:.*]] = insertvalue { ptr, i64 } undef, ptr %[[VAL_2]], 0
-// CHECK:         %[[VAL_5:.*]] = insertvalue { ptr, i64 } %[[VAL_4]], i64 %[[VAL_3]], 1
-// CHECK:         %[[VAL_7:.*]] = extractvalue { ptr, i64 } %[[VAL_5]], 0
-// CHECK:         %[[VAL_8:.*]] = extractvalue { ptr, i64 } %[[VAL_5]], 1
 // CHECK:         %[[VAL_9:.*]] = call ptr @llvm.stacksave.p0()
-// CHECK:         %[[VAL_10:.*]] = alloca i8, i64 %[[VAL_8]], align 1
-// CHECK:         %[[VAL_12:.*]] = call { ptr, i64 } %[[VAL_7]](ptr %[[VAL_10]], i64 %[[VAL_8]])
-// CHECK:         %[[VAL_13:.*]] = add i64 %[[VAL_8]], 12
+// CHECK:         %[[VAL_10:.*]] = alloca i8, i64 %[[VAL_3]], align 1
+// CHECK:         %[[VAL_12:.*]] = call { ptr, i64 } %[[VAL_2]](ptr %[[VAL_10]], i64 %[[VAL_3]])
+// CHECK:         %[[VAL_13:.*]] = add i64 %[[VAL_3]], 12
 // CHECK:         %[[VAL_14:.*]] = alloca i8, i64 %[[VAL_13]], align 1
 // CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_14]], ptr {{.*}}, i64 12, i1 false)
 // CHECK:         %[[VAL_18:.*]] = phi i64

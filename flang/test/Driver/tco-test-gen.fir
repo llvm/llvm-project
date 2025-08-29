@@ -42,11 +42,10 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 // CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.nocapture},
 // CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.nocapture}) {
 
+// CMPLX:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
+// CMPLX:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
 // CMPLX:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CMPLX:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-// CMPLX:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
-// CMPLX:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
-// CMPLX:           %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
 
 // SIMPLE:          %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
 // SIMPLE:          %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64

@@ -13,7 +13,7 @@
 // CHECK: llvm.return
 // CHECK-NOT: func.func
 
-func.func @_QPfoo() {
+func.func @_QPfoo() -> !fir.ref<i32> {
   %1 = fir.alloca i32
-  return
+  return %1 : !fir.ref<i32>
 }

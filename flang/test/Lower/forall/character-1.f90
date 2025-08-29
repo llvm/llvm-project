@@ -23,11 +23,11 @@ end program test
 
 ! CHECK-LABEL: define internal void @_QFPsub(
 ! CHECK-SAME:    ptr {{[^%]*}}%[[arg:.*]])
-! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i64 0, i32 1
+! CHECK: %[[extent:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 7, i32 0, i32 1
 ! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
-! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
+! CHECK: %[[mul:.*]] = mul i64 %[[esval]], 1
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
 ! CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
 ! CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1

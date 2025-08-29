@@ -62,9 +62,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK-LABEL: define void @_QPfunc(
 // CHECK-SAME:      ptr {{[^%]*}}%[[ARG0:.*]]){{.*}}{
 // [...]
-// CHECK:  %[[VAL5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 7, i32 0, i32 0
+// CHECK:  %[[VAL5:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ARG0]], i32 0, i32 6
 // box access:
-// CHECK:  %[[VAL6:.*]] = load i64, ptr %[[VAL5]], align 4, !tbaa ![[BOX_ACCESS_TAG:.*]]
+// CHECK:  %[[VAL6:.*]] = load i8, ptr %[[VAL5]], align 1, !tbaa ![[BOX_ACCESS_TAG:.*]]
 // CHECK:  %[[VAL7:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %0, i32 0, i32 7, i32 0, i32 1
 // box access:
 // CHECK:  %[[VAL8:.*]] = load i64, ptr %[[VAL7]], align 4, !tbaa ![[BOX_ACCESS_TAG]]
@@ -76,15 +76,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL12:.*]] = load ptr, ptr %[[VAL11]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
 // CHECK:  %[[VAL15:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, ptr %[[VAL12]], 0
 // CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL15]], ptr %{{.*}}, align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL16:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 0
-// box access:
-// CHECK:  %[[VAL17:.*]] = load i64, ptr %[[VAL16]], align 4, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL18:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 1
+// CHECK:  %[[VAL18:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i32 0, i32 1
 // box access:
 // CHECK:  %[[VAL19:.*]] = load i64, ptr %[[VAL18]], align 4, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL20:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 2
-// box access:
-// CHECK:  %[[VAL21:.*]] = load i64, ptr %[[VAL20]], align 4, !tbaa ![[BOX_ACCESS_TAG]]
 // [...]
 // box access:
 // CHECK:  store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, ptr %{{.*}}, align 8, !tbaa ![[BOX_ACCESS_TAG]]

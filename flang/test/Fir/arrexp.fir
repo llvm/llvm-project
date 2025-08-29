@@ -143,9 +143,9 @@ func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   %c9 = arith.constant 9 : index
   %c10 = arith.constant 10 : index
 
-  // CHECK: %[[EXT_GEP:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 7, i64 0, i32 1
+  // CHECK: %[[EXT_GEP:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 7, i32 0, i32 1
   // CHECK: %[[EXTENT:.*]] = load i64, ptr %[[EXT_GEP]]
-  // CHECK: %[[SIZE:.*]] = mul i64 4, %[[EXTENT]]
+  // CHECK: %[[SIZE:.*]] = mul i64 %[[EXTENT]], 4
   // CHECK: %[[CMP:.*]] = icmp sgt i64 %[[SIZE]], 0
   // CHECK: %[[SZ:.*]] = select i1 %[[CMP]], i64 %[[SIZE]], i64 1
   // CHECK: %[[MALLOC:.*]] = call ptr @malloc(i64 %[[SZ]])
