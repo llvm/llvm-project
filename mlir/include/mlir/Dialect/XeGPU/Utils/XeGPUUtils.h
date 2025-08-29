@@ -20,6 +20,7 @@ class OpResult;
 class OpBuilder;
 class ValueRange;
 class TypeConverter;
+class OpFoldResult;
 
 namespace xegpu {
 class DistributeLayoutAttr;
