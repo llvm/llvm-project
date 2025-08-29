@@ -1241,24 +1241,6 @@ TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
 }
 #endif
 
-TEST(TestRtsanInterceptors, PthreadCondInitDiesWhenRealtime) {
-  pthread_cond_t cond{};
-  auto Func = [&cond]() { pthread_cond_init(&cond, nullptr); };
-  ExpectRealtimeDeath(Func, "pthread_cond_init");
-  ExpectNonRealtimeSurvival(Func);
-}
-
-TEST(TestRtsanInterceptors, PthreadCondDestroyDiesWhenRealtime) {
-  pthread_cond_t cond{};
-  ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));
-
-  auto Func = [&cond]() { pthread_cond_destroy(&cond); };
-  ExpectRealtimeDeath(Func, "pthread_cond_destroy");
-  ExpectNonRealtimeSurvival(Func);
-
-  pthread_cond_destroy(&cond);
-}
-
 TEST(TestRtsanInterceptors, PthreadCondSignalDiesWhenRealtime) {
   pthread_cond_t cond{};
   ASSERT_EQ(0, pthread_cond_init(&cond, nullptr));

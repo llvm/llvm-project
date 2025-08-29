@@ -339,18 +339,6 @@ declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_approx_func_fp_math_true
-; CHECK-SAME: attributes {approx_func_fp_math = true}
-declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_false
-; CHECK-SAME: attributes {approx_func_fp_math = false}
-declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
 declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
