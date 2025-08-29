@@ -106,7 +106,6 @@ public:
   }
 
   void testNaNPayloads(TotalOrderMagFunc func) {
-
     EXPECT_TRUE(funcWrapper(func, aNaN, aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, sNaN));
 
