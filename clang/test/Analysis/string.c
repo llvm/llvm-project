@@ -1789,3 +1789,60 @@ void CWE124_Buffer_Underwrite__malloc_char_memcpy() {
   free(dataBuffer);
 }
 #endif
+
+//===----------------------------------------------------------------------===
+// strxfrm()
+// It is not a built-in.
+//===----------------------------------------------------------------------===
+
+size_t strxfrm(char *dest, const char *src, size_t n);
+
+void strxfrm_null_dest(const char *src) {
+  strxfrm(NULL, src, 0); // no warning
+  strxfrm(NULL, src, 10); // expected-warning {{Null pointer passed as 1st argument}}
+}
+
+void strxfrm_null_source(char *dest) {
+  strxfrm(dest, NULL, 0); // expected-warning {{Null pointer passed as 2nd argument}}
+}
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void strxfrm_overflow(const char *src) {
+  char dest[10];
+  strxfrm(dest, src, 55); // expected-warning {{Locale transformation function overflows the destination buffer}}
+}
+#endif
+
+void strxfrm_source_smaller() {
+  char dest[10];
+  char source[5];
+  strxfrm(dest, source, 10);
+}
+
+void strxfrm_overlap(char *dest) {
+  strxfrm(dest, dest, 10); // expected-warning {{Arguments must not be overlapping buffers}}
+}
+
+void strxfrm_regular(const char *src) {
+  size_t n = strxfrm(NULL, src, 0);
+  char *dest = (char*)malloc(n + 1);
+  strxfrm(dest, src, n);
+  free(dest);
+}
+
+int strxfrm_dest_undef(const char *src) {
+  char dest[10] = {0};
+  size_t n = strxfrm(dest, src, sizeof(dest));
+
+  int c = 0;
+  if (n >= sizeof(dest)) {
+    for (int i = 0; i < sizeof(dest); ++i) {
+      c += dest[i]; // expected-warning {{Assigned value is uninitialized}}
+    }
+  } else {
+    for (int i = 0; i < sizeof(dest); ++i) {
+      c += dest[i]; // no-warning
+    }
+  }
+  return c;
+}

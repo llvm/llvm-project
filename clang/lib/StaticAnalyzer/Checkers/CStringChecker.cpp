@@ -101,6 +101,7 @@ public:
 
   static void *getTag() { static int tag; return &tag; }
 
+
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef state, SymbolReaper &SR) const;
@@ -163,6 +164,7 @@ public:
       {{CDM::CLibrary, {"strcasecmp"}, 2}, &CStringChecker::evalStrcasecmp},
       {{CDM::CLibrary, {"strncasecmp"}, 3}, &CStringChecker::evalStrncasecmp},
       {{CDM::CLibrary, {"strsep"}, 2}, &CStringChecker::evalStrsep},
+      {{CDM::CLibrary, {"strxfrm"}, 3}, &CStringChecker::evalStrxfrm},
       {{CDM::CLibrary, {"bcopy"}, 3}, &CStringChecker::evalBcopy},
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
@@ -210,6 +212,8 @@ public:
   void evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
                         bool ReturnEnd, bool IsBounded, ConcatFnKind appendK,
                         bool returnPtr = true) const;
+
+  void evalStrxfrm(CheckerContext &C, const CallEvent &Call) const;
 
   void evalStrcat(CheckerContext &C, const CallEvent &Call) const;
   void evalStrncat(CheckerContext &C, const CallEvent &Call) const;
@@ -2241,6 +2245,102 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
   // Set the return value.
   state = state->BindExpr(Call.getOriginExpr(), LCtx, Result);
   C.addTransition(state);
+}
+
+void CStringChecker::evalStrxfrm(CheckerContext &C,
+                                 const CallEvent &Call) const {
+  // size_t strxfrm(char *dest, const char *src, size_t n);
+  CurrentFunctionDescription = "locale transformation function";
+
+  ProgramStateRef state = C.getState();
+  const LocationContext *LCtx = C.getLocationContext();
+  SValBuilder &SVB = C.getSValBuilder();
+
+  // Get arguments
+  DestinationArgExpr Dest = {{Call.getArgExpr(0), 0}};
+  SourceArgExpr Source = {{Call.getArgExpr(1), 1}};
+  SizeArgExpr Size = {{Call.getArgExpr(2), 2}};
+
+  // `src` can never be null
+  SVal SrcVal = state->getSVal(Source.Expression, LCtx);
+  state = checkNonNull(C, state, Source, SrcVal);
+  if (!state)
+    return;
+
+  // Check overlaps
+  state = CheckOverlap(C, state, Size, Dest, Source, CK_Regular);
+  if (!state)
+    return;
+
+  // The function returns an implementation-defined length needed for
+  // transformation
+  SVal retVal = SVB.conjureSymbolVal(Call, C.blockCount());
+
+  state = state->BindExpr(Call.getOriginExpr(), LCtx, retVal);
+
+  // Check if size is zero
+  SVal sizeVal = state->getSVal(Size.Expression, LCtx);
+  QualType sizeTy = Size.Expression->getType();
+
+  auto [stateZeroSize, StateSizeNonZero] =
+      assumeZero(C, state, sizeVal, sizeTy);
+
+  // If `n` is 0, we just return the implementation defined length
+  if (stateZeroSize && !StateSizeNonZero) {
+    C.addTransition(stateZeroSize);
+    return;
+  }
+
+  if (!StateSizeNonZero)
+    return;
+
+  // If `n` is not 0, `dest` can not be null.
+  SVal destVal = state->getSVal(Dest.Expression, LCtx);
+  StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, destVal);
+  if (!StateSizeNonZero)
+    return;
+
+  // Check that we can write to the destination buffer
+  StateSizeNonZero = CheckBufferAccess(C, StateSizeNonZero, Dest, Size,
+                                       AccessKind::write, CK_Regular);
+  if (!StateSizeNonZero)
+    return;
+
+  // Success: return value < `n`
+  // Failure: return value >= `n`
+  auto comparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, retVal, sizeVal,
+                                     SVB.getConditionType())
+                           .getAs<DefinedOrUnknownSVal>();
+
+  if (comparisonVal) {
+    auto [StateSuccess, StateFailure] =
+        StateSizeNonZero->assume(*comparisonVal);
+
+    if (StateSuccess) {
+      // In this case, the transformation invalidated the buffer.
+      StateSuccess = invalidateDestinationBufferBySize(
+          C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), destVal,
+          sizeVal, Size.Expression->getType());
+
+      C.addTransition(StateSuccess);
+    }
+
+    if (StateFailure) {
+      // In this case, dest buffer content is undefined
+      if (std::optional<Loc> destLoc = destVal.getAs<Loc>()) {
+        StateFailure = StateFailure->bindLoc(*destLoc, UndefinedVal{}, LCtx);
+      }
+
+      C.addTransition(StateFailure);
+    }
+  } else {
+    // Fallback: invalidate the buffer.
+    StateSizeNonZero = invalidateDestinationBufferBySize(
+          C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), destVal,
+          sizeVal, Size.Expression->getType());
+
+    C.addTransition(StateSizeNonZero);
+  }
 }
 
 void CStringChecker::evalStrcmp(CheckerContext &C,
