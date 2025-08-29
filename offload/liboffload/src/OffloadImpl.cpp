@@ -456,6 +456,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   }
 
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+  case OL_DEVICE_INFO_MAX_WORK_SIZE:
   case OL_DEVICE_INFO_VENDOR_ID:
   case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
   case OL_DEVICE_INFO_ADDRESS_BITS:
@@ -472,6 +473,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write(static_cast<uint32_t>(Value));
   }
 
+  case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION: {
     // {x, y, z} triples
     ol_dimensions_t Out{0, 0, 0};
@@ -510,6 +512,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   assert(Device == OffloadContext::get().HostDevice());
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
+  constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
+
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
     return Info.write<void *>(Device->Platform);
@@ -527,6 +531,11 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.write<uint32_t>(1);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION:
     return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
+  case OL_DEVICE_INFO_MAX_WORK_SIZE:
+    return Info.write<uint32_t>(uint32_max);
+  case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
+    return Info.write<ol_dimensions_t>(
+        ol_dimensions_t{uint32_max, uint32_max, uint32_max});
   case OL_DEVICE_INFO_VENDOR_ID:
     return Info.write<uint32_t>(0);
   case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
