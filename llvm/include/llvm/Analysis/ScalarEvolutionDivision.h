@@ -38,6 +38,8 @@ public:
   /// Note the following:
   /// * The condition Remainder < Denominator is NOT necessarily required.
   /// * Division of constants is performed as signed.
+  /// * The multiplication of Quotient and Denominator may wrap.
+  /// * The addition of Quotient*Denominator and Remainder may wrap.
   static void divide(ScalarEvolution &SE, const SCEV *Numerator,
                      const SCEV *Denominator, const SCEV **Quotient,
                      const SCEV **Remainder);
