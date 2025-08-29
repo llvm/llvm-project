@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ast_matchers;
 
@@ -22,105 +23,95 @@ AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto Condition = hasCondition(implicitCastExpr(has(
-      callExpr(unless(isMacroID()), unless(cxxMemberCallExpr()),
-               anyOf(callee(namedDecl(hasName("cast"))),
-                     callee(namedDecl(hasName("dyn_cast")).bind("dyn_cast"))))
-          .bind("call"))));
+  auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
+    return allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
+                 callee(expr(ignoringImpCasts(
+                     declRefExpr(to(namedDecl(hasAnyName(CalleeName))),
+                                 hasAnyTemplateArgumentLoc(anything()))
+                         .bind("callee")))));
+  };
 
-  auto Any = anyOf(
-      has(declStmt(containsDeclaration(
-          0, varDecl(hasInitializer(callExpr(unless(isMacroID()),
-                                             unless(cxxMemberCallExpr()),
-                                             callee(namedDecl(hasName("cast"))))
-                                        .bind("assign")))))),
-      Condition);
+  auto Condition = hasCondition(implicitCastExpr(
+      has(callExpr(AnyCalleeName({"cast", "dyn_cast"})).bind("cond"))));
 
-  auto CallExpression =
+  auto Any =
+      anyOf(hasConditionVariableStatement(containsDeclaration(
+                0, varDecl(hasInitializer(callExpr(AnyCalleeName({"cast"}))))
+                       .bind("var"))),
+            Condition);
+
+  auto CallWithBindedArg =
       callExpr(
-
-          unless(isMacroID()), unless(cxxMemberCallExpr()),
-          callee(namedDecl(hasAnyName("isa", "cast", "cast_or_null", "dyn_cast",
-                                      "dyn_cast_or_null"))
-                     .bind("func")),
+          AnyCalleeName({"isa", "cast", "cast_or_null", "cast_if_present",
+                         "dyn_cast", "dyn_cast_or_null",
+                         "dyn_cast_if_present"}),
           hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
           .bind("rhs");
 
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          stmt(anyOf(
-              ifStmt(Any), whileStmt(Any), doStmt(Condition),
-              binaryOperator(unless(isExpansionInFileMatching(
-                                 "llvm/include/llvm/Support/Casting.h")),
-                             hasOperatorName("&&"),
-                             hasLHS(implicitCastExpr().bind("lhs")),
-                             hasRHS(anyOf(implicitCastExpr(has(CallExpression)),
-                                          CallExpression)))
-                  .bind("and")))),
+      stmt(anyOf(ifStmt(Any), forStmt(Any), whileStmt(Any), doStmt(Condition),
+                 binaryOperator(unless(isExpansionInFileMatching(
+                                    "llvm/include/llvm/Support/Casting.h")),
+                                hasOperatorName("&&"),
+                                hasLHS(implicitCastExpr().bind("lhs")),
+                                hasRHS(ignoringImpCasts(CallWithBindedArg)))
+                     .bind("and"))),
       this);
 }
 
 void PreferIsaOrDynCastInConditionalsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("assign")) {
-    SourceLocation StartLoc = MatchedDecl->getCallee()->getExprLoc();
-    SourceLocation EndLoc =
-        StartLoc.getLocWithOffset(StringRef("cast").size() - 1);
+  const auto *Callee = Result.Nodes.getNodeAs<DeclRefExpr>("callee");
+  if (!Callee)
+    return;
 
-    diag(MatchedDecl->getBeginLoc(),
+  SourceLocation StartLoc = Callee->getLocation();
+  SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
+
+  if (Result.Nodes.getNodeAs<VarDecl>("var")) {
+    diag(StartLoc,
          "cast<> in conditional will assert rather than return a null pointer")
         << FixItHint::CreateReplacement(SourceRange(StartLoc, EndLoc),
                                         "dyn_cast");
-  } else if (const auto *MatchedDecl =
-                 Result.Nodes.getNodeAs<CallExpr>("call")) {
-    SourceLocation StartLoc = MatchedDecl->getCallee()->getExprLoc();
-    SourceLocation EndLoc =
-        StartLoc.getLocWithOffset(StringRef("cast").size() - 1);
-
+  } else if (Result.Nodes.getNodeAs<CallExpr>("cond")) {
     StringRef Message =
         "cast<> in conditional will assert rather than return a null pointer";
-    if (Result.Nodes.getNodeAs<NamedDecl>("dyn_cast"))
+    if (Callee->getDecl()->getName() == "dyn_cast")
       Message = "return value from dyn_cast<> not used";
 
-    diag(MatchedDecl->getBeginLoc(), Message)
+    diag(StartLoc, Message)
         << FixItHint::CreateReplacement(SourceRange(StartLoc, EndLoc), "isa");
-  } else if (const auto *MatchedDecl =
-                 Result.Nodes.getNodeAs<BinaryOperator>("and")) {
+  } else if (Result.Nodes.getNodeAs<BinaryOperator>("and")) {
     const auto *LHS = Result.Nodes.getNodeAs<ImplicitCastExpr>("lhs");
     const auto *RHS = Result.Nodes.getNodeAs<CallExpr>("rhs");
     const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
-    const auto *Func = Result.Nodes.getNodeAs<NamedDecl>("func");
 
     assert(LHS && "LHS is null");
     assert(RHS && "RHS is null");
     assert(Arg && "Arg is null");
-    assert(Func && "Func is null");
 
-    StringRef LHSString(Lexer::getSourceText(
-        CharSourceRange::getTokenRange(LHS->getSourceRange()),
-        *Result.SourceManager, getLangOpts()));
+    auto GetText = [&](SourceRange R) {
+      return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
+                                  *Result.SourceManager, getLangOpts());
+    };
 
-    StringRef ArgString(Lexer::getSourceText(
-        CharSourceRange::getTokenRange(Arg->getSourceRange()),
-        *Result.SourceManager, getLangOpts()));
+    StringRef LHSString = GetText(LHS->getSourceRange());
+
+    StringRef ArgString = GetText(Arg->getSourceRange());
 
     if (ArgString != LHSString)
       return;
 
-    StringRef RHSString(Lexer::getSourceText(
-        CharSourceRange::getTokenRange(RHS->getSourceRange()),
-        *Result.SourceManager, getLangOpts()));
+    std::string Replacement = llvm::formatv(
+        "{}{}{}", GetText(Callee->getQualifierLoc().getSourceRange()),
+        "isa_and_nonnull",
+        GetText(SourceRange(Callee->getLAngleLoc(), RHS->getEndLoc())));
 
-    std::string Replacement("isa_and_nonnull");
-    Replacement += RHSString.substr(Func->getName().size());
-
-    diag(MatchedDecl->getBeginLoc(),
+    diag(LHS->getBeginLoc(),
          "isa_and_nonnull<> is preferred over an explicit test for null "
          "followed by calling isa<>")
-        << FixItHint::CreateReplacement(SourceRange(MatchedDecl->getBeginLoc(),
-                                                    MatchedDecl->getEndLoc()),
-                                        Replacement);
+        << FixItHint::CreateReplacement(
+               SourceRange(LHS->getBeginLoc(), RHS->getEndLoc()), Replacement);
   }
 }
 
