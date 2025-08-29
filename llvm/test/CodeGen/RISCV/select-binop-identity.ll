@@ -11,6 +11,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV32,ZICOND,ZICOND32 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ZICOND,ZICOND64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+c,+conditional-cmv-fusion \
+; RUN:   -verify-machineinstrs < %s | FileCheck -check-prefixes=CMV-FUSION %s
 
 ; InstCombine canonicalizes (c ? x | y : x) to (x | (c ? y : 0)) similar for
 ; other binary operations using their identity value as the constant.
@@ -55,6 +57,16 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 s
 ; ZICOND-NEXT:    and a1, a2, a1
 ; ZICOND-NEXT:    or a0, a1, a0
 ; ZICOND-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i32:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a1, a1, a2
+; CMV-FUSION-NEXT:    bnez a0, .LBB0_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB0_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
   ret i32 %b
@@ -104,6 +116,16 @@ define signext i32 @and_select_all_ones_i32_cmp(i32 signext %x, i32 signext %y, 
 ; ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; ZICOND-NEXT:    or a0, a0, a1
 ; ZICOND-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i32_cmp:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a0, a0, a1
+; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    beq a2, a3, .LBB1_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:  .LBB1_2:
+; CMV-FUSION-NEXT:    ret
   %c = icmp eq i32 %z, 4
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
@@ -152,6 +174,16 @@ define signext i32 @and_select_all_ones_i32_cmp2(i32 signext %x, i32 signext %y,
 ; ZICOND-NEXT:    czero.nez a1, a1, a2
 ; ZICOND-NEXT:    or a0, a0, a1
 ; ZICOND-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i32_cmp2:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a0, a0, a1
+; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    blt a2, a3, .LBB2_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:  .LBB2_2:
+; CMV-FUSION-NEXT:    ret
   %c = icmp slt i32 %z, 4
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
@@ -197,6 +229,16 @@ define i64 @and_select_all_ones_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; ZICOND64-NEXT:    and a1, a2, a1
 ; ZICOND64-NEXT:    or a0, a1, a0
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i64:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a1, a1, a2
+; CMV-FUSION-NEXT:    beqz a0, .LBB3_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB3_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i64 -1, i64 %x
   %b = and i64 %y, %a
   ret i64 %b
@@ -249,6 +291,16 @@ define i64 @and_select_all_ones_i64_cmp(i64 %x, i64 %y, i64 %z) {
 ; ZICOND64-NEXT:    czero.eqz a1, a1, a2
 ; ZICOND64-NEXT:    or a0, a0, a1
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i64_cmp:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a0, a0, a1
+; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    beq a2, a3, .LBB4_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:  .LBB4_2:
+; CMV-FUSION-NEXT:    ret
   %c = icmp eq i64 %z, 4
   %a = select i1 %c, i64 %x, i64 -1
   %b = and i64 %a, %y
@@ -319,6 +371,16 @@ define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
 ; ZICOND64-NEXT:    czero.nez a1, a1, a2
 ; ZICOND64-NEXT:    or a0, a0, a1
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: and_select_all_ones_i64_cmp2:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    and a0, a0, a1
+; CMV-FUSION-NEXT:    li a3, 4
+; CMV-FUSION-NEXT:    blt a2, a3, .LBB5_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:  .LBB5_2:
+; CMV-FUSION-NEXT:    ret
   %c = icmp slt i64 %z, 4
   %a = select i1 %c, i64 %x, i64 -1
   %b = and i64 %a, %y
@@ -360,6 +422,16 @@ define signext i32 @or_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 s
 ; ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; ZICOND-NEXT:    or a0, a2, a0
 ; ZICOND-NEXT:    ret
+;
+; CMV-FUSION-LABEL: or_select_all_zeros_i32:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    or a1, a1, a2
+; CMV-FUSION-NEXT:    bnez a0, .LBB6_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB6_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i32 %x, i32 0
   %b = or i32 %y, %a
   ret i32 %b
@@ -410,6 +482,16 @@ define i64 @or_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; ZICOND64-NEXT:    czero.nez a0, a1, a0
 ; ZICOND64-NEXT:    or a0, a0, a2
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: or_select_all_zeros_i64:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    or a1, a1, a2
+; CMV-FUSION-NEXT:    beqz a0, .LBB7_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB7_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i64 0, i64 %x
   %b = or i64 %a, %y
   ret i64 %b
@@ -450,6 +532,16 @@ define signext i32 @xor_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; ZICOND-NEXT:    czero.nez a0, a1, a0
 ; ZICOND-NEXT:    xor a0, a2, a0
 ; ZICOND-NEXT:    ret
+;
+; CMV-FUSION-LABEL: xor_select_all_zeros_i32:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    xor a1, a1, a2
+; CMV-FUSION-NEXT:    beqz a0, .LBB8_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB8_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = xor i32 %y, %a
   ret i32 %b
@@ -500,6 +592,16 @@ define i64 @xor_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; ZICOND64-NEXT:    czero.eqz a0, a1, a0
 ; ZICOND64-NEXT:    xor a0, a0, a2
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: xor_select_all_zeros_i64:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    xor a1, a1, a2
+; CMV-FUSION-NEXT:    bnez a0, .LBB9_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB9_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = xor i64 %a, %y
   ret i64 %b
@@ -546,6 +648,16 @@ define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; ZICOND64-NEXT:    czero.nez a0, a1, a0
 ; ZICOND64-NEXT:    addw a0, a2, a0
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: add_select_all_zeros_i32:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    addw a1, a1, a2
+; CMV-FUSION-NEXT:    beqz a0, .LBB10_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB10_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = add i32 %y, %a
   ret i32 %b
@@ -600,6 +712,16 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; ZICOND64-NEXT:    czero.eqz a0, a1, a0
 ; ZICOND64-NEXT:    add a0, a0, a2
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: add_select_all_zeros_i64:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    add a1, a1, a2
+; CMV-FUSION-NEXT:    bnez a0, .LBB11_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB11_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = add i64 %a, %y
   ret i64 %b
@@ -646,6 +768,16 @@ define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ; ZICOND64-NEXT:    czero.nez a0, a1, a0
 ; ZICOND64-NEXT:    subw a0, a2, a0
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: sub_select_all_zeros_i32:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    subw a1, a2, a1
+; CMV-FUSION-NEXT:    beqz a0, .LBB12_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB12_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i32 0, i32 %x
   %b = sub i32 %y, %a
   ret i32 %b
@@ -700,6 +832,16 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; ZICOND64-NEXT:    czero.eqz a0, a1, a0
 ; ZICOND64-NEXT:    sub a0, a2, a0
 ; ZICOND64-NEXT:    ret
+;
+; CMV-FUSION-LABEL: sub_select_all_zeros_i64:
+; CMV-FUSION:       # %bb.0:
+; CMV-FUSION-NEXT:    sub a1, a2, a1
+; CMV-FUSION-NEXT:    bnez a0, .LBB13_2
+; CMV-FUSION-NEXT:  # %bb.1:
+; CMV-FUSION-NEXT:    mv a1, a2
+; CMV-FUSION-NEXT:  .LBB13_2:
+; CMV-FUSION-NEXT:    mv a0, a1
+; CMV-FUSION-NEXT:    ret
   %a = select i1 %c, i64 %x, i64 0
   %b = sub i64 %y, %a
   ret i64 %b
