@@ -6,11 +6,7 @@
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp"]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FIRST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[ITEM_ONE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FIRST_IDX]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: cir.store {{.*}} %[[ITEM_ONE]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[LAST_IDX]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: cir.do {
@@ -50,11 +46,7 @@
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp"]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FIRST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[ITEM_ONE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FIRST_IDX]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: cir.store {{.*}} %[[ITEM_ONE]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[LAST_IDX]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: cir.do {
@@ -82,11 +74,7 @@
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp"]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FIRST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[ITEM_ONE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FIRST_IDX]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: cir.store {{.*}} %[[ITEM_ONE]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[LAST_IDX]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: cir.do {
@@ -158,11 +146,7 @@
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arrayinit.temp"]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
-// CHECK-NEXT: %[[FIRST_IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CHECK-NEXT: %[[ITEM_ONE:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FIRST_IDX]] : !s64i), !cir.ptr<!s32i>
-// CHECK-NEXT: cir.store {{.*}} %[[ITEM_ONE]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CHECK-NEXT: %[[END_ITR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[LAST_IDX]] : !s64i), !cir.ptr<!s32i>
 // CHECK-NEXT: cir.do {
