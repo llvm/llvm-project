@@ -1069,6 +1069,28 @@ namespace BaseCompare {
   static_assert(foo());
 }
 
+
+namespace NegativeArraySize { 
+  constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+  }
+} // namespace NegativeArraySize
+
+namespace NewNegSizeNothrow {
+  constexpr int get_neg_size() {
+    return -1;
+  }
+
+  constexpr bool test_nothrow_neg_size() {
+    int x = get_neg_size();
+    int* p = new (std::nothrow) int[x]; 
+    return p == nullptr;
+  }
+
+  static_assert(test_nothrow_neg_size(), "expected nullptr");
+} // namespace NewNegSizeNothrow
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
