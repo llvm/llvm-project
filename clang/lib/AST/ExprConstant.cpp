@@ -4033,8 +4033,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       assert((isa<ConstantArrayType>(AT) || isa<IncompleteArrayType>(AT)) &&
              "vla in literal type?");
       uint64_t Index = Sub.Entries[I].getAsArrayIndex();
-      if (isa<ConstantArrayType>(AT) &&
-          cast<ConstantArrayType>(AT)->getSize().ule(Index)) {
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+          CAT && CAT->getSize().ule(Index)) {
         // Note, it should not be possible to form a pointer with a valid
         // designator which points more than one past the end of the array.
         if (Info.getLangOpts().CPlusPlus11)
@@ -4050,8 +4050,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
       else if (!isRead(handler.AccessKind)) {
-        if (isa<ConstantArrayType>(AT) &&
-            !CheckArraySize(Info, cast<ConstantArrayType>(AT), E->getExprLoc()))
+        if (const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+            CAT && !CheckArraySize(Info, CAT, E->getExprLoc()))
           return handler.failed();
 
         expandArray(*O, Index);
