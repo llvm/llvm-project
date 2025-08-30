@@ -282,8 +282,8 @@ unsigned Vocabulary::getSlotIndex(Type::TypeID TypeID) {
   return MaxOpcodes + static_cast<unsigned>(getCanonicalTypeID(TypeID));
 }
 
-unsigned Vocabulary::getSlotIndex(const Value *Op) {
-  unsigned Index = static_cast<unsigned>(getOperandKind(Op));
+unsigned Vocabulary::getSlotIndex(const Value &Op) {
+  unsigned Index = static_cast<unsigned>(getOperandKind(&Op));
   assert(Index < MaxOperandKinds && "Invalid OperandKind");
   return MaxOpcodes + MaxCanonicalTypeIDs + Index;
 }
@@ -297,7 +297,7 @@ const Embedding &Vocabulary::operator[](Type::TypeID TypeID) const {
 }
 
 const ir2vec::Embedding &Vocabulary::operator[](const Value &Arg) const {
-  return Vocab[getSlotIndex(&Arg)];
+  return Vocab[getSlotIndex(Arg)];
 }
 
 StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
