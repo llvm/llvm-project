@@ -693,4 +693,34 @@ TEST(StringMapCustomTest, StringMapEntrySize) {
   EXPECT_EQ(LargeValue, Key.size());
 }
 
+TEST(StringMapCustomTest, NonConstIterator) {
+  StringMap<int> Map;
+  Map["key"] = 1;
+
+  // Check that Map.begin() returns a non-const iterator.
+  static_assert(
+      std::is_same_v<decltype(Map.begin()), StringMap<int>::iterator>);
+
+  // Check that we can construct a const_iterator from an iterator.
+  static_assert(std::is_constructible_v<StringMap<int>::const_iterator,
+                                        StringMap<int>::iterator>);
+
+  // Double check that we can actually construct a const_iterator.
+  StringMap<int>::const_iterator const_it = Map.begin();
+  (void)const_it;
+}
+
+TEST(StringMapCustomTest, ConstIterator) {
+  StringMap<int> Map;
+  const StringMap<int> &ConstMap = Map;
+
+  // Check that ConstMap.begin() returns a const_iterator.
+  static_assert(std::is_same_v<decltype(ConstMap.begin()),
+                               StringMap<int>::const_iterator>);
+
+  // Check that we cannot construct an iterator from a const_iterator.
+  static_assert(!std::is_constructible_v<StringMap<int>::iterator,
+                                         StringMap<int>::const_iterator>);
+}
+
 } // end anonymous namespace
