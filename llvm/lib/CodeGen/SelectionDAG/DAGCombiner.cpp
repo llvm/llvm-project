@@ -11744,7 +11744,7 @@ static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
 
   const TargetOptions &Options = DAG.getTarget().Options;
 
-  return (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) &&
+  return Flags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
          (Flags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
@@ -17235,7 +17235,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
-  bool NoSignedZero = Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros();
+  bool NoSignedZero = Flags.hasNoSignedZeros();
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
@@ -17654,7 +17654,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // N0 + -0.0 --> N0 (also allowed with +0.0 and fast-math)
   ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1, true);
   if (N1C && N1C->isZero())
-    if (N1C->isNegative() || Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())
+    if (N1C->isNegative() || Flags.hasNoSignedZeros())
       return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -17710,8 +17710,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // If 'unsafe math' or reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
     if (N1CFP && N0.getOpcode() == ISD::FADD &&
@@ -17797,8 +17796,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     }
   } // enable-unsafe-fp-math && AllowNewConst
 
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
                                           VT, N0, N1, Flags))
@@ -17869,8 +17867,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub A, 0) -> A
   if (N1CFP && N1CFP->isZero()) {
-    if (!N1CFP->isNegative() || Options.NoSignedZerosFPMath ||
-        Flags.hasNoSignedZeros()) {
+    if (!N1CFP->isNegative() || Flags.hasNoSignedZeros()) {
       return N0;
     }
   }
@@ -17883,8 +17880,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub -0.0, N1) -> -N1
   if (N0CFP && N0CFP->isZero()) {
-    if (N0CFP->isNegative() ||
-        (Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros())) {
+    if (N0CFP->isNegative() || Flags.hasNoSignedZeros()) {
       // We cannot replace an FSUB(+-0.0,X) with FNEG(X) when denormals are
       // flushed to zero, unless all users treat denorms as zero (DAZ).
       // FIXME: This transform will change the sign of a NaN and the behavior
@@ -17900,8 +17896,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     }
   }
 
-  if ((Options.NoSignedZerosFPMath ||
-       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+  if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
       N1.getOpcode() == ISD::FADD) {
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
@@ -18220,7 +18215,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   // TODO: Finally migrate away from global TargetOptions.
   if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
-    if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
+    if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
       if (N0CFP && N0CFP->isZero())
         return N2;
@@ -18525,8 +18520,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // Fold X/Sqrt(X) -> Sqrt(X)
-  if ((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-      Flags.hasAllowReassociation())
+  if (Flags.hasNoSignedZeros() && Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
 
@@ -18753,8 +18747,7 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // FIXME: We should be able to use node-level FMF here.
   // TODO: If strict math, should we use FABS (+ range check for signed cast)?
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) ||
-      !DAG.getTarget().Options.NoSignedZerosFPMath)
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
     return SDValue();
 
   // fptosi/fptoui round towards zero, so converting from FP to integer and
@@ -19195,9 +19188,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   // FIXME: This is duplicated in getNegatibleCost, but getNegatibleCost doesn't
   // know it was called from a context with a nsz flag if the input fsub does
   // not.
-  if (N0.getOpcode() == ISD::FSUB &&
-      (DAG.getTarget().Options.NoSignedZerosFPMath ||
-       N->getFlags().hasNoSignedZeros()) && N0.hasOneUse()) {
+  if (N0.getOpcode() == ISD::FSUB && (N->getFlags().hasNoSignedZeros()) &&
+      N0.hasOneUse()) {
     return DAG.getNode(ISD::FSUB, SDLoc(N), VT, N0.getOperand(1),
                        N0.getOperand(0));
   }
