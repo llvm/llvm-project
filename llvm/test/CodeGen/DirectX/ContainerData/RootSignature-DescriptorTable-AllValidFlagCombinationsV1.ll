@@ -19,33 +19,33 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
 ; DXC:        - Name:            RTS0
-;DXC-NEXT:      Size:            104
-;DXC-NEXT:      RootSignature:
-;DXC-NEXT:        Version:         1
-;DXC-NEXT:        NumRootParameters: 2
-;DXC-NEXT:        RootParametersOffset: 24
-;DXC-NEXT:        NumStaticSamplers: 0
-;DXC-NEXT:        StaticSamplersOffset: 104
-;DXC-NEXT:        Parameters:
-;DXC-NEXT:          - ParameterType:   0
-;DXC-NEXT:            ShaderVisibility: 0
-;DXC-NEXT:            Table:
-;DXC-NEXT:              NumRanges:       1
-;DXC-NEXT:              RangesOffset:    56
-;DXC-NEXT:              Ranges:
-;DXC-NEXT:                - RangeType:       3
-;DXC-NEXT:                  NumDescriptors:  1
-;DXC-NEXT:                  BaseShaderRegister: 1
-;DXC-NEXT:                  RegisterSpace:   0
-;DXC-NEXT:                  OffsetInDescriptorsFromTableStart: 4294967295
-;DXC-NEXT:          - ParameterType:   0
-;DXC-NEXT:            ShaderVisibility: 0
-;DXC-NEXT:            Table:
-;DXC-NEXT:              NumRanges:       1
-;DXC-NEXT:              RangesOffset:    84
-;DXC-NEXT:              Ranges:
-;DXC-NEXT:                - RangeType:       1
-;DXC-NEXT:                  NumDescriptors:  5
-;DXC-NEXT:                  BaseShaderRegister: 1
-;DXC-NEXT:                  RegisterSpace:   10
-;DXC-NEXT:                  OffsetInDescriptorsFromTableStart: 5
+; DXC-NEXT:     Size:            104
+; DXC-NEXT:     RootSignature:
+; DXC-NEXT:       Version:         1
+; DXC-NEXT:       NumRootParameters: 2
+; DXC-NEXT:       RootParametersOffset: 24
+; DXC-NEXT:       NumStaticSamplers: 0
+; DXC-NEXT:       StaticSamplersOffset: 104
+; DXC-NEXT:       Parameters:
+; DXC-NEXT:         - ParameterType:   0
+; DXC-NEXT:           ShaderVisibility: 0
+; DXC-NEXT:           Table:
+; DXC-NEXT:             NumRanges:       1
+; DXC-NEXT:             RangesOffset:    56
+; DXC-NEXT:             Ranges:
+; DXC-NEXT:               - RangeType:       3
+; DXC-NEXT:                 NumDescriptors:  1
+; DXC-NEXT:                 BaseShaderRegister: 1
+; DXC-NEXT:                 RegisterSpace:   0
+; DXC-NEXT:                 OffsetInDescriptorsFromTableStart: 4294967295
+; DXC-NEXT:         - ParameterType:   0
+; DXC-NEXT:           ShaderVisibility: 0
+; DXC-NEXT:           Table:
+; DXC-NEXT:             NumRanges:       1
+; DXC-NEXT:             RangesOffset:    84
+; DXC-NEXT:             Ranges:
+; DXC-NEXT:                - RangeType:       1
+; DXC-NEXT:                 NumDescriptors:  5
+; DXC-NEXT:                 BaseShaderRegister: 1
+; DXC-NEXT:                 RegisterSpace:   10
+; DXC-NEXT:                 OffsetInDescriptorsFromTableStart: 5
