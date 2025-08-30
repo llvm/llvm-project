@@ -55,7 +55,7 @@ public:
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
   /// Clangd should treat the results as unreliable.
-  virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
+  virtual tooling::CompileCommand getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot = std::nullopt) const;
 
   /// If the CDB does any asynchronous work, wait for it to complete.
   /// For use in tests.
@@ -86,7 +86,7 @@ public:
   std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const override;
 
-  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+  tooling::CompileCommand getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot = std::nullopt) const override;
 
   bool blockUntilIdle(Deadline D) const override;
 
@@ -200,7 +200,7 @@ public:
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
-  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+  tooling::CompileCommand getFallbackCommand(PathRef File, std::optional<std::string> ProjectRoot = std::nullopt) const override;
 
   /// Sets or clears the compilation command for a particular file.
   /// Returns true if the command was changed (including insertion and removal),
