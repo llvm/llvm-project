@@ -3157,16 +3157,16 @@ static bool isSmartPtrType(QualType QT) {
 /// collectSmartPtrFieldRegions to share the same traversal logic,
 /// ensuring consistency.
 struct FieldConsumer {
-  const MemRegion *Base;
+  const MemRegion *Reg;
   CheckerContext *C;
   llvm::SmallPtrSetImpl<const MemRegion *> *Out;
 
-  FieldConsumer(const MemRegion *Base, CheckerContext &C,
+  FieldConsumer(const MemRegion *Reg, CheckerContext &C,
                 llvm::SmallPtrSetImpl<const MemRegion *> &Out)
-      : Base(Base), C(&C), Out(&Out) {}
+      : Reg(Reg), C(&C), Out(&Out) {}
 
   void consume(const FieldDecl *FD) {
-    SVal L = C->getState()->getLValue(FD, loc::MemRegionVal(Base));
+    SVal L = C->getState()->getLValue(FD, loc::MemRegionVal(Reg));
     if (const MemRegion *FR = L.getAsRegion())
       Out->insert(FR);
   }
@@ -3175,10 +3175,10 @@ struct FieldConsumer {
                                             bool IsVirtual) {
     // Get the base class region
     SVal BaseL =
-        C->getState()->getLValue(BaseDecl, Base->getAs<SubRegion>(), IsVirtual);
-    if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
+        C->getState()->getLValue(BaseDecl, Reg->getAs<SubRegion>(), IsVirtual);
+    if (const MemRegion *BaseObjRegion = BaseL.getAsRegion()) {
       // Return a consumer for the base class
-      return FieldConsumer{BaseRegion, *C, *Out};
+      return FieldConsumer{BaseObjRegion, *C, *Out};
     }
     return std::nullopt;
   }
@@ -3276,17 +3276,17 @@ static bool isSmartPtrCall(const CallEvent &Call) {
 /// Collect memory regions of smart owning pointer fields from a record type
 /// (including fields from base classes).
 static void
-collectSmartPtrFieldRegions(const MemRegion *Base, QualType RecQT,
+collectSmartPtrFieldRegions(const MemRegion *Reg, QualType RecQT,
                             CheckerContext &C,
                             llvm::SmallPtrSetImpl<const MemRegion *> &Out) {
-  if (!Base)
+  if (!Reg)
     return;
 
   const auto *CRD = RecQT->getAsCXXRecordDecl();
   if (!CRD)
     return;
 
-  FieldConsumer FC{Base, C, Out};
+  FieldConsumer FC{Reg, C, Out};
   hasSmartPtrField(CRD, FC);
 }
 
