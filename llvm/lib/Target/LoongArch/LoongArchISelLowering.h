@@ -37,6 +37,10 @@ enum NodeType : unsigned {
   // Select
   SELECT_CC,
 
+  // Branch
+  BR_CC,
+  BRCOND,
+
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
   SLL_W,
@@ -385,6 +389,7 @@ private:
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
