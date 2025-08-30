@@ -76,6 +76,13 @@ namespace llvm {
 #define __LLVM_FILE_NAME__ ::llvm::impl::getShortFileName(__FILE__)
 #endif
 
+#define LDBG_OS(name, LEVEL)                                                   \
+  ::llvm::impl::raw_ldbg_ostream name {                                        \
+    ::llvm::impl::computePrefix(DEBUG_TYPE, __LLVM_FILE_NAME__, __LINE__,      \
+                                LEVEL),                                        \
+        llvm::dbgs()                                                           \
+  }
+
 #define DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE,     \
                                                 LINE)                          \
   for (bool _c =                                                               \
