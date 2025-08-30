@@ -420,7 +420,7 @@ private:
   char_type* __eout_ = nullptr;
 
   template <class _CharT2, class _Traits2, class _Allocator>
-  _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT2, _Traits2>&
+  _LIBCPP_EXPORTED_FROM_ABI friend basic_istream<_CharT2, _Traits2>&
   getline(basic_istream<_CharT2, _Traits2>&, basic_string<_CharT2, _Traits2, _Allocator>&, _CharT2);
 };
 
