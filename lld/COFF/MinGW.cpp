@@ -226,8 +226,6 @@ void lld::coff::addWrappedSymbols(SymbolTable &symtab,
     Symbol *sym = symtab.findUnderscore(name);
     if (!sym)
       continue;
-    Log(symtab.ctx) << "adding wrapped symbol entry for: " << name << ": "
-                    << sym->kind() << ',' << !!sym->isUsedInRegularObj;
 
     Symbol *real =
         symtab.addUndefined(mangle("__real_" + name, symtab.machine));
@@ -238,12 +236,10 @@ void lld::coff::addWrappedSymbols(SymbolTable &symtab,
     if (auto *usym = dyn_cast<Undefined>(sym)) {
       if (auto *ureal = dyn_cast<Undefined>(real);
           ureal && ureal->weakAlias && !usym->weakAlias) {
-        Log(symtab.ctx) << "inheriting weak alias to: " << usym->getName();
         usym->weakAlias = ureal->weakAlias;
       }
       if (auto *uwrap = dyn_cast<Undefined>(wrap);
           uwrap && usym->weakAlias && !uwrap->weakAlias) {
-        Log(symtab.ctx) << "inheriting weak alias to: " << uwrap->getName();
         uwrap->weakAlias = usym->weakAlias;
       }
     }
@@ -278,8 +274,6 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
     if (Defined *d = dyn_cast<Defined>(w.wrap)) {
-      Log(symtab.ctx) << "checking for importing with unwrapping: "
-                      << d->getName();
       Symbol *imp = symtab.find(("__imp_" + w.sym->getName()).str());
       // Create a new defined local import for the wrap symbol. If
       // no imp prefixed symbol existed, there's no need for it.
@@ -288,12 +282,8 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
       if (imp) {
         if (Symbol *wrapimp =
                 symtab.find(("__imp_" + w.wrap->getName()).str())) {
-          Log(symtab.ctx) << "using unwrapped imported symbol: "
-                          << imp->getName();
           map[imp] = wrapimp;
         } else {
-          Log(symtab.ctx) << "create local unwrapped imported symbol: "
-                          << imp->getName();
           DefinedLocalImport *localwrapimp = make<DefinedLocalImport>(
               symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
           symtab.localImportChunks.push_back(localwrapimp->getChunk());
@@ -307,10 +297,7 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
   parallelForEach(symtab.ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (auto &sym : syms)
-      if (Symbol *s = map.lookup(sym)) {
-        Log(symtab.ctx) << "overriding " << sym->getName() << " by "
-                        << s->getName() << " (in " << file->getName() << ")";
+      if (Symbol *s = map.lookup(sym))
         sym = s;
-      }
   });
 }

@@ -566,11 +566,6 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
     if (!isa_and_nonnull<Defined>(target) || isa<DefinedAbsolute>(target))
       continue;
-    if (target && target->getName().size() > 2)
-      Log(file->symtab.ctx)
-          << "base reloc for " << target->getName() << ": " << target->kind()
-          << ',' << !!target->isUsedInRegularObj << " (in " << file->getName()
-          << ")";
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
 

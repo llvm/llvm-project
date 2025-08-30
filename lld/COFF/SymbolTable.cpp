@@ -257,8 +257,6 @@ void SymbolTable::loadMinGWSymbols() {
   }
 
   for (auto sym : undefs) {
-    Log(ctx) << "trying fixup " << sym->getName() << ": " << sym->kind() << ','
-             << !!sym->isUsedInRegularObj;
     auto *undef = dyn_cast<Undefined>(sym);
     if (!undef)
       continue;
@@ -461,13 +459,6 @@ void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
-
-    if (auto name = sym->getName(); !name.ends_with("__") &&
-                                    !name.starts_with("__guard") &&
-                                    !name.starts_with("__nm_"))
-      Log(ctx) << "checking for " << name << ": " << sym->kind()
-               << " used: " << (sym->isUsedInRegularObj != 0);
-
     auto *undef = dyn_cast<Undefined>(sym);
     if (!undef)
       continue;
@@ -534,7 +525,6 @@ void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
-  Log(ctx) << "inserting " << name;
   bool inserted = false;
   Symbol *&sym = symMap[CachedHashStringRef(name)];
   if (!sym) {
