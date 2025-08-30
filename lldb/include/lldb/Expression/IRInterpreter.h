@@ -37,7 +37,8 @@ class IRInterpreter {
 public:
   static bool CanInterpret(llvm::Module &module, llvm::Function &function,
                            lldb_private::Status &error,
-                           const bool support_function_calls);
+                           const bool support_function_calls,
+                           lldb_private::ExecutionContext &exe_ctx);
 
   static bool Interpret(llvm::Module &module, llvm::Function &function,
                         llvm::ArrayRef<lldb::addr_t> args,

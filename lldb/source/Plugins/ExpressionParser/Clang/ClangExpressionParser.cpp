@@ -1523,7 +1523,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
           !process ? false : process->CanInterpretFunctionCalls();
       can_interpret = IRInterpreter::CanInterpret(
           *execution_unit_sp->GetModule(), *execution_unit_sp->GetFunction(),
-          interpret_error, interpret_function_calls);
+          interpret_error, interpret_function_calls, exe_ctx);
 
       if (!can_interpret && execution_policy == eExecutionPolicyNever) {
         err = Status::FromErrorStringWithFormat(
