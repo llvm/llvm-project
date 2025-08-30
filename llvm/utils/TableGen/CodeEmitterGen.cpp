@@ -134,12 +134,6 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
     return false;
   }
 
-  if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
-    PrintError(R,
-               "Operand " + VarName + " used but also marked as not emitted!");
-    return false;
-  }
-
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
   StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];

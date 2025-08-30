@@ -183,8 +183,6 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
       OpInfo.EncoderMethodNames[0] = EncoderMethod;
-      OpInfo.DoNotEncode.set();
-      OpInfo.DoNotEncode[0] = false;
     }
 
     MIOperandNo += NumOps;
@@ -406,21 +404,6 @@ static void ParseConstraints(StringRef CStr, CGIOperandList &Ops,
   }
 }
 
-void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
-  while (true) {
-    StringRef OpName;
-    std::tie(OpName, DisableEncoding) = getToken(DisableEncoding, " ,\t");
-    if (OpName.empty())
-      break;
-
-    // Figure out which operand this is.
-    std::pair<unsigned, unsigned> Op = parseOperandName(OpName, false);
-
-    // Mark the operand as not-to-be encoded.
-    OperandList[Op.first].DoNotEncode[Op.second] = true;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // CodeGenInstruction Implementation
 //===----------------------------------------------------------------------===//
@@ -489,9 +472,6 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
 
   // Parse Constraints.
   ParseConstraints(R->getValueAsString("Constraints"), Operands, R);
-
-  // Parse the DisableEncoding field.
-  Operands.ProcessDisableEncoding(R->getValueAsString("DisableEncoding"));
 
   // First check for a ComplexDeprecationPredicate.
   if (R->getValue("ComplexDeprecationPredicate")) {

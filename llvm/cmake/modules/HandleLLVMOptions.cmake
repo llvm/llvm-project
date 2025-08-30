@@ -1330,7 +1330,7 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
-if("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
 else()
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)

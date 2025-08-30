@@ -132,7 +132,6 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -346,7 +345,6 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -769,7 +767,6 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
   let sccb_value = 0;
   let IsAtomicRet = 1;
   let Constraints = "$vdata = $vdata_in";
-  let DisableEncoding = "$vdata_in";
 }
 
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
@@ -2414,7 +2411,6 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let OtherPredicates    = ps.OtherPredicates;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW            = ps.SchedRW;

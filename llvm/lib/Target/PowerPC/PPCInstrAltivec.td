@@ -1471,13 +1471,13 @@ def VINSERTB : VXForm_1<781, (outs vrrc:$VD),
                         "vinsertb $VD, $VB, $VA", IIC_VecGeneral,
                         [(set v16i8:$VD, (PPCvecinsert v16i8:$VDi, v16i8:$VB,
                                                       imm32SExt16:$VA))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
 def VINSERTH : VXForm_1<845, (outs vrrc:$VD),
                         (ins vrrc:$VDi, u4imm:$VA, vrrc:$VB),
                         "vinserth $VD, $VB, $VA", IIC_VecGeneral,
                         [(set v8i16:$VD, (PPCvecinsert v8i16:$VDi, v8i16:$VB,
                                                       imm32SExt16:$VA))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
 def VINSERTW : VX1_VT5_UIM5_VB5<909, "vinsertw", []>;
 def VINSERTD : VX1_VT5_UIM5_VB5<973, "vinsertd", []>;
 
@@ -1569,7 +1569,7 @@ def VRLWMI : VXForm_1<133, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB, vrrc:$VDi),
                       [(set v4i32:$VD,
                          (int_ppc_altivec_vrlwmi v4i32:$VA, v4i32:$VB,
                                                  v4i32:$VDi))]>,
-                      RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                      RegConstraint<"$VDi = $VD">;
 def VRLDNM : VX1_VT5_VA5_VB5<453, "vrldnm",
                              [(set v2i64:$VD,
                                  (int_ppc_altivec_vrldnm v2i64:$VA,
@@ -1579,7 +1579,7 @@ def VRLDMI : VXForm_1<197, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB, vrrc:$VDi),
                       [(set v2i64:$VD,
                          (int_ppc_altivec_vrldmi v2i64:$VA, v2i64:$VB,
                                                  v2i64:$VDi))]>,
-                      RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                      RegConstraint<"$VDi = $VD">;
 
 // Vector Shift Left/Right
 def VSLV : VX1_VT5_VA5_VB5<1860, "vslv",
