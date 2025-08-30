@@ -1773,6 +1773,7 @@ def note_unsatisfied_trait
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
+           "%Aggregate{aggregate}|"
            "%Final{final}"
            "}1">;
 
@@ -1794,6 +1795,7 @@ def note_unsatisfied_trait_reason
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%PolymorphicType{is a polymorphic type}|"
            "%VirtualFunction{has a virtual function %1}|"
            "%NonEmptyBase{has a base class %1 that is not empty}|"
            "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
@@ -1806,6 +1808,8 @@ def note_unsatisfied_trait_reason
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%UserDeclaredCtr{has a user-declared constructor}|"
+           "%InheritedCtr{has an inherited constructor}|"
            "%DeletedCtr{has a deleted %select{copy|move}1 "
            "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
@@ -1817,6 +1821,8 @@ def note_unsatisfied_trait_reason
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
            "%IncompleteArrayType{is an incomplete array type}|"
+           "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
+           "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
            "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
