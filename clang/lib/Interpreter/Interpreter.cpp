@@ -41,6 +41,8 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OutOfProcessJITConfig.h"
+#include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Lookup.h"
@@ -54,6 +56,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/Utils/Cloning.h" // for CloneModule
+
+#include <iostream>
 
 #define DEBUG_TYPE "clang-repl"
 
@@ -347,10 +351,99 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
+llvm::ExitOnError ExitOnErr;
+
+std::unique_ptr<llvm::orc::LLJITBuilder>
+Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+  if (OutOfProcessConfig.OOPExecutor != "") {
+    // Launch an out-of-process executor locally in a child process.
+    EPC = ExitOnErr(launchExecutor(OutOfProcessConfig.OOPExecutor,
+                                   OutOfProcessConfig.UseSharedMemory,
+                                   OutOfProcessConfig.SlabAllocateSizeString));
+  } else if (OutOfProcessConfig.OOPExecutorConnect != "") {
+    EPC =
+        ExitOnErr(connectTCPSocket(OutOfProcessConfig.OOPExecutorConnect,
+                                   OutOfProcessConfig.UseSharedMemory,
+                                   OutOfProcessConfig.SlabAllocateSizeString));
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (EPC) {
+    JB = ExitOnErr(clang::Interpreter::createLLJITBuilder(
+        std::move(EPC), OutOfProcessConfig.OrcRuntimePath));
+  }
+
+  return JB;
+}
+
+llvm::Expected<std::string>
+Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
+  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
+  if (!CompilerRTPath) {
+    return llvm::make_error<llvm::StringError>("CompilerRT path not found",
+                                               std::error_code());
+  }
+  llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
+      "clang-repl", reinterpret_cast<void *>(&getOrcRuntimePath)));
+  // Remove paths until you find /build at last
+  while (!(llvm::sys::path::filename(BasePath) == "build") &&
+         !BasePath.empty()) {
+    llvm::sys::path::remove_filename(BasePath);
+  }
+
+  llvm::sys::path::append(BasePath, *CompilerRTPath);
+
+  if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt.a")) {
+    llvm::sys::path::append(BasePath, "liborc_rt.a");
+  } else if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt_osx.a")) {
+    llvm::sys::path::append(BasePath, "liborc_rt_osx.a");
+  } else if (llvm::sys::fs::exists(BasePath.str().str() +
+                                   "/liborc_rt-x86_64.a")) {
+    llvm::sys::path::append(BasePath, "liborc_rt-x86_64.a");
+  } else {
+    return llvm::make_error<llvm::StringError>("OrcRuntime library not found",
+                                               std::error_code());
+  }
+
+  return BasePath.str().str();
+}
+
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI,
-                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
+                    std::optional<OutOfProcessJITConfig> OutOfProcessConfig) {
   llvm::Error Err = llvm::Error::success();
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+
+  if (OutOfProcessConfig != std::nullopt &&
+      OutOfProcessConfig->IsOutOfProcess) {
+    const TargetInfo &TI = CI->getTarget();
+    const llvm::Triple &Triple = TI.getTriple();
+
+    DiagnosticsEngine &Diags = CI->getDiagnostics();
+    driver::Driver Driver("clang", Triple.str(), Diags);
+
+    std::vector<const char *> Args = {"clang", "--version"};
+    std::unique_ptr<clang::driver::Compilation> C(
+        Driver.BuildCompilation(Args));
+    if (!C) {
+      return llvm::make_error<llvm::StringError>(
+          "Failed to create driver compilation for out-of-process JIT",
+          std::error_code());
+    }
+
+    const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+
+    auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
+    if (!OrcRuntimePathOrErr) {
+      return OrcRuntimePathOrErr.takeError();
+    }
+
+    OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
+    JB = outOfProcessJITBuilder(*OutOfProcessConfig);
+  }
+
   auto Interp = std::unique_ptr<Interpreter>(
       new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
   if (Err)

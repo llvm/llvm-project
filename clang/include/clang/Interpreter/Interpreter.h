@@ -15,6 +15,8 @@
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Driver/ToolChain.h"
+#include "clang/Interpreter/OutOfProcessJITConfig.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
@@ -131,15 +133,19 @@ protected:
 
 public:
   virtual ~Interpreter();
-  static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI,
-         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+  static llvm::Expected<std::unique_ptr<Interpreter>> create(
+      std::unique_ptr<CompilerInstance> CI,
+      std::optional<OutOfProcessJITConfig> OutOfProcessConfig = std::nullopt);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
+  static std::unique_ptr<llvm::orc::LLJITBuilder>
+  outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig);
+  static llvm::Expected<std::string>
+  getOrcRuntimePath(const driver::ToolChain &TC);
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
