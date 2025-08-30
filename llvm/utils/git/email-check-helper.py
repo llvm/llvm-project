@@ -63,7 +63,8 @@ def check_user_email(token: str, pr_author: str) -> bool:
             return True
 
         return is_private_email(get_commit_email())
-    except:
+    except Exception as e:
+        print(f"got exception {e.with_traceback()}")
         return False
 
 
