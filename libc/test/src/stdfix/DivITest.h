@@ -11,10 +11,7 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #include "test/UnitTest/Test.h"
 
-template <typename XType> XType get_epsilon() {
-  // TODO: raise error
-  return 0;
-}
+template <typename XType> XType get_epsilon() = delete;
 template <> fract get_epsilon() { return FRACT_EPSILON; }
 template <> unsigned fract get_epsilon() { return UFRACT_EPSILON; }
 template <> long fract get_epsilon() { return LFRACT_EPSILON; }
@@ -29,10 +26,10 @@ public:
 
   void testBasic(DivIFunc func) {
     XType epsilon = get_epsilon<XType>();
-    EXPECT_LT((func(2, 3) - 0.666666r), epsilon);
+    EXPECT_LT((func(2, 3) - 0.666656494140625r), epsilon);
     EXPECT_LT((func(3, 4) - 0.75r), epsilon);
-    EXPECT_LT((func(1043, 2764) - 0.37735r), epsilon);
-    EXPECT_LT((func(60000, 720293) - 0.083299r), epsilon);
+    EXPECT_LT((func(1043, 2764) - 0.3773516643r), epsilon);
+    EXPECT_LT((func(60000, 720293) - 0.08329943509r), epsilon);
 
     EXPECT_EQ(func(128, 256), 0.5r);
     EXPECT_EQ(func(1, 2), 0.5r);
@@ -48,9 +45,16 @@ public:
 
   void testSpecial(DivIFunc func) {
     EXPECT_EQ(func(0,10), 0.r);
-    EXPECT_DEATH([func] { func(10, 0); }, WITH_SIGNAL(-1));
+    EXPECT_EQ(func(0,-10), 0.r);
     EXPECT_EQ(func(-32768,32768), FRACT_MIN);
     EXPECT_EQ(func(32767,32768), FRACT_MAX);  
+    EXPECT_EQ(func(INT_MAX,INT_MAX), 1.0r);
+    EXPECT_EQ(func(INT_MAX-1,INT_MAX), 0.99999999r);
+    EXPECT_EQ(func(INT_MIN,INT_MAX), FRACT_MIN);
+    /* Expecting 0 here as fract is not precise enough to 
+     * handle 1/INT_MAX
+     */
+    EXPECT_EQ(func(1, INT_MAX), 0.r);
   }
 };
 

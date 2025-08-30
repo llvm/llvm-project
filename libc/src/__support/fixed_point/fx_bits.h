@@ -265,10 +265,21 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   /* x0 = (48/17) - (32/17) * d_n */
   long accum a = 2.8235lk; /* 48/17 */
   long accum b = 1.8823lk; /* 32/17 */
+  /* Error of the initial approximation, as derived
+   * from the wikipedia article is
+   *  E0 = 1/17 = 0.059 (5.9%)
+   */
   long accum initial_approx = a - (b * d_scaled_val);
+  /* Each newton-raphson iteration will square the error, due
+   * to quadratic convergence. So,
+   *  E1 = (0.059)^2 = 0.0034
+   */
   long accum val = nrstep(d_scaled_val, initial_approx);
+  /* E2 = 0.0000121 */
   val = nrstep(d_scaled_val, val);
+  /* E3 = 1.468e−10 */
   val = nrstep(d_scaled_val, val);
+  /* E4 = 2.155e−20 */
   val = nrstep(d_scaled_val, val);
   long accum res = n_scaled_val * val;
   if (d_is_signed) {
