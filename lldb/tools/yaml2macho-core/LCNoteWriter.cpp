@@ -36,7 +36,7 @@ void create_lc_note_binary_load_cmd(const CoreSpec &spec,
     add_uint64(payload_bytes, value);      // address
     add_uint64(payload_bytes, UINT64_MAX); // slide
   }
-  payload_bytes.push_back(0);            // name_cstring
+  payload_bytes.push_back(0); // name_cstring
 
   size_t payload_size = payload_bytes.size() - starting_payload_size;
   // Pad out the entry to a 4-byte aligned size.
