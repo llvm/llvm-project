@@ -207,7 +207,11 @@ template <typename T>
 struct shared_ptr {
   T* ptr;
   shared_ptr(T* p) : ptr(p) {}
-  ~shared_ptr() { delete ptr; }
+  ~shared_ptr() {
+    // This destructor intentionally doesn't delete 'ptr' to validate that the
+    // heuristic trusts that smart pointers (based on their class name) will
+    // release the pointee even if it doesn't understand their destructor.
+  }
   shared_ptr(shared_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
   T* get() const { return ptr; }
 };
