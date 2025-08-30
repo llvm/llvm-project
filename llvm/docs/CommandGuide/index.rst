@@ -85,6 +85,7 @@ Developer Tools
    llvm-tblgen
    mlir-tblgen
    lit
+   llvm-advisor
    llvm-exegesis
    llvm-ifs
    llvm-locstats
