@@ -18,6 +18,3 @@ breaks build rocPRIM
 Needs flang team to land
  Revert "[flang][OpenMP] Handle symbols on composite simd with multiple privatizers (#155640)"
 ---
-RobertI  breaks: smoke/nested_par3 smoke/nest_call_par2/
-Revert "[OpenMP][clang] 6.0: num_threads strict (part 2: device runtime) (#146404)"
----
