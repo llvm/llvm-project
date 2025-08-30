@@ -3584,8 +3584,8 @@ _mm512_maskz_cvttps_epu32 (__mmask16 __U, __m512 __A)
                                             (__v16sf)_mm512_setzero_ps(), \
                                             (__mmask16)(U), (int)(R)))
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_cvtepu32_ps(__m512i __A) {
+static __inline__ __m512
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_cvtepu32_ps(__m512i __A) {
   return (__m512)__builtin_convertvector((__v16su)__A, __v16sf);
 }
 
@@ -8857,8 +8857,8 @@ _mm512_maskz_expand_epi32 (__mmask16 __U, __m512i __A)
                                             (__v8df)_mm512_setzero_pd(), \
                                             (__mmask8)(U), (int)(R)))
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_cvtps_pd(__m256 __A) {
+static __inline__ __m512d
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_cvtps_pd(__m256 __A) {
   return (__m512d) __builtin_convertvector((__v8sf)__A, __v8df);
 }
 
