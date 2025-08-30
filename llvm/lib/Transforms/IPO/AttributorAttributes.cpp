@@ -5187,6 +5187,59 @@ struct AADereferenceableCallSiteReturned final
 // ------------------------ Align Argument Attribute ------------------------
 
 namespace {
+
+Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                                const IntrinsicInst &II) {
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::ptrmask: {
+    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+        QueryingAA, IRPosition::value(*(II.getOperand(1))), DepClassTy::NONE);
+    const auto *AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(II),
+                                              DepClassTy::NONE);
+    if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
+      unsigned ShiftValue =
+          std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
+      Align ConstAlign(1 << ShiftValue);
+      if (ConstAlign >= AlignAA->getKnownAlign())
+        return Align(1);
+    }
+    if (AlignAA)
+      return AlignAA->getKnownAlign();
+    break;
+  }
+  default:
+    break;
+  }
+  return Align(1);
+}
+
+Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                                  const IntrinsicInst &II) {
+  Align Alignment;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::ptrmask: {
+    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+        QueryingAA, IRPosition::value(*(II.getOperand(1))),
+        DepClassTy::REQUIRED);
+    const auto *AlignAA =
+        A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
+                            DepClassTy::REQUIRED);
+    if (ConstVals && ConstVals->isValidState()) {
+      unsigned ShiftValue =
+          std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
+      Alignment = Align(1 << ShiftValue);
+    }
+    if (AlignAA && AlignAA->isValidState())
+      Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
+
+    return std::min(QueryingAA.getAssumedAlign(), Alignment);
+  }
+  default:
+    break;
+  }
+  return Alignment;
+}
+
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
@@ -5202,6 +5255,8 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    return getKnownAlignForIntrinsic(A, QueryingAA, *II).value();
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5501,6 +5556,17 @@ struct AAAlignCallSiteReturned final
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = getIRPosition().getCtxI();
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      Align Align = getAssumedAlignForIntrinsic(A, *this, *II);
+      uint64_t OldAssumed = getAssumed();
+      takeAssumedMinimum(Align.value());
+      return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                        : ChangeStatus::CHANGED;
+    }
+    return Base::updateImpl(A);
+  };
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
