@@ -9,6 +9,17 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X86
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse2 -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -1311,6 +1322,10 @@ __m128i test_mm_slli_epi16(__m128i A) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
   return _mm_slli_epi16(A, 1);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_slli_epi16((__m128i)(__v8hi){0, 1, 2, 3, 4, 5, 6, 7}, 0), 0, 1, 2, 3, 4, 5, 6, 7));
+TEST_CONSTEXPR(match_v8hi(_mm_slli_epi16((__m128i)(__v8hi){0, 1, 2, 3, 4, 5, 6, 7}, 1), 0, 0x2, 0x4, 0x6, 0x8, 0xa, 0xc, 0xe));
+TEST_CONSTEXPR(match_v8hi(_mm_slli_epi16((__m128i)(__v8hi){0, 8, 2, 3, 4, 5, 6, 7}, 8), 0, 0x800, 0x200, 0x300, 0x400, 0x500, 0x600, 0x700));
+TEST_CONSTEXPR(match_v8hi(_mm_slli_epi16((__m128i)(__v8hi){0, 8, 2, 3, 4, 5, 6, 7}, 16), 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m128i test_mm_slli_epi16_1(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi16_1
@@ -1329,6 +1344,11 @@ __m128i test_mm_slli_epi32(__m128i A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_slli_epi32(A, 1);
 }
+TEST_CONSTEXPR(match_v4si(_mm_slli_epi32((__m128i)(__v4si){0, 1, 2, 3}, 0), 0, 1, 2, 3));
+TEST_CONSTEXPR(match_v4si(_mm_slli_epi32((__m128i)(__v4si){0, 1, 2, 3}, 1), 0, 0x2, 0x4, 0x6));
+TEST_CONSTEXPR(match_v4su(_mm_slli_epi32((__m128i)(__v4su){0, 1, 2, 3}, 31), 0, 0x80000000, 0x0, 0x80000000));
+TEST_CONSTEXPR(match_v4si(_mm_slli_epi32((__m128i)(__v4si){0, 1, 2, 3}, 32), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4si(_mm_slli_epi32((__m128i)(__v4si){0, 1, 2, 3}, 33), 0, 0, 0, 0));
 
 __m128i test_mm_slli_epi32_1(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi32_1
@@ -1347,6 +1367,12 @@ __m128i test_mm_slli_epi64(__m128i A) {
   // CHECK: call {{.*}}<2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
   return _mm_slli_epi64(A, 1);
 }
+TEST_CONSTEXPR(match_v2di(_mm_slli_epi64((__m128i)(__v2di){0, 1}, 0), 0, 1));
+TEST_CONSTEXPR(match_v2di(_mm_slli_epi64((__m128i)(__v2di){0, 1}, 1), 0, 0x2));
+TEST_CONSTEXPR(match_v2di(_mm_slli_epi64((__m128i)(__v2di){5, 8}, 6), 0x140, 0x200));
+TEST_CONSTEXPR(match_v2du(_mm_slli_epi64((__m128i)(__v2du){0, 1}, 63), 0, 0x8000000000000000ULL));
+TEST_CONSTEXPR(match_v2di(_mm_slli_epi64((__m128i)(__v2di){0, 1}, 64), 0, 0));
+TEST_CONSTEXPR(match_v2di(_mm_slli_epi64((__m128i)(__v2di){0, 1}, 65), 0, 0));
 
 __m128i test_mm_slli_epi64_1(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi64_1
@@ -1403,6 +1429,8 @@ __m128i test_mm_srai_epi16(__m128i A) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %{{.*}}, i32 %{{.*}})
   return _mm_srai_epi16(A, 1);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_srai_epi16((__m128i)(__v8hi){-32768, 32767, -3, -2, -1, 0, 1, 2}, 1), -16384, 16383, -2, -1, -1, 0, 0, 1));
+TEST_CONSTEXPR(match_v8hi(_mm_srai_epi16((__m128i)(__v8hi){-32768, 32767, -3, -2, -1, 0, 1, 2}, 1), -16384, 16383, -2, -1, -1, 0, 0, 1));
 
 __m128i test_mm_srai_epi16_1(__m128i A) {
   // CHECK-LABEL: test_mm_srai_epi16_1
@@ -1421,6 +1449,7 @@ __m128i test_mm_srai_epi32(__m128i A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_srai_epi32(A, 1);
 }
+TEST_CONSTEXPR(match_v4si(_mm_srai_epi32((__m128i)(__v4si){-32768, 32767, -3, 2}, 1), -16384, 16383, -2, 1));
 
 __m128i test_mm_srai_epi32_1(__m128i A) {
   // CHECK-LABEL: test_mm_srai_epi32_1
@@ -1457,6 +1486,7 @@ __m128i test_mm_srli_epi16(__m128i A) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
   return _mm_srli_epi16(A, 1);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_srli_epi16((__m128i)(__v8hi){0, 1, 2, 3, 4, 5, 6, 7}, 1), 0, 0x0, 0x1, 0x1, 0x2, 0x2, 0x3, 0x3));
 
 __m128i test_mm_srli_epi16_1(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi16_1
@@ -1475,6 +1505,7 @@ __m128i test_mm_srli_epi32(__m128i A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_srli_epi32(A, 1);
 }
+TEST_CONSTEXPR(match_v4si(_mm_srli_epi32((__m128i)(__v4si){0, 1, 2, 3}, 8), 0, 0x0, 0x0, 0x0));
 
 __m128i test_mm_srli_epi32_1(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi32_1
@@ -1493,6 +1524,7 @@ __m128i test_mm_srli_epi64(__m128i A) {
   // CHECK: call {{.*}}<2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
   return _mm_srli_epi64(A, 1);
 }
+TEST_CONSTEXPR(match_v2di(_mm_srli_epi64((__m128i)(__v2di){100005, 100008}, 6), 0x61a, 0x61a));
 
 __m128i test_mm_srli_epi64_1(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi64_1
