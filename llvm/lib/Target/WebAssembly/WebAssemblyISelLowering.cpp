@@ -19,6 +19,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -108,6 +109,17 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::externref, MVT::funcref, MVT::Other}) {
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
+    }
+  }
+
+  // Likewise, transform extending loads for address space 1
+  for (auto T : {MVT::i32, MVT::i64}) {
+    for (auto S : {MVT::i8, MVT::i16, MVT::i32}) {
+      if (T != S) {
+        setLoadExtAction(ISD::EXTLOAD, T, S, Custom);
+        setLoadExtAction(ISD::ZEXTLOAD, T, S, Custom);
+        setLoadExtAction(ISD::SEXTLOAD, T, S, Custom);
+      }
     }
   }
 
@@ -1707,6 +1719,11 @@ static bool IsWebAssemblyGlobal(SDValue Op) {
   if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
     return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
 
+  if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+    if (const GlobalAddressSDNode *GA =
+            dyn_cast<GlobalAddressSDNode>(Op->getOperand(0)))
+      return WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace());
+
   return false;
 }
 
@@ -1764,16 +1781,119 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
   const SDValue &Base = LN->getBasePtr();
   const SDValue &Offset = LN->getOffset();
+  ISD::LoadExtType ExtType = LN->getExtensionType();
+  EVT ResultType = LN->getValueType(0);
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
       report_fatal_error(
           "unexpected offset when loading from webassembly global", false);
 
-    SDVTList Tys = DAG.getVTList(LN->getValueType(0), MVT::Other);
-    SDValue Ops[] = {LN->getChain(), Base};
-    return DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
-                                   LN->getMemoryVT(), LN->getMemOperand());
+    if (!ResultType.isInteger() && !ResultType.isFloatingPoint()) {
+      SDVTList Tys = DAG.getVTList(ResultType, MVT::Other);
+      SDValue Ops[] = {LN->getChain(), Base};
+      SDValue GlobalGetNode =
+          DAG.getMemIntrinsicNode(WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops,
+                                  LN->getMemoryVT(), LN->getMemOperand());
+      return GlobalGetNode;
+    }
+
+    EVT GT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+
+    if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Base))
+      GT = EVT::getEVT(GA->getGlobal()->getValueType());
+    if (Base->getOpcode() == WebAssemblyISD::Wrapper)
+      if (const GlobalAddressSDNode *GA =
+              dyn_cast<GlobalAddressSDNode>(Base->getOperand(0)))
+        GT = EVT::getEVT(GA->getGlobal()->getValueType());
+
+    if (GT != MVT::i8 && GT != MVT::i16 && GT != MVT::i32 && GT != MVT::i64 &&
+        GT != MVT::f32 && GT != MVT::f64)
+      report_fatal_error("encountered unexpected global type for Base when "
+                         "loading from webassembly global",
+                         false);
+
+    EVT PromotedGT = (GT == MVT::i8 || GT == MVT::i16) ? MVT::i32 : GT;
+
+    if (ExtType == ISD::NON_EXTLOAD) {
+      // A normal, non-extending load may try to load more or less than the
+      // underlying global, which is invalid. We lower this to a load of the
+      // global (i32 or i64) then truncate or extend as needed
+
+      // Modify the MMO to load the full global
+      MachineMemOperand *OldMMO = LN->getMemOperand();
+      MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
+          OldMMO->getPointerInfo(), OldMMO->getFlags(),
+          LLT(PromotedGT.getSimpleVT()), OldMMO->getBaseAlign(),
+          OldMMO->getAAInfo(), OldMMO->getRanges(), OldMMO->getSyncScopeID(),
+          OldMMO->getSuccessOrdering(), OldMMO->getFailureOrdering());
+
+      SDVTList Tys = DAG.getVTList(PromotedGT, MVT::Other);
+      SDValue Ops[] = {LN->getChain(), Base};
+      SDValue GlobalGetNode = DAG.getMemIntrinsicNode(
+          WebAssemblyISD::GLOBAL_GET, DL, Tys, Ops, PromotedGT, NewMMO);
+
+      if (ResultType.bitsEq(PromotedGT)) {
+        return GlobalGetNode;
+      }
+
+      SDValue ValRes;
+      if (ResultType.isFloatingPoint())
+        ValRes = DAG.getFPExtendOrRound(GlobalGetNode, DL, ResultType);
+      else
+        ValRes = DAG.getAnyExtOrTrunc(GlobalGetNode, DL, ResultType);
+
+      return DAG.getMergeValues({ValRes, GlobalGetNode.getValue(1)}, DL);
+    }
+
+    if (ExtType == ISD::ZEXTLOAD || ExtType == ISD::SEXTLOAD) {
+      // Turn the unsupported load into an EXTLOAD followed by an
+      // explicit zero/sign extend inreg. Same as Expand
+
+      SDValue Result =
+          DAG.getExtLoad(ISD::EXTLOAD, DL, ResultType, LN->getChain(), Base,
+                         LN->getMemoryVT(), LN->getMemOperand());
+      SDValue ValRes;
+      if (ExtType == ISD::SEXTLOAD)
+        ValRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Result.getValueType(),
+                             Result, DAG.getValueType(LN->getMemoryVT()));
+      else
+        ValRes = DAG.getZeroExtendInReg(Result, DL, LN->getMemoryVT());
+
+      return DAG.getMergeValues({ValRes, Result.getValue(1)}, DL);
+    }
+
+    if (ExtType == ISD::EXTLOAD) {
+      // Expand the EXTLOAD into a regular LOAD of the global, and if
+      // needed, a zero-extension
+
+      EVT OldLoadType = LN->getMemoryVT();
+      EVT NewLoadType = (OldLoadType == MVT::i8 || OldLoadType == MVT::i16)
+                            ? MVT::i32
+                            : OldLoadType;
+
+      // Modify the MMO to load a whole WASM "register"'s worth
+      MachineMemOperand *OldMMO = LN->getMemOperand();
+      MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
+          OldMMO->getPointerInfo(), OldMMO->getFlags(),
+          LLT(NewLoadType.getSimpleVT()), OldMMO->getBaseAlign(),
+          OldMMO->getAAInfo(), OldMMO->getRanges(), OldMMO->getSyncScopeID(),
+          OldMMO->getSuccessOrdering(), OldMMO->getFailureOrdering());
+
+      SDValue Result =
+          DAG.getLoad(NewLoadType, DL, LN->getChain(), Base, NewMMO);
+
+      if (NewLoadType != ResultType) {
+        SDValue ValRes = DAG.getNode(ISD::ANY_EXTEND, DL, ResultType, Result);
+        return DAG.getMergeValues({ValRes, Result.getValue(1)}, DL);
+      }
+
+      return Result;
+    }
+
+    report_fatal_error(
+        "encountered unexpected ExtType when loading from webassembly global",
+        false);
   }
 
   if (std::optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
