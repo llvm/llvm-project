@@ -180,9 +180,7 @@ bool verifyBorderColor(uint32_t BorderColor) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-bool verifyOffsetOverflow(uint64_t Register) {
-  return Register > ~0U;
-}
+bool verifyOffsetOverflow(uint64_t Register) { return Register > ~0U; }
 
 bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
   if (NumDescriptors == ~0U)
@@ -190,10 +188,7 @@ bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
 
   uint64_t UpperBound =
       (uint64_t)Register + (uint64_t)NumDescriptors - (uint64_t)1U;
-  if (UpperBound > ~0U)
-    return true;
-
-  return false;
+  return UpperBound > ~0U;
 }
 
 uint64_t updateAppendingRegister(uint64_t AppendingRegister,
