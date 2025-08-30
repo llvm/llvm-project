@@ -2192,12 +2192,23 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL"
+                              "FOLDER;BINARY_DIR;EXCLUDE_DIRS;INCLUDE_DIRS"
+                              "PARAMS;DEPENDS;ARGS"
+                               ${ARGN})
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
       set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
+
+    separate_arguments(ARG_EXCLUDE_DIRS)
+    separate_arguments(ARG_INCLUDE_DIRS)
+
+    if (ARG_EXCLUDE_DIRS AND ARG_INCLUDE_DIRS)
+      message(FATAL_ERROR, "Cannot specify both include and exclude directories")
+    endif()
+
 
     # Search recursively for test directories by assuming anything not
     # in a directory called Inputs contains tests.
@@ -2214,24 +2225,64 @@ function(add_lit_testsuites project directory)
 
       # Create a check- target for the directory.
       string(REPLACE "${directory}/" "" name_slash ${lit_suite})
-      if (name_slash)
-        set(filter ${name_slash})
-        string(REPLACE "/" "-" name_slash ${name_slash})
-        string(REPLACE "\\" "-" name_dashes ${name_slash})
-        string(TOLOWER "${project}-${name_dashes}" name_var)
-        set(lit_args ${lit_suite})
-        if (ARG_BINARY_DIR)
-          set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
-        endif()
-        add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
-          ${lit_args}
-          ${EXCLUDE_FROM_CHECK_ALL}
-          PARAMS ${ARG_PARAMS}
-          DEPENDS ${ARG_DEPENDS}
-          ARGS ${ARG_ARGS}
-        )
-        set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
+      if (NOT name_slash)
+        continue()
       endif()
+
+      # Determine whether to skip this directory.
+      #
+      # If the exclude list is specified, any directory that begins with one of
+      # the excluded paths will be excluded, others will be included.
+      #
+      # If the include list is specified, any directory that begins with one of
+      # the included paths will be included, others will be excluded.
+      #
+      # If neither is specified, all directories will be included.
+      if (ARG_EXCLUDE_DIRS)
+        # Include by default, unless in the exclude list.
+        set(is_skipped false)
+        foreach (excluded_dir ${ARG_EXCLUDE_DIRS})
+          string(FIND "${name_slash}" "${excluded_dir}" exclude_index)
+          if (exclude_index EQUAL 0)
+            set(is_skipped true)
+            break()
+          endif()
+        endforeach()
+      elseif(ARG_INCLUDE_DIRS)
+        # Exclude by default, unless in the include list.
+        set(is_skipped true)
+        foreach (included_dir ${ARG_INCLUDE_DIRS})
+          string(FIND "${name_slash}" "${included_dir}" include_index)
+          if (include_index EQUAL 0)
+            set(is_skipped false)
+            break()
+          endif()
+        endforeach()
+      else()
+        # If neither include nor exclude list is specified, include all.
+        set(is_skipped false)
+      endif()
+
+      if (is_skipped)
+        continue()
+      endif()
+
+      set(filter ${name_slash})
+      string(REPLACE "/" "-" name_slash ${name_slash})
+      string(REPLACE "\\" "-" name_dashes ${name_slash})
+      string(TOLOWER "${project}-${name_dashes}" name_var)
+      set(lit_args ${lit_suite})
+      if (ARG_BINARY_DIR)
+        set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
+      endif()
+      add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
+        ${lit_args}
+        ${EXCLUDE_FROM_CHECK_ALL}
+        PARAMS ${ARG_PARAMS}
+        DEPENDS ${ARG_DEPENDS}
+        ARGS ${ARG_ARGS}
+      )
+      set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
     endforeach()
   endif()
 endfunction()
