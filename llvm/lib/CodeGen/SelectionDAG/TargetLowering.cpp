@@ -9792,7 +9792,8 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   // flag if the (scalar) type is illegal as this is more likely to legalize
   // cleanly:
   // abdu(lhs, rhs) -> sub(xor(sub(lhs, rhs), uof(lhs, rhs)), uof(lhs, rhs))
-  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT)) {
+  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT) &&
+      isOperationCustom(ISD::USUBO, VT)) {
     SDValue USubO =
         DAG.getNode(ISD::USUBO, dl, DAG.getVTList(VT, MVT::i1), {LHS, RHS});
     SDValue Cmp = DAG.getNode(ISD::SIGN_EXTEND, dl, VT, USubO.getValue(1));
