@@ -612,6 +612,15 @@ private:
   /// If CompValue is already set, the function is expected to fail if a match
   /// is found but the value compared to is different.
   bool matchInstruction(Instruction *I, bool isEQ) {
+    Value *Val;
+    if (match(I, m_NUWTrunc(m_Value(Val)))) {
+      // If we already have a value for the switch, it has to match!
+      if (!setValueOnce(Val))
+        return false;
+      UsedICmps++;
+      Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), isEQ));
+      return true;
+    }
     // If this is an icmp against a constant, handle this as one of the cases.
     ICmpInst *ICI;
     ConstantInt *C;
