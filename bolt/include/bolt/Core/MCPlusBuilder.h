@@ -1096,7 +1096,7 @@ public:
   /// targets. Return true on success, and the address in Target.
   virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                               uint64_t &Target) const {
-    return Analysis->evaluateBranch(Inst, Addr, Size, Target);
+    return Analysis->findTargetAddress(Inst, Addr, Size, Target);
   }
 
   /// Return true if one of the operands of the \p Inst instruction uses

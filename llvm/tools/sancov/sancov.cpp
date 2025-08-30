@@ -771,7 +771,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       uint64_t CovPoint = getPreviousInstructionPc(Addr + Size, TheTriple);
       uint64_t Target;
       if (MIA->isCall(Inst) &&
-          MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
+          MIA->findTargetAddress(Inst, SectionAddr + Index, Size, Target) &&
           SanCovAddrs.find(Target) != SanCovAddrs.end())
         Addrs->insert(CovPoint);
       MIA->updateState(Inst, Addr);

@@ -171,8 +171,9 @@ public:
     }
   }
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     unsigned NumOps = Inst.getNumOperands();
     if ((isBranch(Inst) && !isIndirectBranch(Inst)) ||
         Inst.getOpcode() == LoongArch::BL) {

@@ -137,7 +137,7 @@ void GraphBuilder::buildFlowsToUndefined(const FileAnalysis &Analysis,
   } else if (BranchNode.Fallthrough && !BranchNode.Target) {
     // We already know the fallthrough, evaluate the target.
     uint64_t Target;
-    if (!Analysis.getMCInstrAnalysis()->evaluateBranch(
+    if (!Analysis.getMCInstrAnalysis()->findTargetAddress(
             BranchInstrMeta.Instruction, BranchInstrMeta.VMAddress,
             BranchInstrMeta.InstructionSize, Target)) {
       errs() << "Failed to get branch target for conditional branch at address "
@@ -254,7 +254,7 @@ void GraphBuilder::buildFlowGraphImpl(const FileAnalysis &Analysis,
     // Evaluate the branch target to ascertain whether this XRef is the result
     // of a fallthrough or the target of a branch.
     uint64_t BranchTarget;
-    if (!Analysis.getMCInstrAnalysis()->evaluateBranch(
+    if (!Analysis.getMCInstrAnalysis()->findTargetAddress(
             ParentMeta.Instruction, ParentMeta.VMAddress,
             ParentMeta.InstructionSize, BranchTarget)) {
       errs() << "Failed to evaluate branch target for instruction at address "
