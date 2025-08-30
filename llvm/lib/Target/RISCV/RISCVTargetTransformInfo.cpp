@@ -37,11 +37,6 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
-static cl::opt<bool> SLPPreferAltOpcVectorization(
-    "riscv-v-slp-prefer-alt-opc-vectorization",
-    cl::desc("Controls preferAlternateOpcodeVectorization"), cl::init(false),
-    cl::Hidden);
-
 static cl::opt<unsigned>
     RVVMinTripCount("riscv-v-min-trip-count",
                     cl::desc("Set the lower bound of a trip count to decide on "
@@ -3056,8 +3051,4 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
       Options.LoadSizes.insert(Options.LoadSizes.begin(), Size);
   }
   return Options;
-}
-
-bool RISCVTTIImpl::preferAlternateOpcodeVectorization() const {
-  return SLPPreferAltOpcVectorization;
 }
