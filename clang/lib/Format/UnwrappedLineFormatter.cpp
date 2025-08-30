@@ -462,17 +462,6 @@ private:
       }
     }
 
-    const bool MergeShortRecord = [this, &NextLine]() {
-      switch (Style.AllowShortRecordOnASingleLine) {
-      case FormatStyle::SRS_Always:
-        return true;
-      case FormatStyle::SRS_Empty:
-        return NextLine.First->is(tok::r_brace);
-      case FormatStyle::SRS_Never:
-        return false;
-      }
-    }() && !Style.BraceWrapping.SplitEmptyRecord;
-
     // Don't merge an empty template class or struct if SplitEmptyRecords
     // is defined.
     if (PreviousLine && Style.BraceWrapping.SplitEmptyRecord &&
@@ -502,6 +491,18 @@ private:
                  : 0;
     }
 
+    const bool MergeShortRecord = [this, &NextLine]() {
+      switch (Style.AllowShortRecordOnASingleLine) {
+      case FormatStyle::SRS_Always:
+        return true;
+      case FormatStyle::SRS_EmptyIfAttached:
+      case FormatStyle::SRS_Empty:
+        return NextLine.First->is(tok::r_brace);
+      case FormatStyle::SRS_Never:
+        return false;
+      }
+    }();
+
     if (TheLine->Last->is(tok::l_brace)) {
       bool ShouldMerge = false;
       // Try to merge records.
@@ -509,14 +510,16 @@ private:
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
-      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace)) {
-        // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
-        // and structs, but it seems that wrapping is still handled correctly
-        // elsewhere.
-        ShouldMerge = !Style.BraceWrapping.AfterClass ||
-                      (NextLine.First->is(tok::r_brace) &&
-                       !Style.BraceWrapping.SplitEmptyRecord) ||
-                      MergeShortRecord;
+      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                        TT_UnionLBrace)) {
+        if (Style.AllowShortRecordOnASingleLine > FormatStyle::SRS_Never) {
+          // NOTE: We use AfterClass (whereas AfterStruct exists) for both
+          // classes and structs, but it seems that wrapping is still handled
+          // correctly elsewhere.
+          ShouldMerge =
+              !Style.BraceWrapping.AfterClass ||
+              (MergeShortRecord && !Style.BraceWrapping.SplitEmptyRecord);
+        }
       } else if (TheLine->InPPDirective ||
                  !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct)) {
@@ -893,7 +896,7 @@ private:
                  !startsExternCBlock(Line)) {
         // Merge short records only when requested.
         if (isRecordLBrace(*Line.Last) &&
-            Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Never) {
+            Style.AllowShortRecordOnASingleLine < FormatStyle::SRS_Always) {
           return 0;
         }
 
