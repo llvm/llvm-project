@@ -26,8 +26,8 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
   ASSERT_EQ(0, result->tm_isdst);
 }
 
-// TODO(zimirza): These tests does not expect the correct output of localtime as per
-// specification. This is due to timezone functions removed from
+// TODO(zimirza): These tests does not expect the correct output of localtime as
+// per specification. This is due to timezone functions removed from
 // https://github.com/llvm/llvm-project/pull/110363.
 // This will be resolved a new pull request.
 
