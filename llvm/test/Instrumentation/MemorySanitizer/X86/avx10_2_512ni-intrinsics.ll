@@ -156,11 +156,9 @@ define <16 x i32> @test_mm512_dpbssd_epi32(<16 x i32> %__W, <16 x i32> %__A, ptr
 ; CHECK-NEXT:    [[TMP20:%.*]] = or <64 x i1> [[TMP17]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = or <64 x i1> [[TMP20]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = sext <64 x i1> [[TMP21]] to <64 x i8>
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <64 x i8> [[TMP22]] to <32 x i16>
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <32 x i16> [[TMP23]], zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = sext <32 x i1> [[TMP24]] to <32 x i16>
-; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <32 x i16> [[TMP25]] to i512
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast i512 [[TMP26]] to <16 x i32>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <64 x i8> [[TMP22]] to <16 x i32>
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <16 x i32> [[TMP23]], zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = sext <16 x i1> [[TMP24]] to <16 x i32>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP27]], [[TMP4]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    store <16 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
@@ -193,11 +191,9 @@ define <16 x i32> @test_mm512_mask_dpbssds_epi32(<16 x i32> %__W, i16 zeroext %_
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <64 x i1> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <64 x i1> [[TMP16]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sext <64 x i1> [[TMP17]] to <64 x i8>
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <32 x i16>
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <32 x i16> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = sext <32 x i1> [[TMP20]] to <32 x i16>
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <32 x i16> [[TMP21]] to i512
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i512 [[TMP22]] to <16 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <16 x i32>
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <16 x i32> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = sext <16 x i1> [[TMP20]] to <16 x i32>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP23]], [[TMP1]]
 ; CHECK-NEXT:    [[DPI:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP4]] to <16 x i1>
@@ -239,11 +235,9 @@ define <16 x i32> @test_mm512_maskz_dpbssd_epi32(i16 zeroext %__U, <16 x i32> %_
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <64 x i1> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <64 x i1> [[TMP16]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sext <64 x i1> [[TMP17]] to <64 x i8>
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <32 x i16>
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <32 x i16> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = sext <32 x i1> [[TMP20]] to <32 x i16>
-; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <32 x i16> [[TMP21]] to i512
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i512 [[TMP22]] to <16 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <64 x i8> [[TMP18]] to <16 x i32>
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <16 x i32> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = sext <16 x i1> [[TMP20]] to <16 x i32>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <16 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[DPI:%.*]] = tail call <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32> [[__W]], <16 x i32> [[__A]], <16 x i32> [[__B]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP4]] to <16 x i1>
