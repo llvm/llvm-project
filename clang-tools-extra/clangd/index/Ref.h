@@ -166,6 +166,7 @@ public:
     void insert(const SymbolID &ID, const Ref &S);
     /// Consumes the builder to finalize the slab.
     RefSlab build() &&;
+
   private:
     // A ref we're storing with its symbol to consume with build().
     // All strings are interned, so DenseMapInfo can use pointer comparisons.
