@@ -216,9 +216,6 @@ private:
   // function is only called in opt mode.
   void addEarlyCSEOrGVNPass();
 
-  // Add passes that propagate special memory spaces.
-  void addAddressSpaceInferencePasses();
-
   // Add passes that perform straight-line scalar optimizations.
   void addStraightLineScalarOptimizationPasses();
 };
@@ -304,17 +301,6 @@ void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
     addPass(createEarlyCSEPass());
 }
 
-void NVPTXPassConfig::addAddressSpaceInferencePasses() {
-  // NVPTXLowerArgs emits alloca for byval parameters which can often
-  // be eliminated by SROA.
-  addPass(createSROAPass());
-  addPass(createNVPTXLowerAllocaPass());
-  // TODO: Consider running InferAddressSpaces during opt, earlier in the
-  // compilation flow.
-  addPass(createInferAddressSpacesPass());
-  addPass(createNVPTXAtomicLowerPass());
-}
-
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createSeparateConstOffsetFromGEPPass());
   addPass(createSpeculativeExecutionPass());
@@ -368,8 +354,17 @@ void NVPTXPassConfig::addIRPasses() {
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   addPass(createNVPTXLowerArgsPass());
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    // NVPTXLowerArgs emits alloca for byval parameters which can often
+    // be eliminated by SROA.
+    addPass(createSROAPass());
+  addPass(createNVPTXLowerAllocaPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addAddressSpaceInferencePasses();
+    // TODO: Consider running InferAddressSpaces during opt, earlier in the
+    // compilation flow.
+    addPass(createInferAddressSpacesPass());
+    addPass(createNVPTXAtomicLowerPass());
     addStraightLineScalarOptimizationPasses();
   }
 
@@ -501,4 +496,28 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
 
   addPass(&PeepholeOptimizerLegacyID);
   printAndVerify("After codegen peephole optimization pass");
+}
+
+bool NVPTXTargetMachine::isCompatibleDataLayout(
+    const DataLayout &Candidate) const {
+  // XXX: Should we enforce that the Candidate DataLayout has the same address
+  // space for allocas?
+  if (DL == Candidate)
+    return true;
+
+  auto DLStr = DL.getStringRepresentation();
+  if (!StringRef(DLStr).contains("A"))
+    DLStr = DLStr.empty() ? "A" + std::to_string(ADDRESS_SPACE_LOCAL)
+                          : DLStr + "-A" + std::to_string(ADDRESS_SPACE_LOCAL);
+  auto NewDL = DataLayout(DLStr);
+
+  return NewDL == Candidate;
+}
+
+unsigned
+NVPTXTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+  if (Kind == PseudoSourceValue::FixedStack) {
+    return ADDRESS_SPACE_LOCAL;
+  }
+  return CodeGenTargetMachineImpl::getAddressSpaceForPseudoSourceKind(Kind);
 }
