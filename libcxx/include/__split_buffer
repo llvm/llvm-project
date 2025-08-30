@@ -50,19 +50,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _SplitBuffer, class _Tp, class _Allocator>
 class __split_buffer_pointer_layout {
 protected:
-  using value_type                     = _Tp;
-  using allocator_type                 = _Allocator;
-  using __alloc_rr _LIBCPP_NODEBUG     = __libcpp_remove_reference_t<allocator_type>;
-  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<__alloc_rr>;
-  using reference                      = value_type&;
-  using const_reference                = const value_type&;
-  using size_type                      = typename __alloc_traits::size_type;
-  using difference_type                = typename __alloc_traits::difference_type;
-  using pointer                        = typename __alloc_traits::pointer;
-  using const_pointer                  = typename __alloc_traits::const_pointer;
-  using iterator                       = pointer;
-  using const_iterator                 = const_pointer;
-  using __sentinel_type                = pointer;
+  using value_type                      = _Tp;
+  using allocator_type                  = _Allocator;
+  using __alloc_rr _LIBCPP_NODEBUG      = __libcpp_remove_reference_t<allocator_type>;
+  using __alloc_traits _LIBCPP_NODEBUG  = allocator_traits<__alloc_rr>;
+  using reference                       = value_type&;
+  using const_reference                 = const value_type&;
+  using size_type                       = typename __alloc_traits::size_type;
+  using difference_type                 = typename __alloc_traits::difference_type;
+  using pointer                         = typename __alloc_traits::pointer;
+  using const_pointer                   = typename __alloc_traits::const_pointer;
+  using iterator                        = pointer;
+  using const_iterator                  = const_pointer;
+  using __sentinel_type _LIBCPP_NODEBUG = pointer;
 
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_pointer_layout() = default;
@@ -197,19 +197,19 @@ private:
 template <class _SplitBuffer, class _Tp, class _Allocator>
 class __split_buffer_size_layout {
 protected:
-  using value_type                     = _Tp;
-  using allocator_type                 = _Allocator;
-  using __alloc_rr _LIBCPP_NODEBUG     = __libcpp_remove_reference_t<allocator_type>;
-  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<__alloc_rr>;
-  using reference                      = value_type&;
-  using const_reference                = const value_type&;
-  using size_type                      = typename __alloc_traits::size_type;
-  using difference_type                = typename __alloc_traits::difference_type;
-  using pointer                        = typename __alloc_traits::pointer;
-  using const_pointer                  = typename __alloc_traits::const_pointer;
-  using iterator                       = pointer;
-  using const_iterator                 = const_pointer;
-  using __sentinel_type                = size_type;
+  using value_type                      = _Tp;
+  using allocator_type                  = _Allocator;
+  using __alloc_rr _LIBCPP_NODEBUG      = __libcpp_remove_reference_t<allocator_type>;
+  using __alloc_traits _LIBCPP_NODEBUG  = allocator_traits<__alloc_rr>;
+  using reference                       = value_type&;
+  using const_reference                 = const value_type&;
+  using size_type                       = typename __alloc_traits::size_type;
+  using difference_type                 = typename __alloc_traits::difference_type;
+  using pointer                         = typename __alloc_traits::pointer;
+  using const_pointer                   = typename __alloc_traits::const_pointer;
+  using iterator                        = pointer;
+  using const_iterator                  = const_pointer;
+  using __sentinel_type _LIBCPP_NODEBUG = size_type;
 
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer_size_layout() = default;
