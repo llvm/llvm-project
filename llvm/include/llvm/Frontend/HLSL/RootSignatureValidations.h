@@ -40,6 +40,12 @@ LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
 LLVM_ABI bool verifyComparisonFunc(uint32_t ComparisonFunc);
 LLVM_ABI bool verifyBorderColor(uint32_t BorderColor);
 LLVM_ABI bool verifyLOD(float LOD);
+LLVM_ABI bool verifyRegisterOverflow(uint64_t Register,
+                                     uint32_t NumDescriptors);
+LLVM_ABI bool verifyOffsetOverflow(uint64_t Register);
+LLVM_ABI uint64_t updateAppendingRegister(uint64_t AppendingRegisterRegister,
+                                          uint64_t NumDescriptors,
+                                          uint64_t Offset);
 
 } // namespace rootsig
 } // namespace hlsl

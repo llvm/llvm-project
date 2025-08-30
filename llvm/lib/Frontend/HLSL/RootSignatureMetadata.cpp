@@ -27,6 +27,11 @@ namespace rootsig {
 char GenericRSMetadataError::ID;
 char InvalidRSMetadataFormat::ID;
 char InvalidRSMetadataValue::ID;
+char TableSamplerMixinError::ID;
+char ShaderRegisterOverflowError::ID;
+char OffsetOverflowError::ID;
+char DescriptorRangeOverflowError::ID;
+
 template <typename T> char RootSignatureValidationError<T>::ID;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
@@ -515,6 +520,65 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
 }
 
+Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
+                                          uint32_t Location) {
+  bool HasSampler = false;
+  bool HasOtherRangeType = false;
+  dxbc::DescriptorRangeType OtherRangeType;
+
+  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+    dxbc::DescriptorRangeType RangeType =
+        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+
+    if (RangeType == dxbc::DescriptorRangeType::Sampler) {
+      HasSampler = true;
+    } else {
+      HasOtherRangeType = true;
+      OtherRangeType = RangeType;
+    }
+  }
+
+  // Samplers cannot be mixed with other resources in a descriptor table.
+  if (HasSampler && HasOtherRangeType)
+    return make_error<TableSamplerMixinError>(toResourceClass(OtherRangeType),
+                                              Location);
+  return Error::success();
+}
+
+Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
+                                              uint32_t Location) {
+  uint64_t AppendingRegister = 0;
+
+  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+    dxbc::DescriptorRangeType RangeType =
+        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+
+    if (Range.OffsetInDescriptorsFromTableStart != ~0U)
+      AppendingRegister = Range.OffsetInDescriptorsFromTableStart;
+
+    if (verifyOffsetOverflow(AppendingRegister))
+      return make_error<OffsetOverflowError>(dxbc::toResourceClass(RangeType),
+                                             Range.BaseShaderRegister,
+                                             Range.RegisterSpace);
+
+    if (verifyRegisterOverflow(Range.BaseShaderRegister, Range.NumDescriptors))
+      return make_error<ShaderRegisterOverflowError>(
+          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
+          Range.RegisterSpace);
+
+    if (verifyRegisterOverflow(AppendingRegister, Range.NumDescriptors))
+      return make_error<DescriptorRangeOverflowError>(
+          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
+          Range.RegisterSpace);
+
+    AppendingRegister =
+        updateAppendingRegister(AppendingRegister, Range.NumDescriptors,
+                                Range.OffsetInDescriptorsFromTableStart);
+  }
+
+  return Error::success();
+}
+
 Error MetadataParser::validateRootSignature(
     const mcdxbc::RootSignatureDesc &RSD) {
   Error DeferredErrs = Error::success();
@@ -593,6 +657,16 @@ Error MetadataParser::validateRootSignature(
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
                              "DescriptorFlag", Range.Flags));
+
+        if (Error Err =
+                validateDescriptorTableSamplerMixin(Table, Info.Location)) {
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+        }
+
+        if (Error Err =
+                validateDescriptorTableRegisterOverflow(Table, Info.Location)) {
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+        }
       }
       break;
     }

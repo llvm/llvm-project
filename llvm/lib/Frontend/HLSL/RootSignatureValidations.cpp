@@ -180,6 +180,22 @@ bool verifyBorderColor(uint32_t BorderColor) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
+bool verifyOffsetOverflow(uint64_t Register) { return Register > ~0U; }
+
+bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
+  if (NumDescriptors == ~0U)
+    return false;
+
+  uint64_t UpperBound =
+      (uint64_t)Register + (uint64_t)NumDescriptors - (uint64_t)1U;
+  return UpperBound > ~0U;
+}
+
+uint64_t updateAppendingRegister(uint64_t AppendingRegister,
+                                 uint64_t NumDescriptors, uint64_t Offset) {
+  return Offset == ~0U ? AppendingRegister + NumDescriptors
+                       : Offset + NumDescriptors;
+}
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

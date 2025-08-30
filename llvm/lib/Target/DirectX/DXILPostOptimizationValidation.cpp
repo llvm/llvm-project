@@ -25,38 +25,6 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-  llvm_unreachable("Unknown DescriptorRangeType");
-}
-
-static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
-  using namespace dxbc;
-  switch (Type) {
-  case RootParameterType::Constants32Bit:
-    return ResourceClass::CBuffer;
-  case RootParameterType::SRV:
-    return ResourceClass::SRV;
-  case RootParameterType::UAV:
-    return ResourceClass::UAV;
-  case RootParameterType::CBV:
-    return ResourceClass::CBuffer;
-  case dxbc::RootParameterType::DescriptorTable:
-    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
-  }
-  llvm_unreachable("Unknown RootParameterType");
-}
-
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
   for (const auto &UAV : DRM.uavs()) {
     if (UAV.CounterDirection != ResourceCounterDirection::Invalid)
@@ -222,7 +190,7 @@ static void validateRootSignature(Module &M,
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
         Builder.trackBinding(
-            toResourceClass(
+            dxbc::toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
             &ParamInfo);
