@@ -3124,13 +3124,14 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
-// Helper function to check if a name is a recognized smart owning pointer name
+// Allowlist of owning smart pointers we want to recognize.
+// Start with unique_ptr and shared_ptr; weak_ptr is excluded intentionally
+// because it does not own the pointee.
 static bool isSmartOwningPtrName(StringRef Name) {
   return Name == "unique_ptr" || Name == "shared_ptr";
 }
 
-// Allowlist of owning smart pointers we want to recognize.
-// Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
+// Check if a type is a smart owning pointer type.
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
 
