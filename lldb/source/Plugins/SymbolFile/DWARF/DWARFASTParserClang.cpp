@@ -1902,6 +1902,22 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     clang_type =
         m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
 
+    // Try to find an existing specialization with these template arguments and
+    // template parameter list.
+    void *InsertPos = nullptr;
+    if (!class_template_decl->findSpecialization(template_param_infos.GetArgs(),
+                                                 InsertPos))
+      // Add this specialization to the class template.
+      class_template_decl->AddSpecialization(class_specialization_decl,
+                                             InsertPos);
+    else {
+      dwarf->GetObjectFile()->GetModule()->ReportError(
+          "SymbolFileDWARF({0:p}) - Specialization for "
+          "clang::ClassTemplateDecl({1:p}) already exists.",
+          static_cast<void *>(this), static_cast<void *>(class_template_decl));
+      return TypeSP();
+    }
+
     m_ast.SetMetadata(class_template_decl, metadata);
     m_ast.SetMetadata(class_specialization_decl, metadata);
   }
