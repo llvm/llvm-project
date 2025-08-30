@@ -858,6 +858,13 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
+  // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
+  // optimizations might lose structure / information that is necessary for
+  // generating optimal concrete AMDGPU code.
+  if (getTriple().isSPIRV() &&
+      !DriverArgs.hasArg(options::OPT_disable_llvm_passes))
+    CC1Args.push_back("-disable-llvm-passes");
+
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
 }
