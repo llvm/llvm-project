@@ -344,8 +344,8 @@ foreach size = ["8", "16", "32"] in {
 def MxARII       : MxOpClass<"ARII">;
 foreach size = ["8", "16", "32"] in {
   defvar ResSize = !cast<MxSize>("MxSize"#size);
-  def MxARII # size       : MxMemOp<(ops i8imm:$disp, AR32:$reg,    XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
-  def MxARII # size # _TC : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+  def MxARII # size       : MxMemOp<(ops i8imm:$disp, AR32:$reg,    DR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+  def MxARII # size # _TC : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, DR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
 } // foreach size
 
 // ABSOLUTE SHORT ADDRESS. This addressing mode requires one word of extension.
@@ -394,7 +394,7 @@ def MxPCD # size : MxMemOp<(ops i16imm), ResSize,  "q", "printPCD"#size#"Mem", M
 // word, and the contents of the index register.  The value in the program
 // counter is the address of the extension word. This reference is classified as
 // a program reference.
-def MxPCI # size : MxMemOp<(ops i8imm:$disp, XR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
+def MxPCI # size : MxMemOp<(ops i8imm:$disp, DR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
 } // foreach size
 } // OPERAND_PCREL
 
