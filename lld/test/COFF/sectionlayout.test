@@ -115,7 +115,7 @@ CHECK4: ]
 RUN: echo ".text3" > %t.layout.txt
 RUN: echo ".text2" >> %t.layout.txt
 RUN: lld-link /out:%t.exe /entry:main /sectionlayout:%t.layout.txt %t.obj
-RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK1 %s
+RUN: llvm-readobj --sections %t.exe | FileCheck -check-prefix=CHECK2 %s
 
 ## Order in 3 -> 2 -> 1, multiple specification has no effect (the first one is used)
 RUN: echo ".text3" > %t.layout.txt

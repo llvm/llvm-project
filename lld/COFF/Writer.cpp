@@ -1429,13 +1429,19 @@ void Writer::layoutSections() {
       [this, &originalOrder](const OutputSection *a, const OutputSection *b) {
         auto itA = ctx.config.sectionOrder.find(a->name.str());
         auto itB = ctx.config.sectionOrder.find(b->name.str());
+        bool aInOrder = itA != ctx.config.sectionOrder.end();
+        bool bInOrder = itB != ctx.config.sectionOrder.end();
 
-        if (itA != ctx.config.sectionOrder.end() &&
-            itB != ctx.config.sectionOrder.end())
+        // Put unspecified sections after all specified sections
+        if (aInOrder && bInOrder) {
           return itA->second < itB->second;
-
-        // Not found in layout file; respect the original order
-        return originalOrder[a] < originalOrder[b];
+        } else if (aInOrder && !bInOrder) {
+          return true;
+        } else if (!aInOrder && bInOrder) {
+          return false;
+        } else {
+          return originalOrder[a] < originalOrder[b];
+        }
       });
 }
 
