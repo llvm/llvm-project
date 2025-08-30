@@ -28,7 +28,11 @@ RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
+<<<<<<< HEAD
     Fortran::runtime::memcpy(p, s, length);
+=======
+    runtime::memcpy(p, s, length);
+>>>>>>> 30d2cb5a7ecd
     p[length] = '\0';
     return OwningPtr<char>{p};
   } else {
@@ -75,10 +79,17 @@ RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
   std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
+<<<<<<< HEAD
     Fortran::runtime::memcpy(to, from, len);
     Fortran::runtime::memset(to + len, ' ', toLength - len);
   } else {
     Fortran::runtime::memcpy(to, from, toLength);
+=======
+    runtime::memcpy(to, from, len);
+    runtime::memset(to + len, ' ', toLength - len);
+  } else {
+    runtime::memcpy(to, from, toLength);
+>>>>>>> 30d2cb5a7ecd
   }
 }
 
@@ -127,10 +138,17 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
       toIt.Advance(), fromIt.Advance()) {
     // typeElementBytes == 1 when P is a char - the non-specialised case
     if constexpr (typeElementBytes != 1) {
+<<<<<<< HEAD
       Fortran::runtime::memcpy(
           toIt.template Get<P>(), fromIt.template Get<P>(), typeElementBytes);
     } else {
       Fortran::runtime::memcpy(
+=======
+      runtime::memcpy(
+          toIt.template Get<P>(), fromIt.template Get<P>(), typeElementBytes);
+    } else {
+      runtime::memcpy(
+>>>>>>> 30d2cb5a7ecd
           toIt.template Get<P>(), fromIt.template Get<P>(), elementBytes);
     }
   }
@@ -150,9 +168,15 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toAt += elementBytes, fromIt.Advance()) {
     if constexpr (typeElementBytes != 1) {
+<<<<<<< HEAD
       Fortran::runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
       Fortran::runtime::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
+=======
+      runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
+    } else {
+      runtime::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
+>>>>>>> 30d2cb5a7ecd
     }
   }
 }
@@ -170,9 +194,15 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromAt += elementBytes) {
     if constexpr (typeElementBytes != 1) {
+<<<<<<< HEAD
       Fortran::runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {
       Fortran::runtime::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
+=======
+      runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
+    } else {
+      runtime::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
+>>>>>>> 30d2cb5a7ecd
     }
   }
 }
@@ -187,7 +217,11 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
   if (toIsContiguous) {
     if (fromIsContiguous) {
+<<<<<<< HEAD
       Fortran::runtime::memcpy(to.OffsetElement(), from.OffsetElement(),
+=======
+      runtime::memcpy(to.OffsetElement(), from.OffsetElement(),
+>>>>>>> 30d2cb5a7ecd
           to.Elements() * to.ElementBytes());
     } else {
       ShallowCopyDiscontiguousToContiguous<P, RANK>(to, from);
@@ -277,7 +311,11 @@ RT_API_ATTRS char *EnsureNullTerminated(
     char *str, std::size_t length, Terminator &terminator) {
   if (runtime::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
+<<<<<<< HEAD
     Fortran::runtime::memcpy(newCmd, str, length);
+=======
+    runtime::memcpy(newCmd, str, length);
+>>>>>>> 30d2cb5a7ecd
     newCmd[length] = '\0';
     return newCmd;
   } else {
@@ -309,7 +347,11 @@ RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     return ToErrmsg(errmsg, StatValueTooShort);
   }
 
+<<<<<<< HEAD
   Fortran::runtime::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+=======
+  runtime::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+>>>>>>> 30d2cb5a7ecd
 
   if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
     return ToErrmsg(errmsg, StatValueTooShort);

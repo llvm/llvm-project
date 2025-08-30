@@ -560,9 +560,15 @@ RT_API_ATTRS void CopyAndPad(
       to[j] = static_cast<TO>(' ');
     }
   } else if (toChars <= fromChars) {
+<<<<<<< HEAD
     Fortran::runtime::memcpy(to, from, toChars * sizeof(TO));
   } else {
     Fortran::runtime::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+=======
+    runtime::memcpy(to, from, toChars * sizeof(TO));
+  } else {
+    runtime::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+>>>>>>> 30d2cb5a7ecd
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }

@@ -16,8 +16,11 @@
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 namespace {
 
+using namespace Fortran;
 using namespace Fortran::runtime;
 
 RT_OFFLOAD_API_GROUP_BEGIN
@@ -99,7 +102,11 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
   // Avoid passing a null pointer, since it would result in an undefined
   // behavior.
   if (data_ != nullptr) {
+<<<<<<< HEAD
     Fortran::runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+=======
+    runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+>>>>>>> 30d2cb5a7ecd
     FreeMemory(data_);
   }
   data_ = newData;
@@ -227,7 +234,10 @@ void RTNAME(DescriptorAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
 void RTNAME(DestroyDescriptorStack)(void *opaquePtr) {
   DescriptorStack::destroy(getDescriptorStorage(opaquePtr));
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 30d2cb5a7ecd
 RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

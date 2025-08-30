@@ -65,7 +65,11 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
       ioType[0] = 'D';
       ioType[1] = 'T';
+<<<<<<< HEAD
       Fortran::runtime::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+=======
+      runtime::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+>>>>>>> 30d2cb5a7ecd
     } else {
       runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");

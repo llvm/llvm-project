@@ -110,7 +110,11 @@ static RT_API_ATTRS bool EditBOZInput(
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
+<<<<<<< HEAD
   Fortran::runtime::memset(n, 0, bytes);
+=======
+  runtime::memset(n, 0, bytes);
+>>>>>>> 30d2cb5a7ecd
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
@@ -283,18 +287,30 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     auto shft{static_cast<int>(sizeof value - kind)};
     if (!isHostLittleEndian && shft >= 0) {
       auto shifted{value << (8 * shft)};
+<<<<<<< HEAD
       Fortran::runtime::memcpy(n, &shifted, kind);
     } else {
       Fortran::runtime::memcpy(n, &value, kind); // a blank field means zero
+=======
+      runtime::memcpy(n, &shifted, kind);
+    } else {
+      runtime::memcpy(n, &value, kind); // a blank field means zero
+>>>>>>> 30d2cb5a7ecd
     }
 #else
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
     // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
       auto l{value.low() << (8 * shft)};
+<<<<<<< HEAD
       Fortran::runtime::memcpy(n, &l, kind);
     } else {
       Fortran::runtime::memcpy(n, &value, kind); // a blank field means zero
+=======
+      runtime::memcpy(n, &l, kind);
+    } else {
+      runtime::memcpy(n, &value, kind); // a blank field means zero
+>>>>>>> 30d2cb5a7ecd
     }
 #endif
     io.GotChar(fastField.got());
@@ -1121,7 +1137,11 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         --skipChars;
       } else {
         char32_t buffer{0};
+<<<<<<< HEAD
         Fortran::runtime::memcpy(&buffer, input, chunkBytes);
+=======
+        runtime::memcpy(&buffer, input, chunkBytes);
+>>>>>>> 30d2cb5a7ecd
         if ((sizeof *x == 1 && buffer > 0xff) ||
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
@@ -1148,7 +1168,11 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         chunkBytes = std::min<std::size_t>(remainingChars, readyBytes);
         chunkBytes = std::min<std::size_t>(lengthChars, chunkBytes);
         chunkChars = chunkBytes;
+<<<<<<< HEAD
         Fortran::runtime::memcpy(x, input, chunkBytes);
+=======
+        runtime::memcpy(x, input, chunkBytes);
+>>>>>>> 30d2cb5a7ecd
         x += chunkBytes;
         lengthChars -= chunkChars;
       }

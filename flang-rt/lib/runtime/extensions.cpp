@@ -148,7 +148,11 @@ uid_t RTNAME(GetUID)() {
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
+<<<<<<< HEAD
       1, Fortran::runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
+=======
+      1, runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
+>>>>>>> 30d2cb5a7ecd
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)
@@ -172,7 +176,11 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   char str[26];
   // Insufficient space, fill with spaces and return.
   if (length < 24) {
+<<<<<<< HEAD
     Fortran::runtime::memset(arg, ' ', length);
+=======
+    runtime::memset(arg, ' ', length);
+>>>>>>> 30d2cb5a7ecd
     return;
   }
 
@@ -204,8 +212,13 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   if (length >= 1 && getlogin_r(arg, length) == 0) {
+<<<<<<< HEAD
     auto loginLen{Fortran::runtime::strlen(arg)};
     Fortran::runtime::memset(
+=======
+    auto loginLen{runtime::strlen(arg)};
+    runtime::memset(
+>>>>>>> 30d2cb5a7ecd
         arg + loginLen, ' ', static_cast<std::size_t>(length) - loginLen);
     return;
   }
@@ -259,7 +272,11 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
   char *newName{nullptr};
   if (name[nameLength - 1] != '\0') {
     newName = static_cast<char *>(std::malloc(nameLength + 1));
+<<<<<<< HEAD
     Fortran::runtime::memcpy(newName, name, nameLength);
+=======
+    runtime::memcpy(newName, name, nameLength);
+>>>>>>> 30d2cb5a7ecd
     newName[nameLength] = '\0';
     name = newName;
   }
