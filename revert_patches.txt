@@ -18,6 +18,3 @@ breaks build rocPRIM
 Needs flang team to land
  Revert "[flang][OpenMP] Handle symbols on composite simd with multiple privatizers (#155640)"
 ---
-need flang team to land
-[Flang][OpenMP][Runtime] Minor Flang runtime for OpenMP AMDGPU modifications (#152631)
----
