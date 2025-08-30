@@ -977,18 +977,16 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[TMP13]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT6:%.*]], %[[TMP13]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = load double, ptr [[P2]], align 8
-; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7:[0-9]+]]
-; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7]]
-; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = fcmp ule double [[TMP5]], 0.000000e+00
+; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7:[0-9]+]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = fcmp ule double [[TMP6]], 0.000000e+00
-; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = select i1 [[ACTIVE_LANE_MASK]], i1 [[TMP7]], i1 false
+; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = select i1 [[ACTIVE_LANE_MASK]], i1 [[TMP8]], i1 false
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = select i1 [[ACTIVE_LANE_MASK2]], i1 [[TMP8]], i1 false
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP11]], double 1.000000e+00, double 0.000000e+00
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select i1 [[TMP12]], double 1.000000e+00, double 0.000000e+00
 ; TFA_INTERLEAVE-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[ACTIVE_LANE_MASK2]], double [[PREDPHI3]], double [[PREDPHI]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = or i1 [[ACTIVE_LANE_MASK]], [[ACTIVE_LANE_MASK2]]
-; TFA_INTERLEAVE-NEXT:    br i1 [[TMP14]], label %[[BB12:.*]], label %[[TMP13]]
-; TFA_INTERLEAVE:       [[BB12]]:
+; TFA_INTERLEAVE-NEXT:    br i1 [[TMP14]], label %[[BB10:.*]], label %[[TMP13]]
+; TFA_INTERLEAVE:       [[BB10]]:
 ; TFA_INTERLEAVE-NEXT:    store double [[SPEC_SELECT]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label %[[TMP13]]
 ; TFA_INTERLEAVE:       [[TMP13]]:
