@@ -95,28 +95,24 @@ def VectorIndex8 : Operand<i32>, ImmLeaf<i32, [{
 }]> {
   let ParserMatchClass = VectorIndex8Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex16 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 4;
 }]> {
   let ParserMatchClass = VectorIndex16Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex32 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 2;
 }]> {
   let ParserMatchClass = VectorIndex32Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 1;
 }]> {
   let ParserMatchClass = VectorIndex64Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 
 // Register list of one D register.
