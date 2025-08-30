@@ -51,6 +51,12 @@ static cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
+// FoldFMA is a new pass; this option will lets us turn it off in case we
+// encounter some issues.
+static cl::opt<bool> DisableFoldFMA("disable-nvptx-fold-fma",
+                                    cl::desc("Disable NVPTX Fold FMA"),
+                                    cl::init(false), cl::Hidden);
+
 // TODO: Remove this flag when we are confident with no regressions.
 static cl::opt<bool> DisableRequireStructuredCFG(
     "disable-nvptx-require-structured-cfg",
@@ -115,6 +121,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
+  initializeNVPTXFoldFMAPass(PR);
   initializeNVPTXPrologEpilogPassPass(PR);
 }
 
@@ -397,6 +404,8 @@ void NVPTXPassConfig::addIRPasses() {
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
     addPass(createNVPTXTagInvariantLoadsPass());
+    if (!DisableFoldFMA)
+      addPass(createNVPTXFoldFMAPass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {
