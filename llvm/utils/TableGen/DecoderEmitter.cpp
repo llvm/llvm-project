@@ -157,6 +157,9 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The namespace in which this encoding exists.
+  StringRef DecoderNamespace;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
@@ -189,6 +192,9 @@ public:
 
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
+
+  /// Returns the namespace in which this encoding exists.
+  StringRef getDecoderNamespace() const { return DecoderNamespace; }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -326,7 +332,7 @@ struct DecoderTableInfo {
   }
 };
 
-using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
+using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
@@ -1052,8 +1058,6 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
                                            const OperandInfo &OpInfo) const {
-  const std::string &Decoder = OpInfo.Decoder;
-
   bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
 
   if (UseInsertBits) {
@@ -1076,6 +1080,7 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
+  StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -2055,6 +2060,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     Name = (EncodingDef->getName() + Twine(':')).str();
   Name.append(InstDef->getName());
 
+  DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2317,8 +2323,8 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
   for (const auto &MS : CGH.getHwModeSelects()) {
     for (auto [HwModeID, EncodingDef] : MS.second.Items) {
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
-        std::string DecoderNamespace =
-            EncodingDef->getValueAsString("DecoderNamespace").str();
+        StringRef DecoderNamespace =
+            EncodingDef->getValueAsString("DecoderNamespace");
         NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
@@ -2340,9 +2346,7 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-    std::string DecoderNamespace =
-        InstDef->getValueAsString("DecoderNamespace").str();
+    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2515,8 +2519,7 @@ namespace {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
       EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }
