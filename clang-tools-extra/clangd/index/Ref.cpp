@@ -64,5 +64,32 @@ RefSlab RefSlab::Builder::build() && {
   return RefSlab(std::move(Result), std::move(Arena), Entries.size());
 }
 
+void RefSlab::BuilderExpectUnique::insert(const SymbolID &ID, const Ref &S) {
+  Entry E = {ID, S};
+  E.Reference.Location.FileURI = UniqueStrings.save(S.Location.FileURI).data();
+  Entries.emplace_back(std::move(E));
+}
+
+RefSlab RefSlab::BuilderExpectUnique::build() && {
+  std::vector<std::pair<SymbolID, llvm::ArrayRef<Ref>>> Result;
+  // We'll reuse the arena, as it only has unique strings and we need them all.
+  // We need to group refs by symbol and form contiguous arrays on the arena.
+  // Group by SymbolID.
+  std::sort(Entries.begin(), Entries.end());
+  Entries.erase(std::unique(Entries.begin(), Entries.end()), Entries.end());
+  std::vector<Ref> Refs;
+  // Loop over symbols, copying refs for each onto the arena.
+  for (auto I = Entries.begin(), End = Entries.end(); I != End;) {
+    SymbolID Sym = I->Symbol;
+    Refs.clear();
+    do {
+      Refs.push_back(I->Reference);
+      ++I;
+    } while (I != End && I->Symbol == Sym);
+    Result.emplace_back(Sym, llvm::ArrayRef<Ref>(Refs).copy(Arena));
+  }
+  return RefSlab(std::move(Result), std::move(Arena), Entries.size());
+}
+
 } // namespace clangd
 } // namespace clang

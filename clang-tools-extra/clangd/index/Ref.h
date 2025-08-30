@@ -132,6 +132,8 @@ public:
   }
 
   /// RefSlab::Builder is a mutable container that can 'freeze' to RefSlab.
+  /// This variant is optimized to receive duplicate symbols.
+  /// Use this when parsing files
   class Builder {
   public:
     Builder() : UniqueStrings(Arena) {}
@@ -152,6 +154,37 @@ public:
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
     llvm::DenseSet<Entry> Entries;
+  };
+
+  /// RefSlab::Builder is a mutable container that can 'freeze' to RefSlab.
+  /// This variant is optimized to receive unique symbols
+  /// Use this when reading symbols which where previously written in a file.
+  class BuilderExpectUnique {
+  public:
+    BuilderExpectUnique() : UniqueStrings(Arena) {}
+    /// Adds a ref to the slab. Deep copy: Strings will be owned by the slab.
+    void insert(const SymbolID &ID, const Ref &S);
+    /// Consumes the builder to finalize the slab.
+    RefSlab build() &&;
+  private:
+    // A ref we're storing with its symbol to consume with build().
+    // All strings are interned, so DenseMapInfo can use pointer comparisons.
+    struct Entry {
+      SymbolID Symbol;
+      Ref Reference;
+      friend bool operator<(const Entry &L, const Entry &R) noexcept {
+        return std::tie(L.Symbol, L.Reference) <
+               std::tie(R.Symbol, R.Reference);
+      }
+      friend bool operator==(const Entry &L, const Entry &R) noexcept {
+        return std::tie(L.Symbol, L.Reference) ==
+               std::tie(R.Symbol, R.Reference);
+      }
+    };
+    friend struct llvm::DenseMapInfo<Entry>;
+    llvm::BumpPtrAllocator Arena;
+    llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
+    std::vector<Entry> Entries;
   };
 
 private:
