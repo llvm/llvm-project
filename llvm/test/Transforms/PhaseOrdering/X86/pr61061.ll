@@ -13,7 +13,7 @@ define <2 x i64> @PR61061(<2 x i64> noundef %vect) {
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %ptr = alloca <2 x i64>, align 16
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %ptr)
+  call void @llvm.lifetime.start.p0(ptr nonnull %ptr)
   %bc0 = bitcast <2 x i64> %vect to <16 x i8>
   %bc1 = bitcast <2 x i64> %vect to <16 x i8>
   %bc2 = bitcast <2 x i64> %vect to <16 x i8>
@@ -62,8 +62,8 @@ define <2 x i64> @PR61061(<2 x i64> noundef %vect) {
   store i8 %elt2, ptr %ptr14, align 2
   store i8 %elt3, ptr %ptr15, align 1
   %base = load <2 x i64>, ptr %ptr, align 16
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %ptr)
+  call void @llvm.lifetime.end.p0(ptr nonnull %ptr)
   ret <2 x i64> %base
 }
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)

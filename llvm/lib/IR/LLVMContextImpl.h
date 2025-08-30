@@ -312,10 +312,8 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
   unsigned Line;
   uint16_t Column;
   bool ImplicitCode;
@@ -323,36 +321,24 @@ template <> struct MDNodeKeyImpl<DILocation> {
   MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
-      : Scope(Scope), InlinedAt(InlinedAt),
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-        AtomGroup(AtomGroup), AtomRank(AtomRank),
-#endif
-        Line(Line), Column(Column), ImplicitCode(ImplicitCode) {
-  }
+      : Scope(Scope), InlinedAt(InlinedAt), AtomGroup(AtomGroup),
+        AtomRank(AtomRank), Line(Line), Column(Column),
+        ImplicitCode(ImplicitCode) {}
 
   MDNodeKeyImpl(const DILocation *L)
       : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
         AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
-#endif
         Line(L->getLine()), Column(L->getColumn()),
-        ImplicitCode(L->isImplicitCode()) {
-  }
+        ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
-           ImplicitCode == RHS->isImplicitCode()
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-           && AtomGroup == RHS->getAtomGroup() &&
-           AtomRank == RHS->getAtomRank();
-#else
-        ;
-#endif
+           ImplicitCode == RHS->isImplicitCode() &&
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
   }
 
   unsigned getHashValue() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     // Hashing AtomGroup and AtomRank substantially impacts performance whether
     // Key Instructions is enabled or not. We can't detect whether it's enabled
     // here cheaply; avoiding hashing zero values is a good approximation. This
@@ -363,7 +349,6 @@ template <> struct MDNodeKeyImpl<DILocation> {
     if (AtomGroup || AtomRank)
       return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
                           AtomGroup, (uint8_t)AtomRank);
-#endif
     return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };

@@ -196,6 +196,7 @@ public:
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
   AnalysisManager &getAnalysisManager() { return AMgr; }
+  const AnalysisManager &getAnalysisManager() const { return AMgr; }
 
   AnalysisDeclContextManager &getAnalysisDeclContextManager() {
     return AMgr.getAnalysisDeclContextManager();
@@ -206,8 +207,10 @@ public:
   }
 
   SValBuilder &getSValBuilder() { return svalBuilder; }
+  const SValBuilder &getSValBuilder() const { return svalBuilder; }
 
   BugReporter &getBugReporter() { return BR; }
+  const BugReporter &getBugReporter() const { return BR; }
 
   cross_tu::CrossTranslationUnitContext *
   getCrossTranslationUnitContext() {
@@ -416,10 +419,17 @@ public:
                  unsigned int Space, bool IsDot) const;
 
   ProgramStateManager &getStateManager() { return StateMgr; }
+  const ProgramStateManager &getStateManager() const { return StateMgr; }
 
   StoreManager &getStoreManager() { return StateMgr.getStoreManager(); }
+  const StoreManager &getStoreManager() const {
+    return StateMgr.getStoreManager();
+  }
 
   ConstraintManager &getConstraintManager() {
+    return StateMgr.getConstraintManager();
+  }
+  const ConstraintManager &getConstraintManager() const {
     return StateMgr.getConstraintManager();
   }
 
@@ -429,6 +439,7 @@ public:
   }
 
   SymbolManager &getSymbolManager() { return SymMgr; }
+  const SymbolManager &getSymbolManager() const { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
 
   DataTag::Factory &getDataTags() { return Engine.getDataTags(); }
@@ -660,7 +671,7 @@ private:
   /// evalBind - Handle the semantics of binding a value to a specific location.
   ///  This method is used by evalStore, VisitDeclStmt, and others.
   void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
+                SVal location, SVal Val, bool AtDeclInit = false,
                 const ProgramPoint *PP = nullptr);
 
   ProgramStateRef

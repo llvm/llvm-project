@@ -37,7 +37,8 @@ public:
   bool BuiltinWasmTableGrow(CallExpr *TheCall);
   bool BuiltinWasmTableFill(CallExpr *TheCall);
   bool BuiltinWasmTableCopy(CallExpr *TheCall);
-  bool BuiltinWasmTestFunctionPointerSignature(CallExpr *TheCall);
+  bool BuiltinWasmTestFunctionPointerSignature(const TargetInfo &TI,
+                                               CallExpr *TheCall);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);

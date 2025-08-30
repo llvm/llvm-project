@@ -417,7 +417,7 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
   br label %116
 
 116:                                              ; preds = %110, %128
-  call void @llvm.lifetime.start.p0(i64 noundef 8, ptr noundef nonnull align 8 dereferenceable(8) %3) #20
+  call void @llvm.lifetime.start.p0(ptr noundef nonnull align 8 dereferenceable(8) %3) #20
   tail call void @llvm.nvvm.barrier.sync(i32 noundef 8)
   %117 = call zeroext i1 @__kmpc_kernel_parallel(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) %3) #20
   %118 = load ptr, ptr %3, align 8, !tbaa !93
@@ -446,11 +446,11 @@ define internal noundef range(i32 -1, 1024) i32 @__kmpc_target_init(ptr nofree n
 
 128:                                              ; preds = %126, %120
   tail call void @llvm.nvvm.barrier.sync(i32 noundef 8)
-  call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %3) #20
+  call void @llvm.lifetime.end.p0(ptr noundef nonnull %3) #20
   br label %116, !llvm.loop !94
 
 129:                                              ; preds = %116
-  call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %3) #20
+  call void @llvm.lifetime.end.p0(ptr noundef nonnull %3) #20
   br label %130
 
 130:                                              ; preds = %106, %129, %100, %98
@@ -495,7 +495,7 @@ define internal fastcc void @__assert_fail_internal(ptr noundef nonnull derefere
 declare void @llvm.assume(i1 noundef) #9
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #10
+declare void @llvm.lifetime.start.p0(ptr nocapture) #10
 
 ; Function Attrs: convergent nocallback nounwind
 declare void @llvm.nvvm.barrier.sync(i32) #11
@@ -587,7 +587,7 @@ define internal void @__kmpc_kernel_end_parallel() local_unnamed_addr #13 {
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #10
+declare void @llvm.lifetime.end.p0(ptr nocapture) #10
 
 ; Function Attrs: convergent mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite)
 declare extern_weak void @free(ptr allocptr nocapture noundef) local_unnamed_addr #14
@@ -595,11 +595,11 @@ declare extern_weak void @free(ptr allocptr nocapture noundef) local_unnamed_add
 ; Function Attrs: convergent mustprogress nounwind
 define internal noundef i32 @_ZN4ompx6printfEPKcz(ptr noundef %0, ...) local_unnamed_addr #15 {
   %2 = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 noundef 8, ptr noundef nonnull align 8 %2) #29
+  call void @llvm.lifetime.start.p0(ptr noundef nonnull align 8 %2) #29
   call void @llvm.va_start.p0(ptr noundef nonnull align 8 %2) #27
   %3 = load ptr, ptr %2, align 8, !tbaa !101
   %4 = call i32 @vprintf(ptr noundef %0, ptr noundef %3) #24
-  call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %2) #20
+  call void @llvm.lifetime.end.p0(ptr noundef nonnull %2) #20
   ret i32 %4
 }
 
@@ -641,7 +641,7 @@ define internal void @__kmpc_target_deinit() #4 {
   br i1 %14, label %15, label %27
 
 15:                                               ; preds = %11
-  call void @llvm.lifetime.start.p0(i64 noundef 8, ptr noundef nonnull align 8 dereferenceable(8) %1) #29
+  call void @llvm.lifetime.start.p0(ptr noundef nonnull align 8 dereferenceable(8) %1) #29
   %16 = call zeroext i1 @__kmpc_kernel_parallel(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) %1) #20
   %17 = load i32, ptr @__omp_rtl_debug_kind, align 4, !tbaa !62
   %18 = load i32, ptr addrspace(4) @__omp_rtl_device_environment, align 8, !tbaa !83
@@ -659,7 +659,7 @@ define internal void @__kmpc_target_deinit() #4 {
 
 26:                                               ; preds = %15
   tail call void @llvm.assume(i1 noundef %23) #23
-  call void @llvm.lifetime.end.p0(i64 noundef 8, ptr noundef nonnull %1) #20
+  call void @llvm.lifetime.end.p0(ptr noundef nonnull %1) #20
   br label %27
 
 27:                                               ; preds = %26, %11, %10, %0

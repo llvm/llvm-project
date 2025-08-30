@@ -16,7 +16,6 @@ Checks: >
   -modernize-use-trailing-return-type,
   performance-*,
   -performance-enum-size,
-  -performance-move-const-arg,
   -performance-no-int-to-ptr,
   -performance-type-promotion-in-math-fn,
   -performance-unnecessary-value-param,
@@ -33,8 +32,11 @@ Checks: >
   -readability-magic-numbers,
   -readability-named-parameter,
   -readability-qualified-auto,
-  -readability-redundant-declaration,
   -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,
   -readability-suspicious-call-argument,
   -readability-use-anyofallof
+
+CheckOptions:
+  - key:             performance-move-const-arg.CheckTriviallyCopyableMove
+    value:           false

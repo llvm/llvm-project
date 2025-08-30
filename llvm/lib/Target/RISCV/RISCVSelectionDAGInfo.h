@@ -34,6 +34,12 @@ public:
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
 
+  SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
+                                  SDValue Chain, SDValue Dst, SDValue Src,
+                                  SDValue Size, Align Alignment,
+                                  bool isVolatile, bool AlwaysInline,
+                                  MachinePointerInfo DstPtrInfo) const override;
+
   bool hasPassthruOp(unsigned Opcode) const {
     return GenNodeInfo.getDesc(Opcode).TSFlags & RISCVISD::HasPassthruOpMask;
   }

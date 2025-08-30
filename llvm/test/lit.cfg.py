@@ -117,7 +117,12 @@ lli_args = []
 # we don't support COFF in MCJIT well enough for the tests, force ELF format on
 # Windows.  FIXME: the process target triple should be used here, but this is
 # difficult to obtain on Windows.
-if re.search(r"cygwin|windows-gnu|windows-msvc", config.host_triple):
+# Cygwin is excluded from this workaround, even though it is COFF, because this
+# breaks remote tests due to not having a __register_frame function.  The only
+# test that succeeds with cygwin-elf but fails with cygwin is
+# test/ExecutionEngine/MCJIT/stubs-sm-pic.ll so this test is marked as XFAIL
+# for cygwin targets.
+if re.search(r"windows-gnu|windows-msvc", config.host_triple):
     lli_args = ["-mtriple=" + config.host_triple + "-elf"]
 
 llc_args = []
@@ -396,10 +401,11 @@ if config.target_triple:
     else:
         config.available_features.add("target-byteorder-little-endian")
 
-if sys.platform in ["win32"]:
+if sys.platform in ["win32", "cygwin"]:
     # ExecutionEngine, no weak symbols in COFF.
     config.available_features.add("uses_COFF")
-else:
+
+if sys.platform not in ["win32"]:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
 
@@ -668,7 +674,7 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
 if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-gnu|windows-msvc|aix)",
+    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
     config.target_triple,
 ) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
     config.available_features.add("debug_frame")
@@ -709,3 +715,13 @@ if "system-aix" in config.available_features:
 
 if config.has_logf128:
     config.available_features.add("has_logf128")
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)
