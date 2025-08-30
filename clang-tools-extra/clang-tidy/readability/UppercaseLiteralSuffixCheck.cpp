@@ -30,9 +30,6 @@ struct IntegerLiteralCheck {
   static constexpr llvm::StringLiteral Suffixes =
       llvm::StringLiteral("uUlLiIjJ");
 };
-constexpr llvm::StringLiteral IntegerLiteralCheck::Name;
-constexpr llvm::StringLiteral IntegerLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral IntegerLiteralCheck::Suffixes;
 
 struct FloatingLiteralCheck {
   using type = clang::FloatingLiteral;
@@ -50,9 +47,6 @@ struct FloatingLiteralCheck {
   static constexpr llvm::StringLiteral Suffixes =
       llvm::StringLiteral("fFlLhHqQiIjJ");
 };
-constexpr llvm::StringLiteral FloatingLiteralCheck::Name;
-constexpr llvm::StringLiteral FloatingLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral FloatingLiteralCheck::Suffixes;
 
 struct NewSuffix {
   SourceRange LiteralLocation;
