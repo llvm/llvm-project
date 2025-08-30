@@ -85,6 +85,7 @@ public:
       const clang::CXXRecordDecl *nearestVBase) override;
   void emitVTableDefinitions(CIRGenVTables &cgvt,
                              const CXXRecordDecl *rd) override;
+  void emitVirtualInheritanceTables(const CXXRecordDecl *rd) override;
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
@@ -333,6 +334,13 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   if (vtContext.isRelativeLayout()) {
     cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
   }
+}
+
+void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
+    const CXXRecordDecl *rd) {
+  CIRGenVTables &vtables = cgm.getVTables();
+  cir::GlobalOp vtt = vtables.getAddrOfVTT(rd);
+  vtables.emitVTTDefinition(vtt, cgm.getVTableLinkage(rd), rd);
 }
 
 void CIRGenItaniumCXXABI::emitDestructorCall(
