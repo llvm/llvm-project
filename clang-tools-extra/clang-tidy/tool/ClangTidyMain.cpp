@@ -346,6 +346,16 @@ all of the checks.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
+static cl::opt<bool>
+    EnableExperimentalCustomChecks("enable-experimental-custom-checks", desc(R"(
+Enable experimental clang-query based
+custom checks.
+see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+Note this function is still under development
+and the API is subject to change.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
 namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
@@ -633,7 +643,8 @@ int clangTidyMain(int argc, const char **argv) {
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
   std::vector<std::string> EnabledChecks =
-      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+                    EnableExperimentalCustomChecks);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
@@ -665,7 +676,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
-        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
+                        EnableExperimentalCustomChecks);
     ClangTidyOptions OptionsToDump =
         ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
     filterCheckOptions(OptionsToDump, EnabledChecks);
@@ -676,8 +688,8 @@ int clangTidyMain(int argc, const char **argv) {
   if (VerifyConfig) {
     std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
-    ChecksAndOptions Valid =
-        getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
+    ChecksAndOptions Valid = getAllChecksAndOptions(
+        AllowEnablingAnalyzerAlphaCheckers, EnableExperimentalCustomChecks);
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
       if (Opts.Checks)
@@ -714,9 +726,9 @@ int clangTidyMain(int argc, const char **argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  ClangTidyContext Context(std::move(OwningOptionsProvider),
-                           AllowEnablingAnalyzerAlphaCheckers,
-                           EnableModuleHeadersParsing);
+  ClangTidyContext Context(
+      std::move(OwningOptionsProvider), AllowEnablingAnalyzerAlphaCheckers,
+      EnableModuleHeadersParsing, EnableExperimentalCustomChecks);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);

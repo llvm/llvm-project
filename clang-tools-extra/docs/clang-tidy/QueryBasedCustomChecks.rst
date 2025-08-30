@@ -35,6 +35,12 @@ Configuration
 Example
 =======
 
+Note: Since this feature is currently in the development stage. The API may
+change in the future. It needs to be explicitly enabled by
+`--enable-experimental-custom-checks`.
+
+We also welcome suggestions in the link https://discourse.llvm.org/t/support-query-based-clang-tidy-external-check/85331.
+
 .. code-block:: yaml
 
   Checks: -*,custom-call-main-function
