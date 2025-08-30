@@ -181,9 +181,7 @@ bool verifyBorderColor(uint32_t BorderColor) {
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
 bool verifyOffsetOverflow(uint64_t Register) {
-  if (Register > ~0U)
-    return true;
-  return false;
+  return Register > ~0U;
 }
 
 bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
