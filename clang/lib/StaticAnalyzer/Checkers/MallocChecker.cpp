@@ -3135,8 +3135,6 @@ static bool isSmartOwningPtrName(StringRef Name) {
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
 
-  // First try TemplateSpecializationType (for both std and custom smart
-  // pointers)
   if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
     if (!TD)
