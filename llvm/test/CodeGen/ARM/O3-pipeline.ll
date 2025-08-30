@@ -103,6 +103,7 @@
 ; CHECK-NEXT:      Machine code sinking
 ; CHECK-NEXT:      Peephole Optimizations
 ; CHECK-NEXT:      Remove dead machine instructions
+; CHECK-NEXT:      ARM Convert dead defs to compares
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Slot index numbering
 ; CHECK-NEXT:      Live Interval Analysis
