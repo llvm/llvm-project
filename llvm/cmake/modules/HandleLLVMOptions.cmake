@@ -183,7 +183,15 @@ CHECK_CXX_SOURCE_COMPILES("
 int main() { return 0; }
 " LLVM_USES_LIBSTDCXX)
 
-option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ON)
+CHECK_CXX_SOURCE_COMPILES("
+#include <string>
+#if _GLIBCXX_USE_CXX11_ABI == 0
+#error _GLIBCXX_USE_CXX11_ABI not active
+#endif
+int main() { return 0; }
+" LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI)
+
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ${LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI})
 
 if (LLVM_USES_LIBSTDCXX)
   if (GLIBCXX_USE_CXX11_ABI)
