@@ -1,0 +1,197 @@
+# REQUIRES: target-windows
+
+# Test that LLDB can format types from MSVC's STL
+# RUN: split-file %s %t
+# RUN: %build --compiler=clang-cl --std c++20 -o %t.exe -- %t/main.cpp
+# RUN: %lldb -f %t.exe -s \
+# RUN:     %t/commands.input 2>&1 | FileCheck %s
+
+#--- main.cpp
+
+#include <bitset>
+#include <coroutine>
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <variant>
+#include <vector>
+
+int main() {
+    std::shared_ptr<int> sp = std::make_shared<int>(41);
+    std::weak_ptr<int> wp = sp;
+    std::unique_ptr<int> unique(new int(42));
+    std::optional<std::u16string> opt = u"abc";
+    std::string str = "str";
+    std::u8string u8str = u8"str";
+    std::wstring wStr = L"wstr";
+    std::tuple<int, bool, float> tuple{1, false, 4.2};
+    std::coroutine_handle<> coroHandle;
+    std::bitset<16> bitset(123);
+
+    std::map<int, int> map{{1, 2}, {2, 4}, {3, 6}};
+    auto mapIt = map.find(3);
+    std::set<int> set{1, 2, 3};
+    std::multimap<int, int> mMap{{1, 2}, {1, 1}, {2, 4}};
+    std::multiset<int> mSet{1, 2, 3};
+
+    std::variant<int, float, std::string, std::monostate> variant = "wow";
+    std::list<int> list{1, 2, 3};
+    std::forward_list<int> fwList{1, 2, 3};
+
+    std::unordered_map<int, int> uMap{{1, 2}, {2, 4}, {3, 6}};
+    std::unordered_set<int> uSet{1, 2, 4};
+    std::unordered_multimap<int, int> uMMap{{1, 2}, {1, 1}, {2, 4}};
+    std::unordered_multiset<int> uMSet{1, 1, 2};
+    std::deque<int> deque{1, 2, 3};
+    std::vector<int> vec{1, 2, 3};
+    return 0; // break here
+}
+
+#--- commands.input
+
+br s -p "break here"
+r
+
+fr v sp
+fr v wp
+fr v unique
+fr v opt
+fr v str
+# FIXME: char8_t is not recognized as a type - 
+#        the string has a void pointer/void array for SSO storage.
+# fr v u8str
+fr v wStr
+fr v tuple
+fr v map
+fr v mapIt
+fr v set
+fr v mMap
+fr v mSet
+fr v variant
+fr v list
+fr v fwList
+fr v uMap
+fr v uSet
+fr v uMMap
+fr v uMSet
+# FIXME: Static _Block_size is found but doesn't have a value
+fr v deque
+fr v vec
+
+quit
+
+# CHECK:      (lldb) fr v sp
+# CHECK-NEXT: (std::shared_ptr<int>) sp = 41 strong=1 weak=1 {
+# CHECK-NEXT:   pointer = 0x{{.*}}
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v wp
+# CHECK-NEXT: (std::weak_ptr<int>) wp = 41 strong=1 weak=1 {
+# CHECK-NEXT:   pointer = 0x{{.*}}
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v unique
+# CHECK-NEXT: (std::unique_ptr<int,std::default_delete<int> >) unique = 42 {
+# CHECK-NEXT:   pointer = 0x{{.*}}
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v opt
+# CHECK-NEXT: (std::optional<std::basic_string<char16_t,std::char_traits<char16_t>,std::allocator<char16_t> > >) opt =  Has Value=true  {
+# CHECK-NEXT:   Value = u"abc"
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v str
+# CHECK-NEXT: (std::basic_string<char,std::char_traits<char>,std::allocator<char> >) str = "str"
+# CHECK-NEXT: (lldb) fr v wStr
+# CHECK-NEXT: (std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t> >) wStr = L"wstr"
+# CHECK-NEXT: (lldb) fr v tuple
+# CHECK-NEXT: (std::tuple<int,bool,float>) tuple = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = false
+# CHECK-NEXT:   [2] = 4.{{.*}}
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v map
+# CHECK-NEXT: (std::map<int,int,std::less<int>,std::allocator<std::pair<const int,int> > >) map = size=3 {
+# CHECK-NEXT:   [0] = (first = 1, second = 2)
+# CHECK-NEXT:   [1] = (first = 2, second = 4)
+# CHECK-NEXT:   [2] = (first = 3, second = 6)
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v mapIt
+# CHECK-NEXT: (std::_Tree_iterator<std::_Tree_val<std::_Tree_simple_types<std::pair<const int,int> > > >) mapIt = {
+# CHECK-NEXT:   first = 3
+# CHECK-NEXT:   second = 6
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v set
+# CHECK-NEXT: (std::set<int,std::less<int>,std::allocator<int> >) set = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v mMap
+# CHECK-NEXT: (std::multimap<int,int,std::less<int>,std::allocator<std::pair<const int,int> > >) mMap = size=3 {
+# CHECK-NEXT:   [0] = (first = 1, second = 2)
+# CHECK-NEXT:   [1] = (first = 1, second = 1)
+# CHECK-NEXT:   [2] = (first = 2, second = 4)
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v mSet
+# CHECK-NEXT: (std::multiset<int,std::less<int>,std::allocator<int> >) mSet = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v variant
+# CHECK-NEXT: (std::variant<int,float,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,std::monostate>) variant =  Active Type = std::basic_string<char,std::char_traits<char>,std::allocator<char> >  {
+# CHECK-NEXT:   Value = "wow"
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v list
+# CHECK-NEXT: (std::list<int,std::allocator<int> >) list = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v fwList
+# CHECK-NEXT: (std::forward_list<int,std::allocator<int> >) fwList = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v uMap
+# CHECK-NEXT: (std::unordered_map<int,int,std::hash<int>,std::equal_to<int>,std::allocator<std::pair<const int,int> > >) uMap = size=3 {
+# CHECK-NEXT:   [0] = (first = 1, second = 2)
+# CHECK-NEXT:   [1] = (first = 2, second = 4)
+# CHECK-NEXT:   [2] = (first = 3, second = 6)
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v uSet
+# CHECK-NEXT: (std::unordered_set<int,std::hash<int>,std::equal_to<int>,std::allocator<int> >) uSet = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 4
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v uMMap
+# CHECK-NEXT: (std::unordered_multimap<int,int,std::hash<int>,std::equal_to<int>,std::allocator<std::pair<const int,int> > >) uMMap = size=3 {
+# CHECK-NEXT:   [0] = (first = 1, second = 2)
+# CHECK-NEXT:   [1] = (first = 1, second = 1)
+# CHECK-NEXT:   [2] = (first = 2, second = 4)
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v uMSet
+# CHECK-NEXT: (std::unordered_multiset<int,std::hash<int>,std::equal_to<int>,std::allocator<int> >) uMSet = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 1
+# CHECK-NEXT:   [2] = 2
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v deque
+# CHECK-NEXT: (std::deque<int,std::allocator<int> >) deque = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
+# CHECK-NEXT: (lldb) fr v vec
+# CHECK-NEXT: (std::vector<int,std::allocator<int> >) vec = size=3 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 3
+# CHECK-NEXT: }
