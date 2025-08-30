@@ -2872,8 +2872,8 @@ W(int)->W<1>;
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "offset": {{[0-9]+}},
-// CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "tokLen": 8
+// CHECK-NEXT:        "col": 18,
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "offset": {{[0-9]+}},

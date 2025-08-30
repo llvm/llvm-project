@@ -113,11 +113,11 @@ void ThrowException() { throw T(); }
 
 // CHECK-NOTES: [[@LINE-5]]:31: warning: throwing an exception whose type 'bad_generic_exception<std::exception>' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-6]]:31: note: type 'bad_generic_exception<std::exception>' is a template instantiation of 'T'
-// CHECK-NOTES: [[@LINE+21]]:1: note: type defined here
+// CHECK-NOTES: [[@LINE+22]]:1: note: type defined here
 
 // CHECK-NOTES: [[@LINE-9]]:31: warning: throwing an exception whose type 'exotic_exception<non_derived_exception>' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-10]]:31: note: type 'exotic_exception<non_derived_exception>' is a template instantiation of 'T'
-// CHECK-NOTES: [[@LINE+20]]:1: note: type defined here
+// CHECK-NOTES: [[@LINE+21]]:1: note: type defined here
 
 // CHECK-NOTES: [[@LINE-13]]:31: warning: throwing an exception whose type 'int' is not derived from 'std::exception'
 // CHECK-NOTES: [[@LINE-14]]:31: note: type 'int' is a template instantiation of 'T'
