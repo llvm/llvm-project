@@ -1442,16 +1442,28 @@ template LogicalResult
 mlir::affine::boundCheckLoadOrStoreOp(AffineWriteOpInterface storeOp,
                                       bool emitError);
 
+static inline unsigned getIndexInBlock(
+    Operation *op,
+    llvm::DenseMap<Block *, llvm::DenseMap<Operation *, unsigned>> &cache) {
+  Block *block = op->getBlock();
+  auto &blockMap = cache[block];
+  if (blockMap.empty()) {
+    unsigned idx = 0;
+    for (Operation &it : *block)
+      blockMap[&it] = idx++;
+  }
+  return blockMap.lookup(op);
+}
+
 // Returns in 'positions' the Block positions of 'op' in each ancestor
 // Block from the Block containing operation, stopping at 'limitBlock'.
 static void findInstPosition(Operation *op, Block *limitBlock,
                              SmallVectorImpl<unsigned> *positions) {
+  llvm::DenseMap<Block *, llvm::DenseMap<Operation *, unsigned>> indexCache;
+
   Block *block = op->getBlock();
   while (block != limitBlock) {
-    // FIXME: This algorithm is unnecessarily O(n) and should be improved to not
-    // rely on linear scans.
-    int instPosInBlock = std::distance(block->begin(), op->getIterator());
-    positions->push_back(instPosInBlock);
+    positions->push_back(getIndexInBlock(op, indexCache));
     op = block->getParentOp();
     block = op->getBlock();
   }
