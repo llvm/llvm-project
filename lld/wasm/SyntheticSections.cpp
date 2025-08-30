@@ -440,8 +440,6 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
                                  : WASM_OPCODE_I32_ADD;
 
   for (const Symbol *sym : internalGotSymbols) {
-    if (sym->flags & WASM_SYMBOL_ABSOLUTE)
-      continue;
     if (TLS != sym->isTLS())
       continue;
 
@@ -505,8 +503,7 @@ void GlobalSection::writeBody() {
     bool useExtendedConst = false;
     uint32_t globalIdx;
     int64_t offset;
-    if (ctx.arg.extendedConst && ctx.isPic &&
-        (sym->flags & WASM_SYMBOL_ABSOLUTE) == 0) {
+    if (ctx.arg.extendedConst && ctx.isPic) {
       if (auto *d = dyn_cast<DefinedData>(sym)) {
         if (!sym->isTLS()) {
           globalIdx = ctx.sym.memoryBase->getGlobalIndex();

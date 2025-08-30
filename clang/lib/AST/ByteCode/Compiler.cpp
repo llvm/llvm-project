@@ -62,7 +62,7 @@ public:
   OptionScope(Compiler<Emitter> *Ctx, bool NewDiscardResult,
               bool NewInitializing, bool NewToLValue)
       : Ctx(Ctx), OldDiscardResult(Ctx->DiscardResult),
-        OldInitializing(Ctx->Initializing), OldToLValue(NewToLValue) {
+        OldInitializing(Ctx->Initializing), OldToLValue(Ctx->ToLValue) {
     Ctx->DiscardResult = NewDiscardResult;
     Ctx->Initializing = NewInitializing;
     Ctx->ToLValue = NewToLValue;
@@ -256,7 +256,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
-      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+      UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -559,8 +559,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
     if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
-      const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
-      const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      const auto *ED = CE->getType()->castAsEnumDecl();
       if (!ED->isFixed()) {
         if (!this->emitCheckEnumValue(*FromT, ED, CE))
           return false;
@@ -609,7 +608,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -633,7 +632,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isAnyComplexType());
     assert(SubExpr->getType()->isAnyComplexType());
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(CE);
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -678,7 +677,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(CE);
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -722,7 +721,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateTemporary(CE);
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -810,7 +809,7 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return true;
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -911,7 +910,7 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
     // We need a temporary variable holding our return value.
     if (!Initializing) {
-      std::optional<unsigned> ResultIndex = this->allocateLocal(BO);
+      UnsignedOrNone ResultIndex = this->allocateLocal(BO);
       if (!this->emitGetPtrLocal(*ResultIndex, BO))
         return false;
     }
@@ -1151,7 +1150,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -1210,7 +1209,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!LHSIsComplex) {
       // This is using the RHS type for the fake-complex LHS.
-      std::optional<unsigned> LocalIndex = allocateTemporary(RHS);
+      UnsignedOrNone LocalIndex = allocateTemporary(RHS);
       if (!LocalIndex)
         return false;
       LHSOffset = *LocalIndex;
@@ -1377,23 +1376,27 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
   assert(!E->isCommaOp() &&
          "Comma op should be handled in VisitBinaryOperator");
   assert(E->getType()->isVectorType());
-  assert(E->getLHS()->getType()->isVectorType());
-  assert(E->getRHS()->getType()->isVectorType());
+  assert(LHS->getType()->isVectorType());
+  assert(RHS->getType()->isVectorType());
+
+  // We can only handle vectors with primitive element types.
+  if (!canClassify(LHS->getType()->castAs<VectorType>()->getElementType()))
+    return false;
 
   // Prepare storage for result.
-  if (!Initializing && !E->isCompoundAssignmentOp()) {
-    std::optional<unsigned> LocalIndex = allocateTemporary(E);
+  if (!Initializing && !E->isCompoundAssignmentOp() && !E->isAssignmentOp()) {
+    UnsignedOrNone LocalIndex = allocateTemporary(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
   }
 
-  const Expr *LHS = E->getLHS();
-  const Expr *RHS = E->getRHS();
   const auto *VecTy = E->getType()->getAs<VectorType>();
   auto Op = E->isCompoundAssignmentOp()
                 ? BinaryOperator::getOpForCompoundAssignment(E->getOpcode())
@@ -1402,6 +1405,21 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   PrimType ElemT = this->classifyVectorElementType(LHS->getType());
   PrimType RHSElemT = this->classifyVectorElementType(RHS->getType());
   PrimType ResultElemT = this->classifyVectorElementType(E->getType());
+
+  if (E->getOpcode() == BO_Assign) {
+    assert(Ctx.getASTContext().hasSameUnqualifiedType(
+        LHS->getType()->castAs<VectorType>()->getElementType(),
+        RHS->getType()->castAs<VectorType>()->getElementType()));
+    if (!this->visit(LHS))
+      return false;
+    if (!this->visit(RHS))
+      return false;
+    if (!this->emitCopyArray(ElemT, 0, 0, VecTy->getNumElements(), E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  }
 
   // Evaluate LHS and save value to LHSOffset.
   unsigned LHSOffset =
@@ -2099,7 +2117,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                           ExplicitMemberFn);
       }
 
-      std::optional<unsigned> LocalIndex =
+      UnsignedOrNone LocalIndex =
           allocateLocal(std::move(Source), Arg->getType(),
                         /*ExtendingDecl=*/nullptr, ScopeKind::Call);
       if (!LocalIndex)
@@ -2248,7 +2266,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     assert(VAT);
     if (VAT->getElementType()->isArrayType()) {
       std::optional<APSInt> Res =
-          VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx);
+          VAT->getSizeExpr()
+              ? VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx)
+              : std::nullopt;
       if (Res) {
         if (DiscardResult)
           return true;
@@ -2942,7 +2962,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
 
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
-    if (std::optional<unsigned> LocalIndex =
+    if (UnsignedOrNone LocalIndex =
             allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3019,7 +3039,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   unsigned LocalIndex;
   if (T)
     LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
-  else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
+  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(Init))
     LocalIndex = *MaybeIndex;
   else
     return false;
@@ -3196,7 +3216,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (Ctor->isTrivial())
         return true;
       assert(!Initializing);
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
 
       if (!LocalIndex)
         return false;
@@ -3406,7 +3426,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
 
   if (const auto *CT = Ty->getAs<ComplexType>()) {
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3429,7 +3449,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (const auto *VT = Ty->getAs<VectorType>()) {
     // FIXME: Code duplication with the _Complex case above.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3879,6 +3899,8 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitRequiresExpr(const RequiresExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Bool);
+  if (E->isValueDependent())
+    return false;
   if (DiscardResult)
     return true;
   return this->emitConstBool(E->isSatisfied(), E);
@@ -4055,8 +4077,7 @@ bool Compiler<Emitter>::VisitExtVectorElementExpr(
 
   // Now the vector variable for the return value.
   if (!Initializing) {
-    std::optional<unsigned> ResultIndex;
-    ResultIndex = allocateLocal(E);
+    UnsignedOrNone ResultIndex = allocateLocal(E);
     if (!ResultIndex)
       return false;
     if (!this->emitGetPtrLocal(*ResultIndex, E))
@@ -4180,7 +4201,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
       !canClassify(E->getType())) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
 
@@ -4547,10 +4568,10 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
 }
 
 template <class Emitter>
-std::optional<unsigned>
-Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
-                                 const ValueDecl *ExtendingDecl, ScopeKind SC,
-                                 bool IsConstexprUnknown) {
+UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+                                                const ValueDecl *ExtendingDecl,
+                                                ScopeKind SC,
+                                                bool IsConstexprUnknown) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -4584,7 +4605,7 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 }
 
 template <class Emitter>
-std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
+UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty->isRecordType());
 
@@ -4609,8 +4630,8 @@ std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
 template <class Emitter>
 const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
   if (const PointerType *PT = dyn_cast<PointerType>(Ty))
-    return PT->getPointeeType()->getAs<RecordType>();
-  return Ty->getAs<RecordType>();
+    return PT->getPointeeType()->getAsCanonical<RecordType>();
+  return Ty->getAsCanonical<RecordType>();
 }
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
@@ -4663,7 +4684,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // Expressions with a composite return type.
   // For us, that means everything we don't
   // have a PrimType for.
-  if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+  if (UnsignedOrNone LocalOffset = this->allocateLocal(E)) {
     InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
@@ -4860,7 +4881,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
         return this->emitSetLocal(*VarT, Offset, VD);
     }
   } else {
-    if (std::optional<unsigned> Offset = this->allocateLocal(
+    if (UnsignedOrNone Offset = this->allocateLocal(
             VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
       if (!Init)
         return true;
@@ -5012,7 +5033,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
   // Non-primitive return type. Prepare storage.
   if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -5108,7 +5129,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       // If we need to discard the return value but the function returns its
       // value via an RVO pointer, we need to create one such pointer just
       // for this call.
-      if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+      if (UnsignedOrNone LocalIndex = allocateLocal(E)) {
         if (!this->emitGetPtrLocal(*LocalIndex, E))
           return false;
       }
@@ -5116,7 +5137,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       // We need the result. Prepare a pointer to return or
       // dup the current one.
       if (!Initializing) {
-        if (std::optional<unsigned> LocalIndex = allocateLocal(E)) {
+        if (UnsignedOrNone LocalIndex = allocateLocal(E)) {
           if (!this->emitGetPtrLocal(*LocalIndex, E))
             return false;
         }
@@ -5152,7 +5173,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   bool Devirtualized = false;
-  std::optional<unsigned> CalleeOffset;
+  UnsignedOrNone CalleeOffset = std::nullopt;
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
     if (!FuncDecl && classifyPrim(E->getCallee()) == PT_MemberPtr) {
@@ -5229,6 +5250,12 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     const Function *Func = getFunction(FuncDecl);
     if (!Func)
       return false;
+
+    // In error cases, the function may be called with fewer arguments than
+    // parameters.
+    if (E->getNumArgs() < Func->getNumWrittenParams())
+      return false;
+
     assert(HasRVO == Func->hasRVO());
 
     bool HasQualifier = false;
@@ -6560,7 +6587,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   OptPrimType ResT = classify(E);
   auto prepareResult = [=]() -> bool {
     if (!ResT && !Initializing) {
-      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+      UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
@@ -6678,7 +6705,7 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
     return this->delegate(SubExpr);
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
+    UnsignedOrNone LocalIndex = allocateLocal(SubExpr);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -7282,7 +7309,7 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
 
   // Prepare storage for the result in case we discard.
   if (DiscardResult && !Initializing && !ToT) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E);
+    UnsignedOrNone LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))

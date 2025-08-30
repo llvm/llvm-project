@@ -143,7 +143,7 @@ def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->isSVEAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE), "sve">;
-def HasSVEB16B16     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVEB16B16()">,
+def HasSVEB16B16     : Predicate<"Subtarget->hasSVEB16B16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEB16B16), "sve-b16b16">;
 def HasSVE2          : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
@@ -248,6 +248,10 @@ def HasSVE_or_SME
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
+def HasNonStreamingSVE_or_SME2
+    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available()">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME2),
+                "sve or sme2">;
 def HasNonStreamingSVE_or_SME2p1
     : Predicate<"Subtarget->isSVEAvailable() ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p1())">,
@@ -984,6 +988,9 @@ def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
 def AArch64fcvtxnv: PatFrags<(ops node:$Rn),
                                  [(int_aarch64_neon_fcvtxn node:$Rn),
                                   (AArch64fcvtxn_n node:$Rn)]>;
+
+def AArch64fcvtzs_half : SDNode<"AArch64ISD::FCVTZS_HALF", SDTFPExtendOp>;
+def AArch64fcvtzu_half : SDNode<"AArch64ISD::FCVTZU_HALF", SDTFPExtendOp>;
 
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
@@ -2151,7 +2158,7 @@ let Predicates = [HasPAuth] in {
                             i64imm:$Disc, GPR64:$AddrDisc),
                        [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
-    let hasSideEffects = 0;
+    let hasSideEffects = 1;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 32;
@@ -6532,8 +6539,24 @@ defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
                                     int_aarch64_neon_usqadd>;
 
+// f16 -> s16 conversions
+let Predicates = [HasFullFP16] in {
+  def : Pat<(i16(fp_to_sint_sat_gi f16:$Rn)), (FCVTZSv1f16 f16:$Rn)>;
+  def : Pat<(i16(fp_to_uint_sat_gi f16:$Rn)), (FCVTZUv1f16 f16:$Rn)>;
+}
+
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
+
+// f16 -> i16 conversions leave the bit pattern in a f32
+class F16ToI16ScalarPat<SDNode cvt_isd, BaseSIMDTwoScalar instr>
+    : Pat<(f32 (cvt_isd (f16 FPR16:$Rn))),
+     (f32 (SUBREG_TO_REG (i64 0), (instr FPR16:$Rn), hsub))>;
+
+let Predicates = [HasFullFP16] in {
+def : F16ToI16ScalarPat<AArch64fcvtzs_half, FCVTZSv1f16>;
+def : F16ToI16ScalarPat<AArch64fcvtzu_half, FCVTZUv1f16>;
+}
 
 // Round FP64 to BF16.
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in

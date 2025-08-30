@@ -23,9 +23,9 @@ void Block::addPointer(Pointer *P) {
   assert(!hasPointer(P));
 #endif
   if (Pointers)
-    Pointers->PointeeStorage.BS.Prev = P;
-  P->PointeeStorage.BS.Next = Pointers;
-  P->PointeeStorage.BS.Prev = nullptr;
+    Pointers->BS.Prev = P;
+  P->BS.Next = Pointers;
+  P->BS.Prev = nullptr;
   Pointers = P;
 #ifndef NDEBUG
   assert(hasPointer(P));
@@ -40,16 +40,16 @@ void Block::removePointer(Pointer *P) {
   assert(hasPointer(P));
 #endif
 
-  BlockPointer &BP = P->PointeeStorage.BS;
+  BlockPointer &BP = P->BS;
 
   if (Pointers == P)
     Pointers = BP.Next;
 
   if (BP.Prev)
-    BP.Prev->PointeeStorage.BS.Next = BP.Next;
+    BP.Prev->BS.Next = BP.Next;
   if (BP.Next)
-    BP.Next->PointeeStorage.BS.Prev = BP.Prev;
-  P->PointeeStorage.BS.Pointee = nullptr;
+    BP.Next->BS.Prev = BP.Prev;
+  P->BS.Pointee = nullptr;
 #ifndef NDEBUG
   assert(!hasPointer(P));
 #endif
@@ -70,13 +70,13 @@ void Block::replacePointer(Pointer *Old, Pointer *New) {
   assert(hasPointer(Old));
 #endif
 
-  BlockPointer &OldBP = Old->PointeeStorage.BS;
-  BlockPointer &NewBP = New->PointeeStorage.BS;
+  BlockPointer &OldBP = Old->BS;
+  BlockPointer &NewBP = New->BS;
 
   if (OldBP.Prev)
-    OldBP.Prev->PointeeStorage.BS.Next = New;
+    OldBP.Prev->BS.Next = New;
   if (OldBP.Next)
-    OldBP.Next->PointeeStorage.BS.Prev = New;
+    OldBP.Next->BS.Prev = New;
   NewBP.Prev = OldBP.Prev;
   NewBP.Next = OldBP.Next;
   if (Pointers == Old)
@@ -116,7 +116,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   // Transfer pointers.
   B.Pointers = Blk->Pointers;
   for (Pointer *P = Blk->Pointers; P; P = P->asBlockPointer().Next)
-    P->PointeeStorage.BS.Pointee = &B;
+    P->BS.Pointee = &B;
   Blk->Pointers = nullptr;
 }
 

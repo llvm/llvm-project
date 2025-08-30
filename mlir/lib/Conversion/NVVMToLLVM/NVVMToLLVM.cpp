@@ -57,9 +57,9 @@ struct PtxLowering
 
     SmallVector<std::pair<Value, PTXRegisterMod>> asmValues;
     LDBG() << op.getPtx();
-    PtxBuilder generator(op, rewriter);
 
-    op.getAsmValues(rewriter, asmValues);
+    bool needsManualMapping = op.getAsmValues(rewriter, asmValues);
+    PtxBuilder generator(op, rewriter, needsManualMapping);
     for (auto &[asmValue, modifier] : asmValues) {
       LDBG() << asmValue << "\t Modifier : " << modifier;
       generator.insertValue(asmValue, modifier);
