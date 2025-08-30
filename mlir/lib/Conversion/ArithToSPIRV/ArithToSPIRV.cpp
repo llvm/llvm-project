@@ -608,6 +608,32 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// IndexCastOp
+//===----------------------------------------------------------------------===//
+
+// Converts arith.index_cast to spirv.INotEqual if the target type is i1.
+struct IndexCastIndexI1Pattern final
+    : public OpConversionPattern<arith::IndexCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getOperands().front().getType();
+    // Indexes have already been converted to its respective spirv type:
+    Type indexType = getTypeConverter<SPIRVTypeConverter>()->getIndexType();
+    if (srcType != indexType || !op.getType().isInteger(1))
+      return failure();
+
+    Location loc = op.getLoc();
+    Value zeroIdx = spirv::ConstantOp::getZero(srcType, loc, rewriter);
+    rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(
+        op, rewriter.getI1Type(), zeroIdx, adaptor.getOperands().front());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ExtSIOp
 //===----------------------------------------------------------------------===//
 
@@ -1328,7 +1354,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::SIToFPOp, spirv::ConvertSToFOp>,
     TypeCastingOpPattern<arith::FPToUIOp, spirv::ConvertFToUOp>,
     TypeCastingOpPattern<arith::FPToSIOp, spirv::ConvertFToSOp>,
-    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
+    TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>, IndexCastIndexI1Pattern,
     TypeCastingOpPattern<arith::IndexCastUIOp, spirv::UConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
