@@ -44970,6 +44970,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return true;
 
     // X * 0 + Y --> Y
+    // TODO: Handle cases where lower/higher 52 of bits of Op0 * Op1 are known zeroes.
     if (KnownOp0.trunc(52).isZero() || KnownOp1.trunc(52).isZero())
       return TLO.CombineTo(Op, Op2);
 
