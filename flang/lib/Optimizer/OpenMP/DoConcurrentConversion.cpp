@@ -444,6 +444,18 @@ private:
   mlir::SymbolTable &moduleSymbolTable;
 };
 
+/// A listener that forwards notifyOperationErased to the given callback.
+struct CallbackListener : public mlir::RewriterBase::Listener {
+  CallbackListener(std::function<void(mlir::Operation *op)> onOperationErased)
+      : onOperationErased(onOperationErased) {}
+
+  void notifyOperationErased(mlir::Operation *op) override {
+    onOperationErased(op);
+  }
+
+  std::function<void(mlir::Operation *op)> onOperationErased;
+};
+
 class DoConcurrentConversionPass
     : public flangomp::impl::DoConcurrentConversionPassBase<
           DoConcurrentConversionPass> {
@@ -468,6 +480,10 @@ public:
     }
 
     llvm::DenseSet<fir::DoConcurrentOp> concurrentLoopsToSkip;
+    CallbackListener callbackListener([&](mlir::Operation *op) {
+      if (auto loop = mlir::dyn_cast<fir::DoConcurrentOp>(op))
+        concurrentLoopsToSkip.erase(loop);
+    });
     mlir::RewritePatternSet patterns(context);
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
@@ -480,8 +496,11 @@ public:
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
 
-    if (mlir::failed(
-            mlir::applyFullConversion(module, target, std::move(patterns)))) {
+    mlir::ConversionConfig config;
+    config.allowPatternRollback = false;
+    config.listener = &callbackListener;
+    if (mlir::failed(mlir::applyFullConversion(module, target,
+                                               std::move(patterns), config))) {
       signalPassFailure();
     }
   }
