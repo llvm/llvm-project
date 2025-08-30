@@ -783,7 +783,8 @@ struct WgToSgLoadGatherOpWithOffset
       return failure();
     ArrayRef<int64_t> wgShape = resultType.getShape();
 
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -809,8 +810,8 @@ struct WgToSgLoadGatherOpWithOffset
       auto newLoadOp = rewriter.create<xegpu::LoadGatherOp>(
           loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
-      xegpu::setLayoutAttr(newLoadOp->getResult(0),
-                           layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newLoadOp->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -835,7 +836,8 @@ struct WgToSgStoreScatterOpWithOffset
     if (!valueType)
       return failure();
 
-    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getValue());
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getValue());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -1057,7 +1059,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {
-        auto layout = xegpu::getLayoutAttr(op.getResult());
+        auto layout = xegpu::getDistributeLayoutAttr(op.getResult());
         return isLegal(layout);
       });
 
