@@ -72,11 +72,7 @@ RT_API_ATTRS bool InternalDescriptorUnit<DIR>::Emit(
       BlankFill(record + furthestPositionInRecord,
           positionInRecord - furthestPositionInRecord);
     }
-<<<<<<< HEAD
     Fortran::runtime::memcpy(record + positionInRecord, data, bytes);
-=======
-    runtime::memcpy(record + positionInRecord, data, bytes);
->>>>>>> 30d2cb5a7ecd
     positionInRecord += bytes;
     furthestPositionInRecord = furthestAfter;
     return ok;

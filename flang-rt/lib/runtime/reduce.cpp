@@ -79,26 +79,16 @@ public:
       activeTemp_ = 1 - activeTemp_;
     } else {
       activeTemp_ = 0;
-<<<<<<< HEAD
       Fortran::runtime::memcpy(&*temp_[activeTemp_], operand, elementBytes_);
-=======
-      runtime::memcpy(&*temp_[activeTemp_], operand, elementBytes_);
->>>>>>> 30d2cb5a7ecd
     }
     return true;
   }
   template <typename A>
   RT_API_ATTRS void GetResult(A *to, int /*zeroBasedDim*/ = -1) {
     if (activeTemp_ >= 0) {
-<<<<<<< HEAD
       Fortran::runtime::memcpy(to, &*temp_[activeTemp_], elementBytes_);
     } else if (identity_) {
       Fortran::runtime::memcpy(to, identity_, elementBytes_);
-=======
-      runtime::memcpy(to, &*temp_[activeTemp_], elementBytes_);
-    } else if (identity_) {
-      runtime::memcpy(to, identity_, elementBytes_);
->>>>>>> 30d2cb5a7ecd
     } else {
       terminator_.Crash("REDUCE() without IDENTITY= has no result");
     }

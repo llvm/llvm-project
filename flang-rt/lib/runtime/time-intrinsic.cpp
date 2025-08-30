@@ -44,9 +44,6 @@
 // should be preferred. Any other parameters required for SFINAE should have
 // default values provided.
 namespace {
-
-using namespace Fortran;
-
 // Types for the dummy parameter indicating the priority of a given overload.
 // We will invoke our helper with an integer literal argument, so the overload
 // with the highest priority should have the type int.
@@ -279,7 +276,6 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
     char *zone, std::size_t zoneChars,
     const Fortran::runtime::Descriptor *values) {
   if (date) {
-<<<<<<< HEAD
     Fortran::runtime::memset(date, static_cast<int>(' '), dateChars);
   }
   if (time) {
@@ -287,15 +283,6 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
   }
   if (zone) {
     Fortran::runtime::memset(zone, static_cast<int>(' '), zoneChars);
-=======
-    runtime::memset(date, static_cast<int>(' '), dateChars);
-  }
-  if (time) {
-    runtime::memset(time, static_cast<int>(' '), timeChars);
-  }
-  if (zone) {
-    runtime::memset(zone, static_cast<int>(' '), zoneChars);
->>>>>>> 30d2cb5a7ecd
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
@@ -433,11 +420,7 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   auto copyBufferAndPad{
       [&](char *dest, std::size_t destChars, std::size_t len) {
         auto copyLen{std::min(len, destChars)};
-<<<<<<< HEAD
         Fortran::runtime::memcpy(dest, buffer, copyLen);
-=======
-        runtime::memcpy(dest, buffer, copyLen);
->>>>>>> 30d2cb5a7ecd
         for (auto i{copyLen}; i < destChars; ++i) {
           dest[i] = ' ';
         }
@@ -542,13 +525,8 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     ULARGE_INTEGER userSystemTime;
     ULARGE_INTEGER kernelSystemTime;
 
-<<<<<<< HEAD
     Fortran::runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
     Fortran::runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
-=======
-    runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
-    runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
->>>>>>> 30d2cb5a7ecd
 
     usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
     sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;

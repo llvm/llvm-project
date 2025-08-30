@@ -130,11 +130,7 @@ std::size_t PseudoOpenFile::Write(FileOffset at, const char *buffer,
   // TODO: use persistent string buffer that can be reallocated
   // as needed, and only freed at destruction of *this.
   auto string{SizedNew<char>{handler}(bytes + 1)};
-<<<<<<< HEAD
   Fortran::runtime::memcpy(string.get(), buffer, bytes);
-=======
-  runtime::memcpy(string.get(), buffer, bytes);
->>>>>>> 30d2cb5a7ecd
   string.get()[bytes] = '\0';
   std::printf("%s", string.get());
   return bytes;

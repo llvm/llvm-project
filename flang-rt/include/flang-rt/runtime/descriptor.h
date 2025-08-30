@@ -33,11 +33,8 @@
 #include <cstring>
 
 RT_OFFLOAD_VAR_GROUP_BEGIN
-<<<<<<< HEAD
 /// Value used for asyncId when no specific stream is specified.
 static constexpr std::int64_t kNoAsyncId = -1;
-=======
->>>>>>> 30d2cb5a7ecd
 /// Value used for asyncObject when no specific stream is specified.
 static constexpr std::int64_t *kNoAsyncObject = nullptr;
 RT_OFFLOAD_VAR_GROUP_END

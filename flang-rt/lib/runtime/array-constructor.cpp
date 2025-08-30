@@ -173,11 +173,7 @@ void RTDEF(PushArrayConstructorSimpleScalar)(
   AllocateOrReallocateVectorIfNeeded(vector, terminator, to.Elements(), 1);
   SubscriptValue subscript[1]{
       to.GetDimension(0).LowerBound() + vector.nextValuePosition};
-<<<<<<< HEAD
   Fortran::runtime::memcpy(to.Element<char>(subscript), from, to.ElementBytes());
-=======
-  runtime::memcpy(to.Element<char>(subscript), from, to.ElementBytes());
->>>>>>> 30d2cb5a7ecd
   ++vector.nextValuePosition;
 }
 
