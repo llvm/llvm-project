@@ -8,6 +8,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class HelloWatchLocationTestCase(TestBase):
@@ -40,9 +41,18 @@ class HelloWatchLocationTestCase(TestBase):
     # watchpoints are not supported yet
     @expectedFailureAll(triple=re.compile("^mips"))
     # SystemZ and PowerPC also currently supports only one H/W watchpoint
-    @expectedFailureAll(archs=["powerpc64le", "s390x"])
+    @expectedFailureAll(archs=["powerpc64le", "s390x", "^riscv.*"])
     @skipIfWindows  # This test is flaky on Windows
-    def test_hello_watchlocation(self):
+    def test_hello_hardware_watchlocation(self):
+        self.do_hello_watchlocation(WatchpointType.WRITE, lldb.eWatchpointModeHardware)
+
+    def test_hello_software_watchlocation(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (write type).
+        self.do_hello_watchlocation(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_hello_watchlocation(self, wp_type, wp_mode):
         """Test watching a location with '-s size' option."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -67,14 +77,15 @@ class HelloWatchLocationTestCase(TestBase):
 
         # Now let's set a write-type watchpoint pointed to by 'g_char_ptr'.
         self.expect(
-            "watchpoint set expression -w write -s 1 -- g_char_ptr",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.EXPRESSION, wp_type, wp_mode)} -s 1 -- g_char_ptr",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 1", "type = w"],
+            substrs=["Watchpoint created", "size = 1", f"type = {wp_type.value[0]}"],
         )
         # Get a hold of the watchpoint id just created, it is used later on to
         # match the watchpoint id which is expected to be fired.
         match = re.match(
-            "Watchpoint created: Watchpoint (.*):", self.res.GetOutput().splitlines()[0]
+            f"Watchpoint created: {'Hardware' if wp_mode == lldb.eWatchpointModeHardware else 'Software'} Watchpoint (.*):",
+            self.res.GetOutput().splitlines()[0],
         )
         if match:
             expected_wp_id = int(match.group(1), 0)
@@ -84,7 +95,9 @@ class HelloWatchLocationTestCase(TestBase):
         self.runCmd("expr unsigned val = *g_char_ptr; val")
         self.expect(self.res.GetOutput().splitlines()[0], exe=False, endstr=" = 0")
 
-        self.runCmd("watchpoint set expression -w write -s 4 -- &threads[0]")
+        self.runCmd(
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.EXPRESSION, wp_type, wp_mode)} -s 4 -- &threads[0]"
+        )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.

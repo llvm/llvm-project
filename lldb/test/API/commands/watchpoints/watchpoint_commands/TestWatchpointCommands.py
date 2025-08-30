@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointCommandsTestCase(TestBase):
@@ -31,7 +32,19 @@ class WatchpointCommandsTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_rw_watchpoint(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_rw_hardware_watchpoint(self):
+        self.do_rw_watchpoint(WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware)
+
+    def test_rw_software_watchpoint(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_rw_watchpoint(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+        self.runCmd("settings clear target.env-vars")
+
+    def do_rw_watchpoint(self, wp_type, wp_mode):
         """Test read_write watchpoint and expect to stop two times."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -58,12 +71,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -107,7 +120,23 @@ class WatchpointCommandsTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_rw_watchpoint_delete(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_rw_hardware_watchpoint_delete(self):
+        self.do_rw_watchpoint_delete(
+            WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_rw_software_watchpoint_delete(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_rw_watchpoint_delete(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def do_rw_watchpoint_delete(self, wp_type, wp_mode):
         """Test delete watchpoint and expect not to stop for watchpoint."""
         self.build()
         lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
@@ -115,12 +144,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -138,12 +167,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -161,7 +190,23 @@ class WatchpointCommandsTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_rw_watchpoint_set_ignore_count(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_rw_hardware_watchpoint_set_ignore_count(self):
+        self.do_rw_watchpoint_set_ignore_count(
+            WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_rw_software_watchpoint_set_ignore_count(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_rw_watchpoint_set_ignore_count(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def do_rw_watchpoint_set_ignore_count(self, wp_type, wp_mode):
         """Test watchpoint ignore count and expect to not to stop at all."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -188,12 +233,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -213,11 +258,27 @@ class WatchpointCommandsTestCase(TestBase):
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # Expect to find a hit_count of 2 as well.
-        self.expect("watchpoint list -v", substrs=["hit_count = 2", "ignore_count = 2"])
+        self.expect("watchpoint list -v", substrs=["hit_count = 2", "ignore_count = 0"])
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_rw_disable_after_first_stop(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_rw_hardware_watchpoint_disable_after_first_stop(self):
+        self.do_rw_disable_after_first_stop(
+            WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_rw_software_watchpoint_disable_after_first_stop(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_rw_disable_after_first_stop(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def do_rw_disable_after_first_stop(self, wp_type, wp_mode):
         """Test read_write watchpoint but disable it after the first stop."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -244,12 +305,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -286,7 +347,23 @@ class WatchpointCommandsTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_rw_disable_then_enable(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_rw_hardware_watchpoint_disable_then_enable(self):
+        self.do_rw_disable_then_enable(
+            WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_rw_software_watchpoint_disable_then_enable(self):
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_rw_disable_then_enable(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def do_rw_disable_then_enable(self, wp_type, wp_mode):
         """Test read_write watchpoint, disable initially, then enable it."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -316,12 +393,12 @@ class WatchpointCommandsTestCase(TestBase):
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
         self.expect(
-            "watchpoint set variable -w read_write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = rw",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
