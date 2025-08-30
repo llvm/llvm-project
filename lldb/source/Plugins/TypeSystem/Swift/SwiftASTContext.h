@@ -1003,6 +1003,7 @@ protected:
   bool m_has_explicit_modules = false;
   mutable bool m_reported_fatal_error = false;
   mutable bool m_logged_fatal_error = false;
+  bool m_post_first_import = false;
 
   /// Whether this is a scratch or a module AST context.
   bool m_is_scratch_context = false;

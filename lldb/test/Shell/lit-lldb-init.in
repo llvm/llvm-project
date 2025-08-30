@@ -4,7 +4,7 @@ env DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/macosx' LD_LIBRARY_PATH='@LLDB_SWIFT_LI
 settings set symbols.enable-external-lookup false
 settings set plugin.process.gdb-remote.packet-timeout 60
 settings set interpreter.echo-comment-commands false
-settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB@"
+settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB_SHELL@"
 settings set target.auto-apply-fixits false
 settings set target.inherit-tcc true
 settings set target.detach-on-error false

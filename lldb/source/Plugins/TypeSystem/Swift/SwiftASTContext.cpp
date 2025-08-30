@@ -59,13 +59,13 @@
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
-
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2634,6 +2634,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
     swift::ModuleDecl *stdlib =
         ast_context->getStdlibModule(can_create);
+    swift_ast_sp->m_post_first_import = true;
     if (!stdlib || IsDWARFImported(*stdlib)) {
       logError("couldn't load the Swift stdlib");
       return {};
@@ -3031,6 +3032,24 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
                         triple);
   ConfigureModuleCachePath(*swift_ast_sp);
+  {
+    // ModuleInterfaceBuilder creates a separate CompilerInvocation to
+    // perform implicit Clang module imports. They will always use the SDK
+    // version as deployment target, even if that is in the future. To
+    // avoid building modules twice, match this behavior.
+    auto darwin_sdk_info = clang::parseDarwinSDKInfo(
+        *llvm::vfs::getRealFileSystem(), swift_ast_sp->GetPlatformSDKPath());
+    if (!darwin_sdk_info)
+      llvm::consumeError(darwin_sdk_info.takeError());
+    else if (*darwin_sdk_info) {
+      auto sdk_triple = triple;
+      sdk_triple.setOSName(std::string(triple.getOSTypeName(triple.getOS())) +
+                           (*darwin_sdk_info)->getVersion().getAsString());
+      auto &ci_args = swift_ast_sp->GetClangImporterOptions().ExtraArgs;
+      ci_args.push_back("-target");
+      ci_args.push_back(sdk_triple.str());
+    }
+  }
 
   std::vector<swift::PluginSearchOption> plugin_search_options;
   std::vector<std::pair<std::string, bool>> module_search_paths;
@@ -3109,11 +3128,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                                             framework_search_paths);
   swift_ast_sp->SetCompilerInvocationLLDBOverrides();
 
-  if (!swift_ast_sp->GetClangImporter()) {
-    logError("couldn't create a ClangImporter");
-    return {};
-  }
-
   // Initialize the compiler plugin search paths.
   auto &opts = swift_ast_sp->GetSearchPathOptions();
   opts.PluginSearchOpts.insert(opts.PluginSearchOpts.end(),
@@ -3173,22 +3187,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       swift_ast_sp->RegisterSectionModules(*image_sp, module_names);
   }
 
-  // FIXME: It should be sufficient to just import the sc.comp_unit's module .
-  if (!for_expressions && module_sp)
-    swift_ast_sp->ImportSectionModules(*module_sp, module_names);
-
-  if (target_sp)
-    LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
-               static_cast<void *>(target_sp.get()),
-               static_cast<void *>(swift_ast_sp.get()));
-
-  if (swift_ast_sp->HasFatalErrors()) {
-    logError(swift_ast_sp->GetFatalErrors().AsCString());
-    return {};
-  }
-
   {
     auto ast_context = swift_ast_sp->GetASTContext();
+    if (!ast_context) {
+      logError("couldn't initialize Swift cxompiler");
+     return {};
+    }
+
     // Report progress on module importing by using a callback function in
     // swift::ASTContext
     Progress progress("Importing Swift standard library");
@@ -3209,12 +3214,27 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     const bool can_create = true;
     swift::ModuleDecl *stdlib =
         ast_context->getStdlibModule(can_create);
+    swift_ast_sp->m_post_first_import = true;
     if (!stdlib || IsDWARFImported(*stdlib)) {
       logError("couldn't load the Swift stdlib");
       return {};
     }
   }
 
+  // FIXME: It should be sufficient to just import the sc.comp_unit's module .
+  if (!for_expressions && module_sp)
+    swift_ast_sp->ImportSectionModules(*module_sp, module_names);
+
+  if (target_sp)
+    LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
+               static_cast<void *>(target_sp.get()),
+               static_cast<void *>(swift_ast_sp.get()));
+
+  if (swift_ast_sp->HasFatalErrors()) {
+    logError(swift_ast_sp->GetFatalErrors().AsCString());
+    return {};
+  }
+  
   return swift_ast_sp;
 }
 
@@ -3334,6 +3354,7 @@ void SwiftASTContext::SetTriple(const SymbolContext &sc,
 
 bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
   VALID_OR_RETURN(false);
+  assert(!m_post_first_import);
   if (triple.str().empty())
     return false;
 
@@ -3496,12 +3517,10 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     clang_importer_options.ModuleCachePath = std::string(path);
-
-    FileSpec clang_dir_spec;
-    clang_dir_spec = GetClangResourceDir();
-    if (FileSystem::Instance().Exists(clang_dir_spec))
-      clang_importer_options.OverrideResourceDir = clang_dir_spec.GetPath();
+ 
     clang_importer_options.DebuggerSupport = true;
+    // Matches swift/Frontend.cpp
+    clang_importer_options.Optimization = "-Os";
     clang_importer_options.PreferSerializedBridgingHeader =
         props.GetSwiftPreferSerializedBridgingHeader();
 
@@ -3661,34 +3680,32 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   auto &clang_importer_options = GetClangImporterOptions();
   if (!m_ast_context_ap->SearchPathOpts.getSDKPath().empty() ||
       TargetHasNoSDK()) {
-    if (!clang_importer_options.OverrideResourceDir.empty()) {
-      // Create the DWARFImporterDelegate.
-      const auto &props = ModuleList::GetGlobalModuleListProperties();
-      if (props.GetUseSwiftDWARFImporter())
-        m_dwarfimporter_delegate_up =
-            std::make_unique<SwiftDWARFImporterDelegate>(*this);
-      auto importer_diags = getScopedDiagnosticConsumer();
-      clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, "", m_dependency_tracker.get(),
-          m_dwarfimporter_delegate_up.get());
+    // Create the DWARFImporterDelegate.
+    const auto &props = ModuleList::GetGlobalModuleListProperties();
+    if (props.GetUseSwiftDWARFImporter())
+      m_dwarfimporter_delegate_up =
+          std::make_unique<SwiftDWARFImporterDelegate>(*this);
+    auto importer_diags = getScopedDiagnosticConsumer();
+    clang_importer_ap = swift::ClangImporter::create(
+        *m_ast_context_ap, "", m_dependency_tracker.get(),
+        m_dwarfimporter_delegate_up.get());
 
-      // Handle any errors.
-      if (!clang_importer_ap || importer_diags->HasErrors()) {
-        AddDiagnostic(eSeverityError, "failed to create ClangImporter");
-        if (GetLog(LLDBLog::Types)) {
-          DiagnosticManager diagnostic_manager;
-          importer_diags->PrintDiagnostics(diagnostic_manager);
-          std::string underlying_error = diagnostic_manager.GetString();
-          HEALTH_LOG_PRINTF("failed to initialize ClangImporter: %s",
-                            underlying_error.c_str());
-        }
+    // Handle any errors.
+    if (!clang_importer_ap || importer_diags->HasErrors()) {
+      AddDiagnostic(eSeverityError, "failed to create ClangImporter");
+      if (GetLog(LLDBLog::Types)) {
+        DiagnosticManager diagnostic_manager;
+        importer_diags->PrintDiagnostics(diagnostic_manager);
+        std::string underlying_error = diagnostic_manager.GetString();
+        HEALTH_LOG_PRINTF("failed to initialize ClangImporter: %s",
+                          underlying_error.c_str());
       }
-      if (clang_importer_ap) {
-        auto clangModuleCache = swift::getModuleCachePathFromClang(
-            clang_importer_ap->getClangInstance());
-        if (!clangModuleCache.empty())
-          moduleCachePath = clangModuleCache;
-      }
+    }
+    if (clang_importer_ap) {
+      auto clangModuleCache = swift::getModuleCachePathFromClang(
+          clang_importer_ap->getClangInstance());
+      if (!clangModuleCache.empty())
+        moduleCachePath = clangModuleCache;
     }
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "Using Clang module cache path: %s",
