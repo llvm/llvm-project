@@ -282,7 +282,7 @@ define void @ebur128_calc_gating_block(ptr %st, ptr %optional_output) {
 ; CHECK-NEXT:    br i1 [[CMP525_NOT]], label [[FOR_INC11]], label [[FOR_BODY7_LR_PH:%.*]]
 ; CHECK:       for.body7.lr.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[AUDIO_DATA]], align 8
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[LSR_IV1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[TMP3]], i64 [[LSR_IV1]]
 ; CHECK-NEXT:    br label [[FOR_BODY7:%.*]]
 ; CHECK:       for.body7:
 ; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi ptr [ [[SCEVGEP4:%.*]], [[FOR_BODY7]] ], [ [[SCEVGEP]], [[FOR_BODY7_LR_PH]] ]

@@ -77,11 +77,11 @@ define void @smax(i32 %tmp3) {
 ; CHECK-NEXT:    %tmp55 = trunc i64 %tmp54 to i32
 ; CHECK-NEXT:    --> {(trunc i64 undef to i32),+,1}<%bb53> U: full-set S: full-set Exits: (-1 + (0 smax %tmp49))<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp56 = shl nsw i32 %tmp55, 3
-; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (0 smax %tmp49))<nuw><nsw>)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<nsw><%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (0 smax %tmp49))<nuw><nsw>)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp57 = sext i32 %tmp56 to i64
-; CHECK-NEXT:    --> (sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (zext i32 (0 smax %tmp49) to i64))<nuw><nsw>)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {(sext i32 (8 * (trunc i64 undef to i32)) to i64),+,8}<nsw><%bb53> U: [0,-7) S: [-2147483648,9223372036854775801) Exits: (-8 + (sext i32 (8 * (trunc i64 undef to i32)) to i64) + (8 * (zext i32 (0 smax %tmp49) to i64))<nuw><nsw> + (-8 * undef)) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp58 = getelementptr inbounds i8, ptr null, i64 %tmp57
-; CHECK-NEXT:    --> ((sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) + null) U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (zext i32 (0 smax %tmp49) to i64))<nuw><nsw> + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {((sext i32 (8 * (trunc i64 undef to i32)) to i64) + null),+,8}<nw><%bb53> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: (-8 + (sext i32 (8 * (trunc i64 undef to i32)) to i64) + (8 * (zext i32 (0 smax %tmp49) to i64))<nuw><nsw> + (-8 * undef) + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp59 = add nsw i64 %tmp54, 1
 ; CHECK-NEXT:    --> {(1 + undef),+,1}<nsw><%bb53> U: full-set S: full-set Exits: (zext i32 (0 smax %tmp49) to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp62 = add nuw nsw i64 %tmp5, 1
@@ -236,11 +236,11 @@ define void @umax(i32 %tmp3) {
 ; CHECK-NEXT:    %tmp55 = trunc i64 %tmp54 to i32
 ; CHECK-NEXT:    --> {(trunc i64 undef to i32),+,1}<%bb53> U: full-set S: full-set Exits: (-1 + %tmp49)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp56 = shl nsw i32 %tmp55, 3
-; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * %tmp49)<nsw>) LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<nsw><%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * %tmp49)<nsw>) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp57 = sext i32 %tmp56 to i64
-; CHECK-NEXT:    --> (sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) U: [0,-7) S: [-2147483648,2147483641) Exits: (sext i32 (-8 + (8 * %tmp49)<nsw>) to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {(sext i32 (8 * (trunc i64 undef to i32)) to i64),+,8}<nsw><%bb53> U: [0,-7) S: [-2147483648,9223372036854775801) Exits: (-8 + (sext i32 (8 * (trunc i64 undef to i32)) to i64) + (8 * (zext i32 %tmp49 to i64))<nuw><nsw> + (-8 * undef)) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp58 = getelementptr inbounds i8, ptr null, i64 %tmp57
-; CHECK-NEXT:    --> ((sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) + null) U: [0,-7) S: [-2147483648,2147483641) Exits: ((sext i32 (-8 + (8 * %tmp49)<nsw>) to i64) + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {((sext i32 (8 * (trunc i64 undef to i32)) to i64) + null),+,8}<nw><%bb53> U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: (-8 + (sext i32 (8 * (trunc i64 undef to i32)) to i64) + (8 * (zext i32 %tmp49 to i64))<nuw><nsw> + (-8 * undef) + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp59 = add nsw i64 %tmp54, 1
 ; CHECK-NEXT:    --> {(1 + undef),+,1}<nsw><%bb53> U: full-set S: full-set Exits: (zext i32 %tmp49 to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp62 = add nuw nsw i64 %tmp5, 1

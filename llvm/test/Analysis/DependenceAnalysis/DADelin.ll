@@ -598,11 +598,11 @@ for.end12:                                        ; preds = %for.inc10, %entry
 define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK-LABEL: 'nonnegative'
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 1, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *|<]!
+; CHECK-NEXT:    da analyze - consistent output [0 0|<]!
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   %cmp44 = icmp eq i32 %N, 0

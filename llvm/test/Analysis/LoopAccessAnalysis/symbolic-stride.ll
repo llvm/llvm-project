@@ -24,8 +24,8 @@ define void @single_stride(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul:
-; CHECK-NEXT:        {%A,+,(4 * %stride)}<%loop>
-; CHECK-NEXT:        --> {%A,+,4}<%loop>
+; CHECK-NEXT:        {%A,+,(4 * %stride)}<nw><%loop>
+; CHECK-NEXT:        --> {%A,+,4}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -69,8 +69,8 @@ define void @single_stride_nusw(ptr noalias %A, ptr noalias %B, i64 %N, i64 %str
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw i32, ptr %A, i64 %mul:
-; CHECK-NEXT:        {%A,+,(4 * %stride)}<%loop>
-; CHECK-NEXT:        --> {%A,+,4}<%loop>
+; CHECK-NEXT:        {%A,+,(4 * %stride)}<nw><%loop>
+; CHECK-NEXT:        --> {%A,+,4}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -113,8 +113,8 @@ define void @single_stride_struct(ptr noalias %A, ptr noalias %B, i64 %N, i64 %s
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds { i32, i8 }, ptr %A, i64 %mul:
-; CHECK-NEXT:        {%A,+,(8 * %stride)}<%loop>
-; CHECK-NEXT:        --> {%A,+,8}<%loop>
+; CHECK-NEXT:        {%A,+,(8 * %stride)}<nw><%loop>
+; CHECK-NEXT:        --> {%A,+,8}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -160,8 +160,8 @@ define void @single_stride_array(ptr noalias %A, ptr noalias %B, i64 %N, i64 %st
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds [2 x i32], ptr %A, i64 %mul, i64 1:
-; CHECK-NEXT:        {(4 + %A),+,(8 * %stride)}<%loop>
-; CHECK-NEXT:        --> {(4 + %A),+,8}<%loop>
+; CHECK-NEXT:        {(4 + %A),+,(8 * %stride)}<nw><%loop>
+; CHECK-NEXT:        --> {(4 + %A),+,8}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -266,7 +266,7 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %src) High: (808 + (-4 * (zext i32 %offset to i64))<nsw> + %src))
-; CHECK-NEXT:            Member: {(4 + %src),+,4}<%inner.loop>
+; CHECK-NEXT:            Member: {(4 + %src),+,4}<nuw><%inner.loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -274,8 +274,8 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3:
-; CHECK-NEXT:        {((4 * (zext i32 %offset to i64))<nuw><nsw> + %src),+,4}<%inner.loop>
-; CHECK-NEXT:        --> {(4 + %src),+,4}<%inner.loop>
+; CHECK-NEXT:        {((4 * (zext i32 %offset to i64))<nuw><nsw> + %src),+,4}<nuw><%inner.loop>
+; CHECK-NEXT:        --> {(4 + %src),+,4}<nuw><%inner.loop>
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2:
 ; CHECK-NEXT:        {((4 * %iv.1) + %dst),+,(4 * (sext i32 %offset to i64))<nsw>}<%inner.loop>
 ; CHECK-NEXT:        --> {((4 * %iv.1) + %dst),+,4}<%inner.loop>
@@ -384,11 +384,11 @@ define void @two_strides(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride.1, 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds i32, ptr %A, i64 %mul:
-; CHECK-NEXT:        {%A,+,(4 * %stride.1)}<%loop>
-; CHECK-NEXT:        --> {%A,+,4}<%loop>
+; CHECK-NEXT:        {%A,+,(4 * %stride.1)}<nw><%loop>
+; CHECK-NEXT:        --> {%A,+,4}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.A.next = getelementptr inbounds i32, ptr %A, i64 %mul.2:
-; CHECK-NEXT:        {((4 * %stride.2) + %A),+,(4 * %stride.2)}<%loop>
-; CHECK-NEXT:        --> {(4 + %A),+,4}<%loop>
+; CHECK-NEXT:        {((4 * %stride.2) + %A),+,(4 * %stride.2)}<nw><%loop>
+; CHECK-NEXT:        --> {(4 + %A),+,4}<nw><%loop>
 ;
 entry:
   br label %loop
