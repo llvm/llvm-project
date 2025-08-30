@@ -7841,7 +7841,9 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
     return;
   std::optional<llvm::APInt> AllocSize =
       CE->evaluateBytesReturnedByAllocSizeCall(S.Context);
-  if (!AllocSize)
+  // Allocations of size zero are permitted as a special case. They are usually
+  // done intentionally.
+  if (!AllocSize || AllocSize->isZero())
     return;
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
