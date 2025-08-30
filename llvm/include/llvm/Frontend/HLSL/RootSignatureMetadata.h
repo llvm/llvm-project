@@ -51,19 +51,19 @@ public:
 class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
 public:
   static char ID;
-  dxbc::DescriptorRangeType Type;
+  dxil::ResourceClass Type;
   uint32_t Register;
   uint32_t Space;
 
-  OffsetOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+  OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
                       uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Cannot append range with implicit lower bound after an unbounded "
           "range "
-       << getResourceClassName(toResourceClass(Type))
-       << "(register=" << Register << ", space=" << Space << ").";
+       << getResourceClassName(Type) << "(register=" << Register
+       << ", space=" << Space << ").";
   }
 
   std::error_code convertToErrorCode() const override {
@@ -75,17 +75,16 @@ class ShaderRegisterOverflowError
     : public ErrorInfo<ShaderRegisterOverflowError> {
 public:
   static char ID;
-  dxbc::DescriptorRangeType Type;
+  dxil::ResourceClass Type;
   uint32_t Register;
   uint32_t Space;
 
-  ShaderRegisterOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+  ShaderRegisterOverflowError(dxil::ResourceClass Type, uint32_t Register,
                               uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Overflow for shader register range: "
-       << getResourceClassName(toResourceClass(Type))
+    OS << "Overflow for shader register range: " << getResourceClassName(Type)
        << "(register=" << Register << ", space=" << Space << ").";
   }
 
@@ -98,17 +97,16 @@ class DescriptorRangeOverflowError
     : public ErrorInfo<DescriptorRangeOverflowError> {
 public:
   static char ID;
-  dxbc::DescriptorRangeType Type;
+  dxil::ResourceClass Type;
   uint32_t Register;
   uint32_t Space;
 
-  DescriptorRangeOverflowError(dxbc::DescriptorRangeType Type,
-                               uint32_t Register, uint32_t Space)
+  DescriptorRangeOverflowError(dxil::ResourceClass Type, uint32_t Register,
+                               uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Overflow for descriptor range: "
-       << getResourceClassName(toResourceClass(Type))
+    OS << "Overflow for descriptor range: " << getResourceClassName(Type)
        << "(register=" << Register << ", space=" << Space << ").";
   }
 
@@ -120,16 +118,15 @@ public:
 class TableSamplerMixinError : public ErrorInfo<TableSamplerMixinError> {
 public:
   static char ID;
-  dxbc::DescriptorRangeType Type;
+  dxil::ResourceClass Type;
   uint32_t Location;
 
-  TableSamplerMixinError(dxbc::DescriptorRangeType Type, uint32_t Location)
+  TableSamplerMixinError(dxil::ResourceClass Type, uint32_t Location)
       : Type(Type), Location(Location) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Samplers cannot be mixed with other "
-       << "resource types in a descriptor table, "
-       << getResourceClassName(toResourceClass(Type))
+       << "resource types in a descriptor table, " << getResourceClassName(Type)
        << "(location=" << Location << ")";
   }
 

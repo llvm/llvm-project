@@ -540,7 +540,8 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
 
   // Samplers cannot be mixed with other resources in a descriptor table.
   if (HasSampler && HasOtherRangeType)
-    return make_error<TableSamplerMixinError>(OtherRangeType, Location);
+    return make_error<TableSamplerMixinError>(toResourceClass(OtherRangeType),
+                                              Location);
   return Error::success();
 }
 
@@ -556,16 +557,19 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
       AppendingRegister = Range.OffsetInDescriptorsFromTableStart;
 
     if (verifyOffsetOverflow(AppendingRegister))
-      return make_error<OffsetOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+      return make_error<OffsetOverflowError>(dxbc::toResourceClass(RangeType),
+                                             Range.BaseShaderRegister,
+                                             Range.RegisterSpace);
 
     if (verifyRegisterOverflow(Range.BaseShaderRegister, Range.NumDescriptors))
       return make_error<ShaderRegisterOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
+          Range.RegisterSpace);
 
     if (verifyRegisterOverflow(AppendingRegister, Range.NumDescriptors))
       return make_error<DescriptorRangeOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
+          Range.RegisterSpace);
 
     AppendingRegister =
         updateAppendingRegister(AppendingRegister, Range.NumDescriptors,
