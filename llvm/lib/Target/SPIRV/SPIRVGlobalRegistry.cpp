@@ -195,11 +195,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
-                                               MachineIRBuilder &MIRBuilder) {
+                                               MachineIRBuilder &MIRBuilder, uint32_t Fptype) {
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
-        .addImm(Width);
+        .addImm(Width)
+        .addImm(Fptype);
   });
 }
 
@@ -1041,8 +1042,11 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return Width == 1 ? getOpTypeBool(MIRBuilder)
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
-  if (Ty->isFloatingPointTy())
-    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
+  if (Ty->isFloatingPointTy()) {
+    if (Ty->isBFloatTy())
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, 1);
+    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder, 0);
+  }
   if (Ty->isVoidTy())
     return getOpTypeVoid(MIRBuilder);
   if (Ty->isVectorTy()) {
@@ -1677,14 +1681,33 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
     return MI;
   MachineBasicBlock &DepMBB = I.getMF()->front();
   MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
-  const MachineInstr *NewMI =
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+  const MachineInstr *NewMI = nullptr;
+  if(SPIRVOPcode == SPIRV::OpTypeFloat) {
+    if (Ty->isBFloatTy()) {
+      NewMI = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+            .addDef(createTypeVReg(CurMF->getRegInfo()))
+            .addImm(BitWidth)
+            .addImm(1);
+      });
+    } else {
+      NewMI = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
         return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
                        MIRBuilder.getDL(), TII.get(SPIRVOPcode))
             .addDef(createTypeVReg(CurMF->getRegInfo()))
             .addImm(BitWidth)
             .addImm(0);
       });
+    }
+  } else {
+    NewMI = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
+                       MIRBuilder.getDL(), TII.get(SPIRVOPcode))
+            .addDef(createTypeVReg(CurMF->getRegInfo()))
+            .addImm(BitWidth);
+      });
+  }
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
 }
