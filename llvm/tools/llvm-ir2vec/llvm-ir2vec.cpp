@@ -184,7 +184,7 @@ public:
         // Add "Arg" relationships
         unsigned ArgIndex = 0;
         for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getSlotIndex(U.get());
+          unsigned OperandID = Vocabulary::getSlotIndex(*U);
           unsigned RelationID = ArgRelation + ArgIndex;
           OS << Opcode << '\t' << OperandID << '\t' << RelationID << '\n';
 

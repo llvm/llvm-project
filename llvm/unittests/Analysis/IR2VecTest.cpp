@@ -507,23 +507,23 @@ TEST(IR2VecVocabularyTest, SlotIdxMapping) {
 #define EXPECTED_VOCAB_OPERAND_SLOT(X)                                         \
   MaxOpcodes + MaxCanonicalTypeIDs + static_cast<unsigned>(X)
   // Test Function operand
-  EXPECT_EQ(Vocabulary::getSlotIndex(F),
+  EXPECT_EQ(Vocabulary::getSlotIndex(*F),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::FunctionID));
 
   // Test Constant operand
   Constant *C = ConstantInt::get(Type::getInt32Ty(Ctx), 42);
-  EXPECT_EQ(Vocabulary::getSlotIndex(C),
+  EXPECT_EQ(Vocabulary::getSlotIndex(*C),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::ConstantID));
 
   // Test Pointer operand
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   AllocaInst *PtrVal = new AllocaInst(Type::getInt32Ty(Ctx), 0, "ptr", BB);
-  EXPECT_EQ(Vocabulary::getSlotIndex(PtrVal),
+  EXPECT_EQ(Vocabulary::getSlotIndex(*PtrVal),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::PointerID));
 
   // Test Variable operand (function argument)
   Argument *Arg = F->getArg(0);
-  EXPECT_EQ(Vocabulary::getSlotIndex(Arg),
+  EXPECT_EQ(Vocabulary::getSlotIndex(*Arg),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::VariableID));
 #undef EXPECTED_VOCAB_OPERAND_SLOT
 }
