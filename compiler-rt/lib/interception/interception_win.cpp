@@ -684,6 +684,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 3;
   }
 
+  switch (*(u32 *)address) {
+    case 0x2474290f:  // 0f 29 74 24 XX : movaps %xmm6, XX(%rsp)
+      return 5;
+  }
+
 #  if SANITIZER_WINDOWS_x64
   switch (*(u8*)address) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
