@@ -274,6 +274,7 @@ static void buildPartialUnswitchConditionalBranch(
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
     const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
   SmallVector<Value *> FrozenInvariants;
   for (Value *Inv : Invariants) {
@@ -330,6 +331,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   }
 
   IRBuilder<> IRB(&BB);
+  IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
   Value *Cond = VMap[ToDuplicate[0]];
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
@@ -2369,6 +2371,7 @@ static void unswitchNontrivialInvariants(
         // BI (`dyn_cast<BranchInst>(TI)`) is an in-loop instruction hoisted
         // out of the loop.
         Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI->getIterator());
+        cast<Instruction>(Cond)->setDebugLoc(DebugLoc::getDropped());
       }
       BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});

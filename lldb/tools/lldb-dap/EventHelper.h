@@ -17,6 +17,9 @@ struct DAP;
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
+/// Sends target based capabilities and lldb-dap custom capabilities.
+void SendExtraCapabilities(DAP &dap);
+
 void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 
 llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry = false);

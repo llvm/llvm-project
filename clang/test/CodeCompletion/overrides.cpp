@@ -41,3 +41,17 @@ void func() {
 // Runs completion at empty line on line 37.
 // RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-5):1 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
 // CHECK-CC4: COMPLETION: Pattern : void vfunc(bool param, int p) override{{$}}
+
+class NoexceptBase {
+ public:
+  virtual void method() noexcept;
+};
+
+class NoexceptDerived : public NoexceptBase {
+ public:
+  met;
+};
+
+// Runs completion at met^ in the body of NoexceptDerived.
+// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-4):6 %s -o - | FileCheck -check-prefix=CHECK-CC5 %s
+// CHECK-CC5: COMPLETION: Pattern : void method() noexcept override{{$}}

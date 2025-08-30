@@ -132,8 +132,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate oso files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -143,6 +143,9 @@ public:
 
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };

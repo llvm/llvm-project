@@ -36,9 +36,8 @@ TEST(TextDiagnostic, ShowLine) {
   // Create dummy FileManager and SourceManager.
   FileSystemOptions FSOpts;
   FileManager FileMgr(FSOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticOptions DiagEngineOpts;
-  DiagnosticsEngine DiagEngine(DiagID, DiagEngineOpts,
+  DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagEngineOpts,
                                new IgnoringDiagConsumer());
   SourceManager SrcMgr(DiagEngine, FileMgr);
 

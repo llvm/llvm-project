@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/exp10m1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -14,7 +14,7 @@
 using LlvmLibcExp10m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcExp10m1fTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp10m1f(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
@@ -34,7 +34,7 @@ TEST_F(LlvmLibcExp10m1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp10m1fTest, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp10m1f(0x1.fffffep+127f),
                               FE_OVERFLOW);
@@ -50,7 +50,7 @@ TEST_F(LlvmLibcExp10m1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExp10m1fTest, Underflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(-1.0f, LIBC_NAMESPACE::exp10m1f(-max_normal),
                               FE_UNDERFLOW);

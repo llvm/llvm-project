@@ -23,3 +23,12 @@ gpu.module @test_module_1 {
     gpu.return
   }
 }
+
+// Check that debug info metadata from the function is removed from the global location.
+gpu.module @test_module_2 {
+  // CHECK-DAG: llvm.func @__nv_abs(i32) -> i32 loc([[LOC]])
+  func.func @gpu_abs_with_loc(%arg_i32 : i32) -> (i32) {
+    %result32 = math.absi %arg_i32 : i32 loc(fused<#di_subprogram>[#loc])
+    func.return %result32 : i32
+  }
+}

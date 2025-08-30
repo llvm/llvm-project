@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -677,6 +678,11 @@ private:
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
   AtomicOptions AtomicOpts;
+
+  // A set of functions which should be hot-patched; see
+  // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
+  // The list is sorted for binary-searching.
+  std::vector<std::string> MSHotPatchFunctions;
 
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -1616,7 +1622,7 @@ public:
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
   /// Generate a KCFI type identifier for T.
-  llvm::ConstantInt *CreateKCFITypeId(QualType T);
+  llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1817,6 +1823,11 @@ public:
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;
+  }
+
+  /// Helper function to construct a TrapReasonBuilder
+  TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
+    return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
 private:

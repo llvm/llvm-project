@@ -1288,3 +1288,30 @@ omp.declare_mapper @my_mapper : !fir.type<_QFdeclare_mapperTmy_type{data:i32}> {
   omp.declare_mapper.info map_entries(%4, %3 : !fir.ref<!fir.type<_QFdeclare_mapperTmy_type{data:i32}>>, !fir.ref<i32>)
 // CHECK:         }
 }
+
+// -----
+omp.private {type = firstprivate} @boxchar_privatizer : !fir.boxchar<1> copy {
+  ^bb0(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>):
+    omp.yield(%arg1 : !fir.boxchar<1>)
+}
+
+func.func @map_privatized_boxchar(%arg0 : !fir.boxchar<1>) {
+    %0 = fir.alloca !fir.boxchar<1>
+    fir.store %arg0 to %0 : !fir.ref<!fir.boxchar<1>>
+    %7 = fir.box_offset %0 base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+    %8 = omp.map.info var_ptr(%0 : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%7 : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>>
+    %9 = omp.map.info var_ptr(%0 : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) members(%8 : [0] : !fir.ref<!fir.boxchar<1>>) -> !fir.ref<!fir.boxchar<1>>
+    omp.target map_entries(%9 -> %arg1, %8 -> %arg2 : !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>) private(@boxchar_privatizer %arg0 -> %arg3 [map_idx=0] : !fir.boxchar<1>) {
+      omp.terminator
+    }
+    return
+}
+
+// CHECK-LABEL: llvm.func @map_privatized_boxchar(
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.struct<(ptr, i64)>) {
+// CHECK: %[[BOXCHAR_ALLOCA:.*]] = llvm.alloca {{.*}} x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
+// CHECK: llvm.store %[[ARG0]], %[[BOXCHAR_ALLOCA]] : !llvm.struct<(ptr, i64)>, !llvm.ptr
+// CHECK: %[[BASE_ADDR:.*]] = llvm.getelementptr %[[BOXCHAR_ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
+// CHECK: %[[MAP_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[BOXCHAR_ALLOCA]] : !llvm.ptr, i8) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[MAP_BOXCHAR:.*]] = omp.map.info var_ptr(%[[BOXCHAR_ALLOCA]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%[[MAP_BASE_ADDR]] : [0] : !llvm.ptr) -> !llvm.ptr
+// CHECK: omp.target map_entries(%[[MAP_BOXCHAR]] -> %arg1, %[[MAP_BASE_ADDR]] -> %arg2 : !llvm.ptr, !llvm.ptr) private(@boxchar_privatizer %[[ARG0]] -> %arg3 [map_idx=0] : !llvm.struct<(ptr, i64)>) {

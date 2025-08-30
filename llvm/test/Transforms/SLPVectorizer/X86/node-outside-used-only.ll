@@ -4,11 +4,10 @@
 define i64 @test() {
 ; CHECK-LABEL: define i64 @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 0, i32 1
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB5:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP4]] = or <2 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    br label %[[BB5]]

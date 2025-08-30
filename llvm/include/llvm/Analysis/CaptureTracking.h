@@ -95,21 +95,21 @@ namespace llvm {
       function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
       const LoopInfo *LI = nullptr, unsigned MaxUsesToExplore = 0);
 
-  // Returns the 'earliest' instruction that captures \p V in \F. An instruction
-  // A is considered earlier than instruction B, if A dominates B. If 2 escapes
-  // do not dominate each other, the terminator of the common dominator is
-  // chosen. If not all uses can be analyzed, the earliest escape is set to
-  // the first instruction in the function entry block. If \p V does not escape,
-  // nullptr is returned. Note that the caller of the function has to ensure
-  // that the instruction the result value is compared against is not in a
-  // cycle.
+  // Returns the 'earliest' instruction that captures \p V in \F, and which
+  // components may be captured (by any use, not necessarily the earliest one).
+  // An instruction A is considered earlier than instruction B, if A dominates
+  // B. If 2 escapes do not dominate each other, the terminator of the common
+  // dominator is chosen. If not all uses can be analyzed, the earliest escape
+  // is set to the first instruction in the function entry block. If \p V does
+  // not escape, nullptr is returned. Note that the caller of the function has
+  // to ensure that the instruction the result value is compared against is
+  // not in a cycle.
   //
   // Only consider components that are part of \p Mask.
-  LLVM_ABI Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                            bool ReturnCaptures,
-                                            const DominatorTree &DT,
-                                            CaptureComponents Mask,
-                                            unsigned MaxUsesToExplore = 0);
+  LLVM_ABI std::pair<Instruction *, CaptureComponents>
+  FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
+                      const DominatorTree &DT, CaptureComponents Mask,
+                      unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.
   struct UseCaptureInfo {

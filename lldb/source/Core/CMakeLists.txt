@@ -46,6 +46,7 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Opcode.cpp
   PluginManager.cpp
   Progress.cpp
+  ProtocolServer.cpp
   Statusline.cpp
   RichManglingContext.cpp
   SearchFilter.cpp
@@ -57,10 +58,11 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
+
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Core
   DEPENDS
     clang-tablegen-targets
-
-
   LINK_COMPONENTS
     Support
     Demangle

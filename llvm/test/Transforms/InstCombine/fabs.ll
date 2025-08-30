@@ -1522,7 +1522,7 @@ define float @test_fabs_nsz_used_by_frem(float %x) {
 define half @test_fabs_nsz_used_by_fptrunc(float %x) {
 ; CHECK-LABEL: @test_fabs_nsz_used_by_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[X:%.*]] to half
-; CHECK-NEXT:    [[OP:%.*]] = call nsz half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    [[OP:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
 ; CHECK-NEXT:    ret half [[OP]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00

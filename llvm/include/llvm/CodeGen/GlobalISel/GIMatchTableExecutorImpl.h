@@ -410,6 +410,26 @@ bool GIMatchTableExecutor::executeMatchTable(
           return false;
       break;
     }
+    case GIM_CheckLeafOperandPredicate: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint16_t Predicate = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckLeafOperandPredicate(MIs[" << InsnID
+                             << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[InsnID]->getOperand(OpIdx).isReg() &&
+             "Expected register operand");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+
+      if (!testMOPredicate_MO(Predicate, MO, State))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
     case GIM_CheckIsBuildVectorAllOnes:
     case GIM_CheckIsBuildVectorAllZeros: {
       uint64_t InsnID = readULEB();

@@ -254,6 +254,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return FoldBitCast(V, DestTy);
   case Instruction::AddrSpaceCast:
   case Instruction::IntToPtr:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
     return nullptr;
   }
@@ -463,10 +464,9 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
-    if (Elt->isNullValue()) {
-      auto *VTy = VectorType::get(EltTy, MaskEltCount);
-      return ConstantAggregateZero::get(VTy);
-    } else if (!MaskEltCount.isScalable())
+    // For scalable vectors, make sure this doesn't fold back into a
+    // shufflevector.
+    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 

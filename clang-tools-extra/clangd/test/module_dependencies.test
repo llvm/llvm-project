@@ -1,8 +1,7 @@
 # A smoke test to check that a simple dependency chain for modules can work.
 #
-# FIXME: This fails on the Windows ARM64 build server. Not entirely sure why as it has been tested on
-#        an ARM64 Windows VM and appears to work there.
-# UNSUPPORTED: host=aarch64-pc-windows-msvc
+# FIXME: The test fails on Windows; see comments on https://github.com/llvm/llvm-project/pull/142828
+# UNSUPPORTED: system-windows
 #
 # RUN: rm -fr %t
 # RUN: mkdir -p %t

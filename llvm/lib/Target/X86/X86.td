@@ -355,6 +355,9 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
+// FeatureCF is not enabled by default for APXF and targets that support APXF
+// due to performance reason, though it is part of APXF. Users need to enable it
+// manually.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -811,6 +814,7 @@ include "X86SchedSkylakeClient.td"
 include "X86SchedSkylakeServer.td"
 include "X86SchedIceLake.td"
 include "X86SchedAlderlakeP.td"
+include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
 
 //===----------------------------------------------------------------------===//
@@ -1168,7 +1172,6 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
-                                                  FeatureCF,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
@@ -1284,14 +1287,15 @@ def ProcessorFeatures {
                                                   FeatureAVXVNNI,
                                                   FeaturePKU,
                                                   FeatureHRESET,
-                                                  FeatureCLDEMOTE,
                                                   FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureWAITPKG];
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
                                                 TuningFastImmVectorShift];
-  list<SubtargetFeature> ADLTuning = !listconcat(SKLTuning, ADLAdditionalTuning);
+  list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
+  list<SubtargetFeature> ADLTuning =
+      !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
   list<SubtargetFeature> ADLFeatures =
     !listconcat(TRMFeatures, ADLAdditionalFeatures);
 
@@ -1305,15 +1309,20 @@ def ProcessorFeatures {
                                       TuningPOPCNTFalseDeps,
                                       TuningInsertVZEROUPPER];
 
-  // Sierraforest
-  list<SubtargetFeature> SRFAdditionalFeatures = [FeatureCMPCCXADD,
+  // Arrowlake
+  list<SubtargetFeature> ARLAdditionalFeatures = [FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,
                                                   FeatureAVXNECONVERT,
                                                   FeatureENQCMD,
                                                   FeatureUINTR,
                                                   FeatureAVXVNNIINT8];
+  list<SubtargetFeature> ARLFeatures =
+    !listconcat(ADLFeatures, ARLAdditionalFeatures);
+
+  // Sierraforest
+  list<SubtargetFeature> SRFAdditionalFeatures = [FeatureCLDEMOTE];
   list<SubtargetFeature> SRFFeatures =
-    !listconcat(ADLFeatures, SRFAdditionalFeatures);
+    !listconcat(ARLFeatures, SRFAdditionalFeatures);
 
   // Arrowlake S
   list<SubtargetFeature> ARLSAdditionalFeatures = [FeatureAVXVNNIINT16,
@@ -1321,19 +1330,23 @@ def ProcessorFeatures {
                                                    FeatureSM3,
                                                    FeatureSM4];
   list<SubtargetFeature> ARLSFeatures =
-    !listconcat(SRFFeatures, ARLSAdditionalFeatures);
+    !listconcat(ARLFeatures, ARLSAdditionalFeatures);
 
   // Pantherlake
   list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listconcat(ARLSFeatures, PTLAdditionalFeatures);
+    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
 
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
+                                                  FeatureAVXVNNIINT16,
+                                                  FeatureSHA512,
+                                                  FeatureSM3,
+                                                  FeatureSM4,
                                                   FeatureUSERMSR];
   list<SubtargetFeature> CWFFeatures =
-    !listconcat(ARLSFeatures, CWFAdditionalFeatures);
+    !listremove(!listconcat(SRFFeatures, CWFAdditionalFeatures), [FeatureWIDEKL]);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,
@@ -1565,7 +1578,7 @@ def ProcessorFeatures {
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
   list<SubtargetFeature> ZN3Tuning =
-    !listconcat(ZN2Tuning, ZN3AdditionalTuning);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
@@ -1861,11 +1874,13 @@ def : ProcModel<"raptorlake", AlderlakePModel,
 def : ProcModel<"meteorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"arrowlake", AlderlakePModel,
-                ProcessorFeatures.SRFFeatures, ProcessorFeatures.ADLTuning>;
-foreach P = ["arrowlake-s", "arrowlake_s", "lunarlake"] in {
+                ProcessorFeatures.ARLFeatures, ProcessorFeatures.ADLTuning>;
+foreach P = ["arrowlake-s", "arrowlake_s"] in {
 def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.ARLSFeatures, ProcessorFeatures.ADLTuning>;
 }
+def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
+                ProcessorFeatures.ADLTuning>;
 def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,

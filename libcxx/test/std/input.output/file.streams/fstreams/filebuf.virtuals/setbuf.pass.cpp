@@ -15,7 +15,7 @@
 
 // This test requires the fix to https://github.com/llvm/llvm-project/issues/60509 in the dylib,
 // which landed in 5afb937d8a30445642ccaf33866ee4cdd0713222.
-// XFAIL using-built-library-before-llvm-19
+// XFAIL: using-built-library-before-llvm-19
 
 #include <fstream>
 #include <cstddef>

@@ -335,8 +335,8 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
-def IIT_V2048: IIT_Vec<2048, 62>;
-def IIT_V4096: IIT_Vec<4096, 63>;
+def IIT_V2048 : IIT_Vec<2048, 62>;
+def IIT_V4096 : IIT_Vec<4096, 63>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -575,6 +575,7 @@ def llvm_v64i32_ty     : LLVMType<v64i32>;    //   64 x i32
 def llvm_v128i32_ty    : LLVMType<v128i32>;   //  128 x i32
 def llvm_v256i32_ty    : LLVMType<v256i32>;   //  256 x i32
 def llvm_v2048i32_ty   : LLVMType<v2048i32>;  // 2048 x i32
+def llvm_v4096i32_ty   : LLVMType<v4096i32>;  // 4096 x i32
 
 def llvm_v1i64_ty      : LLVMType<v1i64>;    //  1 x i64
 def llvm_v2i64_ty      : LLVMType<v2i64>;    //  2 x i64
@@ -605,7 +606,7 @@ def llvm_v8f32_ty      : LLVMType<v8f32>;       //    8 x float
 def llvm_v10f32_ty     : LLVMType<v10f32>;      //   10 x float
 def llvm_v16f32_ty     : LLVMType<v16f32>;      //   16 x float
 def llvm_v32f32_ty     : LLVMType<v32f32>;      //   32 x float
-def llvm_v2048f32_ty     : LLVMType<v2048f32>;  // 2048 x float
+def llvm_v2048f32_ty   : LLVMType<v2048f32>;    // 2048 x float
 def llvm_v1f64_ty      : LLVMType<v1f64>;       //    1 x double
 def llvm_v2f64_ty      : LLVMType<v2f64>;       //    2 x double
 def llvm_v4f64_ty      : LLVMType<v4f64>;       //    4 x double
@@ -1643,16 +1644,12 @@ def int_ucmp : DefaultAttrsIntrinsic<
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
-def int_lifetime_start  : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
-def int_lifetime_end    : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
+def int_lifetime_start
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_lifetime_end
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 def int_invariant_start : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly,
@@ -1841,11 +1838,11 @@ def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
 
 // Return true if ubsan check is allowed.
 def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
-    [IntrInaccessibleMemOnly, IntrWriteMem, ImmArg<ArgIndex<0>>, NoUndef<RetIndex>]>;
+    [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>, NoUndef<RetIndex>]>;
 
 // Return true if runtime check is allowed.
 def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata_ty],
-    [IntrInaccessibleMemOnly, IntrWriteMem, NoUndef<RetIndex>]>,
+    [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>,
     ClangBuiltin<"__builtin_allow_runtime_check">;
 
 // Support for dynamic deoptimization (or de-specialization)
@@ -1931,6 +1928,12 @@ def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrReadMem, IntrArgMemOnly ]>;
 
+def int_vp_load_ff : DefaultAttrsIntrinsic<[ llvm_anyvector_ty, llvm_i32_ty ],
+                             [ llvm_anyptr_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
+
 def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                              [ LLVMVectorOfAnyPointersToElt<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1964,6 +1967,24 @@ def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty
 def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
                              [ llvm_anyvector_ty, // Vector of pointers
                                llvm_anyint_ty,    // Increment
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
+                             [ IntrArgMemOnly ]>;
+
+def int_experimental_vector_histogram_uadd_sat : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty, // Vector of pointers
+                               llvm_anyint_ty,    // Increment
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
+                             [ IntrArgMemOnly ]>;
+
+def int_experimental_vector_histogram_umin : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty, // Vector of pointers
+                               llvm_anyint_ty,    // Update value
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
+                             [ IntrArgMemOnly ]>;
+
+def int_experimental_vector_histogram_umax : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty, // Vector of pointers
+                               llvm_anyint_ty,    // Update value
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                              [ IntrArgMemOnly ]>;
 

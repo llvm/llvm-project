@@ -931,10 +931,18 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
     // dest, src1, mask, src2, memory, tbl
     CASE_PTERNLOG(PTERNLOGD, m)
     CASE_PTERNLOG(PTERNLOGQ, m)
-    CASE_PTERNLOG(PTERNLOGD, mb)
-    CASE_PTERNLOG(PTERNLOGQ, mb)
     Src2Idx = NumOperands - 7;
     Src3Idx = -1;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -2;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -3;
     break;
 
   default:
@@ -943,8 +951,21 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
   StringRef DestName = getRegName(MI->getOperand(0).getReg());
   StringRef Src1Name = getRegName(MI->getOperand(1).getReg());
   StringRef Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
-  StringRef Src3Name =
-      Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
+  StringRef Src3Name;
+  switch (Src3Idx) {
+  case -1:
+    Src3Name = "mem";
+    break;
+  case -2:
+    Src3Name = "m32bcst";
+    break;
+  case -3:
+    Src3Name = "m64bcst";
+    break;
+  default:
+    Src3Name = getRegName(MI->getOperand(Src3Idx).getReg());
+    break;
+  }
   uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
 
   StringRef SrcNames[] = {Src1Name, Src2Name, Src3Name};

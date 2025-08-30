@@ -916,6 +916,7 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_safe(<2 x half> %a, <2 x half> %
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -984,6 +985,7 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_nnan_flag(<2 x half> %a, <2 x ha
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1052,6 +1054,7 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_nsz_flag(<2 x half> %a, <2 x hal
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1156,6 +1159,7 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_safe(<2 x half> %a, <2 x half> %
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1224,6 +1228,7 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_nnan_flag(<2 x half> %a, <2 x ha
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1292,6 +1297,7 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_nsz_flag(<2 x half> %a, <2 x hal
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xfffd
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.h, v0.h, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu 0xf1ff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

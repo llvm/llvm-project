@@ -104,13 +104,13 @@ define void @function3() #0 {
 ; NOCOST-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; NOCOST-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; NOCOST-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[ADD_LOC]])
-; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTLOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ADD_LOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTLOC]])
 ; NOCOST-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[ADD_LOC]], ptr [[DOTLOC]])
 ; NOCOST-NEXT:    [[ADD_RELOAD:%.*]] = load i32, ptr [[ADD_LOC]], align 4
 ; NOCOST-NEXT:    [[DOTRELOAD:%.*]] = load i32, ptr [[DOTLOC]], align 4
-; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ADD_LOC]])
-; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTLOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ADD_LOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTLOC]])
 ; NOCOST-NEXT:    [[TMP0:%.*]] = load i32, ptr [[OUTPUT]], align 4
 ; NOCOST-NEXT:    call void @outlined_ir_func_2(i32 [[DOTRELOAD]], i32 [[ADD_RELOAD]], ptr [[RESULT]])
 ; NOCOST-NEXT:    ret void
@@ -159,13 +159,13 @@ define void @function4() #0 {
 ; NOCOST-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; NOCOST-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; NOCOST-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[ADD_LOC]])
-; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTLOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ADD_LOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTLOC]])
 ; NOCOST-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[ADD_LOC]], ptr [[DOTLOC]])
 ; NOCOST-NEXT:    [[ADD_RELOAD:%.*]] = load i32, ptr [[ADD_LOC]], align 4
 ; NOCOST-NEXT:    [[DOTRELOAD:%.*]] = load i32, ptr [[DOTLOC]], align 4
-; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ADD_LOC]])
-; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTLOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ADD_LOC]])
+; NOCOST-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTLOC]])
 ; NOCOST-NEXT:    call void @outlined_ir_func_2(i32 [[DOTRELOAD]], i32 [[ADD_RELOAD]], ptr [[RESULT]])
 ; NOCOST-NEXT:    ret void
 ;

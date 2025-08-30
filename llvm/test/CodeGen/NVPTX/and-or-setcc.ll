@@ -14,7 +14,7 @@ define i1 @and_ord(float %a, float %b) {
 ; CHECK-NEXT:    ld.param.b32 %r1, [and_ord_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [and_ord_param_1];
 ; CHECK-NEXT:    setp.num.f32 %p1, %r1, %r2;
-; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r3, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %c = fcmp ord float %a, 0.0
@@ -33,7 +33,7 @@ define i1 @or_uno(float %a, float %b) {
 ; CHECK-NEXT:    ld.param.b32 %r1, [or_uno_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [or_uno_param_1];
 ; CHECK-NEXT:    setp.nan.f32 %p1, %r1, %r2;
-; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r3, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %c = fcmp uno float %a, 0.0

@@ -668,7 +668,6 @@ public:
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
     std::optional<Config::ArgumentListsPolicy> ArgumentLists;
-    std::optional<Config::HeaderInsertionPolicy> HeaderInsertionPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -713,11 +712,6 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    // If CLI has set never, use that regardless of what the config files have
-    if (HeaderInsertion == Config::HeaderInsertionPolicy::NeverInsert) {
-      HeaderInsertionPolicy = Config::HeaderInsertionPolicy::NeverInsert;
-    }
-
     if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
       ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
                               : Config::ArgumentListsPolicy::Delimiters;
@@ -732,8 +726,8 @@ public:
         C.Index.Background = *BGPolicy;
       if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
-      if (HeaderInsertionPolicy)
-        C.Completion.HeaderInsertion = *HeaderInsertionPolicy;
+      if (HeaderInsertion.getNumOccurrences())
+        C.Completion.HeaderInsertion = HeaderInsertion;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 

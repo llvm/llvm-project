@@ -30,21 +30,26 @@ struct SchedulerTest : public testing::Test {
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<BasicAAResult> BAA;
   std::unique_ptr<AAResults> AA;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
 
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("SchedulerTest", errs());
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
+    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
   }
 
   AAResults &getAA(llvm::Function &LLVMF) {
-    TargetLibraryInfoImpl TLII;
-    TargetLibraryInfo TLI(TLII);
-    AA = std::make_unique<AAResults>(TLI);
+    AA = std::make_unique<AAResults>(*TLI);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     DT = std::make_unique<DominatorTree>(LLVMF);
-    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, TLI, *AC,
+    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, *TLI, *AC,
                                           DT.get());
     AA->addAAResult(*BAA);
     return *AA;

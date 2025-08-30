@@ -125,12 +125,12 @@ struct AArch64OutgoingValueAssigner
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+    if (!Flags.isVarArg() && !UseVarArgsCCForFixed) {
       if (!IsReturn)
         applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     } else
-      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
 
     StackSize = State.getStackSize();
     return Res;
@@ -282,7 +282,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 
   /// We need to fixup the reported store size for certain value types because
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
-  /// for compatability with the DAG call lowering implementation, which we're
+  /// for compatibility with the DAG call lowering implementation, which we're
   /// currently building on top of.
   LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
                              ISD::ArgFlagsTy Flags) const override {
@@ -361,7 +361,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
-    if (!Arg.IsFixed)
+    if (Arg.Flags[0].isVarArg())
       MaxSize = 0;
 
     Register ValVReg = Arg.Regs[RegIndex];

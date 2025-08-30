@@ -2353,33 +2353,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     break;
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:
+  case X86::PBLENDWrri:
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
-    // If we're optimizing for size, try to use MOVSD/MOVSS.
-    if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
-      unsigned Mask = (Opc == X86::BLENDPDrri || Opc == X86::VBLENDPDrri) ? 0x03: 0x0F;
-      if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
-#define FROM_TO(FROM, TO)                                                      \
-  case X86::FROM:                                                              \
-    Opc = X86::TO;                                                             \
-    break;
-        switch (Opc) {
-        default:
-          llvm_unreachable("Unreachable!");
-        FROM_TO(BLENDPDrri, MOVSDrr)
-        FROM_TO(BLENDPSrri, MOVSSrr)
-        FROM_TO(VBLENDPDrri, VMOVSDrr)
-        FROM_TO(VBLENDPSrri, VMOVSSrr)
-        }
-        WorkingMI = CloneIfNew(MI);
-        WorkingMI->setDesc(get(Opc));
-        WorkingMI->removeOperand(3);
-        break;
-      }
-#undef FROM_TO
-    }
-    [[fallthrough]];
-  case X86::PBLENDWrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDPSYrri:
   case X86::VPBLENDDrri:
@@ -2487,6 +2463,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       break;
     }
 
+    assert(Opc == X86::MOVSDrr && "Only MOVSD can commute to SHUFPD");
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(X86::SHUFPDrri));
     WorkingMI->addOperand(MachineOperand::CreateImm(0x02));
@@ -4422,13 +4399,8 @@ static unsigned getLoadStoreOpcodeForFP16(bool Load, const X86Subtarget &STI) {
   if (STI.hasFP16())
     return Load ? X86::VMOVSHZrm_alt : X86::VMOVSHZmr;
   if (Load)
-    return STI.hasAVX512() ? X86::VMOVSSZrm
-           : STI.hasAVX()  ? X86::VMOVSSrm
-                           : X86::MOVSSrm;
-  else
-    return STI.hasAVX512() ? X86::VMOVSSZmr
-           : STI.hasAVX()  ? X86::VMOVSSmr
-                           : X86::MOVSSmr;
+    return X86::MOVSHPrm;
+  return X86::MOVSHPmr;
 }
 
 static unsigned getLoadStoreRegOpcode(Register Reg,
@@ -4926,6 +4898,16 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     CmpMask = ~0;
     CmpValue = 0;
     return true;
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = 0;
+    // Force identical compare.
+    CmpMask = 0;
+    CmpValue = 0;
+    return true;
   }
   return false;
 }
@@ -4965,6 +4947,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
   CASE_ND(SUB64ri32)
   CASE_ND(SUB32ri)
   CASE_ND(SUB16ri)
@@ -6154,6 +6140,25 @@ static bool expandSHXDROT(MachineInstrBuilder &MIB, const MCInstrDesc &Desc) {
   return true;
 }
 
+static bool expandMOVSHP(MachineInstrBuilder &MIB, MachineInstr &MI,
+                         const TargetInstrInfo &TII, bool HasAVX) {
+  unsigned NewOpc;
+  if (MI.getOpcode() == X86::MOVSHPrm) {
+    NewOpc = HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+    Register Reg = MI.getOperand(0).getReg();
+    if (Reg > X86::XMM15)
+      NewOpc = X86::VMOVSSZrm;
+  } else {
+    NewOpc = HasAVX ? X86::VMOVSSmr : X86::MOVSSmr;
+    Register Reg = MI.getOperand(5).getReg();
+    if (Reg > X86::XMM15)
+      NewOpc = X86::VMOVSSZmr;
+  }
+
+  MIB->setDesc(TII.get(NewOpc));
+  return true;
+}
+
 bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   bool HasAVX = Subtarget.hasAVX();
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
@@ -6226,6 +6231,9 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
+  case X86::MOVSHPmr:
+  case X86::MOVSHPrm:
+    return expandMOVSHP(MIB, MI, *this, Subtarget.hasAVX());
   case X86::V_SETALLONES:
     return Expand2AddrUndef(MIB,
                             get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));

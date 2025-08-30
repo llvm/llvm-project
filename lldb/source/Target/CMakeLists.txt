@@ -82,6 +82,8 @@ add_lldb_library(lldbTarget
   UnwindLLDB.cpp
   VerboseTrapFrameRecognizer.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Target
   LINK_COMPONENTS
     Support
     MC

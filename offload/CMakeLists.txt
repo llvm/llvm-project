@@ -23,6 +23,8 @@ elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   return()
 endif()
 
+set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 if(OPENMP_STANDALONE_BUILD)
   set(OFFLOAD_LIBDIR_SUFFIX "" CACHE STRING
     "Suffix of lib installation directory, e.g. 64 => lib64")
@@ -40,6 +42,8 @@ else()
 endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
+option(OFFLOAD_INCLUDE_TESTS "Generate and build offload tests." ${LLVM_INCLUDE_TESTS})
 
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
@@ -369,6 +373,7 @@ add_subdirectory(tools/offload-tblgen)
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+add_subdirectory(docs)
 
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
@@ -376,15 +381,7 @@ add_subdirectory(libomptarget)
 add_subdirectory(liboffload)
 
 # Add tests.
-add_subdirectory(test)
-
-# Add unit tests if GMock/GTest is present
-if(NOT LLVM_THIRD_PARTY_DIR)
-  set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
-endif()
-if(EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
-  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-endif()
-if(TARGET llvm_gtest)
+if(OFFLOAD_INCLUDE_TESTS)
+  add_subdirectory(test)
   add_subdirectory(unittests)
 endif()

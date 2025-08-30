@@ -1,0 +1,19 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!rec_Q = !cir.record<struct "Q" {!cir.vptr}>
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!rec_S2 = !cir.record<struct "S2" {!rec_Q, !rec_S}>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_anon_struct1 = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
+module {
+  cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>}> : !rec_anon_struct {alignment = 8 : i64}
+  // CHECK: cir.global external @_ZTV1S = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>}> : !rec_anon_struct {alignment = 8 : i64}
+
+  cir.global external @_ZTV2S2 = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>, #cir.const_array<[#cir.ptr<-8 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN2S23keyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct1 {alignment = 8 : i64}
+  // CHECK: cir.global external @_ZTV2S2 = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>, #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 4>, #cir.const_array<[#cir.ptr<-8 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN2S23keyEv> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct1 {alignment = 8 : i64}
+
+  cir.func private dso_local @_ZN1S3keyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN1S6nonKeyEv(%arg0: !cir.ptr<!rec_S>)
+  cir.func private dso_local @_ZN2S23keyEv(%arg0: !cir.ptr<!rec_S2>)
+}

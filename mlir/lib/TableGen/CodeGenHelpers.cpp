@@ -205,10 +205,14 @@ static ::llvm::LogicalResult {0}(
 
 /// Code for a pattern type or attribute constraint.
 ///
-/// {3}: "Type type" or "Attribute attr".
-static const char *const patternAttrOrTypeConstraintCode = R"(
+/// {0}: name of function
+/// {1}: Condition template
+/// {2}: Constraint summary
+/// {3}: "::mlir::Type type" or "::mlirAttribute attr" or "propType prop".
+/// Can be "T prop" for generic property constraints.
+static const char *const patternConstraintCode = R"(
 static ::llvm::LogicalResult {0}(
-    ::mlir::PatternRewriter &rewriter, ::mlir::Operation *op, ::mlir::{3},
+    ::mlir::PatternRewriter &rewriter, ::mlir::Operation *op, {3},
     ::llvm::StringRef failureStr) {
   if (!({1})) {
     return rewriter.notifyMatchFailure(op, [&](::mlir::Diagnostic &diag) {
@@ -265,15 +269,31 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
   FmtContext ctx;
   ctx.addSubst("_op", "*op").withBuilder("rewriter").withSelf("type");
   for (auto &it : typeConstraints) {
-    os << formatv(patternAttrOrTypeConstraintCode, it.second,
+    os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()), "Type type");
+                  escapeString(it.first.getSummary()), "::mlir::Type type");
   }
   ctx.withSelf("attr");
   for (auto &it : attrConstraints) {
-    os << formatv(patternAttrOrTypeConstraintCode, it.second,
+    os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()), "Attribute attr");
+                  escapeString(it.first.getSummary()),
+                  "::mlir::Attribute attr");
+  }
+  ctx.withSelf("prop");
+  for (auto &it : propConstraints) {
+    PropConstraint propConstraint = cast<PropConstraint>(it.first);
+    StringRef interfaceType = propConstraint.getInterfaceType();
+    // Constraints that are generic over multiple interface types are
+    // templatized under the assumption that they'll be used correctly.
+    if (interfaceType.empty()) {
+      interfaceType = "T";
+      os << "template <typename T>";
+    }
+    os << formatv(patternConstraintCode, it.second,
+                  tgfmt(propConstraint.getConditionTemplate(), &ctx),
+                  escapeString(propConstraint.getSummary()),
+                  Twine(interfaceType) + " prop");
   }
 }
 
@@ -367,10 +387,15 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
 void StaticVerifierFunctionEmitter::collectPatternConstraints(
     const ArrayRef<DagLeaf> constraints) {
   for (auto &leaf : constraints) {
-    assert(leaf.isOperandMatcher() || leaf.isAttrMatcher());
-    collectConstraint(
-        leaf.isOperandMatcher() ? typeConstraints : attrConstraints,
-        leaf.isOperandMatcher() ? "type" : "attr", leaf.getAsConstraint());
+    assert(leaf.isOperandMatcher() || leaf.isAttrMatcher() ||
+           leaf.isPropMatcher());
+    Constraint constraint = leaf.getAsConstraint();
+    if (leaf.isOperandMatcher())
+      collectConstraint(typeConstraints, "type", constraint);
+    else if (leaf.isAttrMatcher())
+      collectConstraint(attrConstraints, "attr", constraint);
+    else if (leaf.isPropMatcher())
+      collectConstraint(propConstraints, "prop", constraint);
   }
 }
 

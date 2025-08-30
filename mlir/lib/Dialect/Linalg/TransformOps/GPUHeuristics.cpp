@@ -11,8 +11,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,8 +22,6 @@
 using namespace mlir;
 
 #define DEBUG_TYPE "linalg-transforms"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 static Attribute linearId0(MLIRContext *ctx) {
   return gpu::GPUThreadMappingAttr::get(ctx, gpu::MappingId::LinearDim0);
@@ -44,9 +42,8 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
   assert(!copySizes.empty() && copySizes.size() <= 3 &&
          "only 1,2,3-D copies are supported for now");
 
-  LDBG("START CopyMappingInfo, favorPredication: " << favorPredication);
-  LLVM_DEBUG(DBGS() << "--copy shape: " << llvm::interleaved(copySizes)
-                    << "\n");
+  LDBG() << "START CopyMappingInfo, favorPredication: " << favorPredication;
+  LDBG() << "--copy shape: " << llvm::interleaved(copySizes);
 
   // Greedily find the largest vector size that can be used to copy the most
   // minor dimension: we are in the business of filling kMaxVectorLoadBitWidth
@@ -54,20 +51,19 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
   int64_t desiredVectorSize = CopyMappingInfo::maxContiguousElementsToTransfer(
       desiredBitAlignment, copySizes.back(), elementalBitwidth);
 
-  LDBG("--greedily determined vectorSize: "
-       << desiredVectorSize << " elements of " << elementalBitwidth
-       << "b each -> " << (desiredVectorSize * elementalBitwidth)
-       << "b total out of a max of " << kMaxVectorLoadBitWidth << "b");
+  LDBG() << "--greedily determined vectorSize: " << desiredVectorSize
+         << " elements of " << elementalBitwidth << "b each -> "
+         << (desiredVectorSize * elementalBitwidth)
+         << "b total out of a max of " << kMaxVectorLoadBitWidth << "b";
 
   status = inferNumThreads(totalNumThreads, copySizes, desiredVectorSize,
                            favorPredication);
   if (status == Status::Invalid)
     return;
 
-  LLVM_DEBUG(DBGS() << "--copy: " << llvm::interleaved(copySizes) << "\n"
-                    << "--numThreads: " << llvm::interleaved(this->numThreads)
-                    << "\n"
-                    << "--vectorSize: " << this->vectorSize << "\n");
+  LDBG() << "--copy: " << llvm::interleaved(copySizes) << "\n"
+         << "--numThreads: " << llvm::interleaved(this->numThreads) << "\n"
+         << "--vectorSize: " << this->vectorSize;
   assert(this->numThreads.size() == copySizes.size() &&
          "compute copy mapping expected same number of threads and copy sizes");
 
@@ -85,7 +81,7 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
   this->threadMapping =
       llvm::to_vector(ArrayRef(allThreadMappings)
                           .take_back(this->smallestBoundingTileSizes.size()));
-  LLVM_DEBUG(this->print(DBGS()); llvm::dbgs() << "\n");
+  LDBG() << *this;
 }
 
 int64_t transform::gpu::CopyMappingInfo::maxContiguousElementsToTransfer(
@@ -141,7 +137,7 @@ static SmallVector<int64_t> maximizeNumThreads(ArrayRef<int64_t> sizes,
          "currentIndex out of bounds");
   std::string indent(2 * currentIndex, '-');
   if (static_cast<size_t>(currentIndex) == sizes.size() - 1) {
-    LDBG(indent << "mandated globalBest: " << sizes[currentIndex]);
+    LDBG() << indent << "mandated globalBest: " << sizes[currentIndex];
     return SmallVector<int64_t>{sizes[currentIndex]};
   }
 
@@ -150,16 +146,16 @@ static SmallVector<int64_t> maximizeNumThreads(ArrayRef<int64_t> sizes,
   SmallVector<int64_t> factors = getFactors(s);
   SmallVector<int64_t> localThreadsPerDim;
   localThreadsPerDim.reserve(sizes.size());
-  LDBG(indent << "maximizeNumThreads in " << s
-              << " with limit: " << maxNumThreads);
+  LDBG() << indent << "maximizeNumThreads in " << s
+         << " with limit: " << maxNumThreads;
   for (auto factor : factors) {
     auto nestedThreadsPerDim =
         maximizeNumThreads(sizes, currentIndex + 1, maxNumThreads / factor);
     int64_t localBest = factor * product(nestedThreadsPerDim);
     if (localBest > best && localBest <= maxNumThreads) {
-      LDBG(indent << "new localBest: " << localBest);
-      LDBG(indent << "nestedThreadsPerDim: "
-                  << llvm::interleaved(nestedThreadsPerDim));
+      LDBG() << indent << "new localBest: " << localBest;
+      LDBG() << indent << "nestedThreadsPerDim: "
+             << llvm::interleaved(nestedThreadsPerDim);
       localThreadsPerDim.clear();
       localThreadsPerDim.push_back(factor);
       llvm::append_range(localThreadsPerDim, nestedThreadsPerDim);
@@ -167,8 +163,8 @@ static SmallVector<int64_t> maximizeNumThreads(ArrayRef<int64_t> sizes,
     }
   }
 
-  LDBG(indent << "found globalBest: " << best);
-  LDBG(indent << "numThreads: " << llvm::interleaved(localThreadsPerDim));
+  LDBG() << indent << "found globalBest: " << best;
+  LDBG() << indent << "numThreads: " << llvm::interleaved(localThreadsPerDim);
   return localThreadsPerDim;
 }
 
@@ -193,8 +189,8 @@ transform::gpu::CopyMappingInfo::inferNumThreads(int64_t totalNumThreads,
       if (status == Status::Success || status == Status::Invalid)
         return status;
 
-      LDBG("requires predication, try reducing vector size to "
-           << (localVectorSize / 2));
+      LDBG() << "requires predication, try reducing vector size to "
+             << (localVectorSize / 2);
     }
   }
 
@@ -211,8 +207,8 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
   assert(sizes.back() % desiredVectorSize == 0 &&
          "most-minor size not divisible by actualVectorSize");
 
-  LDBG("inferNumThreadsImpl with totalNumThreads: "
-       << totalNumThreads << " and vectorSize: " << desiredVectorSize);
+  LDBG() << "inferNumThreadsImpl with totalNumThreads: " << totalNumThreads
+         << " and vectorSize: " << desiredVectorSize;
 
   // Scale the most minor size to account for the chosen vector size and
   // maximize the number of threads without exceeding the total number of
@@ -220,22 +216,22 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
   SmallVector<int64_t> scaledSizes(sizes);
   scaledSizes.back() /= desiredVectorSize;
   if (scaledSizes.back() > totalNumThreads) {
-    LDBG("--Too few threads given the required vector size -> FAIL");
+    LDBG() << "--Too few threads given the required vector size -> FAIL";
     return Status::Invalid;
   }
   SmallVector<int64_t> inferredNumThreads =
       maximizeNumThreads(scaledSizes, 0, totalNumThreads);
 
-  LDBG("inferred numThreads: " << llvm::interleaved(inferredNumThreads));
-  LDBG("computed actualVectorSize: " << desiredVectorSize);
+  LDBG() << "inferred numThreads: " << llvm::interleaved(inferredNumThreads);
+  LDBG() << "computed actualVectorSize: " << desiredVectorSize;
 
   // Corner case: we cannot use more threads than available. If the dimension of
   // the copy is so bad it is because higher-level tiling did not do its job, we
   // do not try to recover from it here.
   int64_t totalNumThreadsUsed = product(inferredNumThreads);
-  LDBG("--totalNumThreadsUsed: " << totalNumThreadsUsed);
+  LDBG() << "--totalNumThreadsUsed: " << totalNumThreadsUsed;
   if (totalNumThreadsUsed == 0 || totalNumThreadsUsed > totalNumThreads) {
-    LDBG("--Too few threads given the required vector size -> FAIL");
+    LDBG() << "--Too few threads given the required vector size -> FAIL";
     return Status::Invalid;
   }
 

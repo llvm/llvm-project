@@ -1605,13 +1605,13 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //
   //  - The signedness of the IV extension and comparison match
   //
-  //  - The narrow IV is always positive (and thus its sign extension is equal
-  //    to its zero extension).  For instance, let's say we're zero extending
-  //    %narrow for the following use
+  //  - The narrow IV is always non-negative (and thus its sign extension is
+  //    equal to its zero extension).  For instance, let's say we're zero
+  //    extending %narrow for the following use
   //
   //      icmp slt i32 %narrow, %val   ... (A)
   //
-  //    and %narrow is always positive.  Then
+  //    and %narrow is always non-negative.  Then
   //
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
@@ -1630,6 +1630,12 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
 
   // Widen the other operand of the compare, if necessary.
   if (CastWidth < IVWidth) {
+    // If the narrow IV is always non-negative and the other operand is sext,
+    // widen using sext so we can combine them. This works for all non-signed
+    // comparison predicates.
+    if (DU.NeverNegative && isa<SExtInst>(Op) && !Cmp->isSigned())
+      CmpPreferredSign = true;
+
     Value *ExtOp = createExtendInst(Op, WideType, CmpPreferredSign, Cmp);
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }

@@ -120,7 +120,7 @@ struct ParserCallbacks {
           IdentificationBit(IdentificationBit), ModuleBit(ModuleBit) {}
 
     // Calls the ctor.
-    LLVM_ABI_FRIEND friend Expected<BitcodeFileContents>
+    LLVM_ABI friend Expected<BitcodeFileContents>
     getBitcodeFileContents(MemoryBufferRef Buffer);
 
     Expected<std::unique_ptr<Module>>

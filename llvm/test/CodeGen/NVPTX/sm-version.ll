@@ -18,14 +18,19 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_90a | FileCheck %s --check-prefix=SM90a
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_100 | FileCheck %s --check-prefix=SM100
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_100a | FileCheck %s --check-prefix=SM100a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_100f | FileCheck %s --check-prefix=SM100f
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_101 | FileCheck %s --check-prefix=SM101
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_101a | FileCheck %s --check-prefix=SM101a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_101f | FileCheck %s --check-prefix=SM101f
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_103 | FileCheck %s --check-prefix=SM103
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_103a | FileCheck %s --check-prefix=SM103a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_103f | FileCheck %s --check-prefix=SM103f
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_120 | FileCheck %s --check-prefix=SM120
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_120a | FileCheck %s --check-prefix=SM120a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_120f | FileCheck %s --check-prefix=SM120f
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_121 | FileCheck %s --check-prefix=SM121
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_121a | FileCheck %s --check-prefix=SM121a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_121f | FileCheck %s --check-prefix=SM121f
 
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=SM20
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_21 | FileCheck %s --check-prefix=SM21
@@ -47,14 +52,19 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90a | FileCheck %s --check-prefix=SM90a
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100 | FileCheck %s --check-prefix=SM100
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100a | FileCheck %s --check-prefix=SM100a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100f | FileCheck %s --check-prefix=SM100f
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101 | FileCheck %s --check-prefix=SM101
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101a | FileCheck %s --check-prefix=SM101a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101f | FileCheck %s --check-prefix=SM101f
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_103 | FileCheck %s --check-prefix=SM103
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_103a | FileCheck %s --check-prefix=SM103a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_103f | FileCheck %s --check-prefix=SM103f
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120 | FileCheck %s --check-prefix=SM120
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120a | FileCheck %s --check-prefix=SM120a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120f | FileCheck %s --check-prefix=SM120f
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121 | FileCheck %s --check-prefix=SM121
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121a | FileCheck %s --check-prefix=SM121a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121f | FileCheck %s --check-prefix=SM121f
 
 ; SM20: .version 3.2
 ; SM21: .version 3.2
@@ -76,14 +86,19 @@
 ; SM90a: .version 8.0
 ; SM100: .version 8.6
 ; SM100a: .version 8.6
+; SM100f: .version 8.8
 ; SM101: .version 8.6
 ; SM101a: .version 8.6
+; SM101f: .version 8.8
 ; SM103: .version 8.8
 ; SM103a: .version 8.8
+; SM103f: .version 8.8
 ; SM120: .version 8.7
 ; SM120a: .version 8.7
+; SM120f: .version 8.8
 ; SM121: .version 8.8
 ; SM121a: .version 8.8
+; SM121f: .version 8.8
 
 ; SM20: .target sm_20
 ; SM21: .target sm_21
@@ -105,11 +120,16 @@
 ; SM90a: .target sm_90a
 ; SM100: .target sm_100
 ; SM100a: .target sm_100a
+; SM100f: .target sm_100f
 ; SM101: .target sm_101
 ; SM101a: .target sm_101a
+; SM101f: .target sm_101f
 ; SM103: .target sm_103
 ; SM103a: .target sm_103a
+; SM103f: .target sm_103f
 ; SM120: .target sm_120
 ; SM120a: .target sm_120a
+; SM120f: .target sm_120f
 ; SM121: .target sm_121
 ; SM121a: .target sm_121a
+; SM121f: .target sm_121f

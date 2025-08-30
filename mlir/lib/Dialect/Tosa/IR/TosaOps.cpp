@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
@@ -22,12 +22,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
@@ -168,7 +166,7 @@ void TosaDialect::initialize() {
       >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
-      mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
+      shard::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
       ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp,
       LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
       LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
@@ -182,12 +180,12 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
   // Tosa dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
   if (llvm::isa<shapeType>(type) && llvm::isa<DenseIntElementsAttr>(value)) {
-    return builder.create<tosa::ConstShapeOp>(
-        loc, type, llvm::cast<DenseIntElementsAttr>(value));
+    return tosa::ConstShapeOp::create(builder, loc, type,
+                                      llvm::cast<DenseIntElementsAttr>(value));
   }
   if (llvm::isa<ElementsAttr>(value))
-    return builder.create<tosa::ConstOp>(loc, type,
-                                         llvm::cast<ElementsAttr>(value));
+    return tosa::ConstOp::create(builder, loc, type,
+                                 llvm::cast<ElementsAttr>(value));
   return nullptr;
 }
 
@@ -272,6 +270,244 @@ void mlir::tosa::printVariableOpTypeOrInitialValue(
   }
 }
 
+namespace {
+
+// parse attributes with special handling for tosa enum attributes
+template <typename EnumType>
+ParseResult parseAttrEntryWithEnumHandling(OpAsmParser &parser,
+                                           NamedAttrList &outAttrs) {
+  llvm::StringRef name;
+  if (parser.parseOptionalKeyword(&name) || parser.parseEqual())
+    return failure();
+
+  // special handling: rounding_mode accepts a *bare* RoundingMode enum
+  // keyword.
+  llvm::StringRef kw;
+  if constexpr (std::is_same_v<EnumType, tosa::RoundingMode>) {
+    if (name == "rounding_mode" &&
+        succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeRoundingMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid rounding_mode value: " << kw;
+      auto attr = RoundingModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: mode accepts a *bare* ResizeMode enum keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::ResizeMode>) {
+    if (name == "mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeResizeMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid resize mode value: " << kw;
+      auto attr = ResizeModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: nan_mode accepts a *bare* NanPropagationMode enum
+  // keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::NanPropagationMode>) {
+    if (name == "nan_mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeNanPropagationMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid nan_mode value: " << kw;
+      auto attr = NanPropagationModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+
+  // Default path: parse any normal attribute literal, including fully qualified
+  // enum keyword
+  Attribute attr;
+  return parser.parseAttribute(attr, name, outAttrs);
+}
+
+template <typename EnumType>
+ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
+  // parse operands
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> operands;
+  if (parser.parseCommaSeparatedList(
+          [&]() { return parser.parseOperand(operands.emplace_back()); }))
+    return failure();
+
+  // Parse { attr-dict } with special handling for enum bare token
+  NamedAttrList attrs;
+  if (succeeded(parser.parseOptionalLBrace()) &&
+      failed(parser.parseOptionalRBrace())) {
+    do {
+      if (parseAttrEntryWithEnumHandling<EnumType>(parser, attrs))
+        return failure();
+    } while (succeeded(parser.parseOptionalComma()));
+    if (parser.parseRBrace())
+      return failure();
+  }
+
+  FunctionType fnTy;
+  if (parser.parseColonType(fnTy))
+    return failure();
+
+  // Resolve operands and types
+  if (failed(parser.resolveOperands(operands, fnTy.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  result.addTypes(fnTy.getResult(0));
+  result.addAttributes(attrs);
+
+  return success();
+}
+
+void printNamedAttr(OpAsmPrinter &parser, const NamedAttribute namedAttr) {
+  parser << namedAttr.getName().strref() << " = ";
+  auto attr = namedAttr.getValue();
+  if (auto roundingModeAttr = dyn_cast<tosa::RoundingModeAttr>(attr)) {
+    parser << roundingModeAttr.getValue();
+  } else if (auto resizeModeAttr = dyn_cast<tosa::ResizeModeAttr>(attr)) {
+    parser << resizeModeAttr.getValue();
+  } else if (auto nanPropagationModeAttr =
+                 dyn_cast<tosa::NanPropagationModeAttr>(attr)) {
+    parser << nanPropagationModeAttr.getValue();
+  } else {
+    parser.printAttribute(attr);
+  }
+}
+
+// print with special handling for default valued NanPropagationMode attribute
+void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  NamedAttrList toPrint(op->getAttrs());
+  // remove default NanPropagate attribute
+  const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
+  for (auto attr : op->getAttrs()) {
+    if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
+      if (nanAttr.getValue() == kDefaultNanValue) {
+        // elide from toPrint
+        toPrint.erase(attr.getName());
+        break;
+      }
+    }
+  }
+
+  if (!toPrint.empty()) {
+    parser << " {";
+    llvm::interleaveComma(toPrint, parser, [&](const NamedAttribute namedAttr) {
+      printNamedAttr(parser, namedAttr);
+    });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+// print with special handling for enums: RoundingMode, ResizeMode
+void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  if (!op->getAttrs().empty()) {
+    parser << " {";
+    llvm::interleaveComma(op->getAttrs(), parser,
+                          [&](const NamedAttribute namedAttr) {
+                            printNamedAttr(parser, namedAttr);
+                          });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+} // namespace
+
+ParseResult RescaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void RescaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ApplyScaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void ApplyScaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ResizeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::ResizeMode>(parser, result);
+}
+
+void ResizeOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ArgMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ArgMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaxPool2dOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaxPool2dOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ClampOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaximumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaximumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MinimumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MinimumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMinOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMinOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -325,7 +561,7 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
                                    builder.getFloatAttr(srcElemType, val))
           : DenseElementsAttr::get(padConstEType,
                                    builder.getIntegerAttr(srcElemType, val))};
-  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
+  return tosa::ConstOp::create(builder, loc, padConstType, padConstAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -849,7 +1085,7 @@ static LogicalResult verifyPoolingOp(T op) {
              << kernelSize << ") / " << strideSize;
 
     const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
-    if (!ShapedType::isDynamic(outputSize) && calculatedOutSize != outputSize)
+    if (ShapedType::isStatic(outputSize) && calculatedOutSize != outputSize)
       return op.emitOpError("calculated output ")
              << dimName << " did not match expected: "
              << "calculated=" << calculatedOutSize
@@ -947,10 +1183,11 @@ LogicalResult tosa::ClampOp::verify() {
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
 
-    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const bool isUnsigned = inputETy.isUnsignedInteger();
+    const bool isBoolean = inputETy.isInteger(1);
     const APInt minVal = intMinValAttr.getValue();
     const APInt maxVal = intMaxValAttr.getValue();
-    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+    if ((isUnsigned || isBoolean) ? maxVal.ult(minVal) : maxVal.slt(minVal))
       return emitOpError("expected min_val <= max_val, got min_val=")
              << minValAttr << ", max_val=" << maxValAttr;
   } else {
@@ -1301,12 +1538,12 @@ LogicalResult tosa::RFFT2dOp::verify() {
     return success();
 
   const int64_t height = inputType.getDimSize(1);
-  if (!ShapedType::isDynamic(height) &&
+  if (ShapedType::isStatic(height) &&
       failed(verifyDimIsPowerOfTwo(*this, height, "height")))
     return failure();
 
   const int64_t width = inputType.getDimSize(2);
-  if (!ShapedType::isDynamic(width) &&
+  if (ShapedType::isStatic(width) &&
       failed(verifyDimIsPowerOfTwo(*this, width, "width")))
     return failure();
 
@@ -1323,7 +1560,7 @@ LogicalResult tosa::RFFT2dOp::verify() {
 
   // Output width dimension expected to be input_width / 2 + 1
   const int64_t outputWidth = outputType.getDimSize(2);
-  if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
+  if (ShapedType::isStatic(width) && ShapedType::isStatic(outputWidth) &&
       (outputWidth != (width / 2) + 1))
     return emitOpError(
                "expected output width to be equal to input_width / 2 + 1, got ")
@@ -1357,13 +1594,13 @@ LogicalResult tosa::FFT2dOp::verify() {
 
   const int64_t height = trySelectStaticDim(inputRealType.getDimSize(1),
                                             inputImagType.getDimSize(1));
-  if (!ShapedType::isDynamic(height) &&
+  if (ShapedType::isStatic(height) &&
       failed(verifyDimIsPowerOfTwo(*this, height, "height")))
     return failure();
 
   const int64_t width = trySelectStaticDim(inputRealType.getDimSize(2),
                                            inputImagType.getDimSize(2));
-  if (!ShapedType::isDynamic(width) &&
+  if (ShapedType::isStatic(width) &&
       failed(verifyDimIsPowerOfTwo(*this, width, "width")))
     return failure();
 
@@ -1965,7 +2202,7 @@ LogicalResult tosa::TableOp::verify() {
   for (auto it : llvm::enumerate(llvm::zip(inputDims, outputDims))) {
     int64_t dim = it.index();
     auto [inputDim, outputDim] = it.value();
-    if (!ShapedType::isDynamic(outputDim) && outputDim != inputDim) {
+    if (ShapedType::isStatic(outputDim) && outputDim != inputDim) {
       return emitOpError() << "dim(result, " << dim << ") = " << outputDim
                            << " doesn't match dim(input, " << dim
                            << ") = " << inputDim;
@@ -2100,7 +2337,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   int64_t numElements = inputShape.getNumElements();
   int64_t staticMul = 1;
   for (auto val : newShapeValue) {
-    if (!ShapedType::isDynamic(val)) {
+    if (ShapedType::isStatic(val)) {
       staticMul *= val;
     }
   }
@@ -2417,7 +2654,7 @@ LogicalResult TransposeOp::reifyResultShapes(
     int32_t dimInInput = transposePerms[dim];
     if (inputType.isDynamicDim(dimInInput))
       returnedDims[dim] =
-          builder.create<tensor::DimOp>(getLoc(), input, dimInInput)
+          tensor::DimOp::create(builder, getLoc(), input, dimInInput)
               .getResult();
     else
       returnedDims[dim] =
@@ -2533,16 +2770,26 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   }
 
   // Compute the output shape based on attributes: scale, offset, and border.
-  outputShape[1] =
+  const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
        scaleInt[1]) +
       1;
 
-  outputShape[2] =
+  const int64_t outputWidth =
       (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
        scaleInt[3]) +
       1;
 
+  if (outputHeight < 0 || outputWidth < 0) {
+    return emitOptionalError(
+        location,
+        "calculated output height and width must be non-negative, "
+        "got height = ",
+        outputHeight, ", width = ", outputWidth);
+  }
+
+  outputShape[1] = outputHeight;
+  outputShape[2] = outputWidth;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
@@ -2978,12 +3225,12 @@ static LogicalResult poolingInferReturnTypes(
   int64_t height = inputShape.getDimSize(1);
   int64_t width = inputShape.getDimSize(2);
 
-  if (!ShapedType::isDynamic(height)) {
+  if (ShapedType::isStatic(height)) {
     int64_t padded = height + pad[0] + pad[1] - kernel[0];
     outputShape[1] = padded / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(width)) {
+  if (ShapedType::isStatic(width)) {
     int64_t padded = width + pad[2] + pad[3] - kernel[1];
     outputShape[2] = padded / stride[1] + 1;
   }
@@ -3032,16 +3279,14 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
   llvm::ArrayRef<int64_t> padding = adaptor.getPad();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t inputSize = inputHeight + padding[0] + padding[1];
     int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t inputSize = inputWidth + padding[2] + padding[3];
     int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
@@ -3101,24 +3346,21 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
   llvm::ArrayRef<int64_t> pad = adaptor.getPad();
 
-  if (!ShapedType::isDynamic(inputDepth) &&
-      !ShapedType::isDynamic(weightDepth)) {
+  if (ShapedType::isStatic(inputDepth) && ShapedType::isStatic(weightDepth)) {
     int32_t inputSize = inputDepth + pad[0] + pad[1];
     int32_t filterSize = (weightDepth - 1) * dilation[0] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int32_t inputSize = inputHeight + pad[2] + pad[3];
     int32_t filterSize = (weightHeight - 1) * dilation[1] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
     outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int32_t inputSize = inputWidth + pad[4] + pad[5];
     int32_t filterSize = (weightWidth - 1) * dilation[2] + 1;
     int32_t unstridedResult = inputSize - filterSize + 1;
@@ -3203,8 +3445,8 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 
   // If both inputChannels and depthChannels are available we can determine
   // the output channels.
-  if (!ShapedType::isDynamic(inputChannels) &&
-      !ShapedType::isDynamic(depthChannels)) {
+  if (ShapedType::isStatic(inputChannels) &&
+      ShapedType::isStatic(depthChannels)) {
     outputShape[3] = inputChannels * depthChannels;
   }
 
@@ -3220,16 +3462,14 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> padding = adaptor.getPad();
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t inputSize = inputHeight + padding[0] + padding[1];
     int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t inputSize = inputWidth + padding[2] + padding[3];
     int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
     int64_t unstridedResult = inputSize - filterSize + 1;
@@ -3289,16 +3529,14 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   llvm::ArrayRef<int64_t> padding = adaptor.getOutPad();
   llvm::ArrayRef<int64_t> stride = adaptor.getStride();
 
-  if (!ShapedType::isDynamic(inputHeight) &&
-      !ShapedType::isDynamic(weightHeight)) {
+  if (ShapedType::isStatic(inputHeight) && ShapedType::isStatic(weightHeight)) {
     int64_t calculateSize =
         (inputHeight - 1) * stride[0] + padding[0] + padding[1] + weightHeight;
     outputShape[1] =
         ShapedType::isDynamic(outputShape[1]) ? calculateSize : outputShape[1];
   }
 
-  if (!ShapedType::isDynamic(inputWidth) &&
-      !ShapedType::isDynamic(weightWidth)) {
+  if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(weightWidth)) {
     int64_t calculateSize =
         (inputWidth - 1) * stride[1] + padding[2] + padding[3] + weightWidth;
     outputShape[2] =
@@ -3344,7 +3582,7 @@ LogicalResult TransposeConv2DOp::verify() {
 
   if (weightType) {
     const int64_t kernelHeight = weightType.getDimSize(1);
-    if (!ShapedType::isDynamic(kernelHeight)) {
+    if (ShapedType::isStatic(kernelHeight)) {
       if (failed(checkPadAgainstKernelDim(outPadTop, kernelHeight,
                                           "out_pad_top", "KH")))
         return failure();
@@ -3355,7 +3593,7 @@ LogicalResult TransposeConv2DOp::verify() {
     }
 
     const int64_t kernelWidth = weightType.getDimSize(2);
-    if (!ShapedType::isDynamic(kernelWidth)) {
+    if (ShapedType::isStatic(kernelWidth)) {
       if (failed(checkPadAgainstKernelDim(outPadLeft, kernelWidth,
                                           "out_pad_left", "KW")))
         return failure();
@@ -3378,8 +3616,8 @@ LogicalResult TransposeConv2DOp::verify() {
     const int64_t kernelHeight = weightType.getDimSize(1);
     const int64_t outputHeight = outputType.getDimSize(1);
 
-    if (!ShapedType::isDynamic(inputHeight) &&
-        !ShapedType::isDynamic(outputHeight)) {
+    if (ShapedType::isStatic(inputHeight) &&
+        ShapedType::isStatic(outputHeight)) {
       if (outputHeight !=
           (inputHeight - 1) * strideY + outPadTop + outPadBottom + kernelHeight)
         return emitOpError(
@@ -3394,8 +3632,7 @@ LogicalResult TransposeConv2DOp::verify() {
     const int64_t kernelWidth = weightType.getDimSize(2);
     const int64_t outputWidth = outputType.getDimSize(2);
 
-    if (!ShapedType::isDynamic(inputWidth) &&
-        !ShapedType::isDynamic(outputWidth)) {
+    if (ShapedType::isStatic(inputWidth) && ShapedType::isStatic(outputWidth)) {
       if (outputWidth !=
           (inputWidth - 1) * strideX + outPadLeft + outPadRight + kernelWidth)
         return emitOpError(
@@ -3419,7 +3656,8 @@ LogicalResult TransposeConv2DOp::verify() {
     return success();
 
   const int64_t outputChannels = outputType.getDimSize(3);
-  if (biasChannels != outputChannels && biasChannels != 1)
+  if (!ShapedType::isDynamic(outputChannels) &&
+      biasChannels != outputChannels && biasChannels != 1)
     return emitOpError(
                "bias channels expected to be equal to output channels (")
            << outputChannels << ") or 1, got " << biasChannels;
@@ -3647,6 +3885,22 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
+static void printInitializationList(OpAsmPrinter &parser,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  parser << prefix << '(';
+  llvm::interleaveComma(
+      llvm::zip(blocksArgs, initializers), parser,
+      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
+  parser << ")";
+}
+
 // parse and print of IfOp refer to the implementation of SCF dialect.
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create the regions for 'then'.
@@ -3654,16 +3908,64 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
 
-  auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand cond;
-  // Create a i1 tensor type for the boolean condition.
-  Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, i1Type, result.operands))
+
+  if (parser.parseOperand(cond))
     return failure();
-  // Parse optional results type list.
-  if (parser.parseOptionalArrowTypeList(result.types))
+
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+
+  // Parse the optional block arguments
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.has_value() && failed(listResult.value()))
     return failure();
+
+  // Parse a colon.
+  if (failed(parser.parseColon()))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Parse the type of the condition operand
+  Type condType;
+  if (failed(parser.parseType(condType)))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Resolve operand with provided type
+  if (failed(parser.resolveOperand(cond, condType, result.operands)))
+    return failure();
+
+  // Parse optional block arg types
+  if (listResult.has_value()) {
+    FunctionType functionType;
+
+    if (failed(parser.parseType(functionType)))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected list of types for block arguments "
+             << "followed by arrow type and list of return types";
+
+    result.addTypes(functionType.getResults());
+
+    if (functionType.getNumInputs() != operands.size()) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected as many input types as operands "
+             << "(expected " << operands.size() << " got "
+             << functionType.getNumInputs() << ")";
+    }
+
+    // Resolve input operands.
+    if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                      parser.getCurrentLocation(),
+                                      result.operands)))
+      return failure();
+  } else {
+    // Parse optional results type list.
+    if (parser.parseOptionalArrowTypeList(result.types))
+      return failure();
+  }
+
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
@@ -3681,26 +3983,28 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
-
   p << " " << getCondition();
-  if (!getResults().empty()) {
-    p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
+
+  printInitializationList(p, getThenGraph().front().getArguments(),
+                          getInputList(), " ");
+  p << " : ";
+  p << getCondition().getType();
+
+  if (!getInputList().empty()) {
+    p << " (";
+    llvm::interleaveComma(getInputList().getTypes(), p);
+    p << ")";
   }
-  p << ' ';
-  p.printRegion(getThenGraph(),
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+  p.printArrowTypeList(getResultTypes());
+  p << " ";
+
+  p.printRegion(getThenGraph());
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = getElseGraph();
   if (!elseRegion.empty()) {
     p << " else ";
-    p.printRegion(elseRegion,
-                  /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
+    p.printRegion(elseRegion);
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());
@@ -3819,16 +4123,16 @@ LogicalResult ReverseOp::verify() {
 
 LogicalResult tosa::SelectOp::verify() {
   // verify input2 and input3 have same element type as output
-  if (verifySameElementTypes(*this, /* inType = */ getInput2().getType(),
+  if (verifySameElementTypes(*this, /* inType = */ getOnTrue().getType(),
                              /* outType = */ getOutput().getType())
           .failed() ||
-      verifySameElementTypes(*this, /* inType = */ getInput3().getType(),
+      verifySameElementTypes(*this, /* inType = */ getOnFalse().getType(),
                              /* outType = */ getOutput().getType())
           .failed()) {
     return failure();
   }
   // verify input1 has element type of bool
-  auto predicateType = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  auto predicateType = llvm::dyn_cast<ShapedType>(getPred().getType());
   if (!predicateType) {
     return emitOpError("expect shaped tensor for input1, got ")
            << getInput1().getType();
@@ -3909,22 +4213,6 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
                  parser.parseOptionalAttrDictWithKeyword(result.attributes));
 }
 
-static void printInitializationList(OpAsmPrinter &parser,
-                                    Block::BlockArgListType blocksArgs,
-                                    ValueRange initializers,
-                                    StringRef prefix = "") {
-  assert(blocksArgs.size() == initializers.size() &&
-         "expected same length of arguments and initializers");
-  if (initializers.empty())
-    return;
-
-  parser << prefix << '(';
-  llvm::interleaveComma(
-      llvm::zip(blocksArgs, initializers), parser,
-      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
-  parser << ")";
-}
-
 void WhileOp::print(OpAsmPrinter &parser) {
   printInitializationList(parser, getCondGraph().front().getArguments(),
                           getInputList(), " ");
@@ -3948,12 +4236,12 @@ std::optional<Value> mlir::tosa::createZeroPointTensor(OpBuilder &builder,
   if (llvm::isa<FloatType>(srcElemType)) {
     auto zpAttr = DenseElementsAttr::get(
         zpType, builder.getFloatAttr(srcElemType, static_cast<double>(zp)));
-    return builder.create<tosa::ConstOp>(loc, zpType, zpAttr);
+    return tosa::ConstOp::create(builder, loc, zpType, zpAttr);
   }
   if (llvm::isa<IntegerType>(srcElemType)) {
     auto zpAttr =
         DenseElementsAttr::get(zpType, builder.getIntegerAttr(srcElemType, zp));
-    return builder.create<tosa::ConstOp>(loc, zpType, zpAttr);
+    return tosa::ConstOp::create(builder, loc, zpType, zpAttr);
   }
   llvm::errs() << "zero point is not allowed for unsupported data types\n";
   return std::nullopt;

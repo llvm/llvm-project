@@ -14,7 +14,9 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include <unordered_map>
 
@@ -29,11 +31,17 @@ class FileSystem;
 
 class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
 public:
-  explicit MemProfUsePass(std::string MemoryProfileFile,
-                          IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI explicit MemProfUsePass(
+      std::string MemoryProfileFile,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
+  // Annotate global variables' section prefix based on data access profile,
+  // return true if any global variable is annotated and false otherwise.
+  bool
+  annotateGlobalVariables(Module &M,
+                          const memprof::DataAccessProfData *DataAccessProf);
   std::string MemoryProfileFileName;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
@@ -42,7 +50,7 @@ namespace memprof {
 
 // Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
-DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
+LLVM_ABI DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
     Module &M, const TargetLibraryInfo &TLI,
     function_ref<bool(uint64_t)> IsPresentInProfile = [](uint64_t) {
       return true;
@@ -59,7 +67,7 @@ using LocToLocMap =
 
 // Compute an undrifting map.  The result is a map from caller GUIDs to an inner
 // map that maps source locations in the profile to those in the current IR.
-DenseMap<uint64_t, LocToLocMap>
+LLVM_ABI DenseMap<uint64_t, LocToLocMap>
 computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
                   const TargetLibraryInfo &TLI);
 

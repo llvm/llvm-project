@@ -1,4 +1,4 @@
-﻿//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
+//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1196,7 +1196,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   }
 
   if (!AssumedDivergent.empty()) {
-    OS << "CYCLES ASSSUMED DIVERGENT:\n";
+    OS << "CYCLES ASSUMED DIVERGENT:\n";
     for (const CycleT *cycle : AssumedDivergent) {
       OS << "  " << cycle->print(Context) << '\n';
     }

@@ -708,10 +708,14 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
       all_equal(Shuf->getShuffleMask()) &&
-      Shuf->getType() == Shuf->getOperand(0)->getType()) {
+      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
+                              cast<VectorType>(Shuf->getOperand(0)->getType())
+                                  ->getElementCount())) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
     // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
+    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
+        Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
     return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
   }
 
@@ -813,6 +817,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       Constant *Log2C1 = ConstantInt::get(SrcTy, C1->exactLogBase2());
       Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
       return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
+    }
+
+    if (match(Src, m_Shr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
+      // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
+      // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
+      return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
     }
 
     Constant *C;
@@ -935,12 +945,9 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Trunc.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       Attribute Attr =
           Trunc.getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(*MaxVScale) < DestWidth) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Trunc, VScale);
-        }
-      }
+      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax())
+        if (Log2_32(*MaxVScale) < DestWidth)
+          return replaceInstUsesWith(Trunc, Builder.CreateVScale(DestTy));
     }
   }
 
@@ -1124,11 +1131,10 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
   case Instruction::Shl: {
     // We can promote shl(x, cst) if we can promote x.  Since shl overwrites the
     // upper bits we can reduce BitsToClear by the shift amount.
-    const APInt *Amt;
-    if (match(I->getOperand(1), m_APInt(Amt))) {
+    uint64_t ShiftAmt;
+    if (match(I->getOperand(1), m_ConstantInt(ShiftAmt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
-      uint64_t ShiftAmt = Amt->getZExtValue();
       BitsToClear = ShiftAmt < BitsToClear ? BitsToClear - ShiftAmt : 0;
       return true;
     }
@@ -1137,11 +1143,11 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
   case Instruction::LShr: {
     // We can promote lshr(x, cst) if we can promote x.  This requires the
     // ultimate 'and' to clear out the high zero bits we're clearing out though.
-    const APInt *Amt;
-    if (match(I->getOperand(1), m_APInt(Amt))) {
+    uint64_t ShiftAmt;
+    if (match(I->getOperand(1), m_ConstantInt(ShiftAmt))) {
       if (!canEvaluateZExtd(I->getOperand(0), Ty, BitsToClear, IC, CxtI))
         return false;
-      BitsToClear += Amt->getZExtValue();
+      BitsToClear += ShiftAmt;
       if (BitsToClear > V->getType()->getScalarSizeInBits())
         BitsToClear = V->getType()->getScalarSizeInBits();
       return true;
@@ -1314,10 +1320,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
           Zext.getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
         unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-        if (Log2_32(*MaxVScale) < TypeWidth) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Zext, VScale);
-        }
+        if (Log2_32(*MaxVScale) < TypeWidth)
+          return replaceInstUsesWith(Zext, Builder.CreateVScale(DestTy));
       }
     }
   }
@@ -1604,12 +1608,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
         Sext.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       Attribute Attr =
           Sext.getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(*MaxVScale) < (SrcBitSize - 1)) {
-          Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
-          return replaceInstUsesWith(Sext, VScale);
-        }
-      }
+      if (std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax())
+        if (Log2_32(*MaxVScale) < (SrcBitSize - 1))
+          return replaceInstUsesWith(Sext, Builder.CreateVScale(DestTy));
     }
   }
 
@@ -1925,7 +1926,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
           CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
-      NewCI->copyFastMathFlags(II);
+      // A normal value may be converted to an infinity. It means that we cannot
+      // propagate ninf from the intrinsic. So we propagate FMF from fptrunc.
+      NewCI->copyFastMathFlags(&FPT);
       return NewCI;
     }
     }
@@ -2067,6 +2070,27 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
         DL.getIntPtrType(CI.getContext(), AS));
     Value *P = Builder.CreateZExtOrTrunc(CI.getOperand(0), Ty);
     return new IntToPtrInst(P, CI.getType());
+  }
+
+  // Replace (inttoptr (add (ptrtoint %Base), %Offset)) with
+  // (getelementptr i8, %Base, %Offset) if the pointer is only used as integer
+  // value.
+  Value *Base;
+  Value *Offset;
+  auto UsesPointerAsInt = [](User *U) {
+    if (isa<ICmpInst, PtrToIntInst>(U))
+      return true;
+    if (auto *P = dyn_cast<PHINode>(U))
+      return P->hasOneUse() && isa<ICmpInst, PtrToIntInst>(*P->user_begin());
+    return false;
+  };
+  if (match(CI.getOperand(0),
+            m_OneUse(m_c_Add(m_PtrToIntSameSize(DL, m_Value(Base)),
+                             m_Value(Offset)))) &&
+      CI.getType()->getPointerAddressSpace() ==
+          Base->getType()->getPointerAddressSpace() &&
+      all_of(CI.users(), UsesPointerAsInt)) {
+    return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
   }
 
   if (Instruction *I = commonCastTransforms(CI))
