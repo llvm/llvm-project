@@ -231,12 +231,15 @@ public:
 
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const {
     switch (K) {
-#define CASE(ID) case ID: OS << #ID; break;
-    CASE(Allocated)
-    CASE(AllocatedOfSizeZero)
-    CASE(Released)
-    CASE(Relinquished)
-    CASE(Escaped)
+#define CASE(ID)                                                               \
+  case ID:                                                                     \
+    OS << #ID;                                                                 \
+    break;
+      CASE(Allocated)
+      CASE(AllocatedOfSizeZero)
+      CASE(Released)
+      CASE(Relinquished)
+      CASE(Escaped)
     }
   }
 
@@ -414,7 +417,7 @@ public:
   // This last frontend is associated with a single bug type which is not used
   // elsewhere and has a different bug category, so it's declared separately.
   CheckerFrontendWithBugType TaintedAllocChecker{"Tainted Memory Allocation",
-                                                 categories::TaintedData};
+                                                categories::TaintedData};
 
   using LeakInfo = std::pair<const ExplodedNode *, const MemRegion *>;
 
@@ -430,7 +433,7 @@ public:
   ProgramStateRef evalAssume(ProgramStateRef state, SVal Cond,
                             bool Assumption) const;
   void checkLocation(SVal l, bool isLoad, const Stmt *S,
-                     CheckerContext &C) const;
+                    CheckerContext &C) const;
 
   ProgramStateRef checkPointerEscape(ProgramStateRef State,
                                     const InvalidatedSymbols &Escaped,
@@ -3012,7 +3015,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
 }
 
 void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
-                                     CheckerContext &C) const
+                                     CheckerContext &C) const 
 {
   ProgramStateRef state = C.getState();
   RegionStateTy OldRS = state->get<RegionState>();
@@ -3073,6 +3076,43 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
   if (const auto *PostFN = PostFnMap.lookup(Call)) {
     (*PostFN)(this, C.getState(), Call, C);
     return;
+  }
+
+  ProgramStateRef State = C.getState();
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
+    // Ensure we are constructing a concrete object/subobject.
+    if (const MemRegion *ObjUnderConstr = Ctor->getCXXThisVal().getAsRegion()) {
+      ProgramStateRef NewState = State;
+
+      for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+        SVal ArgV = Call.getArgSVal(I);
+
+        SymbolRef Sym = ArgV.getAsSymbol();
+        if (!Sym)
+          continue;
+
+        // Look up current ref-state for this symbol in the RegionState map.
+        if (const RefState *RS = State->get<RegionState>(Sym)) {
+          // Only re-label symbols that are still owned allocations from C++
+          // new/new[].
+          if (RS->isAllocated() &&
+              (RS->getAllocationFamily().Kind == AF_CXXNew ||
+               RS->getAllocationFamily().Kind == AF_CXXNewArray)) {
+
+            // Mark as Relinquished at the constructor site: ownership moves
+            // into the constructed subobject. Pass the ctor's origin expr as
+            // the statement associated with this transition.
+            NewState = NewState->set<RegionState>(
+                Sym, RefState::getRelinquished(RS->getAllocationFamily(),
+                                               Ctor->getOriginExpr()));
+          }
+        }
+      }
+
+      if (NewState != State)
+        C.addTransition(NewState);
+    }
   }
 }
 
@@ -3358,9 +3398,8 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
 }
 
 bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
-                                              const CallEvent *Call,
-                                              ProgramStateRef State,
-                                              SymbolRef &EscapingSymbol) const {
+    const CallEvent *Call, ProgramStateRef State,
+    SymbolRef &EscapingSymbol) const {
   assert(Call);
   EscapingSymbol = nullptr;
 
@@ -3532,7 +3571,7 @@ ProgramStateRef MallocChecker::checkPointerEscape(ProgramStateRef State,
 ProgramStateRef MallocChecker::checkConstPointerEscape(ProgramStateRef State,
                                               const InvalidatedSymbols &Escaped,
                                               const CallEvent *Call,
-                                              PointerEscapeKind Kind) const {
+                                              PointerEscapeKind Kind) const { 
   // If a const pointer escapes, it may not be freed(), but it could be deleted.
   return checkPointerEscapeAux(State, Escaped, Call, Kind,
                                /*IsConstPointerEscape*/ true);
@@ -3724,61 +3763,61 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         }
         Msg = OS.str();
         break;
-        }
-        case AF_None:
-          assert(false && "Unhandled allocation family!");
-          return nullptr;
-        }
+      }
+      case AF_None:
+        assert(false && "Unhandled allocation family!");
+        return nullptr;
+      }
 
-        // Record the stack frame that is _responsible_ for this memory release
-        // event. This will be used by the false positive suppression heuristics
-        // that recognize the release points of reference-counted objects.
-        //
-        // Usually (e.g. in C) we say that the _responsible_ stack frame is the
-        // current innermost stack frame:
-        ReleaseFunctionLC = CurrentLC->getStackFrame();
-        // ...but if the stack contains a destructor call, then we say that the
-        // outermost destructor stack frame is the _responsible_ one:
-        for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
-            if (isReferenceCountingPointerDestructor(DD)) {
-              // This immediately looks like a reference-counting destructor.
-              // We're bad at guessing the original reference count of the
-              // object, so suppress the report for now.
-              BR.markInvalid(getTag(), DD);
+      // Record the stack frame that is _responsible_ for this memory release
+      // event. This will be used by the false positive suppression heuristics
+      // that recognize the release points of reference-counted objects.
+      //
+      // Usually (e.g. in C) we say that the _responsible_ stack frame is the
+      // current innermost stack frame:
+      ReleaseFunctionLC = CurrentLC->getStackFrame();
+      // ...but if the stack contains a destructor call, then we say that the
+      // outermost destructor stack frame is the _responsible_ one:
+      for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
+        if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
+          if (isReferenceCountingPointerDestructor(DD)) {
+            // This immediately looks like a reference-counting destructor.
+            // We're bad at guessing the original reference count of the
+            // object, so suppress the report for now.
+            BR.markInvalid(getTag(), DD);
 
-              // After report is considered invalid there is no need to proceed
-              // futher.
-              return nullptr;
-            }
-
-            // Switch suspection to outer destructor to catch patterns like:
-            // (note that class name is distorted to bypass
-            // isReferenceCountingPointerDestructor() logic)
-            //
-            // SmartPointr::~SmartPointr() {
-            //  if (refcount.fetch_sub(1) == 1)
-            //    release_resources();
-            // }
-            // void SmartPointr::release_resources() {
-            //   free(buffer);
-            // }
-            //
-            // This way ReleaseFunctionLC will point to outermost destructor and
-            // it would be possible to catch wider range of FP.
-            //
-            // NOTE: it would be great to support smth like that in C, since
-            // currently patterns like following won't be supressed:
-            //
-            // void doFree(struct Data *data) { free(data); }
-            // void putData(struct Data *data)
-            // {
-            //   if (refPut(data))
-            //     doFree(data);
-            // }
-            ReleaseFunctionLC = LC->getStackFrame();
+            // After report is considered invalid there is no need to proceed
+            // futher.
+            return nullptr;
           }
+
+          // Switch suspection to outer destructor to catch patterns like:
+          // (note that class name is distorted to bypass
+          // isReferenceCountingPointerDestructor() logic)
+          //
+          // SmartPointr::~SmartPointr() {
+          //  if (refcount.fetch_sub(1) == 1)
+          //    release_resources();
+          // }
+          // void SmartPointr::release_resources() {
+          //   free(buffer);
+          // }
+          //
+          // This way ReleaseFunctionLC will point to outermost destructor and
+          // it would be possible to catch wider range of FP.
+          //
+          // NOTE: it would be great to support smth like that in C, since
+          // currently patterns like following won't be supressed:
+          //
+          // void doFree(struct Data *data) { free(data); }
+          // void putData(struct Data *data)
+          // {
+          //   if (refPut(data))
+          //     doFree(data);
+          // }
+          ReleaseFunctionLC = LC->getStackFrame();
         }
+      }
 
     } else if (isRelinquished(RSCurr, RSPrev, S)) {
       Msg = "Memory ownership is transferred";
