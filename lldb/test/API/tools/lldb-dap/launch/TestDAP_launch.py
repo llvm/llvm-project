@@ -607,9 +607,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             # Use initCommands to check if .lldbinit was sourced
             initCommands = ["settings show stop-disassembly-display"]
 
-            # Initialize the DAP session (should NOT source .lldbinit due to --no-lldbinit)
-            self.dap_server.request_initialize()
-
             # Launch with initCommands to check the setting
             self.launch(program, initCommands=initCommands, stopOnEntry=True)
 
