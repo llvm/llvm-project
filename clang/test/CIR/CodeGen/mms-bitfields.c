@@ -24,6 +24,16 @@ struct s2 {
 // LLVM-DAG: %struct.s2 = type { i32, i8, i32 }
 // OGCG-DAG: %struct.s2 = type { i32, i8, i32 }
 
+struct s3 {
+    int  a : 18;
+    int    :  0;
+    int  c : 14;
+} zero_bit;
+
+// CIR-DAG:  !rec_s3 = !cir.record<struct "s3" {!s32i, !s32i}>
+// LLVM-DAG: %struct.s3 = type { i32, i32 }
+// OGCG-DAG: %struct.s3 = type { i32, i32 }
+
 #pragma pack (push,1)
 
 struct Inner {
