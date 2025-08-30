@@ -778,6 +778,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   unsigned Spaces = Current.SpacesRequiredBefore + ExtraSpaces;
 
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave &&
+      State.Line->InPPDirective && Previous.is(tok::hash) &&
+      &Previous == State.Line->First) {
+    Spaces += Current.OriginalColumn - Previous.OriginalColumn - 1;
+  }
+
   // Indent preprocessor directives after the hash if required.
   int PPColumnCorrection = 0;
   if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&

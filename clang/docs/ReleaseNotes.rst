@@ -426,6 +426,7 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------
