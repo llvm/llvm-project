@@ -1129,7 +1129,7 @@ for your target.  It has the following strengths:
 
     def STWU  : DForm_1<37, (outs ptr_rc:$ea_res), (ins GPRC:$rS, memri:$dst),
                     "stwu $rS, $dst", LdStStoreUpd, []>,
-                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
+                    RegConstraint<"$dst.reg = $ea_res">;
 
     def : Pat<(pre_store GPRC:$rS, ptr_rc:$ptrreg, iaddroff:$ptroff),
               (STWU GPRC:$rS, iaddroff:$ptroff, ptr_rc:$ptrreg)>;
