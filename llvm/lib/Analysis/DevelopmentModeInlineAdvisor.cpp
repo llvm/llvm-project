@@ -97,7 +97,8 @@ struct InlineEvent {
 /// Collect data we may use for training a model.
 class TrainingLogger final {
 public:
-  TrainingLogger(StringRef LogFileName, const ModelUnderTrainingRunner *MUTR);
+  TrainingLogger(StringRef LogFileName, const ModelUnderTrainingRunner *MUTR,
+                 const std::vector<TensorSpec> &FeatureMap);
 
   /// Log one inlining event.
   void logInlineEvent(const InlineEvent &Event,
@@ -106,6 +107,8 @@ public:
 private:
   StringRef LogFileName;
   const ModelUnderTrainingRunner *const MUTR;
+  const std::vector<TensorSpec> &FeatureMap;
+
   std::unique_ptr<Logger> L;
   BitVector Effects;
   /// Set these 2 clearly OOB, to make sure we set them later.
@@ -142,9 +145,10 @@ class DevelopmentModeMLInlineAdvisor : public MLInlineAdvisor {
 public:
   DevelopmentModeMLInlineAdvisor(
       Module &M, ModuleAnalysisManager &MAM,
-      std::unique_ptr<MLModelRunner> ModelRunner,
-      std::function<bool(CallBase &)> GetDefaultAdvice,
-      std::unique_ptr<TrainingLogger> Logger);
+      std::function<
+          std::unique_ptr<MLModelRunner>(const std::vector<TensorSpec> &)>
+          GetModelRunner,
+      std::function<bool(CallBase &)> GetDefaultAdvice);
 
   size_t getTotalSizeEstimate();
 
@@ -258,9 +262,13 @@ static const std::vector<TensorSpec> TrainingOnlyFeatures{
     TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
     TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
 
-static const std::vector<TensorSpec> getInputFeatures() {
+// add TFFeedPrefix to the names and also add the "TrainingOnlyFeatures" which
+// the model runner needs to see present. We don't set them ourselves or
+// interact with them.
+static const std::vector<TensorSpec>
+convertInputFeatures(const std::vector<TensorSpec> &OriginalFeatures) {
   std::vector<TensorSpec> InputSpecs;
-  for (const auto &Feature : getFeatureMap())
+  for (const auto &Feature : OriginalFeatures)
     InputSpecs.push_back(TensorSpec(TFFeedPrefix + Feature.name(), Feature));
   append_range(InputSpecs, TrainingOnlyFeatures);
   return InputSpecs;
@@ -269,8 +277,9 @@ static const std::vector<TensorSpec> getInputFeatures() {
 } // namespace
 
 TrainingLogger::TrainingLogger(StringRef LogFileName,
-                               const ModelUnderTrainingRunner *MUTR)
-    : LogFileName(LogFileName), MUTR(MUTR) {
+                               const ModelUnderTrainingRunner *MUTR,
+                               const std::vector<TensorSpec> &FeatureMap)
+    : LogFileName(LogFileName), MUTR(MUTR), FeatureMap(FeatureMap) {
   // The first output is the inlining decision.
   std::vector<TensorSpec> FT(getFeatureMap().begin(), getFeatureMap().end());
 
@@ -327,15 +336,19 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
 
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
-    std::unique_ptr<MLModelRunner> ModelRunner,
-    std::function<bool(CallBase &)> GetDefaultAdvice,
-    std::unique_ptr<TrainingLogger> Logger)
-    : MLInlineAdvisor(M, MAM, std::move(ModelRunner), GetDefaultAdvice),
+    std::function<
+        std::unique_ptr<MLModelRunner>(const std::vector<TensorSpec> &)>
+        GetModelRunner,
+    std::function<bool(CallBase &)> GetDefaultAdvice)
+    : MLInlineAdvisor(M, MAM, GetModelRunner, GetDefaultAdvice),
       IsDoingInference(isa<ModelUnderTrainingRunner>(getModelRunner())),
-      Logger(std::move(Logger)),
       InitialNativeSize(isLogging() ? getTotalSizeEstimate() : 0),
       CurrentNativeSize(InitialNativeSize) {
   // We cannot have the case of neither inference nor logging.
+  if (!TrainingLog.empty())
+    Logger = std::make_unique<TrainingLogger>(
+        TrainingLog, dyn_cast<ModelUnderTrainingRunner>(ModelRunner.get()),
+        getFeatureMap());
   assert(IsDoingInference || isLogging());
 }
 
@@ -401,21 +414,22 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::function<bool(CallBase &)> GetDefaultAdvice) {
   auto &Ctx = M.getContext();
-  std::unique_ptr<MLModelRunner> Runner;
-  if (TFModelUnderTrainingPath.empty())
-    Runner.reset(new NoInferenceModelRunner(Ctx, getInputFeatures()));
-  else
-    Runner = ModelUnderTrainingRunner::createAndEnsureValid(
-        Ctx, TFModelUnderTrainingPath, DecisionName, getInputFeatures(),
-        TFOutputSpecOverride);
-  if (!Runner)
-    return nullptr;
-  std::unique_ptr<TrainingLogger> Logger;
-  if (!TrainingLog.empty())
-    Logger = std::make_unique<TrainingLogger>(
-        TrainingLog, dyn_cast<ModelUnderTrainingRunner>(Runner.get()));
-
-  return std::make_unique<DevelopmentModeMLInlineAdvisor>(
-      M, MAM, std::move(Runner), GetDefaultAdvice, std::move(Logger));
+  auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
+      -> std::unique_ptr<MLModelRunner> {
+    std::unique_ptr<MLModelRunner> Runner;
+    const std::vector<TensorSpec> ConvertedFeatures =
+        convertInputFeatures(InputFeatures);
+    if (TFModelUnderTrainingPath.empty())
+      Runner.reset(new NoInferenceModelRunner(Ctx, ConvertedFeatures));
+    else
+      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+          Ctx, TFModelUnderTrainingPath, DecisionName, ConvertedFeatures,
+          TFOutputSpecOverride);
+    if (!Runner)
+      return nullptr;
+    return Runner;
+  };
+  return std::make_unique<DevelopmentModeMLInlineAdvisor>(M, MAM, RunnerFactory,
+                                                          GetDefaultAdvice);
 }
 #endif // defined(LLVM_HAVE_TFLITE)
