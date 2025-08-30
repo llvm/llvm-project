@@ -432,17 +432,15 @@ public:
 };
 
 template <typename ValueTy, bool IsConst> class StringMapIterBase {
-  using EntryTy = std::conditional_t<IsConst, const StringMapEntry<ValueTy>,
-                                     StringMapEntry<ValueTy>>;
-
   StringMapEntryBase **Ptr = nullptr;
 
 public:
   using iterator_category = std::forward_iterator_tag;
-  using value_type = EntryTy;
+  using value_type = StringMapEntry<ValueTy>;
   using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = value_type &;
+  using pointer = std::conditional_t<IsConst, const value_type *, value_type *>;
+  using reference =
+      std::conditional_t<IsConst, const value_type &, value_type &>;
 
   StringMapIterBase() = default;
 
@@ -453,8 +451,8 @@ public:
       AdvancePastEmptyBuckets();
   }
 
-  reference operator*() const { return *static_cast<EntryTy *>(*Ptr); }
-  pointer operator->() const { return &operator*(); }
+  reference operator*() const { return *static_cast<value_type *>(*Ptr); }
+  pointer operator->() const { return static_cast<value_type *>(*Ptr); }
 
   StringMapIterBase &operator++() { // Preincrement
     ++Ptr;
