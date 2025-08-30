@@ -266,6 +266,17 @@ SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
   return Data;
 }
 
+OffloadBinary::OffloadingImage OffloadBinary::getOffloadingImage() const {
+  OffloadingImage OI;
+  OI.TheImageKind = getImageKind();
+  OI.TheOffloadKind = getOffloadKind();
+  OI.Flags = getFlags();
+  OI.StringData = StringData;
+  OI.Image = MemoryBuffer::getMemBuffer(
+      MemoryBufferRef(getImage(), /*Identifier*/ ""));
+  return OI;
+}
+
 Error object::extractOffloadBinaries(MemoryBufferRef Buffer,
                                      SmallVectorImpl<OffloadFile> &Binaries) {
   file_magic Type = identify_magic(Buffer.getBuffer());
