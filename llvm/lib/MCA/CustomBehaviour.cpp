@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MCA/CustomBehaviour.h"
+#include "llvm/MCA/Instruction.h"
 
 namespace llvm {
 namespace mca {
@@ -40,6 +41,29 @@ std::vector<std::unique_ptr<View>>
 CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
                              llvm::ArrayRef<llvm::MCInst> Insts) {
   return std::vector<std::unique_ptr<View>>();
+}
+
+static const llvm::StringRef CustomInstrumentName = "CUSTOMIZE";
+
+bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
+  return EnableInstruments && Type == CustomInstrumentName;
+}
+
+bool InstrumentManager::canCustomize(
+    const llvm::SmallVector<Instrument *> &IVec) const {
+  for (const auto I : IVec) {
+    if (I->canCustomize())
+      return true;
+  }
+  return false;
+}
+
+void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
+                                  InstrDesc &ID) const {
+  for (const auto I : IVec) {
+    if (I->canCustomize())
+      I->customize(ID);
+  }
 }
 
 UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,

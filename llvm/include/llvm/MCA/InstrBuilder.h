@@ -25,6 +25,7 @@
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include <functional>
 
 namespace llvm {
 namespace mca {
@@ -77,6 +78,10 @@ class InstrBuilder {
   // value InstrDesc
   DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
+
+  // These descriptors are customized for particular instructions and cannot
+  // be reused
+  SmallVector<std::unique_ptr<const InstrDesc>> CustomDescriptors;
 
   bool FirstCallInst;
   bool FirstReturnInst;
