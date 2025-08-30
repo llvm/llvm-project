@@ -2803,10 +2803,10 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
   assert(RedTy->isIntegerTy() &&
          "VPExpressionRecipe only supports integer types currently.");
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(
+      cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
-    unsigned Opcode = RecurrenceDescriptor::getOpcode(
-        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     return Ctx.TTI.getExtendedReductionCost(
         Opcode,
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
@@ -2814,13 +2814,14 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
         RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
   }
   case ExpressionTypes::MulAccReduction:
-    return Ctx.TTI.getMulAccReductionCost(false, RedTy, SrcVecTy, Ctx.CostKind);
+    return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
+                                          Ctx.CostKind);
 
   case ExpressionTypes::ExtMulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
-        RedTy, SrcVecTy, Ctx.CostKind);
+        Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
