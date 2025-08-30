@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++23, has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// UNSUPPORTED: no-localization
+// ^ (This doesn't work; using macro check below)
 
 /*
   Hardened requirements for the `current` call with given `skip` and `max_depth` amounts:
@@ -19,9 +21,12 @@
                                   const allocator_type& alloc = allocator_type()) noexcept;
 */
 
-#include <stacktrace>
+#include <__config_site>
+#if _LIBCPP_HAS_LOCALIZATION
 
-#include "check_assertion.h"
+#  include <stacktrace>
+
+#  include "check_assertion.h"
 
 int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
@@ -29,3 +34,7 @@ int main(int, char**) {
 
   return 0;
 }
+
+#else
+int main() { return 0; }
+#endif // _LIBCPP_HAS_LOCALIZATION

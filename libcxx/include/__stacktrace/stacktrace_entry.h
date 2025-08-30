@@ -23,14 +23,16 @@ _LIBCPP_PUSH_MACROS
 
 #  include <__assert>
 #  include <__functional/function.h>
-#  include <__fwd/format.h>
-#  include <__fwd/ostream.h>
-#  include <__type_traits/is_base_of.h>
 #  include <cstddef>
 #  include <cstdint>
 #  include <memory>
 #  include <optional>
 #  include <string>
+
+#  if _LIBCPP_HAS_LOCALIZATION
+#    include <__fwd/format.h>
+#    include <__fwd/ostream.h>
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -114,8 +116,11 @@ struct entry_base {
   _LIBCPP_HIDE_FROM_ABI str& assign_desc(str&& __s) { return *(__desc_ = std::move(__s)); }
   _LIBCPP_HIDE_FROM_ABI str& assign_file(str&& __s) { return *(__file_ = std::move(__s)); }
 
+#  if _LIBCPP_HAS_LOCALIZATION
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
+#  endif // _LIBCPP_HAS_LOCALIZATION
+
   _LIBCPP_EXPORTED_FROM_ABI uintptr_t adjusted_addr() const;
 
   _LIBCPP_HIDE_FROM_ABI constexpr static entry_base* of(auto& __s) { return static_cast<entry_base*>(__s); }
@@ -180,13 +185,14 @@ public:
 
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string to_string(const stacktrace_entry& __entry);
 
+#  if _LIBCPP_HAS_LOCALIZATION
 _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry) {
   return __entry.__base_.write_to(__os);
 }
-
 _LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry) {
   return __entry.__base_.to_string();
 }
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.5)
 // Formatting support [stacktrace.format]:

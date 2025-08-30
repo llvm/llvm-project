@@ -9,16 +9,21 @@
 #include <__config>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
 #include <string>
+
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <iomanip>
+#  include <iostream>
+#  include <sstream>
+#endif //_LIBCPP_HAS_LOCALIZATION
 
 #include "stacktrace/images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
+
+#if _LIBCPP_HAS_LOCALIZATION
 
 ostream& entry_base::write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
@@ -66,6 +71,8 @@ string base::to_string() const {
   write_to(__ss);
   return __ss.str();
 }
+
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 uintptr_t entry_base::adjusted_addr() const {
   auto sub = __image_ ? __image_->slide_ : 0;

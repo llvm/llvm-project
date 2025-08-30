@@ -13,7 +13,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <stacktrace>
 
@@ -32,38 +31,32 @@ unsigned custom_dealloc = 0;
 void* operator new(size_t sz) {
   ++new_count;
   auto* ret = malloc(sz);
-  std::cerr << "op new: " << new_count << ": new:   " << ret << " size " << sz << '\n';
   return ret;
 }
 
 void* operator new[](size_t sz) {
   ++new_count;
   auto* ret = malloc(sz);
-  std::cerr << "op new: " << new_count << ": new[]: " << ret << " size " << sz << '\n';
   return ret;
 }
 
 void operator delete(void* ptr) noexcept {
   ++del_count;
-  std::cerr << "op del: " << del_count << ": del:   " << ptr << '\n';
   free(ptr);
 }
 
-void operator delete(void* ptr, size_t sz) noexcept {
+void operator delete(void* ptr, size_t) noexcept {
   ++del_count;
-  std::cerr << "op del: " << del_count << ": del:   " << ptr << " size " << sz << '\n';
   free(ptr);
 }
 
 void operator delete[](void* ptr) noexcept {
   ++del_count;
-  std::cerr << "op del: " << del_count << ": del[]: " << ptr << '\n';
   free(ptr);
 }
 
-void operator delete[](void* ptr, size_t sz) noexcept {
+void operator delete[](void* ptr, size_t) noexcept {
   ++del_count;
-  std::cerr << "op del: " << del_count << ": del[]: " << ptr << " size " << sz << '\n';
   free(ptr);
 }
 
@@ -78,28 +71,24 @@ struct test_alloc : std::allocator<T> {
 
   T* allocate(size_t n) {
     ++custom_alloc;
-    std::cerr << "allocator: allocate(" << n << ")\n";
     auto* ret = base::allocate(n);
     return ret;
   }
 
   std::allocation_result<T*, size_t> allocate_at_least(size_t n) {
     ++custom_alloc;
-    std::cerr << "allocator: atleast(" << n << ")\n";
     auto ret = base::allocate_at_least(n);
     return ret;
   }
 
   void deallocate(T* p, size_t n) {
     ++custom_dealloc;
-    std::cerr << "allocator: deallocate(" << (void*)p << ", " << n << ")\n";
     base::deallocate(p, n);
   }
 };
 
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
-  std::cerr << "initial call to `current`\n";
   (void)std::stacktrace::current();
 
   // Clear these counters in case anything was created/deleted prior to `main`,
@@ -109,7 +98,6 @@ int main(int, char**) {
 
   {
     using A = test_alloc<std::stacktrace_entry>;
-    std::cerr << "calling `current` with allocator\n";
     A alloc;
     auto st = std::basic_stacktrace<A>::current(alloc);
     // Ensure allocator was called at some point

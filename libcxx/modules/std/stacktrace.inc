@@ -22,9 +22,10 @@ export namespace std {
   // [stacktrace.basic.nonmem], non-member functions
   using std::swap;
 
+#  if _LIBCPP_HAS_LOCALIZATION
   using std::to_string;
-
   using std::operator<<;
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
   namespace pmr {
     using std::pmr::stacktrace;

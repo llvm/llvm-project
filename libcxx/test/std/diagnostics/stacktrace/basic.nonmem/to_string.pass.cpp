@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// UNSUPPORTED: no-localization
+// ^ (This doesn't work; using macro check below)
 
 /*
   (19.6.4.6) Non-member functions
@@ -17,9 +19,12 @@
     string to_string(const basic_stacktrace<Allocator>& st);
 */
 
-#include <cassert>
-#include <iostream>
-#include <stacktrace>
+#include <__config_site>
+#if _LIBCPP_HAS_LOCALIZATION
+
+#  include <cassert>
+#  include <iostream>
+#  include <stacktrace>
 
 int main(int, char**) {
   auto a    = std::stacktrace::current();
@@ -34,3 +39,7 @@ int main(int, char**) {
 
   return 0;
 }
+
+#else
+int main() { return 0; }
+#endif // _LIBCPP_HAS_LOCALIZATION

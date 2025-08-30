@@ -25,8 +25,6 @@ _LIBCPP_PUSH_MACROS
 #  include <__cstddef/size_t.h>
 #  include <__functional/function.h>
 #  include <__functional/hash.h>
-#  include <__fwd/format.h>
-#  include <__fwd/ostream.h>
 #  include <__iterator/iterator.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__memory/allocator_traits.h>
@@ -38,6 +36,11 @@ _LIBCPP_PUSH_MACROS
 #  include <cstdint>
 #  include <string>
 #  include <utility>
+
+#  if _LIBCPP_HAS_LOCALIZATION
+#    include <__fwd/format.h>
+#    include <__fwd/ostream.h>
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 #  include <__stacktrace/stacktrace_entry.h>
 
@@ -308,15 +311,16 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
   __a.swap(__b);
 }
 
+#  if _LIBCPP_HAS_LOCALIZATION
 template <class _Allocator>
 _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::base const&)__stacktrace).write_to(__os);
 }
-
 template <class _Allocator>
 _LIBCPP_EXPORTED_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::base const&)__stacktrace).to_string();
 }
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.6)
 // Hash support [stacktrace.basic.hash]

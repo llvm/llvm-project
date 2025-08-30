@@ -10,13 +10,11 @@
 // ADDITIONAL_COMPILE_FLAGS: -O3 -g
 
 #include <cassert>
-#include <iostream>
 #include <stacktrace>
 
 int main(int, char**) {
   // uint32_t line_number = __LINE__ + 1; // record where `current` is being called:
   auto trace = std::stacktrace::current();
-  std::cout << trace << '\n';
   // First entry of this should be `main`.
   auto entry = trace.at(0);
   assert(entry);

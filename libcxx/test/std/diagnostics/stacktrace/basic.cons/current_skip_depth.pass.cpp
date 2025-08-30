@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// UNSUPPORTED: no-localization
+// ^ (This doesn't work; using macro check below)
 
 /*
   (19.6.4.2)
@@ -16,9 +18,12 @@
                                   const allocator_type& alloc = allocator_type()) noexcept;
 */
 
-#include <cassert>
-#include <iostream>
-#include <stacktrace>
+#include <__config_site>
+#if _LIBCPP_HAS_LOCALIZATION
+
+#  include <cassert>
+#  include <iostream>
+#  include <stacktrace>
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
   // current stack is: [this function, main, (possibly something else, such as libc _start)]
@@ -47,3 +52,7 @@ int main(int, char**) {
   test_current_with_skip_depth();
   return 0;
 }
+
+#else
+int main() { return 0; }
+#endif // _LIBCPP_HAS_LOCALIZATION

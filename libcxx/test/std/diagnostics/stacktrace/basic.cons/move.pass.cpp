@@ -21,6 +21,7 @@
 
 #include <cassert>
 #include <stacktrace>
+#include <utility>
 
 #include "../test_allocs.h"
 

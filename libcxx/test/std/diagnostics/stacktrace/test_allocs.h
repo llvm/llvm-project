@@ -13,6 +13,7 @@ Allocator class useful for testing various propagation, always-equal scenarios.
 #ifndef _LIBCPP_STACKTRACE_TEST_ALLOCS_H
 #define _LIBCPP_STACKTRACE_TEST_ALLOCS_H
 
+#include <cstddef>
 #include <memory>
 #include <type_traits>
 
