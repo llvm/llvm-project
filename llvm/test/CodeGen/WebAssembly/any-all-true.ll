@@ -23,7 +23,7 @@ define zeroext i1 @manual_i8x16_all_true(<4 x i32> %a) {
 start:
   %_3 = bitcast <4 x i32> %a to <16 x i8>
   %0 = tail call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %_3)
-  %_0 = icmp eq i8 %0, -1
+  %_0 = icmp ne i8 %0, 0
   ret i1 %_0
 }
 
@@ -37,7 +37,7 @@ define zeroext i1 @manual_i16x8_all_true(<4 x i32> %a) {
 start:
   %_3 = bitcast <4 x i32> %a to <8 x i16>
   %0 = tail call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %_3)
-  %_0 = icmp eq i16 %0, -1
+  %_0 = icmp ne i16 %0, 0
   ret i1 %_0
 }
 
@@ -50,7 +50,7 @@ define zeroext i1 @manual_i32x4_all_true(<4 x i32> %a) {
 ; CHECK-NEXT:    # fallthrough-return
 start:
   %0 = tail call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
-  %_0 = icmp eq i32 %0, -1
+  %_0 = icmp ne i32 %0, 0
   ret i1 %_0
 }
 
@@ -63,7 +63,7 @@ define zeroext i1 @manual_i64x2_all_true(<2 x i64> %a) {
 ; CHECK-NEXT:    # fallthrough-return
 start:
   %0 = tail call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %a)
-  %_0 = icmp eq i64 %0, -1
+  %_0 = icmp ne i64 %0, 0
   ret i1 %_0
 }
 
@@ -111,7 +111,7 @@ start:
 }
 
 
-define zeroext i1 @manual_i64x2_any_true(<2 x i64> %a) {
+define i1 @manual_i64x2_any_true(<2 x i64> %a) {
 ; CHECK-LABEL: manual_i64x2_any_true:
 ; CHECK:         .functype manual_i64x2_any_true (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0: # %start

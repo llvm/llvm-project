@@ -627,7 +627,6 @@ bool WebAssemblyTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   default:
     return true;
   case Intrinsic::vector_reduce_and:
-    return false;
   case Intrinsic::vector_reduce_or:
     return false;
   }

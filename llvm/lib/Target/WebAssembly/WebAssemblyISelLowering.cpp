@@ -244,11 +244,19 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                   MVT::v2f64})
+                   MVT::v2f64}) {
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
 
-    if (Subtarget->hasFP16())
+      setOperationAction(ISD::VECREDUCE_OR, T, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, T, Custom);
+    }
+
+    if (Subtarget->hasFP16()) {
       setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8f16, Custom);
+
+      setOperationAction(ISD::VECREDUCE_OR, MVT::v8f16, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, MVT::v8f16, Custom);
+    }
 
     // Support splatting
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -291,16 +299,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::CTPOP, MVT::v16i8, Legal);
     setOperationAction(ISD::CTLZ, MVT::v16i8, Expand);
     setOperationAction(ISD::CTTZ, MVT::v16i8, Expand);
-
-    setOperationAction(ISD::VECREDUCE_AND, MVT::v16i8, Legal);
-    setOperationAction(ISD::VECREDUCE_AND, MVT::v8i16, Legal);
-    setOperationAction(ISD::VECREDUCE_AND, MVT::v4i32, Legal);
-    setOperationAction(ISD::VECREDUCE_AND, MVT::v2i64, Legal);
-
-    setOperationAction(ISD::VECREDUCE_OR, MVT::v16i8, Legal);
-    setOperationAction(ISD::VECREDUCE_OR, MVT::v8i16, Legal);
-    setOperationAction(ISD::VECREDUCE_OR, MVT::v4i32, Legal);
-    setOperationAction(ISD::VECREDUCE_OR, MVT::v2i64, Legal);
 
     // Custom lower bit counting operations for other types to scalarize them.
     for (auto Op : {ISD::CTLZ, ISD::CTTZ, ISD::CTPOP})
@@ -1749,6 +1747,9 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_AND:
+    return LowerVECREDUCE(Op, DAG);
   case ISD::SETCC:
     return LowerSETCC(Op, DAG);
   case ISD::SHL:
@@ -2728,6 +2729,61 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
 }
 
+static SDValue emitShuffleReduceTree(SelectionDAG &DAG, const SDLoc &DL,
+                                     SDValue Vec, unsigned BaseOpc) {
+  EVT VecVT = Vec.getValueType();
+  assert(VecVT.isVector() && "expected vector");
+
+  auto foldInHalf = [&](ArrayRef<int> Mask) -> void {
+    SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, Vec, Vec, Mask);
+    Vec = DAG.getNode(BaseOpc, DL, VecVT, Vec, Shuf);
+  };
+
+  if (VecVT == MVT::v16i8) {
+    foldInHalf({8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0});
+    foldInHalf({4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    foldInHalf({2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    foldInHalf({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+    return Vec;
+  } else if (VecVT == MVT::v8i16) {
+    foldInHalf({4, 5, 6, 7, 0, 0, 0, 0});
+    foldInHalf({2, 3, 0, 0, 0, 0, 0, 0});
+    foldInHalf({1, 0, 0, 0, 0, 0, 0, 0});
+    return Vec;
+  } else if (VecVT == MVT::v4i32) {
+    foldInHalf({2, 3, 0, 0});
+    foldInHalf({1, 0, 0, 0});
+    return Vec;
+  } else if (VecVT == MVT::v2i64) {
+    foldInHalf({1, 0});
+    return Vec;
+  }
+
+  return SDValue();
+}
+
+SDValue WebAssemblyTargetLowering::LowerVECREDUCE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  const SDLoc DL(Op);
+  // Only ISD::VECREDUCE_AND and ISD::VECREDUCE_OR are custom-lowered currently.
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  if (BaseOpc != ISD::AND && BaseOpc != ISD::OR)
+    return SDValue();
+
+  if (!Subtarget->hasSIMD128())
+    return SDValue();
+
+  SDValue ReducedVec =
+      emitShuffleReduceTree(DAG, DL, Op.getOperand(0), BaseOpc);
+  if (!ReducedVec)
+    return SDValue();
+
+  // Extract lane 0 (the reduced value) and convert to the result type.
+  EVT EltVT = ReducedVec.getValueType().getVectorElementType();
+  SDValue Lane0 = DAG.getExtractVectorElt(DL, EltVT, ReducedVec, 0);
+  return DAG.getZExtOrTrunc(Lane0, DL, Op.getValueType());
+}
+
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -3402,6 +3458,45 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+// Combine a setcc of a vecreduce, for example:
+//
+// setcc (vecreduce_or(v4i32 V128:$vec)), (i32 0), SETNE
+//  ==> ANYTRUE V128:$vec
+//
+// setcc (i32 (vecreduce_and(v4i32 V128:$vec))), (i32 0), SETNE
+//  ==> ALLTRUE_I32x4 V128:$vec
+static SDValue combineSetCCVecReduce(SDNode *SetCC,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Reduce = SetCC->getOperand(0);
+  SDValue Constant = SetCC->getOperand(1);
+  SDValue Cond = SetCC->getOperand(2);
+
+  unsigned ReduceIntrinsic;
+  if (Reduce->getOpcode() == ISD::VECREDUCE_OR) {
+    ReduceIntrinsic = Intrinsic::wasm_anytrue;
+  } else if (Reduce->getOpcode() == ISD::VECREDUCE_AND) {
+    ReduceIntrinsic = Intrinsic::wasm_alltrue;
+  } else {
+    return SDValue();
+  }
+
+  if (cast<CondCodeSDNode>(Cond)->get() != ISD::SETNE)
+    return SDValue();
+
+  if (cast<ConstantSDNode>(Constant)->getSExtValue() != 0)
+    return SDValue();
+
+  SDLoc DL(SetCC);
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDValue Match = Reduce->getOperand(0);
+  SDValue Intrinsic = DAG.getConstant(ReduceIntrinsic, DL, MVT::i32);
+  SDValue Chain =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, {Intrinsic, Match});
+
+  return DAG.getZExtOrTrunc(Chain, DL, MVT::i1);
+}
+
 /// Try to convert a i128 comparison to a v16i8 comparison before type
 /// legalization splits it up into chunks
 static SDValue
@@ -3460,6 +3555,9 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
+    return V;
+
+  if (SDValue V = combineSetCCVecReduce(N, DCI))
     return V;
 
   SDValue LHS = N->getOperand(0);

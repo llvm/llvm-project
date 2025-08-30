@@ -1002,16 +1002,6 @@ def : Pat<(i32 (setne (i32 (intrinsic (vec.vt V128:$x))), (i32 0))), (inst $x)>;
 def : Pat<(i32 (seteq (i32 (intrinsic (vec.vt V128:$x))), (i32 1))), (inst $x)>;
 }
 
-def : Pat<(i32 (setcc (and (i32 (vecreduce_and (v16i8 V128:$vec))), (i32 255)), (i32 255), SETEQ)), (ALLTRUE_I8x16 V128:$vec)>;
-def : Pat<(i32 (setcc (and (i32 (vecreduce_and (v8i16 V128:$vec))), (i32 65535)), (i32 65535), SETEQ)), (ALLTRUE_I16x8 V128:$vec)>;
-def : Pat<(i32 (setcc (i32 (vecreduce_and(v4i32 V128:$vec))), (i32 -1), SETEQ)), (ALLTRUE_I32x4 V128:$vec)>;
-def : Pat<(i32 (setcc (i64 (vecreduce_and(v2i64 V128:$vec))), (i64 -1), SETEQ)), (ALLTRUE_I64x2 V128:$vec)>;
-
-def : Pat<(i32 (setcc (and (i32 (vecreduce_or(v16i8 V128:$vec))), (i32 255)), (i32 0), SETNE)), (ANYTRUE V128:$vec)>;
-def : Pat<(i32 (setcc (and (i32 (vecreduce_or(v8i16 V128:$vec))), (i32 65535)), (i32 0), SETNE)), (ANYTRUE V128:$vec)>;
-def : Pat<(i32 (setcc (vecreduce_or(v4i32 V128:$vec)), (i32 0), SETNE)), (ANYTRUE V128:$vec)>;
-def : Pat<(i32 (setcc (vecreduce_or(v2i64 V128:$vec)), (i64 0), SETNE)), (ANYTRUE V128:$vec)>;
-
 multiclass SIMDBitmask<Vec vec, bits<32> simdop> {
   defm _#vec : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
                       [(set I32:$dst,
