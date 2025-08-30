@@ -197,44 +197,17 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlignAfterOpenBracket:
 
-**AlignAfterOpenBracket** (``BracketAlignmentStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
+**AlignAfterOpenBracket** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
   If ``true``, horizontally aligns arguments after an open bracket.
 
+
+  .. code-block:: c++
+
+    true:                         vs.   false
+    someLongFunction(argument1,         someLongFunction(argument1,
+                     argument2);            argument2);
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
-
-  Possible values:
-
-  * ``BAS_Align`` (in configuration: ``Align``)
-    Align parameters on the open bracket, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-                       argument2);
-
-  * ``BAS_DontAlign`` (in configuration: ``DontAlign``)
-    Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-          argument2);
-
-  * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
-    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
-    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
-    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-
-  * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
-    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
-    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
-    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
-    in combination with ``BreakBeforeCloseBracketBracedList``,
-    ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
-    ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
-
-
 
 .. _AlignArrayOfStructures:
 
