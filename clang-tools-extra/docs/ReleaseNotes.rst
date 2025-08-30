@@ -244,6 +244,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly recognizes 
+  const member functions returning lvalues as side-effect-free, preventing 
+  missed transformations.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
