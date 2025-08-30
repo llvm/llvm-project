@@ -1496,8 +1496,11 @@ class DebugAdapterServer(DebugCommunication):
         self.connection = None
         if executable is not None:
             process, connection = DebugAdapterServer.launch(
-                executable=executable, connection=connection, env=env, log_file=log_file,
-                additional_args=additional_args
+                executable=executable,
+                connection=connection,
+                env=env,
+                log_file=log_file,
+                additional_args=additional_args,
             )
             self.process = process
             self.connection = connection

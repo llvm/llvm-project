@@ -599,8 +599,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
             # Test with --no-lldbinit flag (should NOT source .lldbinit)
             self.build_and_create_debug_adapter(
-                lldbDAPEnv={"HOME": temp_home},
-                additional_args=["--no-lldbinit"]
+                lldbDAPEnv={"HOME": temp_home}, additional_args=["--no-lldbinit"]
             )
             program = self.getBuildArtifact("a.out")
 
