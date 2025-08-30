@@ -5154,11 +5154,14 @@ multiclass sve_int_dup_imm<string asm> {
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, cpy_imm8_opt_lsl_i64:$imm), 1>;
 
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd,
+                       (cpy_imm8_opt_lsl_i16 0, 0)), 1>;
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd,
+                       (cpy_imm8_opt_lsl_i32 0, 0)), 1>;
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd,
+                       (cpy_imm8_opt_lsl_i64 0, 0)), 1>;
 }
 
 class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
@@ -5549,11 +5552,14 @@ multiclass sve_int_dup_imm_pred_merge<string asm, SDPatternOperator op> {
                                             nxv2i64, nxv2i1, i64, SVECpyDupImm64Pat>;
 
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i16 0, 0)), 0>;
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i32 0, 0)), 0>;
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i64 0, 0)), 0>;
 
   def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv8f16 ZPR:$Zd)),
             (!cast<Instruction>(NAME # _H) $Zd, $Pg, 0, 0)>;
