@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/KnownBits.h"
@@ -52,15 +51,18 @@ static bool tryToImproveAlign(
     Value *AlignOp = II->getIntrinsicID() == Intrinsic::masked_load
                          ? II->getArgOperand(1)
                          : II->getArgOperand(2);
+    Type *Type = II->getIntrinsicID() == Intrinsic::masked_load
+                     ? II->getType()
+                     : II->getArgOperand(0)->getType();
 
     Align OldAlign = cast<ConstantInt>(AlignOp)->getAlignValue();
-    Align PrefAlign = getKnownAlignment(PtrOp, DL, II);
+    Align PrefAlign = DL.getPrefTypeAlign(Type);
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
     if (NewAlign <= OldAlign)
       return false;
 
-    Value *V = llvm::ConstantInt::get(llvm::Type::getInt32Ty(II->getContext()),
-                                      NewAlign.value());
+    Value *V =
+        ConstantInt::get(Type::getInt32Ty(II->getContext()), NewAlign.value());
     if (II->getIntrinsicID() == Intrinsic::masked_load)
       II->setOperand(1, V);
     else
