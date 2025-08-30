@@ -96,15 +96,14 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
     };
 
     StringRef LHSString = GetText(LHS->getSourceRange());
-
     StringRef ArgString = GetText(Arg->getSourceRange());
 
     if (ArgString != LHSString)
       return;
 
-    std::string Replacement = llvm::formatv(
-        "{}{}{}", GetText(Callee->getQualifierLoc().getSourceRange()),
-        "isa_and_nonnull",
+    const std::string Replacement = llvm::formatv(
+        "{}isa_and_nonnull{}",
+        GetText(Callee->getQualifierLoc().getSourceRange()),
         GetText(SourceRange(Callee->getLAngleLoc(), RHS->getEndLoc())));
 
     diag(LHS->getBeginLoc(),
