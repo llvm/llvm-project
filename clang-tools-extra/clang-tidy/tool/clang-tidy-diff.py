@@ -28,6 +28,7 @@ import glob
 import json
 import multiprocessing
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -41,13 +42,6 @@ try:
     import yaml
 except ImportError:
     yaml = None
-
-is_py2 = sys.version[0] == "2"
-
-if is_py2:
-    import Queue as queue
-else:
-    import queue as queue
 
 
 def run_tidy(task_queue, lock, timeout, failed_files):
@@ -177,7 +171,7 @@ def main():
     parser.add_argument(
         "-j",
         type=int,
-        default=1,
+        default=0,
         help="number of tidy instances to be run in parallel.",
     )
     parser.add_argument(
@@ -318,6 +312,7 @@ def main():
     if max_task_count == 0:
         max_task_count = multiprocessing.cpu_count()
     max_task_count = min(len(lines_by_file), max_task_count)
+    print(f"Running clang-tidy in {max_task_count} threads...")
 
     combine_fixes = False
     export_fixes_dir = None

@@ -170,8 +170,7 @@ public:
         new VPInstruction(Opcode, Operands, Flags, DL, Name));
   }
 
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -180,7 +179,7 @@ public:
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
-                                     std::initializer_list<VPValue *> Operands,
+                                     ArrayRef<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = DebugLoc::getUnknown(),
                                      const Twine &Name = "") {
@@ -230,7 +229,6 @@ public:
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
   /// and \p B.
-  /// TODO: add createFCmp when needed.
   VPInstruction *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
                             DebugLoc DL = DebugLoc::getUnknown(),
                             const Twine &Name = "") {
@@ -240,6 +238,17 @@ public:
         new VPInstruction(Instruction::ICmp, {A, B}, Pred, DL, Name));
   }
 
+  /// Create a new FCmp VPInstruction with predicate \p Pred and operands \p A
+  /// and \p B.
+  VPInstruction *createFCmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                            DebugLoc DL = DebugLoc::getUnknown(),
+                            const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_FCMP_PREDICATE &&
+           Pred <= CmpInst::LAST_FCMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::FCmp, {A, B}, Pred, DL, Name));
+  }
+
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -247,17 +256,40 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::none(), DL, Name));
   }
-  VPInstruction *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
-                                      DebugLoc DL = DebugLoc::getUnknown(),
-                                      const Twine &Name = "") {
+
+  VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
+                                    GEPNoWrapFlags GEPFlags,
+                                    DebugLoc DL = DebugLoc::getUnknown(),
+                                    const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::PtrAdd, {Ptr, Offset}, GEPFlags, DL, Name));
+  }
+
+  VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
+                                  DebugLoc DL = DebugLoc::getUnknown(),
+                                  const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::inBounds(), DL, Name));
+        new VPInstruction(VPInstruction::WidePtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::none(), DL, Name));
   }
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
                          const Twine &Name = "") {
     return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
+  VPValue *createElementCount(Type *Ty, ElementCount EC) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPValue *RuntimeEC =
+        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    if (EC.isScalable()) {
+      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      RuntimeEC = EC.getKnownMinValue() == 1
+                      ? VScale
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
+    }
+    return RuntimeEC;
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -300,6 +332,10 @@ public:
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
+  }
+
+  VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
+    return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
   //===--------------------------------------------------------------------===//
@@ -477,6 +513,13 @@ public:
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
 
+  /// \return The desired interleave count.
+  /// If interleave count has been specified by metadata it will be returned.
+  /// Otherwise, the interleave count is computed and returned. VF and LoopCost
+  /// are the selected vectorization factor and the cost of the selected VF.
+  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                 InstructionCost LoopCost);
+
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
@@ -519,6 +562,11 @@ public:
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
+
+  /// Create a check to \p Plan to see if the vector loop should be executed
+  /// based on its trip count.
+  void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
+                                ElementCount MinProfitableTripCount) const;
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,

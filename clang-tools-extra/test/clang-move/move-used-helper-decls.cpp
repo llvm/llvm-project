@@ -1,13 +1,13 @@
-// RUN: mkdir -p %T/used-helper-decls
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: cd %T/used-helper-decls
+// RUN: mkdir -p %t.dir/used-helper-decls
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: cd %t.dir/used-helper-decls
 
 // ----------------------------------------------------------------------------
 // Test moving used helper function and its transitively used functions.
 // ----------------------------------------------------------------------------
-// RUN: clang-move -names="a::Class1" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS1-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS1-CPP %s
+// RUN: clang-move -names="a::Class1" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS1-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS1-CPP %s
 
 // CHECK-NEW-CLASS1-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS1-CPP-SAME: {{[[:space:]]}}
@@ -31,10 +31,10 @@
 // ----------------------------------------------------------------------------
 // Test moving used helper function and its transitively used static variables.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class2" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS2-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS2-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class2" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS2-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS2-CPP %s
 
 // CHECK-NEW-CLASS2-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS2-CPP-SAME: {{[[:space:]]}}
@@ -67,10 +67,10 @@
 // ----------------------------------------------------------------------------
 // Test using a static member variable of a helper class.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS3-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS3-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class3" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS3-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS3-CPP %s
 
 // CHECK-NEW-CLASS3-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS3-CPP-SAME: {{[[:space:]]}}
@@ -99,10 +99,10 @@
 // ----------------------------------------------------------------------------
 // Test moving helper classes.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class4" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS4-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS4-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class4" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS4-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS4-CPP %s
 
 // CHECK-NEW-CLASS4-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS4-CPP-SAME: {{[[:space:]]}}
@@ -120,10 +120,10 @@
 // ----------------------------------------------------------------------------
 // Test moving helper variables and helper functions together.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class5" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS5-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS5-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class5" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS5-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS5-CPP %s
 
 // CHECK-NEW-CLASS5-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS5-CPP-SAME: {{[[:space:]]}}
@@ -153,10 +153,10 @@
 // ----------------------------------------------------------------------------
 // Test moving helper variables and their transitively used helper classes.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class6" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS6-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS6-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class6" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS6-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS6-CPP %s
 
 // CHECK-NEW-CLASS6-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS6-CPP-SAME: {{[[:space:]]}}
@@ -186,10 +186,10 @@
 // ----------------------------------------------------------------------------
 // Test moving classes where its methods use helpers.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class7" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS7-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS7-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class7" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CLASS7-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-CLASS7-CPP %s
 
 // CHECK-NEW-CLASS7-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-CLASS7-CPP-SAME: {{[[:space:]]}}
@@ -218,10 +218,10 @@
 // ----------------------------------------------------------------------------
 // Test moving helper function and its transitively used helper variables.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Fun1" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN1-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-FUN1-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Fun1" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN1-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-FUN1-CPP %s
 
 // CHECK-NEW-FUN1-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-FUN1-CPP-SAME: {{[[:space:]]}}
@@ -244,11 +244,11 @@
 // ----------------------------------------------------------------------------
 // Test no moving helpers when moving inline functions in header.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Fun2" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN2-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-FUN2-H %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.h -check-prefix=CHECK-OLD-FUN2-H %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Fun2" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN2-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-FUN2-H %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.h -check-prefix=CHECK-OLD-FUN2-H %s
 
 // CHECK-NEW-FUN2-H: namespace a {
 // CHECK-NEW-FUN2-H-NEXT: inline void Fun2() {}
@@ -262,10 +262,10 @@
 // ----------------------------------------------------------------------------
 // Test moving used helper function and its transitively used functions.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN3-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-FUN3-CPP %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="b::Fun3" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-FUN3-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -check-prefix=CHECK-OLD-FUN3-CPP %s
 
 // CHECK-NEW-FUN3-CPP: #include "{{.*}}new_helper_decls_test.h"
 // CHECK-NEW-FUN3-CPP-SAME: {{[[:space:]]}}
@@ -294,12 +294,12 @@
 // ----------------------------------------------------------------------------
 // Test moving all symbols in headers.
 // ----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/helper_decls_test*  %T/used-helper-decls/
-// RUN: clang-move -names="a::Class1, a::Class2, a::Class3, a::Class4, a::Class5, a::Class5, a::Class6, a::Class7, a::Fun1, a::Fun2, b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-H %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: cp %S/Inputs/helper_decls_test*  %t.dir/used-helper-decls/
+// RUN: clang-move -names="a::Class1, a::Class2, a::Class3, a::Class4, a::Class5, a::Class5, a::Class6, a::Class7, a::Fun1, a::Fun2, b::Fun3" -new_cc=%t.dir/used-helper-decls/new_helper_decls_test.cpp -new_header=%t.dir/used-helper-decls/new_helper_decls_test.h -old_cc=%t.dir/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %t.dir/used-helper-decls/helper_decls_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-H %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CPP %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%t.dir/used-helper-decls/helper_decls_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
 
 
 // CHECK-NEW-H: namespace a {

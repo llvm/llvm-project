@@ -1196,7 +1196,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   }
 
   if (!AssumedDivergent.empty()) {
-    OS << "CYCLES ASSSUMED DIVERGENT:\n";
+    OS << "CYCLES ASSUMED DIVERGENT:\n";
     for (const CycleT *cycle : AssumedDivergent) {
       OS << "  " << cycle->print(Context) << '\n';
     }

@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
@@ -166,7 +166,7 @@ void TosaDialect::initialize() {
       >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
-      mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
+      shard::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
       ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp,
       LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
       LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
@@ -180,12 +180,12 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
   // Tosa dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
   if (llvm::isa<shapeType>(type) && llvm::isa<DenseIntElementsAttr>(value)) {
-    return builder.create<tosa::ConstShapeOp>(
-        loc, type, llvm::cast<DenseIntElementsAttr>(value));
+    return tosa::ConstShapeOp::create(builder, loc, type,
+                                      llvm::cast<DenseIntElementsAttr>(value));
   }
   if (llvm::isa<ElementsAttr>(value))
-    return builder.create<tosa::ConstOp>(loc, type,
-                                         llvm::cast<ElementsAttr>(value));
+    return tosa::ConstOp::create(builder, loc, type,
+                                 llvm::cast<ElementsAttr>(value));
   return nullptr;
 }
 
@@ -270,6 +270,244 @@ void mlir::tosa::printVariableOpTypeOrInitialValue(
   }
 }
 
+namespace {
+
+// parse attributes with special handling for tosa enum attributes
+template <typename EnumType>
+ParseResult parseAttrEntryWithEnumHandling(OpAsmParser &parser,
+                                           NamedAttrList &outAttrs) {
+  llvm::StringRef name;
+  if (parser.parseOptionalKeyword(&name) || parser.parseEqual())
+    return failure();
+
+  // special handling: rounding_mode accepts a *bare* RoundingMode enum
+  // keyword.
+  llvm::StringRef kw;
+  if constexpr (std::is_same_v<EnumType, tosa::RoundingMode>) {
+    if (name == "rounding_mode" &&
+        succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeRoundingMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid rounding_mode value: " << kw;
+      auto attr = RoundingModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: mode accepts a *bare* ResizeMode enum keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::ResizeMode>) {
+    if (name == "mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeResizeMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid resize mode value: " << kw;
+      auto attr = ResizeModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+  // special handling: nan_mode accepts a *bare* NanPropagationMode enum
+  // keyword.
+  if constexpr (std::is_same_v<EnumType, tosa::NanPropagationMode>) {
+    if (name == "nan_mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
+      auto sym = symbolizeNanPropagationMode(kw);
+      if (!sym)
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid nan_mode value: " << kw;
+      auto attr = NanPropagationModeAttr::get(parser.getContext(), sym.value());
+      outAttrs.push_back(NamedAttribute(name, attr));
+      return success();
+    }
+  }
+
+  // Default path: parse any normal attribute literal, including fully qualified
+  // enum keyword
+  Attribute attr;
+  return parser.parseAttribute(attr, name, outAttrs);
+}
+
+template <typename EnumType>
+ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
+  // parse operands
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> operands;
+  if (parser.parseCommaSeparatedList(
+          [&]() { return parser.parseOperand(operands.emplace_back()); }))
+    return failure();
+
+  // Parse { attr-dict } with special handling for enum bare token
+  NamedAttrList attrs;
+  if (succeeded(parser.parseOptionalLBrace()) &&
+      failed(parser.parseOptionalRBrace())) {
+    do {
+      if (parseAttrEntryWithEnumHandling<EnumType>(parser, attrs))
+        return failure();
+    } while (succeeded(parser.parseOptionalComma()));
+    if (parser.parseRBrace())
+      return failure();
+  }
+
+  FunctionType fnTy;
+  if (parser.parseColonType(fnTy))
+    return failure();
+
+  // Resolve operands and types
+  if (failed(parser.resolveOperands(operands, fnTy.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  result.addTypes(fnTy.getResult(0));
+  result.addAttributes(attrs);
+
+  return success();
+}
+
+void printNamedAttr(OpAsmPrinter &parser, const NamedAttribute namedAttr) {
+  parser << namedAttr.getName().strref() << " = ";
+  auto attr = namedAttr.getValue();
+  if (auto roundingModeAttr = dyn_cast<tosa::RoundingModeAttr>(attr)) {
+    parser << roundingModeAttr.getValue();
+  } else if (auto resizeModeAttr = dyn_cast<tosa::ResizeModeAttr>(attr)) {
+    parser << resizeModeAttr.getValue();
+  } else if (auto nanPropagationModeAttr =
+                 dyn_cast<tosa::NanPropagationModeAttr>(attr)) {
+    parser << nanPropagationModeAttr.getValue();
+  } else {
+    parser.printAttribute(attr);
+  }
+}
+
+// print with special handling for default valued NanPropagationMode attribute
+void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  NamedAttrList toPrint(op->getAttrs());
+  // remove default NanPropagate attribute
+  const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
+  for (auto attr : op->getAttrs()) {
+    if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
+      if (nanAttr.getValue() == kDefaultNanValue) {
+        // elide from toPrint
+        toPrint.erase(attr.getName());
+        break;
+      }
+    }
+  }
+
+  if (!toPrint.empty()) {
+    parser << " {";
+    llvm::interleaveComma(toPrint, parser, [&](const NamedAttribute namedAttr) {
+      printNamedAttr(parser, namedAttr);
+    });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+// print with special handling for enums: RoundingMode, ResizeMode
+void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
+  parser << " ";
+  parser.printOperands(op->getOperands());
+
+  if (!op->getAttrs().empty()) {
+    parser << " {";
+    llvm::interleaveComma(op->getAttrs(), parser,
+                          [&](const NamedAttribute namedAttr) {
+                            printNamedAttr(parser, namedAttr);
+                          });
+    parser << "}";
+  }
+
+  parser << " : ";
+  parser.printFunctionalType(op);
+}
+
+} // namespace
+
+ParseResult RescaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void RescaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ApplyScaleOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
+}
+
+void ApplyScaleOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ResizeOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::ResizeMode>(parser, result);
+}
+
+void ResizeOp::print(OpAsmPrinter &parser) {
+  printWithEnumHandling(parser, *this);
+}
+
+ParseResult ArgMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ArgMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaxPool2dOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaxPool2dOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ClampOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MaximumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MaximumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult MinimumOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void MinimumOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMaxOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMaxOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
+ParseResult ReduceMinOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
+}
+
+void ReduceMinOp::print(OpAsmPrinter &parser) {
+  printWithNanPropagationHandling(parser, *this);
+}
+
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -323,7 +561,7 @@ Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
                                    builder.getFloatAttr(srcElemType, val))
           : DenseElementsAttr::get(padConstEType,
                                    builder.getIntegerAttr(srcElemType, val))};
-  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
+  return tosa::ConstOp::create(builder, loc, padConstType, padConstAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -945,10 +1183,11 @@ LogicalResult tosa::ClampOp::verify() {
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
 
-    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const bool isUnsigned = inputETy.isUnsignedInteger();
+    const bool isBoolean = inputETy.isInteger(1);
     const APInt minVal = intMinValAttr.getValue();
     const APInt maxVal = intMaxValAttr.getValue();
-    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+    if ((isUnsigned || isBoolean) ? maxVal.ult(minVal) : maxVal.slt(minVal))
       return emitOpError("expected min_val <= max_val, got min_val=")
              << minValAttr << ", max_val=" << maxValAttr;
   } else {
@@ -2415,7 +2654,7 @@ LogicalResult TransposeOp::reifyResultShapes(
     int32_t dimInInput = transposePerms[dim];
     if (inputType.isDynamicDim(dimInInput))
       returnedDims[dim] =
-          builder.create<tensor::DimOp>(getLoc(), input, dimInInput)
+          tensor::DimOp::create(builder, getLoc(), input, dimInInput)
               .getResult();
     else
       returnedDims[dim] =
@@ -3646,6 +3885,22 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
+static void printInitializationList(OpAsmPrinter &parser,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  parser << prefix << '(';
+  llvm::interleaveComma(
+      llvm::zip(blocksArgs, initializers), parser,
+      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
+  parser << ")";
+}
+
 // parse and print of IfOp refer to the implementation of SCF dialect.
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Create the regions for 'then'.
@@ -3653,16 +3908,64 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
 
-  auto &builder = parser.getBuilder();
   OpAsmParser::UnresolvedOperand cond;
-  // Create a i1 tensor type for the boolean condition.
-  Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, i1Type, result.operands))
+
+  if (parser.parseOperand(cond))
     return failure();
-  // Parse optional results type list.
-  if (parser.parseOptionalArrowTypeList(result.types))
+
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+
+  // Parse the optional block arguments
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.has_value() && failed(listResult.value()))
     return failure();
+
+  // Parse a colon.
+  if (failed(parser.parseColon()))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Parse the type of the condition operand
+  Type condType;
+  if (failed(parser.parseType(condType)))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected type for condition operand");
+
+  // Resolve operand with provided type
+  if (failed(parser.resolveOperand(cond, condType, result.operands)))
+    return failure();
+
+  // Parse optional block arg types
+  if (listResult.has_value()) {
+    FunctionType functionType;
+
+    if (failed(parser.parseType(functionType)))
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected list of types for block arguments "
+             << "followed by arrow type and list of return types";
+
+    result.addTypes(functionType.getResults());
+
+    if (functionType.getNumInputs() != operands.size()) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "expected as many input types as operands "
+             << "(expected " << operands.size() << " got "
+             << functionType.getNumInputs() << ")";
+    }
+
+    // Resolve input operands.
+    if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                      parser.getCurrentLocation(),
+                                      result.operands)))
+      return failure();
+  } else {
+    // Parse optional results type list.
+    if (parser.parseOptionalArrowTypeList(result.types))
+      return failure();
+  }
+
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
@@ -3680,26 +3983,28 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
-
   p << " " << getCondition();
-  if (!getResults().empty()) {
-    p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
+
+  printInitializationList(p, getThenGraph().front().getArguments(),
+                          getInputList(), " ");
+  p << " : ";
+  p << getCondition().getType();
+
+  if (!getInputList().empty()) {
+    p << " (";
+    llvm::interleaveComma(getInputList().getTypes(), p);
+    p << ")";
   }
-  p << ' ';
-  p.printRegion(getThenGraph(),
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+  p.printArrowTypeList(getResultTypes());
+  p << " ";
+
+  p.printRegion(getThenGraph());
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = getElseGraph();
   if (!elseRegion.empty()) {
     p << " else ";
-    p.printRegion(elseRegion,
-                  /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
+    p.printRegion(elseRegion);
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());
@@ -3908,22 +4213,6 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
                  parser.parseOptionalAttrDictWithKeyword(result.attributes));
 }
 
-static void printInitializationList(OpAsmPrinter &parser,
-                                    Block::BlockArgListType blocksArgs,
-                                    ValueRange initializers,
-                                    StringRef prefix = "") {
-  assert(blocksArgs.size() == initializers.size() &&
-         "expected same length of arguments and initializers");
-  if (initializers.empty())
-    return;
-
-  parser << prefix << '(';
-  llvm::interleaveComma(
-      llvm::zip(blocksArgs, initializers), parser,
-      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
-  parser << ")";
-}
-
 void WhileOp::print(OpAsmPrinter &parser) {
   printInitializationList(parser, getCondGraph().front().getArguments(),
                           getInputList(), " ");
@@ -3947,12 +4236,12 @@ std::optional<Value> mlir::tosa::createZeroPointTensor(OpBuilder &builder,
   if (llvm::isa<FloatType>(srcElemType)) {
     auto zpAttr = DenseElementsAttr::get(
         zpType, builder.getFloatAttr(srcElemType, static_cast<double>(zp)));
-    return builder.create<tosa::ConstOp>(loc, zpType, zpAttr);
+    return tosa::ConstOp::create(builder, loc, zpType, zpAttr);
   }
   if (llvm::isa<IntegerType>(srcElemType)) {
     auto zpAttr =
         DenseElementsAttr::get(zpType, builder.getIntegerAttr(srcElemType, zp));
-    return builder.create<tosa::ConstOp>(loc, zpType, zpAttr);
+    return tosa::ConstOp::create(builder, loc, zpType, zpAttr);
   }
   llvm::errs() << "zero point is not allowed for unsupported data types\n";
   return std::nullopt;

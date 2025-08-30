@@ -178,6 +178,17 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpolymorphic_to_nonpolymorphic
 ! Just checking that FIR is generated without error.
 
+  subroutine nonpolymorphic_to_polymorphic(p, t)
+    type p1
+    end type
+    type(p1), pointer :: p(:)
+    class(p1), target :: t(:)
+    p(0:1) => t
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPnonpolymorphic_to_polymorphic
+! CHECK: fir.call @_FortranAPointerAssociateRemappingMonomorphic
+
 ! Test that lowering does not crash for function return with unlimited
 ! polymoprhic value.
 
@@ -1146,7 +1157,7 @@ program test
   l = i < o%inner
 end program
 
-! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "test"} {
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "TEST"} {
 ! CHECK: %[[ADDR_O:.*]] = fir.address_of(@_QFEo) : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTouter{inner:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>}>>>>
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ADDR_O]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTouter{inner:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

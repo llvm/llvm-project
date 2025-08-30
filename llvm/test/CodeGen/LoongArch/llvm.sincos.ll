@@ -347,42 +347,42 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) #0 {
 ;
 ; LA64-LABEL: test_sincos_v2f32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -64
-; LA64-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
-; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
-; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    addi.d $sp, $sp, -80
+; LA64-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
 ; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
-; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; LA64-NEXT:    vreplvei.w $vr0, $vr0, 1
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    vpackev.w $vr0, $vr0, $vr1
-; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
-; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
-; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
+; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
+; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
+; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    vpackev.w $vr1, $vr0, $vr1
+; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
+; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 64
+; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    fmov.s $fa1, $fa0
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.w $vr1, $vr0, 16
+; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 80
 ; LA64-NEXT:    ret
   %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
   ret { <2 x float>, <2 x float> } %result
@@ -441,44 +441,56 @@ define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) #0 {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -96
 ; LA64-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
+; LA64-NEXT:    vreplvei.w $vr0, $vr0, 1
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
-; LA64-NEXT:    vreplvei.w $vr0, $vr0, 2
+; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vst $vr0, $sp, 64 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 72
-; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    vreplvei.w $vr0, $vr0, 1
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 64 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
+; LA64-NEXT:    vst $vr0, $sp, 64 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    vreplvei.w $vr0, $vr0, 2
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 68
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 64 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.w $vr1, $vr0, 32
+; LA64-NEXT:    vst $vr1, $sp, 64 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
-; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 64
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 56
-; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
+; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 52
-; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    fst.s $fa0, $sp, 48
-; LA64-NEXT:    vld $vr0, $sp, 64
-; LA64-NEXT:    vld $vr1, $sp, 48
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.w $vr1, $vr0, 32
+; LA64-NEXT:    vld $vr0, $sp, 64 # 16-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 96
 ; LA64-NEXT:    ret
@@ -568,44 +580,42 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ;
 ; LA64-LABEL: test_sincos_v2f64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -64
-; LA64-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA64-NEXT:    addi.d $sp, $sp, -80
+; LA64-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
+; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
+; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
-; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
-; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
+; LA64-NEXT:    pcaddu18i $ra, %call36(cos)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 1
-; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cos)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
-; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
-; LA64-NEXT:    pcaddu18i $ra, %call36(cos)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; LA64-NEXT:    fmov.d $fa1, $fa0
+; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.d $vr1, $vr0, 16
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 64
+; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 80
 ; LA64-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
@@ -801,17 +811,17 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ;
 ; LA64-LABEL: test_sincos_v2f128:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -80
-; LA64-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s6, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s7, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    addi.d $sp, $sp, -96
+; LA64-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s0, $sp, 72 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s1, $sp, 64 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s2, $sp, 56 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s3, $sp, 48 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s4, $sp, 40 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s7, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    ld.d $fp, $a1, 16
 ; LA64-NEXT:    ld.d $s0, $a1, 24
 ; LA64-NEXT:    ld.d $s1, $a1, 0
@@ -847,17 +857,17 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; LA64-NEXT:    st.d $s6, $s3, 16
 ; LA64-NEXT:    st.d $s5, $s3, 8
 ; LA64-NEXT:    st.d $s4, $s3, 0
-; LA64-NEXT:    ld.d $s7, $sp, 0 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s6, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 80
+; LA64-NEXT:    ld.d $s7, $sp, 16 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s5, $sp, 32 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s4, $sp, 40 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s3, $sp, 48 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s2, $sp, 56 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s1, $sp, 64 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s0, $sp, 72 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 96
 ; LA64-NEXT:    ret
   %result = call { <2 x fp128>, <2 x fp128> } @llvm.sincos.v2f128(<2 x fp128> %a)
   ret { <2 x fp128>, <2 x fp128> } %result

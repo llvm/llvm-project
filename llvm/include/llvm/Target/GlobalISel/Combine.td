@@ -194,6 +194,7 @@ def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -556,6 +557,13 @@ def right_identity_neg_zero_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FADD $dst, $x, $y):$root,
     [{ return Helper.matchConstantFPOp(${y}, -0.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
+def right_identity_neg_zero_fp_nsz: GICombineRule<
+  (defs root:$dst),
+  (match (G_FADD $dst, $x, $y, (MIFlags FmNsz)):$root,
+    [{ return Helper.matchConstantFPOp(${y}, 0.0); }]),
   (apply (GIReplaceReg $dst, $x))
 >;
 
@@ -1032,6 +1040,34 @@ def funnel_shift_overshift: GICombineRule<
   (apply [{ Helper.applyFunnelShiftConstantModulo(*${root}); }])
 >;
 
+// Transform: fshl x, z, y | shl x, y -> fshl x, z, y
+// Transform: shl x, y | fshl x, z, y  -> fshl x, z, y
+// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+//        necessitating the use of !foreach to handle it manually.
+def funnel_shift_or_shift_to_funnel_shift_left_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHL $out1, $x, $z, $y), (G_SHL $out2, $x, $y), inst))>;
+def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
+  (defs root:$root), 
+  (match (funnel_shift_or_shift_to_funnel_shift_left_frags $root, $out1, $out2)),
+  (apply (GIReplaceReg $root, $out1))
+>;
+
+// Transform: fshr z, x, y | srl x, y -> fshr z, x, y
+// Transform: srl x, y | fshr z, x, y -> fshr z, x, y
+// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+//        necessitating the use of !foreach to handle it manually.
+def funnel_shift_or_shift_to_funnel_shift_right_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHR $out1, $z, $x, $y), (G_LSHR $out2, $x, $y), inst))>;
+def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
+  (defs root:$root), 
+  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)), 
+  (apply (GIReplaceReg $root, $out1))
+>;
+
 def rotate_out_of_range : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ROTR, G_ROTL):$root,
@@ -1104,7 +1140,9 @@ def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
                                             funnel_shift_to_rotate,
                                             funnel_shift_right_zero,
                                             funnel_shift_left_zero,
-                                            funnel_shift_overshift]>;
+                                            funnel_shift_overshift,
+                                            funnel_shift_or_shift_to_funnel_shift_left,
+                                            funnel_shift_or_shift_to_funnel_shift_right]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
@@ -1132,14 +1170,14 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 def udiv_by_const : GICombineRule<
   (defs root:$root),
   (match (G_UDIV $dst, $x, $y):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
   (match (G_SDIV $dst, $x, $y):$root,
-   [{ return Helper.matchSDivByConst(*${root}); }]),
-  (apply [{ Helper.applySDivByConst(*${root}); }])>;
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
 
 def sdiv_by_pow2 : GICombineRule<
   (defs root:$root),
@@ -1159,10 +1197,16 @@ def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
 def urem_by_const : GICombineRule<
   (defs root:$root),
   (match (G_UREM $dst, $x, $y):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
-def intrem_combines : GICombineGroup<[urem_by_const]>;
+def srem_by_const : GICombineRule<
+  (defs root:$root),
+  (match (G_SREM $dst, $x, $y):$root,
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[urem_by_const, srem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1235,6 +1279,35 @@ def mulh_to_lshr : GICombineRule<
   (apply [{ Helper.applyUMulHToLShr(*${root}); }])>;
 
 def mulh_combines : GICombineGroup<[mulh_to_lshr]>;
+
+def trunc_ssats : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+         [{ return Helper.matchTruncSSatS(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatS(*${root}, ${matchinfo}); }])>;
+
+def trunc_ssatu : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $dst, $src):$root,
+    [{ return Helper.matchTruncSSatU(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyTruncSSatU(*${root}, ${matchinfo}); }])>;
+
+def trunc_usatu : GICombineRule<
+  (defs root:$root),
+  (match (G_UMIN $min, $x, $y):$Min, 
+         (G_TRUNC $dst, $min):$root,
+    [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
+  (apply (G_TRUNC_USAT_U $dst, $x))>;
+
+def truncusatu_to_fptouisat : GICombineRule<
+  (defs root:$root),
+  (match (G_FPTOUI $src, $x):$Src,
+         (G_TRUNC_USAT_U $dst, $src):$root,
+    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, *${Src}); }]),
+  (apply (G_FPTOUI_SAT $dst, $x))
+>;
+
+def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
 
 def redundant_neg_operands: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1996,7 +2069,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold,
-                                        right_identity_neg_zero_fp,
+                                        right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
@@ -2060,7 +2133,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -55,6 +55,10 @@ struct JITEngine {
   process(const __tgt_device_image &Image,
           target::plugin::GenericDeviceTy &Device);
 
+  /// Remove \p Image from the jit engine's cache
+  void erase(const __tgt_device_image &Image,
+             target::plugin::GenericDeviceTy &Device);
+
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
   /// be loaded to the target device of the triple \p Triple architecture \p
@@ -89,11 +93,13 @@ private:
     /// LLVM Context in which the modules will be constructed.
     LLVMContext Context;
 
-    /// Output images generated from LLVM backend.
-    SmallVector<std::unique_ptr<MemoryBuffer>, 4> JITImages;
+    /// A map of embedded IR images to the buffer used to store JITed code
+    DenseMap<const __tgt_device_image *, std::unique_ptr<MemoryBuffer>>
+        JITImages;
 
     /// A map of embedded IR images to JITed images.
-    DenseMap<const __tgt_device_image *, __tgt_device_image *> TgtImageMap;
+    DenseMap<const __tgt_device_image *, std::unique_ptr<__tgt_device_image>>
+        TgtImageMap;
   };
 
   /// Map from (march) "CPUs" (e.g., sm_80, or gfx90a), which we call compute

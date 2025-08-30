@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid Descriptor Range type: Invalid 
+; CHECK: error: Invalid Descriptor Range type
 ; CHECK-NOT: Root Signature Definitions
 
 define void @main() #0 {

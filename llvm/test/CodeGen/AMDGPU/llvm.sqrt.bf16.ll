@@ -2,8 +2,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-TRUE16 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-FAKE16 %s
 
-; FIXME: t16 doesn't work at the moment because the store of s16 under t16 mode fails to select.
-
 declare bfloat @llvm.sqrt.bf16(bfloat %a)
 declare <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> %a)
 
