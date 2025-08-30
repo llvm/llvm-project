@@ -28,18 +28,18 @@ def make_pdl_module():
             @pdl.pattern(benefit=1, sym_name="addi_to_mul")
             def pat():
                 # Match arith.addi with index types.
-                index_type = pdl.TypeOp(IndexType.get())
-                operand0 = pdl.OperandOp(index_type)
-                operand1 = pdl.OperandOp(index_type)
+                i64_type = pdl.TypeOp(IntegerType.get_signless(64))
+                operand0 = pdl.OperandOp(i64_type)
+                operand1 = pdl.OperandOp(i64_type)
                 op0 = pdl.OperationOp(
-                    name="arith.addi", args=[operand0, operand1], types=[index_type]
+                    name="arith.addi", args=[operand0, operand1], types=[i64_type]
                 )
 
                 # Replace the matched op with arith.muli.
                 @pdl.rewrite()
                 def rew():
                     newOp = pdl.OperationOp(
-                        name="arith.muli", args=[operand0, operand1], types=[index_type]
+                        name="arith.muli", args=[operand0, operand1], types=[i64_type]
                     )
                     pdl.ReplaceOp(op0, with_op=newOp)
 
@@ -63,17 +63,21 @@ def testCustomPass():
         module = ModuleOp.parse(
             r"""
             module {
-              func.func @add(%a: index, %b: index) -> index {
-                %sum = arith.addi %a, %b : index
-                return %sum : index
+              func.func @add(%a: i64, %b: i64) -> i64 {
+                %sum = arith.addi %a, %b : i64
+                return %sum : i64
               }
             }
         """
         )
 
-        # CHECK-LABEL: Dump After CustomPass
-        # CHECK: arith.muli
         pm = PassManager("any")
         pm.enable_ir_printing()
+
+        # CHECK-LABEL: Dump After CustomPass
+        # CHECK: arith.muli
         pm.add(CustomPass())
+        # CHECK-LABEL: Dump After ArithToLLVMConversionPass
+        # CHECK: llvm.mul
+        pm.add("convert-arith-to-llvm")
         pm.run(module)
