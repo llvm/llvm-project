@@ -8,6 +8,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
@@ -403,29 +404,20 @@ private:
   llvm::BumpPtrAllocator FactAllocator;
 };
 
-class FactGenerator : public ConstStmtVisitor<FactGenerator> {
-  using Base = ConstStmtVisitor<FactGenerator>;
+class FactGeneratorVisitor : public ConstStmtVisitor<FactGeneratorVisitor> {
+  using Base = ConstStmtVisitor<FactGeneratorVisitor>;
 
 public:
-  FactGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC) {}
+  FactGeneratorVisitor(FactManager &FactMgr) : FactMgr(FactMgr) {}
 
-  void run() {
-    llvm::TimeTraceScope TimeProfile("FactGenerator");
-    // Iterate through the CFG blocks in reverse post-order to ensure that
-    // initializations and destructions are processed in the correct sequence.
-    for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
-      CurrentBlockFacts.clear();
-      for (unsigned I = 0; I < Block->size(); ++I) {
-        const CFGElement &Element = Block->Elements[I];
-        if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
-          Visit(CS->getStmt());
-        else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                     Element.getAs<CFGAutomaticObjDtor>())
-          handleDestructor(*DtorOpt);
-      }
-      FactMgr.addBlockFacts(Block, CurrentBlockFacts);
-    }
+  void startBlock(const CFGBlock *Block) {
+    CurrentBlock = Block;
+    CurrentBlockFacts.clear();
+  }
+
+  void endBlock() {
+    FactMgr.addBlockFacts(CurrentBlock, CurrentBlockFacts);
+    startBlock(nullptr);
   }
 
   void VisitDeclStmt(const DeclStmt *DS) {
@@ -445,7 +437,6 @@ public:
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (!hasOrigin(ICE->getType()))
       return;
-    Visit(ICE->getSubExpr());
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
     // TODO: Consider if this is actually useful in practice. Alternatively, we
@@ -513,18 +504,6 @@ public:
     Base::VisitCXXFunctionalCastExpr(FCE);
   }
 
-private:
-  // Check if a type has an origin.
-  bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
-
-  template <typename Destination, typename Source>
-  void addAssignOriginFact(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
-  }
-
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
     /// TODO: Also handle trivial destructors (e.g., for `int`
     /// variables) which will never have a CFGAutomaticObjDtor node.
@@ -545,6 +524,18 @@ private:
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
     }
+  }
+
+private:
+  // Check if a type has an origin.
+  bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
+
+  template <typename Destination, typename Source>
+  void addAssignOriginFact(const Destination &D, const Source &S) {
+    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
+    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
   }
 
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
@@ -569,8 +560,60 @@ private:
   }
 
   FactManager &FactMgr;
-  AnalysisDeclContext &AC;
+  const CFGBlock *CurrentBlock = nullptr;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+};
+
+class FactGenerator : public RecursiveASTVisitor<FactGenerator> {
+public:
+  FactGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
+      : FG(FactMgr), AC(AC) {}
+
+  bool shouldTraversePostOrder() const { return true; }
+
+  void run() {
+    llvm::TimeTraceScope TimeProfile("FactGenerator");
+    // Iterate through the CFG blocks in reverse post-order to ensure that
+    // initializations and destructions are processed in the correct sequence.
+    for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
+      FactGeneratorBlockRAII BlockGenerator(FG, Block);
+      for (const CFGElement &Element : *Block) {
+        if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
+          TraverseStmt(const_cast<Stmt *>(CS->getStmt()));
+        else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
+                     Element.getAs<CFGAutomaticObjDtor>())
+          FG.handleDestructor(*DtorOpt);
+      }
+    }
+  }
+
+  bool TraverseStmt(Stmt *S) {
+    // Avoid re-visiting nodes to not create duplicate facts.
+    if (!S || !VisitedStmts.insert(S).second)
+      return true;
+    return RecursiveASTVisitor::TraverseStmt(S);
+  }
+
+  bool VisitStmt(Stmt *S) {
+    FG.Visit(S);
+    return true; // Continue traversing to children.
+  }
+
+private:
+  struct FactGeneratorBlockRAII {
+    FactGeneratorBlockRAII(FactGeneratorVisitor &FG, const CFGBlock *Block)
+        : FG(FG) {
+      FG.startBlock(Block);
+    }
+    ~FactGeneratorBlockRAII() { FG.endBlock(); }
+
+  private:
+    FactGeneratorVisitor &FG;
+  };
+
+  FactGeneratorVisitor FG;
+  AnalysisDeclContext &AC;
+  llvm::DenseSet<const Stmt *> VisitedStmts;
 };
 
 // ========================================================================= //
@@ -1116,8 +1159,8 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
 
-  FactGenerator FactGen(*FactMgr, AC);
-  FactGen.run();
+  FactGenerator FG(*FactMgr, AC);
+  FG.run();
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
