@@ -1031,7 +1031,7 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P7-NEXT:    vmaddfp 5, 5, 0, 3
 ; CHECK-P7-NEXT:    vmaddfp 3, 5, 4, 3
 ; CHECK-P7-NEXT:    vxor 4, 4, 4
-; CHECK-P7-NEXT:    vcmpeqfp 2, 2, 4
+; CHECK-P7-NEXT:    vcmpgefp 2, 4, 2
 ; CHECK-P7-NEXT:    vnot 2, 2
 ; CHECK-P7-NEXT:    vand 2, 2, 3
 ; CHECK-P7-NEXT:    blr
