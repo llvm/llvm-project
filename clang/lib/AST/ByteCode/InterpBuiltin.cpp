@@ -3325,6 +3325,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return LHS.lshr(RHS.getZExtValue());
         });
 
+  case clang::X86::BI__builtin_ia32_vprotbi:
+  case clang::X86::BI__builtin_ia32_vprotdi:
+  case clang::X86::BI__builtin_ia32_vprotqi:
+  case clang::X86::BI__builtin_ia32_vprotwi:
+  case clang::X86::BI__builtin_ia32_prold128:
+  case clang::X86::BI__builtin_ia32_prold256:
+  case clang::X86::BI__builtin_ia32_prold512:
+  case clang::X86::BI__builtin_ia32_prolq128:
+  case clang::X86::BI__builtin_ia32_prolq256:
+  case clang::X86::BI__builtin_ia32_prolq512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotl(RHS); });
+
+  case clang::X86::BI__builtin_ia32_prord128:
+  case clang::X86::BI__builtin_ia32_prord256:
+  case clang::X86::BI__builtin_ia32_prord512:
+  case clang::X86::BI__builtin_ia32_prorq128:
+  case clang::X86::BI__builtin_ia32_prorq256:
+  case clang::X86::BI__builtin_ia32_prorq512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, BuiltinID,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotr(RHS); });
+
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
     return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
