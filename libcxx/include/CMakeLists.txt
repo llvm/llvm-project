@@ -932,6 +932,7 @@ set(files
   __utility/scope_guard.h
   __utility/small_buffer.h
   __utility/swap.h
+  __utility/three_way_comparator.h
   __utility/to_underlying.h
   __utility/try_key_extraction.h
   __utility/unreachable.h
