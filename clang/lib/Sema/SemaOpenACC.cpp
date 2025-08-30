@@ -2589,6 +2589,59 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
+/// Loops through a type and generates an appropriate InitListExpr to generate
+/// type initialization.
+static Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
+                                             SourceRange ExprRange,
+                                             QualType Ty) {
+  Ty = Ty.getCanonicalType();
+  llvm::SmallVector<Expr *> Exprs;
+
+  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    for (auto *F : RD->fields()) {
+      if (Expr *NewExpr =
+              GenerateReductionInitRecipeExpr(Context, ExprRange, F->getType()))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+  } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
+    for (uint64_t Idx = 0; Idx < AT->getZExtSize(); ++Idx) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
+                                                          AT->getElementType()))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+
+  } else {
+    assert(Ty->isScalarType());
+
+    // TODO:  OpenACC: This currently only works for '1', but we need to figure
+    // out a way to do least/largest/all-1s.
+    if (Ty->isFloatingType()) {
+      Exprs.push_back(FloatingLiteral::Create(
+          Context, llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty)),
+          /*isExact=*/true, Ty, ExprRange.getBegin()));
+    } else if (Ty->isPointerType()) {
+      // It isn't clear here what we can do, we don't know the intended
+      // size/etc, as that isn't present in the recipe. We probably have to come
+      // up with a way to have the bounds passed to these, but it isn't clear
+      // how that should work.
+      return nullptr;
+    } else {
+      Exprs.push_back(IntegerLiteral::Create(
+          Context, llvm::APInt(Context.getTypeSize(Ty), 1), Ty,
+          ExprRange.getBegin()));
+    }
+  }
+
+  Expr *InitExpr = new (Context)
+      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  InitExpr->setType(Ty);
+  return InitExpr;
+}
+
 std::pair<VarDecl *, VarDecl *>
 SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
                               OpenACCReductionOperator ReductionOperator,
@@ -2733,14 +2786,33 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // are used for code generation, we can just ignore/not bother doing any
         // initialization here.
         break;
-      case OpenACCReductionOperator::Multiplication:
       case OpenACCReductionOperator::Max:
       case OpenACCReductionOperator::Min:
       case OpenACCReductionOperator::BitwiseAnd:
-      case OpenACCReductionOperator::And:
         // TODO: OpenACC: figure out init for these.
         break;
 
+      case OpenACCReductionOperator::Multiplication:
+      case OpenACCReductionOperator::And: {
+        // '&&' initializes every field to 1.  However, we need to loop through
+        // every field/element and generate an initializer for each of the
+        // elements.
+
+        Expr *InitExpr = GenerateReductionInitRecipeExpr(
+            getASTContext(), VarExpr->getSourceRange(), VarTy);
+
+        if (InitExpr) {
+          InitializationKind Kind = InitializationKind::CreateForInit(
+              Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
+          InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind,
+                                         InitExpr,
+                                         /*TopLevelOfInitList=*/false,
+                                         /*TreatUnavailableAsInvalid=*/false);
+          Init =
+              InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+        }
+        break;
+      }
       case OpenACCReductionOperator::Addition:
       case OpenACCReductionOperator::BitwiseOr:
       case OpenACCReductionOperator::BitwiseXOr:
