@@ -16,8 +16,15 @@
 
 void create_lc_note_binary_load_cmd(const CoreSpec &spec,
                                     std::vector<uint8_t> &cmds,
-                                    std::string uuid, uint64_t slide,
+                                    std::string uuid, bool value_is_slide,
+                                    uint64_t value,
                                     std::vector<uint8_t> &payload_bytes,
                                     off_t data_offset);
+
+void create_lc_note_addressable_bits(const CoreSpec &spec,
+                                     std::vector<uint8_t> &cmds,
+                                     int address_bits,
+                                     std::vector<uint8_t> &payload_bytes,
+                                     off_t data_offset);
 
 #endif

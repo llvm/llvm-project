@@ -26,6 +26,9 @@
   fprintf(stderr, "   -i|--input <yaml spec>\n");
   fprintf(stderr, "   -o|--output <corefile name>\n");
   fprintf(stderr, "   -u|--uuids <uuid,uuid,uuid>\n");
+  fprintf(stderr, "   -L|--uuids-and-load-addrs <uuid,vaddr,uuid,vaddr>\n");
+  fprintf(stderr,
+          "   -A|--address-bits <number of bits valid for addressing>\n");
   fprintf(stderr, "   Add LC_NOTE 'load binary' for those UUIDs, "
                   "at slide 0.\n");
   exit(1);
@@ -55,15 +58,20 @@ std::vector<std::string> get_fields_from_delimited_string(std::string str,
 
 int main(int argc, char **argv) {
 
-  const char *const short_opts = "i:o:u:h";
-  const option long_opts[] = {{"input", required_argument, nullptr, 'i'},
-                              {"output", required_argument, nullptr, 'o'},
-                              {"uuids", required_argument, nullptr, 'u'},
-                              {"help", no_argument, nullptr, 'h'},
-                              {nullptr, no_argument, nullptr, 0}};
+  const char *const short_opts = "i:o:u:L:A:h";
+  const option long_opts[] = {
+      {"input", required_argument, nullptr, 'i'},
+      {"output", required_argument, nullptr, 'o'},
+      {"uuids", required_argument, nullptr, 'u'},
+      {"uuids-and-load-addrs", required_argument, nullptr, 'L'},
+      {"address-bits", required_argument, nullptr, 'A'},
+      {"help", no_argument, nullptr, 'h'},
+      {nullptr, no_argument, nullptr, 0}};
 
   std::optional<std::string> infile, outfile;
   std::optional<std::vector<std::string>> uuids;
+  std::optional<std::vector<std::string>> uuids_with_load_addrs;
+  std::optional<std::string> address_bits;
   while (true) {
     const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
     if (opt == -1)
@@ -78,6 +86,12 @@ int main(int argc, char **argv) {
     case 'u':
       uuids = get_fields_from_delimited_string(optarg, ',');
       break;
+    case 'L':
+      uuids_with_load_addrs = get_fields_from_delimited_string(optarg, ',');
+      break;
+    case 'A':
+      address_bits = optarg;
+      break;
     case 'h':
       print_help();
     }
@@ -86,6 +100,11 @@ int main(int argc, char **argv) {
   if (!infile || !outfile)
     print_help();
 
+  if (uuids_with_load_addrs && uuids_with_load_addrs->size() % 2 != 0) {
+    fprintf(stderr, "--uids-and-load-addrs should be comma separated list of "
+                    "uuid,load addr for one or more tuples.\n");
+    print_help();
+  }
   struct stat sb;
 
   if (stat(infile->c_str(), &sb) == -1) {
@@ -127,10 +146,30 @@ int main(int argc, char **argv) {
     for (const std::string &uuid : *uuids) {
       std::vector<uint8_t> segment_command_bytes;
       std::vector<uint8_t> payload_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, 0,
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, true, 0,
                                      payload_bytes, 0);
       load_commands.push_back(segment_command_bytes);
     }
+  if (uuids_with_load_addrs) {
+    int count = uuids_with_load_addrs->size() / 2;
+    for (int i = 0; i < count; i++) {
+      std::string uuid = uuids_with_load_addrs->at(i * 2);
+      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
+      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
+      std::vector<uint8_t> segment_command_bytes;
+      std::vector<uint8_t> payload_bytes;
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, false,
+                                     va, payload_bytes, 0);
+      load_commands.push_back(segment_command_bytes);
+    }
+  }
+  if (address_bits) {
+    std::vector<uint8_t> segment_command_bytes;
+    std::vector<uint8_t> payload_bytes;
+    create_lc_note_addressable_bits(spec, segment_command_bytes,
+                                    std::stoi(*address_bits), payload_bytes, 0);
+    load_commands.push_back(segment_command_bytes);
+  }
 
   off_t size_of_load_commands = 0;
   for (const auto &lc : load_commands)
@@ -157,19 +196,46 @@ int main(int argc, char **argv) {
     payload_fileoff = (payload_fileoff + 4096 - 1) & ~(4096 - 1);
   }
 
+  off_t payload_fileoff_before_lcnotes = payload_fileoff;
   std::vector<uint8_t> lc_note_payload_bytes;
   if (uuids) {
-    off_t starting_fileoff_to_lcnote_payload = payload_fileoff;
     for (const std::string &uuid : *uuids) {
       std::vector<uint8_t> segment_command_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, 0,
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, true, 0,
                                      lc_note_payload_bytes, payload_fileoff);
       payload_fileoff =
-          starting_fileoff_to_lcnote_payload + lc_note_payload_bytes.size();
+          payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();
       load_commands.push_back(segment_command_bytes);
     }
-    payload_fileoff = (payload_fileoff + 4096 - 1) & ~(4096 - 1);
   }
+  if (uuids_with_load_addrs) {
+    int count = uuids_with_load_addrs->size() / 2;
+    for (int i = 0; i < count; i++) {
+      std::string uuid = uuids_with_load_addrs->at(i * 2);
+      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
+      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
+      std::vector<uint8_t> segment_command_bytes;
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, false,
+                                     va, lc_note_payload_bytes,
+                                     payload_fileoff);
+      payload_fileoff =
+          payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();
+      load_commands.push_back(segment_command_bytes);
+    }
+  }
+  if (address_bits) {
+    std::vector<uint8_t> segment_command_bytes;
+    create_lc_note_addressable_bits(spec, segment_command_bytes,
+                                    std::stoi(*address_bits),
+                                    lc_note_payload_bytes, payload_fileoff);
+    payload_fileoff =
+        payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();
+    load_commands.push_back(segment_command_bytes);
+  }
+
+  // Realign our payload offset if we added any LC_NOTEs.
+  if (lc_note_payload_bytes.size() > 0)
+    payload_fileoff = (payload_fileoff + 4096 - 1) & ~(4096 - 1);
 
   FILE *f = fopen(outfile->c_str(), "w");
   if (f == nullptr) {
