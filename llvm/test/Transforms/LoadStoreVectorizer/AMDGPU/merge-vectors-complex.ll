@@ -7,24 +7,19 @@ define void @merge_i32_v2i16_f32_v4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[GEP1]], align 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <2 x i16>, ptr addrspace(1) [[PTR1]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr addrspace(1) [[GEP2]], align 4
-; CHECK-NEXT:    [[LOAD2_MUT1:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD4_MUT2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD3_MUT3:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD2_TOORIG:%.*]] = bitcast i32 [[LOAD2_MUT1]] to <2 x i16>
-; CHECK-NEXT:    [[LOAD3_TOORIG:%.*]] = bitcast i32 [[LOAD3_MUT3]] to float
-; CHECK-NEXT:    [[LOAD4_TOORIG:%.*]] = bitcast i32 [[LOAD4_MUT2]] to <4 x i8>
+; CHECK-NEXT:    [[LOAD2:%.*]] = load <2 x i16>, ptr addrspace(1) [[GEP2]], align 4
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 2
+; CHECK-NEXT:    [[LOAD3:%.*]] = load float, ptr addrspace(1) [[GEP3]], align 4
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(1) [[PTR1]], i64 3
+; CHECK-NEXT:    [[LOAD4:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP4]], align 4
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-NEXT:    store i32 [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds <2 x i16>, ptr addrspace(2) [[PTR2]], i64 1
-; CHECK-NEXT:    [[LOAD2_BC:%.*]] = bitcast <2 x i16> [[LOAD2_TOORIG]] to i32
-; CHECK-NEXT:    store i32 [[LOAD2_BC]], ptr addrspace(2) [[STORE_GEP2]], align 4
-; CHECK-NEXT:    [[LOAD3_BC:%.*]] = bitcast float [[LOAD3_TOORIG]] to i32
+; CHECK-NEXT:    store <2 x i16> [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[PTR2]], i64 2
+; CHECK-NEXT:    store float [[LOAD3]], ptr addrspace(2) [[STORE_GEP3]], align 4
 ; CHECK-NEXT:    [[STORE_GEP4:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(2) [[PTR2]], i64 3
-; CHECK-NEXT:    [[LOAD4_BC:%.*]] = bitcast <4 x i8> [[LOAD4_TOORIG]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD4_BC]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LOAD3_BC]], i32 1
-; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(2) [[STORE_GEP4]], align 4
+; CHECK-NEXT:    store <4 x i8> [[LOAD4]], ptr addrspace(2) [[STORE_GEP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %ptr1, i64 0
@@ -119,5 +114,26 @@ define void @no_merge_mixed_ptr_addrspaces(ptr addrspace(1) %ptr1, ptr addrspace
   store ptr addrspace(1) %load1, ptr addrspace(2) %store.gep1, align 4
   %store.gep2 = getelementptr inbounds ptr addrspace(2), ptr addrspace(2) %ptr2, i64 1
   store ptr addrspace(2) %load2, ptr addrspace(2) %store.gep2, align 4
+  ret void
+}
+
+; Stores in this test should not be vectorized as as the total byte span
+; from the end of %gep.a to the end of %gep.b is not a power of 2. This
+; is a necessary condition for splitChainByAlignment.
+define void @check_contiguity_of_base_ptrs(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: define void @check_contiguity_of_base_ptrs(
+; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
+; CHECK-NEXT:    store i32 274, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[PTR]], i64 4
+; CHECK-NEXT:    store i64 3610770474484254748, ptr addrspace(1) [[GEP_A]], align 8
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[PTR]], i64 12
+; CHECK-NEXT:    store <2 x i32> <i32 1819043144, i32 1867980911>, ptr addrspace(1) [[GEP_B]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 274, ptr addrspace(1) %ptr, align 4
+  %gep.a = getelementptr inbounds nuw i8, ptr addrspace(1) %ptr, i64 4
+  store i64 3610770474484254748, ptr addrspace(1) %gep.a, align 8
+  %gep.b = getelementptr inbounds nuw i8, ptr addrspace(1) %ptr, i64 12
+  store <2 x i32> <i32 1819043144, i32 1867980911>, ptr addrspace(1) %gep.b, align 4
   ret void
 }

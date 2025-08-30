@@ -142,11 +142,12 @@ define amdgpu_kernel void @test_v2i64_vreg(ptr addrspace(1) noalias %out, ptr ad
 define amdgpu_kernel void @trunc_i64_add_to_i32(ptr addrspace(1) %out, i32, i64 %a, i32, i64 %b) {
 ; SI-LABEL: trunc_i64_add_to_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_load_dword s4, s[4:5], 0x11
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_load_dword s2, s[4:5], 0xd
+; SI-NEXT:    s_load_dword s6, s[4:5], 0x11
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_add_i32 s4, s4, s2
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_add_i32 s4, s6, s2
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0

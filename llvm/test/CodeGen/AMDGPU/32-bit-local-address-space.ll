@@ -298,24 +298,26 @@ define amdgpu_kernel void @local_address_store(ptr addrspace(3) %out, i32 %val) 
 define amdgpu_kernel void @local_address_gep_store(ptr addrspace(3) %out, i32, i32 %val, i32 %offset) {
 ; GFX7-LABEL: local_address_gep_store:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; GFX7-NEXT:    s_load_dword s2, s[4:5], 0x9
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_lshl_b32 s2, s2, 2
-; GFX7-NEXT:    s_add_i32 s0, s0, s2
-; GFX7-NEXT:    v_mov_b32_e32 v0, s1
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 2
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    s_add_i32 s0, s2, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX7-NEXT:    ds_write_b32 v1, v0
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: local_address_gep_store:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX8-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_lshl_b32 s2, s2, 2
-; GFX8-NEXT:    s_add_i32 s0, s0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v0, s1
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 2
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    s_add_i32 s0, s2, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX8-NEXT:    ds_write_b32 v1, v0
 ; GFX8-NEXT:    s_endpgm
