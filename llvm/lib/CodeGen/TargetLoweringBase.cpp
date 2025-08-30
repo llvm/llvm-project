@@ -956,6 +956,10 @@ void TargetLoweringBase::initActions() {
   // This one by default will call __clear_cache unless the target
   // wants something different.
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
+
+  // By default, STACKADDRESS nodes are expanded to STACKSAVE nodes.
+  // On SPARC targets, custom lowering is required.
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
