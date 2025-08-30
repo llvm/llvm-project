@@ -205,17 +205,17 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ; RV32C-NEXT:    c.lw a3, 4(a1)
 ; RV32C-NEXT:    c.lw a1, 8(a1)
 ; RV32C-NEXT:    c.lui a5, 16
-; RV32C-NEXT:    add a6, a4, a5
-; RV32C-NEXT:    srli a5, a2, 29
+; RV32C-NEXT:    add a7, a4, a5
+; RV32C-NEXT:    srli a6, a2, 29
 ; RV32C-NEXT:    slli a4, a3, 3
-; RV32C-NEXT:    c.or a4, a5
+; RV32C-NEXT:    or a4, a4, a6
 ; RV32C-NEXT:    srli a5, a1, 29
 ; RV32C-NEXT:    c.srli a3, 29
 ; RV32C-NEXT:    c.slli a1, 3
 ; RV32C-NEXT:    c.slli a2, 3
-; RV32C-NEXT:    c.slli a6, 3
+; RV32C-NEXT:    c.slli a7, 3
 ; RV32C-NEXT:    c.or a1, a3
-; RV32C-NEXT:    or a3, a6, a5
+; RV32C-NEXT:    or a3, a7, a5
 ; RV32C-NEXT:    c.sw a2, 0(a0)
 ; RV32C-NEXT:    c.sw a4, 4(a0)
 ; RV32C-NEXT:    c.sw a1, 8(a0)
