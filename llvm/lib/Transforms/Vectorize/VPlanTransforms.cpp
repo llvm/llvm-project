@@ -86,13 +86,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
+              false /*Consecutive*/, VPIRMetadata(*Load),
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              VPIRMetadata(*Store), Ingredient.getDebugLoc());
+              nullptr /*Mask*/, false /*Consecutive*/, VPIRMetadata(*Store),
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -2158,6 +2158,22 @@ void VPlanTransforms::addActiveLaneMask(
   HeaderMask->eraseFromParent();
 }
 
+/// If \p R is a VPInstruction::Reverse, return a VPWidenIntrinsicRecipe
+/// for the vp.reverse intrinsic using \p EVL. Returns nullptr otherwise.
+static VPWidenIntrinsicRecipe *
+getEVLReverse(VPRecipeBase &R, VPTypeAnalysis &TypeInfo, VPValue &EVL) {
+  VPValue *ReversedVal;
+  if (!match(&R,
+             m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReversedVal))))
+    return nullptr;
+
+  auto *Reverse = cast<VPInstruction>(&R);
+  VPlan *Plan = Reverse->getParent()->getPlan();
+  return new VPWidenIntrinsicRecipe(
+      Intrinsic::experimental_vp_reverse, {ReversedVal, Plan->getTrue(), &EVL},
+      TypeInfo.inferScalarType(Reverse), Reverse->getDebugLoc());
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
@@ -2176,10 +2192,25 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
+    VPValue *NewMask = OrigMask;
+    VPWidenIntrinsicRecipe *ReverseMask = nullptr;
+    bool IsReverse = match(
+        OrigMask, m_VPInstruction<VPInstruction::Reverse>(m_VPValue(NewMask)));
+    if (HeaderMask == NewMask)
+      return nullptr;
+
     VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
-      return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
+    if (match(NewMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      NewMask = Mask;
+
+    if (IsReverse) {
+      auto *R = cast<VPInstruction>(OrigMask);
+      ReverseMask = getEVLReverse(*R, TypeInfo, EVL);
+      ReverseMask->insertBefore(R);
+      ReverseMask->setOperand(0, NewMask);
+      NewMask = ReverseMask;
+    }
+    return NewMask;
   };
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
@@ -2192,7 +2223,9 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     assert(
         all_of(EndPtr->users(),
                [](VPUser *U) {
-                 return cast<VPWidenMemoryRecipe>(U)->isReverse();
+                 auto *MaskR = dyn_cast<VPInstruction>(
+                     cast<VPWidenMemoryRecipe>(U)->getMask());
+                 return MaskR && MaskR->getOpcode() == VPInstruction::Reverse;
                }) &&
         "VPVectorEndPointRecipe not used by reversed widened memory recipe?");
     VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
@@ -2346,6 +2379,37 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
     }
     ToErase.push_back(CurRecipe);
+
+    // Convert general reverse operations on loaded values and stored values
+    // into vp.reverse, when the VPVectorEndPointerRecipe adjusting the access
+    // address uses EVL instead of VF.
+    // TODO: Extend conversion along the def-use/use-def chain, as reverse
+    // operations may be eliminated or moved in the future.
+    if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(EVLRecipe);
+        MemR && match(MemR->getAddr(),
+                      m_VectorEndPointer(m_VPValue(), m_Specific(&EVL)))) {
+      VPRecipeBase *Candidate = nullptr;
+      if (auto *LoadR = dyn_cast<VPWidenLoadEVLRecipe>(MemR)) {
+        assert(LoadR->getNumUsers() == 1 &&
+               "Unexpected user number of reverse load");
+        Candidate = cast<VPRecipeBase>(*LoadR->user_begin());
+      } else if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(MemR)) {
+        VPValue *StoredVal = StoreR->getStoredValue();
+        // Skip if the stored value is not defined in the loop region.
+        if (StoredVal->isDefinedOutsideLoopRegions())
+          continue;
+        Candidate = StoredVal->getDefiningRecipe();
+      }
+      assert(Candidate && "Must have one reverse operation for reverse access");
+
+      VPWidenIntrinsicRecipe *NewReverse =
+          getEVLReverse(*Candidate, TypeInfo, EVL);
+      assert(NewReverse &&
+             "Unable to get an EVL reverse when tail folding by EVL");
+      NewReverse->insertBefore(Candidate);
+      cast<VPInstruction>(Candidate)->replaceAllUsesWith(NewReverse);
+      ToErase.push_back(Candidate);
+    }
   }
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
@@ -3714,8 +3778,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       // process one original iteration.
       auto *L = new VPWidenLoadRecipe(
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
-          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
+          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true, {},
+          LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
@@ -3757,8 +3821,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
-        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
+        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true, {},
+        StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
