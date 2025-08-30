@@ -75,7 +75,7 @@ public:
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
                    bool AllowEnablingAnalyzerAlphaCheckers,
                    bool EnableModuleHeadersParsing,
-                   bool EnableExperimentalCustomChecks);
+                   bool ExperimentalCustomChecks);
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
@@ -215,9 +215,9 @@ public:
   }
 
   // whether experimental custom checks can be enabled.
-  // enabled with `--enable-experimental-custom-checks`
-  bool canEnableExperimentalCustomChecks() const {
-    return EnableExperimentalCustomChecks;
+  // enabled with `--experimental-custom-checks`
+  bool canExperimentalCustomChecks() const {
+    return ExperimentalCustomChecks;
   }
 
   void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
@@ -268,7 +268,7 @@ private:
 
   bool AllowEnablingAnalyzerAlphaCheckers;
   bool EnableModuleHeadersParsing;
-  bool EnableExperimentalCustomChecks;
+  bool ExperimentalCustomChecks;
 
   bool SelfContainedDiags = false;
 

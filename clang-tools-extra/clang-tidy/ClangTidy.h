@@ -57,7 +57,7 @@ private:
 /// filters are applied.
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
                                        bool AllowEnablingAnalyzerAlphaCheckers,
-                                       bool EnableExperimentalCustomChecks);
+                                       bool ExperimentalCustomChecks);
 
 struct ChecksAndOptions {
   llvm::StringSet<> Checks;
@@ -65,7 +65,7 @@ struct ChecksAndOptions {
 };
 
 ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
-                                        bool EnableExperimentalCustomChecks);
+                                        bool ExperimentalCustomChecks);
 
 /// Returns the effective check-specific options.
 ///
@@ -76,7 +76,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
 ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers,
-                bool EnableExperimentalCustomChecks);
+                bool ExperimentalCustomChecks);
 
 /// Filters CheckOptions in \p Options to only include options specified in
 /// the \p EnabledChecks which is a sorted vector.

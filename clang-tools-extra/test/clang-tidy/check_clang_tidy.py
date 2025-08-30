@@ -209,7 +209,7 @@ class CheckRunner:
         args = (
             [
                 "clang-tidy",
-                "--enable-experimental-custom-checks",
+                "--experimental-custom-checks",
                 self.temp_file_name,
             ]
             + [

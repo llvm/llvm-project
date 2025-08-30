@@ -348,7 +348,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
     : Context(Context), OverlayFS(std::move(OverlayFS)),
       CheckFactories(new ClangTidyCheckFactories) {
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (Context.canEnableExperimentalCustomChecks())
+  if (Context.canExperimentalCustomChecks())
     custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
 #endif
   for (ClangTidyModuleRegistry::entry E : ClangTidyModuleRegistry::entries()) {
@@ -421,7 +421,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (Context.canEnableExperimentalCustomChecks())
+  if (Context.canExperimentalCustomChecks())
     custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
 #endif
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
@@ -511,12 +511,12 @@ ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
 
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
                                        bool AllowEnablingAnalyzerAlphaCheckers,
-                                       bool EnableExperimentalCustomChecks) {
+                                       bool ExperimentalCustomChecks) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
                                                Options),
       AllowEnablingAnalyzerAlphaCheckers, false,
-      EnableExperimentalCustomChecks);
+      ExperimentalCustomChecks);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckNames();
 }
@@ -538,12 +538,12 @@ void filterCheckOptions(ClangTidyOptions &Options,
 ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers,
-                bool EnableExperimentalCustomChecks) {
+                bool ExperimentalCustomChecks) {
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
                                                Options),
       AllowEnablingAnalyzerAlphaCheckers, false,
-      EnableExperimentalCustomChecks);
+      ExperimentalCustomChecks);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
   DiagnosticsEngine DE(llvm::makeIntrusiveRefCnt<DiagnosticIDs>(), *DiagOpts,
@@ -681,17 +681,17 @@ void exportReplacements(const llvm::StringRef MainFilePath,
 }
 
 ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
-                                        bool EnableExperimentalCustomChecks) {
+                                        bool ExperimentalCustomChecks) {
   ChecksAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
   clang::tidy::ClangTidyContext Context(
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(), Opts),
       AllowEnablingAnalyzerAlphaCheckers, false,
-      EnableExperimentalCustomChecks);
+      ExperimentalCustomChecks);
   ClangTidyCheckFactories Factories;
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (EnableExperimentalCustomChecks)
+  if (ExperimentalCustomChecks)
     custom::registerCustomChecks(Context.getOptions(), Factories);
 #endif
   for (const ClangTidyModuleRegistry::entry &Module :
