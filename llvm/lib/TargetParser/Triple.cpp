@@ -277,6 +277,8 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case PC: return "pc";
   case SCEI: return "scei";
   case SUSE: return "suse";
+  case WALI:
+    return "wali";
   case Meta:
     return "meta";
   }
@@ -681,6 +683,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
       .Case("suse", Triple::SUSE)
       .Case("oe", Triple::OpenEmbedded)
       .Case("intel", Triple::Intel)
+      .Case("wali", Triple::WALI)
       .Case("meta", Triple::Meta)
       .Default(Triple::UnknownVendor);
 }

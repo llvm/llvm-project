@@ -199,6 +199,7 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
+    WALI,
     Meta,
     LastVendorType = Meta
   };
@@ -793,6 +794,12 @@ public:
   /// Tests whether the OS uses the DXContainer binary format.
   bool isOSBinFormatDXContainer() const {
     return getObjectFormat() == Triple::DXContainer;
+  }
+
+  /// Tests whether the target uses WALI Wasm
+  bool isWALI() const {
+    return getArch() == Triple::wasm32 && getVendor() == Triple::WALI &&
+           getOS() == Triple::Linux;
   }
 
   /// Tests whether the target is the PS4 platform.
