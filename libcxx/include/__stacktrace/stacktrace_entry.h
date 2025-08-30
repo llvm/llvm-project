@@ -121,7 +121,7 @@ struct entry_base {
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-  _LIBCPP_EXPORTED_FROM_ABI uintptr_t adjusted_addr() const;
+  _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
 
   _LIBCPP_HIDE_FROM_ABI constexpr static entry_base* of(auto& __s) { return static_cast<entry_base*>(__s); }
 
@@ -136,8 +136,8 @@ struct entry_base {
 } // namespace __stacktrace
 
 class stacktrace_entry {
-  friend _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry);
-  friend _LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry);
+  friend _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry);
+  friend _LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry);
 
   __stacktrace::entry_base __base_{};
 
@@ -146,35 +146,33 @@ public:
   using native_handle_type = uintptr_t;
 
   // (19.6.3.2) [stacktrace.entry.cons], constructors
-  _LIBCPP_EXPORTED_FROM_ABI ~stacktrace_entry() noexcept                                            = default;
-  _LIBCPP_EXPORTED_FROM_ABI constexpr stacktrace_entry() noexcept                                   = default;
-  _LIBCPP_EXPORTED_FROM_ABI constexpr stacktrace_entry(const stacktrace_entry&) noexcept            = default;
-  _LIBCPP_EXPORTED_FROM_ABI constexpr stacktrace_entry& operator=(const stacktrace_entry&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI ~stacktrace_entry() noexcept                                            = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry() noexcept                                   = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry(const stacktrace_entry&) noexcept            = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry& operator=(const stacktrace_entry&) noexcept = default;
 
   // (19.6.3.3) [stacktrace.entry.obs], observers
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI constexpr native_handle_type native_handle() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept {
     return __base_.__addr_;
   }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI constexpr explicit operator bool() const noexcept {
-    return native_handle() != 0;
-  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string description() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string description() const {
     return __base_.__desc_ ? string(*__base_.__desc_) : string();
   }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string source_file() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string source_file() const {
     return __base_.__file_ ? string(*__base_.__file_) : string();
   }
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI friend constexpr bool
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const stacktrace_entry& __x, const stacktrace_entry& __y) noexcept {
     return __x.native_handle() == __y.native_handle();
   }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI friend constexpr strong_ordering
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
   operator<=>(const stacktrace_entry& __x, const stacktrace_entry& __y) noexcept {
     return __x.native_handle() <=> __y.native_handle();
   }
@@ -183,13 +181,13 @@ public:
 // (19.6.4.6)
 // Non-member functions [stacktrace.basic.nonmem]
 
-[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string to_string(const stacktrace_entry& __entry);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI string to_string(const stacktrace_entry& __entry);
 
 #  if _LIBCPP_HAS_LOCALIZATION
-_LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry) {
+_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry) {
   return __entry.__base_.write_to(__os);
 }
-_LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry) {
+_LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry) {
   return __entry.__base_.to_string();
 }
 #  endif // _LIBCPP_HAS_LOCALIZATION
@@ -202,7 +200,7 @@ _LIBCPP_EXPORTED_FROM_ABI inline string to_string(std::stacktrace_entry const& _
 // Hash support [stacktrace.basic.hash]
 
 template <>
-struct _LIBCPP_EXPORTED_FROM_ABI hash<stacktrace_entry> {
+struct _LIBCPP_HIDE_FROM_ABI hash<stacktrace_entry> {
   [[nodiscard]] size_t operator()(stacktrace_entry const& __entry) const noexcept {
     auto __addr = __entry.native_handle();
     return hash<uintptr_t>()(__addr);

@@ -413,7 +413,6 @@
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_negative_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_positive_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_thousands_sepEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNKSt3__112__stacktrace10entry_base13adjusted_addrEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace10entry_base8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace10entry_base9to_stringEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace4base8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
@@ -980,7 +979,6 @@
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__112__stacktrace4base12__create_strEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace4base12current_implEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace6imagesC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace6imagesC2Ev', 'type': 'FUNC'}
@@ -1953,7 +1951,6 @@
 {'is_defined': True, 'name': '__ZNSt3__19to_stringEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__19to_stringEx', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__19to_stringEy', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__1lsERNS_13basic_ostreamIcNS_11char_traitsIcEEEERKNS_16stacktrace_entryE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EEPKS6_RKS9_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt8bad_castC1Ev', 'type': 'I'}
 {'is_defined': True, 'name': '__ZNSt8bad_castC2Ev', 'type': 'I'}

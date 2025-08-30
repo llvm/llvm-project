@@ -47,35 +47,37 @@ struct dll {
 
 struct dbghelp_dll final : dll {
   IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
-  bool    (*StackWalk64)        (DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*, void*, void*, void*);
   bool    (*SymCleanup)         (HANDLE);
+  DWORD   (*SymGetOptions)      ();
+  bool    (*SymGetSearchPath)   (HANDLE, char const*, DWORD);
+  bool    (*SymInitialize)      (HANDLE, char const*, bool);
+  DWORD   (*SymSetOptions)      (DWORD);
+  bool    (*SymSetSearchPath)   (HANDLE, char const*);
+  bool    (*StackWalk64)        (DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*, void*, void*, void*);
   void*   (*SymFunctionTableAccess64)(HANDLE, DWORD64);
   bool    (*SymGetLineFromAddr64)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
   DWORD64 (*SymGetModuleBase64) (HANDLE, DWORD64);
-  DWORD   (*SymGetOptions)      ();
-  bool    (*SymGetSearchPath)   (HANDLE, char const*, DWORD);
+  bool    (*SymGetModuleInfo64) (HANDLE, DWORD64, IMAGEHLP_MODULE64*);
   bool    (*SymGetSymFromAddr64)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
-  bool    (*SymInitialize)      (HANDLE, char const*, bool);
   DWORD64 (*SymLoadModule64)    (HANDLE, HANDLE, char const*, char const*, void*, DWORD);
-  DWORD   (*SymSetOptions)      (DWORD);
-  bool    (*SymSetSearchPath)   (HANDLE, char const*);
 
   dbghelp_dll() : dll("dbghelp.dll") {
     loaded_ = true
       && get_func(&ImageNtHeader, "ImageNtHeader")
-      && get_func(&StackWalk64, "StackWalk64")
       && get_func(&SymCleanup, "SymCleanup")
+      && get_func(&SymGetOptions, "SymGetOptions")
+      && get_func(&SymGetSearchPath, "SymGetSearchPath")
+      && get_func(&SymInitialize, "SymInitialize")
+      && get_func(&SymSetOptions, "SymSetOptions")
+      && get_func(&SymSetSearchPath, "SymSetSearchPath")
+      && get_func(&StackWalk64, "StackWalk64")
       && get_func(&SymFunctionTableAccess64, "SymFunctionTableAccess64")
       && get_func(&SymGetLineFromAddr64, "SymGetLineFromAddr64")
       && get_func(&SymGetModuleBase64, "SymGetModuleBase64")
-      && get_func(&SymGetOptions, "SymGetOptions")
-      && get_func(&SymGetSearchPath, "SymGetSearchPath")
+      && get_func(&SymGetModuleInfo64, "SymGetModuleInfo64")
       && get_func(&SymGetSymFromAddr64, "SymGetSymFromAddr64")
-      && get_func(&SymInitialize, "SymInitialize")
       && get_func(&SymLoadModule64, "SymLoadModule64")
-      && get_func(&SymSetOptions, "SymSetOptions")
-      && get_func(&SymSetSearchPath, "SymSetSearchPath")
-    ;
+      ;
   }
 };
 
@@ -122,11 +124,9 @@ base::current_impl(size_t skip, size_t max_depth) {
   static std::mutex api_mutex;
   std::lock_guard<std::mutex> api_guard(api_mutex);
 
-  HANDLE proc;
-  proc = GetCurrentProcess();
-
-  HMODULE exe;
-  if (!(exe = GetModuleHandle(nullptr))) { return; }
+  HANDLE proc = GetCurrentProcess();
+  HMODULE exe = GetModuleHandle(nullptr);
+  if (!exe) { return; }
 
   sym_init_scope symscope(dbghelp, proc);
 
@@ -164,40 +164,52 @@ base::current_impl(size_t skip, size_t max_depth) {
   frame.AddrPC.Mode      = AddrModeFlat;
   frame.AddrStack.Mode   = AddrModeFlat;
   frame.AddrFrame.Mode   = AddrModeFlat;
-#if defined(_M_IX86)
-  frame.AddrPC.Offset    = ccx.Eip;
-  frame.AddrStack.Offset = ccx.Esp;
-  frame.AddrFrame.Offset = ccx.Ebp;
-#elif defined(_M_AMD64)
+#if defined(_M_AMD64)
   frame.AddrPC.Offset    = ccx.Rip;
   frame.AddrStack.Offset = ccx.Rsp;
   frame.AddrFrame.Offset = ccx.Rbp;
-#elif defined(_M_ARM)
-  frame.AddrPC.Offset    = ccx.Pc;
-  frame.AddrStack.Offset = ccx.Sp;
-  frame.AddrFrame.Offset = ccx.Fp;
 #elif defined(_M_ARM64)
   frame.AddrPC.Offset    = ccx.Pc;
   frame.AddrStack.Offset = ccx.Sp;
   frame.AddrFrame.Offset = ccx.Fp;
 #else
-#error Unhandled CPU/arch for stacktrace
+# warning stacktrace requires x86-64 or ARM64; returned stacktraces will be empty
+  return;
 #endif
 
-  ++skip;  // skip call to this `populate` func
+  // Skip call to this `current_impl` func
+  ++skip;
+  
   while (max_depth) {
+
     if (!(*dbghelp.StackWalk64)(
           machine, proc, thread, &frame, &ccx, nullptr,
-          *dbghelp.SymFunctionTableAccess64, *dbghelp.SymGetModuleBase64,
+          (PFUNCTION_TABLE_ACCESS_ROUTINE64) dbghelp.SymFunctionTableAccess64,
+          (PGET_MODULE_BASE_ROUTINE64) dbghelp.SymGetModuleBase64,
           nullptr)) {
-      break; }
+      break;
+    }
 
     if (skip && skip--) { continue; }
     if (!frame.AddrPC.Offset) { break; }
 
     auto& entry = this->__entry_append_();
-    // Note: can't differentiate between a signal, SEH exception handler, or a normal function call
-    entry.__addr_ = frame.AddrPC.Offset - 1; // Back up 1 byte to get into prev insn range
+
+    // Note: can't differentiate between a signal / exception, or a normal function call.
+    // This assumes the more common (presumably) case of normal function calls, so we'll
+    // always back up 1 byte to get into the previous (calling) instruction.
+    entry.__addr_ = frame.AddrPC.Offset - 1;
+
+    // Get the filename of the module containing this calling instruction, i.e. the program
+    // itself or a DLL.  This is used in place of the source filename, if the source filename
+    // cannot be found (missing PDB, etc.).  If the source file can be determined this will
+    // be overwritten.
+    IMAGEHLP_MODULE64 mod_info;
+    memset(&mod_info, 0, sizeof(mod_info));
+    mod_info.SizeOfStruct = sizeof(mod_info);
+    if ((*dbghelp.SymGetModuleInfo64)(proc, frame.AddrPC.Offset, &mod_info)) {
+      entry.assign_file(__create_str()).assign(mod_info.LoadedImageName);
+    }
 
     --max_depth;
   }
@@ -212,8 +224,7 @@ base::current_impl(size_t skip, size_t max_depth) {
   // Symbols longer than this will be truncated.
   static constexpr size_t kMaxSymName = 256;
 
-  for (auto& entry : __entry_iters_()) {    
-#if defined(_M_ARM64) || defined(_M_AMD64)
+  for (auto& entry : __entry_iters_()) {
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName + 1];
     auto* sym          = (IMAGEHLP_SYMBOL64*)space;
     sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL64);
@@ -229,23 +240,6 @@ base::current_impl(size_t skip, size_t max_depth) {
       entry.assign_file(__create_str()).assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
-#else
-    char space[sizeof(IMAGEHLP_SYMBOL) + kMaxSymName + 1];
-    auto* sym          = (IMAGEHLP_SYMBOL*)space;
-    sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL);
-    sym->MaxNameLength = kMaxSymName;
-    uint32_t symdisp{0};
-    DWORD linedisp{0};
-    IMAGEHLP_LINE line;
-    if ((*dbghelp.SymGetSymFromAddr)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(__create_str()).assign(sym->Name);
-    }
-    line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-    if ((*dbghelp.SymGetLineFromAddr)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(__create_str()).assign(line.FileName);
-      entry.__line_ = line.LineNumber;
-    }
-#endif
   }
 }
 

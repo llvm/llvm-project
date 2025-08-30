@@ -25,7 +25,7 @@ namespace __stacktrace {
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-ostream& entry_base::write_to(ostream& __os) const {
+_LIBCPP_EXPORTED_FROM_ABI ostream& entry_base::write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
@@ -42,7 +42,7 @@ ostream& entry_base::write_to(ostream& __os) const {
   return __os;
 }
 
-ostream& base::write_to(std::ostream& __os) const {
+_LIBCPP_EXPORTED_FROM_ABI ostream& base::write_to(std::ostream& __os) const {
   auto iters = __entry_iters_();
   auto count = iters.size();
   if (!count) {
@@ -60,13 +60,13 @@ ostream& base::write_to(std::ostream& __os) const {
   return __os;
 }
 
-string entry_base::to_string() const {
+_LIBCPP_EXPORTED_FROM_ABI string entry_base::to_string() const {
   stringstream __ss;
   write_to(__ss);
   return __ss.str();
 }
 
-string base::to_string() const {
+_LIBCPP_EXPORTED_FROM_ABI string base::to_string() const {
   stringstream __ss;
   write_to(__ss);
   return __ss.str();
@@ -74,7 +74,7 @@ string base::to_string() const {
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-uintptr_t entry_base::adjusted_addr() const {
+_LIBCPP_HIDE_FROM_ABI uintptr_t entry_base::adjusted_addr() const {
   auto sub = __image_ ? __image_->slide_ : 0;
   return __addr_ - sub;
 }
