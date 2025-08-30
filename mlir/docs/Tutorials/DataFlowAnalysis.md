@@ -5,20 +5,361 @@ daunting and/or complex. A dataflow analysis generally involves propagating
 information about the IR across various different types of control flow
 constructs, of which MLIR has many (Block-based branches, Region-based branches,
 CallGraph, etc), and it isn't always clear how best to go about performing the
-propagation. To help writing these types of analyses in MLIR, this document
-details several utilities that simplify the process and make it a bit more
-approachable.
+propagation. Dataflow analyses often require implementing fixed-point iteration
+when data dependencies form cycles, as can happen with control-flow. Tracking
+dependencies and making sure updates are properly propagated can get quite
+difficult when writing complex analyses. That is why MLIR provides a framework
+for writing general dataflow analyses as well as several utilities to streamline
+the implementation of common analyses. The code and test from this tutorial can 
+be found in `mlir/examples/dataflow`.
 
-## Forward Dataflow Analysis
+## DataFlow Analysis Framework
 
-One type of dataflow analysis is a forward propagation analysis. This type of
-analysis, as the name may suggest, propagates information forward (e.g. from
-definitions to uses). To provide a bit of concrete context, let's go over
-writing a simple forward dataflow analysis in MLIR. Let's say for this analysis
-that we want to propagate information about a special "metadata" dictionary
-attribute. The contents of this attribute are simply a set of metadata that
-describe a specific value, e.g. `metadata = { likes_pizza = true }`. We will
-collect the `metadata` for operations in the IR and propagate them about.
+MLIR provides a general dataflow analysis framework for building fixed-point
+iteration dataflow analyses with ease and utilities for common dataflow
+analyses. Because the landscape of IRs in MLIR can be vast, the framework is
+designed to be extensible and composable, so that utilities can be shared across
+dialects with different semantics as much as possible. The framework also tries
+to make debugging dataflow analyses easy by providing (hopefully) insightful
+logs with `-debug-only="dataflow"`.
+
+Suppose we want to compute at compile-time the constant-valued results of
+operations. For example, consider:
+
+```mlir
+%0 = string.constant "foo"
+%1 = string.constant "bar"
+%2 = string.concat %0, %1
+```
+We can determine with the information in the IR at compile time the value of
+`%2` to be "foobar". This is called constant propagation. In MLIR's dataflow
+analysis framework, this is in general called the "analysis state of a program
+point"; the "state" being, in this case, the constant value, and the "program
+point" being the SSA value `%2`.
+
+The constant value state of an SSA value is implemented as a subclass of
+`AnalysisState`, and program points are represented by the `ProgramPoint` union,
+which can be operations, SSA values, or blocks. They can also be just about
+anything, see [Extending ProgramPoint](#extending-programpoint). In general, an
+analysis state represents information about the IR computed by an analysis. 
+
+Let us define an analysis state to represent a compile time known string value
+of an SSA value:
+
+```c++
+class StringConstant : public AnalysisState {
+  /// This is the known string constant value of an SSA value at compile time
+  /// as determined by a dataflow analysis. To implement the concept of being
+  /// "uninitialized", the potential string value is wrapped in an `Optional`
+  /// and set to `None` by default to indicate that no value has been provided.
+  std::optional<std::string> stringValue = std::nullopt;
+
+public:
+  using AnalysisState::AnalysisState;
+
+  /// Return true if no value has been provided for the string constant value.
+  bool isUninitialized() const { return !stringValue.has_value(); }
+
+  /// Default initialized the state to an empty string. Return whether the value
+  /// of the state has changed.
+  ChangeResult defaultInitialize() {
+    // If the state already has a value, do nothing.
+    if (!isUninitialized())
+      return ChangeResult::NoChange;
+    // Initialize the state and indicate that its value changed.
+    stringValue = "";
+    return ChangeResult::Change;
+  }
+
+  /// Get the currently known string value.
+  StringRef getStringValue() const {
+    assert(!isUninitialized() && "getting the value of an uninitialized state");
+    return stringValue.value();
+  }
+
+  /// "Join" the value of the state with another constant.
+  ChangeResult join(const Twine &value) {
+    // If the current state is uninitialized, just take the value.
+    if (isUninitialized()) {
+      stringValue = value.str();
+      return ChangeResult::Change;
+    }
+    // If the current state is "overdefined", no new information can be taken.
+    if (stringValue->empty())
+      return ChangeResult::NoChange;
+    // If the current state has a different value, it now has two conflicting
+    // values and should go to overdefined.
+    if (stringValue != value.str()) {
+      stringValue = "";
+      return ChangeResult::Change;
+    }
+    return ChangeResult::NoChange;
+  }
+
+  /// Print the constant value.
+  void print(raw_ostream &os) const override {
+    os << stringValue.value_or("") << "\n";
+  }
+};
+```
+
+Analysis states often depend on each other. In our example, the constant value
+of `%2` depends on that of `%0` and `%1`. It stands to reason that the constant
+value of `%2` needs to be recomputed when that of `%0` and `%1` change. The
+`DataFlowSolver` implements the fixed-point iteration algorithm and manages the
+dependency graph between analysis states.
+
+The computation of analysis states, on the other hand, is performed by dataflow
+analyses, subclasses of `DataFlowAnalysis`. A dataflow analysis has to implement
+a "transfer function", that is, code that computes the values of some states
+using the values of others, and set up the dependency graph correctly. Since the
+dependency graph inside the solver is initially empty, it must also set up the
+dependency graph.
+
+```c++
+class DataFlowAnalysis {
+public:
+  /// "Visit" the provided program point. This method is typically used to
+  /// implement transfer functions on or across program points.
+  virtual LogicalResult visit(ProgramPoint point) = 0;
+
+  /// Initialize the dependency graph required by this analysis from the given
+  /// top-level operation. This function is called once by the solver before
+  /// running the fixed-point iteration algorithm.
+  virtual LogicalResult initialize(Operation *top) = 0;
+
+protected:
+  /// Create a dependency between the given analysis state and lattice anchor
+  /// on this analysis.
+  void addDependency(AnalysisState *state, ProgramPoint *point);
+
+  /// Propagate an update to a state if it changed.
+  void propagateIfChanged(AnalysisState *state, ChangeResult changed);
+
+  /// Get the analysis state associated with the lattice anchor. The returned
+  /// state is expected to be "write-only", and any updates need to be
+  /// propagated by `propagateIfChanged`.
+  template <typename StateT, typename AnchorT>
+  StateT *getOrCreate(AnchorT anchor) {
+    return solver.getOrCreateState<StateT>(anchor);
+  }
+};
+```
+
+Dependency management is a little unusual in this framework. The dependents of
+the value of a state are not other states but invocations of dataflow analyses
+on certain program points. For example:
+
+```c++
+class StringConstantPropagation : public DataFlowAnalysis {
+public:
+  /// Implement the transfer function for string operations. When visiting a
+  /// string operation, this analysis will try to determine compile time values
+  /// of the operation's results and set them in `StringConstant` states. This
+  /// function is invoked on an operation whenever the states of its operands
+  /// are changed.
+  LogicalResult visit(ProgramPoint point) override {
+    // This function expects only to receive operations.
+    auto *op = point->getPrevOp();
+
+    // Get or create the constant string values of the operands.
+    SmallVector<StringConstant *> operandValues;
+    for (Value operand : op->getOperands()) {
+      auto *value = getOrCreate<StringConstant>(operand);
+      // Create a dependency from the state to this analysis. When the string
+      // value of one of the operation's operands are updated, invoke the
+      // transfer function again.
+      addDependency(value, point);
+      // If the state is uninitialized, bail out and come back later when it is
+      // initialized.
+      if (value->isUninitialized())
+        return success();
+      operandValues.push_back(value);
+    }
+
+    // Try to compute a constant value of the result.
+    auto *result = getOrCreate<StringConstant>(op->getResult(0));
+    if (auto constant = dyn_cast<string::ConstantOp>(op)) {
+      // Just grab and set the constant value of the result of the operation.
+      // Propagate an update to the state if it changed.
+      propagateIfChanged(result, result->join(constant.getValue()));
+    } else if (auto concat = dyn_cast<string::ConcatOp>(op)) {
+      StringRef lhs = operandValues[0]->getStringValue();
+      StringRef rhs = operandValues[1]->getStringValue();
+      // If either operand is overdefined, the results are overdefined.
+      if (lhs.empty() || rhs.empty()) {
+        propagateIfChanged(result, result->defaultInitialize());
+
+        // Otherwise, compute the constant value and join it with the result.
+      } else {
+        propagateIfChanged(result, result->join(lhs + rhs));
+      }
+    } else {
+      // We don't know how to implement the transfer function for this
+      // operation. Mark its results as overdefined.
+      propagateIfChanged(result, result->defaultInitialize());
+    }
+    return success();
+  }
+};
+```
+
+In the above example, the `visit` function sets up the dependencies of the
+analysis invocation on an operation as the constant values of the operands of
+each operation. When the operand states have initialized values but overdefined
+values, it sets the state of the result to overdefined. Otherwise, it computes
+the state of the result and merges the new information in with `join`.
+
+However, the dependency graph still needs to be initialized before the solver
+knows what to call `visit` on. This is done in the `initialize` function:
+
+```c++
+LogicalResult StringConstantPropagation::initialize(Operation *top) {
+  // Visit every nested string operation and set up its dependencies.
+  top->walk([&](Operation *op) {
+    for (Value operand : op->getOperands()) {
+      auto *state = getOrCreate<StringConstant>(operand);
+      addDependency(state, getProgramPointAfter(op));
+    }
+  });
+  // Now that the dependency graph has been set up, "seed" the evolution of the
+  // analysis by marking the constant values of all block arguments as
+  // overdefined and the results of (non-constant) operations with no operands.
+  auto defaultInitializeAll = [&](ValueRange values) {
+    for (Value value : values) {
+      auto *state = getOrCreate<StringConstant>(value);
+      propagateIfChanged(state, state->defaultInitialize());
+    }
+  };
+  top->walk([&](Operation *op) {
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        defaultInitializeAll(block.getArguments());
+    if (auto constant = dyn_cast<string::ConstantOp>(op)) {
+      auto *result = getOrCreate<StringConstant>(constant.getResult());
+      propagateIfChanged(result, result->join(constant.getValue()));
+    } else if (op->getNumOperands() == 0) {
+      defaultInitializeAll(op->getResults());
+    }
+  });
+  // The dependency graph has been set up and the analysis has been seeded.
+  // Finish initialization and let the solver run.
+  return success();
+}
+```
+
+Note that we can remove the call to `addDependency` inside our `visit` function
+because the dependencies are set by the initialize function. Dependencies added
+inside the `visit` function -- that is, while the solver is running -- are
+called "dynamic dependencies". Dependending on the kind of analysis, it may be
+more efficient to set some dependencies statically or dynamically.
+
+Another way to improve the efficiency of our analysis is to recognize that this
+is a *sparse*, *forward* analysis. It is sparse because the dependencies of an
+operation's transfer function are only the states of its operands, meaning that
+we can track dependencies through the IR instead of relying on the solver to do
+the bookkeeping. It is forward (assuming our IR has SSA dominance) because
+information can only be propagated from an SSA value's definition to its users.
+
+That is a lot of code to write, however, so the framework comes with utilities
+for implementing conditional sparse and dense dataflow analyses. See
+[Sparse Forward DataFlowAnalysis](#sparse-forward-dataflow-analysis).
+
+### Running the Solver
+
+Setting up the dataflow solver is straightforward:
+
+```c++
+void MyPass::runOnOperation() {
+  Operation *top = getOperation();
+  DataFlowSolver solver;
+  // Load the analysis.
+  solver.load<StringConstantPropagation>();
+  // Run the solver!
+  if (failed(solver.initializeAndRun(top)))
+    return signalPassFailure();
+  // Query the results and do something...
+  top->walk([&](string::ConcatOp concat) {
+    auto *result = solver.lookupState<StringConstant>(concat.getResult());
+    // ...
+  });
+}
+```
+
+The following is a simple example.
+
+```mlir
+func.func @single_concat() {
+  %1 = string.constant "hello "
+  %2 = string.constant "world."
+  %3 = string.concat %1, %2
+  return
+}
+```
+
+The above IR will print the following after running pass.
+
+```mlir
+%0 = string.constant "hello " : hello 
+%1 = string.constant "world." : world.
+%2 = string.concat %0, %1 : hello world.
+```
+
+### Extending ProgramPoint
+
+`ProgramPoint` can be extended to represent just about anything in a program:
+control-flow edges or memory addresses. Custom "generic" program points are
+implemented as subclasses of `GenericProgramPointBase`, a user of the storage
+uniquer API, with a content-key.
+
+Example 1: a control-flow edge between two blocks. Suppose we want to represent
+the state of an edge in the control-flow graph, such as its liveness. We can
+attach such a state to the custom program point:
+
+```c++
+/// This program point represents a control-flow edge between two blocks. The
+/// block `from` is a predecessor of `to`.
+class CFGEdge
+    : public GenericLatticeAnchorBase<CFGEdge, std::pair<Block *, Block *>> {
+public:
+  Block *getFrom() const { return getValue().first; }
+  Block *getTo() const { return getValue().second; }
+};
+```
+
+Example 2: a raw memory address after the execution of an operation. This
+program point allows us to attach states to a raw memory address before an
+operation after an operation is executed.
+
+```c++
+class RawMemoryAddr : public GenericProgramPointBase<
+    RawMemoryAddr, std::pair<uintptr_t, Operation *>> { /* ... */ };
+```
+
+Instances of program points can be accessed as follows:
+
+```c++
+Block *from = /* ... */, *to = /* ... */;
+auto *cfgEdge = solver.getProgramPoint<CFGEdge>(from, to);
+
+Operation *op = /* ... */;
+auto *addr = solver.getProgramPoint<RawMemoryAddr>(0x3000, op);
+```
+
+## Sparse Forward DataFlow Analysis
+
+One type of dataflow analysis is a sparse forward propagation analysis. This
+type of analysis, as the name may suggest, propagates information forward (e.g.
+from definitions to uses). The class `SparseDataFlowAnalysis` implements much of
+the analysis logic, including handling control-flow, and abstracts away the
+dependency management.
+
+To provide a bit of concrete context, let's go over writing a simple forward
+dataflow analysis in MLIR. Let's say for this analysis that we want to propagate
+information about a special "metadata" dictionary attribute. The contents of
+this attribute are simply a set of metadata that describe a specific value, e.g.
+`metadata = { likes_pizza = true }`. We will collect the `metadata` for
+operations in the IR and propagate them about.
 
 ### Lattices
 
@@ -72,31 +413,11 @@ held by an element of the lattice used by our dataflow analysis:
 struct MetadataLatticeValue {
   MetadataLatticeValue() = default;
   /// Compute a lattice value from the provided dictionary.
-  MetadataLatticeValue(DictionaryAttr attr)
-      : metadata(attr.begin(), attr.end()) {}
-
-  /// Return a pessimistic value state, i.e. the `top`/`overdefined`/`unknown`
-  /// state, for our value type. The resultant state should not assume any
-  /// information about the state of the IR.
-  static MetadataLatticeValue getPessimisticValueState(MLIRContext *context) {
-    // The `top`/`overdefined`/`unknown` state is when we know nothing about any
-    // metadata, i.e. an empty dictionary.
-    return MetadataLatticeValue();
-  }
-  /// Return a pessimistic value state for our value type using only information
-  /// about the state of the provided IR. This is similar to the above method,
-  /// but may produce a slightly more refined result. This is okay, as the
-  /// information is already encoded as fact in the IR.
-  static MetadataLatticeValue getPessimisticValueState(Value value) {
-    // Check to see if the parent operation has metadata.
-    if (Operation *parentOp = value.getDefiningOp()) {
-      if (auto metadata = parentOp->getAttrOfType<DictionaryAttr>("metadata"))
-        return MetadataLatticeValue(metadata);
-
-      // If no metadata is present, fallback to the
-      // `top`/`overdefined`/`unknown` state.
+  MetadataLatticeValue(DictionaryAttr attr) {
+    for (NamedAttribute pair : attr) {
+      metadata.insert(
+          std::pair<StringAttr, Attribute>(pair.getName(), pair.getValue()));
     }
-    return MetadataLatticeValue();
   }
 
   /// This method conservatively joins the information held by `lhs` and `rhs`
@@ -110,33 +431,48 @@ struct MetadataLatticeValue {
   ///   * monotonicity: join(x, join(x,y)) == join(x,y)
   static MetadataLatticeValue join(const MetadataLatticeValue &lhs,
                                    const MetadataLatticeValue &rhs) {
-    // To join `lhs` and `rhs` we will define a simple policy, which is that we
-    // only keep information that is the same. This means that we only keep
-    // facts that are true in both.
-    MetadataLatticeValue result;
-    for (const auto &lhsIt : lhs.metadata) {
-      // As noted above, we only merge if the values are the same.
-      auto it = rhs.metadata.find(lhsIt.first);
-      if (it == rhs.metadata.end() || it.second != lhsIt.second)
-        continue;
-      result.insert(lhsIt);
-    }
-    return result;
+  // To join `lhs` and `rhs` we will define a simple policy, which is that we
+  // directly insert the metadata of rhs into the metadata of lhs.If lhs and rhs
+  // have overlapping attributes, keep the attribute value in lhs unchanged.
+  MetadataLatticeValue result;
+  for (auto &&lhsIt : lhs.metadata) {
+    result.metadata.insert(
+        std::pair<StringAttr, Attribute>(lhsIt.first, lhsIt.second));
   }
+
+  for (auto &&rhsIt : rhs.metadata) {
+    result.metadata.insert(
+        std::pair<StringAttr, Attribute>(rhsIt.first, rhsIt.second));
+  }
+  return result;
+}
 
   /// A simple comparator that checks to see if this value is equal to the one
   /// provided.
   bool operator==(const MetadataLatticeValue &rhs) const {
-    if (metadata.size() != rhs.metadata.size())
+  if (metadata.size() != rhs.metadata.size())
+    return false;
+
+  // Check that `rhs` contains the same metadata.
+  for (auto &&it : metadata) {
+    auto rhsIt = rhs.metadata.find(it.first);
+    if (rhsIt == rhs.metadata.end() || it.second != rhsIt->second)
       return false;
-    // Check that `rhs` contains the same metadata.
-    for (const auto &it : metadata) {
-      auto rhsIt = rhs.metadata.find(it.first);
-      if (rhsIt == rhs.metadata.end() || it.second != rhsIt.second)
-        return false;
-    }
-    return true;
   }
+  return true;
+}
+
+  /// Print data in metadata.
+  void print(llvm::raw_ostream &os) const  {
+  SmallVector<StringAttr> metadataKey(metadata.keys());
+  std::sort(metadataKey.begin(), metadataKey.end(),
+            [&](StringAttr a, StringAttr b) { return a < b; });
+  os << "{";
+  for (StringAttr key : metadataKey) {
+    os << key << ": " << metadata.at(key) << ", ";
+  }
+  os << "\b\b}\n";
+}
 
   /// Our value represents the combined metadata, which is originally a
   /// DictionaryAttr, so we use a map.
@@ -154,7 +490,7 @@ shown below:
 /// This class represents a lattice element holding a specific value of type
 /// `ValueT`.
 template <typename ValueT>
-class LatticeElement ... {
+class Lattice ... {
 public:
   /// Return the value held by this element. This requires that a value is
   /// known, i.e. not `uninitialized`.
@@ -168,20 +504,25 @@ public:
   /// Join the information contained in the 'rhs' value into this
   /// lattice. Returns if the state of the current lattice changed.
   ChangeResult join(const ValueT &rhs);
-
-  /// Mark the lattice element as having reached a pessimistic fixpoint. This
-  /// means that the lattice may potentially have conflicting value states, and
-  /// only the conservatively known value state should be relied on.
-  ChangeResult markPessimisticFixPoint();
+  
+  ...
 };
 ```
 
 With our lattice defined, we can now define the driver that will compute and
-propagate our lattice across the IR.
+propagate our lattice across the IR. The following is our definition of metadata
+lattice.
 
-### ForwardDataflowAnalysis Driver
+```c++
+class MetadataLatticeValueLattice : public Lattice<MetadataLatticeValue> {
+public:
+  using Lattice::Lattice;
+};
+```
 
-The `ForwardDataFlowAnalysis` class represents the driver of the dataflow
+### SparseForwardDataFlowAnalysis Driver
+
+The `SparseForwardDataFlowAnalysis` class represents the driver of the dataflow
 analysis, and performs all of the related analysis computation. When defining
 our analysis, we will inherit from this class and implement some of its hooks.
 Before that, let's look at a quick overview of this class and some of the
@@ -190,42 +531,36 @@ important API for our analysis:
 ```c++
 /// This class represents the main driver of the forward dataflow analysis. It
 /// takes as a template parameter the value type of lattice being computed.
-template <typename ValueT>
-class ForwardDataFlowAnalysis : ... {
+template <typename StateT>
+class SparseForwardDataFlowAnalysis : ... {
 public:
-  ForwardDataFlowAnalysis(MLIRContext *context);
+  explicit SparseForwardDataFlowAnalysis(DataFlowSolver &solver)
+      : AbstractSparseForwardDataFlowAnalysis(solver) {}
 
-  /// Compute the analysis on operations rooted under the given top-level
-  /// operation. Note that the top-level operation is not visited.
-  void run(Operation *topLevelOp);
+  /// Visit an operation with the lattices of its operands. This function is
+  /// expected to set the lattices of the operation's results.
+  virtual LogicalResult visitOperation(Operation *op,
+                                       ArrayRef<const StateT *> operands,
+                                       ArrayRef<StateT *> results) = 0;
+  ...
 
+protected:
   /// Return the lattice element attached to the given value. If a lattice has
   /// not been added for the given value, a new 'uninitialized' value is
   /// inserted and returned.
-  LatticeElement<ValueT> &getLatticeElement(Value value);
+  StateT *getLatticeElement(Value value);
 
-  /// Return the lattice element attached to the given value, or nullptr if no
-  /// lattice element for the value has yet been created.
-  LatticeElement<ValueT> *lookupLatticeElement(Value value);
+  /// Get the lattice element for a value and create a dependency on the
+  /// provided program point.
+  const StateT *getLatticeElementFor(ProgramPoint *point, Value value);
 
-  /// Mark all of the lattice elements for the given range of Values as having
-  /// reached a pessimistic fixpoint.
-  ChangeResult markAllPessimisticFixPoint(ValueRange values);
-
-protected:
-  /// Visit the given operation, and join any necessary analysis state
-  /// into the lattice elements for the results and block arguments owned by
-  /// this operation using the provided set of operand lattice elements
-  /// (all pointer values are guaranteed to be non-null). Returns if any result
-  /// or block argument value lattice elements changed during the visit. The
-  /// lattice element for a result or block argument value can be obtained, and
-  /// join'ed into, by using `getLatticeElement`.
-  virtual ChangeResult visitOperation(
-      Operation *op, ArrayRef<LatticeElement<ValueT> *> operands) = 0;
+  /// Set the given lattice element(s) at control flow entry point(s).
+  virtual void setToEntryState(StateT *lattice) = 0;
+  ...
 };
 ```
 
-NOTE: Some API has been redacted for our example. The `ForwardDataFlowAnalysis`
+NOTE: Some API has been redacted for our example. The `SparseForwardDataFlowAnalysis`
 contains various other hooks that allow for injecting custom behavior when
 applicable.
 
@@ -237,60 +572,92 @@ function for the operation, that is specific to our analysis. A simple
 implementation for our example is shown below:
 
 ```c++
-class MetadataAnalysis : public ForwardDataFlowAnalysis<MetadataLatticeValue> {
+class MetadataAnalysis
+    : public SparseForwardDataFlowAnalysis<MetadataLatticeValueLattice> {
 public:
-  using ForwardDataFlowAnalysis<MetadataLatticeValue>::ForwardDataFlowAnalysis;
+  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
+  LogicalResult
+  visitOperation(Operation *op,
+                 ArrayRef<const MetadataLatticeValueLattice *> operands,
+                 ArrayRef<MetadataLatticeValueLattice *> results) override {
+  DictionaryAttr metadata = op->getAttrOfType<DictionaryAttr>("metadata");
+  // If we have no metadata for this operation and the operands is empty, we
+  // will conservatively mark all of the results as having reached a pessimistic
+  // fixpoint.
+  if (!metadata && operands.empty()) {
+    setAllToEntryStates(results);
+    return success();
+  }
 
-  ChangeResult visitOperation(
-      Operation *op, ArrayRef<LatticeElement<ValueT> *> operands) override {
-    DictionaryAttr metadata = op->getAttrOfType<DictionaryAttr>("metadata");
+  MetadataLatticeValue latticeValue;
+  if (metadata)
+    latticeValue = MetadataLatticeValue(metadata);
 
-    // If we have no metadata for this operation, we will conservatively mark
-    // all of the results as having reached a pessimistic fixpoint.
-    if (!metadata)
-      return markAllPessimisticFixPoint(op->getResults());
+  // Otherwise, we will compute a lattice value for the metadata and join it
+  // into the current lattice element for all of our results.`results` stores
+  // the lattices corresponding to the results of op, We use a loop to traverse
+  // them.
+  for (MetadataLatticeValueLattice *: results) {
 
-    // Otherwise, we will compute a lattice value for the metadata and join it
-    // into the current lattice element for all of our results.
-    MetadataLatticeValue latticeValue(metadata);
-    ChangeResult result = ChangeResult::NoChange;
-    for (Value value : op->getResults()) {
-      // We grab the lattice element for `value` via `getLatticeElement` and
-      // then join it with the lattice value for this operation's metadata. Note
-      // that during the analysis phase, it is fine to freely create a new
-      // lattice element for a value. This is why we don't use the
-      // `lookupLatticeElement` method here.
-      result |= getLatticeElement(value).join(latticeValue);
-    }
-    return result;
+    // `isChanged` records whether the result has been changed.
+    ChangeResult isChanged = ChangeResult::NoChange;
+
+    // Op's metadata is joined result's lattice.
+    isChanged |= result->join(latticeValue);
+
+    // All lattice of operands of op are joined to the lattice of result.
+    for (auto operand : operands)
+      isChanged |= result->join(*operand);
+
+    propagateIfChanged(result, isChanged);
+  }
+  return success();
   }
 };
 ```
 
 With that, we have all of the necessary components to compute our analysis.
-After the analysis has been computed, we can grab any computed information for
-values by using `lookupLatticeElement`. We use this function over
-`getLatticeElement` as the analysis is not guaranteed to visit all values, e.g.
-if the value is in a unreachable block, and we don't want to create a new
-uninitialized lattice element in this case. See below for a quick example:
+After the analysis has been computed, we need to run our analysis using 
+`DataFlowSolver`, and we can grab any computed information for values by 
+using `lookupState`. See below for a quick example, after the pass runs the
+analysis, we print the metadata of each op's results.
 
 ```c++
 void MyPass::runOnOperation() {
-  MetadataAnalysis analysis(&getContext());
-  analysis.run(getOperation());
+  Operation *op = getOperation();
+  DataFlowSolver solver;
+  solver.load<DeadCodeAnalysis>();
+  solver.load<MetadataAnalysis>();
+  if (failed(solver.initializeAndRun(op)))
+    return signalPassFailure();
+
+  // If an op has more than one result, then the lattice is the same for each
+  // result, and we just print one of the results.
+  op->walk([&](Operation *op) {
+    if (op->getNumResults()) {
+      Value result = op->getResult(0);
+      auto lattice = solver.lookupState<MetadataLatticeValueLattice>(result);
+      llvm::outs() << OpWithFlags(op, OpPrintingFlags().skipRegions()) << " : ";
+      lattice->print(llvm::outs());
+    }
+  });
   ...
 }
+```
 
-void MyPass::useAnalysisOn(MetadataAnalysis &analysis, Value value) {
-  LatticeElement<MetadataLatticeValue> *latticeElement = analysis.lookupLatticeElement(value);
+The following is a simple example. More tests can be found in the `mlir/Example/dataflow`.
 
-  // If we don't have an element, the `value` wasn't visited during our analysis
-  // meaning that it could be dead. We need to treat this conservatively.
-  if (!lattice)
-    return;
-
-  // Our lattice element has a value, use it:
-  MetadataLatticeValue &value = lattice->getValue();
-  ...
+```mlir
+func.func @single_join(%arg0 : index, %arg1 : index) -> index {
+  %1 = arith.addi %arg0, %arg1 {metadata = { likes_pizza = true }} : index
+  %2 = arith.addi %1, %arg1 : index
+  return %2 : index
 }
+```
+
+The above IR will print the following after running pass.
+
+```mlir
+%0 = arith.addi %arg0, %arg1 {metadata = {likes_pizza = true}} : index : {"likes_pizza": true} 
+%1 = arith.addi %0, %arg1 : index : {"likes_pizza": true} 
 ```
