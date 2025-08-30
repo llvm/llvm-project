@@ -802,3 +802,19 @@ gpu.module @test_module {
     func.return %bDimX : index
   }
 }
+
+// -----
+
+gpu.module @test_module {
+// CHECK-LABEL: func @broadcast
+//  CHECK-SAME:   (%[[ARG:.*]]: i64, %[[IDX:.*]]: i32)
+func.func @broadcast(%arg0 : index, %arg1 : i32) -> (index, index, index) {
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+//       CHECK:   %{{.*}} = rocdl.readlane %[[ARG]], %[[IDX]] : (i64, i32) -> i64
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : index
+  %1 = gpu.subgroup_broadcast %arg0, any_lane : index
+  %2 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : index
+  func.return %0, %1, %2 : index, index, index
+}
+}
