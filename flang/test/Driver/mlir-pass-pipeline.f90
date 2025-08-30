@@ -15,6 +15,7 @@ end program
 ! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
+! O2-NEXT: ExpressionSimplification
 ! O2-NEXT: Canonicalizer
 ! ALL:     Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:'fir.global' Pipeline
