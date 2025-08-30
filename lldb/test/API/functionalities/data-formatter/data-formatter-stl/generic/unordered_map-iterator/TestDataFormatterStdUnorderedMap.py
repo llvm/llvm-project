@@ -16,6 +16,12 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         pair = var.GetChildAtIndex(0)
         self.assertTrue(pair)
 
+        # std::unordered_map previously stores the actual key/value pair
+        # in  __hash_value_type::__cc_ (or previously __cc).
+        if pair.GetNumChildren() == 1:
+            pair = pair.GetChildAtIndex(0)
+            self.assertTrue(pair)
+
         self.assertEqual(pair.GetChildAtIndex(0).summary, '"Hello"')
         self.assertEqual(pair.GetChildAtIndex(1).summary, '"World"')
 
@@ -28,6 +34,12 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
 
         pair = ptr.GetChildAtIndex(0)
         self.assertTrue(pair)
+
+        # std::unordered_map previously stores the actual key/value pair
+        # in  __hash_value_type::__cc_ (or previously __cc).
+        if pair.GetNumChildren() == 1:
+            pair = pair.GetChildAtIndex(0)
+            self.assertTrue(pair)
 
         self.assertEqual(pair.GetChildAtIndex(0).summary, '"Hello"')
         self.assertEqual(pair.GetChildAtIndex(1).summary, '"World"')
@@ -113,7 +125,6 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         Test that pointers to std::unordered_map are formatted correctly.
         """
 
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here", lldb.SBFileSpec("main.cpp", False)
         )
