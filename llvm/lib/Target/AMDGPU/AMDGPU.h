@@ -39,6 +39,10 @@ FunctionPass *createSIAnnotateControlFlowLegacyPass();
 FunctionPass *createSIFoldOperandsLegacyPass();
 FunctionPass *createSIPeepholeSDWALegacyPass();
 FunctionPass *createSILowerI1CopiesLegacyPass();
+FunctionPass *createAMDGPUSSASpillerLegacyPass();
+FunctionPass *createAMDGPURebuildSSALegacyPass();
+FunctionPass *createAMDGPURebuildSSAPass();
+FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
@@ -89,6 +93,21 @@ struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
 class SILowerI1CopiesPass : public PassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUSSASpillerPass : public PassInfoMixin<AMDGPUSSASpillerPass> {
+public:
+  AMDGPUSSASpillerPass() = default;
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPURebuildSSAPass : public PassInfoMixin<AMDGPURebuildSSAPass> {
+public:
+  AMDGPURebuildSSAPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
@@ -196,6 +215,15 @@ extern char &SILowerWWMCopiesLegacyID;
 
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
+
+void initializeAMDGPUSSASpillerLegacyPass(PassRegistry &);
+extern char &AMDGPUSSASpillerLegacyID;
+
+void initializeAMDGPURebuildSSALegacyPass(PassRegistry &);
+extern char &AMDGPURebuildSSALegacyID;
+
+void initializeAMDGPUNextUseAnalysisWrapperPass(PassRegistry &);
+extern char &AMDGPUNextUseAnalysisID;
 
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
