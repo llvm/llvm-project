@@ -173,6 +173,7 @@ struct FoldCandidate {
 
 class SIFoldOperandsImpl {
 public:
+  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
@@ -705,6 +706,36 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   }
 
   MachineOperand *New = Fold.Def.OpToFold;
+
+  // Verify the register is compatible with the operand.
+  if (const TargetRegisterClass *OpRC =
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI, *MF)) {
+    const TargetRegisterClass *OldRC = MRI->getRegClass(Old.getReg());
+    const TargetRegisterClass *NewRC = MRI->getRegClass(New->getReg());
+    unsigned NewSubReg = New->getSubReg();
+    unsigned OldSubReg = Old.getSubReg();
+
+    const TargetRegisterClass *ConstrainRC = OpRC;
+    if (NewSubReg && OldSubReg) {
+      unsigned PreA, PreB;
+      ConstrainRC = TRI->getCommonSuperRegClass(OpRC, OldSubReg, NewRC,
+                                                NewSubReg, PreA, PreB);
+    } else if (OldSubReg) {
+      ConstrainRC = TRI->getMatchingSuperRegClass(OldRC, OpRC, OldSubReg);
+    } else if (NewSubReg) {
+      ConstrainRC = TRI->getMatchingSuperRegClass(NewRC, OpRC, NewSubReg);
+    }
+
+    if (!ConstrainRC)
+      return false;
+
+    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+      LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
+                        << TRI->getRegClassName(ConstrainRC) << '\n');
+      return false;
+    }
+  }
+
   // Rework once the VS_16 register class is updated to include proper
   // 16-bit SGPRs instead of 32-bit ones.
   if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
@@ -1429,30 +1460,9 @@ void SIFoldOperandsImpl::foldOperand(
       return;
   }
 
-  if (!FoldingImmLike) {
-    if (OpToFold.isReg() && ST->needsAlignedVGPRs()) {
-      // Don't fold if OpToFold doesn't hold an aligned register.
-      const TargetRegisterClass *RC =
-          TRI->getRegClassForReg(*MRI, OpToFold.getReg());
-      assert(RC);
-      if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
-        unsigned SubReg = OpToFold.getSubReg();
-        if (const TargetRegisterClass *SubRC =
-                TRI->getSubRegisterClass(RC, SubReg))
-          RC = SubRC;
-      }
-
-      if (!RC || !TRI->isProperlyAlignedRC(*RC))
-        return;
-    }
-
-    tryAddToFoldList(FoldList, UseMI, UseOpIdx, OpToFold);
-
-    // FIXME: We could try to change the instruction from 64-bit to 32-bit
-    // to enable more folding opportunities.  The shrink operands pass
-    // already does this.
-    return;
-  }
+  // FIXME: We could try to change the instruction from 64-bit to 32-bit
+  // to enable more folding opportunities.  The shrink operands pass
+  // already does this.
 
   tryAddToFoldList(FoldList, UseMI, UseOpIdx, OpToFold);
 }
@@ -2747,6 +2757,7 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 }
 
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
+  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
