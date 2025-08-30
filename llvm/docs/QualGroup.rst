@@ -1,3 +1,14 @@
+..
+   This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+   SPDX-License-Identifier: CC-BY-3.0
+
+.. _LLVM Qualification Group:
+
+.. CHANGE TRACKER for reference
+.. Purpose: Fixed document location and added Current Topics & Backlog
+.. Author: Carlos Andres Ramirez
+.. Last updated: 2025-08-30 by Carlos Ramirez
+
 ========================
 LLVM Qualification Group
 ========================
@@ -47,6 +58,20 @@ Participation is open to anyone interested. There are several ways to get involv
 * Contribute ideas, feedback, or patches via GitHub, Discourse, or directly in working documents.
 
 We welcome contributors from diverse backgrounds, organizations, and experience levels.
+
+Current Topics & Backlog
+========================
+
+Our working group is actively engaged in discussions about the project's
+direction and tackling technical challenges. You can find our current 
+discussions, challenges, and the project backlog in the following 
+document.
+
+:doc:`LLVM-Qualification-Group-Backlog <qual-wg/doc/llvm-qualgroup-backlog>` 
+
+This document serves as our central hub for all ongoing topics and will
+be updated regularly to reflect our progress. We welcome your 
+contributions and feedback.
 
 Meeting Minutes
 ===============
