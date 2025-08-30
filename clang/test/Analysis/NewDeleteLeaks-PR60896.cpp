@@ -1,8 +1,7 @@
 // RUN: %clang_analyze_cc1 -verify -analyzer-output=text %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus \
-// RUN:   -analyzer-checker=unix \
-// RUN:   -analyzer-checker=unix.Malloc
+// RUN:   -analyzer-checker=unix
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
