@@ -1773,7 +1773,8 @@ def note_unsatisfied_trait
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
-           "%Final{final}"
+           "%Final{final}|"
+           "%Abstract{abstract}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1818,7 +1819,10 @@ def note_unsatisfied_trait_reason
            "%CVVoidType{is a cv void type}|"
            "%IncompleteArrayType{is an incomplete array type}|"
            "%NotClassOrUnion{is not a class or union type}|"
-           "%NotMarkedFinal{is not marked 'final'}"
+           "%NotMarkedFinal{is not marked 'final'}|"
+           "%UnionType{is a union type}|"
+           "%NotStructOrClass{is not a struct or class type}|"
+           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
