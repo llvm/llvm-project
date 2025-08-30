@@ -853,3 +853,59 @@ void foo32() {
 // OGCG: %[[REAL_ADDR:.*]] = alloca i32, align 4
 // OGCG: %[[REAL:.*]] = load i32, ptr @_ZN9Container1cE, align 4
 // OGCG: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4
+
+void foo33(__builtin_va_list a) {
+  float _Complex b = __builtin_va_arg(a, float _Complex);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>, ["a", init]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>
+// CIR: %[[VA_TAG:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.ptr<!rec___va_list_tag>>, !cir.ptr<!rec___va_list_tag>
+// CIR: %[[COMPLEX:.*]] = cir.va_arg %[[VA_TAG]] : (!cir.ptr<!rec___va_list_tag>) -> !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store ptr %[[ARG_0:.*]], ptr %[[A_ADDR]], align 8
+// LLVM: %[[TMP_A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
+// LLVM: %[[COMPLEX:.*]] = va_arg ptr %[[TMP_A]], { float, float }
+// LLVM: store { float, float } %[[COMPLEX]], ptr %[[B_ADDR]], align 4
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// Test will be updated when that is implemented
+
+// OGCG: %[[A_ADDR:.*]] = alloca ptr, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store ptr %[[ARG_0:.*]], ptr %[[A_ADDR]], align 8
+// OGCG: %[[TMP_A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
+// OGCG: %[[GP_OFFSET_PTR:.*]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[TMP_A]], i32 0, i32 1
+// OGCG: %[[GP_OFFSET:.*]] = load i32, ptr %[[GP_OFFSET_PTR]], align 4
+// OGCG: %[[COND:.*]] = icmp ule i32 %[[GP_OFFSET]], 160
+// OGCG: br i1 %[[COND]], label %[[VA_ARG_IN_REG:.*]], label %[[VA_ARG_IN_MEM:.*]]
+//
+// OGCG: [[VA_ARG_IN_REG]]:
+// OGCG:  %[[REG_SAVE_PTR:.*]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[TMP_A]], i32 0, i32 3
+// OGCG:  %[[REG_SAVE:.*]] = load ptr, ptr %[[REG_SAVE_PTR]], align 8
+// OGCG:  %[[VA_ADDR:..*]] = getelementptr i8, ptr %[[REG_SAVE]], i32 %[[GP_OFFSET]]
+// OGCG:  %[[GP_OFFSET_NEXT:.*]] = add i32 %[[GP_OFFSET]], 16
+// OGCG:  store i32 %[[GP_OFFSET_NEXT]], ptr %[[GP_OFFSET_PTR]], align 4
+// OGCG:  br label %[[VA_ARG_END:.*]]
+//
+// OGCG: [[VA_ARG_IN_MEM]]:
+// OGCG:  %[[OVERFLOW_PTR:.*]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[TMP_A]], i32 0, i32 2
+// OGCG:  %[[OVERFLOW:.*]] = load ptr, ptr %[[OVERFLOW_PTR]], align 8
+// OGCG:  %[[OVERFLOW_NEXT:.*]] = getelementptr i8, ptr %[[OVERFLOW]], i32 8
+// OGCG:  store ptr %[[OVERFLOW_NEXT]], ptr %[[OVERFLOW_PTR]], align 8
+// OGCG:  br label %[[VA_ARG_END]]
+//
+// OGCG: [[VA_ARG_END]]:
+// OGCG:  %[[RESULT:.*]] = phi ptr [ %[[VA_ADDR]], %[[VA_ARG_IN_REG]] ], [ %[[OVERFLOW]], %[[VA_ARG_IN_MEM]] ]
+// OGCG:  %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT]], i32 0, i32 0
+// OGCG:  %[[RESULT_REAL:.*]] = load float, ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG:  %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT]], i32 0, i32 1
+// OGCG:  %[[RESULT_IMAG:.*]] = load float, ptr %[[RESULT_IMAG_PTR]], align 4
+// OGCG:  %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG:  %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG:  store float %[[RESULT_REAL]], ptr %[[B_REAL_PTR]], align 4
+// OGCG:  store float %[[RESULT_IMAG]], ptr %[[B_IMAG_PTR]], align 4

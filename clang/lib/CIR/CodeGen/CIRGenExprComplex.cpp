@@ -182,6 +182,8 @@ public:
   mlir::Value VisitBinDivAssign(const CompoundAssignOperator *e) {
     return emitCompoundAssign(e, &ComplexExprEmitter::emitBinDiv);
   }
+
+  mlir::Value VisitVAArgExpr(VAArgExpr *e);
 };
 } // namespace
 
@@ -595,6 +597,10 @@ mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
 mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
   mlir::Value op = Visit(e->getSubExpr());
   return builder.createNot(op);
+}
+
+mlir::Value ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *e) {
+  return cgf.emitVAArg(e);
 }
 
 mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
