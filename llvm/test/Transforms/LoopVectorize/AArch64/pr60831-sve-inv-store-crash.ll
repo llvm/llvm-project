@@ -125,9 +125,9 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <16 x i64> [[TMP45]], i64 [[TMP30]], i32 14
 ; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <16 x i64> [[TMP46]], i64 [[TMP31]], i32 15
 ; CHECK-NEXT:    [[TMP48:%.*]] = trunc <16 x i64> [[TMP47]] to <16 x i8>
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP48]], i32 15
 ; CHECK-NEXT:    [[TMP49:%.*]] = add i64 [[TMP0]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[TMP49]]
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP48]], i32 15
 ; CHECK-NEXT:    store i8 [[TMP51]], ptr [[TMP50]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
@@ -166,9 +166,9 @@ define void @test_loop2(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    [[TMP75:%.*]] = insertelement <8 x i64> [[TMP74]], i64 [[TMP67]], i32 6
 ; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <8 x i64> [[TMP75]], i64 [[TMP68]], i32 7
 ; CHECK-NEXT:    [[TMP77:%.*]] = trunc <8 x i64> [[TMP76]] to <8 x i8>
+; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i32 7
 ; CHECK-NEXT:    [[TMP78:%.*]] = add i64 [[TMP53]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP78]]
-; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <8 x i8> [[TMP77]], i32 7
 ; CHECK-NEXT:    store i8 [[TMP80]], ptr [[TMP79]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX2]], 8
 ; CHECK-NEXT:    [[TMP81:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 1000
