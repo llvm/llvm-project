@@ -1065,6 +1065,38 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 
+  MemoryEffects MECall1Loc = Call1->getMemoryEffects();
+  MemoryEffects MECall2Loc = Call2->getMemoryEffects();
+  ModRefInfo NewMR = ModRefInfo::NoModRef;
+  bool Changed = false;
+  for (unsigned TargetLoc =
+           (static_cast<unsigned>(IRMemLocation::ErrnoMem) + 1);
+       TargetLoc < static_cast<unsigned>(IRMemLocation::Last); ++TargetLoc) {
+    ModRefInfo LocCall1MR =
+        MECall1Loc.getModRef(static_cast<IRMemLocation>(TargetLoc));
+    if (LocCall1MR == ModRefInfo::NoModRef)
+      continue;
+    ModRefInfo LocCall2MR =
+        MECall2Loc.getModRef(static_cast<IRMemLocation>(TargetLoc));
+    if (LocCall2MR == ModRefInfo::NoModRef)
+      continue;
+    // Should be no relation between the two calls if  (Call1 == Ref) and
+    // (Call2 == Mod). And the one that Modifies(Call2) only changes one
+    // Target Memory Location.
+    // Example Call1 = sme.fdot.lane and Call2 = set.fpmr
+    if (LocCall1MR == ModRefInfo::Ref && LocCall2MR == ModRefInfo::Mod &&
+        MECall2Loc.getWithoutLoc(static_cast<IRMemLocation>(TargetLoc))
+            .doesNotAccessMemory()) {
+      Changed = true;
+      NewMR |= ModRefInfo::NoModRef;
+    } else {
+      Changed = true;
+      NewMR |= ModRefInfo::ModRef;
+    }
+  }
+
+  if (Changed)
+    return NewMR;
   // Be conservative.
   return ModRefInfo::ModRef;
 }
