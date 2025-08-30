@@ -38,16 +38,18 @@ e.g. ``-mllvm -print-after-all``.
 Understanding the source of the issue
 =====================================
 
-If you have a miscompilation introduced by a pass, it is frequently
-possible to identify the pass where things go wrong by searching a
-pass-by-pass printout, which is enabled using the ``-print-after-all``
-flag. Pipe stderr into ``less`` (append ``2>&1 | less`` to command
-line) and use text search to move between passes (e.g. type ``/Dump
-After<Enter>``, ``n`` to move to next pass, ``N`` to move to previous
-pass). If the name of the function containing the buggy IR is known, you
-can filter the output by passing ``-filter-print-funcs=functionname``. You
-can sometimes pass ``-debug`` to get useful details about what passes
-are doing.
+If you have a miscompilation introduced by a pass, it is
+frequently possible to identify the pass where things go wrong
+by searching a pass-by-pass printout, which is enabled using the
+``-print-after-all`` flag. Pipe stderr into ``less`` (append ``2>&1 |
+less`` to command line) and use text search to move between passes
+(e.g. type ``/Dump After<Enter>``, ``n`` to move to next pass,
+``N`` to move to previous pass). If the name of the function
+containing the buggy IR is known, you can filter the output by passing
+``-filter-print-funcs=functionname``. You can sometimes pass ``-debug`` to
+get useful details about what passes are doing. See also  `PrintPasses.cpp
+<https://github.com/llvm/llvm-project/blob/main/llvm/lib/IR/PrintPasses.cpp>`_
+for more useful options.
 
 Creating a debug build of LLVM
 ==============================
@@ -76,8 +78,7 @@ such as the following:
 
 .. code-block:: text
 
-    b Instruction::Instruction
-    cond 1 this == 0x12345678
+    b Instruction::Instruction if this == 0x12345678
 
 When the breakpoint is hit, you will likely be at the location where
 the instruction was created, so you can unwind the stack with ``bt``
@@ -106,5 +107,5 @@ following (or add it to your ``~/.gdbinit``)::
   source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
 
 It also might be handy to enable the `print pretty
-<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
-avoid data structures being printed as a big block of text.
+<https://sourceware.org/gdb/current/onlinedocs/gdb.html/Print-Settings.html>`__
+option to avoid data structures being printed as a big block of text.
