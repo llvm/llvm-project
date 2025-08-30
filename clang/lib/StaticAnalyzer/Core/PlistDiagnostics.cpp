@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
@@ -100,7 +101,8 @@ public:
   /// is found through a call piece, etc), it's subpieces are reported, and the
   /// piece itself is collected. Call this function after the entire bugpath
   /// was reported.
-  void ReportMacroExpansions(raw_ostream &o, unsigned indent);
+  void ReportMacroExpansions(raw_ostream &o, unsigned indent,
+                             bool ShouldFormatMacrosPlist);
 
 private:
   void ReportPiece(raw_ostream &o, const PathDiagnosticPiece &P,
@@ -163,9 +165,15 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static std::optional<StringRef> getExpandedMacro(
-    SourceLocation MacroLoc, const cross_tu::CrossTranslationUnitContext &CTU,
-    const MacroExpansionContext &MacroExpansions, const SourceManager &SM);
+static std::optional<StringRef>
+getExpandedMacro(SourceLocation MacroLoc,
+                 const cross_tu::CrossTranslationUnitContext &CTU,
+                 const MacroExpansionContext &MacroExpansions,
+                 const SourceManager &SM, bool ShouldFormatMacrosPlist);
+
+static std::optional<StringRef>
+getFormattedMacro(std::optional<StringRef> ExpandedText,
+                  bool ShouldFormatMacrosPlist);
 
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
@@ -372,7 +380,8 @@ void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
          "Fixits on constrol flow pieces are not implemented yet!");
 }
 
-void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
+void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent,
+                                         bool ShouldFormatMacrosPlist) {
 
   for (const PathDiagnosticMacroPiece *P : MacroPieces) {
     const SourceManager &SM = PP.getSourceManager();
@@ -382,8 +391,8 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
 
     const std::optional<StringRef> MacroName =
         MacroExpansions.getOriginalText(MacroExpansionLoc);
-    const std::optional<StringRef> ExpansionText =
-        getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
+    const std::optional<StringRef> ExpansionText = getExpandedMacro(
+        MacroExpansionLoc, CTU, MacroExpansions, SM, ShouldFormatMacrosPlist);
 
     if (!MacroName || !ExpansionText)
       continue;
@@ -602,7 +611,8 @@ void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
 
   o << "   <key>macro_expansions</key>\n"
        "   <array>\n";
-  Printer.ReportMacroExpansions(o, /* indent */ 4);
+  Printer.ReportMacroExpansions(o, /* indent */ 4,
+                                DiagOpts.ShouldFormatMacrosPlist);
   o << "   </array>\n";
 }
 
@@ -824,10 +834,49 @@ static std::optional<StringRef>
 getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const cross_tu::CrossTranslationUnitContext &CTU,
                  const MacroExpansionContext &MacroExpansions,
-                 const SourceManager &SM) {
+                 const SourceManager &SM, bool ShouldFormatMacrosPlist) {
+  std::optional<StringRef> ExpandedText;
   if (auto CTUMacroExpCtx =
           CTU.getMacroExpansionContextForSourceLocation(MacroExpansionLoc)) {
-    return CTUMacroExpCtx->getExpandedText(MacroExpansionLoc);
+    ExpandedText = CTUMacroExpCtx->getExpandedText(MacroExpansionLoc);
+  } else {
+    ExpandedText = MacroExpansions.getExpandedText(MacroExpansionLoc);
   }
-  return MacroExpansions.getExpandedText(MacroExpansionLoc);
+
+  std::optional<StringRef> FormattedMacroText =
+      getFormattedMacro(ExpandedText, ShouldFormatMacrosPlist);
+  return FormattedMacroText;
+}
+
+static std::optional<StringRef>
+getFormattedMacro(std::optional<StringRef> ExpandedText,
+                  bool ShouldFormatMacrosPlist) {
+  if (!ExpandedText) {
+    return std::nullopt;
+  }
+
+  if (!ShouldFormatMacrosPlist) {
+    return *ExpandedText;
+  }
+
+  clang::format::FormatStyle Style = clang::format::getLLVMStyle();
+
+  std::string MacroCodeBlock = ExpandedText->str();
+
+  std::vector<clang::tooling::Range> Ranges;
+  Ranges.emplace_back(0, MacroCodeBlock.length());
+
+  auto Replacements = clang::format::reformat(Style, MacroCodeBlock, Ranges,
+                                              "<macro-expansion>");
+
+  auto Result =
+      clang::tooling::applyAllReplacements(MacroCodeBlock, Replacements);
+  if (!Result) {
+    return *ExpandedText;
+  }
+
+  static std::vector<std::string> FormattedResults;
+  FormattedResults.emplace_back(*Result);
+
+  return StringRef(FormattedResults.back());
 }
