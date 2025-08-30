@@ -10540,7 +10540,7 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
 
   // Generate the operation with flags
   SDValue OpWithFlags =
-      DAG.getNode(Opcode, dl, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+      DAG.getNode(Opcode, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
 
   SDValue OpResult = OpWithFlags.getValue(0);
   SDValue Flags = OpWithFlags.getValue(1);
