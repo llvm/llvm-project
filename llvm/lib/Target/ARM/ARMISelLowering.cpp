@@ -5639,7 +5639,7 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
   }
   SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
                             DAG.getConstant(0, DL, MVT::i32), Op.getOperand(0));
-  // Generate SUBS & CSEL.
+  // Generate SUBS & CMOV.
   SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
                             DAG.getConstant(0, DL, MVT::i32));
   return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
@@ -5679,7 +5679,7 @@ SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Generate SUBS and CMOV for absolute difference (like LowerABS)
   // Compute a - b with flags
   SDValue Cmp =
       DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
@@ -5688,11 +5688,12 @@ SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
   SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
                             DAG.getConstant(0, DL, MVT::i32), Cmp.getValue(0));
 
-  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
-  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  // For unsigned: use LO (a < b) to select -(a-b), which is the same as b-a in
+  // twos complement, otherwise a-b For signed: use MI (a - b < 0) to select
+  // -(a-b), otherwise a-b
   ARMCC::CondCodes CC = (Op.getOpcode() == ISD::ABDS) ? ARMCC::MI : ARMCC::LO;
 
-  // CSEL: if a > b, select a-b, otherwise b-a
+  // CMOV: if a > b, select a-b, otherwise negare
   return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Cmp.getValue(0), Neg,
                      DAG.getConstant(CC, DL, MVT::i32), Cmp.getValue(1));
 }
@@ -14168,6 +14169,48 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+static SDValue getNegatedInteger(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  return DAG.getNode(ISD::SUB, DL, VT, Zero, Op);
+}
+
+// Try to fold
+//
+// (neg (cmov X, Y)) -> (cmov (neg X), (neg Y))
+//
+// The folding helps cmov to be matched with csneg without generating
+// redundant neg instruction.
+static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
+  if (!isNegatedInteger(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue CSel = N->getOperand(1);
+  if (CSel.getOpcode() != ARMISD::CMOV || !CSel->hasOneUse())
+    return SDValue();
+
+  SDValue N0 = CSel.getOperand(0);
+  SDValue N1 = CSel.getOperand(1);
+
+  // If both of them is not negations, it's not worth the folding as it
+  // introduces two additional negations while reducing one negation.
+  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+    return SDValue();
+
+  SDValue N0N = getNegatedInteger(N0, DAG);
+  SDValue N1N = getNegatedInteger(N1, DAG);
+
+  SDLoc DL(N);
+  EVT VT = CSel.getValueType();
+  return DAG.getNode(ARMISD::CMOV, DL, VT, N0N, N1N, CSel.getOperand(2),
+                     CSel.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -14183,6 +14226,9 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue R = PerformSubCSINCCombine(N, DCI.DAG))
     return R;
+
+  if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
+    return Val;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
