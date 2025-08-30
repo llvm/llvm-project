@@ -12629,11 +12629,11 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
       if (OrigRecipes.RecipeDecl)
         InitRecipe = OrigRecipes.RecipeDecl;
        else
-         InitRecipe =
-             Self.getSema()
-                 .OpenACC()
-                 .CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
-                 .first;
+         InitRecipe = Self.getSema()
+                          .OpenACC()
+                          .CreateInitRecipe(OpenACCClauseKind::Reduction,
+                                            C.getReductionOp(), Res.get())
+                          .first;
 
       Recipes.push_back({InitRecipe});
     }
