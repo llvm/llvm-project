@@ -18,7 +18,6 @@
 #include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <mutex>
 
 #define DEBUG_TYPE "stable-function-map"
 

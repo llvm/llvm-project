@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -728,17 +727,16 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
-      RHSKnown.Zero.lshrInPlace(ShAmt);
-      RHSKnown.One.lshrInPlace(ShAmt);
+      RHSKnown >>= ShAmt;
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
     } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
                ShAmt < BitWidth) {
-      KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
-      Known.Zero |= RHSKnown.Zero << ShAmt;
-      Known.One |= RHSKnown.One << ShAmt;
+      KnownBits RHSKnown = KnownBits::makeConstant(*C);
+      RHSKnown <<= ShAmt;
+      Known = Known.unionWith(RHSKnown);
     }
     break;
   case ICmpInst::ICMP_NE: {
@@ -1835,13 +1833,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.reverseBits();
-        Known.One |= Known2.One.reverseBits();
+        Known = Known.unionWith(Known2.reverseBits());
         break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.byteSwap();
-        Known.One |= Known2.One.byteSwap();
+        Known = Known.unionWith(Known2.byteSwap());
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
@@ -1891,10 +1887,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
 
-        Known.Zero =
-            Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
-        Known.One =
-            Known2.One.shl(ShiftAmt) | Known3.One.lshr(BitWidth - ShiftAmt);
+        Known2 <<= ShiftAmt;
+        Known3 >>= BitWidth - ShiftAmt;
+        Known = Known2.unionWith(Known3);
         break;
       }
       case Intrinsic::uadd_sat:
@@ -6356,27 +6351,6 @@ llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
   return nullptr;
 }
 
-bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                       unsigned CharSize) {
-  // Make sure the GEP has exactly three arguments.
-  if (GEP->getNumOperands() != 3)
-    return false;
-
-  // Make sure the index-ee is a pointer to array of \p CharSize integers.
-  // CharSize.
-  ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
-  if (!AT || !AT->getElementType()->isIntegerTy(CharSize))
-    return false;
-
-  // Check to make sure that the first operand of the GEP is an integer and
-  // has value 0 so that we are sure we're indexing into the initializer.
-  const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
-  if (!FirstIdx || !FirstIdx->isZero())
-    return false;
-
-  return true;
-}
-
 // If V refers to an initialized global constant, set Slice either to
 // its initializer if the size of its elements equals ElementSize, or,
 // for ElementSize == 8, to its representation as an array of unsiged
@@ -7415,8 +7389,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::fshr:
       case Intrinsic::smax:
       case Intrinsic::smin:
+      case Intrinsic::scmp:
       case Intrinsic::umax:
       case Intrinsic::umin:
+      case Intrinsic::ucmp:
       case Intrinsic::ptrmask:
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
@@ -7785,7 +7761,7 @@ bool llvm::mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 
   // The set of all recursive users we've visited (which are assumed to all be
   // poison because of said visit)
-  SmallSet<const Value *, 16> KnownPoison;
+  SmallPtrSet<const Value *, 16> KnownPoison;
   SmallVector<const Instruction*, 16> Worklist;
   Worklist.push_back(Root);
   while (!Worklist.empty()) {
@@ -8140,8 +8116,8 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
 
   // Set of instructions that we have proved will yield poison if Inst
   // does.
-  SmallSet<const Value *, 16> YieldsPoison;
-  SmallSet<const BasicBlock *, 4> Visited;
+  SmallPtrSet<const Value *, 16> YieldsPoison;
+  SmallPtrSet<const BasicBlock *, 4> Visited;
 
   YieldsPoison.insert(V);
   Visited.insert(BB);

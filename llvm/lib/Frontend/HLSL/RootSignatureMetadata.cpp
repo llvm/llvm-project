@@ -15,6 +15,7 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -54,6 +55,17 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
   if (NodeText == nullptr)
     return std::nullopt;
   return NodeText->getString();
+}
+
+static Expected<dxbc::ShaderVisibility>
+extractShaderVisibility(MDNode *Node, unsigned int OpId) {
+  if (std::optional<uint32_t> Val = extractMdIntValue(Node, OpId)) {
+    if (!dxbc::isValidShaderVisibility(*Val))
+      return make_error<RootSignatureValidationError<uint32_t>>(
+          "ShaderVisibility", *Val);
+    return dxbc::ShaderVisibility(*Val);
+  }
+  return make_error<InvalidRSMetadataValue>("ShaderVisibility");
 }
 
 namespace {
@@ -124,9 +136,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
-                      dxil::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Descriptor.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -166,9 +176,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> Builder(Ctx);
-  StringRef ResName =
-      enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
-                      dxil::getResourceClasses());
+  StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),
@@ -229,15 +237,10 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("RootConstants Element");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
-  // The parameter offset doesn't matter here - we recalculate it during
-  // serialization  Header.ParameterOffset = 0;
-  Header.ParameterType = to_underlying(dxbc::RootParameterType::Constants32Bit);
-
-  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractShaderVisibility(RootConstantNode, 1);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
   dxbc::RTS0::v1::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
@@ -255,7 +258,8 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   else
     return make_error<InvalidRSMetadataValue>("Num32BitValues");
 
-  RSD.ParametersContainer.addParameter(Header, Constants);
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::Constants32Bit,
+                                       *Visibility, Constants);
 
   return Error::success();
 }
@@ -271,26 +275,26 @@ Error MetadataParser::parseRootDescriptors(
   if (RootDescriptorNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("Root Descriptor Element");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
+  dxbc::RootParameterType Type;
   switch (ElementKind) {
   case RootSignatureElementKind::SRV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::SRV);
+    Type = dxbc::RootParameterType::SRV;
     break;
   case RootSignatureElementKind::UAV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::UAV);
+    Type = dxbc::RootParameterType::UAV;
     break;
   case RootSignatureElementKind::CBV:
-    Header.ParameterType = to_underlying(dxbc::RootParameterType::CBV);
+    Type = dxbc::RootParameterType::CBV;
     break;
   default:
     llvm_unreachable("invalid Root Descriptor kind");
     break;
   }
 
-  if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractShaderVisibility(RootDescriptorNode, 1);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
   dxbc::RTS0::v2::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
@@ -304,7 +308,7 @@ Error MetadataParser::parseRootDescriptors(
     return make_error<InvalidRSMetadataValue>("RegisterSpace");
 
   if (RSD.Version == 1) {
-    RSD.ParametersContainer.addParameter(Header, Descriptor);
+    RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
     return Error::success();
   }
   assert(RSD.Version > 1);
@@ -314,7 +318,7 @@ Error MetadataParser::parseRootDescriptors(
   else
     return make_error<InvalidRSMetadataValue>("Root Descriptor Flags");
 
-  RSD.ParametersContainer.addParameter(Header, Descriptor);
+  RSD.ParametersContainer.addParameter(Type, *Visibility, Descriptor);
   return Error::success();
 }
 
@@ -380,15 +384,12 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
   if (NumOperands < 2)
     return make_error<InvalidRSMetadataFormat>("Descriptor Table");
 
-  dxbc::RTS0::v1::RootParameterHeader Header;
-  if (std::optional<uint32_t> Val = extractMdIntValue(DescriptorTableNode, 1))
-    Header.ShaderVisibility = *Val;
-  else
-    return make_error<InvalidRSMetadataValue>("ShaderVisibility");
+  Expected<dxbc::ShaderVisibility> Visibility =
+      extractShaderVisibility(DescriptorTableNode, 1);
+  if (auto E = Visibility.takeError())
+    return Error(std::move(E));
 
   mcdxbc::DescriptorTable Table;
-  Header.ParameterType =
-      to_underlying(dxbc::RootParameterType::DescriptorTable);
 
   for (unsigned int I = 2; I < NumOperands; I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
@@ -400,7 +401,8 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
       return Err;
   }
 
-  RSD.ParametersContainer.addParameter(Header, Table);
+  RSD.ParametersContainer.addParameter(dxbc::RootParameterType::DescriptorTable,
+                                       *Visibility, Table);
   return Error::success();
 }
 
@@ -591,20 +593,14 @@ Error MetadataParser::validateRootSignature(
   }
 
   for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
-    if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
-      DeferredErrs =
-          joinErrors(std::move(DeferredErrs),
-                     make_error<RootSignatureValidationError<uint32_t>>(
-                         "ShaderVisibility", Info.Header.ShaderVisibility));
 
-    assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
-           "Invalid value for ParameterType");
+    switch (Info.Type) {
+    case dxbc::RootParameterType::Constants32Bit:
+      break;
 
-    switch (Info.Header.ParameterType) {
-
-    case to_underlying(dxbc::RootParameterType::CBV):
-    case to_underlying(dxbc::RootParameterType::UAV):
-    case to_underlying(dxbc::RootParameterType::SRV): {
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::UAV:
+    case dxbc::RootParameterType::SRV: {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
@@ -629,7 +625,7 @@ Error MetadataParser::validateRootSignature(
       }
       break;
     }
-    case to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    case dxbc::RootParameterType::DescriptorTable: {
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {

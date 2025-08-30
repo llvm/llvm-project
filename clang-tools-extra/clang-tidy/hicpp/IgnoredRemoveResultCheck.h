@@ -21,6 +21,9 @@ namespace clang::tidy::hicpp {
 class IgnoredRemoveResultCheck : public bugprone::UnusedReturnValueCheck {
 public:
   IgnoredRemoveResultCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 };
 

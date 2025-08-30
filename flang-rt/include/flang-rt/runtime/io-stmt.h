@@ -696,6 +696,7 @@ public:
   RT_API_ATTRS ChildListIoStatementState(
       ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
+  RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
 };
 
@@ -729,6 +730,9 @@ public:
   RT_API_ATTRS void set_isUnformatted(bool yes = true) {
     isUnformatted_ = yes;
   } // FORM=
+  RT_API_ATTRS void set_mustBeFormatted(bool yes = true) {
+    mustBeFormatted_ = yes;
+  }
 
   RT_API_ATTRS void CompleteOperation();
   RT_API_ATTRS int EndIoStatement();
@@ -743,6 +747,7 @@ private:
   OwningPtr<char> path_;
   std::size_t pathLength_{};
   Fortran::common::optional<bool> isUnformatted_;
+  Fortran::common::optional<bool> mustBeFormatted_;
   Fortran::common::optional<Access> access_;
 };
 

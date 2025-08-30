@@ -9,7 +9,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOSCFPASS
@@ -201,12 +201,7 @@ void FIRToSCFPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   patterns.add<DoLoopConversion, IterWhileConversion, IfConversion>(
       patterns.getContext());
-  mlir::ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp, fir::IterWhileOp, fir::IfOp>();
-  target.markUnknownOpDynamicallyLegal([](mlir::Operation *) { return true; });
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
-    signalPassFailure();
+  walkAndApplyPatterns(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<mlir::Pass> fir::createFIRToSCFPass() {

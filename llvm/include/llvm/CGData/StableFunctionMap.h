@@ -22,6 +22,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <mutex>
+#include <unordered_map>
 
 namespace llvm {
 

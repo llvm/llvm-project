@@ -864,7 +864,8 @@ private:
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore =
-            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
+            Style.SpaceInEmptyBraces != FormatStyle::SIEB_Never ||
+            Line.Last->is(tok::comment);
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
