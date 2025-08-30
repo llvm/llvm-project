@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/isordered.h>
 #include <clc/relational/clc_isordered.h>
 
-#define FUNCTION isordered
+#define __CLC_FUNCTION isordered
 #define __CLC_BODY "binary_def.inc"
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>

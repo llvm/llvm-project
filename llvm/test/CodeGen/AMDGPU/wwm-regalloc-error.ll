@@ -2,7 +2,7 @@
 
 ; A negative test to capture the expected error when the VGPRs are insufficient for wwm-regalloc.
 
-; CHECK: error: can't find enough VGPRs for wwm-regalloc
+; CHECK: error: cannot find enough VGPRs for wwm-regalloc
 
 define amdgpu_kernel void @test(i32 %in) {
 entry:

@@ -305,18 +305,18 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
 
   if (isa<IndexType>(srcElemType) || isa<IndexType>(dstElemType)) {
     if (castKind == CastKind::Signed)
-      return builder.create<arith::IndexCastOp>(loc, dstType, src);
-    return builder.create<arith::IndexCastUIOp>(loc, dstType, src);
+      return arith::IndexCastOp::create(builder, loc, dstType, src);
+    return arith::IndexCastUIOp::create(builder, loc, dstType, src);
   }
 
   auto srcInt = cast<IntegerType>(srcElemType);
   auto dstInt = cast<IntegerType>(dstElemType);
   if (dstInt.getWidth() < srcInt.getWidth())
-    return builder.create<arith::TruncIOp>(loc, dstType, src);
+    return arith::TruncIOp::create(builder, loc, dstType, src);
 
   if (castKind == CastKind::Signed)
-    return builder.create<arith::ExtSIOp>(loc, dstType, src);
-  return builder.create<arith::ExtUIOp>(loc, dstType, src);
+    return arith::ExtSIOp::create(builder, loc, dstType, src);
+  return arith::ExtUIOp::create(builder, loc, dstType, src);
 }
 
 struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {

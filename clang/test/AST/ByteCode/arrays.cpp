@@ -779,3 +779,44 @@ namespace DiscardedSubScriptExpr {
     return true;
   }
 }
+
+namespace ZeroSizeArrayRead {
+  constexpr char str[0] = {};
+  constexpr  unsigned checksum(const char *s) {
+    unsigned result = 0;
+    for (const char *p = s; *p != '\0'; ++p) { // both-note {{read of dereferenced one-past-the-end pointer}}
+      result += *p;
+    }
+    return result;
+  }
+  constexpr unsigned C = checksum(str); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{in call to}}
+
+  constexpr const char *p1 = &str[0];
+  constexpr const char *p2 = &str[1]; // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{cannot refer to element 1 of array of 0 elements in a constant expression}}
+
+  constexpr char s[] = {};
+  static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of dereferenced one-past-the-end pointer}}
+}
+
+namespace FAM {
+  char *strchr(const char *, int);
+
+  struct A {
+    char n, a[2];
+  };
+  struct B {
+    int n;
+    struct A a[]; // both-note {{here}}
+  };
+
+  const struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}};
+  void foo(void) { int sch = 0 != strchr(b.a[1].a, '\0'); }
+
+  int foo2() {
+    struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}}; // both-error {{initialization of flexible array member is not allowed}}
+    return 1;
+  }
+}

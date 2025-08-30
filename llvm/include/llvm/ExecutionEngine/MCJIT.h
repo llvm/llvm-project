@@ -15,8 +15,8 @@
 #define LLVM_EXECUTIONENGINE_MCJIT_H
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Support/AlwaysTrue.h"
 #include "llvm/Support/Compiler.h"
-#include <cstdlib>
 
 extern "C" LLVM_ABI void LLVMLinkInMCJIT();
 
@@ -24,13 +24,11 @@ namespace {
   struct ForceMCJITLinking {
     ForceMCJITLinking() {
       // We must reference MCJIT in such a way that compilers will not
-      // delete it all as dead code, even with whole program optimization,
-      // yet is effectively a NO-OP. As the compiler isn't smart enough
-      // to know that getenv() never returns -1, this will do the job.
-      // This is so that globals in the translation units where these functions
-      // are defined are forced to be initialized, populating various
-      // registries.
-      if (std::getenv("bar") != (char*) -1)
+      // delete it all as dead code, even with whole program optimization, yet
+      // is effectively a NO-OP. This is so that globals in the translation
+      // units where these functions are defined are forced to be initialized,
+      // populating various registries.
+      if (llvm::getNonFoldableAlwaysTrue())
         return;
 
       LLVMLinkInMCJIT();

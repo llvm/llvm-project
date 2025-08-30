@@ -18,10 +18,10 @@ define void @foo() {
 ; CHECK-NEXT:    ld.d $a3, $a3, %got_pc_lo12(g_813)
 ; CHECK-NEXT:    st.w $zero, $a1, 0
 ; CHECK-NEXT:    st.w $a2, $a3, 0
+; CHECK-NEXT:    xvrepli.b $xr0, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $a0, 32
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
-; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    st.w $zero, $a0, 20
 ; CHECK-NEXT:    ret
 entry:

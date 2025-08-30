@@ -173,9 +173,11 @@ public:
 
   DoConcurrentConversion(
       mlir::MLIRContext *context, bool mapToDevice,
-      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip)
+      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip,
+      mlir::SymbolTable &moduleSymbolTable)
       : OpConversionPattern(context), mapToDevice(mapToDevice),
-        concurrentLoopsToSkip(concurrentLoopsToSkip) {}
+        concurrentLoopsToSkip(concurrentLoopsToSkip),
+        moduleSymbolTable(moduleSymbolTable) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DoConcurrentOp doLoop, OpAdaptor adaptor,
@@ -246,9 +248,9 @@ private:
   genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
                 mlir::IRMapping &mapper) const {
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
+    auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
     rewriter.createBlock(&parallelOp.getRegion());
-    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+    rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
 
     genLoopNestIndVarAllocs(rewriter, ivInfos, mapper);
     return parallelOp;
@@ -312,69 +314,106 @@ private:
               bool isComposite) const {
     mlir::omp::WsloopOperands wsloopClauseOps;
 
+    auto cloneFIRRegionToOMP = [&rewriter](mlir::Region &firRegion,
+                                           mlir::Region &ompRegion) {
+      if (!firRegion.empty()) {
+        rewriter.cloneRegionBefore(firRegion, ompRegion, ompRegion.begin());
+        auto firYield =
+            mlir::cast<fir::YieldOp>(ompRegion.back().getTerminator());
+        rewriter.setInsertionPoint(firYield);
+        mlir::omp::YieldOp::create(rewriter, firYield.getLoc(),
+                                   firYield.getOperands());
+        rewriter.eraseOp(firYield);
+      }
+    };
+
     // For `local` (and `local_init`) opernads, emit corresponding `private`
     // clauses and attach these clauses to the workshare loop.
-    if (!loop.getLocalOperands().empty())
+    if (!loop.getLocalVars().empty())
       for (auto [op, sym, arg] : llvm::zip_equal(
-               loop.getLocalOperands(),
+               loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
-        auto localizer = mlir::SymbolTable::lookupNearestSymbolFrom<
-            fir::LocalitySpecifierOp>(loop, sym);
+        auto localizer = moduleSymbolTable.lookup<fir::LocalitySpecifierOp>(
+            sym.getLeafReference());
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit)
           TODO(localizer.getLoc(),
                "local_init conversion is not supported yet");
 
-        auto oldIP = rewriter.saveInsertionPoint();
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(localizer);
-        auto privatizer = rewriter.create<mlir::omp::PrivateClauseOp>(
-            localizer.getLoc(), sym.getLeafReference().str() + ".omp",
+
+        auto privatizer = mlir::omp::PrivateClauseOp::create(
+            rewriter, localizer.getLoc(), sym.getLeafReference().str() + ".omp",
             localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
 
-        if (!localizer.getInitRegion().empty()) {
-          rewriter.cloneRegionBefore(localizer.getInitRegion(),
-                                     privatizer.getInitRegion(),
-                                     privatizer.getInitRegion().begin());
-          auto firYield = mlir::cast<fir::YieldOp>(
-              privatizer.getInitRegion().back().getTerminator());
-          rewriter.setInsertionPoint(firYield);
-          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
-                                              firYield.getOperands());
-          rewriter.eraseOp(firYield);
-        }
+        cloneFIRRegionToOMP(localizer.getInitRegion(),
+                            privatizer.getInitRegion());
+        cloneFIRRegionToOMP(localizer.getDeallocRegion(),
+                            privatizer.getDeallocRegion());
 
-        if (!localizer.getDeallocRegion().empty()) {
-          rewriter.cloneRegionBefore(localizer.getDeallocRegion(),
-                                     privatizer.getDeallocRegion(),
-                                     privatizer.getDeallocRegion().begin());
-          auto firYield = mlir::cast<fir::YieldOp>(
-              privatizer.getDeallocRegion().back().getTerminator());
-          rewriter.setInsertionPoint(firYield);
-          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
-                                              firYield.getOperands());
-          rewriter.eraseOp(firYield);
-        }
-
-        rewriter.restoreInsertionPoint(oldIP);
+        moduleSymbolTable.insert(privatizer);
 
         wsloopClauseOps.privateVars.push_back(op);
         wsloopClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
       }
 
+    if (!loop.getReduceVars().empty()) {
+      for (auto [op, byRef, sym, arg] : llvm::zip_equal(
+               loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
+               loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
+               loop.getRegionReduceArgs())) {
+        auto firReducer = moduleSymbolTable.lookup<fir::DeclareReductionOp>(
+            sym.getLeafReference());
+
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointAfter(firReducer);
+        std::string ompReducerName = sym.getLeafReference().str() + ".omp";
+
+        auto ompReducer =
+            moduleSymbolTable.lookup<mlir::omp::DeclareReductionOp>(
+                rewriter.getStringAttr(ompReducerName));
+
+        if (!ompReducer) {
+          ompReducer = mlir::omp::DeclareReductionOp::create(
+              rewriter, firReducer.getLoc(), ompReducerName,
+              firReducer.getTypeAttr().getValue());
+
+          cloneFIRRegionToOMP(firReducer.getAllocRegion(),
+                              ompReducer.getAllocRegion());
+          cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
+                              ompReducer.getInitializerRegion());
+          cloneFIRRegionToOMP(firReducer.getReductionRegion(),
+                              ompReducer.getReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
+                              ompReducer.getAtomicReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
+                              ompReducer.getCleanupRegion());
+          moduleSymbolTable.insert(ompReducer);
+        }
+
+        wsloopClauseOps.reductionVars.push_back(op);
+        wsloopClauseOps.reductionByref.push_back(byRef);
+        wsloopClauseOps.reductionSyms.push_back(
+            mlir::SymbolRefAttr::get(ompReducer));
+      }
+    }
+
     auto wsloopOp =
-        rewriter.create<mlir::omp::WsloopOp>(loop.getLoc(), wsloopClauseOps);
+        mlir::omp::WsloopOp::create(rewriter, loop.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
     wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
+    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
     auto loopNestOp =
-        rewriter.create<mlir::omp::LoopNestOp>(loop.getLoc(), clauseOps);
+        mlir::omp::LoopNestOp::create(rewriter, loop.getLoc(), clauseOps);
 
     // Clone the loop's body inside the loop nest construct using the
     // mapped values.
@@ -382,7 +421,7 @@ private:
                                loopNestOp.getRegion().begin(), mapper);
 
     rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
-    rewriter.create<mlir::omp::YieldOp>(loop->getLoc());
+    mlir::omp::YieldOp::create(rewriter, loop->getLoc());
 
     // `local` region arguments are transferred/cloned from the `do concurrent`
     // loop to the loopnest op when the region is cloned above. Instead, these
@@ -393,7 +432,8 @@ private:
                              clauseOps.loopLowerBounds.size())))
       rewriter.replaceAllUsesWith(loopNestArg, wsloopArg);
 
-    for (unsigned i = 0; i < loop.getLocalVars().size(); ++i)
+    for (unsigned i = 0;
+         i < loop.getLocalVars().size() + loop.getReduceVars().size(); ++i)
       loopNestOp.getRegion().eraseArgument(clauseOps.loopLowerBounds.size());
 
     return loopNestOp;
@@ -401,6 +441,7 @@ private:
 
   bool mapToDevice;
   llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip;
+  mlir::SymbolTable &moduleSymbolTable;
 };
 
 class DoConcurrentConversionPass
@@ -414,12 +455,9 @@ public:
       : DoConcurrentConversionPassBase(options) {}
 
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-
-    if (func.isDeclaration())
-      return;
-
+    mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *context = &getContext();
+    mlir::SymbolTable moduleSymbolTable(module);
 
     if (mapTo != flangomp::DoConcurrentMappingKind::DCMK_Host &&
         mapTo != flangomp::DoConcurrentMappingKind::DCMK_Device) {
@@ -433,7 +471,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
-        concurrentLoopsToSkip);
+        concurrentLoopsToSkip, moduleSymbolTable);
     mlir::ConversionTarget target(*context);
     target.addDynamicallyLegalOp<fir::DoConcurrentOp>(
         [&](fir::DoConcurrentOp op) {
@@ -442,8 +480,8 @@ public:
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
 
-    if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+    if (mlir::failed(
+            mlir::applyFullConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }
   }

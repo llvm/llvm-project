@@ -13,14 +13,14 @@
 
 #define SampleRS "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \
                              "DENY_VERTEX_SHADER_ROOT_ACCESS), " \
-                 "CBV(b0, space = 1, flags = DATA_STATIC), " \
+                 "CBV(b0, space = 1, flags = DATA_VOLATILE), " \
                  "SRV(t0), " \
                  "UAV(u0), " \
                  "DescriptorTable( CBV(b1), " \
                                    "SRV(t1, numDescriptors = 8, " \
-                                   "        flags = DESCRIPTORS_VOLATILE), " \
+                                   "        flags = DATA_VOLATILE | DESCRIPTORS_VOLATILE), " \
                                    "UAV(u1, numDescriptors = unbounded, " \
-                                   "        flags = DESCRIPTORS_VOLATILE)), " \
+                                   "        flags = DATA_VOLATILE | DESCRIPTORS_VOLATILE)), " \
                  "DescriptorTable(Sampler(s0, space=1, numDescriptors = 4)), " \
                  "RootConstants(num32BitConstants=3, b10), " \
                  "StaticSampler(s1)," \
@@ -34,7 +34,7 @@
 // CHECK-SAME: RootElements{
 // CHECK-SAME: RootFlags(AllowInputAssemblerInputLayout | DenyVertexShaderRootAccess),
 // CHECK-SAME: RootCBV(b0,
-// CHECK-SAME:   space = 1, visibility = All, flags = DataStatic
+// CHECK-SAME:   space = 1, visibility = All, flags = DataVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: RootSRV(t0,
 // CHECK-SAME:   space = 0, visibility = All,
@@ -50,10 +50,10 @@
 // CHECK-V1_1-SAME: flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: ),
 // CHECK-SAME: SRV(
-// CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
+// CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile | DataVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: UAV(
-// CHECK-SAME:   u1, numDescriptors = unbounded, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
+// CHECK-SAME:   u1, numDescriptors = unbounded, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile | DataVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: DescriptorTable(
 // CHECK-SAME:   numClauses = 3, visibility = All
@@ -92,14 +92,14 @@ void same_rs_main() {}
 #define SampleSameRS \
    "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \
                "DENY_VERTEX_SHADER_ROOT_ACCESS), " \
-   "CBV(b0, space = 1, flags = DATA_STATIC), " \
+   "CBV(b0, space = 1, flags = DATA_VOLATILE), " \
    "SRV(t0), " \
    "UAV(u0), " \
    "DescriptorTable( CBV(b1), " \
-                     "SRV(t1, numDescriptors = 8, " \
-                     "        flags = DESCRIPTORS_VOLATILE), " \
-                     "UAV(u1, numDescriptors = unbounded, " \
-                     "        flags = DESCRIPTORS_VOLATILE)), " \
+   "  SRV(t1, numDescriptors = 8, " \
+   "          flags = DATA_VOLATILE | DESCRIPTORS_VOLATILE), " \
+   "  UAV(u1, numDescriptors = unbounded, " \
+   "          flags = DATA_VOLATILE | DESCRIPTORS_VOLATILE)), " \
    "DescriptorTable(Sampler(s0, space=1, numDescriptors = 4)), " \
    "RootConstants(num32BitConstants=3, b10), " \
    "StaticSampler(s1)," \

@@ -17,4 +17,20 @@ json::Value toJSON(const CapabilitiesEventBody &CEB) {
   return json::Object{{"capabilities", CEB.capabilities}};
 }
 
+json::Value toJSON(const ModuleEventBody::Reason &MEBR) {
+  switch (MEBR) {
+  case ModuleEventBody::eReasonNew:
+    return "new";
+  case ModuleEventBody::eReasonChanged:
+    return "changed";
+  case ModuleEventBody::eReasonRemoved:
+    return "removed";
+  }
+  llvm_unreachable("unhandled module event reason!.");
+}
+
+json::Value toJSON(const ModuleEventBody &MEB) {
+  return json::Object{{"reason", MEB.reason}, {"module", MEB.module}};
+}
+
 } // namespace lldb_dap::protocol

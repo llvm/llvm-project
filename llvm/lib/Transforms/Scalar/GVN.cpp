@@ -978,7 +978,7 @@ static bool IsValueFullyAvailableInBlock(
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
+  SmallPtrSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
   SmallVector<BasicBlock *, 32> AvailableBBs;
 #endif
 
@@ -1222,7 +1222,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
                         const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
-  SmallSet<BasicBlock *, 1> Exclusion;
+  SmallPtrSet<BasicBlock *, 1> Exclusion;
   Exclusion.insert(Between->getParent());
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }
@@ -1310,7 +1310,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
   BatchAAResults BatchAA(*AA);
   for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
     for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
-         Inst != nullptr; Inst = Inst->getPrevNonDebugInstruction()) {
+         Inst != nullptr; Inst = Inst->getPrevNode()) {
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;
@@ -2367,11 +2367,14 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   // See if we can refine the value number by looking at the PN incoming value
   // for the given predecessor.
   if (PHINode *PN = NumberingPhi[Num]) {
-    if (PN->getParent() == PhiBlock)
-      for (unsigned I = 0; I != PN->getNumIncomingValues(); ++I)
-        if (PN->getIncomingBlock(I) == Pred)
-          if (uint32_t TransVal = lookup(PN->getIncomingValue(I), false))
-            return TransVal;
+    if (PN->getParent() != PhiBlock)
+      return Num;
+    for (unsigned I = 0; I != PN->getNumIncomingValues(); ++I) {
+      if (PN->getIncomingBlock(I) != Pred)
+        continue;
+      if (uint32_t TransVal = lookup(PN->getIncomingValue(I), false))
+        return TransVal;
+    }
     return Num;
   }
 
@@ -2496,9 +2499,13 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::replaceOperandsForInBlockEquality(Instruction *Instr) const {
   bool Changed = false;
   for (unsigned OpNum = 0; OpNum < Instr->getNumOperands(); ++OpNum) {
-    Value *Operand = Instr->getOperand(OpNum);
-    auto It = ReplaceOperandsWithMap.find(Operand);
+    Use &Operand = Instr->getOperandUse(OpNum);
+    auto It = ReplaceOperandsWithMap.find(Operand.get());
     if (It != ReplaceOperandsWithMap.end()) {
+      const DataLayout &DL = Instr->getDataLayout();
+      if (!canReplacePointersInUseIfEqual(Operand, It->second, DL))
+        continue;
+
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
                         << *It->second << " in instruction " << *Instr << '\n');
       Instr->setOperand(OpNum, It->second);
@@ -2674,6 +2681,11 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     // "false"
     if (match(LHS, m_NUWTrunc(m_Value(A)))) {
       Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
+      continue;
+    }
+
+    if (match(LHS, m_Not(m_Value(A)))) {
+      Worklist.emplace_back(A, ConstantInt::get(A->getType(), !IsKnownTrue));
       continue;
     }
   }

@@ -205,6 +205,7 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
   Data64bitsDirective = "\t.dword\t";
   ZeroDirective = "\t.space\t";
   CommentString = "#";
+  AllowDollarAtStartOfIdentifier = false;
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;

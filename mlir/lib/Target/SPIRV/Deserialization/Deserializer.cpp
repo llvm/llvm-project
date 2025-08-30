@@ -138,6 +138,7 @@ LogicalResult spirv::Deserializer::processHeader() {
       MIN_VERSION_CASE(3);
       MIN_VERSION_CASE(4);
       MIN_VERSION_CASE(5);
+      MIN_VERSION_CASE(6);
 #undef MIN_VERSION_CASE
     default:
       return emitError(unknownLoc, "unsupported SPIR-V minor version: ")
@@ -343,14 +344,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
+  case spirv::Decoration::Invariant:
+  case spirv::Decoration::Patch:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
     }
-    // Block decoration does not affect spirv.struct type, but is still stored
-    // for verification.
-    // TODO: Update StructType to contain this information since
-    // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
     break;
   case spirv::Decoration::Location:
@@ -518,8 +517,8 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   std::string fnName = getFunctionSymbol(fnID);
-  auto funcOp = opBuilder.create<spirv::FuncOp>(
-      unknownLoc, fnName, functionType, fnControl.value());
+  auto funcOp = spirv::FuncOp::create(opBuilder, unknownLoc, fnName,
+                                      functionType, fnControl.value());
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {
@@ -678,6 +677,14 @@ spirv::Deserializer::getConstant(uint32_t id) {
   return constIt->getSecond();
 }
 
+std::optional<std::pair<Attribute, Type>>
+spirv::Deserializer::getConstantCompositeReplicate(uint32_t id) {
+  if (auto it = constantCompositeReplicateMap.find(id);
+      it != constantCompositeReplicateMap.end())
+    return it->second;
+  return std::nullopt;
+}
+
 std::optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
@@ -706,8 +713,8 @@ spirv::SpecConstantOp
 spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
-  auto op = opBuilder.create<spirv::SpecConstantOp>(unknownLoc, symName,
-                                                    defaultValue);
+  auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
+                                          defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
       op->setAttr(attr.getName(), attr.getValue());
@@ -782,9 +789,9 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
            << wordIndex << " of " << operands.size() << " processed";
   }
   auto loc = createFileLineColLoc(opBuilder);
-  auto varOp = opBuilder.create<spirv::GlobalVariableOp>(
-      loc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
-      initializer);
+  auto varOp = spirv::GlobalVariableOp::create(
+      opBuilder, loc, TypeAttr::get(type),
+      opBuilder.getStringAttr(variableName), initializer);
 
   // Decorations.
   if (decorations.count(variableID)) {
@@ -985,7 +992,8 @@ spirv::Deserializer::processOpTypePointer(ArrayRef<uint32_t> operands) {
 
       if (failed(structType.trySetBody(
               deferredStructIt->memberTypes, deferredStructIt->offsetInfo,
-              deferredStructIt->memberDecorationsInfo)))
+              deferredStructIt->memberDecorationsInfo,
+              deferredStructIt->structDecorationsInfo)))
         return failure();
 
       deferredStructIt = deferredStructTypesInfos.erase(deferredStructIt);
@@ -1180,17 +1188,30 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
             }
             offsetInfo[memberIndex] = memberDecoration.second[0];
           } else {
+            auto intType = mlir::IntegerType::get(context, 32);
             if (!memberDecoration.second.empty()) {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/1,
-                                                 memberDecoration.first,
-                                                 memberDecoration.second[0]);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first,
+                  IntegerAttr::get(intType, memberDecoration.second[0]));
             } else {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/0,
-                                                 memberDecoration.first, 0);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first, UnitAttr::get(context));
             }
           }
         }
       }
+    }
+  }
+
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
+  if (decorations.count(operands[0])) {
+    NamedAttrList &allDecorations = decorations[operands[0]];
+    for (NamedAttribute &decorationAttr : allDecorations) {
+      std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+          llvm::convertToCamelFromSnakeCase(decorationAttr.getName(), true));
+      assert(decoration.has_value());
+      structDecorationsInfo.emplace_back(decoration.value(),
+                                         decorationAttr.getValue());
     }
   }
 
@@ -1200,18 +1221,19 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
   if (structIdentifier.empty()) {
     assert(unresolvedMemberTypes.empty() &&
            "didn't expect unresolved member types");
-    typeMap[structID] =
-        spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
+    typeMap[structID] = spirv::StructType::get(
+        memberTypes, offsetInfo, memberDecorationsInfo, structDecorationsInfo);
   } else {
     auto structTy = spirv::StructType::getIdentified(context, structIdentifier);
     typeMap[structID] = structTy;
 
     if (!unresolvedMemberTypes.empty())
-      deferredStructTypesInfos.push_back({structTy, unresolvedMemberTypes,
-                                          memberTypes, offsetInfo,
-                                          memberDecorationsInfo});
+      deferredStructTypesInfos.push_back(
+          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
+           memberDecorationsInfo, structDecorationsInfo});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
-                                        memberDecorationsInfo)))
+                                        memberDecorationsInfo,
+                                        structDecorationsInfo)))
       return failure();
   }
 
@@ -1538,7 +1560,19 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+  if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    SmallVector<Attribute> flattenedElems;
+    for (Attribute element : elements) {
+      if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(element)) {
+        for (auto value : denseElemAttr.getValues<Attribute>())
+          flattenedElems.push_back(value);
+      } else {
+        flattenedElems.push_back(element);
+      }
+    }
+    auto attr = DenseElementsAttr::get(tensorType, flattenedElems);
+    constantMap.try_emplace(resultID, attr, tensorType);
+  } else if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
     auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
@@ -1554,15 +1588,63 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3) {
+    return emitError(
+               unknownLoc,
+               "OpConstantCompositeReplicateEXT expects 3 operands but found ")
+           << operands.size();
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto compositeType = dyn_cast<CompositeType>(resultType);
+  if (!compositeType) {
+    return emitError(unknownLoc,
+                     "result type from <id> is not a composite type")
+           << operands[0];
+  }
+
+  uint32_t resultID = operands[1];
+  uint32_t constantID = operands[2];
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
+      getConstantCompositeReplicate(constantID);
+  if (replicatedConstantCompositeInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  return emitError(unknownLoc, "OpConstantCompositeReplicateEXT operand <id> ")
+         << constantID
+         << " must come from a normal constant or a "
+            "OpConstantCompositeReplicateEXT";
+}
+
 LogicalResult
 spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
-    return emitError(unknownLoc,
-                     "OpConstantComposite must have type <id> and result <id>");
+    return emitError(
+        unknownLoc,
+        "OpSpecConstantComposite must have type <id> and result <id>");
   }
   if (operands.size() < 3) {
     return emitError(unknownLoc,
-                     "OpConstantComposite must have at least 1 parameter");
+                     "OpSpecConstantComposite must have at least 1 parameter");
   }
 
   Type resultType = getType(operands[0]);
@@ -1581,10 +1663,45 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
     elements.push_back(SymbolRefAttr::get(elementInfo));
   }
 
-  auto op = opBuilder.create<spirv::SpecConstantCompositeOp>(
-      unknownLoc, TypeAttr::get(resultType), symName,
+  auto op = spirv::SpecConstantCompositeOp::create(
+      opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
       opBuilder.getArrayAttr(elements));
   specConstCompositeMap[resultID] = op;
+
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3) {
+    return emitError(unknownLoc, "OpSpecConstantCompositeReplicateEXT expects "
+                                 "3 operands but found ")
+           << operands.size();
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto compositeType = dyn_cast<CompositeType>(resultType);
+  if (!compositeType) {
+    return emitError(unknownLoc,
+                     "result type from <id> is not a composite type")
+           << operands[0];
+  }
+
+  uint32_t resultID = operands[1];
+
+  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
+  spirv::SpecConstantOp constituentSpecConstantOp =
+      getSpecConstant(operands[2]);
+  auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
+      opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
+      SymbolRefAttr::get(constituentSpecConstantOp));
+
+  specConstCompositeReplicateMap[resultID] = op;
 
   return success();
 }
@@ -1656,7 +1773,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
 
   auto loc = createFileLineColLoc(opBuilder);
   auto specConstOperationOp =
-      opBuilder.create<spirv::SpecConstantOperationOp>(loc, resultType);
+      spirv::SpecConstantOperationOp::create(opBuilder, loc, resultType);
 
   Region &body = specConstOperationOp.getBody();
   // Move the new block into SpecConstantOperation's body.
@@ -1669,7 +1786,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   OpBuilder::InsertionGuard moduleInsertionGuard(opBuilder);
   opBuilder.setInsertionPointToEnd(&block);
 
-  opBuilder.create<spirv::YieldOp>(loc, block.front().getResult(0));
+  spirv::YieldOp::create(opBuilder, loc, block.front().getResult(0));
   return specConstOperationOp.getResult();
 }
 
@@ -1677,7 +1794,7 @@ LogicalResult
 spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
-                     "OpConstantNull must have type <id> and result <id>");
+                     "OpConstantNull must only have type <id> and result <id>");
   }
 
   Type resultType = getType(operands[0]);
@@ -1687,8 +1804,15 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
+  Attribute attr;
   if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
-    auto attr = opBuilder.getZeroAttr(resultType);
+    attr = opBuilder.getZeroAttr(resultType);
+  } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
+      attr = DenseElementsAttr::get(tensorType, element);
+  }
+
+  if (attr) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
@@ -1733,7 +1857,7 @@ LogicalResult spirv::Deserializer::processBranch(ArrayRef<uint32_t> operands) {
   // The preceding instruction for the OpBranch instruction could be an
   // OpLoopMerge or an OpSelectionMerge instruction, in this case they will have
   // the same OpLine information.
-  opBuilder.create<spirv::BranchOp>(loc, target);
+  spirv::BranchOp::create(opBuilder, loc, target);
 
   clearDebugLine();
   return success();
@@ -1764,8 +1888,8 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   // an OpSelectionMerge instruction, in this case they will have the same
   // OpLine information.
   auto loc = createFileLineColLoc(opBuilder);
-  opBuilder.create<spirv::BranchConditionalOp>(
-      loc, condition, trueBlock,
+  spirv::BranchConditionalOp::create(
+      opBuilder, loc, condition, trueBlock,
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
 
@@ -1947,7 +2071,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
   OpBuilder builder(&mergeBlock->front());
 
   auto control = static_cast<spirv::SelectionControl>(selectionControl);
-  auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
+  auto selectionOp = spirv::SelectionOp::create(builder, location, control);
   selectionOp.addMergeBlock(builder);
 
   return selectionOp;
@@ -1959,7 +2083,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
   OpBuilder builder(&mergeBlock->front());
 
   auto control = static_cast<spirv::LoopControl>(loopControl);
-  auto loopOp = builder.create<spirv::LoopOp>(location, control);
+  auto loopOp = spirv::LoopOp::create(builder, location, control);
   loopOp.addEntryAndMergeBlock(builder);
 
   return loopOp;
@@ -2092,8 +2216,8 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // The loop entry block should have a unconditional branch jumping to the
     // loop header block.
     builder.setInsertionPointToEnd(&body.front());
-    builder.create<spirv::BranchOp>(location, mapper.lookupOrNull(headerBlock),
-                                    ArrayRef<Value>(blockArgs));
+    spirv::BranchOp::create(builder, location, mapper.lookupOrNull(headerBlock),
+                            ArrayRef<Value>(blockArgs));
   }
 
   // Values defined inside the selection region that need to be yielded outside
@@ -2177,12 +2301,12 @@ LogicalResult ControlFlowStructurizer::structurize() {
     Operation *newOp = nullptr;
 
     if (isLoop)
-      newOp = builder.create<spirv::LoopOp>(
-          location, TypeRange(ValueRange(outsideUses)),
-          static_cast<spirv::LoopControl>(control));
+      newOp = spirv::LoopOp::create(builder, location,
+                                    TypeRange(ValueRange(outsideUses)),
+                                    static_cast<spirv::LoopControl>(control));
     else
-      newOp = builder.create<spirv::SelectionOp>(
-          location, TypeRange(ValueRange(outsideUses)),
+      newOp = spirv::SelectionOp::create(
+          builder, location, TypeRange(ValueRange(outsideUses)),
           static_cast<spirv::SelectionControl>(control));
 
     newOp->getRegion(0).takeBody(body);
@@ -2308,7 +2432,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
       // but replace all ops inside with a branch to the merge block.
       block->clear();
       builder.setInsertionPointToEnd(block);
-      builder.create<spirv::BranchOp>(location, mergeBlock);
+      spirv::BranchOp::create(builder, location, mergeBlock);
     } else {
       LLVM_DEBUG(logger.startLine() << "[cf] erasing block " << block << "\n");
       block->erase();
@@ -2362,22 +2486,22 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 
     if (auto branchOp = dyn_cast<spirv::BranchOp>(op)) {
       // Replace the previous branch op with a new one with block arguments.
-      opBuilder.create<spirv::BranchOp>(branchOp.getLoc(), branchOp.getTarget(),
-                                        blockArgs);
+      spirv::BranchOp::create(opBuilder, branchOp.getLoc(),
+                              branchOp.getTarget(), blockArgs);
       branchOp.erase();
     } else if (auto branchCondOp = dyn_cast<spirv::BranchConditionalOp>(op)) {
       assert((branchCondOp.getTrueBlock() == target ||
               branchCondOp.getFalseBlock() == target) &&
              "expected target to be either the true or false target");
       if (target == branchCondOp.getTrueTarget())
-        opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.getCondition(), blockArgs,
-            branchCondOp.getFalseBlockArguments(),
+        spirv::BranchConditionalOp::create(
+            opBuilder, branchCondOp.getLoc(), branchCondOp.getCondition(),
+            blockArgs, branchCondOp.getFalseBlockArguments(),
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueTarget(),
             branchCondOp.getFalseTarget());
       else
-        opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.getCondition(),
+        spirv::BranchConditionalOp::create(
+            opBuilder, branchCondOp.getLoc(), branchCondOp.getCondition(),
             branchCondOp.getTrueBlockArguments(), blockArgs,
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueBlock(),
             branchCondOp.getFalseBlock());
@@ -2437,7 +2561,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
-      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+      spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);
 
       // After splitting we need to update the map to use the new block as a
       // header.

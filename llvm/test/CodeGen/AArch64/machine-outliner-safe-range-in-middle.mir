@@ -16,27 +16,53 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: BL @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x16, implicit $x0, implicit $sp
     ; CHECK-NEXT: $x9 = ADDXri $x16, 16, 0
-    ; CHECK-NEXT: $x16 = ADDXri killed $x16, 16, 0
+    ; CHECK-NEXT: $x16 = ADDXri killed $x16, 16, 1
     ; CHECK-NEXT: BL @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3, implicit-def $x16, implicit $x0, implicit $sp
     ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
-    ; CHECK-NEXT: $x16 = ADDXri killed $x16, 16, 0
+    ; CHECK-NEXT: $x16 = ADDXri killed $x16, 16, 2
     ; CHECK-NEXT: RET undef $x9
     $x0 = ADDXri $x0, 0, 0
     $x1 = ADDXri $x0, 1, 0
     $x2 = ADDXri $x0, 2, 0
     $x3 = ADDXri $x0, 3, 0
-
-    ; End safe range
     $x16 = ADDXri $x0, 16, 0
     $x9 = ADDXri $x16, 16, 0
-    $x16 = ADDXri killed $x16, 16, 0
-
+    $x16 = ADDXri killed $x16, 16, 1
+    ; End safe range
     $x0 = ADDXri $x0, 0, 0
     $x1 = ADDXri $x0, 1, 0
     $x2 = ADDXri $x0, 2, 0
     $x3 = ADDXri $x0, 3, 0
-    ; End safe range
     $x16 = ADDXri $x0, 16, 0
     $x9 = ADDXri $x9, 16, 0
-    $x16 = ADDXri killed $x16, 16, 0
+    $x16 = ADDXri killed $x16, 16, 2
+    ; End safe range
     RET undef $x9
+...
+---
+name:           unsafe_range_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: unsafe_range_bundle
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x0 = ADDXri $x0, 0, 0
+    ; CHECK-NEXT: $x16 = ADDXri $x0, 16, 0
+    ; CHECK-NEXT: BUNDLE {
+    ; CHECK-NEXT:   $x16 = ADDXri killed $x16, 16, 3
+    ; CHECK-NEXT:   $x1 = ADDXri $x0, 0, 0
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: RET undef $x9
+    $x0 = ADDXri $x0, 0, 0
+    $x16 = ADDXri $x0, 16, 0
+    BUNDLE { ; Bundle crosses a safe range
+      $x16 = ADDXri killed $x16, 16, 3
+      ; End safe range
+      $x1 = ADDXri $x0, 0, 0
+    }
+    RET undef $x9
+...

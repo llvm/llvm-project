@@ -246,8 +246,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
-      VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -296,27 +295,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+  auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
     // Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
     return Shuf;
   };
 
@@ -372,6 +355,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     set(Def, VectorValue);
   } else {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    assert(isa<VPInstruction>(Def) &&
+           "Explicit BuildVector recipes must have"
+           "handled packing for non-VPInstructions.");
     // Initialize packing with insertelements to start from poison.
     VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
@@ -487,10 +473,16 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
+      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
+      // in the original IR, except when the predecessor is the entry block.
+      // This enables including SCEV and memory runtime check blocks in VPlan.
+      // TODO: Remove exception by modeling the terminator of entry block using
+      // BranchOnCond.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       assert((TermBr && (!TermBr->getSuccessor(idx) ||
                          (isa<VPIRBasicBlock>(this) &&
-                          TermBr->getSuccessor(idx) == NewBB))) &&
+                          (TermBr->getSuccessor(idx) == NewBB ||
+                           PredVPBlock == getPlan()->getEntry())))) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
@@ -945,33 +937,6 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             VPTransformState &State) {
-  Type *TCTy = TripCountV->getType();
-  // Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
-                                   "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
-  }
-
-  VectorTripCount.setUnderlyingValue(VectorTripCountV);
-
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  // FIXME: Model VF * UF computation completely in VPlan.
-  unsigned UF = getUF();
-  if (VF.getNumUsers()) {
-    Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
-    VF.setUnderlyingValue(RuntimeVF);
-    VFxUF.setUnderlyingValue(
-        UF > 1 ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, UF))
-               : RuntimeVF);
-  } else {
-    VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
-  }
-}
-
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
   auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
     return VPIRBB->getIRBasicBlock() == IRBB;
@@ -1037,21 +1002,6 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-             "recipe generating only scalars should have been replaced");
-      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
-
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-      continue;
-    }
-
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.
     bool NeedsScalar = isa<VPInstruction>(PhiR) ||
@@ -1068,12 +1018,17 @@ void VPlan::execute(VPTransformState *State) {
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
-  // blocks, like the preheader or middle blocks.
+  // blocks, like the preheader or middle blocks, expect for checking them for
+  // recipes with invalid costs.
   InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
 
-  // If any instructions in the middle block are invalid return invalid.
-  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
-  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+  // If the cost of the loop region is invalid or any recipe in the skeleton
+  // outside loop regions are invalid return an invalid cost.
+  if (!Cost.isValid() || any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
+                                    vp_depth_first_shallow(getEntry())),
+                                [&VF, &Ctx](VPBasicBlock *VPBB) {
+                                  return !VPBB->cost(VF, Ctx).isValid();
+                                }))
     return InstructionCost::getInvalid();
 
   return Cost;
@@ -1518,7 +1473,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
-  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
   // Integer or FP constants with different types will result in he same string
   // due to stripping types.
   if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
@@ -1526,7 +1481,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // If it is already used by C > 0 other VPValues, increase the version counter
   // C and use it for V.
-  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
+  const auto &[C, UseInserted] = BaseName2Version.try_emplace(BaseName, 0);
   if (!UseInserted) {
     C->second++;
     A->second = (BaseName + Twine(".") + Twine(C->second)).str();

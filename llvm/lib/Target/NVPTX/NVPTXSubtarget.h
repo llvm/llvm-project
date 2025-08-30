@@ -82,6 +82,7 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasAtomSwap128() const { return SmVersion >= 90 && PTXVersion >= 83; }
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
@@ -116,6 +117,8 @@ public:
 
     return HasTcgen05 && PTXVersion >= 86;
   }
+  // f32x2 instructions in Blackwell family
+  bool hasF32x2Instructions() const;
 
   // TMA G2S copy with cta_group::1/2 support
   bool hasCpAsyncBulkTensorCTAGroupSupport() const {

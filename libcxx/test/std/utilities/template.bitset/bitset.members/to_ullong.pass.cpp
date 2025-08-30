@@ -11,6 +11,7 @@
 #include <bitset>
 #include <algorithm>
 #include <type_traits>
+#include <limits>
 #include <climits>
 #include <cassert>
 #include <stdexcept>
@@ -64,7 +65,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
     std::bitset<std::numeric_limits<unsigned long long>::digits + 1> q(0);
     q.flip();
     try {
-      q.to_ullong(); // throws
+      (void)q.to_ullong(); // throws
       assert(false);
     } catch (const std::overflow_error&) {
       // expected

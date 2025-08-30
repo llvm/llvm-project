@@ -972,10 +972,10 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
 
   auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.empty() || Guard == Base)
+      return Guard.str();
     if (Guard.contains('|'))
       return Base.str() + ",(" + Guard.str() + ")";
-    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
-      return Guard.str();
     return Base.str() + "," + Guard.str();
   };
 
@@ -1901,6 +1901,9 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
         !Def->getSMEGuard().empty())
       report_fatal_error("Missing VerifyRuntimeMode flag");
+    if (Def->isFlagSet(VerifyRuntimeMode) &&
+        (Def->getSVEGuard().empty() || Def->getSMEGuard().empty()))
+      report_fatal_error("VerifyRuntimeMode requires SVE and SME guards");
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());

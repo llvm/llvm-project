@@ -730,7 +730,7 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.AddAPInt(E->getValue());
 
-  if (E->getValue().getBitWidth() == 32) {
+  if (E->getBitWidth() == 32) {
     AbbrevToUse = Writer.getIntegerLiteralAbbrev();
   }
 
@@ -1702,7 +1702,7 @@ void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   Record.push_back(E->getOperator());
-  Record.AddSourceRange(E->Range);
+  Record.AddSourceLocation(E->BeginLoc);
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
     AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();

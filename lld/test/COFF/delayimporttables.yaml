@@ -15,7 +15,7 @@
 # CHECK-NEXT:   Attributes: 0x1
 # CHECK-NEXT:   ModuleHandle: 0x3000
 # CHECK-NEXT:   ImportAddressTable: 0x3010
-# CHECK-NEXT:   ImportNameTable: 0x2070
+# CHECK-NEXT:   ImportNameTable: 0x2068
 # CHECK-NEXT:   BoundDelayImportTable: 0x0
 # CHECK-NEXT:   UnloadDelayImportTable: 0x0
 # CHECK-NEXT:   Import {
@@ -32,16 +32,16 @@
 # CHECK-NEXT:   Attributes: 0x1
 # CHECK-NEXT:   ModuleHandle: 0x3008
 # CHECK-NEXT:   ImportAddressTable: 0x3028
-# CHECK-NEXT:   ImportNameTable: 0x2088
+# CHECK-NEXT:   ImportNameTable: 0x2080
 # CHECK-NEXT:   BoundDelayImportTable: 0x0
 # CHECK-NEXT:   UnloadDelayImportTable: 0x0
 # CHECK-NEXT:   Import {
 # CHECK-NEXT:     Symbol: left (0)
-# CHECK-NEXT:     Address: 0x1400010B8
+# CHECK-NEXT:     Address: 0x1400010DC
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Import {
 # CHECK-NEXT:     Symbol: right (0)
-# CHECK-NEXT:     Address: 0x1400010C4
+# CHECK-NEXT:     Address: 0x1400010E8
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 

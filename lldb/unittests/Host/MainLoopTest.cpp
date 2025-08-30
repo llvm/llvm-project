@@ -10,6 +10,7 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
@@ -64,7 +65,7 @@ protected:
 };
 } // namespace
 
-TEST_F(MainLoopTest, ReadObject) {
+TEST_F(MainLoopTest, ReadSocketObject) {
   char X = 'X';
   size_t len = sizeof(X);
   ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
@@ -79,6 +80,8 @@ TEST_F(MainLoopTest, ReadObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
+// Flakey, see https://github.com/llvm/llvm-project/issues/152677.
+#ifndef _WIN32
 TEST_F(MainLoopTest, ReadPipeObject) {
   Pipe pipe;
 
@@ -99,6 +102,145 @@ TEST_F(MainLoopTest, ReadPipeObject) {
   ASSERT_TRUE(handle);
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, MultipleReadsPipeObject) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  MainLoop loop;
+
+  std::future<void> async_writer = std::async(std::launch::async, [&] {
+    for (int i = 0; i < 5; ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      char X = 'X';
+      size_t len = sizeof(X);
+      ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+    }
+  });
+
+  Status error;
+  lldb::FileSP file = std::make_shared<NativeFile>(
+      pipe.GetReadFileDescriptor(), File::eOpenOptionReadOnly, false);
+  auto handle = loop.RegisterReadObject(
+      file,
+      [&](MainLoopBase &loop) {
+        callback_count++;
+        if (callback_count == 5)
+          loop.RequestTermination();
+
+        // Read some data to ensure the handle is not in a readable state.
+        char buf[1024] = {0};
+        size_t len = sizeof(buf);
+        ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
+        EXPECT_EQ(len, 1U);
+        EXPECT_EQ(buf[0], 'X');
+      },
+      error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(5u, callback_count);
+  async_writer.wait();
+}
+#endif
+
+TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  MainLoop loop;
+
+  Status error;
+  lldb::FileSP file = std::make_shared<NativeFile>(
+      pipe.GetReadFileDescriptor(), File::eOpenOptionReadOnly, false);
+  auto handle = loop.RegisterReadObject(
+      file,
+      [&](MainLoopBase &loop) {
+        callback_count++;
+
+        // Read some data to ensure the handle is not in a readable state.
+        char buf[1024] = {0};
+        size_t len = sizeof(buf);
+        ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
+        EXPECT_EQ(len, 2U);
+        EXPECT_EQ(buf[0], 'X');
+        EXPECT_EQ(buf[1], 'X');
+      },
+      error);
+  auto cb = [&](MainLoopBase &) {
+    callback_count++;
+    char X = 'X';
+    size_t len = sizeof(X);
+    // Write twice and ensure we coalesce into a single read.
+    ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+    ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+  };
+  // Add a write that triggers a read events.
+  loop.AddCallback(cb, std::chrono::milliseconds(500));
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   std::chrono::milliseconds(1000));
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+
+  // Write between RegisterReadObject / Run should NOT invoke the callback.
+  cb(loop);
+  ASSERT_EQ(1u, callback_count);
+
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(4u, callback_count);
+}
+
+TEST_F(MainLoopTest, NoSelfTriggersDuringPipeHandler) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  MainLoop loop;
+
+  Status error;
+  lldb::FileSP file = std::make_shared<NativeFile>(
+      pipe.GetReadFileDescriptor(), File::eOpenOptionReadOnly, false);
+  auto handle = loop.RegisterReadObject(
+      file,
+      [&](MainLoopBase &lop) {
+        callback_count++;
+
+        char X = 'Y';
+        size_t len = sizeof(X);
+        // writes / reads during the handler callback should NOT trigger itself.
+        ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+
+        char buf[1024] = {0};
+        len = sizeof(buf);
+        ASSERT_THAT_ERROR(file->Read(buf, len).ToError(), llvm::Succeeded());
+        EXPECT_EQ(len, 2U);
+        EXPECT_EQ(buf[0], 'X');
+        EXPECT_EQ(buf[1], 'Y');
+
+        if (callback_count == 2)
+          loop.RequestTermination();
+      },
+      error);
+  // Add a write that triggers a read event.
+  loop.AddPendingCallback([&](MainLoopBase &) {
+    char X = 'X';
+    size_t len = sizeof(X);
+    ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+  });
+  loop.AddCallback(
+      [&](MainLoopBase &) {
+        char X = 'X';
+        size_t len = sizeof(X);
+        ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+      },
+      std::chrono::milliseconds(500));
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(2u, callback_count);
 }
 
 TEST_F(MainLoopTest, NoSpuriousPipeReads) {

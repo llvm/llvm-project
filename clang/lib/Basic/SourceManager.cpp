@@ -329,6 +329,7 @@ SourceManager::~SourceManager() {
 void SourceManager::clearIDTables() {
   MainFileID = FileID();
   LocalSLocEntryTable.clear();
+  LocalLocOffsetTable.clear();
   LoadedSLocEntryTable.clear();
   SLocEntryLoaded.clear();
   SLocEntryOffsetLoaded.clear();
@@ -628,9 +629,11 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(
       SLocEntry::get(NextLocalOffset,
                      FileInfo::get(IncludePos, File, FileCharacter, Filename)));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   LastLookupStartOffset = NextLocalOffset;
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
@@ -684,7 +687,9 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
     Diag.Report(diag::err_sloc_space_too_large);
@@ -807,6 +812,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   assert(SLocOffset < NextLocalOffset && "Bad function choice");
   assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() && SLocOffset > 0 &&
          "Invalid SLocOffset");
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   assert(LastFileIDLookup.ID >= 0 && "Only cache local file sloc entry");
 
   // After the first and second level caches, I see two common sorts of
@@ -826,7 +832,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // SLocOffset.
   unsigned LessIndex = 0;
   // upper bound of the search range.
-  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  unsigned GreaterIndex = LocalLocOffsetTable.size();
   // Use the LastFileIDLookup to prune the search space.
   if (LastLookupStartOffset < SLocOffset)
     LessIndex = LastFileIDLookup.ID;
@@ -837,16 +843,16 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   unsigned NumProbes = 0;
   while (true) {
     --GreaterIndex;
-    assert(GreaterIndex < LocalSLocEntryTable.size());
-    if (LocalSLocEntryTable[GreaterIndex].getOffset() <= SLocOffset) {
+    assert(GreaterIndex < LocalLocOffsetTable.size());
+    if (LocalLocOffsetTable[GreaterIndex] <= SLocOffset) {
       FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
-      LastLookupStartOffset = LocalSLocEntryTable[GreaterIndex].getOffset();
+      LastLookupStartOffset = LocalLocOffsetTable[GreaterIndex];
       LastLookupEndOffset =
-          GreaterIndex + 1 >= LocalSLocEntryTable.size()
+          GreaterIndex + 1 >= LocalLocOffsetTable.size()
               ? NextLocalOffset
-              : LocalSLocEntryTable[GreaterIndex + 1].getOffset();
+              : LocalLocOffsetTable[GreaterIndex + 1];
       NumLinearScans += NumProbes + 1;
       return Res;
     }
@@ -858,11 +864,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
     ++NumBinaryProbes;
 
     unsigned MiddleIndex = LessIndex + (GreaterIndex - LessIndex) / 2;
-
-    SourceLocation::UIntTy MidOffset =
-        LocalSLocEntryTable[MiddleIndex].getOffset();
-
-    if (MidOffset <= SLocOffset)
+    if (LocalLocOffsetTable[MiddleIndex] <= SLocOffset)
       LessIndex = MiddleIndex + 1;
     else
       GreaterIndex = MiddleIndex;
@@ -871,8 +873,8 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // At this point, LessIndex is the index of the *first element greater than*
   // SLocOffset. The element we are actually looking for is the one immediately
   // before it.
-  LastLookupStartOffset = LocalSLocEntryTable[LessIndex - 1].getOffset();
-  LastLookupEndOffset = LocalSLocEntryTable[LessIndex].getOffset();
+  LastLookupStartOffset = LocalLocOffsetTable[LessIndex - 1];
+  LastLookupEndOffset = LocalLocOffsetTable[LessIndex];
   return LastFileIDLookup = FileID::get(LessIndex - 1);
 }
 
@@ -1169,14 +1171,14 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
         if (Buf[FilePos - 1] == '\r' || Buf[FilePos - 1] == '\n')
           --FilePos;
       }
-      return FilePos - LineStart + 1;
+      return (FilePos - LineStart) + 1;
     }
   }
 
   unsigned LineStart = FilePos;
   while (LineStart && Buf[LineStart-1] != '\n' && Buf[LineStart-1] != '\r')
     --LineStart;
-  return FilePos-LineStart+1;
+  return (FilePos - LineStart) + 1;
 }
 
 // isInvalid - Return the result of calling loc.isInvalid(), and
@@ -1793,9 +1795,8 @@ void SourceManager::associateFileChunkWithMacroArgExp(
     // spelling range and if one is itself a macro argument expansion, recurse
     // and associate the file chunk that it represents.
 
-    FileID SpellFID; // Current FileID in the spelling range.
-    unsigned SpellRelativeOffs;
-    std::tie(SpellFID, SpellRelativeOffs) = getDecomposedLoc(SpellLoc);
+    // Current FileID in the spelling range.
+    auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
     while (true) {
       const SLocEntry &Entry = getSLocEntry(SpellFID);
       SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
@@ -1877,9 +1878,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid() || !Loc.isFileID())
     return Loc;
 
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = getDecomposedLoc(Loc);
+  auto [FID, Offset] = getDecomposedLoc(Loc);
   if (FID.isInvalid())
     return Loc;
 
@@ -2367,23 +2366,21 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,
                                        /*RequiresNullTerminator=*/false));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
-  FileMgr =
-      std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  FileMgr = std::make_unique<FileManager>(FileSystemOptions(),
+                                          std::move(InMemoryFileSystem));
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
-  Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
+  Diagnostics =
+      std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =

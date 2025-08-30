@@ -42,8 +42,9 @@ namespace {
 class FunctionPropertiesAnalysisTest : public testing::Test {
 public:
   FunctionPropertiesAnalysisTest() {
-    createTestVocabulary(1);
-    MAM.registerPass([&] { return IR2VecVocabAnalysis(Vocabulary); });
+    auto VocabVector = ir2vec::Vocabulary::createDummyVocabForTest(1);
+    MAM.registerPass([&] { return IR2VecVocabAnalysis(VocabVector); });
+    IR2VecVocab = ir2vec::Vocabulary(std::move(VocabVector));
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -60,33 +61,12 @@ private:
   float OriginalTypeWeight = ir2vec::TypeWeight;
   float OriginalArgWeight = ir2vec::ArgWeight;
 
-  void createTestVocabulary(unsigned Dim) {
-    llvm::SmallVector<std::string, 32> SampleEntities = {
-        "add",        "sub",      "mul",        "icmp",          "br",
-        "ret",        "store",    "load",       "alloca",        "phi",
-        "call",       "voidTy",   "floatTy",    "integerTy",     "functionTy",
-        "structTy",   "arrayTy",  "pointerTy",  "vectorTy",      "emptyTy",
-        "labelTy",    "tokenTy",  "metadataTy", "unknownTy",     "function",
-        "pointer",    "constant", "variable",   "getelementptr", "invoke",
-        "landingpad", "resume",   "catch",      "cleanup"};
-    float EmbVal = 0.1f;
-
-    // Helper lambda to add entries to the vocabulary
-    auto addEntry = [&](std::string key) {
-      Vocabulary[key] = ir2vec::Embedding(Dim, EmbVal);
-      EmbVal += 0.1f;
-    };
-
-    for (auto &Name : SampleEntities)
-      addEntry(Name);
-  }
-
 protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
   FunctionAnalysisManager FAM;
   ModuleAnalysisManager MAM;
-  ir2vec::Vocab Vocabulary;
+  ir2vec::Vocabulary IR2VecVocab;
 
   void TearDown() override {
     // Restore original IR2Vec weights
@@ -126,7 +106,7 @@ protected:
   }
 
   std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
-    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, IR2VecVocab);
     EXPECT_TRUE(static_cast<bool>(Emb));
     return Emb;
   }

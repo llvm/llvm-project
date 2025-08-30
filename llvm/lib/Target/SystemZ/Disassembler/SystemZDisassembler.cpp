@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -327,6 +328,8 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
   // Get the first two bytes of the instruction.
   Size = 0;
   if (Bytes.size() < 2)

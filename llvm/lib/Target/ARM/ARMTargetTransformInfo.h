@@ -91,9 +91,9 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
       ARM::FeatureAvoidMOVsShOp, ARM::FeatureHasRetAddrStack,
       ARM::FeatureHasNoBranchPredictor, ARM::FeatureDSP, ARM::FeatureMP,
       ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
-      ARM::FeatureAClass, ARM::FeatureNaClTrap, ARM::FeatureStrictAlign,
-      ARM::FeatureLongCalls, ARM::FeatureExecuteOnly, ARM::FeatureReserveR9,
-      ARM::FeatureNoMovt, ARM::FeatureNoNegativeImmediates
+      ARM::FeatureAClass, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
+      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
+      ARM::FeatureNoNegativeImmediates
   };
 
   const ARMSubtarget *getST() const { return ST; }
@@ -257,8 +257,9 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
-  InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

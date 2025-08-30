@@ -15,7 +15,7 @@ namespace Fortran::runtime::typeInfo {
 
 RT_OFFLOAD_API_GROUP_BEGIN
 
-RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
+RT_API_ATTRS common::optional<TypeParameterValue> Value::GetValue(
     const Descriptor *descriptor) const {
   switch (genre_) {
   case Genre::Explicit:
@@ -26,9 +26,9 @@ RT_API_ATTRS Fortran::common::optional<TypeParameterValue> Value::GetValue(
         return addendum->LenParameterValue(value_);
       }
     }
-    return Fortran::common::nullopt;
+    return common::nullopt;
   default:
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 
@@ -140,7 +140,7 @@ RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
   EstablishDescriptor(descriptor, container, terminator);
-  std::size_t offset{offset_};
+  std::size_t offset{static_cast<std::size_t>(offset_)};
   if (subscripts) {
     offset += container.SubscriptsToByteOffset(subscripts);
   }
@@ -330,7 +330,7 @@ FILE *SpecialBinding::Dump(FILE *f) const {
   }
   std::fprintf(f, "    isArgDescriptorSet: 0x%x\n", isArgDescriptorSet_);
   std::fprintf(f, "    isTypeBound: %d\n", isTypeBound_);
-  std::fprintf(f, "    isArgContiguousSet: 0x%x\n", isArgContiguousSet_);
+  std::fprintf(f, "    specialCaseFlag 0x%x\n", specialCaseFlag_);
   std::fprintf(f, "    proc: %p\n", reinterpret_cast<void *>(proc_));
   return f;
 }

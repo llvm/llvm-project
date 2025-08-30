@@ -261,10 +261,63 @@ define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3(ptr %p
 ; CHECK-LABEL: vector_deinterleave_load_factor3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    vlseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <24 x i8>, ptr %p
   %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec)
+  %t0 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 0
+  %t1 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 1
+  %t2 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 2
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  ret { <8 x i8>, <8 x i8>, <8 x i8> } %res2
+}
+
+define { <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3_partial(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor3_partial:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg3e8.v v7, (a0)
+; CHECK-NEXT:    vmv1r.v v8, v7
+; CHECK-NEXT:    ret
+  %vec = load <24 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec)
+  %t0 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 0
+  %t2 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 2
+  %res0 = insertvalue { <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8> } %res0, <8 x i8> %t2, 1
+  ret { <8 x i8>, <8 x i8> } %res1
+}
+
+; InterleavedAccess should kick in even if the users of deinterleave intrinsic are not extractvalue.
+define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3_no_extract(ptr %p, ptr %p1, i1 %c) {
+; CHECK-LABEL: vector_deinterleave_load_factor3_no_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB17_2
+; CHECK-NEXT:  # %bb.1: # %bb0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB17_2: # %bb1
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg3e8.v v6, (a1)
+; CHECK-NEXT:    ret
+  br i1 %c, label %bb0, label %bb1
+
+bb0:
+  %vec0 = load <24 x i8>, ptr %p
+  %d0.0 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec0)
+  br label %merge
+
+bb1:
+  %vec1 = load <24 x i8>, ptr %p1
+  %d0.1 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec1)
+  br label %merge
+
+merge:
+  %d0 = phi {<8 x i8>, <8 x i8>, <8 x i8>} [%d0.0, %bb0], [%d0.1, %bb1]
   %t0 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 0
   %t1 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 1
   %t2 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 2

@@ -1,0 +1,54 @@
+# Test MIR printer and parser to NOT have `CalleeTypeIds` field in callSites.
+# `CalleeTypeId` is used for propagating call site type identifiers for
+# indirect targets only. This test does not contain any indirect targets.
+
+# RUN: llc -mtriple=x86_64 --call-graph-section %s -run-pass=none -o - | FileCheck --match-full-lines %s
+# CHECK-NOT: calleeTypeIds
+# CHECK: name: bar
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [] }
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [] }
+# CHECK: name: foo
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [] }
+
+--- |
+  declare i32 @fizz(i32, i32)
+  
+  declare i32 @buzz(i32, i32)
+  
+  define i32 @bar(i32 %x, i32 %y) !type !0 {
+  entry:
+    %call = call i32 @buzz(i32 %x, i32 %x)
+    %call1 = call i32 @fizz(i32 %x, i32 %x)
+    ret i32 0
+  }
+  
+  define i32 @foo(i32 %x, i32 %y) !type !0 {
+  entry:
+    %call1 = call i32 @bar(i32 %x, i32 %x)
+    ret i32 0
+  }
+  
+  !0 = !{i64 0, !"_ZTSFiiiE.generalized"}
+...
+---
+name:            bar
+callSites:
+  - { bb: 0, offset: 0, fwdArgRegs: [] }
+  - { bb: 0, offset: 1, fwdArgRegs: [] }
+body:             |
+  bb.0.entry:
+    CALL64pcrel32 target-flags(x86-plt) @buzz, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    CALL64pcrel32 target-flags(x86-plt) @fizz, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+
+...
+---
+name:            foo
+callSites:
+  - { bb: 0, offset: 0, fwdArgRegs: [] }
+body:             |
+  bb.0.entry:
+    CALL64pcrel32 target-flags(x86-plt) @bar, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+
+...

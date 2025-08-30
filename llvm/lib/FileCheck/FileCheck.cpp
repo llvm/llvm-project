@@ -1360,6 +1360,12 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
   size_t Best = StringRef::npos;
   double BestQuality = 0;
 
+  // Arbitrarily limit quadratic search behavior stemming from long CHECK lines.
+  if (size_t(4096) * size_t(2048) <
+      std::min(size_t(4096), Buffer.size()) *
+          std::max(FixedStr.size(), RegExStr.size()))
+    return;
+
   // Use an arbitrary 4k limit on how far we will search.
   for (size_t i = 0, e = std::min(size_t(4096), Buffer.size()); i != e; ++i) {
     if (Buffer[i] == '\n')

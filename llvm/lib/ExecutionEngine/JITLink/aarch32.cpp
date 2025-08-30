@@ -28,7 +28,7 @@ namespace aarch32 {
 
 /// Check whether the given target flags are set for this Symbol.
 bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags) {
-  return static_cast<TargetFlagsType>(Sym.getTargetFlags()) & Flags;
+  return Sym.getTargetFlags() & Flags;
 }
 
 /// Encode 22-bit immediate value for branch instructions without J1J2 range
@@ -239,15 +239,14 @@ Error makeUnexpectedOpcodeError(const LinkGraph &G, const ThumbRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
       formatv("Invalid opcode [ {0:x4}, {1:x4} ] for relocation: {2}",
-              static_cast<uint16_t>(R.Hi), static_cast<uint16_t>(R.Lo),
-              G.getEdgeKindName(Kind)));
+              R.Hi.value(), R.Lo.value(), G.getEdgeKindName(Kind)));
 }
 
 Error makeUnexpectedOpcodeError(const LinkGraph &G, const ArmRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
-      formatv("Invalid opcode {0:x8} for relocation: {1}",
-              static_cast<uint32_t>(R.Wd), G.getEdgeKindName(Kind)));
+      formatv("Invalid opcode {0:x8} for relocation: {1}", R.Wd.value(),
+              G.getEdgeKindName(Kind)));
 }
 
 template <EdgeKind_aarch32 K> constexpr bool isArm() {

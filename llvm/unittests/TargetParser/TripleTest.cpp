@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 #include "gtest/gtest.h"
@@ -756,6 +757,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-meta-unknown-mtia");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::Meta, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::MTIA, T.getEnvironment());
 
   T = Triple("riscv64-unknown-linux");
   EXPECT_EQ(Triple::riscv64, T.getArch());
@@ -2755,6 +2762,163 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+}
+
+TEST(TripleTest, DefaultExceptionHandling) {
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-freebsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm32-unknown-wasi-wasm").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm64-unknown-wasi-wasm").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::ARM,
+      Triple("arm-unknown-linux-android16").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv6-unknown-netbsd-eabi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("armv7-suse-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("thumbv7-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("thumbv7-none-netbsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::ZOS,
+            Triple("s390x-ibm-zos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("systemz-ibm-linux").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("sparcel-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("amdgcn--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("nvptx64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv32--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv64--").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i686-pc-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-apple-darwin9").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-unknown-uefi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI, // ???
+            Triple("x86_64-unknown-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xtensa-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("lanai-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arc-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("msp430-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("m68k-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("csky-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc-ibm-aix").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc---xcoff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("powerpc-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-windows-coreclr").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-linux").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv7k-apple-watchos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::SjLj,
+            Triple("armv7-apple-ios").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips64-mti-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mips-pc-windows-msvc-coff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mipsel-windows--coff").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mipsel-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::WinEH,
+      Triple("aarch64-unknown-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64_32-apple-ios").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-xmos-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-pc-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-mingw64").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-win32-gnu").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-scei-ps4").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
 }
 
 TEST(TripleTest, NormalizeWindows) {

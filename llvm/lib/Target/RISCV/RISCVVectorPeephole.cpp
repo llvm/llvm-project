@@ -434,6 +434,15 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   if (!isKnownSameDefs(TrueMask.getReg(), MIMask.getReg()))
     return false;
 
+  // Masked off lanes past TrueVL will come from False, and converting to vmv
+  // will lose these lanes unless MIVL <= TrueVL.
+  // TODO: We could relax this for False == Passthru and True policy == TU
+  const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  const MachineOperand &TrueVL =
+      True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
+  if (!RISCV::isVLKnownLE(MIVL, TrueVL))
+    return false;
+
   // True's passthru needs to be equivalent to False
   Register TruePassthruReg = True->getOperand(1).getReg();
   Register FalseReg = MI.getOperand(2).getReg();
@@ -521,15 +530,22 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
 /// Check if it's safe to move From down to To, checking that no physical
 /// registers are clobbered.
 static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent() && !From.hasImplicitDef());
-  SmallVector<Register> PhysUses;
+  assert(From.getParent() == To.getParent());
+  SmallVector<Register> PhysUses, PhysDefs;
   for (const MachineOperand &MO : From.all_uses())
     if (MO.getReg().isPhysical())
       PhysUses.push_back(MO.getReg());
+  for (const MachineOperand &MO : From.all_defs())
+    if (MO.getReg().isPhysical())
+      PhysDefs.push_back(MO.getReg());
   bool SawStore = false;
-  for (auto II = From.getIterator(); II != To.getIterator(); II++) {
+  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
     for (Register PhysReg : PhysUses)
       if (II->definesRegister(PhysReg, nullptr))
+        return false;
+    for (Register PhysReg : PhysDefs)
+      if (II->definesRegister(PhysReg, nullptr) ||
+          II->readsRegister(PhysReg, nullptr))
         return false;
     if (II->mayStore()) {
       SawStore = true;
@@ -630,8 +646,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   if (!Src || Src->hasUnmodeledSideEffects() ||
       Src->getParent() != MI.getParent() ||
       !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
-      !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
-      !RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags))
+      !RISCVII::hasVLOp(Src->getDesc().TSFlags))
     return false;
 
   // Src's dest needs to have the same EEW as MI's input.
@@ -665,12 +680,14 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
                                               *Src->getParent()->getParent()));
   }
 
-  // If MI was tail agnostic and the VL didn't increase, preserve it.
-  int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
-      RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
-    Policy |= RISCVVType::TAIL_AGNOSTIC;
-  Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
+  if (RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags)) {
+    // If MI was tail agnostic and the VL didn't increase, preserve it.
+    int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
+        RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
+      Policy |= RISCVVType::TAIL_AGNOSTIC;
+    Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
+  }
 
   MRI->constrainRegClass(Src->getOperand(0).getReg(),
                          MRI->getRegClass(MI.getOperand(0).getReg()));
