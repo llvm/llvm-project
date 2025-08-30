@@ -707,12 +707,10 @@ TEST(StringMapCustomTest, NonConstIterator) {
       "The value_type of a non-const iterator should not be a const type.");
 
   // Check that pointer and reference types are not const.
-  static_assert(
-      std::is_same_v<StringMap<int>::iterator::pointer,
-                     StringMap<int>::iterator::value_type *>);
-  static_assert(
-      std::is_same_v<StringMap<int>::iterator::reference,
-                     StringMap<int>::iterator::value_type &>);
+  static_assert(std::is_same_v<StringMap<int>::iterator::pointer,
+                               StringMap<int>::iterator::value_type *>);
+  static_assert(std::is_same_v<StringMap<int>::iterator::reference,
+                               StringMap<int>::iterator::value_type &>);
 
   // Check that we can construct a const_iterator from an iterator.
   static_assert(std::is_constructible_v<StringMap<int>::const_iterator,
