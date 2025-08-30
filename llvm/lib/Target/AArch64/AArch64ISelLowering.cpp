@@ -22189,6 +22189,17 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
                      Zero);
 }
 
+static SDValue tryCombineNeonFcvtFP16ToI16(SDNode *N, unsigned Opcode,
+                                           SelectionDAG &DAG) {
+  if (N->getValueType(0) != MVT::i16)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue CVT = DAG.getNode(Opcode, DL, MVT::f32, N->getOperand(1));
+  SDValue Bitcast = DAG.getBitcast(MVT::i32, CVT);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Bitcast);
+}
+
 // If a merged operation has no inactive lanes we can relax it to a predicated
 // or unpredicated operation, which potentially allows better isel (perhaps
 // using immediate forms) or relaxing register reuse requirements.
@@ -22442,6 +22453,26 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_uabd:
     return DAG.getNode(ISD::ABDU, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtas:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtau:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtms:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtmu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtns:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtnu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtps:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtpu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPU_HALF, DAG);
   case Intrinsic::aarch64_crc32b:
   case Intrinsic::aarch64_crc32cb:
     return tryCombineCRC32(0xff, N, DAG);
