@@ -1729,7 +1729,7 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
   addToUDTs(Ty);
 
   AliasRecord AR(UnderlyingTypeIndex, TypeName);
-  auto alias_index = TypeTable.writeLeafType(AR);
+  auto AliasIndex = TypeTable.writeLeafType(AR);
 
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::Int32Long) &&
       TypeName == "HRESULT")
@@ -1738,7 +1738,7 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
       TypeName == "wchar_t")
     return TypeIndex(SimpleTypeKind::WideCharacter);
 
-  return alias_index;
+  return AliasIndex;
 }
 
 TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {

@@ -1,4 +1,40 @@
-YAML file generated via llvm-pdbutil pdb2yaml -tpi-stream, and then manually
+Built with clang (22+) because MSVC does not output lf_alias for typedefs
+
+Build typedef.ll with clang -S -emit-llvm -g:
+
+```
+void *__purecall = 0;
+
+typedef unsigned char u8;
+using i64 = long long;
+
+int main() {
+    u8 val = 15;
+    i64 val2 = -1;
+
+    return 0;
+}
+```
+
+RUN: llc -O0 %p/Inputs/typedef.ll --filetype=obj -o %t.obj
+RUN: llvm-pdbutil dump --types %t.obj | FileCheck --check-prefix=OBJTYPE %s
+
+OBJTYPE: 0x1003 | LF_ALIAS [size = 12] alias = u8, underlying type = 0x0020 (unsigned char)
+OBJTYPE-NEXT: 0x1004 | LF_ALIAS [size = 12] alias = i64, underlying type = 0x0013 (__int64)
+
+RUN: llvm-pdbutil dump --symbols %t.obj | FileCheck --check-prefix=OBJSYM %s
+
+OBJSYM: 0 | S_LOCAL [size = 16] `val`
+OBJSYM-NEXT:     type=0x1003 (u8), flags = none
+OBJSYM: 0 | S_LOCAL [size = 16] `val2`
+OBJSYM:     type=0x1004 (i64), flags = none
+OBJSYM: 0 | S_UDT [size = 12] `u8`
+OBJSYM-NEXT:     original type = 0x1003
+OBJSYM-NEXT: 0 | S_UDT [size = 12] `i64`
+OBJSYM-NEXT:     original type = 0x1004
+
+
+typedef.yaml file generated via `clang -fno-rtti -g -O0 typedef.cpp` and `llvm-pdbutil pdb2yaml -tpi-stream`, and then manually
 reduced to only the typedef nodes
 
 RUN: llvm-pdbutil yaml2pdb -pdb=%t.yaml.pdb %p/Inputs/typedef.yaml
