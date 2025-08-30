@@ -19,4 +19,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_target_unittest(RISCVTests
   MCInstrAnalysisTest.cpp
   RISCVInstrInfoTest.cpp
+  RISCVSelectionDAGTest.cpp
   )
