@@ -2959,25 +2959,52 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       if (AddRecLoop == cast<SCEVAddRecExpr>(Ops[OtherIdx])->getLoop()) {
         // Other + {A,+,B}<L> + {C,+,D}<L>  -->  Other + {A+C,+,B+D}<L>
         SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
+
+        // Track flags: start with the flags from the first AddRec.
+        bool AllHaveNSW = AddRec->hasNoSignedWrap();
+        bool AllHaveNUW = AddRec->hasNoUnsignedWrap();
+
         for (; OtherIdx != Ops.size() && isa<SCEVAddRecExpr>(Ops[OtherIdx]);
              ++OtherIdx) {
           const auto *OtherAddRec = cast<SCEVAddRecExpr>(Ops[OtherIdx]);
           if (OtherAddRec->getLoop() == AddRecLoop) {
+            // Update flags based on this AddRec
+            if (!OtherAddRec->hasNoSignedWrap())
+              AllHaveNSW = false;
+            if (!OtherAddRec->hasNoUnsignedWrap())
+              AllHaveNUW = false;
             for (unsigned i = 0, e = OtherAddRec->getNumOperands();
                  i != e; ++i) {
               if (i >= AddRecOps.size()) {
                 append_range(AddRecOps, OtherAddRec->operands().drop_front(i));
                 break;
               }
+              // Preserve no-wrap flags when combining AddRec operands.
+              SCEV::NoWrapFlags CombineFlags = SCEV::FlagAnyWrap;
+              if (auto *AR1 = dyn_cast<SCEVAddRecExpr>(AddRecOps[i]))
+                if (auto *AR2 =
+                        dyn_cast<SCEVAddRecExpr>(OtherAddRec->getOperand(i))) {
+                  if (AR1->hasNoSignedWrap() && AR2->hasNoSignedWrap())
+                    CombineFlags = setFlags(CombineFlags, SCEV::FlagNSW);
+                  if (AR1->hasNoUnsignedWrap() && AR2->hasNoUnsignedWrap())
+                    CombineFlags = setFlags(CombineFlags, SCEV::FlagNUW);
+                }
               SmallVector<const SCEV *, 2> TwoOps = {
                   AddRecOps[i], OtherAddRec->getOperand(i)};
-              AddRecOps[i] = getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
+              AddRecOps[i] = getAddExpr(TwoOps, CombineFlags, Depth + 1);
             }
             Ops.erase(Ops.begin() + OtherIdx); --OtherIdx;
           }
         }
         // Step size has changed, so we cannot guarantee no self-wraparound.
-        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, SCEV::FlagAnyWrap);
+        // However, preserve NSW/NUW flags if all combined AddRecs had them.
+        SCEV::NoWrapFlags FinalFlags = SCEV::FlagAnyWrap;
+        if (AllHaveNSW)
+          FinalFlags = setFlags(FinalFlags, SCEV::FlagNSW);
+        if (AllHaveNUW)
+          FinalFlags = setFlags(FinalFlags, SCEV::FlagNUW);
+
+        Ops[Idx] = getAddRecExpr(AddRecOps, AddRecLoop, FinalFlags);
         return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
       }
     }
