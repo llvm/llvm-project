@@ -2395,6 +2395,7 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+  assert(getType()->isSignedIntegerType() && "IntTy should be signed");
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -3533,14 +3534,14 @@ const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
 }
 
 std::optional<llvm::APInt>
-CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
   const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
 
   assert(AllocSize && AllocSize->getElemSizeParam().isValid());
   unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
   unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
   if (getNumArgs() <= SizeArgNo)
-    return {};
+    return std::nullopt;
 
   auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
     Expr::EvalResult ExprResult;
@@ -3556,7 +3557,7 @@ CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
 
   llvm::APSInt SizeOfElem;
   if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
-    return {};
+    return std::nullopt;
 
   if (!AllocSize->getNumElemsParam().isValid())
     return SizeOfElem;
@@ -3564,12 +3565,12 @@ CallExpr::getBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
   llvm::APSInt NumberOfElems;
   unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
   if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
-    return {};
+    return std::nullopt;
 
   bool Overflow;
   llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
   if (Overflow)
-    return {};
+    return std::nullopt;
 
   return BytesAvailable;
 }

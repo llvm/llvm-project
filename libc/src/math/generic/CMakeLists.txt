@@ -4667,6 +4667,7 @@ add_entrypoint_object(
   HDRS
     ../scalblnbf16.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
@@ -4738,6 +4739,7 @@ add_entrypoint_object(
   HDRS
     ../scalblnbf16.h
   DEPENDS
+    libc.hdr.float_macros
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types

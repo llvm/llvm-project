@@ -2260,10 +2260,6 @@ static bool canSinkInstructions(
 
   for (unsigned OI = 0, OE = I0->getNumOperands(); OI != OE; ++OI) {
     Value *Op = I0->getOperand(OI);
-    if (Op->getType()->isTokenTy())
-      // Don't touch any operand of token type.
-      return false;
-
     auto SameAsI0 = [&I0, OI](const Instruction *I) {
       assert(I->getNumOperands() == I0->getNumOperands());
       return I->getOperand(OI) == I0->getOperand(OI);
@@ -2764,8 +2760,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
     Use &U1 = std::get<1>(Ops);
     if (U0 == U1)
       return false;
-    return U0->getType()->isTokenTy() ||
-           !canReplaceOperandWithVariable(cast<Instruction>(U0.getUser()),
+    return !canReplaceOperandWithVariable(cast<Instruction>(U0.getUser()),
                                           U0.getOperandNo());
   };
   assert(Invokes.size() == 2 && "Always called with exactly two candidates.");
