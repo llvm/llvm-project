@@ -77,7 +77,7 @@ attributes #9 = { noduplicate }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "coro.c", directory: "/home/gor/build/bin")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
