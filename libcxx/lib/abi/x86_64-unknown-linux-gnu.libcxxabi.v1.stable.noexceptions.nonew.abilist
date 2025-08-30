@@ -24,9 +24,6 @@
 {'is_defined': False, 'name': '__cxa_pure_virtual', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_uncaught_exceptions', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZGVZNSt3__112__stacktrace24__has_working_executableINS0_15llvm_symbolizerEEEbvE3ret', 'size': 8, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZGVZNSt3__112__stacktrace24__has_working_executableINS0_4atosEEEbvE3ret', 'size': 8, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZGVZNSt3__112__stacktrace24__has_working_executableINS0_9addr2lineEEEbvE3ret', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNKSt12bad_any_cast4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt12experimental15fundamentals_v112bad_any_cast4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'type': 'FUNC'}
@@ -595,16 +592,6 @@
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace10__run_toolINS0_15llvm_symbolizerEEEbRNS0_4baseE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace10__run_toolINS0_4atosEEEbRNS0_4baseE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace10__run_toolINS0_9addr2lineEEEbRNS0_4baseE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace17__executable_nameINS0_15llvm_symbolizerEE3getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace17__executable_nameINS0_4atosEE3getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace17__executable_nameINS0_9addr2lineEE3getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace18__executable_worksEPKc', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace24__has_working_executableINS0_15llvm_symbolizerEEEbv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace24__has_working_executableINS0_4atosEEEbv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace24__has_working_executableINS0_9addr2lineEEEbv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__stacktrace4base12current_implEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__stacktrace6imagesC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__stacktrace6imagesC2Ev', 'type': 'FUNC'}
@@ -1435,7 +1422,6 @@
 {'is_defined': True, 'name': '_ZNSt3__17collateIwED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17collateIwED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17collateIwED2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17getlineIcNS_11char_traitsIcEENS_12__stacktrace9str_allocIcEEEERNS_13basic_istreamIT_T0_EESA_RNS_12basic_stringIS7_S8_T1_EES7_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE2idE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17num_putIcNS_19ostreambuf_iteratorIcNS_11char_traitsIcEEEEE2idE', 'size': 16, 'type': 'OBJECT'}
@@ -1745,6 +1731,3 @@
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD1Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZZNSt3__112__stacktrace24__has_working_executableINS0_15llvm_symbolizerEEEbvE3ret', 'size': 1, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZZNSt3__112__stacktrace24__has_working_executableINS0_4atosEEEbvE3ret', 'size': 1, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZZNSt3__112__stacktrace24__has_working_executableINS0_9addr2lineEEEbvE3ret', 'size': 1, 'type': 'OBJECT'}

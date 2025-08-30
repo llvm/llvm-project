@@ -40,15 +40,10 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
-  stacktrace.cpp
-  stacktrace/fd.h
   stacktrace/images.cpp
   stacktrace/impl_generic.cpp
   stacktrace/impl_windows.cpp
-  stacktrace/tools/apple_atos.cpp
-  stacktrace/tools/gnu_addr2line.cpp
-  stacktrace/tools/llvm_symbolizer.cpp
-  stacktrace/tools/tools.h
+  stacktrace/impl.cpp
   stacktrace/unwinding.h
   stdexcept.cpp
   string.cpp

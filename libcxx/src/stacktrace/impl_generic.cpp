@@ -17,7 +17,6 @@
 #  include <__stacktrace/stacktrace_entry.h>
 
 #  include "stacktrace/images.h"
-#  include "stacktrace/tools/tools.h"
 #  include "stacktrace/unwinding.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -54,40 +53,21 @@ base::current_impl(size_t skip, size_t max_depth) {
   3. Resolve adjusted addresses into their symbols; some environments provide this out of the box
      (MacOS) and others make this less easy (Linux)
   4. To get the source file and line number, we have to dig through debug information (DWARF format);
-     we might need the help of an external tool or library.
-     4A: Ideally we would have a library inside libcxx, possibly refactored from somewhere within
-         compiler-rt, lldb, llvm-symbolizer, that could handle all of this.
-         (XXX we don't have this currently)
-     4B: If the local system happens to have a library that does this, that will work too.
-         Look for: libbacktrace, libdwarf, etc.
-         (XXX we don't do this yet)
-     4C: Use an external tool (i.e. spawn a child process) which can do this.
-
+     we might need the help of a library.
   */
 
-  // (1) Collect instruction addresses; build vector, populate their `__addr_`'s
   unwind_addrs(*this, skip + 1, max_depth);
-  if (!__entry_iters_().size()) {
-    return;
+  if (__entry_iters_().size()) {
+    find_images();
+    find_symbols();
+    find_source_locs();
   }
-
-  // (2) Map these addresses to their respective program images, populate `__image_`
-  find_images();
-
-  // (3) Use system loader and/or `dl` to get symbols
-  find_symbols();
-
-  // (4C) Use an external tool to get source file/line, as well as any missing symbols
-  find_source_locs();
 }
 
 void base::find_images() {
   images images;
   size_t i = 0;
-  auto it  = __entry_iters_().begin();
-  auto end = __entry_iters_().end();
-  while (it != end) {
-    auto& entry = *it++;
+  for (auto& entry : __entry_iters_()) {
     images.find(&i, entry.__addr_);
     if (auto& image = images[i]) {
       entry.__image_ = &image;
@@ -97,15 +77,12 @@ void base::find_images() {
   }
 }
 
-void base::find_symbols() {}
+void base::find_symbols() {
+  // TODO
+}
 
 void base::find_source_locs() {
-#  if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
-  (void)(false                                                                                  //
-         || (__has_working_executable<atos>() && __run_tool<atos>(*this))                       //
-         || (__has_working_executable<llvm_symbolizer>() && __run_tool<llvm_symbolizer>(*this)) //
-         || (__has_working_executable<addr2line>() && __run_tool<addr2line>(*this)));           //
-#  endif
+  // TODO
 }
 
 } // namespace __stacktrace
