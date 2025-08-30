@@ -54,10 +54,12 @@ def check_user_email(token: str, pr_author: str) -> bool:
         
         api = Github(token)
         user = api.get_user(pr_author)
+        emails = user.get_emails()
+        print(emails)
         
         print(f"User public email: {user.email or 'null (private)'}")
 
-        if user.email is not None and is_private_email(user.email):
+        if user.email is not None or is_private_email(user.email):
             return True
 
         return is_private_email(get_commit_email())
@@ -87,12 +89,6 @@ def main():
         type=str,
         default=os.getenv("GITHUB_REPOSITORY", "llvm/llvm-project"),
         help="The GitHub repository in the form of <owner>/<repo>",
-    )
-    parser.add_argument(
-        "--issue-number",
-        type=int,
-        required=True,
-        help="The PR number to check"
     )
     parser.add_argument(
         "--pr-author",

@@ -40,13 +40,11 @@ jobs:
 
       - name: Validate author email
         env:
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           echo "[]" > comments &&
           python ./email-check-tools/llvm/utils/git/email-check-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
-            --issue-number $GITHUB_PR_NUMBER \
             --pr-author "$PR_AUTHOR"
 
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
