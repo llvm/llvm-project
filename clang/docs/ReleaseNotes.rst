@@ -423,6 +423,9 @@ AST Matchers
 - ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
   and ``switch`` statements.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
