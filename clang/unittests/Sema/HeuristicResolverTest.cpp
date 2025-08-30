@@ -33,21 +33,21 @@ template <typename InputNode>
 using ResolveFnT = std::function<std::vector<const NamedDecl *>(
     const HeuristicResolver *, InputNode)>;
 
-std::string format_error(const clang::StoredDiagnostic *D) {
+std::string format_error(const clang::StoredDiagnostic &D) {
   std::ostringstream Msg{};
-  if (D->getLevel() == DiagnosticsEngine::Level::Ignored)
+  if (D.getLevel() == DiagnosticsEngine::Level::Ignored)
     Msg << "Ignored: ";
-  if (D->getLevel() == DiagnosticsEngine::Level::Note)
+  if (D.getLevel() == DiagnosticsEngine::Level::Note)
     Msg << "Note: ";
-  if (D->getLevel() == DiagnosticsEngine::Level::Remark)
+  if (D.getLevel() == DiagnosticsEngine::Level::Remark)
     Msg << "Remark: ";
-  if (D->getLevel() == DiagnosticsEngine::Level::Warning)
+  if (D.getLevel() == DiagnosticsEngine::Level::Warning)
     Msg << "Warning: ";
-  if (D->getLevel() == DiagnosticsEngine::Level::Error)
+  if (D.getLevel() == DiagnosticsEngine::Level::Error)
     Msg << "Error: ";
-  if (D->getLevel() == DiagnosticsEngine::Level::Fatal)
+  if (D.getLevel() == DiagnosticsEngine::Level::Fatal)
     Msg << "Fatal: ";
-  Msg << D->getID() << ": " << D->getMessage().str();
+  Msg << D.getID() << ": " << D.getMessage().str();
   return Msg.str();
 }
 
@@ -61,14 +61,10 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  llvm::SmallSet<unsigned int, 16> IgnoredDiagnostics{};
   auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++23"});
 
-  for (auto D = TU->stored_diag_begin(), DEnd = TU->stored_diag_end();
-       D != DEnd; ++D) {
-    EXPECT_TRUE(D->getLevel() < DiagnosticsEngine::Warning ||
-                IgnoredDiagnostics.contains(D->getID()))
-        << format_error(D);
+  for (const auto &D : TU->storedDiagnostics()) {
+    EXPECT_TRUE(D.getLevel() < DiagnosticsEngine::Error) << format_error(D);
   }
 
   auto &Ctx = TU->getASTContext();

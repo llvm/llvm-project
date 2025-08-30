@@ -644,9 +644,13 @@ namespace {
 
 class ASTBuilderAction : public ToolAction {
   std::vector<std::unique_ptr<ASTUnit>> &ASTs;
+  CaptureDiagsKind CaptureKinds;
 
 public:
-  ASTBuilderAction(std::vector<std::unique_ptr<ASTUnit>> &ASTs) : ASTs(ASTs) {}
+  ASTBuilderAction(
+      std::vector<std::unique_ptr<ASTUnit>> &ASTs,
+      CaptureDiagsKind CaptureDiagnosticKinds = CaptureDiagsKind::None)
+      : ASTs(ASTs), CaptureKinds(CaptureDiagnosticKinds) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *Files,
@@ -665,8 +669,6 @@ public:
     ASTs.push_back(std::move(AST));
     return true;
   }
-
-  CaptureDiagsKind CaptureKinds{CaptureDiagsKind::None};
 };
 
 } // namespace
@@ -694,12 +696,12 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
-    DiagnosticConsumer *DiagConsumer, CaptureDiagsKind CaptureKind,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
+    DiagnosticConsumer *DiagConsumer,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    CaptureDiagsKind CaptureKind) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
 
-  ASTBuilderAction Action(ASTs);
-  Action.CaptureKinds = CaptureDiagsKind::All;
+  ASTBuilderAction Action(ASTs, CaptureKind);
 
   auto OverlayFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(

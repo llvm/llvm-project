@@ -239,9 +239,9 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
     DiagnosticConsumer *DiagConsumer = nullptr,
-    CaptureDiagsKind CaptureKind = CaptureDiagsKind::None,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
-        llvm::vfs::getRealFileSystem());
+        llvm::vfs::getRealFileSystem(),
+    CaptureDiagsKind CaptureKind = CaptureDiagsKind::None);
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {
