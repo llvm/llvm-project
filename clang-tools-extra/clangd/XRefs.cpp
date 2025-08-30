@@ -799,7 +799,6 @@ auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &Query)
     return error("Not a valid top-level matcher: {}.", Diag.toString());
   }
 
-
   struct CollectBoundNodes : MatchFinder::MatchCallback {
     std::vector<BoundNodes> *Bindings;
     CollectBoundNodes(std::vector<BoundNodes> &Bindings)

@@ -1651,13 +1651,16 @@ bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &S,
          O.map("positions", S.positions);
 }
 
-bool fromJSON(const llvm::json::Value &Params, SearchASTArgs &Args, llvm::json::Path P) {
+bool fromJSON(const llvm::json::Value &Params, SearchASTArgs &Args,
+              llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("query", Args.searchQuery)
-  && O.map("textDocument", Args.textDocument)
-  // && O.map("bindRoot", Args.bindRoot); TODO: add bindRoot to extend this feature
-  // && O.map("traversalKind", Args.tk); TODO: add traversalKind to extend this feature
-  ;
+  return O && O.map("query", Args.searchQuery) &&
+         O.map("textDocument", Args.textDocument)
+      // && O.map("bindRoot", Args.bindRoot); TODO: add bindRoot to extend this
+      // feature
+      // && O.map("traversalKind", Args.tk); TODO: add traversalKind to extend
+      // this feature
+      ;
 }
 
 llvm::json::Value toJSON(const SelectionRange &Out) {

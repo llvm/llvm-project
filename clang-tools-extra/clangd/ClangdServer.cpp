@@ -812,35 +812,35 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
 
 void ClangdServer::findAST(SearchASTArgs const &Args,
                            Callback<BoundASTNodes> CB) {
-  auto Action =
-      [Args, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        auto BoundNodes = clangd::locateASTQuery(InpAST->AST, Args);
-        if (!BoundNodes)
-          return CB(BoundNodes.takeError());
-        if (BoundNodes->empty())
-          return CB(error("No matching AST nodes found"));
+  auto Action = [Args, CB = std::move(CB)](
+                    llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto BoundNodes = clangd::locateASTQuery(InpAST->AST, Args);
+    if (!BoundNodes)
+      return CB(BoundNodes.takeError());
+    if (BoundNodes->empty())
+      return CB(error("No matching AST nodes found"));
 
-        auto &&AST = InpAST->AST;
-        // Convert BoundNodes to a vector of vectors to ASTNode's.
-        BoundASTNodes Result;
-        Result.reserve(BoundNodes->size());
-        for (auto &&BN : *BoundNodes) {
-          auto &&Map = BN.getMap();
-          BoundASTNodes::value_type BAN;
-          for (const auto &[Key, Value] : Map) {
-            BAN.emplace(Key, dumpAST(Value, AST.getTokens(), AST.getASTContext()));
-          }
-          if (BAN.empty())
-            continue;
-          Result.push_back(std::move(BAN));
-        }
-        if (Result.empty()) {
-          return CB(error("No AST nodes found for the query"));
-        }
-        CB(std::move(Result));
-      };
+    auto &&AST = InpAST->AST;
+    // Convert BoundNodes to a vector of vectors to ASTNode's.
+    BoundASTNodes Result;
+    Result.reserve(BoundNodes->size());
+    for (auto &&BN : *BoundNodes) {
+      auto &&Map = BN.getMap();
+      BoundASTNodes::value_type BAN;
+      for (const auto &[Key, Value] : Map) {
+        BAN.emplace(Key, dumpAST(Value, AST.getTokens(), AST.getASTContext()));
+      }
+      if (BAN.empty())
+        continue;
+      Result.push_back(std::move(BAN));
+    }
+    if (Result.empty()) {
+      return CB(error("No AST nodes found for the query"));
+    }
+    CB(std::move(Result));
+  };
 
   WorkScheduler->runWithAST("Definitions", Args.textDocument.uri.file(),
                             std::move(Action));
