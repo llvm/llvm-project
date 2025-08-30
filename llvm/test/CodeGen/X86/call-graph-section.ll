@@ -11,14 +11,12 @@ declare !type !2 ptr @baz(ptr)
 
 define void @main() {
 entry:
-  %a = alloca i8, align 1
   %fp_foo_val = load ptr, ptr null, align 8
   call void (...) %fp_foo_val(), !callee_type !1
   %fp_bar_val = load ptr, ptr null, align 8
-  %param = trunc i64 0 to i8
-  %call_fp_bar = call i32 %fp_bar_val(i8 signext %param), !callee_type !3
+  %call_fp_bar = call i32 %fp_bar_val(i8 0), !callee_type !3
   %fp_baz_val = load ptr, ptr null, align 8
-  %call_fp_baz = call ptr %fp_baz_val(ptr %a), !callee_type !4
+  %call_fp_baz = call ptr %fp_baz_val(ptr null), !callee_type !4
   ret void
 }
 
