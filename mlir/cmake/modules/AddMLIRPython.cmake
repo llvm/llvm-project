@@ -130,7 +130,11 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
     OUTPUT ${NB_STUBGEN_OUTPUT}
     COMMAND ${NB_STUBGEN_CMD}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
-    DEPENDS "${mlir_depends_target}" "${depends_target}" MLIRPythonSources.Core.Python)
+    DEPENDS
+      "${mlir_depends_target}.extension._mlir.dso"
+      "${mlir_depends_target}.sources.MLIRPythonSources.Core.Python"
+      "${depends_target}"
+  )
   set(_name "MLIRPythonModuleStubs_${_module}")
   add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
@@ -292,7 +296,7 @@ function(add_mlir_python_modules name)
         generate_type_stubs(
           ${_module_name}
           ${_extension_target}
-          "${modules_target}.extension._mlir.dso"
+          ${name}
           "${CMAKE_CURRENT_SOURCE_DIR}/mlir/_mlir_libs/_mlir"
         )
         declare_mlir_python_sources(
