@@ -155,12 +155,15 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
   if (!EntryCount) {
-    F.getContext().emitError("Profile verification failed: function entry "
-                             "count missing (set to 0 if cold)");
+    auto *MD = F.getMetadata(LLVMContext::MD_prof);
+    if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
+      F.getContext().emitError("Profile verification failed: function entry "
+                               "count missing (set to 0 if cold)");
+      return PreservedAnalyses::all();
+    }
+  } else if (EntryCount->getCount() == 0) {
     return PreservedAnalyses::all();
   }
-  if (EntryCount->getCount() == 0)
-    return PreservedAnalyses::all();
   for (const auto &BB : F) {
     if (AnnotateSelect) {
       for (const auto &I : BB)
