@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/struct_tm.h"
+#include "hdr/types/time_t.h"
 #include "src/time/localtime_r.h"
 #include "src/time/time_utils.h"
-
 #include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
