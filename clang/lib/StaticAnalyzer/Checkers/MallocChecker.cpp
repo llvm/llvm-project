@@ -78,6 +78,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -421,6 +422,13 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+
+  ProgramStateRef
+  handleSmartPointerConstructorArguments(const CallEvent &Call,
+                                         ProgramStateRef State) const;
+  ProgramStateRef handleSmartPointerRelatedCalls(const CallEvent &Call,
+                                                 CheckerContext &C,
+                                                 ProgramStateRef State) const;
   void checkNewAllocator(const CXXAllocatorCall &Call, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &Call, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
@@ -1095,6 +1103,54 @@ public:
     state = state->remove<RegionState>(sym);
     return true;
   }
+};
+
+/// EscapeTrackedCallback - A SymbolVisitor that marks allocated symbols as
+/// escaped.
+///
+/// This visitor is used to suppress false positive leak reports when smart
+/// pointers are nested in temporary objects passed by value to functions. When
+/// the analyzer can't see the destructor calls for temporary objects, it may
+/// incorrectly report leaks for memory that will be properly freed by the smart
+/// pointer destructors.
+///
+/// The visitor traverses reachable symbols from a given set of memory regions
+/// (typically smart pointer field regions) and marks any allocated symbols as
+/// escaped. Escaped symbols are not reported as leaks by checkDeadSymbols.
+class EscapeTrackedCallback final : public SymbolVisitor {
+  ProgramStateRef State;
+
+  explicit EscapeTrackedCallback(ProgramStateRef S) : State(std::move(S)) {}
+
+  bool VisitSymbol(SymbolRef Sym) override {
+    if (const RefState *RS = State->get<RegionState>(Sym)) {
+      if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
+        State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
+      }
+    }
+    return true;
+  }
+
+public:
+  /// Escape tracked regions reachable from the given roots.
+  static ProgramStateRef
+  EscapeTrackedRegionsReachableFrom(ArrayRef<const MemRegion *> Roots,
+                                    ProgramStateRef State) {
+    if (Roots.empty())
+      return State;
+
+    // scanReachableSymbols is expensive, so we use a single visitor for all
+    // roots
+    SmallVector<const MemRegion *, 10> Regions;
+    EscapeTrackedCallback Visitor(State);
+    for (const MemRegion *R : Roots) {
+      Regions.push_back(R);
+    }
+    State->scanReachableSymbols(Regions, Visitor);
+    return Visitor.State;
+  }
+
+  friend class SymbolVisitor;
 };
 } // end anonymous namespace
 
@@ -3068,12 +3124,224 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
+// Allowlist of owning smart pointers we want to recognize.
+// Start with unique_ptr and shared_ptr; weak_ptr is excluded intentionally
+// because it does not own the pointee.
+static bool isSmartOwningPtrName(StringRef Name) {
+  return Name == "unique_ptr" || Name == "shared_ptr";
+}
+
+// Check if a type is a smart owning pointer type.
+static bool isSmartOwningPtrType(QualType QT) {
+  QT = QT->getCanonicalTypeUnqualified();
+
+  if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
+    const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
+    if (!TD)
+      return false;
+
+    const auto *ND = dyn_cast_or_null<NamedDecl>(TD->getTemplatedDecl());
+    if (!ND)
+      return false;
+
+    // For broader coverage we recognize all template classes with names that
+    // match the allowlist even if they are not declared in namespace 'std'.
+    return isSmartOwningPtrName(ND->getName());
+  }
+
+  return false;
+}
+
+/// Check if a record type has smart owning pointer fields (directly or in base
+/// classes).
+static bool hasSmartOwningPtrField(const CXXRecordDecl *CRD) {
+  // Check direct fields
+  if (llvm::any_of(CRD->fields(), [](const FieldDecl *FD) {
+        return isSmartOwningPtrType(FD->getType());
+      }))
+    return true;
+
+  // Check fields from base classes
+  for (const CXXBaseSpecifier &Base : CRD->bases()) {
+    if (const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {
+      if (hasSmartOwningPtrField(BaseDecl))
+        return true;
+    }
+  }
+  return false;
+}
+
+/// Check if an expression is an rvalue record type passed by value.
+static bool isRvalueByValueRecord(const Expr *AE) {
+  if (AE->isGLValue())
+    return false;
+
+  QualType T = AE->getType();
+  if (!T->isRecordType() || T->isReferenceType())
+    return false;
+
+  // Accept common temp/construct forms but don't overfit.
+  return isa<CXXTemporaryObjectExpr, MaterializeTemporaryExpr, CXXConstructExpr,
+             InitListExpr, ImplicitCastExpr, CXXBindTemporaryExpr>(AE);
+}
+
+/// Check if an expression is an rvalue record with smart owning pointer fields
+/// passed by value.
+static bool isRvalueByValueRecordWithSmartOwningPtr(const Expr *AE) {
+  if (!isRvalueByValueRecord(AE))
+    return false;
+
+  const auto *CRD = AE->getType()->getAsCXXRecordDecl();
+  return CRD && hasSmartOwningPtrField(CRD);
+}
+
+/// Check if a CXXRecordDecl has a name matching recognized smart pointer names.
+static bool isSmartOwningPtrRecord(const CXXRecordDecl *RD) {
+  if (!RD)
+    return false;
+
+  // Check the record name directly and accept both std and custom smart pointer
+  // implementations for broader coverage
+  return isSmartOwningPtrName(RD->getName());
+}
+
+/// Check if a call is a constructor of a smart owning pointer class that
+/// accepts pointer parameters.
+static bool isSmartOwningPtrCall(const CallEvent &Call) {
+  // Only check for smart pointer constructor calls
+  const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(Call.getDecl());
+  if (!CD)
+    return false;
+
+  const auto *RD = CD->getParent();
+  if (!isSmartOwningPtrRecord(RD))
+    return false;
+
+  // Check if constructor takes a pointer parameter
+  for (const auto *Param : CD->parameters()) {
+    QualType ParamType = Param->getType();
+    if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
+        !ParamType->isVoidPointerType()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static void collectSmartOwningPtrFieldRegions(
+    const MemRegion *Base, QualType RecQT, CheckerContext &C,
+    llvm::SmallPtrSetImpl<const MemRegion *> &Out) {
+  if (!Base)
+    return;
+  const auto *CRD = RecQT->getAsCXXRecordDecl();
+  if (!CRD)
+    return;
+
+  // Collect direct fields
+  for (const FieldDecl *FD : CRD->fields()) {
+    if (!isSmartOwningPtrType(FD->getType()))
+      continue;
+    SVal L = C.getState()->getLValue(FD, loc::MemRegionVal(Base));
+    if (const MemRegion *FR = L.getAsRegion())
+      Out.insert(FR);
+  }
+
+  // Collect fields from base classes
+  for (const CXXBaseSpecifier &BaseSpec : CRD->bases()) {
+    if (const CXXRecordDecl *BaseDecl =
+            BaseSpec.getType()->getAsCXXRecordDecl()) {
+      // Get the base class region
+      SVal BaseL = C.getState()->getLValue(BaseDecl, Base->getAs<SubRegion>(),
+                                           BaseSpec.isVirtual());
+      if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
+        // Recursively collect fields from this base class
+        collectSmartOwningPtrFieldRegions(BaseRegion, BaseSpec.getType(), C,
+                                          Out);
+      }
+    }
+  }
+}
+
+/// Handle smart pointer constructor calls by escaping allocated symbols
+/// that are passed as pointer arguments to the constructor.
+ProgramStateRef MallocChecker::handleSmartPointerConstructorArguments(
+    const CallEvent &Call, ProgramStateRef State) const {
+  const auto *CD = cast<CXXConstructorDecl>(Call.getDecl());
+  for (unsigned I = 0, E = std::min(Call.getNumArgs(), CD->getNumParams());
+       I != E; ++I) {
+    const Expr *ArgExpr = Call.getArgExpr(I);
+    if (!ArgExpr)
+      continue;
+
+    QualType ParamType = CD->getParamDecl(I)->getType();
+    if (ParamType->isPointerType() && !ParamType->isFunctionPointerType() &&
+        !ParamType->isVoidPointerType()) {
+      // This argument is a pointer being passed to smart pointer constructor
+      SVal ArgVal = Call.getArgSVal(I);
+      SymbolRef Sym = ArgVal.getAsSymbol();
+      if (Sym && State->contains<RegionState>(Sym)) {
+        const RefState *RS = State->get<RegionState>(Sym);
+        if (RS && (RS->isAllocated() || RS->isAllocatedOfSizeZero())) {
+          State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
+        }
+      }
+    }
+  }
+  return State;
+}
+
+/// Handle all smart pointer related processing in function calls.
+/// This includes both direct smart pointer constructor calls and by-value
+/// arguments containing smart pointer fields.
+ProgramStateRef MallocChecker::handleSmartPointerRelatedCalls(
+    const CallEvent &Call, CheckerContext &C, ProgramStateRef State) const {
+
+  // Handle direct smart pointer constructor calls first
+  if (isSmartOwningPtrCall(Call)) {
+    return handleSmartPointerConstructorArguments(Call, State);
+  }
+
+  // Handle smart pointer fields in by-value record arguments
+  llvm::SmallPtrSet<const MemRegion *, 8> SmartPtrFieldRoots;
+  for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+    const Expr *AE = Call.getArgExpr(I);
+    if (!AE)
+      continue;
+    AE = AE->IgnoreParenImpCasts();
+
+    if (!isRvalueByValueRecordWithSmartOwningPtr(AE))
+      continue;
+
+    // Find a region for the argument.
+    SVal ArgVal = Call.getArgSVal(I);
+    const MemRegion *ArgRegion = ArgVal.getAsRegion();
+    // Collect direct smart owning pointer field regions
+    collectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
+                                      SmartPtrFieldRoots);
+  }
+
+  // Escape symbols reachable from smart pointer fields
+  if (!SmartPtrFieldRoots.empty()) {
+    SmallVector<const MemRegion *, 8> SmartPtrFieldRootsVec(
+        SmartPtrFieldRoots.begin(), SmartPtrFieldRoots.end());
+    State = EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
+        SmartPtrFieldRootsVec, State);
+  }
+
+  return State;
+}
+
 void MallocChecker::checkPostCall(const CallEvent &Call,
                                   CheckerContext &C) const {
+  // Handle existing post-call handlers first
   if (const auto *PostFN = PostFnMap.lookup(Call)) {
     (*PostFN)(this, C.getState(), Call, C);
-    return;
+    return; // Post-handler already called addTransition, we're done
   }
+
+  // Handle smart pointer related processing only if no post-handler was called
+  C.addTransition(handleSmartPointerRelatedCalls(Call, C, C.getState()));
 }
 
 void MallocChecker::checkPreCall(const CallEvent &Call,
@@ -3194,7 +3462,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
   if (!Sym)
     // If we are returning a field of the allocated struct or an array element,
     // the callee could still free the memory.
-    // TODO: This logic should be a part of generic symbol escape callback.
     if (const MemRegion *MR = RetVal.getAsRegion())
       if (isa<FieldRegion, ElementRegion>(MR))
         if (const SymbolicRegion *BMR =
