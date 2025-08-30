@@ -122,9 +122,6 @@ bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
   }
   return (Flags & ~Mask) == FlagT::None;
 }
-
-// This is included to avoid including BinaryFormat/DXContainer to make the
-// flags conversion, since this might cause compilation times to increase.
 bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
                                uint32_t Flags) {
   return verifyDescriptorRangeFlag(Version, Type,

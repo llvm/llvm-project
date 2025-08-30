@@ -1252,7 +1252,6 @@ bool SemaHLSL::handleRootSignatureElements(
     case llvm::dxil::ResourceClass::Sampler:
       return llvm::dxbc::DescriptorRangeType::Sampler;
     }
-
     llvm_unreachable("Unhandled Resource Class");
   };
 
@@ -1297,6 +1296,7 @@ bool SemaHLSL::handleRootSignatureElements(
         // value
         ReportError(Loc, 1, 0xfffffffe);
       }
+
       if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
               Version, toDescriptorRangeType(Clause->Type), Clause->Flags))
         ReportFlagError(Loc);
