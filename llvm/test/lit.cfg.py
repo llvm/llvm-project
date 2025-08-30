@@ -385,7 +385,7 @@ for arch in config.targets_to_build.split():
     config.available_features.add(arch.lower() + "-registered-target")
 
 # Features
-known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+known_arches = ["x86_64", "mips64", "powerpc64", "aarch64"]
 if config.host_ldflags.find("-m32") < 0 and any(
     config.llvm_host_triple.startswith(x) for x in known_arches
 ):
