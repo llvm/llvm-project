@@ -1255,6 +1255,20 @@ static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+APFloat MipsTargetLowering::getNaNValue(EVT VT) const {
+  if (!Subtarget.isNaN2008()) {
+    if (&VT.getFltSemantics() == &APFloat::IEEEsingle()) {
+      APInt intPayload(64, 0xbfffff);
+      return APFloat::getSNaN(VT.getFltSemantics(), false, &intPayload);
+    } else if (&VT.getFltSemantics() == &APFloat::IEEEdouble()) {
+      APInt intPayload(64, 0x7ffffffffffff);
+      return APFloat::getSNaN(VT.getFltSemantics(), false, &intPayload);
+    }
+  }
+
+  return APFloat::getNaN(VT.getFltSemantics());
+}
+
 SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   const {
   SelectionDAG &DAG = DCI.DAG;
