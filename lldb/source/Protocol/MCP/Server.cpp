@@ -14,6 +14,18 @@
 using namespace lldb_protocol::mcp;
 using namespace llvm;
 
+llvm::json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
+  return llvm::json::Object{{"connection_uri", SM.connection_uri},
+                            {"pid", SM.pid}};
+}
+
+bool lldb_protocol::mcp::fromJSON(const llvm::json::Value &V, ServerInfo &SM,
+                                  llvm::json::Path P) {
+  llvm::json::ObjectMapper O(V, P);
+  return O && O.map("connection_uri", SM.connection_uri) &&
+         O.map("pid", SM.pid);
+}
+
 Server::Server(std::string name, std::string version,
                std::unique_ptr<MCPTransport> transport_up,
                lldb_private::MainLoop &loop)
