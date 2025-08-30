@@ -1064,7 +1064,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Only ARMv6 has BSWAP.
   if (!Subtarget->hasV6Ops())
-    setOperationAction(ISD::BSWAP, MVT::i32, Expand);
+    setOperationAction(ISD::BSWAP, MVT::i32, Custom);
 
   bool hasDivide = Subtarget->isThumb() ? Subtarget->hasDivideInThumbMode()
                                         : Subtarget->hasDivideInARMMode();
@@ -9508,6 +9508,42 @@ static bool isAddSubZExt(SDNode *N, SelectionDAG &DAG) {
   return false;
 }
 
+static SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) {
+
+  // eor     r1, r0, r0, ror #16
+  // bic     r1, r1, #0xff0000
+  // mov     r1, r1, lsr #8
+  // eor     r0, r1, r0, ror #8
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  // ror rtmp, r0, #16
+  SDValue Ror16 = DAG.getNode(ISD::ROTR, DL, MVT::i32, Src,
+                              DAG.getConstant(16, DL, MVT::i32));
+  // eor r1, r0, rtmp   ; r1 = r0 ^ (r0 ror 16)
+  SDValue Xor1 = DAG.getNode(ISD::XOR, DL, MVT::i32, Src, Ror16);
+
+  // bic r1, r1, #0xff0000 (clear bits 16-23)
+  // BIC r1, r1, #0xff0000 becomes AND r1, r1, ~0x00ff0000
+  // So we need the negated value: ~0x00FF0000 = 0xFF00FFFF
+  SDValue Mask = DAG.getConstant(0xFF00FFFFu, DL, MVT::i32);
+  SDValue BicResult = DAG.getNode(ISD::AND, DL, MVT::i32, Xor1, Mask);
+
+  // mov r1, r1, lsr #8
+  SDValue Lsr8 = DAG.getNode(ISD::SRL, DL, MVT::i32, BicResult,
+                             DAG.getConstant(8, DL, MVT::i32));
+
+  // ror r0, r0, #8
+  SDValue Ror8 = DAG.getNode(ISD::ROTR, DL, MVT::i32, Src,
+                             DAG.getConstant(8, DL, MVT::i32));
+
+  // eor r0, Lsr8, Ror8
+  SDValue Result = DAG.getNode(ISD::XOR, DL, MVT::i32, Lsr8, Ror8);
+
+  return Result;
+}
+
 static SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) {
   // Multiplications are only custom-lowered for 128-bit vectors so that
   // VMULL can be detected.  Otherwise v2i64 multiplications are not legal.
@@ -10708,6 +10744,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UCMP:
   case ISD::SCMP:
     return LowerCMP(Op, DAG);
+  case ISD::BSWAP:
+    return LowerBSWAP(Op, DAG);
   }
 }
 
