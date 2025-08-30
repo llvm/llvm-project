@@ -15,7 +15,11 @@ template <typename T>
 struct unique_ptr {
   T* ptr;
   unique_ptr(T* p) : ptr(p) {}
-  ~unique_ptr() { delete ptr; }
+  ~unique_ptr() {
+    // This destructor intentionally doesn't delete 'ptr' to validate that the
+    // heuristic trusts that smart pointers (based on their class name) will
+    // release the pointee even if it doesn't understand their destructor.
+  }
   unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
   T* get() const { return ptr; }
 };
