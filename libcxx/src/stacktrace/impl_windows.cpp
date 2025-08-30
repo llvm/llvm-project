@@ -37,8 +37,8 @@ struct dll {
   }
 
   template <typename F>
-  bool get_func(F* func, char const* name) {
-    *func = (F)GetProcAddress(module_, name);
+  bool get_func(F** func, char const* name) {
+    *func = (F*)GetProcAddress(module_, name);
     return func != nullptr;
   }
 };
@@ -188,7 +188,7 @@ base::current_impl(size_t skip, size_t max_depth) {
   while (max_depth) {
     if (!(*dbghelp.StackWalk64)(
           machine, proc, thread, &frame, &ccx, nullptr,
-          dbghelp.SymFunctionTableAccess64, dbghelp.SymGetModuleBase64,
+          *dbghelp.SymFunctionTableAccess64, *dbghelp.SymGetModuleBase64,
           nullptr)) {
       break; }
 
