@@ -274,6 +274,18 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),
                      this);
+
+  auto DeclRefToConstVar =
+      declRefExpr(to(varDecl(anyOf(hasType(isConstQualified()),
+                                   hasType(references(isConstQualified()))))
+                         .bind(OldVarDeclId)));
+  Finder->addMatcher(
+      LocalVarCopiedFrom(
+          memberExpr(hasObjectExpression(anyOf(hasDescendant(DeclRefToConstVar),
+                                               DeclRefToConstVar)),
+                     unless(hasDescendant(cxxMemberCallExpr())))
+              .bind("memExpr")),
+      this);
 }
 
 void UnnecessaryCopyInitialization::check(
@@ -295,6 +307,7 @@ void UnnecessaryCopyInitialization::check(
       IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
+  const auto *ME = Result.Nodes.getNodeAs<MemberExpr>("memExpr");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
@@ -319,9 +332,12 @@ void UnnecessaryCopyInitialization::check(
   if (OldVar == nullptr) {
     // `auto NewVar = functionCall();`
     handleCopyFromMethodReturn(Context, ObjectArg);
-  } else {
+  } else if (ME == nullptr) {
     // `auto NewVar = OldVar;`
     handleCopyFromLocalVar(Context, *OldVar);
+  } else {
+    // `auto NewVar = OldVar.FD;`
+    handleCopyFromConstVarMember(Context, *ME);
   }
 }
 
@@ -344,6 +360,14 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
                                        ExcludedContainerTypes))
     return;
   diagnoseCopyFromLocalVar(Ctx, OldVar);
+}
+
+void UnnecessaryCopyInitialization::handleCopyFromConstVarMember(
+    const CheckContext &Ctx, const MemberExpr &ME) {
+  bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
+    return;
+  diagnoseCopyFromConstVarMember(Ctx, ME);
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
@@ -369,6 +393,21 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
            "| and never used}3; consider %select{avoiding the copy|removing "
            "the statement}3")
       << &Ctx.Var << &OldVar << Ctx.Var.getType() << Ctx.IsVarUnused;
+  maybeIssueFixes(Ctx, Diagnostic);
+}
+
+void UnnecessaryCopyInitialization::diagnoseCopyFromConstVarMember(
+    const CheckContext &Ctx, const MemberExpr &ME) {
+  std::string MEStr(Lexer::getSourceText(
+      CharSourceRange::getTokenRange(ME.getSourceRange()),
+      Ctx.ASTCtx.getSourceManager(), Ctx.ASTCtx.getLangOpts()));
+  auto Diagnostic =
+      diag(Ctx.Var.getLocation(),
+           "local copy %0 of the subobject '%1' of type %2 is never "
+           "modified%select{"
+           "| and never used}3; consider %select{avoiding the copy|removing "
+           "the statement}3")
+      << &Ctx.Var << MEStr << Ctx.Var.getType() << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
