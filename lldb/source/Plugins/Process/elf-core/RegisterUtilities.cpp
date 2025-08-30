@@ -16,7 +16,7 @@ static std::optional<uint32_t>
 getNoteType(const llvm::Triple &Triple,
             llvm::ArrayRef<RegsetDesc> RegsetDescs) {
   for (const auto &Entry : RegsetDescs) {
-    if (Entry.OS != Triple.getOS())
+    if (Entry.OS != llvm::Triple::UnknownOS && Entry.OS != Triple.getOS())
       continue;
     if (Entry.Arch != llvm::Triple::UnknownArch &&
         Entry.Arch != Triple.getArch())
