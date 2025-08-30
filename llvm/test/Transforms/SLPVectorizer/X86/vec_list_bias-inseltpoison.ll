@@ -39,19 +39,18 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[T29:%.*]] = sub nsw i32 [[T9]], [[T15]]
 ; CHECK-NEXT:    [[T30:%.*]] = add nsw i32 [[T27]], [[T29]]
 ; CHECK-NEXT:    [[T31:%.*]] = mul nsw i32 [[T30]], 4433
+; CHECK-NEXT:    [[T32:%.*]] = mul nsw i32 [[T27]], 6270
 ; CHECK-NEXT:    [[T34:%.*]] = mul nsw i32 [[T29]], -15137
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[T40]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[T27]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[T32]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[T47]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 6270, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 poison, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 4, i32 poison, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[T48]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[T40]], i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP5]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul nsw <4 x i32> [[TMP5]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[T701:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 poison, i32 3>
+; CHECK-NEXT:    [[T701:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[T701]], i32 [[T34]], i32 6
 ; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T71]], splat (i32 3)
 ; CHECK-NEXT:    store <8 x i32> [[T76]], ptr [[T2]], align 4
