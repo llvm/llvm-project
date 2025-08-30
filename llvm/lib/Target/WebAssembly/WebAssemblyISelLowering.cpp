@@ -3388,6 +3388,75 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+// Combine a setcc of a vecreduce, for example:
+//
+// setcc (vecreduce_or(v4i32 V128:$vec)), (i32 0), SETNE
+//  ==> ANYTRUE V128:$vec
+//
+// setcc (i32 (vecreduce_and(v4i32 V128:$vec))), (i32 -1), SETEQ
+//  ==> ALLTRUE_I32x4 V128:$vec
+static SDValue combineSetCCVecReduce(SDNode *SetCC,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Reduce = SetCC->getOperand(0);
+  SDValue Constant = SetCC->getOperand(1);
+  SDValue Cond = SetCC->getOperand(2);
+  unsigned ReduceIntrinsic;
+
+  // i8 and i16 truncate the vecreduce result.
+  if (Reduce->getOpcode() == ISD::AND) {
+    SDValue L = Reduce->getOperand(0), R = Reduce->getOperand(1);
+
+    ConstantSDNode *C = dyn_cast<ConstantSDNode>(R);
+    if (!C)
+      return SDValue();
+
+    EVT VT = Reduce->getValueType(0);
+    if (VT == MVT::v16i8 && C->getZExtValue() == 255) {
+      Reduce = L;
+    } else if (VT == MVT::v8i16 && C->getZExtValue() == 65535) {
+      Reduce = L;
+    } else {
+      return SDValue();
+    }
+  }
+
+  switch (Reduce->getOpcode()) {
+  case ISD::VECREDUCE_OR: {
+    ReduceIntrinsic = Intrinsic::wasm_anytrue;
+
+    if (cast<CondCodeSDNode>(Cond)->get() != ISD::SETNE)
+      return SDValue();
+
+    if (cast<ConstantSDNode>(Constant)->getSExtValue() != 0)
+      return SDValue();
+
+    break;
+  }
+  case ISD::VECREDUCE_AND: {
+    ReduceIntrinsic = Intrinsic::wasm_alltrue;
+
+    if (cast<CondCodeSDNode>(Cond)->get() != ISD::SETEQ)
+      return SDValue();
+
+    if (cast<ConstantSDNode>(Constant)->getSExtValue() != -1)
+      return SDValue();
+
+    break;
+  }
+  default:
+    return SDValue();
+  }
+
+  SDLoc DL(SetCC);
+  auto &DAG = DCI.DAG;
+  SDValue Match = Reduce->getOperand(0);
+
+  return DAG.getZExtOrTrunc(
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                  {DAG.getConstant(ReduceIntrinsic, DL, MVT::i32), Match}),
+      DL, MVT::i1);
+}
+
 /// Try to convert a i128 comparison to a v16i8 comparison before type
 /// legalization splits it up into chunks
 static SDValue
@@ -3448,6 +3517,9 @@ static SDValue performSETCCCombine(SDNode *N,
   if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
     return V;
 
+  if (SDValue V = combineSetCCVecReduce(N, DCI))
+    return V;
+
   SDValue LHS = N->getOperand(0);
   if (LHS->getOpcode() != ISD::BITCAST)
     return SDValue();
@@ -3462,9 +3534,9 @@ static SDValue performSETCCCombine(SDNode *N,
 
   if (!cast<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
-
   EVT VecVT = FromVT.changeVectorElementType(MVT::getIntegerVT(128 / NumElts));
   auto &DAG = DCI.DAG;
+
   // setcc (iN (bitcast (vNi1 X))), 0, ne
   //   ==> any_true (vNi1 X)
   if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(

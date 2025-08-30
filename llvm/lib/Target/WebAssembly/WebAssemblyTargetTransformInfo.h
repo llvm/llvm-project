@@ -104,6 +104,7 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   /// @}
 };
 
