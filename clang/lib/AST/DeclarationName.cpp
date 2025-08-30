@@ -388,7 +388,7 @@ DeclarationNameLoc::DeclarationNameLoc(DeclarationName Name) {
     setNamedTypeLoc(nullptr);
     break;
   case DeclarationName::CXXOperatorName:
-    setCXXOperatorNameRange(SourceRange());
+    CXXOperatorName.OInfo = nullptr;
     break;
   case DeclarationName::CXXLiteralOperatorName:
     setCXXLiteralOperatorNameLoc(SourceLocation());

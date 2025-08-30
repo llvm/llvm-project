@@ -505,6 +505,7 @@ class RequiresExpr final : public Expr,
                           concepts::Requirement *> {
   friend TrailingObjects;
   friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 
   unsigned NumLocalParameters;
   unsigned NumRequirements;
@@ -563,7 +564,7 @@ public:
   }
 
   SourceLocation getRequiresKWLoc() const {
-    return RequiresExprBits.RequiresKWLoc;
+    return SourceLocation::getFromRawEncoding(RequiresExprBits.RequiresKWLoc);
   }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -575,7 +576,7 @@ public:
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return RequiresExprBits.RequiresKWLoc;
+    return getRequiresKWLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return RBraceLoc;
