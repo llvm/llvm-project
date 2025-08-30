@@ -111,7 +111,7 @@ start:
 }
 
 
-define zeroext i1 @manual_i64x2_any_true(<2 x i64> %a) {
+define i1 @manual_i64x2_any_true(<2 x i64> %a) {
 ; CHECK-LABEL: manual_i64x2_any_true:
 ; CHECK:         .functype manual_i64x2_any_true (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0: # %start
