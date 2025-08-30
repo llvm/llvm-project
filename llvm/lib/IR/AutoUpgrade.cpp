@@ -4148,6 +4148,34 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
+
+    // Input arguments types were incorrectly set to vectors of i32 before but
+    // they should be vectors of i8. Insert bit cast when encountering the old
+    // types
+    if (Args[1]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[1]->getType())
+            ->getElementType()
+            ->isIntegerTy(32) &&
+        Args[2]->getType()->isVectorTy() &&
+        cast<VectorType>(Args[2]->getType())
+            ->getElementType()
+            ->isIntegerTy(32)) {
+      Type *NewArgType = nullptr;
+      if (VecWidth == 128)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 16, false);
+      else if (VecWidth == 256)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 32, false);
+      else if (VecWidth == 512)
+        NewArgType = VectorType::get(Builder.getInt8Ty(), 64, false);
+      else
+        llvm_unreachable("Unexpected vector bit width");
+
+      if (NewArgType) {
+        Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
+        Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
+      }
+    }
+
     Rep = Builder.CreateIntrinsic(IID, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
