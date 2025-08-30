@@ -396,13 +396,15 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << MF.getName() << " ********\n");
 
   if (PreRegAlloc) {
+    RegisterClassInfo RegClassInfo;
+    RegClassInfo.runOnMachineFunction(MF);
     // Estimate register pressure during pre-regalloc pass.
     unsigned NumRPS = TRI->getNumRegPressureSets();
     RegPressure.resize(NumRPS);
     llvm::fill(RegPressure, 0);
     RegLimit.resize(NumRPS);
     for (unsigned i = 0, e = NumRPS; i != e; ++i)
-      RegLimit[i] = TRI->getRegPressureSetLimit(MF, i);
+      RegLimit[i] = RegClassInfo.getRegPressureSetLimit(i);
   }
 
   if (HoistConstLoads)
