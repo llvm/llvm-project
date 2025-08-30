@@ -157,13 +157,16 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The namespace in which this encoding exists.
+  StringRef DecoderNamespace;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
 
   /// Mask of bits that should be considered unknown during decoding.
   /// This is the value of the `SoftFail` field.
-  APInt SoftFailBits;
+  APInt SoftFailMask;
 
   /// The name of the function to use for decoding. May be an empty string,
   /// meaning the decoder is generated.
@@ -190,6 +193,9 @@ public:
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
 
+  /// Returns the namespace in which this encoding exists.
+  StringRef getDecoderNamespace() const { return DecoderNamespace; }
+
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
 
@@ -197,7 +203,7 @@ public:
   const KnownBits &getInstBits() const { return InstBits; }
 
   /// Returns a mask of bits that should be considered unknown during decoding.
-  const APInt &getSoftFailBits() const { return SoftFailBits; }
+  const APInt &getSoftFailMask() const { return SoftFailMask; }
 
   /// Returns the known bits of this encoding that must match for
   /// successful decoding.
@@ -205,8 +211,8 @@ public:
     KnownBits EncodingBits = InstBits;
     // Mark all bits that are allowed to change according to SoftFail mask
     // as unknown.
-    EncodingBits.Zero &= ~SoftFailBits;
-    EncodingBits.One &= ~SoftFailBits;
+    EncodingBits.Zero &= ~SoftFailMask;
+    EncodingBits.One &= ~SoftFailMask;
     return EncodingBits;
   }
 
@@ -326,7 +332,7 @@ struct DecoderTableInfo {
   }
 };
 
-using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
+using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
@@ -1052,8 +1058,6 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
                                            const OperandInfo &OpInfo) const {
-  const std::string &Decoder = OpInfo.Decoder;
-
   bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
 
   if (UseInsertBits) {
@@ -1076,6 +1080,7 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
+  StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1243,32 +1248,13 @@ void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
 void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   const KnownBits &InstBits = Encoding.getInstBits();
-  const APInt &SFBits = Encoding.getSoftFailBits();
+  const APInt &SoftFailMask = Encoding.getSoftFailMask();
 
-  if (SFBits.isZero())
+  if (SoftFailMask.isZero())
     return;
 
-  unsigned EncodingWidth = InstBits.getBitWidth();
-  APInt PositiveMask(EncodingWidth, 0);
-  APInt NegativeMask(EncodingWidth, 0);
-  for (unsigned i = 0; i != EncodingWidth; ++i) {
-    if (!SFBits[i])
-      continue;
-
-    if (InstBits.Zero[i]) {
-      // The bit is meant to be false, so emit a check to see if it is true.
-      PositiveMask.setBit(i);
-    } else if (InstBits.One[i]) {
-      // The bit is meant to be true, so emit a check to see if it is false.
-      NegativeMask.setBit(i);
-    }
-  }
-
-  bool NeedPositiveMask = PositiveMask.getBoolValue();
-  bool NeedNegativeMask = NegativeMask.getBoolValue();
-
-  if (!NeedPositiveMask && !NeedNegativeMask)
-    return;
+  APInt PositiveMask = InstBits.Zero & SoftFailMask;
+  APInt NegativeMask = InstBits.One & SoftFailMask;
 
   TableInfo.Table.insertOpcode(MCD::OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
@@ -1737,7 +1723,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
 
 void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
   InstBits = KnownBits(VLI.size());
-  SoftFailBits = APInt(VLI.size(), 0);
+  SoftFailMask = APInt(VLI.size(), 0);
 
   // Parse Inst field.
   unsigned I = 0;
@@ -1806,7 +1792,7 @@ void InstructionEncoding::parseFixedLenEncoding(
   ArrayRef<const Init *> ActiveInstBits =
       RecordInstBits.getBits().take_front(BitWidth);
   InstBits = KnownBits(BitWidth);
-  SoftFailBits = APInt(BitWidth, 0);
+  SoftFailMask = APInt(BitWidth, 0);
 
   // Parse Inst field.
   for (auto [I, V] : enumerate(ActiveInstBits)) {
@@ -1848,7 +1834,7 @@ void InstructionEncoding::parseFixedLenEncoding(
                            "to be fully defined (0 or 1, not '?')",
                            I));
       }
-      SoftFailBits.setBit(I);
+      SoftFailMask.setBit(I);
     }
   }
 }
@@ -2074,6 +2060,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     Name = (EncodingDef->getName() + Twine(':')).str();
   Name.append(InstDef->getName());
 
+  DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2336,8 +2323,8 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
   for (const auto &MS : CGH.getHwModeSelects()) {
     for (auto [HwModeID, EncodingDef] : MS.second.Items) {
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
-        std::string DecoderNamespace =
-            EncodingDef->getValueAsString("DecoderNamespace").str();
+        StringRef DecoderNamespace =
+            EncodingDef->getValueAsString("DecoderNamespace");
         NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
@@ -2359,9 +2346,7 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-    std::string DecoderNamespace =
-        InstDef->getValueAsString("DecoderNamespace").str();
+    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2534,8 +2519,7 @@ namespace {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
       EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }

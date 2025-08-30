@@ -946,7 +946,14 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
 Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
-argument is always boolean mask vector.
+argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
+takes an optional third vector argument that will be used for the result of the
+masked-off lanes. These builtins assume the memory is always aligned.
+
+The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
+builtins have the same interface but store the result in consecutive indices.
+Effectively this performs the ``if (mask[i]) val[i] = ptr[j++]`` and ``if
+(mask[i]) ptr[j++] = val[i]`` pattern respectively.
 
 Example:
 
@@ -955,9 +962,19 @@ Example:
     using v8b = bool [[clang::ext_vector_type(8)]];
     using v8i = int [[clang::ext_vector_type(8)]];
 
-    v8i load(v8b m, v8i *p) { return __builtin_masked_load(m, p); }
-
-    void store(v8b m, v8i v, v8i *p) { __builtin_masked_store(m, v, p); }
+    v8i load(v8b mask, v8i *ptr) { return __builtin_masked_load(mask, ptr); }
+    
+    v8i load_expand(v8b mask, v8i *ptr) {
+      return __builtin_masked_expand_load(mask, ptr);
+    }
+    
+    void store(v8b mask, v8i val, v8i *ptr) {
+      __builtin_masked_store(mask, val, ptr);
+    }
+    
+    void store_compress(v8b mask, v8i val, v8i *ptr) {
+      __builtin_masked_compress_store(mask, val, ptr);
+    }
 
 
 Matrix Types
@@ -5160,6 +5177,23 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_ballot_w{32,64}`` returns a bitmask that contains its
+boolean argument as a bit for every lane of the current wave that is currently
+active (i.e., that is converged with the executing thread), and a 0 bit for
+every lane that is not active.
+
+The result is uniform, i.e. it is the same in every active thread of the wave.
+
+__builtin_amdgcn_inverse_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
+returns the bit at the position of the current lane. It is almost equivalent to
+``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
+the given mask has the same value for all active lanes of the current wave.
 
 ARM/AArch64 Language Extensions
 -------------------------------
