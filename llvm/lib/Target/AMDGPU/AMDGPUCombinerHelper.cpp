@@ -464,8 +464,9 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   LLT DestTy = MRI.getType(Dst);
   LLT ScalarDestTy = DestTy.getScalarType();
 
-  if ((ScalarDestTy != LLT::float64() && ScalarDestTy != LLT::float32() &&
-       ScalarDestTy != LLT::float16()) ||
+  // TODO: Expected float type in ScalarDestTy
+  if ((ScalarDestTy != LLT::scalar(64) && ScalarDestTy != LLT::scalar(32) &&
+       ScalarDestTy != LLT::scalar(16)) ||
       !MRI.hasOneNonDBGUse(Sel.getOperand(0).getReg()))
     return false;
 
@@ -486,7 +487,8 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   // For f32, only non-inline constants should be transformed.
-  if (ScalarDestTy == LLT::float32() && TII.isInlineConstant(*SelectTrueVal) &&
+  // TODO: Expected float32
+  if (ScalarDestTy == LLT::scalar(32) && TII.isInlineConstant(*SelectTrueVal) &&
       TII.isInlineConstant(*SelectFalseVal))
     return false;
 
