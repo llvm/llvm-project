@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Options.h"
+#include "DebuggerView.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/Support/COM.h"
@@ -120,8 +121,11 @@ int main(int argc, char **argv) {
     llvm::append_range(Objects, Objs);
   }
 
-  propagateOptions();
+  if (debuggerview::EnableDebuggerView)
+    return debuggerview::printDebuggerView(Objects, OutputFile.os());
+
   ScopedPrinter W(OutputFile.os());
+  propagateOptions();
   LVReaderHandler ReaderHandler(Objects, W, ReaderOptions);
 
   // Print the command line.
