@@ -73,6 +73,10 @@ public:
     return Globals[Idx]->block();
   }
 
+  bool isGlobalInitialized(unsigned Index) const {
+    return getPtrGlobal(Index).isInitialized();
+  }
+
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
   std::optional<unsigned> getGlobal(const Expr *E);
@@ -152,7 +156,7 @@ public:
   };
 
   /// Returns the current declaration ID.
-  std::optional<unsigned> getCurrentDecl() const {
+  UnsignedOrNone getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
       return std::nullopt;
     return CurrentDeclaration;
@@ -171,9 +175,6 @@ private:
   llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Function relocation locations.
-  llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
 
   /// Native pointers referenced by bytecode.
   std::vector<const void *> NativePointers;

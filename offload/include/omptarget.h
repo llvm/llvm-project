@@ -77,6 +77,9 @@ enum tgt_map_type {
   // the structured region
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_TGT_MAPTYPE_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_TGT_MAPTYPE_ATTACH = 0x4000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1

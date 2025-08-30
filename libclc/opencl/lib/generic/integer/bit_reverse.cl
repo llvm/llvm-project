@@ -11,7 +11,7 @@
 #include <clc/integer/clc_bit_reverse.h>
 #include <clc/opencl/integer/bit_reverse.h>
 
-#define FUNCTION bit_reverse
+#define __CLC_FUNCTION bit_reverse
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/integer/gentype.inc>
