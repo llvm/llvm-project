@@ -356,9 +356,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return CurrentState.BreakBeforeClosingBrace;
   }
 
-  // Allow breaking before the right parens with block indentation if there was
-  // a break after the left parens, which is tracked by BreakBeforeClosingParen.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+  // Check need to break before the right parens if there was a break after
+  // the left parens, which is tracked by BreakBeforeClosingParen.
+  if ((Style.BreakBeforeCloseBracketFunction ||
+       Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+       Style.BreakBeforeCloseBracketSwitch) &&
       Current.is(tok::r_paren)) {
     return CurrentState.BreakBeforeClosingParen;
   }
@@ -833,32 +835,38 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
              Style.Cpp11BracedListStyle;
     };
-    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
-        !IsStartOfBracedList()) {
+    if (IsStartOfBracedList())
+      return Style.BreakAfterOpenBracketBracedList;
+    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square))
       return false;
-    }
     if (!Tok.Previous)
       return true;
     if (Tok.Previous->isIf())
-      return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
-    return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                  tok::kw_switch) &&
-           !(Style.isJavaScript() && Tok.Previous->is(Keywords.kw_await));
+      return Style.BreakAfterOpenBracketIf;
+    if (Tok.Previous->isLoop(Style))
+      return Style.BreakAfterOpenBracketLoop;
+    if (Tok.Previous->is(tok::kw_switch))
+      return Style.BreakAfterOpenBracketSwitch;
+    if (Style.BreakAfterOpenBracketFunction) {
+      return !Tok.Previous->is(TT_CastRParen) &&
+             !(Style.isJavaScript() && Tok.is(Keywords.kw_await));
+    }
+    return false;
   };
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  auto IsInTemplateString = [this](const FormatToken &Tok) {
+  auto IsInTemplateString = [this](const FormatToken &Tok, bool NestBlocks) {
     if (!Style.isJavaScript())
       return false;
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
-      if (Prev->opensScope() ||
-          (Prev->is(TT_TemplateString) && Prev->closesScope())) {
-        break;
-      }
+      if (Prev->opensScope() && !NestBlocks)
+        return false;
+      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+        return false;
     }
     return false;
   };
@@ -880,21 +888,25 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
          Tok.isOneOf(tok::ellipsis, Keywords.kw_await))) {
       return true;
     }
-    const auto *Previous = Tok.Previous;
-    if (!Previous || (!Previous->isOneOf(TT_FunctionDeclarationLParen,
-                                         TT_LambdaDefinitionLParen) &&
-                      !IsFunctionCallParen(*Previous))) {
+    const auto *Previous = TokAfterLParen.Previous;
+    assert(Previous); // IsOpeningBracket(Previous)
+    if (Previous->Previous &&
+        (Previous->Previous->isIf() || Previous->Previous->isLoop(Style) ||
+         Previous->Previous->is(tok::kw_switch))) {
+      return false;
+    }
+    if (!Previous->isOneOf(TT_FunctionDeclarationLParen,
+                           TT_LambdaDefinitionLParen) &&
+        !IsFunctionCallParen(*Previous)) {
       return true;
     }
-    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok))
+    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok, true))
       return true;
     const auto *Next = Tok.Next;
     return !Next || Next->isMemberAccess() ||
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
-  if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
-       Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
-      IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
+  if (IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -924,7 +936,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
-      !IsInTemplateString(Current)) {
+      !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
@@ -1261,8 +1273,22 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if (PreviousNonComment && PreviousNonComment->is(tok::l_paren)) {
-    CurrentState.BreakBeforeClosingParen =
-        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
+    auto Previous = PreviousNonComment->Previous;
+    if (Previous) {
+
+      if (Previous->isIf()) {
+        CurrentState.BreakBeforeClosingParen = Style.BreakBeforeCloseBracketIf;
+      } else if (Previous->isLoop(Style)) {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketLoop;
+      } else if (Previous->is(tok::kw_switch)) {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketSwitch;
+      } else {
+        CurrentState.BreakBeforeClosingParen =
+            Style.BreakBeforeCloseBracketFunction;
+      }
+    }
   }
 
   if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener))
@@ -1405,11 +1431,15 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      (Current.is(tok::r_paren) ||
-       (Current.is(tok::r_brace) && Current.MatchingParen &&
-        Current.MatchingParen->is(BK_BracedInit))) &&
+  if (Style.BreakBeforeCloseBracketBracedList && Current.is(tok::r_brace) &&
+      Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit) &&
       State.Stack.size() > 1) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
+  if ((Style.BreakBeforeCloseBracketFunction ||
+       Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+       Style.BreakBeforeCloseBracketSwitch) &&
+      Current.is(tok::r_paren) && State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&

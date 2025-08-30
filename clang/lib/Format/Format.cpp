@@ -207,12 +207,12 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
     IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
     IO.enumCase(Value, "DontAlign", FormatStyle::BAS_DontAlign);
-    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
-    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
 
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::BAS_Align);
     IO.enumCase(Value, "false", FormatStyle::BAS_DontAlign);
+    IO.enumCase(Value, "AlwaysBreak", FormatStyle::BAS_AlwaysBreak);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BAS_BlockIndent);
   }
 };
 
@@ -1044,10 +1044,29 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
+    IO.mapOptional("BreakAfterOpenBracketBracedList",
+                   Style.BreakAfterOpenBracketBracedList);
+    IO.mapOptional("BreakAfterOpenBracketFunction",
+                   Style.BreakAfterOpenBracketFunction);
+    IO.mapOptional("BreakAfterOpenBracketIf", Style.BreakAfterOpenBracketIf);
+    IO.mapOptional("BreakAfterOpenBracketLoop",
+                   Style.BreakAfterOpenBracketLoop);
+    IO.mapOptional("BreakAfterOpenBracketSwitch",
+                   Style.BreakAfterOpenBracketSwitch);
     IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
+    IO.mapOptional("BreakBeforeCloseBracketBracedList",
+                   Style.BreakBeforeCloseBracketBracedList);
+    IO.mapOptional("BreakBeforeCloseBracketFunction",
+                   Style.BreakBeforeCloseBracketFunction);
+    IO.mapOptional("BreakBeforeCloseBracketIf",
+                   Style.BreakBeforeCloseBracketIf);
+    IO.mapOptional("BreakBeforeCloseBracketLoop",
+                   Style.BreakBeforeCloseBracketLoop);
+    IO.mapOptional("BreakBeforeCloseBracketSwitch",
+                   Style.BreakBeforeCloseBracketSwitch);
     IO.mapOptional("BreakBeforeConceptDeclarations",
                    Style.BreakBeforeConceptDeclarations);
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
@@ -1235,6 +1254,39 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
+
+    // If AlwaysBreak or BlockIndent were specified but individual
+    // options for BreakAfterOpenBracket* (CloseAfterOpenBracket*),
+    // initialize the latter to preserve backwards compatibility.
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak) {
+      if (!Style.BreakAfterOpenBracketBracedList &&
+          !Style.BreakAfterOpenBracketFunction &&
+          !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
+          !Style.BreakAfterOpenBracketSwitch) {
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+      }
+      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+    } else if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+      if (!Style.BreakAfterOpenBracketBracedList &&
+          !Style.BreakAfterOpenBracketFunction &&
+          !Style.BreakAfterOpenBracketIf && !Style.BreakAfterOpenBracketLoop &&
+          !Style.BreakAfterOpenBracketSwitch &&
+          !Style.BreakBeforeCloseBracketBracedList &&
+          !Style.BreakBeforeCloseBracketFunction &&
+          !Style.BreakBeforeCloseBracketIf &&
+          !Style.BreakBeforeCloseBracketLoop &&
+          !Style.BreakBeforeCloseBracketSwitch) {
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        Style.BreakBeforeCloseBracketBracedList = true;
+        Style.BreakBeforeCloseBracketFunction = true;
+        Style.BreakBeforeCloseBracketIf = true;
+      }
+      Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+    }
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
@@ -1584,10 +1636,20 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterOpenBracketBracedList = false;
+  LLVMStyle.BreakAfterOpenBracketFunction = false;
+  LLVMStyle.BreakAfterOpenBracketIf = false;
+  LLVMStyle.BreakAfterOpenBracketLoop = false;
+  LLVMStyle.BreakAfterOpenBracketSwitch = false;
   LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
+  LLVMStyle.BreakBeforeCloseBracketBracedList = false;
+  LLVMStyle.BreakBeforeCloseBracketFunction = false;
+  LLVMStyle.BreakBeforeCloseBracketIf = false;
+  LLVMStyle.BreakBeforeCloseBracketLoop = false;
+  LLVMStyle.BreakBeforeCloseBracketSwitch = false;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;
@@ -1848,7 +1910,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpaceAfterCStyleCast = true;
     GoogleStyle.SpacesBeforeTrailingComments = 1;
   } else if (Language == FormatStyle::LK_JavaScript) {
-    GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+    GoogleStyle.BreakAfterOpenBracketBracedList = true;
+    GoogleStyle.BreakAfterOpenBracketFunction = true;
+    GoogleStyle.BreakAfterOpenBracketIf = true;
+    GoogleStyle.BreakAfterOpenBracketLoop = false;
+    GoogleStyle.BreakAfterOpenBracketSwitch = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     // TODO: still under discussion whether to switch to SLS_All.

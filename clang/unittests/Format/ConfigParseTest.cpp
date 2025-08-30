@@ -171,6 +171,16 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketBracedList);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketFunction);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketIf);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketLoop);
+  CHECK_PARSE_BOOL(BreakAfterOpenBracketSwitch);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketBracedList);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketFunction);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketIf);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketLoop);
+  CHECK_PARSE_BOOL(BreakBeforeCloseBracketSwitch);
   CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
@@ -533,18 +543,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
   CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
-  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
-              FormatStyle::BAS_AlwaysBreak);
-  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
-              FormatStyle::BAS_BlockIndent);
   // For backward compatibility:
+  CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
+              FormatStyle::BAS_Align);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
+              FormatStyle::BAS_Align);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
 
