@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - depot-ubuntu-24.04-arm-4
+          - depot-ubuntu-24.04-arm-16
           - llvm-premerge-linux-runners
     runs-on: ${{ matrix.runs-on }}
     container:
