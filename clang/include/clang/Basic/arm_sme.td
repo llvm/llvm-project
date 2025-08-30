@@ -156,16 +156,15 @@ let SMETargetGuard = "sme2p1" in {
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Counting elements in a streaming vector
 
-multiclass ZACount<string n_suffix> {
-  def NAME : SInst<"sv" # n_suffix, "nv", "", MergeNone,
-                    "aarch64_sme_" # n_suffix,
-                    [IsOverloadNone, IsStreamingCompatible]>;
+multiclass ZACount<string intr, string n_suffix> {
+  def NAME : SInst<"sv"#n_suffix, "nv", "", MergeNone,
+                   intr, [IsOverloadNone, IsStreamingCompatible]>;
 }
 
-defm SVCNTSB : ZACount<"cntsb">;
-defm SVCNTSH : ZACount<"cntsh">;
-defm SVCNTSW : ZACount<"cntsw">;
-defm SVCNTSD : ZACount<"cntsd">;
+defm SVCNTSB : ZACount<"", "cntsb">;
+defm SVCNTSH : ZACount<"", "cntsh">;
+defm SVCNTSW : ZACount<"", "cntsw">;
+defm SVCNTSD : ZACount<"aarch64_sme_cntsd", "cntsd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME - ADDHA/ADDVA

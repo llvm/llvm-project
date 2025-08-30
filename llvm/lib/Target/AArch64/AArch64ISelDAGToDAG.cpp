@@ -71,6 +71,9 @@ public:
   template <signed Low, signed High, signed Scale>
   bool SelectRDVLImm(SDValue N, SDValue &Imm);
 
+  template <signed Low, signed High>
+  bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
+
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -930,6 +933,23 @@ bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
     int64_t RDVLImm = MulImm / Scale;
     if ((RDVLImm >= Low) && (RDVLImm <= High)) {
       Imm = CurDAG->getSignedTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <signed Low, signed High>
+bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+
+  int64_t ShlImm = cast<ConstantSDNode>(N)->getSExtValue();
+  if (ShlImm >= 3) {
+    int64_t MulImm = 1 << (ShlImm - 3);
+    if (MulImm >= Low && MulImm <= High) {
+      Imm = CurDAG->getSignedTargetConstant(MulImm, SDLoc(N), MVT::i32);
       return true;
     }
   }
