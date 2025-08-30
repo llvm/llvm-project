@@ -5847,7 +5847,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vcvtph_s16_f16:
   case NEON::BI__builtin_neon_vcvth_s16_f16: {
     unsigned Int;
-    llvm::Type* InTy = Int32Ty;
+    llvm::Type *InTy = Int16Ty;
     llvm::Type* FTy  = HalfTy;
     llvm::Type *Tys[2] = {InTy, FTy};
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
@@ -5874,8 +5874,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     case NEON::BI__builtin_neon_vcvth_s16_f16:
       Int = Intrinsic::aarch64_neon_fcvtzs; break;
     }
-    Ops[0] = EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvt");
-    return Builder.CreateTrunc(Ops[0], Int16Ty);
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "fcvt");
   }
   case NEON::BI__builtin_neon_vcaleh_f16:
   case NEON::BI__builtin_neon_vcalth_f16:
