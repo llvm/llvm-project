@@ -47,29 +47,23 @@ bool RegisterContextCorePOSIX_arm::WriteFPR() {
 
 bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &value) {
-  lldb::offset_t offset = reg_info->byte_offset;
-  if (offset + reg_info->byte_size <= GetGPRSize()) {
-    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value = v;
-      return true;
-    }
-  }
-
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM)
     return false;
 
-  if (IsFPR(reg)) {
-    assert(offset >= GetGPRSize());
-    offset -= GetGPRSize();
-    if (m_fpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size)) {
-      Status error;
-      value.SetFromMemoryData(*reg_info, m_fpr.GetDataStart() + offset,
-                              reg_info->byte_size, lldb::eByteOrderLittle,
-                              error);
-      return error.Success();
+  if (IsGPR(reg)) {
+    lldb::offset_t offset = reg_info->byte_offset;
+    if (m_gpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size)) {
+      value = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
+      return offset == reg_info->byte_offset + reg_info->byte_size;
     }
+  } else if (IsFPR(reg)) {
+    assert(reg_info->byte_offset >= GetGPRSize());
+    lldb::offset_t offset = reg_info->byte_offset - GetGPRSize();
+    if (m_fpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size))
+      return value
+          .SetValueFromData(*reg_info, m_fpr, offset, /*partial_data_ok=*/false)
+          .Success();
   }
 
   return false;
