@@ -20073,6 +20073,26 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
+  case ARMISD::VORRIMM:
+  case ARMISD::VBICIMM: {
+    KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    unsigned Encoded = Op.getConstantOperandVal(1);
+    unsigned DecEltBits = 0;
+    uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, DecEltBits);
+    bool IsVORR = Op.getOpcode() == ARMISD::VORRIMM;
+
+    if (Op.getScalarValueSizeInBits() == DecEltBits) {
+      APInt Imm(DecEltBits, DecodedVal);
+      Known.One = IsVORR ? (KnownLHS.One | Imm) : (KnownLHS.One & ~Imm);
+      Known.Zero = IsVORR ? (KnownLHS.Zero & ~Imm) : (KnownLHS.Zero | Imm);
+    } else {
+      if (IsVORR)
+        Known.One = KnownLHS.One;
+      else
+        Known.Zero = KnownLHS.Zero;
+    }
+    break;
+  }
   }
 }
 
