@@ -252,7 +252,7 @@ define signext i32 @test16(i32 signext %x, i32 signext %y) {
 ; RV64I-NEXT:    or a2, a2, a4
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slliw a0, a0, 1
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    ret
   %a = or i32 %x, 192
   %d = call i32 @llvm.bswap.i32(i32 %a)
