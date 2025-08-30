@@ -488,22 +488,26 @@ public:
     return false;
   };
 
-  /// Get number of loaded/parsed DWO files. This is emitted in "statistics
-  /// dump"
+  /// Retrieves statistics about DWO files associated with this symbol file.
+  /// This function returns a DWOStats struct containing:
+  ///   - The number of successfully loaded/parsed DWO files.
+  ///   - The total number of DWO files encountered.
+  ///   - The number of DWO CUs that failed to load due to errors.
+  /// If this symbol file does not support DWO files, all counts will be zero.
   ///
   /// \returns
-  ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
-  ///     symbol file doesn't support DWO files, both counts will be 0.
-  virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
+  ///   A DWOStats struct with loaded, total, and error counts for DWO files.
+  virtual DWOStats GetDwoStats() { return {}; }
 
-  virtual lldb::TypeSP
-  MakeType(lldb::user_id_t uid, ConstString name,
-           std::optional<uint64_t> byte_size, SymbolContextScope *context,
-           lldb::user_id_t encoding_uid,
-           Type::EncodingDataType encoding_uid_type, const Declaration &decl,
-           const CompilerType &compiler_qual_type,
-           Type::ResolveState compiler_type_resolve_state,
-           uint32_t opaque_payload = 0) = 0;
+  virtual lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                                std::optional<uint64_t> byte_size,
+                                SymbolContextScope *context,
+                                lldb::user_id_t encoding_uid,
+                                Type::EncodingDataType encoding_uid_type,
+                                const Declaration &decl,
+                                const CompilerType &compiler_qual_type,
+                                Type::ResolveState compiler_type_resolve_state,
+                                uint32_t opaque_payload = 0) = 0;
 
   virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
 
@@ -597,7 +601,7 @@ public:
     return m_debug_info_had_variable_errors;
   }
   void SetDebugInfoHadFrameVariableErrors() override {
-     m_debug_info_had_variable_errors = true;
+    m_debug_info_had_variable_errors = true;
   }
 
   /// This function is used to create types that belong to a SymbolFile. The
@@ -612,21 +616,20 @@ public:
                         const CompilerType &compiler_qual_type,
                         Type::ResolveState compiler_type_resolve_state,
                         uint32_t opaque_payload = 0) override {
-     lldb::TypeSP type_sp (new Type(
-         uid, this, name, byte_size, context, encoding_uid,
-         encoding_uid_type, decl, compiler_qual_type,
-         compiler_type_resolve_state, opaque_payload));
-     m_type_list.Insert(type_sp);
-     return type_sp;
+    lldb::TypeSP type_sp(new Type(
+        uid, this, name, byte_size, context, encoding_uid, encoding_uid_type,
+        decl, compiler_qual_type, compiler_type_resolve_state, opaque_payload));
+    m_type_list.Insert(type_sp);
+    return type_sp;
   }
 
   lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
-     // Make sure the real symbol file matches when copying types.
-     if (GetBackingSymbolFile() != other_type->GetSymbolFile())
+    // Make sure the real symbol file matches when copying types.
+    if (GetBackingSymbolFile() != other_type->GetSymbolFile())
       return lldb::TypeSP();
-     lldb::TypeSP type_sp(new Type(*other_type));
-     m_type_list.Insert(type_sp);
-     return type_sp;
+    lldb::TypeSP type_sp(new Type(*other_type));
+    m_type_list.Insert(type_sp);
+    return type_sp;
   }
 
 protected:
