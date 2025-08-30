@@ -15,7 +15,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 namespace flangomp {
@@ -161,27 +161,34 @@ void collectLoopLocalValues(fir::DoConcurrentLoopOp loop,
 ///
 /// \param rewriter - builder used for updating \p allocRegion.
 static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
-                                   mlir::ConversionPatternRewriter &rewriter) {
+                                   mlir::PatternRewriter &rewriter) {
   rewriter.moveOpBefore(local.getDefiningOp(), &allocRegion.front().front());
 }
 } // namespace looputils
 
 class DoConcurrentConversion
-    : public mlir::OpConversionPattern<fir::DoConcurrentOp> {
+    : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
 public:
-  using mlir::OpConversionPattern<fir::DoConcurrentOp>::OpConversionPattern;
+  using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
   DoConcurrentConversion(
       mlir::MLIRContext *context, bool mapToDevice,
       llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip,
       mlir::SymbolTable &moduleSymbolTable)
-      : OpConversionPattern(context), mapToDevice(mapToDevice),
+      : OpRewritePattern(context), mapToDevice(mapToDevice),
         concurrentLoopsToSkip(concurrentLoopsToSkip),
         moduleSymbolTable(moduleSymbolTable) {}
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DoConcurrentOp doLoop, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
+  matchAndRewrite(fir::DoConcurrentOp doLoop,
+                  mlir::PatternRewriter &rewriter) const override {
+    // TODO: This pass should use "walkAndApplyPatterns", but that driver does
+    // not support pre-order traversals yet.
+    if (doLoop->getParentOfType<fir::DoConcurrentOp>())
+      return rewriter.notifyMatchFailure(
+          doLoop, "skipping op to enforce pre-order traversal");
+    if (concurrentLoopsToSkip.contains(doLoop))
+      return rewriter.notifyMatchFailure(doLoop, "skipping concurrent loop");
     if (mapToDevice)
       return doLoop.emitError(
           "not yet implemented: Mapping `do concurrent` loops to device");
@@ -231,9 +238,8 @@ public:
       rewriter.moveOpBefore(op, allocBlock, allocBlock->begin());
     }
 
-    // Mark `unordered` loops that are not perfectly nested to be skipped from
-    // the legality check of the `ConversionTarget` since we are not interested
-    // in mapping them to OpenMP.
+    // Mark `unordered` loops that are not perfectly nested to be skipped since
+    // we are not interested in mapping them to OpenMP.
     ompLoopNest->walk([&](fir::DoConcurrentOp doLoop) {
       concurrentLoopsToSkip.insert(doLoop);
     });
@@ -245,7 +251,7 @@ public:
 
 private:
   mlir::omp::ParallelOp
-  genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+  genParallelOp(mlir::Location loc, mlir::PatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
                 mlir::IRMapping &mapper) const {
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
@@ -256,7 +262,7 @@ private:
     return parallelOp;
   }
 
-  void genLoopNestIndVarAllocs(mlir::ConversionPatternRewriter &rewriter,
+  void genLoopNestIndVarAllocs(mlir::PatternRewriter &rewriter,
                                looputils::InductionVariableInfos &ivInfos,
                                mlir::IRMapping &mapper) const {
 
@@ -264,10 +270,9 @@ private:
       genInductionVariableAlloc(rewriter, indVarInfo.iterVarMemDef, mapper);
   }
 
-  mlir::Operation *
-  genInductionVariableAlloc(mlir::ConversionPatternRewriter &rewriter,
-                            mlir::Operation *indVarMemDef,
-                            mlir::IRMapping &mapper) const {
+  mlir::Operation *genInductionVariableAlloc(mlir::PatternRewriter &rewriter,
+                                             mlir::Operation *indVarMemDef,
+                                             mlir::IRMapping &mapper) const {
     assert(
         indVarMemDef != nullptr &&
         "Induction variable memdef is expected to have a defining operation.");
@@ -285,8 +290,7 @@ private:
   }
 
   void
-  genLoopNestClauseOps(mlir::Location loc,
-                       mlir::ConversionPatternRewriter &rewriter,
+  genLoopNestClauseOps(mlir::Location loc, mlir::PatternRewriter &rewriter,
                        fir::DoConcurrentLoopOp loop, mlir::IRMapping &mapper,
                        mlir::omp::LoopNestOperands &loopNestClauseOps) const {
     assert(loopNestClauseOps.loopLowerBounds.empty() &&
@@ -308,8 +312,8 @@ private:
   }
 
   mlir::omp::LoopNestOp
-  genWsLoopOp(mlir::ConversionPatternRewriter &rewriter,
-              fir::DoConcurrentLoopOp loop, mlir::IRMapping &mapper,
+  genWsLoopOp(mlir::PatternRewriter &rewriter, fir::DoConcurrentLoopOp loop,
+              mlir::IRMapping &mapper,
               const mlir::omp::LoopNestOperands &clauseOps,
               bool isComposite) const {
     mlir::omp::WsloopOperands wsloopClauseOps;
@@ -472,18 +476,25 @@ public:
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
         concurrentLoopsToSkip, moduleSymbolTable);
-    mlir::ConversionTarget target(*context);
-    target.addDynamicallyLegalOp<fir::DoConcurrentOp>(
-        [&](fir::DoConcurrentOp op) {
-          return concurrentLoopsToSkip.contains(op);
-        });
-    target.markUnknownOpDynamicallyLegal(
-        [](mlir::Operation *) { return true; });
 
-    if (mlir::failed(
-            mlir::applyFullConversion(module, target, std::move(patterns)))) {
+    // TODO: This pass should use "walkAndApplyPatterns", but that driver does
+    // not support pre-order traversals yet.
+    if (mlir::failed(applyPatternsGreedily(module.getOperation(),
+                                           std::move(patterns)))) {
+      module.emitError("failed to apply patterns");
       signalPassFailure();
     }
+
+    // Make sure that all loops were converted.
+    mlir::WalkResult status = module->walk([&](fir::DoConcurrentOp op) {
+      if (concurrentLoopsToSkip.contains(op))
+        return mlir::WalkResult::advance();
+
+      op.emitError("failed to convert operation");
+      return mlir::WalkResult::interrupt();
+    });
+    if (status.wasInterrupted())
+      signalPassFailure();
   }
 };
 } // namespace

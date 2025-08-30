@@ -20,6 +20,8 @@ program main
 
 end program main
 
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+
 ! CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFFfooEn"}
 
 ! CHECK: fir.load
@@ -27,7 +29,6 @@ end program main
 ! CHECK: %[[LB:.*]] = fir.convert %{{c1_.*}} : (i32) -> index
 ! CHECK: %[[N_VAL:.*]] = fir.load %[[N_DECL]]#0 : !fir.ref<i32>
 ! CHECK: %[[UB:.*]] = fir.convert %[[N_VAL]] : (i32) -> index
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
 
 ! CHECK: omp.parallel {
 

@@ -51,13 +51,14 @@ fir.declare_reduction @add_reduction_i32 : i32 init {
 // CHECK:         omp.private {type = private} @_QFdo_concurrent_reduceEl_private_i32.omp : i32
 
 // CHECK-LABEL:   func.func @_QPdo_concurrent_reduce() {
+// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i"}
 // CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "l", uniq_name = "_QFdo_concurrent_reduceEl"}
 // CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFdo_concurrent_reduceEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           omp.parallel {
 // CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i"}
 // CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -67,7 +68,6 @@ fir.declare_reduction @add_reduction_i32 : i32 init {
 // CHECK:                 fir.store %[[VAL_12]] to %[[VAL_8]]#0 : !fir.ref<i32>
 // CHECK:                 %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFdo_concurrent_reduceEl"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:                 %[[VAL_15:.*]] = arith.constant 1 : i32
 // CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_13]]#0 : i32, !fir.ref<i32>
 // CHECK:                 %[[VAL_16:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<i32>
 // CHECK:                 %[[VAL_17:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>

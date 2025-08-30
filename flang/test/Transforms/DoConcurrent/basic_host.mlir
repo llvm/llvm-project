@@ -4,6 +4,9 @@
 
 // CHECK-LABEL: func.func @do_concurrent_basic
 func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_basic"} {
+    // CHECK: %[[C1:.*]] = arith.constant 1 : i32
+    // CHECK: %[[C10:.*]] = arith.constant 10 : i32
+    // CHECK: %[[STEP:.*]] = arith.constant 1 : index
     // CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 
     %2 = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xi32>>
@@ -18,11 +21,8 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
 
     // CHECK-NOT: fir.do_concurrent
 
-    // CHECK: %[[C1:.*]] = arith.constant 1 : i32
     // CHECK: %[[LB:.*]] = fir.convert %[[C1]] : (i32) -> index
-    // CHECK: %[[C10:.*]] = arith.constant 10 : i32
     // CHECK: %[[UB:.*]] = fir.convert %[[C10]] : (i32) -> index
-    // CHECK: %[[STEP:.*]] = arith.constant 1 : index
 
     // CHECK: omp.parallel {
 

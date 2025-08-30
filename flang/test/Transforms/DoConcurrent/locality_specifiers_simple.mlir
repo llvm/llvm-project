@@ -33,13 +33,13 @@ func.func @_QPlocal_spec_translation() {
 // CHECK: omp.private {type = private} @[[PRIVATIZER:.*local_spec_translationElocal_var.*.omp]] : f32
 
 // CHECK: func.func @_QPlocal_spec_translation
+// CHECK:   %[[C42:.*]] = arith.constant 4.200000e+01 : f32
 // CHECK:   %[[LOCAL_VAR:.*]] = fir.alloca f32 {bindc_name = "local_var", {{.*}}}
 // CHECK:   %[[LOCAL_VAR_DECL:.*]]:2 = hlfir.declare %[[LOCAL_VAR]]
 // CHECK:   omp.parallel {
 // CHECK:     omp.wsloop private(@[[PRIVATIZER]] %[[LOCAL_VAR_DECL]]#0 -> %[[LOCAL_ARG:.*]] : !fir.ref<f32>) {
 // CHECK:       omp.loop_nest {{.*}} {
 // CHECK:       %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[LOCAL_ARG]]
-// CHECK:       %[[C42:.*]] = arith.constant
 // CHECK:       hlfir.assign %[[C42]] to %[[PRIV_DECL]]#0
 // CHECK:       omp.yield
 // CHECK:     }

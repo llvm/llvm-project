@@ -44,11 +44,12 @@ func.func @_QPdo_concurrent_reduce() {
 // CHECK:         }
 
 // CHECK-LABEL:   func.func @_QPdo_concurrent_reduce() {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i"}
 // CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "_QFdo_concurrent_reduceEs"}
 // CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           omp.parallel {
 // CHECK:             %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "i"}
 // CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFdo_concurrent_reduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -59,7 +60,6 @@ func.func @_QPdo_concurrent_reduce() {
 // CHECK:                 fir.store %[[VAL_9]] to %[[VAL_6]]#0 : !fir.ref<i32>
 // CHECK:                 %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFdo_concurrent_reduceEs"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:                 %[[VAL_11:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
-// CHECK:                 %[[VAL_12:.*]] = arith.constant 1 : i32
 // CHECK:                 %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_12]] : i32
 // CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_10]]#0 : i32, !fir.ref<i32>
 // CHECK:                 omp.yield

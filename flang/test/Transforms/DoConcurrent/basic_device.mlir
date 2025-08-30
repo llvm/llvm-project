@@ -12,7 +12,7 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
     %c1 = arith.constant 1 : index
 
     // expected-error@+2 {{not yet implemented: Mapping `do concurrent` loops to device}}
-    // expected-error@below {{failed to legalize operation 'fir.do_concurrent'}}
+    // expected-error@below {{failed to convert operation}}
     fir.do_concurrent {
       %0 = fir.alloca i32 {bindc_name = "i"}
       %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

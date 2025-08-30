@@ -7,6 +7,10 @@
  
 ! CHECK-LABEL: DO_CONCURRENT_BASIC
 program do_concurrent_basic
+    ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+    ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
+    ! CHECK: %[[STEP:.*]] = arith.constant 1 : index
+
     ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 
     implicit none
@@ -15,11 +19,8 @@ program do_concurrent_basic
 
     ! CHECK-NOT: fir.do_loop
 
-    ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
     ! CHECK: %[[LB:.*]] = fir.convert %[[C1]] : (i32) -> index
-    ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
     ! CHECK: %[[UB:.*]] = fir.convert %[[C10]] : (i32) -> index
-    ! CHECK: %[[STEP:.*]] = arith.constant 1 : index
 
     ! CHECK: omp.parallel {
 

@@ -20,22 +20,21 @@ end
 ! CHECK: func.func @_QQmain
 
 ! CHECK: %[[C3:.*]] = arith.constant 3 : i32
-! CHECK: %[[LB_I:.*]] = fir.convert %[[C3]] : (i32) -> index
 ! CHECK: %[[C20:.*]] = arith.constant 20 : i32
-! CHECK: %[[UB_I:.*]] = fir.convert %[[C20]] : (i32) -> index
-! CHECK: %[[STEP_I:.*]] = arith.constant 1 : index
-
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C5:.*]] = arith.constant 5 : i32
-! CHECK: %[[LB_J:.*]] = fir.convert %[[C5]] : (i32) -> index
 ! CHECK: %[[C40:.*]] = arith.constant 40 : i32
-! CHECK: %[[UB_J:.*]] = fir.convert %[[C40]] : (i32) -> index
-! CHECK: %[[STEP_J:.*]] = arith.constant 1 : index
-
 ! CHECK: %[[C7:.*]] = arith.constant 7 : i32
-! CHECK: %[[LB_K:.*]] = fir.convert %[[C7]] : (i32) -> index
 ! CHECK: %[[C60:.*]] = arith.constant 60 : i32
+
+! CHECK: %[[LB_I:.*]] = fir.convert %[[C3]] : (i32) -> index
+! CHECK: %[[UB_I:.*]] = fir.convert %[[C20]] : (i32) -> index
+
+! CHECK: %[[LB_J:.*]] = fir.convert %[[C5]] : (i32) -> index
+! CHECK: %[[UB_J:.*]] = fir.convert %[[C40]] : (i32) -> index
+
+! CHECK: %[[LB_K:.*]] = fir.convert %[[C7]] : (i32) -> index
 ! CHECK: %[[UB_K:.*]] = fir.convert %[[C60]] : (i32) -> index
-! CHECK: %[[STEP_K:.*]] = arith.constant 1 : index
 
 ! CHECK: omp.parallel {
 
@@ -53,7 +52,7 @@ end
 ! CHECK-SAME:   (%[[ARG0:[^[:space:]]+]], %[[ARG1:[^[:space:]]+]], %[[ARG2:[^[:space:]]+]])
 ! CHECK-SAME:   : index = (%[[LB_I]], %[[LB_J]], %[[LB_K]])
 ! CHECK-SAME:     to (%[[UB_I]], %[[UB_J]], %[[UB_K]]) inclusive
-! CHECK-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) {
+! CHECK-SAME:     step (%[[C1]], %[[C1]], %[[C1]]) {
 
 ! CHECK-NEXT: %[[IV_IDX_I:.*]] = fir.convert %[[ARG0]]
 ! CHECK-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#0
