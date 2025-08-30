@@ -22191,7 +22191,7 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
 
 static SDValue tryCombineNeonFcvtFP16ToI16(SDNode *N, unsigned Opcode,
                                            SelectionDAG &DAG) {
-  if (N->getValueType(0).getScalarType() != MVT::i16)
+  if (N->getValueType(0) != MVT::i16)
     return SDValue();
 
   SDLoc DL(N);
