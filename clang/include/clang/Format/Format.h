@@ -992,6 +992,9 @@ struct FormatStyle {
   enum ShortRecordStyle : int8_t {
     /// Never merge records into a single line.
     SRS_Never,
+    /// Only merge empty records if the opening brace was not wrapped,
+    /// i.e. the corresponding ``BraceWrapping.After...`` option was not set.
+    SRS_EmptyIfAttached,
     /// Only merge empty records.
     /// \code
     ///   struct foo {};
