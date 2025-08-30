@@ -14,7 +14,9 @@
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -35,8 +37,39 @@ static bool tryToImproveAlign(
       return true;
     }
   }
-  // TODO: Also handle memory intrinsics.
-  return false;
+
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+
+  // TODO: Handle more memory intrinsics.
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store: {
+    Value *PtrOp = II->getIntrinsicID() == Intrinsic::masked_load
+                       ? II->getArgOperand(0)
+                       : II->getArgOperand(1);
+    Value *AlignOp = II->getIntrinsicID() == Intrinsic::masked_load
+                         ? II->getArgOperand(1)
+                         : II->getArgOperand(2);
+
+    Align OldAlign = cast<ConstantInt>(AlignOp)->getAlignValue();
+    Align PrefAlign = getKnownAlignment(PtrOp, DL, II);
+    Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
+    if (NewAlign <= OldAlign)
+      return false;
+
+    Value *V = llvm::ConstantInt::get(llvm::Type::getInt32Ty(II->getContext()),
+                                      NewAlign.value());
+    if (II->getIntrinsicID() == Intrinsic::masked_load)
+      II->setOperand(1, V);
+    else
+      II->setOperand(2, V);
+    return true;
+  }
+  default:
+    return false;
+  }
 }
 
 bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
