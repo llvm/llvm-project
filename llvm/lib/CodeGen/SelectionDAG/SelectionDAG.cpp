@@ -3859,7 +3859,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
 
       // Canonicalize to ROTR.
-      if (Opcode == ISD::ROTL)
+      if (Opcode == ISD::ROTL && Amt != 0)
         Amt = BitWidth - Amt;
 
       Known.Zero = Known.Zero.rotr(Amt);
