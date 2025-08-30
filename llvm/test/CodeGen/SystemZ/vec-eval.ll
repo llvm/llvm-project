@@ -1541,8 +1541,8 @@ define <16 x i8> @eval109(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vgbm %v0, 65535
 ; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
-; CHECK-NEXT:    vn %v2, %v26, %v24
-; CHECK-NEXT:    veval %v0, %v28, %v0, %v2, 7
+; CHECK-NEXT:    vn %v1, %v26, %v24
+; CHECK-NEXT:    veval %v0, %v28, %v0, %v1, 7
 ; CHECK-NEXT:    vo %v1, %v28, %v24
 ; CHECK-NEXT:    veval %v0, %v0, %v24, %v26, 47
 ; CHECK-NEXT:    veval %v24, %v0, %v26, %v1, 47
@@ -1567,9 +1567,9 @@ define <16 x i8> @eval110(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval110:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vno %v0, %v24, %v24
+; CHECK-NEXT:    veval %v0, %v0, %v28, %v26, 2
 ; CHECK-NEXT:    vgbm %v1, 65535
 ; CHECK-NEXT:    vo %v2, %v28, %v24
-; CHECK-NEXT:    veval %v0, %v0, %v28, %v26, 2
 ; CHECK-NEXT:    veval %v0, %v0, %v26, %v2, 47
 ; CHECK-NEXT:    veval %v1, %v26, %v1, %v28, 190
 ; CHECK-NEXT:    veval %v24, %v0, %v1, %v24, 31
@@ -1754,8 +1754,8 @@ define <16 x i8> @eval121(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vgbm %v0, 65535
 ; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
-; CHECK-NEXT:    vn %v2, %v26, %v24
-; CHECK-NEXT:    veval %v0, %v28, %v0, %v2, 7
+; CHECK-NEXT:    vn %v1, %v26, %v24
+; CHECK-NEXT:    veval %v0, %v28, %v0, %v1, 7
 ; CHECK-NEXT:    vo %v1, %v28, %v26
 ; CHECK-NEXT:    veval %v0, %v0, %v26, %v24, 47
 ; CHECK-NEXT:    veval %v24, %v0, %v24, %v1, 47

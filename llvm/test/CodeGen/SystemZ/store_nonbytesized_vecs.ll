@@ -5,34 +5,34 @@
 define void @fun0(<4 x i31> %src, ptr %p)
 ; CHECK-LABEL: fun0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlgvf %r0, %v24, 0
-; CHECK-NEXT:    vlvgp %v0, %r0, %r0
-; CHECK-NEXT:    vrepib %v1, 93
 ; CHECK-NEXT:    vlgvf %r0, %v24, 1
-; CHECK-NEXT:    vslb %v0, %v0, %v1
-; CHECK-NEXT:    larl %r1, .LCPI0_0
-; CHECK-NEXT:    vl %v2, 0(%r1), 3
-; CHECK-NEXT:    vsl %v0, %v0, %v1
+; CHECK-NEXT:    vlgvf %r1, %v24, 0
+; CHECK-NEXT:    larl %r3, .LCPI0_0
+; CHECK-NEXT:    vlgvf %r4, %v24, 2
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r0
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vrepib %v3, 62
-; CHECK-NEXT:    vslb %v1, %v1, %v3
-; CHECK-NEXT:    vlgvf %r0, %v24, 2
-; CHECK-NEXT:    vsl %v1, %v1, %v3
-; CHECK-NEXT:    vo %v0, %v0, %v1
-; CHECK-NEXT:    vlvgp %v1, %r0, %r0
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vrepib %v3, 31
-; CHECK-NEXT:    vslb %v1, %v1, %v3
+; CHECK-NEXT:    vlvgp %v2, %r1, %r1
+; CHECK-NEXT:    vlvgp %v3, %r4, %r4
+; CHECK-NEXT:    vn %v1, %v1, %v0
+; CHECK-NEXT:    vrepib %v4, 93
+; CHECK-NEXT:    vrepib %v5, 62
+; CHECK-NEXT:    vslb %v2, %v2, %v4
+; CHECK-NEXT:    vslb %v1, %v1, %v5
+; CHECK-NEXT:    vn %v3, %v3, %v0
+; CHECK-NEXT:    vrepib %v6, 31
 ; CHECK-NEXT:    vlgvf %r0, %v24, 3
-; CHECK-NEXT:    vsl %v1, %v1, %v3
-; CHECK-NEXT:    vo %v0, %v0, %v1
-; CHECK-NEXT:    vlvgp %v1, %r0, %r0
+; CHECK-NEXT:    vslb %v3, %v3, %v6
+; CHECK-NEXT:    vsl %v2, %v2, %v4
+; CHECK-NEXT:    vsl %v1, %v1, %v5
+; CHECK-NEXT:    vlvgp %v4, %r0, %r0
 ; CHECK-NEXT:    larl %r1, .LCPI0_1
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vo %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
-; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vo %v1, %v2, %v1
+; CHECK-NEXT:    vsl %v2, %v3, %v6
+; CHECK-NEXT:    vo %v1, %v1, %v2
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vn %v0, %v4, %v0
+; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vn %v0, %v0, %v2
 ; CHECK-NEXT:    vst %v0, 0(%r2), 4
 ; CHECK-NEXT:    br %r14
 {
@@ -49,34 +49,34 @@ define i16 @fun1(<16 x i1> %src)
 ; CHECK-NEXT:    vlgvb %r0, %v24, 0
 ; CHECK-NEXT:    vlgvb %r1, %v24, 1
 ; CHECK-NEXT:    risblg %r0, %r0, 16, 144, 15
+; CHECK-NEXT:    vlgvb %r2, %v24, 2
 ; CHECK-NEXT:    rosbg %r0, %r1, 49, 49, 14
-; CHECK-NEXT:    vlgvb %r1, %v24, 2
-; CHECK-NEXT:    rosbg %r0, %r1, 50, 50, 13
 ; CHECK-NEXT:    vlgvb %r1, %v24, 3
+; CHECK-NEXT:    rosbg %r0, %r2, 50, 50, 13
+; CHECK-NEXT:    vlgvb %r2, %v24, 4
 ; CHECK-NEXT:    rosbg %r0, %r1, 51, 51, 12
-; CHECK-NEXT:    vlgvb %r1, %v24, 4
-; CHECK-NEXT:    rosbg %r0, %r1, 52, 52, 11
 ; CHECK-NEXT:    vlgvb %r1, %v24, 5
+; CHECK-NEXT:    rosbg %r0, %r2, 52, 52, 11
+; CHECK-NEXT:    vlgvb %r2, %v24, 6
 ; CHECK-NEXT:    rosbg %r0, %r1, 53, 53, 10
-; CHECK-NEXT:    vlgvb %r1, %v24, 6
-; CHECK-NEXT:    rosbg %r0, %r1, 54, 54, 9
 ; CHECK-NEXT:    vlgvb %r1, %v24, 7
+; CHECK-NEXT:    rosbg %r0, %r2, 54, 54, 9
+; CHECK-NEXT:    vlgvb %r2, %v24, 8
 ; CHECK-NEXT:    rosbg %r0, %r1, 55, 55, 8
-; CHECK-NEXT:    vlgvb %r1, %v24, 8
-; CHECK-NEXT:    rosbg %r0, %r1, 56, 56, 7
 ; CHECK-NEXT:    vlgvb %r1, %v24, 9
+; CHECK-NEXT:    rosbg %r0, %r2, 56, 56, 7
+; CHECK-NEXT:    vlgvb %r2, %v24, 10
 ; CHECK-NEXT:    rosbg %r0, %r1, 57, 57, 6
-; CHECK-NEXT:    vlgvb %r1, %v24, 10
-; CHECK-NEXT:    rosbg %r0, %r1, 58, 58, 5
 ; CHECK-NEXT:    vlgvb %r1, %v24, 11
+; CHECK-NEXT:    rosbg %r0, %r2, 58, 58, 5
+; CHECK-NEXT:    vlgvb %r2, %v24, 12
 ; CHECK-NEXT:    rosbg %r0, %r1, 59, 59, 4
-; CHECK-NEXT:    vlgvb %r1, %v24, 12
-; CHECK-NEXT:    rosbg %r0, %r1, 60, 60, 3
 ; CHECK-NEXT:    vlgvb %r1, %v24, 13
+; CHECK-NEXT:    rosbg %r0, %r2, 60, 60, 3
+; CHECK-NEXT:    vlgvb %r2, %v24, 14
 ; CHECK-NEXT:    rosbg %r0, %r1, 61, 61, 2
-; CHECK-NEXT:    vlgvb %r1, %v24, 14
-; CHECK-NEXT:    rosbg %r0, %r1, 62, 62, 1
 ; CHECK-NEXT:    vlgvb %r1, %v24, 15
+; CHECK-NEXT:    rosbg %r0, %r2, 62, 62, 1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 0
 ; CHECK-NEXT:    llhr %r2, %r0
 ; CHECK-NEXT:    aghi %r15, 168
@@ -179,9 +179,9 @@ define void @fun3(ptr %src, ptr %p)
 ; CHECK-NEXT:    vrepib %v2, 32
 ; CHECK-NEXT:    vslb %v0, %v0, %v2
 ; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vsrlb %v1, %v0, %v2
 ; CHECK-NEXT:    vstef %v0, 8(%r3), 3
-; CHECK-NEXT:    vsrlb %v0, %v0, %v2
-; CHECK-NEXT:    vsteg %v0, 0(%r3), 1
+; CHECK-NEXT:    vsteg %v1, 0(%r3), 1
 ; CHECK-NEXT:    br %r14
 {
   %tmp = load <3 x i31>, ptr %src
