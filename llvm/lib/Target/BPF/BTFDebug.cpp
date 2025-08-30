@@ -305,17 +305,22 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
   const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
-    const auto *DDTy = cast<DIDerivedType>(Element);
-
-    BTFMember.NameOff = BDebug.addString(DDTy->getName());
-    if (HasBitField) {
-      uint8_t BitFieldSize = DDTy->isBitField() ? DDTy->getSizeInBits() : 0;
-      BTFMember.Offset = BitFieldSize << 24 | DDTy->getOffsetInBits();
-    } else {
-      BTFMember.Offset = DDTy->getOffsetInBits();
+    if (const auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
+      BTFMember.NameOff = BDebug.addString(DDTy->getName());
+      if (HasBitField) {
+        uint8_t BitFieldSize = DDTy->isBitField() ? DDTy->getSizeInBits() : 0;
+        BTFMember.Offset = BitFieldSize << 24 | DDTy->getOffsetInBits();
+      } else {
+        BTFMember.Offset = DDTy->getOffsetInBits();
+      }
+      const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
+      BTFMember.Type = BDebug.getTypeId(BaseTy);
+    } else if (const auto *DCTy = dyn_cast<DICompositeType>(Element)) {
+      BTFMember.NameOff = BDebug.addString(DCTy->getName());
+      BTFMember.Offset = DCTy->getOffsetInBits();
+      const auto *DTy = cast<DIType>(DCTy);
+      BTFMember.Type = BDebug.getTypeId(DTy);
     }
-    const auto *BaseTy = tryRemoveAtomicType(DDTy->getBaseType());
-    BTFMember.Type = BDebug.getTypeId(BaseTy);
     Members.push_back(BTFMember);
   }
 }
@@ -667,6 +672,23 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
   return TmpTypeId;
 }
 
+// Check whether the given composite type has any bitfield members
+bool BTFDebug::structHasBitField(const DICompositeType *CTy) {
+  const DINodeArray Elements = CTy->getElements();
+  for (const auto *Element : Elements) {
+    if (const auto *E = dyn_cast<DIDerivedType>(Element)) {
+      if (E->isBitField()) {
+        return true;
+      }
+    } else if (const auto *E = dyn_cast<DICompositeType>(Element)) {
+      if (structHasBitField(E)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
@@ -675,15 +697,7 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   if (VLen > BTF::MAX_VLEN)
     return;
 
-  // Check whether we have any bitfield members or not
-  bool HasBitField = false;
-  for (const auto *Element : Elements) {
-    auto E = cast<DIDerivedType>(Element);
-    if (E->isBitField()) {
-      HasBitField = true;
-      break;
-    }
-  }
+  bool HasBitField = structHasBitField(CTy);
 
   auto TypeEntry =
       std::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
@@ -696,10 +710,14 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   // Visit all struct members.
   int FieldNo = 0;
   for (const auto *Element : Elements) {
-    const auto Elem = cast<DIDerivedType>(Element);
-    visitTypeEntry(Elem);
-    processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
-    FieldNo++;
+    if (const auto *Elem = dyn_cast<DIDerivedType>(Element)) {
+      visitTypeEntry(Elem);
+      processDeclAnnotations(Elem->getAnnotations(), TypeId, FieldNo);
+      FieldNo++;
+    } else if (const auto *Elem = dyn_cast<DICompositeType>(Element)) {
+      auto Tag = CTy->getTag();
+      visitStructType(Elem, Tag == dwarf::DW_TAG_structure_type, TypeId);
+    }
   }
 }
 

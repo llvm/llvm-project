@@ -330,6 +330,7 @@ class BTFDebug : public DebugHandlerBase {
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
   void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
+  bool structHasBitField(const DICompositeType *CTy);
   void visitStructType(const DICompositeType *STy, bool IsStruct,
                        uint32_t &TypeId);
   void visitArrayType(const DICompositeType *ATy, uint32_t &TypeId);
