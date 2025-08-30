@@ -103,19 +103,23 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
-      set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+    set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
   else()
-      message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
+    message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
   endif()
+  file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
 
   set(_module "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${module_name}")
+  file(REAL_PATH "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." _import_path)
+  # file(TO_NATIVE_PATH ${_import_path} _import_path)
+
   set(NB_STUBGEN_CMD
       "${Python_EXECUTABLE}"
       "${NB_STUBGEN}"
       --module
       "${_module}"
       -i
-      "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.."
+      "${_import_path}"
       --recursive
       --include-private
       --output-dir
@@ -125,7 +129,7 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
   add_custom_command(
     OUTPUT ${NB_STUBGEN_OUTPUT}
     COMMAND ${NB_STUBGEN_CMD}
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
     DEPENDS "${mlir_depends_target}" "${depends_target}")
   set(_name "MLIRPythonModuleStubs_${_module}")
   add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
