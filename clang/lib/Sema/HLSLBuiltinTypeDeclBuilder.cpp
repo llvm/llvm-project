@@ -676,6 +676,75 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
       .finalize();
 }
 
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType RecordType = AST.getCanonicalTagType(Record);
+  QualType ConstRecordType = RecordType.withConst();
+  QualType ConstRecordRefType = AST.getLValueReferenceType(ConstRecordType);
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  BuiltinTypeMethodBuilder Builder(*this, "", AST.VoidTy, false, true);
+  Builder.addParam("other", ConstRecordRefType);
+  Builder.ensureCompleteDecl();
+
+  ParmVarDecl *OtherParam = Builder.Method->getParamDecl(0);
+
+  Expr *OtherDeclRef = DeclRefExpr::Create(
+      AST, NestedNameSpecifierLoc(), SourceLocation(), OtherParam, false,
+      DeclarationNameInfo(OtherParam->getDeclName(), SourceLocation()),
+      ConstRecordType, VK_LValue);
+
+  FieldDecl *HandleField = getResourceHandleField();
+  Expr *OtherHandleMemberExpr = MemberExpr::CreateImplicit(
+      AST, OtherDeclRef, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+
+  return Builder.assign(PH::Handle, OtherHandleMemberExpr).finalize();
+}
+
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType RecordType = AST.getCanonicalTagType(Record);
+  QualType ConstRecordType = RecordType.withConst();
+  QualType ConstRecordRefType = AST.getLValueReferenceType(ConstRecordType);
+  QualType RecordRefType = AST.getLValueReferenceType(RecordType);
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
+  BuiltinTypeMethodBuilder Builder(*this, Name, RecordRefType, false, false);
+  Builder.addParam("other", ConstRecordRefType);
+  Builder.ensureCompleteDecl();
+
+  ParmVarDecl *OtherParam = Builder.Method->getParamDecl(0);
+  Expr *OtherDeclRef = DeclRefExpr::Create(
+      AST, NestedNameSpecifierLoc(), SourceLocation(), OtherParam, false,
+      DeclarationNameInfo(OtherParam->getDeclName(), SourceLocation()),
+      ConstRecordType, VK_LValue);
+
+  FieldDecl *HandleField = getResourceHandleField();
+  Expr *OtherHandleMemberExpr = MemberExpr::CreateImplicit(
+      AST, OtherDeclRef, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+
+  Builder.assign(PH::Handle, OtherHandleMemberExpr);
+
+  // return *this;
+  CXXThisExpr *This = CXXThisExpr::Create(
+      AST, SourceLocation(), Builder.Method->getFunctionObjectParameterType(),
+      true);
+  Builder.StmtsList.push_back(This);
+
+  return Builder.finalize();
+}
+
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
   ASTContext &AST = Record->getASTContext();
   DeclarationName Subscript =
