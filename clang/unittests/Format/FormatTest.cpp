@@ -8575,6 +8575,19 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                Style);
 }
 
+TEST_F(FormatTest, BreakFunctionsReturningRecords) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.AfterClass = false;
+  Style.BraceWrapping.AfterStruct = false;
+  Style.BraceWrapping.AfterUnion = false;
+
+  verifyFormat("class Bar foo() {}", Style);
+  verifyFormat("struct Bar foo() {}", Style);
+  verifyFormat("union Bar foo() {}", Style);
+}
+
 TEST_F(FormatTest, DontBreakBeforeQualifiedOperator) {
   // Regression test for https://bugs.llvm.org/show_bug.cgi?id=40516:
   // Prefer keeping `::` followed by `operator` together.
@@ -15275,6 +15288,167 @@ TEST_F(FormatTest, NeverMergeShortRecords) {
                "void Bar();\n"
                "};",
                Style);
+}
+
+TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.SplitEmptyRecord = false;
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
+
+  verifyFormat("class foo {\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo {\n};", Style);
+
+  verifyFormat("struct foo {\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo {\n};", Style);
+
+  verifyFormat("union foo {\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo {\n};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
+
+  verifyFormat("class foo {\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo {\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo {\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("union foo {};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+
+  verifyFormat("class foo {\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo {\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo {\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo {};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+
+  verifyFormat("class foo { void bar(); };", Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo { int bar; };", Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo { int bar; };", Style);
+  verifyFormat("union foo {};", Style);
+
+  Style.BraceWrapping.AfterClass = true;
+  Style.BraceWrapping.AfterStruct = true;
+  Style.BraceWrapping.AfterUnion = true;
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
+
+  verifyFormat("class foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo\n{};", Style);
+
+  verifyFormat("struct foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo\n{};", Style);
+
+  verifyFormat("union foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo\n{};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
+
+  verifyFormat("class foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo\n{};", Style);
+
+  verifyFormat("struct foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("struct foo\n{};", Style);
+
+  verifyFormat("union foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("union foo\n{};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+
+  verifyFormat("class foo\n{\n"
+               "  void bar();\n"
+               "};",
+               Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo\n{\n"
+               "  int bar;\n"
+               "};",
+               Style);
+  verifyFormat("union foo {};", Style);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+
+  verifyFormat("class foo { void bar(); };", Style);
+  verifyFormat("class foo {};", Style);
+
+  verifyFormat("struct foo { int bar; };", Style);
+  verifyFormat("struct foo {};", Style);
+
+  verifyFormat("union foo { int bar; };", Style);
+  verifyFormat("union foo {};", Style);
+
+  // Ensure option gets overriden by SplitEmptyRecord
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+  Style.BraceWrapping.SplitEmptyRecord = true;
+
+  verifyFormat("class foo\n{\n}", Style);
+  verifyFormat("struct foo\n{\n}", Style);
+  verifyFormat("union foo\n{\n}", Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
