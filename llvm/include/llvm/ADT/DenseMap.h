@@ -81,21 +81,21 @@ public:
     if (empty())
       return end();
     if (shouldReverseIterate<KeyT>())
-      return makeIterator(getBucketsEnd() - 1, getBuckets(), *this);
-    return makeIterator(getBuckets(), getBucketsEnd(), *this);
+      return makeIterator(getBucketsEnd() - 1, getBuckets());
+    return makeIterator(getBuckets(), getBucketsEnd());
   }
   inline iterator end() {
-    return makeIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+    return makeIterator(getBucketsEnd(), getBucketsEnd(), true);
   }
   inline const_iterator begin() const {
     if (empty())
       return end();
     if (shouldReverseIterate<KeyT>())
-      return makeConstIterator(getBucketsEnd() - 1, getBuckets(), *this);
-    return makeConstIterator(getBuckets(), getBucketsEnd(), *this);
+      return makeConstIterator(getBucketsEnd() - 1, getBuckets());
+    return makeConstIterator(getBuckets(), getBucketsEnd());
   }
   inline const_iterator end() const {
-    return makeConstIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+    return makeConstIterator(getBucketsEnd(), getBucketsEnd(), true);
   }
 
   // Return an iterator to iterate over keys in the map.
@@ -186,7 +186,7 @@ public:
     if (BucketT *Bucket = doFind(Val))
       return makeIterator(
           Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
+          true);
     return end();
   }
   template <class LookupKeyT>
@@ -194,7 +194,7 @@ public:
     if (const BucketT *Bucket = doFind(Val))
       return makeConstIterator(
           Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
+          true);
     return end();
   }
 
@@ -485,30 +485,27 @@ private:
     return {makeInsertIterator(Bucket), Inserted};
   }
 
-  iterator makeIterator(BucketT *P, BucketT *E, DebugEpochBase &Epoch,
-                        bool NoAdvance = false) {
+  iterator makeIterator(BucketT *P, BucketT *E, bool NoAdvance = false) {
     if (shouldReverseIterate<KeyT>()) {
       BucketT *B = P == getBucketsEnd() ? getBuckets() : P + 1;
-      return iterator(B, E, Epoch, NoAdvance);
+      return iterator(B, E, *this, NoAdvance);
     }
-    return iterator(P, E, Epoch, NoAdvance);
+    return iterator(P, E, *this, NoAdvance);
   }
 
   const_iterator makeConstIterator(const BucketT *P, const BucketT *E,
-                                   const DebugEpochBase &Epoch,
                                    const bool NoAdvance = false) const {
     if (shouldReverseIterate<KeyT>()) {
       const BucketT *B = P == getBucketsEnd() ? getBuckets() : P + 1;
-      return const_iterator(B, E, Epoch, NoAdvance);
+      return const_iterator(B, E, *this, NoAdvance);
     }
-    return const_iterator(P, E, Epoch, NoAdvance);
+    return const_iterator(P, E, *this, NoAdvance);
   }
 
   iterator makeInsertIterator(BucketT *TheBucket) {
-    return makeIterator(TheBucket,
-                        shouldReverseIterate<KeyT>() ? getBuckets()
-                                                     : getBucketsEnd(),
-                        *this, true);
+    return makeIterator(
+        TheBucket,
+        shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(), true);
   }
 
   unsigned getNumEntries() const {
