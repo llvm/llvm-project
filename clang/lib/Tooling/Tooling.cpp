@@ -644,13 +644,13 @@ namespace {
 
 class ASTBuilderAction : public ToolAction {
   std::vector<std::unique_ptr<ASTUnit>> &ASTs;
-  CaptureDiagsKind CaptureKinds;
+  CaptureDiagsKind CaptureKind;
 
 public:
   ASTBuilderAction(
       std::vector<std::unique_ptr<ASTUnit>> &ASTs,
-      CaptureDiagsKind CaptureDiagnosticKinds = CaptureDiagsKind::None)
-      : ASTs(ASTs), CaptureKinds(CaptureDiagnosticKinds) {}
+      CaptureDiagsKind CaptureDiagnosticsKind = CaptureDiagsKind::None)
+      : ASTs(ASTs), CaptureKind(CaptureDiagnosticsKind) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *Files,
@@ -662,7 +662,7 @@ public:
                                             Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
-        Files, false, CaptureKinds);
+        Files, false, CaptureKind);
     if (!AST)
       return false;
 
