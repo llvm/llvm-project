@@ -226,7 +226,7 @@ def : Flag<["-"], "e">, Alias<editor>, HelpText<"Alias for --editor">;
 def no_use_colors : F<"no-use-colors">, HelpText<"Do not use colors.">;
 def : Flag<["-"], "X">,
       Alias<no_use_colors>,
-      HelpText<"Alias for --no-use-color">;
+      HelpText<"Alias for --no-use-colors">;
 
 def file : Separate<["--", "-"], "file">,
            MetaVarName<"<filename>">,
