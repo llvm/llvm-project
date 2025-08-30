@@ -207,6 +207,15 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to emit and error upon pass failure.
+  MlirOptMainConfig &emitErrorOnPassFailure(bool emit) {
+    emitErrorOnPassFailureFlag = emit;
+    return *this;
+  }
+  bool shouldEmitErrorOnPassFailure() const {
+    return emitErrorOnPassFailureFlag;
+  }
+
   /// Set whether to run the verifier on parsing.
   MlirOptMainConfig &verifyOnParsing(bool verify) {
     disableVerifierOnParsingFlag = !verify;
@@ -290,6 +299,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Emit an error upon a pass failure.
+  bool emitErrorOnPassFailureFlag = false;
 
   /// Disable the verifier on parsing.
   bool disableVerifierOnParsingFlag = false;
