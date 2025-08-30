@@ -62,8 +62,9 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
 void PreferIsaOrDynCastInConditionalsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Callee = Result.Nodes.getNodeAs<DeclRefExpr>("callee");
-  if (!Callee)
-    return;
+
+  // Callee should be matched if anything is matched.
+  assert(Callee && "Callee is null");
 
   SourceLocation StartLoc = Callee->getLocation();
   SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
