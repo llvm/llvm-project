@@ -629,7 +629,7 @@ define i64 @fold_ptrtoint_nested_nullgep_array_variable_multiple_uses(i64 %x, i6
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_nullgep_array_variable_multiple_uses
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; INSTCOMBINE-NEXT:    [[PTR_SPLIT:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]]
-; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr [2 x i16], ptr addrspace(1) [[PTR_SPLIT]], i64 0, i64 [[Y]]
+; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[PTR_SPLIT]], i64 [[Y]]
 ; INSTCOMBINE-NEXT:    call void @use_ptr(ptr addrspace(1) [[PTR]])
 ; INSTCOMBINE-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]

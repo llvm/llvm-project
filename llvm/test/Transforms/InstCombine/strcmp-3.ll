@@ -25,7 +25,7 @@ define i32 @fold_strcmp_a5i0_a5i1_to_0() {
 
 define i32 @call_strcmp_a5i0_a5iI(i64 %I) {
 ; CHECK-LABEL: @call_strcmp_a5i0_a5iI(
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr [5 x [4 x i8]], ptr @a5, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], ptr @a5, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(4) @a5, ptr noundef nonnull dereferenceable(1) [[Q]])
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
@@ -40,7 +40,7 @@ define i32 @call_strcmp_a5i0_a5iI(i64 %I) {
 
 define i32 @call_strcmp_a5iI_a5i0(i64 %I) {
 ; CHECK-LABEL: @call_strcmp_a5iI_a5i0(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr [5 x [4 x i8]], ptr @a5, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [4 x i8], ptr @a5, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(1) [[P]], ptr noundef nonnull dereferenceable(4) @a5)
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
@@ -68,7 +68,7 @@ define i32 @fold_strcmp_a5i0_a5i1_p1_to_0() {
 
 define i32 @call_strcmp_a5i0_a5i1_pI(i64 %I) {
 ; CHECK-LABEL: @call_strcmp_a5i0_a5i1_pI(
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr [5 x [4 x i8]], ptr @a5, i64 0, i64 1, i64 [[I:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], ptr @a5, i64 1, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(4) @a5, ptr noundef nonnull dereferenceable(1) [[Q]])
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
