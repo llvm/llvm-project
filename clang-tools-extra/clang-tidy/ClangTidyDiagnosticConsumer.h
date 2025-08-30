@@ -216,9 +216,7 @@ public:
 
   // whether experimental custom checks can be enabled.
   // enabled with `--experimental-custom-checks`
-  bool canExperimentalCustomChecks() const {
-    return ExperimentalCustomChecks;
-  }
+  bool canExperimentalCustomChecks() const { return ExperimentalCustomChecks; }
 
   void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
 

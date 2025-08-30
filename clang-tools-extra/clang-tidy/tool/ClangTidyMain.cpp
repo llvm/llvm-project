@@ -346,13 +346,14 @@ all of the checks.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    ExperimentalCustomChecks("experimental-custom-checks", desc(R"(
+static cl::opt<bool> ExperimentalCustomChecks("experimental-custom-checks",
+                                              desc(R"(
 Enable experimental clang-query based
 custom checks.
 see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
 )"),
-                                   cl::init(false), cl::cat(ClangTidyCategory));
+                                              cl::init(false),
+                                              cl::cat(ClangTidyCategory));
 
 namespace clang::tidy {
 
