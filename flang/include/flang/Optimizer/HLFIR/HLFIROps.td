@@ -375,6 +375,23 @@ def hlfir_CmpCharOp : hlfir_Op<"cmpchar",
   let hasVerifier = 1;
 }
 
+def hlfir_CharTrimOp
+    : hlfir_Op<
+          "char_trim", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "trim character";
+  let description = [{ Trim a character string. }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$chr);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+      $chr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$chr)>];
+}
+
 def hlfir_AllOp : hlfir_Op<"all", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "ALL transformational intrinsic";
   let description = [{
