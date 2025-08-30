@@ -256,6 +256,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -600,6 +601,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -717,9 +719,20 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
          Kind == OMPD_teams_loop || Kind == OMPD_target_teams_loop;
 }
 
-bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
+bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_interchange || DKind == OMPD_stripe;
+}
+
+bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_fuse;
+}
+
+bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
+  return isOpenMPCanonicalLoopNestTransformationDirective(DKind) ||
+         isOpenMPCanonicalLoopSequenceTransformationDirective(DKind);
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
