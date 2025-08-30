@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVISelLowering.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -94,7 +95,7 @@ TEST_F(RISCVSelectionDAGTest, computeKnownBits_SRLW) {
   auto Py = DAG->getConstant(2147483647, Loc, IntVT);
   auto N1 = DAG->getNode(ISD::AND, Loc, IntVT, Px, Py);
   auto Qx = DAG->getRegister(0, IntVT);
-  auto N2 = DAG->getNode(ISD::SRL, Loc, IntVT, N1, Qx);
+  auto N2 = DAG->getNode(RISCVISD::SRLW, Loc, IntVT, N1, Qx);
   auto N3 = DAG->getNode(ISD::ZERO_EXTEND, Loc, Int64VT, N2);
   // N1 = 0???????????????????????????????
   // N2 = 0???????????????????????????????
