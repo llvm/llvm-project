@@ -126,6 +126,10 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
   count messages.
 
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` 
+  scripts by adding the `-hide-progress` option to suppressing progress and
+  informational messages.
+
 New checks
 ^^^^^^^^^^
 
