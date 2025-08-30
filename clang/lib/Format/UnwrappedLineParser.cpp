@@ -960,8 +960,8 @@ static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
 
   bool IsEmptyBlock = NextToken.is(tok::r_brace);
   bool WrapRecordAllowed =
-      !(IsEmptyBlock &&
-        Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) ||
+      !(IsEmptyBlock && Style.AllowShortRecordOnASingleLine >
+                            FormatStyle::SRS_EmptyIfAttached) ||
       Style.BraceWrapping.SplitEmptyRecord;
 
   switch (Kind) {
