@@ -47,7 +47,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    ; implicit-def: $vgpr30_vgpr31
 ; CHECK-NEXT:    ; implicit-def: $vgpr22_vgpr23
 ; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %Flow10
+; CHECK-NEXT:  .LBB0_1: ; %Flow9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[24:25]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_17
@@ -62,7 +62,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_10
 ; CHECK-NEXT:  ; %bb.4: ; %.preheader1855.i.i.i3329.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[10:11]
+; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; CHECK-NEXT:    flat_load_dwordx2 v[24:25], v[24:25]
 ; CHECK-NEXT:    v_accvgpr_read_b32 v27, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v26, a2
@@ -120,10 +120,14 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  .LBB0_9: ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[22:23], 0
 <<<<<<< HEAD
+<<<<<<< HEAD
 ; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[10:11]
 =======
 ; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[12:13]
 >>>>>>> 5cef8c6c2c95 ([LSV] Merge contiguous chains across scalar types)
+=======
+; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[10:11]
+>>>>>>> 153ff02a7582 ([LSV] Check for power-of-two width)
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[20:21]
 ; CHECK-NEXT:    s_branch .LBB0_15
 ; CHECK-NEXT:  .LBB0_10: ; in Loop: Header=BB0_2 Depth=1
@@ -146,8 +150,12 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    global_store_dwordx2 v20, v[16:17], s[12:13]
 =======
 ; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[16:17]
+<<<<<<< HEAD
 ; CHECK-NEXT:    global_store_dwordx2 v20, v[16:17], s[14:15]
 >>>>>>> 5cef8c6c2c95 ([LSV] Merge contiguous chains across scalar types)
+=======
+; CHECK-NEXT:    global_store_dwordx2 v20, v[16:17], s[12:13]
+>>>>>>> 153ff02a7582 ([LSV] Check for power-of-two width)
 ; CHECK-NEXT:    s_cselect_b32 s23, s23, 0
 ; CHECK-NEXT:    s_cselect_b32 s22, s22, 0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], -1
@@ -155,6 +163,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  .LBB0_13: ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[22:23], 0
+<<<<<<< HEAD
 <<<<<<< HEAD
 ; CHECK-NEXT:  .LBB0_14: ; %Flow6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -166,6 +175,12 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b64_e32 v[30:31], v[24:25]
 ; CHECK-NEXT:  .LBB0_15: ; %Flow7
 >>>>>>> 5cef8c6c2c95 ([LSV] Merge contiguous chains across scalar types)
+=======
+; CHECK-NEXT:  .LBB0_14: ; %Flow6
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    v_mov_b64_e32 v[30:31], v[24:25]
+; CHECK-NEXT:  .LBB0_15: ; %Flow6
+>>>>>>> 153ff02a7582 ([LSV] Check for power-of-two width)
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[24:25], -1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
@@ -174,10 +189,14 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[24:25], 0
 <<<<<<< HEAD
+<<<<<<< HEAD
 ; CHECK-NEXT:    global_store_dwordx2 v20, v[20:21], s[12:13]
 =======
 ; CHECK-NEXT:    global_store_dwordx2 v20, v[20:21], s[14:15]
 >>>>>>> 5cef8c6c2c95 ([LSV] Merge contiguous chains across scalar types)
+=======
+; CHECK-NEXT:    global_store_dwordx2 v20, v[20:21], s[12:13]
+>>>>>>> 153ff02a7582 ([LSV] Check for power-of-two width)
 ; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_17: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm
