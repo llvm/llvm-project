@@ -1773,6 +1773,7 @@ def note_unsatisfied_trait
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
+           "%TriviallyDefaultConstructible{trivially default constructible}|"
            "%Final{final}"
            "}1">;
 
@@ -1808,6 +1809,8 @@ def note_unsatisfied_trait_reason
            "constructor}|"
            "%DeletedCtr{has a deleted %select{copy|move}1 "
            "constructor}|"
+           "%NTDCBase{has a non-trivially-default-constructible base %1}|"
+           "%NTDCField{has a non-trivially-default-constructible member %1 of type %2}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
            "assignment operator}|"
            "%DeletedAssign{has a deleted %select{copy|move}1 "
