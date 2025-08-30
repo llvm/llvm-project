@@ -167,19 +167,31 @@ void test_multiple_memory_owning_arguments() {
   );
 }
 
-// Test 8: Variadic constructor - test for potential out-of-bounds access
-// This tests a scenario where Call.getNumArgs() > CD->getNumParams()
+} // namespace unique_ptr_tests
+
+//===----------------------------------------------------------------------===//
+// Variadic constructor test cases
+//===----------------------------------------------------------------------===//
+namespace variadic_constructor_tests {
+
+// Variadic constructor - test for potential out-of-bounds access
+// This is the only test in this namespace and tests a scenario where Call.getNumArgs() > CD->getNumParams()
+// We use a synthetic unique_ptr here to activate the specific logic in the MallocChecker that will test out of bounds
 template <typename T>
-struct VariadicSmartPtr {
+struct unique_ptr {
   T* ptr;
-  
+
   // Constructor with ellipsis - can receive more arguments than parameters  
-  VariadicSmartPtr(T* p, ...) : ptr(p) {}
-  
-  ~VariadicSmartPtr() { delete ptr; }
+  unique_ptr(T* p, ...) : ptr(p) {}
+
+  ~unique_ptr() {
+    // This destructor intentionally doesn't delete 'ptr' to validate that the
+    // heuristic trusts that smart pointers (based on their class name) will
+    // release the pointee even if it doesn't understand their destructor.
+  }
 };
 
-void process_variadic_smart_ptr(VariadicSmartPtr<int> ptr) {
+void process_variadic_smart_ptr(unique_ptr<int> ptr) {
   // Function body doesn't matter for this test
 }
 
@@ -190,12 +202,12 @@ void test_variadic_constructor_bounds() {
   // The constructor has 1 formal parameter (T* p) plus ellipsis, but we pass multiple args
   // This should trigger the bounds checking issue in handleSmartPointerConstructorArguments
   int* raw_ptr = new int(42);
-  process_variadic_smart_ptr(VariadicSmartPtr<int>(raw_ptr, 1, 2, 3, 4, 5));
+  process_variadic_smart_ptr(unique_ptr<int>(raw_ptr, 1, 2, 3, 4, 5));
   
   (void)malloc_ptr;
 } // expected-warning {{Potential leak of memory pointed to by 'malloc_ptr'}} expected-note {{Potential leak of memory pointed to by 'malloc_ptr'}}
 
-} // namespace unique_ptr_tests
+} // namespace variadic_constructor_tests
 
 //===----------------------------------------------------------------------===//
 // shared_ptr test cases
