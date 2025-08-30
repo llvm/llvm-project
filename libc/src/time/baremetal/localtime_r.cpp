@@ -9,13 +9,13 @@
 #include "src/time/localtime_r.h"
 #include "src/time/time_utils.h"
 
+#include "src/__support/macros/null_check.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(struct tm *, localtime_r,
                    (const time_t *timer, struct tm *buf)) {
-  if (timer == nullptr) {
-    return nullptr;
-  }
+  LIBC_CRASH_ON_NULLPTR(timer);
 
   return time_utils::localtime_internal(timer, buf);
 }
