@@ -244,6 +244,19 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+  - Fix-it handles Callees with nested-name-specifier correctly.
+
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
+
+  - ``for`` loops are supported.
+
+  - ``cast_if_present`` and ``dyn_cast_if_present`` are supported in the case
+    that ``isa_and_nonnull`` is preferred.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
