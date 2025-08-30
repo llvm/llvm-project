@@ -872,6 +872,9 @@ void foo33(__builtin_va_list a) {
 // LLVM: %[[COMPLEX:.*]] = va_arg ptr %[[TMP_A]], { float, float }
 // LLVM: store { float, float } %[[COMPLEX]], ptr %[[B_ADDR]], align 4
 
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// Test will be updated when that is implemented
+
 // OGCG: %[[A_ADDR:.*]] = alloca ptr, align 8
 // OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: store ptr %[[ARG_0:.*]], ptr %[[A_ADDR]], align 8
