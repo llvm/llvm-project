@@ -1,6 +1,9 @@
 # Check the umask command
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-umask | FileCheck -match-full-lines %s
+# TODO(boomanaiden154): We should be asserting that we get expected behavior
+# on Windows rather than just listing this as unsupported.
+# UNSUPPORTED: system-windows
 
 # CHECK: -- Testing: 3 tests{{.*}}
 
