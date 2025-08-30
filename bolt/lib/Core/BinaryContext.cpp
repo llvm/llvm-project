@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <functional>
@@ -1636,7 +1637,9 @@ void BinaryContext::preprocessDWODebugInfo() {
       if (!opts::CompDirOverride.empty()) {
         sys::path::append(AbsolutePath, opts::CompDirOverride);
         sys::path::append(AbsolutePath, DWOName);
-      }
+      } else if (!sys::fs::exists(DwarfUnit->getCompilationDir()) &&
+                 sys::fs::exists(DWOName))
+        AbsolutePath = DWOName;
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
