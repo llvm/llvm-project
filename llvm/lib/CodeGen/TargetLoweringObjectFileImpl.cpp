@@ -2424,7 +2424,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
   if (!GO->hasSection())
     report_fatal_error("#pragma clang section is not yet supported");
 
-  StringRef SectionName = GO->getSection();
+  std::string SectionName(GO->getSection());
 
   // Handle the XCOFF::TD case first, then deal with the rest.
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
@@ -2446,6 +2446,25 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
     MappingClass = XCOFF::XMC_RO;
   else
     report_fatal_error("XCOFF other section types not yet implemented.");
+
+  // The profiling instrumentation symbols are special in that we want to
+  // emit a unique CSECT for each when function sections are enabled, which
+  // are then renamed back to the CSECT name specified by the explicit section.
+  // This is to work around the limitation of not having section groups or a
+  // similar feature in XCOFF.
+  if (TM.getFunctionSections()) {
+    std::string ProfilingDataSectionName =
+        getInstrProfSectionName(IPSK_data, Triple::XCOFF, false);
+    std::string ProfilingCounterSectionName =
+        getInstrProfSectionName(IPSK_cnts, Triple::XCOFF, false);
+    if ((SectionName == ProfilingDataSectionName &&
+         GO->getName().starts_with(getInstrProfDataVarPrefix())) ||
+        (SectionName == ProfilingCounterSectionName &&
+         GO->getName().starts_with(getInstrProfCountersVarPrefix()))) {
+      SectionName += ".";
+      SectionName += GO->getName();
+    }
+  }
 
   return getContext().getXCOFFSection(
       SectionName, Kind, XCOFF::CsectProperties(MappingClass, XCOFF::XTY_SD),
