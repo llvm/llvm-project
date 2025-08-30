@@ -967,12 +967,12 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
-  if (Save) {
-    SavePoints.push_back(Save);
-    RestorePoints.push_back(Restore);
-  }
+
+  // List of CalleeSavedInfo for registers will be added during prologepilog
+  // pass
+  SaveRestorePoints::PointsMap SavePoints({{Save, {}}});
+  SaveRestorePoints::PointsMap RestorePoints({{Restore, {}}});
+
   MFI.setSavePoints(SavePoints);
   MFI.setRestorePoints(RestorePoints);
   ++NumCandidates;
