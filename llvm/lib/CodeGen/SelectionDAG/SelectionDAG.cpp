@@ -3852,7 +3852,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
+    if (ConstantSDNode *C =
+            isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
       unsigned Amt = C->getAPIntValue().urem(BitWidth);
 
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
