@@ -63,13 +63,11 @@ bool verifyRangeType(uint32_t Type) {
   return false;
 }
 
-bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
-                               uint32_t FlagsVal) {
+bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
+                               dxbc::DescriptorRangeFlags Flags) {
   using FlagT = dxbc::DescriptorRangeFlags;
-  FlagT Flags = FlagT(FlagsVal);
 
-  const bool IsSampler =
-      (Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler));
+  const bool IsSampler = (Type == dxbc::DescriptorRangeType::Sampler);
 
   if (Version == 1) {
     // Since the metadata is unversioned, we expect to explicitly see the values
@@ -123,6 +121,11 @@ bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
     Mask |= FlagT::DataStatic;
   }
   return (Flags & ~Mask) == FlagT::None;
+}
+bool verifyDescriptorRangeFlag(uint32_t Version, dxbc::DescriptorRangeType Type,
+                               uint32_t Flags) {
+  return verifyDescriptorRangeFlag(Version, Type,
+                                   dxbc::DescriptorRangeFlags(Flags));
 }
 
 bool verifyNumDescriptors(uint32_t NumDescriptors) {
