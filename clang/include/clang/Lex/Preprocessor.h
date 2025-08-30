@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -134,6 +135,24 @@ struct CXXStandardLibraryVersionInfo {
   enum Library { Unknown, LibStdCXX };
   Library Lib;
   std::uint64_t Version;
+};
+
+class ExportContextualKeywordInfo {
+  Token ExportTok;
+  bool AtPhysicalStartOfLine = false;
+
+public:
+  ExportContextualKeywordInfo() = default;
+  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
+      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
+
+  bool isValid() const { return ExportTok.is(tok::kw_export); }
+  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
+  Token getExportTok() const { return ExportTok; }
+  void reset() {
+    ExportTok.startToken();
+    AtPhysicalStartOfLine = false;
+  }
 };
 
 /// Engages in a tight little dance with the lexer to efficiently
@@ -339,8 +358,9 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The import path for named module that we're currently processing.
-  SmallVector<IdentifierLoc, 2> NamedModuleImportPath;
+  /// The source location of the \c module contextual keyword we just
+  /// lexed, if any.
+  SourceLocation ModuleDeclLoc;
 
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
@@ -350,6 +370,15 @@ private:
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
+
+  /// Whether we're importing a standard C++20 named Modules.
+  bool ImportingCXXNamedModules = false;
+
+  /// Whether we're declaring a standard C++20 named Modules.
+  bool DeclaringCXXNamedModules = false;
+
+  /// Whether the last token we lexed was an 'export' keyword.
+  ExportContextualKeywordInfo LastTokenWasExportKeyword;
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
@@ -638,10 +667,6 @@ private:
   };
 
   ModuleDeclSeq ModuleDeclState;
-
-  /// Whether the module import expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleImportExpectsIdentifier = false;
 
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
@@ -1776,6 +1801,22 @@ public:
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
+  bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                             SmallVectorImpl<Token> &Suffix,
+                             SmallVectorImpl<IdentifierLoc> &Path,
+                             bool AllowMacroExpansion = true);
+  void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
+  void HandleCXXImportDirective(Token Import);
+  void HandleCXXModuleDirective(Token Module);
+
+  /// Callback invoked when the lexer sees one of export, import or module token
+  /// at the start of a line.
+  ///
+  /// This consumes the import, module directive, modifies the
+  /// lexer/preprocessor state, and advances the lexer(s) so that the next token
+  /// read is the correct one.
+  bool HandleModuleContextualKeyword(Token &Result,
+                                     bool TokAtPhysicalStartOfLine);
 
   /// Get the start location of the first pp-token in main file.
   SourceLocation getMainFileFirstPPTokenLoc() const {
@@ -1785,7 +1826,10 @@ public:
   }
 
   bool LexAfterModuleImport(Token &Result);
-  void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
+  void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
+                             bool StopUntilEOD = false);
+  bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
+                                           bool StopUntilEOD = false);
 
   void makeModuleVisible(Module *M, SourceLocation Loc,
                          bool IncludeExports = true);
@@ -2401,20 +2445,27 @@ public:
   /// If \p EnableMacros is true, then we consider macros that expand to zero
   /// tokens as being ok.
   ///
+  /// If \p ExtraToks not null, the extra tokens will be saved in this
+  /// container.
+  ///
   /// \return The location of the end of the directive (the terminating
   /// newline).
-  SourceLocation CheckEndOfDirective(const char *DirType,
-                                     bool EnableMacros = false);
+  SourceLocation
+  CheckEndOfDirective(StringRef DirType, bool EnableMacros = false,
+                      SmallVectorImpl<Token> *ExtraToks = nullptr);
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
-  SourceRange DiscardUntilEndOfDirective() {
+  SourceRange
+  DiscardUntilEndOfDirective(SmallVectorImpl<Token> *DiscardedToks = nullptr) {
     Token Tmp;
-    return DiscardUntilEndOfDirective(Tmp);
+    return DiscardUntilEndOfDirective(Tmp, DiscardedToks);
   }
 
   /// Same as above except retains the token that was found.
-  SourceRange DiscardUntilEndOfDirective(Token &Tok);
+  SourceRange
+  DiscardUntilEndOfDirective(Token &Tok,
+                             SmallVectorImpl<Token> *DiscardedToks = nullptr);
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -2485,11 +2536,12 @@ public:
   }
 
   /// If we're importing a standard C++20 Named Modules.
-  bool isInImportingCXXNamedModules() const {
-    // NamedModuleImportPath will be non-empty only if we're importing
-    // Standard C++ named modules.
-    return !NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules &&
-           !IsAtImport;
+  bool isImportingCXXNamedModules() const {
+    return getLangOpts().CPlusPlusModules && ImportingCXXNamedModules;
+  }
+
+  bool isDeclaringCXXNamedModules() const {
+    return getLangOpts().CPlusPlusModules && DeclaringCXXNamedModules;
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.

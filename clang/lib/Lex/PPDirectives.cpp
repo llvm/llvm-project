@@ -82,14 +82,19 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
 
 /// Read and discard all tokens remaining on the current line until
 /// the tok::eod token is found.
-SourceRange Preprocessor::DiscardUntilEndOfDirective(Token &Tmp) {
+SourceRange Preprocessor::DiscardUntilEndOfDirective(
+    Token &Tmp, SmallVectorImpl<Token> *DiscardedToks) {
   SourceRange Res;
-
-  LexUnexpandedToken(Tmp);
+  auto ReadNextTok = [&]() {
+    LexUnexpandedToken(Tmp);
+    if (DiscardedToks && Tmp.isNot(tok::eod))
+      DiscardedToks->push_back(Tmp);
+  };
+  ReadNextTok();
   Res.setBegin(Tmp.getLocation());
   while (Tmp.isNot(tok::eod)) {
     assert(Tmp.isNot(tok::eof) && "EOF seen while discarding directive tokens");
-    LexUnexpandedToken(Tmp);
+    ReadNextTok();
   }
   Res.setEnd(Tmp.getLocation());
   return Res;
@@ -439,21 +444,27 @@ void Preprocessor::ReadMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
 /// true, then we consider macros that expand to zero tokens as being ok.
 ///
 /// Returns the location of the end of the directive.
-SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
-                                                 bool EnableMacros) {
+SourceLocation
+Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
+                                  SmallVectorImpl<Token> *ExtraToks) {
   Token Tmp;
+  auto ReadNextTok = [this, ExtraToks, &Tmp](auto &&LexFn) {
+    std::invoke(LexFn, this, Tmp);
+    if (ExtraToks && Tmp.isNot(tok::eod))
+      ExtraToks->push_back(Tmp);
+  };
   // Lex unexpanded tokens for most directives: macros might expand to zero
   // tokens, causing us to miss diagnosing invalid lines.  Some directives (like
   // #line) allow empty macros.
   if (EnableMacros)
-    Lex(Tmp);
+    ReadNextTok(&Preprocessor::Lex);
   else
-    LexUnexpandedToken(Tmp);
+    ReadNextTok(&Preprocessor::LexUnexpandedToken);
 
   // There should be no tokens after the directive, but we allow them as an
   // extension.
   while (Tmp.is(tok::comment))  // Skip comments in -C mode.
-    LexUnexpandedToken(Tmp);
+    ReadNextTok(&Preprocessor::LexUnexpandedToken);
 
   if (Tmp.is(tok::eod))
     return Tmp.getLocation();
@@ -466,7 +477,14 @@ SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
   if ((LangOpts.GNUMode || LangOpts.C99 || LangOpts.CPlusPlus) &&
       !CurTokenLexer)
     Hint = FixItHint::CreateInsertion(Tmp.getLocation(),"//");
-  Diag(Tmp, diag::ext_pp_extra_tokens_at_eol) << DirType << Hint;
+
+  unsigned DiagID = diag::ext_pp_extra_tokens_at_eol;
+  // C++20 import or module directive has no '#' prefix.
+  if (getLangOpts().CPlusPlusModules &&
+      (DirType == "import" || DirType == "module"))
+    DiagID = diag::ext_pp_extra_tokens_at_module_directive_eol;
+
+  Diag(Tmp, DiagID) << DirType << Hint;
   return DiscardUntilEndOfDirective().getEnd();
 }
 
@@ -1245,9 +1263,14 @@ void Preprocessor::HandleDirective(Token &Result) {
   // Save the '#' token in case we need to return it later.
   Token SavedHash = Result;
 
+  bool IsCXX20ImportOrModuleDirective =
+      getLangOpts().CPlusPlusModules &&
+      Result.isModuleContextualKeyword(/*AllowExport=*/false);
+
   // Read the next token, the directive flavor.  This isn't expanded due to
   // C99 6.10.3p8.
-  LexUnexpandedToken(Result);
+  if (!IsCXX20ImportOrModuleDirective)
+    LexUnexpandedToken(Result);
 
   // C99 6.10.3p11: Is this preprocessor directive in macro invocation?  e.g.:
   //   #define A(x) #x
@@ -1266,7 +1289,9 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp___include_macros:
       case tok::pp_pragma:
       case tok::pp_embed:
-        Diag(Result, diag::err_embedded_directive) << II->getName();
+      case tok::pp_module:
+        Diag(Result, diag::err_embedded_directive)
+            << IsCXX20ImportOrModuleDirective << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
@@ -1357,9 +1382,12 @@ void Preprocessor::HandleDirective(Token &Result) {
     // C99 6.10.6 - Pragma Directive.
     case tok::pp_pragma:
       return HandlePragmaDirective({PIK_HashPragma, SavedHash.getLocation()});
-
+    case tok::pp_module:
+      return HandleCXXModuleDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
+      if (IsCXX20ImportOrModuleDirective)
+        return HandleCXXImportDirective(Result);
       return HandleImportDirective(SavedHash.getLocation(), Result);
     case tok::pp_include_next:
       return HandleIncludeNextDirective(SavedHash.getLocation(), Result);
@@ -4051,4 +4079,228 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   StringRef FilenameToGo =
       StringRef(static_cast<char *>(Mem), OriginalFilename.size());
   HandleEmbedDirectiveImpl(HashLoc, *Params, BinaryContents, FilenameToGo);
+}
+
+void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
+  assert(getLangOpts().CPlusPlusModules && ImportTok.is(tok::kw_import));
+  llvm::SaveAndRestore<bool> SaveImportingCXXModules(
+      this->ImportingCXXNamedModules);
+  ImportingCXXNamedModules = true;
+
+  if (LastTokenWasExportKeyword.isValid())
+    LastTokenWasExportKeyword.reset();
+
+  Token Tok;
+  if (LexHeaderName(Tok)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName());
+    return;
+  }
+
+  SourceLocation UseLoc = ImportTok.getLocation();
+  SmallVector<Token, 4> DirToks{ImportTok};
+  SmallVector<IdentifierLoc, 2> Path;
+  bool ImportingHeader = false;
+  bool IsPartition = false;
+  std::string FlatName;
+  switch (Tok.getKind()) {
+  case tok::header_name:
+    ImportingHeader = true;
+    DirToks.push_back(Tok);
+    break;
+  case tok::colon:
+    IsPartition = true;
+    DirToks.push_back(Tok);
+    UseLoc = Tok.getLocation();
+    Lex(Tok);
+    [[fallthrough]];
+  case tok::identifier: {
+    if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path)) {
+      if (Tok.isNot(tok::eod))
+        CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
+                            /*EnableMacros=*/false, &DirToks);
+      EnterModuleSuffixTokenStream(DirToks);
+      return;
+    }
+
+    bool IsValid =
+        (IsPartition && ModuleDeclState.isNamedModule()) || !IsPartition;
+    if (Callbacks && IsValid) {
+      if (IsPartition && ModuleDeclState.isNamedModule()) {
+        FlatName += ModuleDeclState.getPrimaryName();
+        FlatName += ":";
+      }
+
+      FlatName += ModuleLoader::getFlatNameFromPath(Path);
+      SourceLocation StartLoc = IsPartition ? UseLoc : Path[0].getLoc();
+      IdentifierLoc FlatNameLoc(StartLoc, getIdentifierInfo(FlatName));
+
+      // We don't/shouldn't load the standard c++20 modules when preprocessing.
+      // so the imported module is nullptr.
+      Callbacks->moduleImport(ImportTok.getLocation(),
+                              ModuleIdPath(FlatNameLoc),
+                              /*Imported=*/nullptr);
+    }
+    break;
+  }
+  default:
+    DirToks.push_back(Tok);
+    break;
+  }
+
+  // Consume the pp-import-suffix and expand any macros in it now, if we're not
+  // at the semicolon already.
+  if (!DirToks.back().isOneOf(tok::semi, tok::eod))
+    CollectPPImportSuffix(DirToks);
+
+  if (DirToks.back().isNot(tok::eod))
+    CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName());
+  else
+    DirToks.pop_back();
+
+  // This is not a pp-import after all.
+  if (DirToks.back().isNot(tok::semi)) {
+    EnterModuleSuffixTokenStream(DirToks);
+    return;
+  }
+
+  if (ImportingHeader) {
+    // C++2a [cpp.module]p1:
+    //   The ';' preprocessing-token terminating a pp-import shall not have
+    //   been produced by macro replacement.
+    SourceLocation SemiLoc = DirToks.back().getLocation();
+    if (SemiLoc.isMacroID())
+      Diag(SemiLoc, diag::err_header_import_semi_in_macro);
+
+    auto Action = HandleHeaderIncludeOrImport(
+        /*HashLoc*/ SourceLocation(), ImportTok, Tok, SemiLoc);
+    switch (Action.Kind) {
+    case ImportAction::None:
+      break;
+
+    case ImportAction::ModuleBegin:
+      // Let the parser know we're textually entering the module.
+      DirToks.emplace_back();
+      DirToks.back().startToken();
+      DirToks.back().setKind(tok::annot_module_begin);
+      DirToks.back().setLocation(SemiLoc);
+      DirToks.back().setAnnotationEndLoc(SemiLoc);
+      DirToks.back().setAnnotationValue(Action.ModuleForHeader);
+      [[fallthrough]];
+
+    case ImportAction::ModuleImport:
+    case ImportAction::HeaderUnitImport:
+    case ImportAction::SkippedModuleImport:
+      // We chose to import (or textually enter) the file. Convert the
+      // header-name token into a header unit annotation token.
+      DirToks[1].setKind(tok::annot_header_unit);
+      DirToks[1].setAnnotationEndLoc(DirToks[0].getLocation());
+      DirToks[1].setAnnotationValue(Action.ModuleForHeader);
+      // FIXME: Call the moduleImport callback?
+      break;
+    case ImportAction::Failure:
+      assert(TheModuleLoader.HadFatalFailure &&
+             "This should be an early exit only to a fatal error");
+      CurLexer->cutOffLexing();
+      return;
+    }
+  }
+
+  EnterModuleSuffixTokenStream(DirToks);
+}
+
+void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
+  assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
+  Token Introducer = ModuleTok;
+  if (LastTokenWasExportKeyword.isValid()) {
+    Introducer = LastTokenWasExportKeyword.getExportTok();
+    LastTokenWasExportKeyword.reset();
+  }
+
+  SourceLocation StartLoc = Introducer.getLocation();
+  if (!IncludeMacroStack.empty()) {
+    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
+    Diag(StartLoc, diag::err_module_decl_in_header)
+        << SourceRange(StartLoc, End);
+    return;
+  }
+
+  if (CurPPLexer->getConditionalStackDepth() != 0) {
+    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
+    Diag(StartLoc, diag::err_pp_cond_span_module_decl)
+        << SourceRange(StartLoc, End);
+    return;
+  }
+
+  Token Tok;
+  SourceLocation UseLoc = ModuleTok.getLocation();
+  SmallVector<Token, 4> DirToks{ModuleTok};
+  SmallVector<IdentifierLoc, 2> Path, Partition;
+  LexUnexpandedToken(Tok);
+
+  switch (Tok.getKind()) {
+  // Global Module Fragment.
+  case tok::semi:
+    DirToks.push_back(Tok);
+    break;
+  case tok::colon:
+    DirToks.push_back(Tok);
+    LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::kw_private)) {
+      if (Tok.isNot(tok::eod))
+        CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                            /*EnableMacros=*/false, &DirToks);
+      EnterModuleSuffixTokenStream(DirToks);
+      return;
+    }
+    DirToks.push_back(Tok);
+    break;
+  case tok::identifier: {
+    // C++ [cpp.module]p3: Any preprocessing tokens after the module
+    // preprocessing token in the module directive are processed just as in
+    // normal text.
+    //
+    // P3034R1 Module Declarations Shouldn’t be Macros.
+    if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path,
+                              /*AllowMacroExpansion=*/false)) {
+      if (Tok.isNot(tok::eod))
+        CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                            /*EnableMacros=*/false, &DirToks);
+      EnterModuleSuffixTokenStream(DirToks);
+      return;
+    }
+
+    // C++20 [cpp.module]p
+    //   The pp-tokens, if any, of a pp-module shall be of the form:
+    //     pp-module-name pp-module-partition[opt] pp-tokens[opt]
+    if (Tok.is(tok::colon)) {
+      LexUnexpandedToken(Tok);
+      if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition)) {
+        if (Tok.isNot(tok::eod))
+          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName());
+        EnterModuleSuffixTokenStream(DirToks);
+        return;
+      }
+    }
+    break;
+  }
+  default:
+    DirToks.push_back(Tok);
+    break;
+  }
+
+  // Consume the pp-import-suffix and expand any macros in it now, if we're not
+  // at the semicolon already.
+  SourceLocation End = DirToks.back().getLocation();
+  if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
+    CollectPPImportSuffix(DirToks);
+    End = DirToks.back().getLocation();
+  }
+
+  if (DirToks.back().isNot(tok::eod))
+    End = CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                              /*EnableMacros=*/false, &DirToks);
+  else
+    End = DirToks.pop_back_val().getLocation();
+  EnterModuleSuffixTokenStream(DirToks);
 }
