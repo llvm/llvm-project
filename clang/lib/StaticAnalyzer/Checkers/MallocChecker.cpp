@@ -3144,8 +3144,8 @@ static bool isSmartOwningPtrType(QualType QT) {
     if (!ND)
       return false;
 
-    // Accept both std and custom smart pointer implementations for broader
-    // coverage
+    // For broader coverage we recognize all template classes with names that
+    // match the allowlist even if they are not declared in namespace 'std'.
     return isSmartOwningPtrName(ND->getName());
   }
 
