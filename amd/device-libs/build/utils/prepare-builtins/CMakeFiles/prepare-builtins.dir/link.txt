@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/prepare-builtins.dir/prepare-builtins.cpp.o" -o prepare-builtins   -L/usr/lib/llvm-14/lib  -Wl,-rpath,/usr/lib/llvm-14/lib /usr/lib/llvm-14/lib/libLLVM-14.so.1

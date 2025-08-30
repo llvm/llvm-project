@@ -659,11 +659,19 @@ bool Vectorizer::runOnPseudoBB(BasicBlock::iterator Begin,
     if (!AllElemsMatchTotalBits(C1) || !AllElemsMatchTotalBits(C2))
       continue;
 
-    // Rebase C2's offsets into C1's coordinate space prior to merging.
-    rebaseChain(C2, *DeltaOpt);
+    // Power-of-two span ensures we can form a legal, single vector access without
+    // padding or splitting. Many targets and cost models assume POT widths, and
+    // it guarantees an integral element count for the chosen VecElemTy.
+    APInt Sz = C2.front().OffsetFromLeader +
+      DL.getTypeStoreSize(getLoadStoreType(C2.front().Inst)) -
+      C1.back().OffsetFromLeader + *DeltaOpt;
+    if (!Sz.isPowerOf2())
+      continue;
 
-    // Merge C2 into C1 by appending all elements of C2 to C1, then erase C2
+    // Rebase C2's offsets into C1's coordinate space prior to merging and
+    // merge C2 into C1 by appending all elements of C2 to C1, then erase C2
     // from ContiguousSubChains.
+    rebaseChain(C2, *DeltaOpt);
     C1.insert(C1.end(), C2.begin(), C2.end());
     ContiguousSubChains.erase(ContiguousSubChains.begin() + I);
 
