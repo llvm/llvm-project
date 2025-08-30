@@ -334,14 +334,14 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
 
 static void ignoreTypeLocClasses(
     TypeLoc &Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   while (llvm::is_contained(LocClasses, Loc.getTypeLocClass()))
     Loc = Loc.getNextTypeLoc();
 }
 
 static bool isMultiLevelPointerToTypeLocClasses(
     TypeLoc Loc,
-    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
+    const std::initializer_list<TypeLoc::TypeLocClass> &LocClasses) {
   ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
   TypeLoc::TypeLocClass TLC = Loc.getTypeLocClass();
   if (TLC != TypeLoc::Pointer && TLC != TypeLoc::MemberPointer)

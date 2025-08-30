@@ -89,11 +89,11 @@ static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
   }
   return true;
 }
+#endif // NDEBUG
 
 static std::string stringifyReassocIndices(ReassociationIndicesRef ri) {
   return llvm::interleaved(ri, ", ", /*Prefix=*/"|", /*Suffix=*/"");
 }
-#endif // NDEBUG
 
 /// Return the index of the first result of `map` that is a function of
 /// AffineDimExpr(dim), std::nullopt otherwise.
