@@ -130,7 +130,7 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
     OUTPUT ${NB_STUBGEN_OUTPUT}
     COMMAND ${NB_STUBGEN_CMD}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
-    DEPENDS "${mlir_depends_target}" "${depends_target}")
+    DEPENDS "${mlir_depends_target}" "${depends_target}" MLIRPythonSources.Core.Python)
   set(_name "MLIRPythonModuleStubs_${_module}")
   add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
