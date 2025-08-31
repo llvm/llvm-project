@@ -87,6 +87,7 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
   }
 }
 
+#ifndef _WIN32
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::orc::LLJITBuilder &JITBuilder,
                                          llvm::Error &Err, pid_t ChildPid)
@@ -101,6 +102,7 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
     return;
   }
 }
+#endif
 
 IncrementalExecutor::~IncrementalExecutor() {}
 

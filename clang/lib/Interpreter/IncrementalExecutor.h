@@ -60,9 +60,11 @@ public:
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
+#ifndef _WIN32
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err,
                       pid_t ChildPid);
+#endif
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
