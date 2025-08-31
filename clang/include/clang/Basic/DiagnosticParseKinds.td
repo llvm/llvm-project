@@ -1777,12 +1777,14 @@ def ext_bit_int : Extension<
 let CategoryName = "Modules Issue" in {
 def err_invalid_module_or_import_directive : Error<
   "the %select{module|import}0 directive is ill-formed, "
-  "%select{module contextual keyword must be followed by an identifier "
+  "%select{module contextual keyword must be immediately "
+  "followed on the same line by an identifier, "
   "or a ';' after being at the start of a line, or preceded by "
   "an export keyword at the start of a line|"
-  "import contextual keyword must be followed by an identifier, "
-  "'<', '\"', or ':', but not '::', after being at the start of a "
-  "line or preceded by an export at the start of the line}0">;
+  "import contextual keyword must be immediately followed "
+  "on the same line by an identifier, '<', '\"', or ':', but not '::', "
+  "after being at the start of a line or preceded by an export at "
+  "the start of the line}0">;
 def err_unexpected_module_or_import_decl : Error<
   "%select{module|import}0 declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
