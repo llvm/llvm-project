@@ -2510,7 +2510,6 @@ namespace {
   for (const auto &[HwModeID, EncodingIDs] : EncodingIDsByHwMode) {
     for (unsigned EncodingID : EncodingIDs) {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
-      const Record *EncodingDef = Encoding.getRecord();
       const unsigned BitWidth =
           IsVarLenInst ? MaxInstLen : Encoding.getBitWidth();
       StringRef DecoderNamespace = Encoding.getDecoderNamespace();
