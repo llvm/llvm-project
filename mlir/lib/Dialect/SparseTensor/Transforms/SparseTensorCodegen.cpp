@@ -412,13 +412,13 @@ static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
   if (memTp.getRank() > 1)
     return mem;
   // Truncate linear memrefs to given size.
-  return builder
-      .create<memref::SubViewOp>(
-          loc, MemRefType::get({ShapedType::kDynamic}, memTp.getElementType()),
-          mem, ValueRange{}, ValueRange{sz}, ValueRange{},
-          ArrayRef<int64_t>{0},                    // static offset
-          ArrayRef<int64_t>{ShapedType::kDynamic}, // dynamic size
-          ArrayRef<int64_t>{1})                    // static stride
+  return memref::SubViewOp::create(
+             builder, loc,
+             MemRefType::get({ShapedType::kDynamic}, memTp.getElementType()),
+             mem, ValueRange{}, ValueRange{sz}, ValueRange{},
+             ArrayRef<int64_t>{0},                    // static offset
+             ArrayRef<int64_t>{ShapedType::kDynamic}, // dynamic size
+             ArrayRef<int64_t>{1})                    // static stride
       .getResult();
 }
 
@@ -449,7 +449,7 @@ class SparseInsertGenerator
 public:
   SparseInsertGenerator(TensorType rtp, TypeRange retTypes, ValueRange params,
                         bool genCall)
-      : FuncCallOrInlineGenerator(retTypes, params, genCall), rtp(rtp){};
+      : FuncCallOrInlineGenerator(retTypes, params, genCall), rtp(rtp) {};
 
   /// Generates code along an insertion path without the need for a "cursor".
   /// This current insertion strategy comes at the expense of some testing

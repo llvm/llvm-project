@@ -76,16 +76,9 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
 
-static cl::opt<bool> AnnotationStaticDataPrefix(
-    "annotate-static-data-prefix", cl::init(false), cl::Hidden,
+static cl::opt<bool> AnnotateStaticDataSectionPrefix(
+    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
     cl::desc("If true, annotate the static data section prefix"));
-
-static cl::opt<bool>
-    PrintStaticDataPrefix("print-static-data-prefix", cl::init(false),
-                          cl::Hidden,
-                          cl::desc("If true, print the static data section "
-                                   "prefix in errs(). This option is "
-                                   "meant for debugging."));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -102,6 +95,14 @@ STATISTIC(NumOfMemProfMatchedAllocs,
           "Number of matched memory profile allocs.");
 STATISTIC(NumOfMemProfMatchedCallSites,
           "Number of matched memory profile callsites.");
+STATISTIC(NumOfMemProfHotGlobalVars,
+          "Number of global vars annotated with 'hot' section prefix.");
+STATISTIC(NumOfMemProfColdGlobalVars,
+          "Number of global vars annotated with 'unlikely' section prefix.");
+STATISTIC(NumOfMemProfUnknownGlobalVars,
+          "Number of global vars with unknown hotness (no section prefix).");
+STATISTIC(NumOfMemProfExplicitSectionGlobalVars,
+          "Number of global vars with user-specified section (not annotated).");
 
 static void addCallsiteMetadata(Instruction &I,
                                 ArrayRef<uint64_t> InlinedCallStack,
@@ -691,7 +692,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (M.empty() && M.globals().empty())
     return PreservedAnalyses::all();
 
-  LLVM_DEBUG(dbgs() << "Read in memory profile:");
+  LLVM_DEBUG(dbgs() << "Read in memory profile:\n");
   auto &Ctx = M.getContext();
   auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);
   if (Error E = ReaderOrErr.takeError()) {
@@ -774,57 +775,94 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
+// Returns true iff the global variable has custom section either by
+// __attribute__((section("name")))
+// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
+// or #pragma clang section directives
+// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
+static bool hasExplicitSectionName(const GlobalVariable &GVar) {
+  if (GVar.hasSection())
+    return true;
+
+  auto Attrs = GVar.getAttributes();
+  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
+      Attrs.hasAttribute("relro-section") ||
+      Attrs.hasAttribute("rodata-section"))
+    return true;
+  return false;
+}
+
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
-  if (!AnnotationStaticDataPrefix || M.globals().empty() || !DataAccessProf)
+  if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
     return false;
 
+  if (!DataAccessProf) {
+    M.getContext().diagnose(DiagnosticInfoPGOProfile(
+        MemoryProfileFileName.data(),
+        StringRef("Data access profiles not found in memprof. Ignore "
+                  "-memprof-annotate-static-data-prefix."),
+        DS_Warning));
+    return false;
+  }
+
   bool Changed = false;
+  // Iterate all global variables in the module and annotate them based on
+  // data access profiles. Note it's up to the linker to decide how to map input
+  // sections to output sections, and one conservative practice is to map
+  // unlikely-prefixed ones to unlikely output section, and map the rest
+  // (hot-prefixed or prefix-less) to the canonical output section.
   for (GlobalVariable &GVar : M.globals()) {
     assert(!GVar.getSectionPrefix().has_value() &&
            "GVar shouldn't have section prefix yet");
     if (GVar.isDeclarationForLinker())
       continue;
 
+    if (hasExplicitSectionName(GVar)) {
+      ++NumOfMemProfExplicitSectionGlobalVars;
+      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
+                        << " has explicit section name. Skip annotating.\n");
+      continue;
+    }
+
     StringRef Name = GVar.getName();
-    // Skip string literals whose mangled names doesn't stay stable across
+    // Skip string literals as their mangled names don't stay stable across
     // binary releases.
     // TODO: Track string content hash in the profiles and compute it inside the
     // compiler to categeorize the hotness string literals.
-    if (Name.starts_with(".str"))
-      continue;
+    if (Name.starts_with(".str")) {
 
-    // DataAccessProfRecord's look-up methods will canonicalize the variable
-    // name before looking up methods, so optimizer doesn't need to do it.
+      LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
+      continue;
+    }
+
+    // DataAccessProfRecord's get* methods will canonicalize the name under the
+    // hood before looking it up, so optimizer doesn't need to do it.
     std::optional<DataAccessProfRecord> Record =
         DataAccessProf->getProfileRecord(Name);
     // Annotate a global variable as hot if it has non-zero sampled count, and
     // annotate it as cold if it's seen in the profiled binary
     // file but doesn't have any access sample.
+    // For logging, optimization remark emitter requires a llvm::Function, but
+    // it's not well defined how to associate a global variable with a function.
+    // So we just print out the static data section prefix in LLVM_DEBUG.
     if (Record && Record->AccessCount > 0) {
+      ++NumOfMemProfHotGlobalVars;
       GVar.setSectionPrefix("hot");
       Changed = true;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name
+                        << " is annotated as hot\n");
     } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+      ++NumOfMemProfColdGlobalVars;
       GVar.setSectionPrefix("unlikely");
       Changed = true;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name
+                        << " is annotated as unlikely\n");
+    } else {
+      ++NumOfMemProfUnknownGlobalVars;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name << " is not annotated\n");
     }
   }
 
-  // Optimization remark emitter requires a llvm::Function, but it's not well
-  // defined to associate a global variable with a function. So we just print
-  // out the static data section prefix in errs().
-  if (PrintStaticDataPrefix) {
-    for (GlobalVariable &GVar : M.globals()) {
-      if (GVar.isDeclarationForLinker())
-        continue;
-      StringRef Name = GVar.getName();
-      auto SectionPrefix = GVar.getSectionPrefix();
-      if (SectionPrefix.has_value())
-        errs() << "Global variable " << Name
-               << " has section prefix: " << SectionPrefix.value() << "\n";
-      else
-        errs() << "Global variable " << Name << " has no section prefix\n";
-    }
-  }
   return Changed;
 }

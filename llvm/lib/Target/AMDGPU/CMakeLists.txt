@@ -71,6 +71,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUImageIntrinsicOptimizer.cpp
   AMDGPULibFunc.cpp
   AMDGPULowerBufferFatPointers.cpp
+  AMDGPULowerIntrinsics.cpp
   AMDGPULowerKernelArguments.cpp
   AMDGPULowerKernelAttributes.cpp
   AMDGPULowerModuleLDSPass.cpp
@@ -114,7 +115,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUTargetTransformInfo.cpp
   AMDGPUWaitSGPRHazards.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
-  AMDGPUUnifyMetadata.cpp
   R600MachineCFGStructurizer.cpp
   GCNCreateVOPD.cpp
   GCNDPPCombine.cpp
@@ -199,6 +199,7 @@ add_llvm_target(AMDGPUCodeGen
   Instrumentation
   MC
   MIRParser
+  ObjCARC
   Passes
   Scalar
   SelectionDAG

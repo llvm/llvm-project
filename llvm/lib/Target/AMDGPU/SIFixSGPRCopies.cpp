@@ -460,7 +460,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   // List of clobbering instructions.
   SmallVector<MachineInstr*, 8> Clobbers;
   // List of instructions marked for deletion.
-  SmallSet<MachineInstr*, 8> MergedInstrs;
+  SmallPtrSet<MachineInstr *, 8> MergedInstrs;
 
   bool Changed = false;
 
@@ -808,7 +808,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
-  SmallSet<const MachineInstr *, 4> Visited;
+  SmallPtrSet<const MachineInstr *, 4> Visited;
   SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);

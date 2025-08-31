@@ -127,34 +127,26 @@ define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a4
-; GFX908-NEXT:    ;;#ASMSTART
-; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v0, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a2
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v3
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a7
-; GFX908-NEXT:    v_accvgpr_write_b32 a8, v7
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v8
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v2
+; GFX908-NEXT:    ;;#ASMSTART
+; GFX908-NEXT:    ;;#ASMEND
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a4, v3
-; GFX908-NEXT:    v_accvgpr_write_b32 a7, v6
-; GFX908-NEXT:    v_accvgpr_write_b32 a6, v5
-; GFX908-NEXT:    v_accvgpr_write_b32 a5, v4
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, v0
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v2
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, v1
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v0
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, v4
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, v5
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    s_endpgm
@@ -173,16 +165,16 @@ define amdgpu_kernel void @max_10_vgprs_used_9a() #1 {
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v9, a3
-; GFX90A-NEXT:    v_accvgpr_read_b32 v8, a2
+; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a3
+; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v3
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a2, v0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v8
-; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v9
+; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v4
+; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_endpgm

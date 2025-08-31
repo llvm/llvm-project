@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
@@ -36,6 +37,8 @@ cc_test(
         "IR/*.cpp",
     ]),
     deps = [
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//mlir:BytecodeReader",
         "//mlir:CallOpInterfaces",
@@ -43,6 +46,7 @@ cc_test(
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Parser",
+        "//mlir:RemarkStreamer",
         "//mlir:Support",
         "//mlir/test:TestDialect",
         "//third-party/unittest:gmock",
@@ -419,6 +423,7 @@ cc_test(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:ReconcileUnrealizedCasts",
+        "//mlir:RegisterAllDialects",
         "//mlir:ToLLVMIRTranslation",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",

@@ -1561,10 +1561,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
-  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
-    llvmFunc->addFnAttr("approx-func-fp-math",
-                        llvm::toStringRef(*approxFuncFpMath));
-
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
@@ -1756,6 +1752,48 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
   }
 
   return attrBuilder;
+}
+
+LogicalResult ModuleTranslation::convertArgAndResultAttrs(
+    ArgAndResultAttrsOpInterface attrsOp, llvm::CallBase *call,
+    ArrayRef<unsigned> immArgPositions) {
+  // Convert the argument attributes.
+  if (ArrayAttr argAttrsArray = attrsOp.getArgAttrsAttr()) {
+    unsigned argAttrIdx = 0;
+    llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
+                                                     immArgPositions.end());
+    for (unsigned argIdx : llvm::seq<unsigned>(call->arg_size())) {
+      if (argAttrIdx >= argAttrsArray.size())
+        break;
+      // Skip immediate arguments (they have no entries in argAttrsArray).
+      if (immArgPositionsSet.contains(argIdx))
+        continue;
+      // Skip empty argument attributes.
+      auto argAttrs = cast<DictionaryAttr>(argAttrsArray[argAttrIdx++]);
+      if (argAttrs.empty())
+        continue;
+      // Convert and add attributes to the call instruction.
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), argAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addParamAttrs(argIdx, *attrBuilder);
+    }
+  }
+
+  // Convert the result attributes.
+  if (ArrayAttr resAttrsArray = attrsOp.getResAttrsAttr()) {
+    if (!resAttrsArray.empty()) {
+      auto resAttrs = cast<DictionaryAttr>(resAttrsArray[0]);
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(attrsOp->getLoc(), resAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      call->addRetAttrs(*attrBuilder);
+    }
+  }
+
+  return success();
 }
 
 FailureOr<llvm::AttrBuilder>
@@ -2276,6 +2314,25 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
+  if (auto asmAttr = m->getDiscardableAttr(
+          LLVM::LLVMDialect::getModuleLevelAsmAttrName())) {
+    auto asmArrayAttr = dyn_cast<ArrayAttr>(asmAttr);
+    if (!asmArrayAttr) {
+      m->emitError("expected an array attribute for a module level asm");
+      return nullptr;
+    }
+
+    for (Attribute elt : asmArrayAttr) {
+      auto asmStrAttr = dyn_cast<StringAttr>(elt);
+      if (!asmStrAttr) {
+        m->emitError(
+            "expected a string attribute for each entry of a module level asm");
+        return nullptr;
+      }
+      llvmModule->appendModuleInlineAsm(asmStrAttr.getValue());
+    }
+  }
+
   return llvmModule;
 }
 
@@ -2345,11 +2402,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // constants to point to the correct blocks.
   if (failed(translator.convertUnresolvedBlockAddress()))
     return nullptr;
-
-  // Once we've finished constructing elements in the module, we should convert
-  // it to use the debug info format desired by LLVM.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-  translator.llvmModule->convertToNewDbgValues();
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.

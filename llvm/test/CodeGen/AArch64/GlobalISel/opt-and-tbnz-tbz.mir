@@ -149,7 +149,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
-  ; CHECK-NEXT:   Bcc 11, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 4, %bb.1, implicit $nzcv
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

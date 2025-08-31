@@ -70,10 +70,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           TypedValue<ShapedType> sourceShard, GridOp grid,
                           int64_t splitTensorAxis, GridAxis splitGridAxis) {
   TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder
-          .create<AllSliceOp>(sourceShard, grid,
-                              ArrayRef<GridAxis>(splitGridAxis),
-                              splitTensorAxis)
+      AllSliceOp::create(builder, sourceShard, grid,
+                         ArrayRef<GridAxis>(splitGridAxis), splitTensorAxis)
           .getResult());
   Sharding targetSharding = targetShardingInSplitLastAxis(
       builder.getContext(), sourceSharding, splitTensorAxis, splitGridAxis);
@@ -420,16 +418,15 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 
   // Finally update the halo.
   auto updateHaloResult =
-      builder
-          .create<UpdateHaloOp>(
-              sourceShard.getLoc(),
-              RankedTensorType::get(outShape,
-                                    sourceShard.getType().getElementType()),
-              initOprnd, grid.getSymName(),
-              GridAxesArrayAttr::get(builder.getContext(),
-                                     sourceSharding.getSplitAxes()),
-              targetSharding.getDynamicHaloSizes(),
-              targetSharding.getStaticHaloSizes())
+      UpdateHaloOp::create(
+          builder, sourceShard.getLoc(),
+          RankedTensorType::get(outShape,
+                                sourceShard.getType().getElementType()),
+          initOprnd, grid.getSymName(),
+          GridAxesArrayAttr::get(builder.getContext(),
+                                 sourceSharding.getSplitAxes()),
+          targetSharding.getDynamicHaloSizes(),
+          targetSharding.getStaticHaloSizes())
           .getResult();
   return std::make_tuple(cast<TypedValue<ShapedType>>(updateHaloResult),
                          targetSharding);
@@ -480,10 +477,10 @@ reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
   return targetShard;
 }
 
-TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, GridOp grid,
-                               Sharding sourceSharding, Sharding targetSharding,
-                               TypedValue<ShapedType> sourceUnshardedValue,
-                               TypedValue<ShapedType> sourceShard) {
+static TypedValue<ShapedType>
+reshard(ImplicitLocOpBuilder &builder, GridOp grid, Sharding sourceSharding,
+        Sharding targetSharding, TypedValue<ShapedType> sourceUnshardedValue,
+        TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
   if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
                                            isFullReplication(targetSharding))) {
@@ -538,7 +535,7 @@ using UnshardedToShardedValueMap = DenseMap<Value, Value>;
 // Get the types of block arguments for an partitioned block.
 // Reads the sharding annotations of the arguments to deduce the sharded types.
 // Types that are not ranked tensors are left unchanged.
-SmallVector<Type>
+static SmallVector<Type>
 shardedBlockArgumentTypes(Block &block,
                           SymbolTableCollection &symbolTableCollection) {
   SmallVector<Type> res;

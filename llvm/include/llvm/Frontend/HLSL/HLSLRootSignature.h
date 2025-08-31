@@ -42,10 +42,9 @@ struct RootConstants {
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
 };
 
-enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
 struct RootDescriptor {
-  DescriptorType Type;
+  dxil::ResourceClass Type;
   Register Reg;
   uint32_t Space = 0;
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
@@ -60,13 +59,16 @@ struct RootDescriptor {
     assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
            "Specified an invalid root signature version");
     switch (Type) {
-    case DescriptorType::CBuffer:
-    case DescriptorType::SRV:
+    case dxil::ResourceClass::CBuffer:
+    case dxil::ResourceClass::SRV:
       Flags = dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute;
       break;
-    case DescriptorType::UAV:
+    case dxil::ResourceClass::UAV:
       Flags = dxbc::RootDescriptorFlags::DataVolatile;
       break;
+    case dxil::ResourceClass::Sampler:
+      llvm_unreachable(
+          "ResourceClass::Sampler is not valid for RootDescriptors");
     }
   }
 };
@@ -82,9 +84,8 @@ struct DescriptorTable {
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
-using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
-  ClauseType Type;
+  dxil::ResourceClass Type;
   Register Reg;
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
@@ -94,7 +95,7 @@ struct DescriptorTableClause {
   void setDefaultFlags(dxbc::RootSignatureVersion Version) {
     if (Version == dxbc::RootSignatureVersion::V1_0) {
       Flags = dxbc::DescriptorRangeFlags::DescriptorsVolatile;
-      if (Type != ClauseType::Sampler)
+      if (Type != dxil::ResourceClass::Sampler)
         Flags |= dxbc::DescriptorRangeFlags::DataVolatile;
       return;
     }
@@ -102,14 +103,14 @@ struct DescriptorTableClause {
     assert(Version == dxbc::RootSignatureVersion::V1_1 &&
            "Specified an invalid root signature version");
     switch (Type) {
-    case ClauseType::CBuffer:
-    case ClauseType::SRV:
+    case dxil::ResourceClass::CBuffer:
+    case dxil::ResourceClass::SRV:
       Flags = dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute;
       break;
-    case ClauseType::UAV:
+    case dxil::ResourceClass::UAV:
       Flags = dxbc::DescriptorRangeFlags::DataVolatile;
       break;
-    case ClauseType::Sampler:
+    case dxil::ResourceClass::Sampler:
       Flags = dxbc::DescriptorRangeFlags::None;
       break;
     }

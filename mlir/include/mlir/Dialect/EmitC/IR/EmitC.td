@@ -1051,6 +1051,8 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+    %1 = "emitc.member" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1058,7 +1060,7 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
@@ -1073,6 +1075,9 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.lvalue<i32>
+    %1 = "emitc.member_of_ptr" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
+        -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1080,7 +1085,7 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
@@ -1659,13 +1664,22 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
     emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.opaque = "another_feature"}
     // Example with no attribute:
     emitc.field @fieldName0 : !emitc.array<1xf32>
+    // Example with an initial value:
+    emitc.field @fieldName0 : !emitc.array<1xf32> = dense<0.0>
+    // Example with an initial value and attributes:
+    emitc.field @fieldName0 : !emitc.array<1xf32> = dense<0.0> {
+      emitc.opaque = "input_tensor"}
     ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
-      OptionalAttr<AnyAttr>:$attrs);
+      OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value);
 
-  let assemblyFormat = [{ $sym_name `:` $type ($attrs^)? attr-dict}];
+  let assemblyFormat = [{
+       $sym_name
+       `:` custom<EmitCFieldOpTypeAndInitialValue>($type, $initial_value)
+       attr-dict
+  }];
 
   let hasVerifier = 1;
 }
@@ -1686,8 +1700,9 @@ def EmitC_GetFieldOp
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$field_name);
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

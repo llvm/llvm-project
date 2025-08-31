@@ -338,7 +338,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
 
     OS << "\n";
-    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !G->block()->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -394,8 +394,6 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 
-  if (isDummy())
-    OS << " dummy";
   if (IsConstexprUnknown)
     OS << " constexpr-unknown";
 }
@@ -531,7 +529,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   Desc->dump(OS);
   OS << ")\n";
   unsigned NPointers = 0;
-  for (const Pointer *P = Pointers; P; P = P->Next) {
+  for (const Pointer *P = Pointers; P; P = P->asBlockPointer().Next) {
     ++NPointers;
   }
   OS << "  EvalID: " << EvalID << '\n';
@@ -541,50 +539,27 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   else
     OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
-  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Dead: " << isDead() << "\n";
   OS << "  Static: " << IsStatic << "\n";
-  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
-  OS << "  Weak: " << IsWeak << "\n";
-  OS << "  Dynamic: " << IsDynamic << "\n";
+  OS << "  Weak: " << isWeak() << "\n";
+  OS << "  Dummy: " << isDummy() << '\n';
+  OS << "  Dynamic: " << isDynamic() << "\n";
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {
-  assert(Ctx);
   auto &OS = llvm::errs();
-  const ASTContext &ASTCtx = Ctx->getASTContext();
 
-  switch (Kind) {
-  case Empty:
+  if (empty()) {
     OS << "Empty\n";
-    break;
-  case RValue:
-    OS << "RValue: ";
-    std::get<APValue>(Value).dump(OS, ASTCtx);
-    break;
-  case LValue: {
-    assert(Source);
-    QualType SourceType;
-    if (const auto *D = dyn_cast<const Decl *>(Source)) {
-      if (const auto *VD = dyn_cast<ValueDecl>(D))
-        SourceType = VD->getType();
-    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
-      SourceType = E->getType();
-    }
-
-    OS << "LValue: ";
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      P->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
-    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-      FP->toAPValue(ASTCtx).printPretty(OS, ASTCtx, SourceType);
-    OS << "\n";
-    break;
-  }
-  case Invalid:
+  } else if (isInvalid()) {
     OS << "Invalid\n";
-    break;
-  case Valid:
-    OS << "Valid\n";
-    break;
+  } else {
+    OS << "Value: ";
+#ifndef NDEBUG
+    assert(Ctx);
+    Value.dump(OS, Ctx->getASTContext());
+#endif
   }
 }

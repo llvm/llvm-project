@@ -809,6 +809,11 @@ let hasNoSchedulingInfo = 1 in {
     Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
     let FalseLanes = flags;
   }
+
+  class UnpredRegImmPseudo<ZPRRegOp zprty, Operand immty>
+  : SVEPseudo2Instr<NAME, 0>,
+    Pseudo<(outs zprty:$Zd), (ins zprty:$Zs, immty:$imm), []> {
+  }
 }
 
 //
@@ -1885,13 +1890,14 @@ class sve_int_perm_extract_i<string asm>
   let Inst{4-0}   = Zdn;
 
   let Constraints = "$Zdn = $_Zdn";
-  let DestructiveInstType = DestructiveOther;
+  let DestructiveInstType = Destructive2xRegImmUnpred;
   let ElementSize = ElementSizeNone;
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_perm_extract_i<string asm, SDPatternOperator op> {
-  def NAME : sve_int_perm_extract_i<asm>;
+multiclass sve_int_perm_extract_i<string asm, SDPatternOperator op, string Ps> {
+  def NAME : sve_int_perm_extract_i<asm>,
+             SVEPseudo2Instr<Ps, 1>;
 
   def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, imm0_255,
                          !cast<Instruction>(NAME)>;
@@ -5148,11 +5154,14 @@ multiclass sve_int_dup_imm<string asm> {
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, cpy_imm8_opt_lsl_i64:$imm), 1>;
 
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd,
+                       (cpy_imm8_opt_lsl_i16 0, 0)), 1>;
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd,
+                       (cpy_imm8_opt_lsl_i32 0, 0)), 1>;
   def : InstAlias<"fmov $Zd, #0.0",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, 0, 0), 1>;
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd,
+                       (cpy_imm8_opt_lsl_i64 0, 0)), 1>;
 }
 
 class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
@@ -5543,11 +5552,14 @@ multiclass sve_int_dup_imm_pred_merge<string asm, SDPatternOperator op> {
                                             nxv2i64, nxv2i1, i64, SVECpyDupImm64Pat>;
 
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i16 0, 0)), 0>;
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i32 0, 0)), 0>;
   def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
-                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, 0, 0), 0>;
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg,
+                       (cpy_imm8_opt_lsl_i64 0, 0)), 0>;
 
   def : Pat<(vselect PPRAny:$Pg, (SVEDup0), (nxv8f16 ZPR:$Zd)),
             (!cast<Instruction>(NAME # _H) $Zd, $Pg, 0, 0)>;

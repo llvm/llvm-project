@@ -203,7 +203,7 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic_store(ptr addrspace(1) 
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 syncscope("agent") seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   %tmp0 = insertelement <4 x i32> poison, i32 %in.1, i32 0
   %tmp1 = insertelement <4 x i32> %tmp0, i32 0, i32 1
   %tmp2 = insertelement <4 x i32> %tmp1, i32 0, i32 2
@@ -229,7 +229,7 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic64_store(ptr addrspace(1
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 syncscope("agent") seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   %tmp0 = insertelement <2 x i64> poison, i64 %in.1, i32 0
   %tmp1 = insertelement <2 x i64> %tmp0, i64 0, i32 1
   %tmp2 = bitcast <2 x i64> %tmp1 to <4 x i32>
@@ -319,3 +319,5 @@ exit:
 }
 
 attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+
+!0 = !{}
