@@ -15,6 +15,7 @@
 #define CLANG_LIB_CODEGEN_CIRGENCALL_H
 
 #include "CIRGenValue.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/SmallVector.h"
@@ -224,6 +225,8 @@ public:
   }
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
+
+  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
