@@ -780,6 +780,53 @@ def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
   }];
 }
 
+class ROCDL_ConcretePair<Type elem0, Type elem1> :
+  Type<And<[
+    LLVM_AnyStruct.predicate,
+    SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[0]",
+         elem0.predicate>,
+      SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[1]",
+         elem1.predicate>
+  ]>,
+  "LLVM dialect-compatible struct of " # elem0.summary # "and" # elem1.summary,
+  "::mlir::LLVM::LLVMStructType">,
+  BuildableType<"::mlir::LLVM::LLVMStructType::getLiteral($_builder.getContext(), "
+  "{" # elem0.builderCall # ", " # elem1.builderCall # "})">;
+
+// Permlane16 swap intrinsic operation
+def ROCDL_Permlane16SwapOp : ROCDL_IntrOp<"permlane16.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane16.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
+// Permlane32 swap intrinsic operation
+def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane32.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
 class ROCDL_ConcreteVector<Type elem, int length> :
   FixedVectorOfLengthAndType<[length], [elem]>,
   BuildableType<

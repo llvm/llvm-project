@@ -226,7 +226,7 @@ test_alloc(const Alloc& lhs_alloc                   = Alloc(),
     }
     check_alloc_invariant();
   }
-  { // Make a somewhat larget set to exercise the algorithm a bit
+  { // Make a somewhat larger set to exercise the algorithm a bit
     using V   = std::pair<const int, int>;
     using Map = std::map<int, int, std::less<int>, Alloc>;
 

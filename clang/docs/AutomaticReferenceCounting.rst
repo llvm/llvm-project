@@ -740,7 +740,7 @@ following rules apply:
 
 * If the qualifier is so applied at a position in the declaration
   where the next-innermost declarator is a function declarator, and
-  there is an block declarator within that function declarator, then
+  there is a block declarator within that function declarator, then
   the qualifier applies instead to that block declarator and this rule
   is considered afresh beginning from the new position.
 
@@ -924,7 +924,7 @@ not support ``__weak`` references.
 
 A class may indicate that it does not support weak references by providing the
 ``objc_arc_weak_reference_unavailable`` attribute on the class's interface declaration.  A
-retainable object pointer type is **weak-unavailable** if
+retainable object pointer type is **weak-unavailable** if it
 is a pointer to an (optionally protocol-qualified) Objective-C class ``T`` where
 ``T`` or one of its superclasses has the ``objc_arc_weak_reference_unavailable``
 attribute.  A program is ill-formed if it applies the ``__weak`` ownership
@@ -1129,7 +1129,7 @@ be the same for identical code.
   C and C++ while still automatically managing memory.  While it is
   usually simpler and more idiomatic to use Objective-C objects for
   secondary data structures, doing so can introduce extra allocation
-  and message-send overhead, which can cause to unacceptable
+  and message-send overhead, which can cause unacceptable
   performance.  Using structs can resolve some of this tension.
 
   ``__autoreleasing`` is forbidden because it is treacherous to rely
@@ -1446,7 +1446,7 @@ ill-formed.
 Template arguments
 ^^^^^^^^^^^^^^^^^^
 
-If a template argument for a template type parameter is an retainable object
+If a template argument for a template type parameter is a retainable object
 owner type that does not have an explicit ownership qualifier, it is adjusted
 to have ``__strong`` qualification.  This adjustment occurs regardless of
 whether the template argument was deduced or explicitly specified.
@@ -2064,7 +2064,7 @@ You can test if your compiler has support for ``objc_externally_retained`` with
 ``self``
 --------
 
-The ``self`` parameter variable of an non-init Objective-C method is considered
+The ``self`` parameter variable of a non-init Objective-C method is considered
 :ref:`externally-retained <arc.misc.externally_retained>` by the implementation.
 It is undefined behavior, or at least dangerous, to cause an object to be
 deallocated during a message send to that object.  In an init method, ``self``
@@ -2334,7 +2334,7 @@ emit, which are described in the remainder of this section.
 
   * the machine code to do so is significantly smaller,
   * it is much easier to recognize the C functions in the ARC optimizer, and
-  * a sufficient sophisticated runtime may be able to avoid the message send in
+  * a sufficiently sophisticated runtime may be able to avoid the message send in
     common cases.
 
   Several other of these functions are "fused" operations which can be

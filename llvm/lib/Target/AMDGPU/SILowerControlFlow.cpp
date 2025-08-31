@@ -81,7 +81,7 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
-  SmallSet<MachineBasicBlock *, 4> KillBlocks;
+  SmallPtrSet<MachineBasicBlock *, 4> KillBlocks;
   SmallSet<Register, 8> RecomputeRegs;
 
   const TargetRegisterClass *BoolRC = nullptr;
@@ -460,7 +460,7 @@ MachineBasicBlock::iterator
 SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
   MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
 
-  SmallSet<const MachineBasicBlock *, 4> Visited;
+  SmallPtrSet<const MachineBasicBlock *, 4> Visited;
   MachineBasicBlock *B = &MBB;
   do {
     if (!Visited.insert(B).second)

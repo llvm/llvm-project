@@ -1095,8 +1095,7 @@ let hasSideEffects = 0 in {
 defm RLDIMI : MDForm_1r<30, 3, (outs g8rc:$RA),
                         (ins g8rc:$RAi, g8rc:$RS, u6imm:$SH, u6imm:$MBE),
                         "rldimi", "$RA, $RS, $SH, $MBE", IIC_IntRotateDI,
-                        []>, isPPC64, RegConstraint<"$RAi = $RA">,
-                        NoEncode<"$RAi">;
+                        []>, isPPC64, RegConstraint<"$RAi = $RA">;
 
 // Rotate instructions.
 defm RLDCL  : MDSForm_1r<30, 8,
@@ -1156,7 +1155,7 @@ defm RLWIMI8 : MForm_2r<20, (outs g8rc:$RA),
                         (ins g8rc:$RAi, g8rc:$RS, u5imm:$SH, u5imm:$MB,
                         u5imm:$ME), "rlwimi", "$RA, $RS, $SH, $MB, $ME",
                         IIC_IntRotate, []>, PPC970_DGroup_Cracked,
-                        RegConstraint<"$RAi = $RA">, NoEncode<"$RAi">;
+                        RegConstraint<"$RAi = $RA">;
 
 let isSelect = 1 in
 def ISEL8   : AForm_4<31, 15,
@@ -1313,21 +1312,18 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAU8 : DForm_1<43, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lhau $RST, $addr", IIC_LdStLHAU,
-                    []>, RegConstraint<"$addr.reg = $ea_result">,
-                    NoEncode<"$ea_result">;
+                    []>, RegConstraint<"$addr.reg = $ea_result">;
 // NO LWAU!
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAUX8 : XForm_1_memOp<31, 375, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lhaux $RST, $addr", IIC_LdStLHAUX,
-                          []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                          NoEncode<"$ea_result">;
+                          []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 def LWAUX : XForm_1_memOp<31, 373, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lwaux $RST, $addr", IIC_LdStLHAUX,
-                          []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                          NoEncode<"$ea_result">, isPPC64;
+                          []>, RegConstraint<"$addr.ptrreg = $ea_result">, isPPC64;
 }
 }
 
@@ -1366,34 +1362,28 @@ let mayLoad = 1, hasSideEffects = 0 in {
 def LBZU8 : DForm_1<35, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lbzu $RST, $addr", IIC_LdStLoadUpd,
-                    []>, RegConstraint<"$addr.reg = $ea_result">,
-                    NoEncode<"$ea_result">;
+                    []>, RegConstraint<"$addr.reg = $ea_result">;
 def LHZU8 : DForm_1<41, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lhzu $RST, $addr", IIC_LdStLoadUpd,
-                    []>, RegConstraint<"$addr.reg = $ea_result">,
-                    NoEncode<"$ea_result">;
+                    []>, RegConstraint<"$addr.reg = $ea_result">;
 def LWZU8 : DForm_1<33, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lwzu $RST, $addr", IIC_LdStLoadUpd,
-                    []>, RegConstraint<"$addr.reg = $ea_result">,
-                    NoEncode<"$ea_result">;
+                    []>, RegConstraint<"$addr.reg = $ea_result">;
 
 def LBZUX8 : XForm_1_memOp<31, 119, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lbzux $RST, $addr", IIC_LdStLoadUpdX,
-                          []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                          NoEncode<"$ea_result">;
+                          []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 def LHZUX8 : XForm_1_memOp<31, 311, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lhzux $RST, $addr", IIC_LdStLoadUpdX,
-                          []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                          NoEncode<"$ea_result">;
+                          []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lwzux $RST, $addr", IIC_LdStLoadUpdX,
-                          []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                          NoEncode<"$ea_result">;
+                          []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 }
 }
 } // Interpretation64Bit
@@ -1445,14 +1435,12 @@ let mayLoad = 1, hasSideEffects = 0 in {
 def LDU  : DSForm_1<58, 1, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                     (ins (memrix $D, $RA):$addr),
                     "ldu $RST, $addr", IIC_LdStLDU,
-                    []>, RegConstraint<"$addr.reg = $ea_result">, isPPC64,
-                    NoEncode<"$ea_result">;
+                    []>, RegConstraint<"$addr.reg = $ea_result">, isPPC64;
 
 def LDUX : XForm_1_memOp<31, 53, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
                         (ins (memrr $RA, $RB):$addr),
                         "ldux $RST, $addr", IIC_LdStLDUX,
-                        []>, RegConstraint<"$addr.ptrreg = $ea_result">,
-                        NoEncode<"$ea_result">, isPPC64;
+                        []>, RegConstraint<"$addr.ptrreg = $ea_result">, isPPC64;
 }
 
 let mayLoad = 1, hasNoSchedulingInfo = 1 in {
@@ -1718,45 +1706,41 @@ let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 def STBU8 : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stbu $RST, $addr", IIC_LdStSTU, []>,
-                   RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
+                   RegConstraint<"$addr.reg = $ea_res">;
 def STHU8 : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "sthu $RST, $addr", IIC_LdStSTU, []>,
-                   RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
+                   RegConstraint<"$addr.reg = $ea_res">;
 def STWU8 : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stwu $RST, $addr", IIC_LdStSTU, []>,
-                   RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
+                   RegConstraint<"$addr.reg = $ea_res">;
 
 def STBUX8: XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stbux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STHUX8: XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "sthux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STWUX8: XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stwux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 } // Interpretation64Bit
 
 def STDU : DSForm_1<62, 1, (outs ptr_rc_nor0:$ea_res),
                    (ins g8rc:$RST, (memrix $D, $RA):$addr),
                    "stdu $RST, $addr", IIC_LdStSTU, []>,
-                   RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">,
+                   RegConstraint<"$addr.reg = $ea_res">,
                    isPPC64;
 
 def STDUX : XForm_8_memOp<31, 181, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
-                          NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked, isPPC64;
 }
 

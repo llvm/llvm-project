@@ -6,11 +6,9 @@ using namespace clang::CIRGen;
 
 bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
                                            QualType t) {
-  const RecordType *rt = t->getAs<RecordType>();
-  if (!rt)
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
     return false;
-
-  const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
