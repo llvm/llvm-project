@@ -1473,26 +1473,13 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
 
   // We have finished with the filter processings.  Now it's time to choose
   // the best performing filter.
-  unsigned BestIndex = 0;
-  bool AllUseless = true;
-  unsigned BestScore = 0;
-
-  for (const auto &[Idx, Filter] : enumerate(Filters)) {
-    unsigned Usefulness = Filter->usefulness();
-
-    if (Usefulness)
-      AllUseless = false;
-
-    if (Usefulness > BestScore) {
-      BestIndex = Idx;
-      BestScore = Usefulness;
-    }
-  }
-
-  if (AllUseless)
+  auto MaxIt = llvm::max_element(Filters, [](const std::unique_ptr<Filter> &A,
+                                             const std::unique_ptr<Filter> &B) {
+    return A->usefulness() < B->usefulness();
+  });
+  if (MaxIt == Filters.end() || (*MaxIt)->usefulness() == 0)
     return nullptr;
-
-  return std::move(Filters[BestIndex]);
+  return std::move(*MaxIt);
 }
 
 std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
