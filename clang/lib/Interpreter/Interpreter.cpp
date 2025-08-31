@@ -659,9 +659,11 @@ llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
   auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
 #ifndef _WIN32
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err, OOPChildPid);
+  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder,
+                                                        Err, OOPChildPid);
 #else
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
+  auto Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
 #endif
 #endif
   if (!Err)
