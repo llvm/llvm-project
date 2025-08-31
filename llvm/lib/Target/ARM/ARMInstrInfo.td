@@ -765,7 +765,6 @@ class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
 class MVEVectorIndex<int NumLanes> : Operand<i32> {
   let PrintMethod = "printVectorIndex";
   let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // shift_imm: An integer that encodes a shift amount and the type of shift
@@ -1181,7 +1180,6 @@ def PostIdxImm8AsmOperand : AsmOperandClass { let Name = "PostIdxImm8"; }
 def postidx_imm8 : MemOperand {
   let PrintMethod = "printPostIdxImm8Operand";
   let ParserMatchClass = PostIdxImm8AsmOperand;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // postidx_imm8s4 := +/- [0,1020]
