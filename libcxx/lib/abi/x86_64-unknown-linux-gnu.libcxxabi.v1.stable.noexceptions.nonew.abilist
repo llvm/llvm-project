@@ -68,7 +68,6 @@
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_negative_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_positive_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_thousands_sepEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace10entry_base13adjusted_addrEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112__stacktrace10entry_base8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112__stacktrace10entry_base9to_stringEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112__stacktrace4base8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
