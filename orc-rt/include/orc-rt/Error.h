@@ -126,7 +126,7 @@ private:
 };
 
 /// Create an Error from an ErrorInfoBase.
-Error make_error(std::unique_ptr<ErrorInfoBase> Payload) {
+inline Error make_error(std::unique_ptr<ErrorInfoBase> Payload) {
   return Error(std::move(Payload));
 }
 

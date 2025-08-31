@@ -46,18 +46,6 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
     "disable-bitcode-version-upgrade", cl::Hidden,
     cl::desc("Disable automatic bitcode upgrade for version mismatch"));
 
-static constexpr StringLiteral PreservedSymbols[] = {
-    // There are global variables, so put it here instead of in
-    // RuntimeLibcalls.td.
-    // TODO: Are there similar such variables?
-    "__ssp_canary_word",
-    "__stack_chk_guard",
-};
-
-static bool isPreservedGlobalVarName(StringRef Name) {
-  return PreservedSymbols[0] == Name || PreservedSymbols[1] == Name;
-}
-
 namespace {
 
 const char *getExpectedProducerName() {
@@ -106,7 +94,7 @@ struct Builder {
 
   std::vector<storage::Str> DependentLibraries;
 
-  bool isPreservedLibFuncName(StringRef Name) {
+  bool isPreservedName(StringRef Name) {
     return Libcalls.getSupportedLibcallImpl(Name) != RTLIB::Unsupported;
   }
 
@@ -281,8 +269,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
   StringRef GVName = GV->getName();
   setStr(Sym.IRName, GVName);
 
-  if (Used.count(GV) || isPreservedLibFuncName(GVName) ||
-      isPreservedGlobalVarName(GVName))
+  if (Used.count(GV) || isPreservedName(GVName))
     Sym.Flags |= 1 << storage::Symbol::FB_used;
   if (GV->isThreadLocal())
     Sym.Flags |= 1 << storage::Symbol::FB_tls;

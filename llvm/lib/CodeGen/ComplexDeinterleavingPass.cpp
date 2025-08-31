@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#include "llvm/ADT/AllocatorList.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -263,6 +264,7 @@ public:
   };
 
   using Addend = std::pair<Value *, bool>;
+  using AddendList = BumpPtrList<Addend>;
   using CompositeNode = ComplexDeinterleavingCompositeNode::CompositeNode;
 
   // Helper struct for holding info about potential partial multiplication
@@ -291,7 +293,7 @@ private:
   SmallPtrSet<Instruction *, 16> FinalInstructions;
 
   /// Root instructions are instructions from which complex computation starts
-  std::map<Instruction *, CompositeNode *> RootToNode;
+  DenseMap<Instruction *, CompositeNode *> RootToNode;
 
   /// Topologically sorted root instructions
   SmallVector<Instruction *, 1> OrderedRoots;
@@ -339,7 +341,7 @@ private:
   /// ComplexDeinterleavingOperation::ReductionPHI node replacement. It is then
   /// used in the ComplexDeinterleavingOperation::ReductionOperation node
   /// replacement process.
-  std::map<PHINode *, PHINode *> OldToNewPHI;
+  DenseMap<PHINode *, PHINode *> OldToNewPHI;
 
   CompositeNode *prepareCompositeNode(ComplexDeinterleavingOperation Operation,
                                       Value *R, Value *I) {
@@ -417,28 +419,28 @@ private:
   /// and \p ImagAddens. If \p Accumulator is not null, add the result to it.
   /// Return nullptr if it is not possible to construct a complex number.
   /// \p Flags are needed to generate symmetric Add and Sub operations.
-  CompositeNode *identifyAdditions(std::list<Addend> &RealAddends,
-                                   std::list<Addend> &ImagAddends,
+  CompositeNode *identifyAdditions(AddendList &RealAddends,
+                                   AddendList &ImagAddends,
                                    std::optional<FastMathFlags> Flags,
                                    CompositeNode *Accumulator);
 
   /// Extract one addend that have both real and imaginary parts positive.
-  CompositeNode *extractPositiveAddend(std::list<Addend> &RealAddends,
-                                       std::list<Addend> &ImagAddends);
+  CompositeNode *extractPositiveAddend(AddendList &RealAddends,
+                                       AddendList &ImagAddends);
 
   /// Determine if sum of multiplications of complex numbers can be formed from
   /// \p RealMuls and \p ImagMuls. If \p Accumulator is not null, add the result
   /// to it. Return nullptr if it is not possible to construct a complex number.
-  CompositeNode *identifyMultiplications(std::vector<Product> &RealMuls,
-                                         std::vector<Product> &ImagMuls,
+  CompositeNode *identifyMultiplications(SmallVectorImpl<Product> &RealMuls,
+                                         SmallVectorImpl<Product> &ImagMuls,
                                          CompositeNode *Accumulator);
 
   /// Go through pairs of multiplication (one Real and one Imag) and find all
   /// possible candidates for partial multiplication and put them into \p
   /// Candidates. Returns true if all Product has pair with common operand
-  bool collectPartialMuls(const std::vector<Product> &RealMuls,
-                          const std::vector<Product> &ImagMuls,
-                          std::vector<PartialMulCandidate> &Candidates);
+  bool collectPartialMuls(ArrayRef<Product> RealMuls,
+                          ArrayRef<Product> ImagMuls,
+                          SmallVectorImpl<PartialMulCandidate> &Candidates);
 
   /// If the code is compiled with -Ofast or expressions have `reassoc` flag,
   /// the order of complex computation operations may be significantly altered,
@@ -1255,8 +1257,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
   // Collect multiplications and addend instructions from the given instruction
   // while traversing it operands. Additionally, verify that all instructions
   // have the same fast math flags.
-  auto Collect = [&Flags](Instruction *Insn, std::vector<Product> &Muls,
-                          std::list<Addend> &Addends) -> bool {
+  auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
+                          AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
@@ -1336,8 +1338,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     return true;
   };
 
-  std::vector<Product> RealMuls, ImagMuls;
-  std::list<Addend> RealAddends, ImagAddends;
+  SmallVector<Product> RealMuls, ImagMuls;
+  AddendList RealAddends, ImagAddends;
   if (!Collect(Real, RealMuls, RealAddends) ||
       !Collect(Imag, ImagMuls, ImagAddends))
     return nullptr;
@@ -1371,8 +1373,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
 }
 
 bool ComplexDeinterleavingGraph::collectPartialMuls(
-    const std::vector<Product> &RealMuls, const std::vector<Product> &ImagMuls,
-    std::vector<PartialMulCandidate> &PartialMulCandidates) {
+    ArrayRef<Product> RealMuls, ArrayRef<Product> ImagMuls,
+    SmallVectorImpl<PartialMulCandidate> &PartialMulCandidates) {
   // Helper function to extract a common operand from two products
   auto FindCommonInstruction = [](const Product &Real,
                                   const Product &Imag) -> Value * {
@@ -1423,18 +1425,18 @@ bool ComplexDeinterleavingGraph::collectPartialMuls(
 
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyMultiplications(
-    std::vector<Product> &RealMuls, std::vector<Product> &ImagMuls,
+    SmallVectorImpl<Product> &RealMuls, SmallVectorImpl<Product> &ImagMuls,
     CompositeNode *Accumulator = nullptr) {
   if (RealMuls.size() != ImagMuls.size())
     return nullptr;
 
-  std::vector<PartialMulCandidate> Info;
+  SmallVector<PartialMulCandidate> Info;
   if (!collectPartialMuls(RealMuls, ImagMuls, Info))
     return nullptr;
 
   // Map to store common instruction to node pointers
-  std::map<Value *, CompositeNode *> CommonToNode;
-  std::vector<bool> Processed(Info.size(), false);
+  DenseMap<Value *, CompositeNode *> CommonToNode;
+  SmallVector<bool> Processed(Info.size(), false);
   for (unsigned I = 0; I < Info.size(); ++I) {
     if (Processed[I])
       continue;
@@ -1463,8 +1465,8 @@ ComplexDeinterleavingGraph::identifyMultiplications(
     }
   }
 
-  std::vector<bool> ProcessedReal(RealMuls.size(), false);
-  std::vector<bool> ProcessedImag(ImagMuls.size(), false);
+  SmallVector<bool> ProcessedReal(RealMuls.size(), false);
+  SmallVector<bool> ProcessedImag(ImagMuls.size(), false);
   CompositeNode *Result = Accumulator;
   for (auto &PMI : Info) {
     if (ProcessedReal[PMI.RealIdx] || ProcessedImag[PMI.ImagIdx])
@@ -1580,7 +1582,7 @@ ComplexDeinterleavingGraph::identifyMultiplications(
 
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyAdditions(
-    std::list<Addend> &RealAddends, std::list<Addend> &ImagAddends,
+    AddendList &RealAddends, AddendList &ImagAddends,
     std::optional<FastMathFlags> Flags, CompositeNode *Accumulator = nullptr) {
   if (RealAddends.size() != ImagAddends.size())
     return nullptr;
@@ -1671,8 +1673,8 @@ ComplexDeinterleavingGraph::identifyAdditions(
 }
 
 ComplexDeinterleavingGraph::CompositeNode *
-ComplexDeinterleavingGraph::extractPositiveAddend(
-    std::list<Addend> &RealAddends, std::list<Addend> &ImagAddends) {
+ComplexDeinterleavingGraph::extractPositiveAddend(AddendList &RealAddends,
+                                                  AddendList &ImagAddends) {
   for (auto ItR = RealAddends.begin(); ItR != RealAddends.end(); ++ItR) {
     for (auto ItI = ImagAddends.begin(); ItI != ImagAddends.end(); ++ItI) {
       auto [R, IsPositiveR] = *ItR;
