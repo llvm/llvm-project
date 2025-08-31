@@ -92,6 +92,13 @@ def parse_args():
         action="store_true",
     )
     format_group.add_argument(
+        "-r",
+        "--relative-paths",
+        dest="printPathRelativeCWD",
+        help="Print paths relative to CWD",
+        action="store_true",
+    )
+    format_group.add_argument(
         "-o",
         "--output",
         type=lit.reports.JsonReport,

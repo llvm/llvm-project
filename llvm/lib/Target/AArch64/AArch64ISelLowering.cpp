@@ -1121,7 +1121,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::UBSANTRAP, MVT::Other, Legal);
 
-  // We combine OR nodes for bitfield operations.
+  // We combine OR nodes for ccmp operations.
   setTargetDAGCombine(ISD::OR);
   // Try to create BICs for vector ANDs.
   setTargetDAGCombine(ISD::AND);
@@ -2585,6 +2585,30 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = Known.intersectWith(Known2);
     break;
   }
+  case AArch64ISD::CSNEG:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::CSINV: {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    KnownBits KnownOp1 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+
+    // The result is either:
+    // CSINC: KnownOp0 or KnownOp1 + 1
+    // CSINV: KnownOp0 or ~KnownOp1
+    // CSNEG: KnownOp0 or KnownOp1 * -1
+    if (Op.getOpcode() == AArch64ISD::CSINC)
+      KnownOp1 = KnownBits::add(
+          KnownOp1,
+          KnownBits::makeConstant(APInt(Op.getScalarValueSizeInBits(), 1)));
+    else if (Op.getOpcode() == AArch64ISD::CSINV)
+      std::swap(KnownOp1.Zero, KnownOp1.One);
+    else if (Op.getOpcode() == AArch64ISD::CSNEG)
+      KnownOp1 =
+          KnownBits::mul(KnownOp1, KnownBits::makeConstant(APInt::getAllOnes(
+                                       Op.getScalarValueSizeInBits())));
+
+    Known = KnownOp0.intersectWith(KnownOp1);
+    break;
+  }
   case AArch64ISD::BICi: {
     // Compute the bit cleared value.
     APInt Mask =
@@ -2984,21 +3008,20 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
   if (TPIDR2.Uses > 0) {
+    // Note: This case just needs to do `SVL << 48`. It is not implemented as we
+    // generally don't support big-endian SVE/SME.
+    if (!Subtarget->isLittleEndian())
+      reportFatalInternalError(
+          "TPIDR2 block initialization is not supported on big-endian targets");
+
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    // Store the buffer pointer to the TPIDR2 stack object.
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
+    // Store buffer pointer and num_za_save_slices.
+    // Bytes 10-15 are implicitly zeroed.
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STPXi))
         .addReg(MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(1).getReg())
         .addFrameIndex(TPIDR2.FrameIndex)
         .addImm(0);
-    // Set the reserved bytes (10-15) to zero
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
-        .addReg(AArch64::WZR)
-        .addFrameIndex(TPIDR2.FrameIndex)
-        .addImm(5);
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
-        .addReg(AArch64::WZR)
-        .addFrameIndex(TPIDR2.FrameIndex)
-        .addImm(3);
   } else
     MFI.RemoveStackObject(TPIDR2.FrameIndex);
 
@@ -4911,6 +4934,18 @@ SDValue AArch64TargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   // width.
   if (DstWidth < SatWidth)
     return SDValue();
+
+  if (SrcVT == MVT::f16 && SatVT == MVT::i16 && DstVT == MVT::i32) {
+    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+      SDValue CVTf32 =
+          DAG.getNode(AArch64ISD::FCVTZS_HALF, DL, MVT::f32, SrcVal);
+      SDValue Bitcast = DAG.getBitcast(DstVT, CVTf32);
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, DstVT, Bitcast,
+                         DAG.getValueType(SatVT));
+    }
+    SDValue CVTf32 = DAG.getNode(AArch64ISD::FCVTZU_HALF, DL, MVT::f32, SrcVal);
+    return DAG.getBitcast(DstVT, CVTf32);
+  }
 
   SDValue NativeCvt =
       DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal, DAG.getValueType(DstVT));
@@ -8313,9 +8348,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                              {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
         MFI.CreateVariableSizedObject(Align(16), nullptr);
       }
+      SDValue NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                            DAG.getConstant(1, DL, MVT::i32));
       Chain = DAG.getNode(
           AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
-          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
+          {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0),
+           /*Num save slices*/ NumZaSaveSlices});
     } else if (Attrs.hasAgnosticZAInterface()) {
       // Call __arm_sme_state_size().
       SDValue BufferSize =
@@ -9165,19 +9203,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool RequiresLazySave = !UseNewSMEABILowering && CallAttrs.requiresLazySave();
   bool RequiresSaveAllZA = CallAttrs.requiresPreservingAllZAState();
   if (RequiresLazySave) {
-    const TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
-    MachinePointerInfo MPI =
-        MachinePointerInfo::getStack(MF, TPIDR2.FrameIndex);
+    TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
         TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-    SDValue NumZaSaveSlicesAddr =
-        DAG.getNode(ISD::ADD, DL, TPIDR2ObjAddr.getValueType(), TPIDR2ObjAddr,
-                    DAG.getConstant(8, DL, TPIDR2ObjAddr.getValueType()));
-    SDValue NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                          DAG.getConstant(1, DL, MVT::i32));
-    Chain = DAG.getTruncStore(Chain, DL, NumZaSaveSlices, NumZaSaveSlicesAddr,
-                              MPI, MVT::i16);
     Chain = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
@@ -14799,21 +14828,13 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
-static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
+static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
+  assert(VT.isVector() && "Expected vector type in tryLowerToBSL\n");
   SDLoc DL(N);
   const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
 
-  if (!VT.isVector())
-    return SDValue();
-
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
-    return SDValue();
-
-  if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14865,14 +14886,13 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // We only have to look for constant vectors here since the general, variable
   // case can be handled in TableGen.
   unsigned Bits = VT.getScalarSizeInBits();
-  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
   for (int i = 1; i >= 0; --i)
     for (int j = 1; j >= 0; --j) {
       APInt Val1, Val2;
 
       if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
           ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
-          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+          ~Val1.trunc(Bits) == Val2.trunc(Bits)) {
         return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
                            N0->getOperand(1 - i), N1->getOperand(1 - j));
       }
@@ -14886,7 +14906,8 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
         ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
         if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+            CN0->getAPIntValue().trunc(Bits) !=
+                ~CN1->getAsAPIntVal().trunc(Bits)) {
           FoundMatch = false;
           break;
         }
@@ -14904,6 +14925,9 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
                                    !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
+
+  if (SDValue Res = tryLowerToBSL(Op, DAG))
+    return Res;
 
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
   if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
@@ -17604,14 +17628,16 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
 bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   Value *LaneMask,
                                                   ShuffleVectorInst *SVI,
-                                                  unsigned Factor) const {
+                                                  unsigned Factor,
+                                                  const APInt &GapMask) const {
 
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
@@ -18314,7 +18340,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   if (Val == 0 || AArch64_AM::isLogicalImmediate(Val, BitSize))
     return true;
 
-  if ((int64_t)Val < 0)
+  if (Val < 0)
     Val = ~Val;
   if (BitSize == 32)
     Val &= (1LL << 32) - 1;
@@ -19658,16 +19684,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
-
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
-  if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
-    return Res;
 
   return SDValue();
 }
@@ -22170,6 +22189,17 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
                      Zero);
 }
 
+static SDValue tryCombineNeonFcvtFP16ToI16(SDNode *N, unsigned Opcode,
+                                           SelectionDAG &DAG) {
+  if (N->getValueType(0) != MVT::i16)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue CVT = DAG.getNode(Opcode, DL, MVT::f32, N->getOperand(1));
+  SDValue Bitcast = DAG.getBitcast(MVT::i32, CVT);
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Bitcast);
+}
+
 // If a merged operation has no inactive lanes we can relax it to a predicated
 // or unpredicated operation, which potentially allows better isel (perhaps
 // using immediate forms) or relaxing register reuse requirements.
@@ -22423,6 +22453,26 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_uabd:
     return DAG.getNode(ISD::ABDU, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTZU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtas:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtau:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTAU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtms:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtmu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTMU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtns:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtnu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTNU_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtps:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPS_HALF, DAG);
+  case Intrinsic::aarch64_neon_fcvtpu:
+    return tryCombineNeonFcvtFP16ToI16(N, AArch64ISD::FCVTPU_HALF, DAG);
   case Intrinsic::aarch64_crc32b:
   case Intrinsic::aarch64_crc32cb:
     return tryCombineCRC32(0xff, N, DAG);
@@ -28698,9 +28748,13 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
@@ -28715,13 +28769,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
     return;
   }
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *AArch64TargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getGlobalVariable("__security_cookie");
-  return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {

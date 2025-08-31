@@ -396,11 +396,6 @@ struct ConvertNVGPUToNVVMPass
     : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
   using Base::Base;
 
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, LLVM::LLVMDialect, NVVM::NVVMDialect,
-                    arith::ArithDialect>();
-  }
-
   void runOnOperation() override {
     LowerToLLVMOptions options(&getContext());
     RewritePatternSet patterns(&getContext());
@@ -1031,8 +1026,10 @@ struct NVGPUTmaAsyncStoreOpLowering
       coords[index] = truncToI32(b, value);
     }
 
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(
-        op, adaptor.getTensorMapDescriptor(), dest, coords,
+        op, adaptor.getTensorMapDescriptor(), dest, coords, Value{},
+        NVVM::TMAStoreMode::TILE, // default is TILE mode
         adaptor.getPredicate());
     return success();
   }
