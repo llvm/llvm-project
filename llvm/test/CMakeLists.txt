@@ -263,8 +263,8 @@ add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   )
 set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 
-# Note, exclude TableGen and FileCheck directories as we define handle
-# them with a reduced set of dependencies below.
+# Note, exclude TableGen and FileCheck directories as we define them with a
+# reduced set of dependencies below.
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
   DEPENDS ${LLVM_TEST_DEPENDS_COMMON}
