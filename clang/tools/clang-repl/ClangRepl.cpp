@@ -279,8 +279,8 @@ int main(int argc, const char **argv) {
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
   clang::OutOfProcessJITConfig OutOfProcessConfig;
-  OutOfProcessConfig.IsOutOfProcess = !OOPExecutor.empty() ||
-                                      !OOPExecutorConnect.empty();
+  OutOfProcessConfig.IsOutOfProcess =
+      !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   OutOfProcessConfig.OOPExecutor = OOPExecutor;
   OutOfProcessConfig.SlabAllocateSizeString = SlabAllocateSizeString;
   OutOfProcessConfig.UseSharedMemory = UseSharedMemory;

@@ -146,8 +146,8 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
   OutOfProcessConfig.IsOutOfProcess = true;
   OutOfProcessConfig.OrcRuntimePath = getOrcRuntimePath();
 
-  std::cout << "OrcRuntimePath: " << OutOfProcessConfig.OrcRuntimePath
-            << "\n";
+
+  std::cout << "OrcRuntimePath: " << OutOfProcessConfig.OrcRuntimePath << "\n";
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 

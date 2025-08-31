@@ -367,7 +367,8 @@ public:
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
-                         std::unique_ptr<clang::ASTConsumer> Consumer, OutOfProcessJITConfig OOPConfig)
+                         std::unique_ptr<clang::ASTConsumer> Consumer,
+                         OutOfProcessJITConfig OOPConfig)
     : JITBuilder(std::move(JITBuilder)) {
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
@@ -468,18 +469,20 @@ Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
   pid_t childPid = -1;
   if (OutOfProcessConfig.OOPExecutor != "") {
     // Launch an out-of-process executor locally in a child process.
-    auto ResultOrErr = IncrementalExecutor::launchExecutor(OutOfProcessConfig.OOPExecutor,
-                                   OutOfProcessConfig.UseSharedMemory,
-                                   OutOfProcessConfig.SlabAllocateSizeString, OutOfProcessConfig.CustomizeFork);
+    auto ResultOrErr = IncrementalExecutor::launchExecutor(
+        OutOfProcessConfig.OOPExecutor, OutOfProcessConfig.UseSharedMemory,
+        OutOfProcessConfig.SlabAllocateSizeString,
+        OutOfProcessConfig.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
     auto EPCOrErr = std::move(ResultOrErr->first);
     EPC = std::move(EPCOrErr);
   } else if (OutOfProcessConfig.OOPExecutorConnect != "") {
-    auto EPCOrErr = IncrementalExecutor::connectTCPSocket(OutOfProcessConfig.OOPExecutorConnect,
-                                     OutOfProcessConfig.UseSharedMemory,
-                                     OutOfProcessConfig.SlabAllocateSizeString);
+    auto EPCOrErr = IncrementalExecutor::connectTCPSocket(
+        OutOfProcessConfig.OOPExecutorConnect,
+        OutOfProcessConfig.UseSharedMemory,
+        OutOfProcessConfig.SlabAllocateSizeString);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -536,8 +539,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
     const llvm::Triple &Triple = TI.getTriple();
 
     DiagnosticsEngine &Diags = CI->getDiagnostics();
-    std::string BinaryName =
-        llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+    std::string BinaryName = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
     driver::Driver Driver(BinaryName, Triple.str(), Diags);
     std::vector<const char *> Args = {"clang", "--version"};
     std::unique_ptr<clang::driver::Compilation> C(
@@ -557,13 +559,11 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
 
       OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
     }
-
   }
 
-  auto Interp = std::unique_ptr<Interpreter>(
-      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr,
-                      OutOfProcessConfig ? *OutOfProcessConfig
-                                        : OutOfProcessJITConfig()));
+  auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
+      std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr,
+      OutOfProcessConfig ? *OutOfProcessConfig : OutOfProcessJITConfig()));
   if (auto E = std::move(Err))
     return std::move(E);
 
@@ -789,8 +789,8 @@ llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
 #ifdef __EMSCRIPTEN__
   auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
-  auto Executor =
-      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err, OOPChildPid);
+  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder,
+                                                        Err, OOPChildPid);
 #endif
   if (!Err)
     IncrExecutor = std::move(Executor);

@@ -15,29 +15,28 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
+#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
-#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TargetSelect.h"
 
 #ifdef LLVM_ON_UNIX
 #include <netdb.h>
@@ -90,8 +89,7 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
 
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::orc::LLJITBuilder &JITBuilder,
-                                         llvm::Error &Err,
-                                         pid_t ChildPid)
+                                         llvm::Error &Err, pid_t ChildPid)
     : TSCtx(TSC), OutOfProcessChildPid(ChildPid) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
@@ -210,10 +208,9 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
       SlabSize, SREPC, SAs);
 }
 
-
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
-                                   bool UseSharedMemory,
+                                    bool UseSharedMemory,
                                     llvm::StringRef SlabAllocateSizeString,
                                     std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
@@ -348,7 +345,7 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 
 llvm::Expected<std::unique_ptr<SimpleRemoteEPC>>
 IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
-                                     bool UseSharedMemory,
+                                      bool UseSharedMemory,
                                       llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.

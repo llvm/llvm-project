@@ -126,7 +126,8 @@ protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
-              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr, OutOfProcessJITConfig OOPConfig = {});
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
+              OutOfProcessJITConfig OOPConfig = {});
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -147,7 +148,8 @@ public:
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
-  static llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
+  static llvm::Expected<
+      std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
   outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig);
   static llvm::Expected<std::string>
   getOrcRuntimePath(const driver::ToolChain &TC);
