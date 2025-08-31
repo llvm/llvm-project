@@ -1,7 +1,7 @@
 // REQUIRES: lld
 
 // Test that simple types can be found
-// RUN: %build --std=c++20 --nodefaultlib --arch=64 -o %t.exe -- %s
+// RUN: %build --std=c++20 --nodefaultlib --compiler=clang-cl --arch=64 -o %t.exe -- %s
 // RUN: lldb-test symbols %t.exe | FileCheck %s
 
 bool *PB;
