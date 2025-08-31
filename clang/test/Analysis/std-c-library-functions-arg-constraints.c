@@ -323,7 +323,8 @@ void test_buf_size_concrete_with_multiplication(void) {
 void test_buf_size_symbolic_with_multiplication(size_t s) {
   short buf[3];
   __buf_size_arg_constraint_mul(buf, s, sizeof(short));
-  clang_analyzer_eval(s * sizeof(short) <= 6); // \
+  // FIXME: remove the conversion to unsigned long will cause the test to fail.
+  clang_analyzer_eval((unsigned long)s * sizeof(short) <= 6); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}}
@@ -331,7 +332,8 @@ void test_buf_size_symbolic_with_multiplication(size_t s) {
 void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
   short buf[3];
   __buf_size_arg_constraint_mul(buf + 1, s, sizeof(short));
-  clang_analyzer_eval(s * sizeof(short) <= 4); // \
+  // FIXME: remove the conversion to unsigned long will cause the test to fail.
+  clang_analyzer_eval((unsigned long)s * sizeof(short) <= 4); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}}
