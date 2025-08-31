@@ -264,7 +264,7 @@ public:
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   const ValueTy &at(StringRef Val) const {
-    auto Iter = this->find(std::move(Val));
+    auto Iter = this->find(Val);
     assert(Iter != this->end() && "StringMap::at failed due to a missing key");
     return Iter->second;
   }
