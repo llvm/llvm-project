@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/localtime.h"
+#include "hdr/types/struct_tm.h"
+#include "hdr/types/time_t.h"
 #include "src/__support/macros/null_check.h"
 #include "src/time/time_utils.h"
 
