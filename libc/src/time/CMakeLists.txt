@@ -30,6 +30,7 @@ add_object_library(
     libc.hdr.types.time_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
+    libc.hdr.stdint_proxy
 )
 
 add_entrypoint_object(
