@@ -4742,6 +4742,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
+  case G_ABDS:
+  case G_ABDU:
+    return lowerAbsDiffToMinMax(MI);
   case G_FABS:
     return lowerFAbs(MI);
   case G_SELECT:
