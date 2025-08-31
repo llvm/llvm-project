@@ -169,8 +169,10 @@ Non-comprehensive list of changes in this release
 - A vector of booleans is now a valid condition for the ternary ``?:`` operator.
   This binds to a simple vector select operation.
 
-- Added ``__builtin_masked_load`` and ``__builtin_masked_store`` for conditional
-  memory loads from vectors. Binds to the LLVM intrinsic of the same name.
+- Added ``__builtin_masked_load``, ``__builtin_masked_expand_load``,
+  ``__builtin_masked_store``, ``__builtin_masked_compress_store`` for
+  conditional memory loads from vectors. Binds to the LLVM intrinsics of the
+  same name.
 
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
@@ -273,17 +275,22 @@ Bug Fixes in This Version
   ``#pragma pop_macro("")``. (#GH149762).
 - Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type 
   being used in ``_Countof`` expression. (#GH152826).
-- `-Wunreachable-code`` now diagnoses tautological or contradictory
+- ``-Wunreachable-code`` now diagnoses tautological or contradictory
   comparisons such as ``x != 0 || x != 1.0`` and ``x == 0 && x == 1.0`` on
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
+- Fix crash in ``__builtin_function_start`` by checking for invalid
+  first parameter. (#GH113323).
 - Fixed a crash with incompatible pointer to integer conversions in designated
   initializers involving string literals. (#GH154046)
 - Clang now emits a frontend error when a function marked with the `flatten` attribute
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
 - Fixed scope of typedefs present inside a template class. (#GH91451)
+- Builtin elementwise operators now accept vector arguments that have different
+  qualifiers on their elements. For example, vector of 4 ``const float`` values
+  and vector of 4 ``float`` values. (#GH155405)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
