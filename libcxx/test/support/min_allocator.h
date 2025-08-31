@@ -212,7 +212,7 @@ public:
 
 template <class T, class ID>
 class min_pointer {
-  T* ptr_;
+  T* ptr_ {};
 
   TEST_CONSTEXPR_CXX14 explicit min_pointer(T* p) TEST_NOEXCEPT : ptr_(p) {}
 

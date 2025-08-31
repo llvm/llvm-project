@@ -79,6 +79,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     {
       typedef M::iterator R;
       V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
+      (void)ar[0].second;
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
       assert(r == m.begin());

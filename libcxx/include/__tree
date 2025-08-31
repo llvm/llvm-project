@@ -1016,16 +1016,18 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
+    (void)__p.__ptr_->__left_;
     return std::__try_key_extraction<key_type>(
         [this, __p](const key_type& __key, _Args&&... __args2) {
           __end_node_pointer __parent;
           __node_base_pointer __dummy;
+    (void)__p.__ptr_->__left_;
           __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __key);
-          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
           bool __inserted              = false;
           if (__child == nullptr) {
             __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
-            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
             __r        = __h.release();
             __inserted = true;
           }
@@ -1036,9 +1038,9 @@ public:
           __end_node_pointer __parent;
           __node_base_pointer __dummy;
           __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__get_value());
-          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
           if (__child == nullptr) {
-            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
             __r = __h.release();
           }
           return pair<iterator, bool>(iterator(__r), __child == nullptr);
@@ -1873,6 +1875,9 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(
     const_iterator __prior = __hint;
     if (__prior == begin() || value_comp()(*--__prior, __v)) {
       // *prev(__hint) < __v < *__hint
+      auto __xx = __hint.__ptr_;
+      auto __yy = __xx->__left_;
+      (void)( __yy);
       if (__hint.__ptr_->__left_ == nullptr) {
         __parent = __hint.__ptr_;
         return __parent->__left_;
