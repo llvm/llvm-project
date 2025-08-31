@@ -104,3 +104,45 @@ define double @test_fmadd(double %a0, double %a1, double %a2) {
   %t2 = fdiv double %t1, %t0
   ret double %t2
 }
+
+
+define i64 @test_or_flags(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
+  ; CHECK-LABEL: name: test_or_flags
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:gpr = OR [[COPY3]], [[COPY2]]
+  ; CHECK-NEXT:   [[OR1:%[0-9]+]]:gpr = disjoint OR [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[OR2:%[0-9]+]]:gpr = disjoint OR killed [[OR]], killed [[OR1]]
+  ; CHECK-NEXT:   $x10 = COPY [[OR2]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  %t0 = or i64 %a0, %a1
+  %t1 = or disjoint i64 %t0, %a2
+  %t2 = or disjoint i64 %t1, %a3
+  ret i64 %t2
+}
+
+define i64 @test_add_flags(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
+  ; CHECK-LABEL: name: test_add_flags
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x13
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY3]], [[COPY2]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:gpr = ADD [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[ADD2:%[0-9]+]]:gpr = ADD killed [[ADD]], killed [[ADD1]]
+  ; CHECK-NEXT:   $x10 = COPY [[ADD2]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  %t0 = add i64 %a0, %a1
+  %t1 = add nsw i64 %t0, %a2
+  %t2 = add nuw i64 %t1, %a3
+  ret i64 %t2
+}
+
