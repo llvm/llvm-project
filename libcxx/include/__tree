@@ -988,11 +988,11 @@ public:
         [this](const key_type& __key, _Args&&... __args2) {
           __end_node_pointer __parent;
           __node_base_pointer& __child = __find_equal(__parent, __key);
-          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
           bool __inserted              = false;
           if (__child == nullptr) {
             __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
-            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
             __r        = __h.release();
             __inserted = true;
           }
@@ -1002,10 +1002,10 @@ public:
           __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
           __end_node_pointer __parent;
           __node_base_pointer& __child = __find_equal(__parent, __h->__get_value());
-          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
           bool __inserted              = false;
           if (__child == nullptr) {
-            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
             __r        = __h.release();
             __inserted = true;
           }
