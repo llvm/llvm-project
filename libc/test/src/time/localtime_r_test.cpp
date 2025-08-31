@@ -35,7 +35,7 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
 }
 
 TEST(LlvmLibcLocaltime, NullPtr) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::localtime_r(nullptr, nullptr); }, 4);
+  EXPECT_DEATH([] { LIBC_NAMESPACE::localtime_r(nullptr, nullptr); }, WITH_SIGNAL(4));
 }
 
 // TODO(zimirza): These tests does not expect the correct output of localtime as
