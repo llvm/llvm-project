@@ -107,8 +107,7 @@ class basic_stacktrace : private __stacktrace::base {
   constexpr static bool __kAlwaysEqual      = _ATraits::is_always_equal::value;
   constexpr static bool __kNoThrowAlloc     = noexcept(noexcept(_Allocator().allocate(1)));
 
-  [[no_unique_address]]
-  _Allocator __alloc_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Allocator __alloc_;
 
   vector<stacktrace_entry, _Allocator> __entries_;
   _LIBCPP_HIDE_FROM_ABI _EntryIters entry_iters() { return {__entries_.data(), __entries_.size()}; }
@@ -141,9 +140,9 @@ public:
   // (19.6.4.2)
   // Creation and assignment [stacktrace.basic.cons]
 
-  _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_HIDE_FROM_ABI static basic_stacktrace
+  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
   current(const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    size_type __skip      = 1;
+    size_type __skip      = 0;
     size_type __max_depth = __default_max_depth;
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
@@ -152,9 +151,8 @@ public:
     return __ret;
   }
 
-  _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_HIDE_FROM_ABI static basic_stacktrace
+  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
   current(size_type __skip, const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    ++__skip;
     size_type __max_depth = __default_max_depth;
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
@@ -163,11 +161,10 @@ public:
     return __ret;
   }
 
-  _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_HIDE_FROM_ABI static basic_stacktrace
+  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
   current(size_type __skip,
           size_type __max_depth,
           const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    ++__skip;
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
     basic_stacktrace __ret{__caller_alloc};

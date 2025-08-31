@@ -38,8 +38,7 @@ struct dll {
 
   template <typename F>
   bool get_func(F** func, char const* name) {
-    *func = (F*)GetProcAddress(module_, name);
-    return func != nullptr;
+    return ((*func = (F*)(void*)GetProcAddress(module_, name)) != nullptr);
   }
 };
 
@@ -47,19 +46,19 @@ struct dll {
 
 struct dbghelp_dll final : dll {
   IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
-  bool    (*SymCleanup)         (HANDLE);
-  DWORD   (*SymGetOptions)      ();
-  bool    (*SymGetSearchPath)   (HANDLE, char const*, DWORD);
-  bool    (*SymInitialize)      (HANDLE, char const*, bool);
-  DWORD   (*SymSetOptions)      (DWORD);
-  bool    (*SymSetSearchPath)   (HANDLE, char const*);
-  bool    (*StackWalk64)        (DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*, void*, void*, void*);
-  void*   (*SymFunctionTableAccess64)(HANDLE, DWORD64);
-  bool    (*SymGetLineFromAddr64)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
-  DWORD64 (*SymGetModuleBase64) (HANDLE, DWORD64);
-  bool    (*SymGetModuleInfo64) (HANDLE, DWORD64, IMAGEHLP_MODULE64*);
-  bool    (*SymGetSymFromAddr64)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
-  DWORD64 (*SymLoadModule64)    (HANDLE, HANDLE, char const*, char const*, void*, DWORD);
+  bool    (WINAPI *SymCleanup)         (HANDLE);
+  DWORD   (WINAPI *SymGetOptions)      ();
+  bool    (WINAPI *SymGetSearchPath)   (HANDLE, char const*, DWORD);
+  bool    (WINAPI *SymInitialize)      (HANDLE, char const*, bool);
+  DWORD   (WINAPI *SymSetOptions)      (DWORD);
+  bool    (WINAPI *SymSetSearchPath)   (HANDLE, char const*);
+  bool    (WINAPI *StackWalk64)        (DWORD, HANDLE, HANDLE, STACKFRAME64*, void*, void*, void*, void*, void*);
+  void*   (WINAPI *SymFunctionTableAccess64)(HANDLE, DWORD64);
+  bool    (WINAPI *SymGetLineFromAddr64)(HANDLE, DWORD64, DWORD*, IMAGEHLP_LINE64*);
+  DWORD64 (WINAPI *SymGetModuleBase64) (HANDLE, DWORD64);
+  bool    (WINAPI *SymGetModuleInfo64) (HANDLE, DWORD64, IMAGEHLP_MODULE64*);
+  bool    (WINAPI *SymGetSymFromAddr64)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
+  DWORD64 (WINAPI *SymLoadModule64)    (HANDLE, HANDLE, char const*, char const*, void*, DWORD);
 
   dbghelp_dll() : dll("dbghelp.dll") {
     loaded_ = true
@@ -82,9 +81,9 @@ struct dbghelp_dll final : dll {
 };
 
 struct psapi_dll final : dll {
-  bool  (*EnumProcessModules)   (HANDLE, HMODULE*, DWORD, DWORD*);
-  bool  (*GetModuleInformation) (HANDLE, HMODULE, MODULEINFO*, DWORD);
-  DWORD (*GetModuleBaseName)    (HANDLE, HMODULE, char**, DWORD);
+  bool  (WINAPI *EnumProcessModules)   (HANDLE, HMODULE*, DWORD, DWORD*);
+  bool  (WINAPI *GetModuleInformation) (HANDLE, HMODULE, MODULEINFO*, DWORD);
+  DWORD (WINAPI *GetModuleBaseName)    (HANDLE, HMODULE, char**, DWORD);
 
   psapi_dll() : dll("psapi.dll") {
     loaded_ = true
@@ -184,8 +183,8 @@ base::current_impl(size_t skip, size_t max_depth) {
 
     if (!(*dbghelp.StackWalk64)(
           machine, proc, thread, &frame, &ccx, nullptr,
-          (PFUNCTION_TABLE_ACCESS_ROUTINE64) dbghelp.SymFunctionTableAccess64,
-          (PGET_MODULE_BASE_ROUTINE64) dbghelp.SymGetModuleBase64,
+          (PFUNCTION_TABLE_ACCESS_ROUTINE64) (void*) dbghelp.SymFunctionTableAccess64,
+          (PGET_MODULE_BASE_ROUTINE64) (void*) dbghelp.SymGetModuleBase64,
           nullptr)) {
       break;
     }
