@@ -5,7 +5,7 @@
 
 
 #include <immintrin.h>
-#include <builtin_test_helpers.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/bmi-intrinsics-fast-isel.ll
 
