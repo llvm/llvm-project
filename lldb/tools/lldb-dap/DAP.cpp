@@ -901,9 +901,15 @@ void DAP::SendTerminatedEvent() {
   // Prevent races if the process exits while we're being asked to disconnect.
   llvm::call_once(terminated_event_flag, [&] {
     RunTerminateCommands();
+
     // Send a "terminated" event
     llvm::json::Object event(CreateTerminatedEventObject(target));
     SendJSON(llvm::json::Value(std::move(event)));
+
+    // Destroy the debugger when the session ends. This will trigger the
+    // debugger's destroy callbacks for earlier logging and clean-ups, rather
+    // than waiting for the termination of the lldb-dap process.
+    lldb::SBDebugger::Destroy(debugger);
   });
 }
 
