@@ -650,7 +650,7 @@ let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
 
 let Predicates = [HasSVE_or_SME] in {
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
-  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub, add>;
   defm SUBR_ZI  : sve_int_arith_imm0<0b011, "subr", AArch64subr>;
   defm SQADD_ZI : sve_int_arith_imm0_ssat<0b100, "sqadd", saddsat, ssubsat>;
   defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
