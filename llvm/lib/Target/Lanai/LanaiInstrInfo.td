@@ -212,7 +212,6 @@ def MemImmAsmOperand : AsmOperandClass {
   let ParserMethod  = "parseMemoryOperand";
 }
 def MEMi : Operand<i32> {
-  let MIOperandInfo = (ops i32lo21:$offset);
   let ParserMatchClass = MemImmAsmOperand;
   let PrintMethod   = "printMemImmOperand";
 }

@@ -1990,18 +1990,12 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
     // Otherwise, if we have an operand with sub-operands, but they aren't
     // named...
     if (Op.MIOperandInfo && OpInfo.Decoder.empty()) {
-      // If it's a single sub-operand, and no custom decoder, use the decoder
-      // from the one sub-operand.
-      if (Op.MIOperandInfo->getNumArgs() == 1)
-        OpInfo =
-            getOpInfo(cast<DefInit>(Op.MIOperandInfo->getArg(0))->getDef());
-
-      // If we have multiple sub-ops, there'd better have a custom
-      // decoder. (Otherwise we don't know how to populate them properly...)
-      if (Op.MIOperandInfo->getNumArgs() > 1) {
+      // If we have sub-ops, we'd better have a custom decoder.
+      // (Otherwise we don't know how to populate them properly...)
+      if (Op.MIOperandInfo->getNumArgs()) {
         PrintError(EncodingDef,
                    "DecoderEmitter: operand \"" + Op.Name +
-                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                       "\" has non-empty MIOperandInfo, but doesn't "
                        "have a custom decoder!");
         debugDumpRecord(*EncodingDef);
         continue;
