@@ -1,3 +1,4 @@
+REQUIRES: rdar159531365
 // This test checks that the value of the symbols.swift-module-loading-mode
 // setting is respected when loading Swift modules.
 // Note: It intentionally does not check the only-interface or prefer-interface

@@ -3,7 +3,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-
+@skipIf(bugnumber = "rdar://159531304")
 class TestSwiftObjcProtocol(TestBase):
     def skip_debug_info_libraries(self):
         if platform.system() == "Darwin":

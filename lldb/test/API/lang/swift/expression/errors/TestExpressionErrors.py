@@ -18,7 +18,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
-
+@skipIf(bugnumber = "rdar://159531241")
 class TestExpressionErrors(TestBase):
     @swiftTest
     def test_CanThrowError(self):

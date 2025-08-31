@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import platform
 
+@skipIf(bugnumber ="rdar://159531310")
 class TestStepThroughAllocatingInit(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 

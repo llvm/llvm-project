@@ -30,7 +30,7 @@ def execute_command(command):
     (exit_status, output) = subprocess.getstatusoutput(command)
     return exit_status
 
-
+@skipIf(bugnumber = "rdar://159531216")
 class TestUnitTests(TestBase):
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
