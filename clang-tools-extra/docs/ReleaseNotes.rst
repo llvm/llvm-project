@@ -243,6 +243,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check by
+  adding the option `PreserveConsistency`, which prevents shortening
+  directives if it would break visual consistency with other directives in the
+  ``#if`` chain.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
