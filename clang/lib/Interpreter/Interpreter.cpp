@@ -459,6 +459,8 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
   if (auto E = Interp->ParseAndExecute(Runtimes))
     return std::move(E);
 
+  Interp->markUserCodeStart();
+
   return std::move(Interp);
 }
 

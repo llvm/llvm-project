@@ -1,4 +1,4 @@
-// REQUIRES: host-supports-jit,  host-supports-out-of-process-jit, x86_64
+// REQUIRES: host-supports-jit,  host-supports-out-of-process-jit, x86_64-linux
 
 // RUN: cat %s | clang-repl -oop-executor -orc-runtime | FileCheck %s
 
