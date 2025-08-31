@@ -146,8 +146,6 @@ Community members can find active and inactive maintainers for a project in the
 Maintainers are volunteering to take on shared responsibilities
 within an area of a project, not to exert power through that status.
 Actions and opinions of maintainers have equal weight to those of other contributors.
-Conflicts are resolved by the area teams (defined in `LP0004
-<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_).
 
 The main responsibilities of a maintainer are:
 * **Code Review**: ensure that commits receive high-quality review, either by the
@@ -177,7 +175,8 @@ maintainer to reach out to, a lead maintainer is always a good choice.
 
 Lead maintainers do not have additional privileges over other maintainers,
 for example overruling another maintainer's decision if consensus has been reached.
-They also don't need to know _everything_ that happens in the project.
+They also don't need to know _everything_ that happens in the project, but are
+expected to find resolutions to problems in areas not covered by other maintainers.
 Having multiple lead maintainers can help cover all areas with reasonable depth,
 as well as allow for better coverage and response times.
 
@@ -188,8 +187,7 @@ project should be discontinued.
 
 All contributors with commit access to the LLVM Project are **eligible** to be a
 maintainer. However, we are looking for people who can commit to engaging in
-the responsibilities above consistently for at least three months in the previous
-six months.
+the responsibilities above consistently for the least three months.
 
 In the interest of having a wider coverage of maintainers, we encourage any active
 collaborator to volunteer for a maintainer role, especially in areas currently without
@@ -208,9 +206,9 @@ adds yourself to the area(s) you are volunteering for. Alternatively, an
 existing maintainer can nominate you by posting a PR, but the nominee must
 explicitly accept the PR so that it's clear they agree to volunteer within the
 proposed area(s). As long as the volunteer meets the requirements above, there
-are no objections from the community, and there are no other constraints (for
-example, too many maintainers in the target area already), the volunteer can
-be accepted as a maintainer.
+are no objections from the community, and there are no other constraints, the
+volunteer can be accepted as a maintainer by at least one existing maintainer
+in the same area.
 
 **To step down as a maintainer**, you can move your name to the "inactive
 maintainers" section of the ``Maintainers.rst`` file for the project, or remove
