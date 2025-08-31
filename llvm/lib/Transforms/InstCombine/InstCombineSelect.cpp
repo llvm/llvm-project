@@ -1153,6 +1153,15 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
   }
 
+  // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
+  // Recognize the pattern where we have sub, icmp, neg(sub), select
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(TI, m_Sub(m_Specific(A), m_Specific(B))) &&
+      match(FI, m_Neg(m_Specific(TI))) && TI->hasNoSignedWrap()) {
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
+                                         Builder.getFalse());
+  }
+
   return nullptr;
 }
 

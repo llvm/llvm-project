@@ -865,9 +865,7 @@ define i32 @abs_range_metadata(i32 %x) {
 define i32 @abs_diff(i32 %x, i32 %y) {
 ; CHECK-LABEL: @abs_diff(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub nsw i32 %x, %y
@@ -925,9 +923,7 @@ define i32 @abs_diff_neg_no_nsw(i32 %x, i32 %y) {
 define i32 @abs_diff_ge(i32 %x, i32 %y) {
 ; CHECK-LABEL: @abs_diff_ge(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i32 [[SUB1]], i32 [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub nsw i32 %x, %y
