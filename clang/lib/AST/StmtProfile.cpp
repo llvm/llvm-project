@@ -2748,6 +2748,14 @@ void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
   VisitClauseWithVarList(Clause);
+
+  for (auto &Recipe : Clause.getRecipes()) {
+    Profiler.VisitDecl(Recipe.RecipeDecl);
+    // TODO: OpenACC: Make sure we remember to update this when we figure out
+    // what we're adding for the operation recipe, in the meantime, a static
+    // assert will make sure we don't add something.
+    static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
+  }
 }
 
 void OpenACCClauseProfiler::VisitBindClause(const OpenACCBindClause &Clause) {

@@ -258,7 +258,7 @@ public:
         const FieldRegion *FR = MrMgr.getFieldRegion(I, R);
         FieldChain.push_back(I);
         T = I->getType();
-        if (T->getAsStructureType()) {
+        if (T->isStructureType()) {
           if (Find(FR))
             return true;
         } else {
