@@ -953,6 +953,33 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sub
 }
 
+define i32 @abdu_select(i32 %x, i32 %y) {
+; X86-LABEL: abdu_select:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovbel %edx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abdu_select:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    cmoval %edi, %eax
+; X64-NEXT:    retq
+  %sub = sub i32 %x, %y
+  %cmp = icmp ugt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
