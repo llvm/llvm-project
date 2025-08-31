@@ -57,8 +57,6 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/Utils/Cloning.h" // for CloneModule
 
-#include <iostream>
-
 #define DEBUG_TYPE "clang-repl"
 
 using namespace clang;
@@ -369,7 +367,7 @@ public:
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
-                         std::unique_ptr<clang::ASTConsumer> Consumer)
+                         std::unique_ptr<clang::ASTConsumer> Consumer, OutOfProcessJITConfig OOPConfig)
     : JITBuilder(std::move(JITBuilder)) {
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
@@ -402,7 +400,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
       ASTContext &C = CI->getASTContext();
       RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
     }
-    if (llvm::Error Err = CreateExecutor()) {
+    if (llvm::Error Err = CreateExecutor(OOPConfig)) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
       return;
     }
@@ -464,62 +462,65 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
-llvm::ExitOnError ExitOnErr;
-
-std::unique_ptr<llvm::orc::LLJITBuilder>
+llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
 Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+  pid_t childPid = -1;
   if (OutOfProcessConfig.OOPExecutor != "") {
     // Launch an out-of-process executor locally in a child process.
-    EPC = ExitOnErr(launchExecutor(OutOfProcessConfig.OOPExecutor,
+    auto ResultOrErr = IncrementalExecutor::launchExecutor(OutOfProcessConfig.OOPExecutor,
                                    OutOfProcessConfig.UseSharedMemory,
-                                   OutOfProcessConfig.SlabAllocateSizeString));
+                                   OutOfProcessConfig.SlabAllocateSizeString, OutOfProcessConfig.CustomizeFork);
+    if (!ResultOrErr)
+      return ResultOrErr.takeError();
+    childPid = ResultOrErr->second;
+    auto EPCOrErr = std::move(ResultOrErr->first);
+    EPC = std::move(EPCOrErr);
   } else if (OutOfProcessConfig.OOPExecutorConnect != "") {
-    EPC =
-        ExitOnErr(connectTCPSocket(OutOfProcessConfig.OOPExecutorConnect,
-                                   OutOfProcessConfig.UseSharedMemory,
-                                   OutOfProcessConfig.SlabAllocateSizeString));
+    auto EPCOrErr = IncrementalExecutor::connectTCPSocket(OutOfProcessConfig.OOPExecutorConnect,
+                                     OutOfProcessConfig.UseSharedMemory,
+                                     OutOfProcessConfig.SlabAllocateSizeString);
+    if (!EPCOrErr)
+      return EPCOrErr.takeError();
+    EPC = std::move(*EPCOrErr);
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
   if (EPC) {
-    JB = ExitOnErr(clang::Interpreter::createLLJITBuilder(
-        std::move(EPC), OutOfProcessConfig.OrcRuntimePath));
+    auto JBOrErr = clang::Interpreter::createLLJITBuilder(
+        std::move(EPC), OutOfProcessConfig.OrcRuntimePath);
+    if (!JBOrErr)
+      return JBOrErr.takeError();
+    JB = std::move(*JBOrErr);
   }
 
-  return JB;
+  return std::make_pair(std::move(JB), childPid);
 }
-
 llvm::Expected<std::string>
 Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
   std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
+  std::optional<std::string> ResourceDir = TC.getRuntimePath();
+
   if (!CompilerRTPath) {
     return llvm::make_error<llvm::StringError>("CompilerRT path not found",
                                                std::error_code());
   }
-  llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
-      "clang-repl", reinterpret_cast<void *>(&getOrcRuntimePath)));
-  // Remove paths until you find /build at last
-  while (!(llvm::sys::path::filename(BasePath) == "build") &&
-         !BasePath.empty()) {
-    llvm::sys::path::remove_filename(BasePath);
+
+  const std::array<const char *, 3> OrcRTLibNames = {
+      "liborc_rt.a", "liborc_rt_osx.a", "liborc_rt-x86_64.a"};
+
+  for (const char *LibName : OrcRTLibNames) {
+    llvm::SmallString<256> CandidatePath((*CompilerRTPath).c_str());
+    llvm::sys::path::append(CandidatePath, LibName);
+
+    if (llvm::sys::fs::exists(CandidatePath)) {
+      return CandidatePath.str().str();
+    }
   }
 
-  llvm::sys::path::append(BasePath, *CompilerRTPath);
-
-  if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt.a")) {
-    llvm::sys::path::append(BasePath, "liborc_rt.a");
-  } else if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt_osx.a")) {
-    llvm::sys::path::append(BasePath, "liborc_rt_osx.a");
-  } else if (llvm::sys::fs::exists(BasePath.str().str() +
-                                   "/liborc_rt-x86_64.a")) {
-    llvm::sys::path::append(BasePath, "liborc_rt-x86_64.a");
-  } else {
-    return llvm::make_error<llvm::StringError>("OrcRuntime library not found",
-                                               std::error_code());
-  }
-
-  return BasePath.str().str();
+  return llvm::make_error<llvm::StringError>(
+      llvm::Twine("OrcRuntime library not found in: ") + (*CompilerRTPath),
+      std::error_code());
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
@@ -535,8 +536,9 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
     const llvm::Triple &Triple = TI.getTriple();
 
     DiagnosticsEngine &Diags = CI->getDiagnostics();
-    driver::Driver Driver("clang", Triple.str(), Diags);
-
+    std::string BinaryName =
+        llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+    driver::Driver Driver(BinaryName, Triple.str(), Diags);
     std::vector<const char *> Args = {"clang", "--version"};
     std::unique_ptr<clang::driver::Compilation> C(
         Driver.BuildCompilation(Args));
@@ -545,30 +547,30 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
           "Failed to create driver compilation for out-of-process JIT",
           std::error_code());
     }
+    if (OutOfProcessConfig->OrcRuntimePath == "") {
+      const clang::driver::ToolChain &TC = C->getDefaultToolChain();
 
-    const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+      auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
+      if (!OrcRuntimePathOrErr) {
+        return OrcRuntimePathOrErr.takeError();
+      }
 
-    auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
-    if (!OrcRuntimePathOrErr) {
-      return OrcRuntimePathOrErr.takeError();
+      OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
     }
 
-    OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
-    JB = outOfProcessJITBuilder(*OutOfProcessConfig);
   }
 
   auto Interp = std::unique_ptr<Interpreter>(
-      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
-  if (Err)
-    return std::move(Err);
+      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr,
+                      OutOfProcessConfig ? *OutOfProcessConfig
+                                        : OutOfProcessJITConfig()));
+  if (auto E = std::move(Err))
+    return std::move(E);
 
   // Add runtime code and set a marker to hide it from user code. Undo will not
   // go through that.
-  Err = Interp->ParseAndExecute(Runtimes);
-  if (Err)
-    return std::move(Err);
-
-  Interp->markUserCodeStart();
+  if (auto E = Interp->ParseAndExecute(Runtimes))
+    return std::move(E);
 
   return std::move(Interp);
 }
@@ -674,6 +676,12 @@ Interpreter::RegisterPTU(TranslationUnitDecl *TU,
   return LastPTU;
 }
 
+pid_t Interpreter::getOutOfProcessExecutorPID() const {
+  if (IncrExecutor)
+    return IncrExecutor->getOutOfProcessChildPid();
+  return -1;
+}
+
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
@@ -742,7 +750,7 @@ Interpreter::createLLJITBuilder(
   return std::move(*JB);
 }
 
-llvm::Error Interpreter::CreateExecutor() {
+llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
   if (IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
@@ -751,6 +759,21 @@ llvm::Error Interpreter::CreateExecutor() {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
+  pid_t OOPChildPid = -1;
+  if (OOPConfig.IsOutOfProcess) {
+    if (!JITBuilder) {
+      auto ResOrErr = outOfProcessJITBuilder(OOPConfig);
+      if (!ResOrErr)
+        return ResOrErr.takeError();
+      JITBuilder = std::move(ResOrErr->first);
+      OOPChildPid = ResOrErr->second;
+    }
+    if (!JITBuilder)
+      return llvm::make_error<llvm::StringError>(
+          "Operation failed. No LLJITBuilder for out-of-process JIT",
+          std::error_code());
+  }
+
   if (!JITBuilder) {
     const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
     auto JTMB = createJITTargetMachineBuilder(TT);
@@ -767,7 +790,7 @@ llvm::Error Interpreter::CreateExecutor() {
   auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
   auto Executor =
-      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err, OOPChildPid);
 #endif
   if (!Err)
     IncrExecutor = std::move(Executor);

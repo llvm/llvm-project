@@ -41,6 +41,20 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
+
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -73,6 +87,47 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
+static std::string getOrcRuntimePath() {
+  clang::DiagnosticOptions DiagOpts;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
+      new clang::DiagnosticIDs());
+
+  clang::IgnoringDiagConsumer DiagConsumer;
+  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagConsumer, false);
+  std::vector<const char *> Args = {"clang", "--version"};
+  clang::driver::Driver D("clang", llvm::sys::getProcessTriple(), Diags);
+  D.setCheckInputsExist(false);
+
+  std::unique_ptr<clang::driver::Compilation> C(D.BuildCompilation(Args));
+  if (!C) {
+    return "";
+  }
+
+  const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+  std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
+
+  // Fallback: Calculate base path similar to clang-repl logic.
+  llvm::SmallString<256> BasePath(llvm::sys::fs::getMainExecutable(
+      "clang", reinterpret_cast<void *>(&getOrcRuntimePath)));
+  removePathComponent(5, BasePath);
+
+  // Append libdir, clang, and version.
+
+  llvm::sys::path::append(BasePath, *CompilerRTPath);
+
+  std::cout << "BasePath: " << BasePath.str().str() << "\n";
+
+  if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt_osx.a")) {
+    return BasePath.str().str() + "/liborc_rt_osx.a";
+  } else if (llvm::sys::fs::exists(BasePath.str().str() + "/liborc_rt.a")) {
+    return BasePath.str().str() + "/liborc_rt.a";
+  } else if (llvm::sys::fs::exists(BasePath.str().str() +
+                                   "/liborc_rt-x86_64.a")) {
+    return BasePath.str().str() + "liborc_rt-x86_64.a";
+  } else
+    return "";
+}
+
 static std::unique_ptr<Interpreter>
 createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
                                      DiagnosticConsumer *Client = nullptr) {
@@ -89,6 +144,10 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
   OutOfProcessConfig.UseSharedMemory = false;
   OutOfProcessConfig.SlabAllocateSizeString = "";
   OutOfProcessConfig.IsOutOfProcess = true;
+  OutOfProcessConfig.OrcRuntimePath = getOrcRuntimePath();
+
+  std::cout << "OrcRuntimePath: " << OutOfProcessConfig.OrcRuntimePath
+            << "\n";
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 

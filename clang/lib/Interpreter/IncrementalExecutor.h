@@ -15,10 +15,16 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/Support/Error.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 
 namespace llvm {
 class Error;
@@ -39,6 +45,7 @@ class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
   std::unique_ptr<llvm::orc::LLJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
+  pid_t OutOfProcessChildPid = -1;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
@@ -51,6 +58,9 @@ public:
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                       llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
+  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
+                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err,
+                      pid_t ChildPid);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
@@ -62,8 +72,20 @@ public:
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 
+  pid_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
+
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
+
+  static llvm::Expected<
+      std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
+  launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
+                 llvm::StringRef SlabAllocateSizeString,
+                 std::function<void()> CustomizeFork = nullptr);
+
+  static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
+  connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
+                   llvm::StringRef SlabAllocateSizeString);
 };
 
 } // end namespace clang

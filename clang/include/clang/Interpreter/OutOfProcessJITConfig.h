@@ -38,6 +38,9 @@ struct OutOfProcessJITConfig {
 
   /// Path to the ORC runtime library.
   std::string OrcRuntimePath;
+
+  /// Custom lambda function to customize the fork behavior.
+  std::function<void()> CustomizeFork = nullptr;
 };
 
 } // namespace clang

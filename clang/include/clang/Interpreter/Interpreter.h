@@ -126,11 +126,11 @@ protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
-              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr, OutOfProcessJITConfig OOPConfig = {});
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error CreateExecutor();
+  llvm::Error CreateExecutor(OutOfProcessJITConfig OOPConfig = {});
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
@@ -147,7 +147,7 @@ public:
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
-  static std::unique_ptr<llvm::orc::LLJITBuilder>
+  static llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
   outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig);
   static llvm::Expected<std::string>
   getOrcRuntimePath(const driver::ToolChain &TC);
@@ -185,6 +185,8 @@ public:
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
                                       std::unique_ptr<llvm::Module> M = {},
                                       IncrementalAction *Action = nullptr);
+
+  pid_t getOutOfProcessExecutorPID() const;
 
 private:
   size_t getEffectivePTUSize() const;
