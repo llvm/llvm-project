@@ -174,20 +174,8 @@ public:
     return contains(Val) ? 1 : 0;
   }
 
-  iterator find(const_arg_type_t<KeyT> Val) {
-    if (BucketT *Bucket = doFind(Val))
-      return makeIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
-  }
-  const_iterator find(const_arg_type_t<KeyT> Val) const {
-    if (const BucketT *Bucket = doFind(Val))
-      return makeConstIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
-  }
+  iterator find(const_arg_type_t<KeyT> Val) { return find_as(Val); }
+  const_iterator find(const_arg_type_t<KeyT> Val) const { return find_as(Val); }
 
   /// Alternate version of find() which allows a different, and possibly
   /// less expensive, key type.
@@ -348,11 +336,11 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) {
-    return try_emplace_impl(Key).first->second;
+    return lookupOrInsertIntoBucket(Key).first->second;
   }
 
   ValueT &operator[](KeyT &&Key) {
-    return try_emplace_impl(std::move(Key)).first->second;
+    return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
 
   /// isPointerIntoBucketsArray - Return true if the specified pointer points
@@ -477,16 +465,24 @@ protected:
 
 private:
   template <typename KeyArgT, typename... Ts>
-  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+  std::pair<BucketT *, bool> lookupOrInsertIntoBucket(KeyArgT &&Key,
+                                                      Ts &&...Args) {
     BucketT *TheBucket = nullptr;
     if (LookupBucketFor(Key, TheBucket))
-      return {makeInsertIterator(TheBucket), false}; // Already in the map.
+      return {TheBucket, false}; // Already in the map.
 
     // Otherwise, insert the new element.
     TheBucket = findBucketForInsertion(Key, TheBucket);
     TheBucket->getFirst() = std::forward<KeyArgT>(Key);
     ::new (&TheBucket->getSecond()) ValueT(std::forward<Ts>(Args)...);
-    return {makeInsertIterator(TheBucket), true};
+    return {TheBucket, true};
+  }
+
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    auto [Bucket, Inserted] = lookupOrInsertIntoBucket(
+        std::forward<KeyArgT>(Key), std::forward<Ts>(Args)...);
+    return {makeInsertIterator(Bucket), Inserted};
   }
 
   iterator makeIterator(BucketT *P, BucketT *E, DebugEpochBase &Epoch,
@@ -582,7 +578,6 @@ private:
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
       LookupBucketFor(Lookup, TheBucket);
-      NumBuckets = getNumBuckets();
     } else if (LLVM_UNLIKELY(NumBuckets -
                                  (NewNumEntries + getNumTombstones()) <=
                              NumBuckets / 8)) {

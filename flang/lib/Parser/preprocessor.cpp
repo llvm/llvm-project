@@ -414,7 +414,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     const TokenSequence &input, Prescanner &prescanner,
     std::optional<std::size_t> *partialFunctionLikeMacro, bool inIfExpression) {
   // Do quick scan for any use of a defined name.
-  if (definitions_.empty()) {
+  if (!inIfExpression && definitions_.empty()) {
     return std::nullopt;
   }
   std::size_t tokens{input.SizeInTokens()};

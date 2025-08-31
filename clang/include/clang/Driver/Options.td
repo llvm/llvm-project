@@ -9512,6 +9512,16 @@ def fvk_use_scalar_layout
     : DXCFlag<"fvk-use-scalar-layout">,
       HelpText<"Use scalar memory layout for Vulkan resources.">;
 
+def fhlsl_spv_use_unknown_image_format
+    : Flag<["-"], "fspv-use-unknown-image-format">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"For storage images and texel buffers, sets the default format "
+               "to 'Unknown' when not specified via the `vk::image_format` "
+               "attribute. If this option is not used, the format is inferred "
+               "from the resource's data type.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

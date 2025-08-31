@@ -138,10 +138,6 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
   string ConstraintsY = !if(hasSrc2AccY, "$src2Y = $vdstY", "");
   let Constraints =
       ConstraintsX # !if(!and(hasSrc2AccX, hasSrc2AccY), ", ", "") # ConstraintsY;
-  string DisableEncodingX = !if(hasSrc2AccX, "$src2X", "");
-  string DisableEncodingY = !if(hasSrc2AccY, "$src2Y", "");
-  let DisableEncoding =
-      DisableEncodingX # !if(!and(hasSrc2AccX, hasSrc2AccY), ", ", "") # DisableEncodingY;
 
   let Uses = RegListUnion<VDX.Uses, VDY.Uses>.ret;
   let Defs = RegListUnion<VDX.Defs, VDY.Defs>.ret;

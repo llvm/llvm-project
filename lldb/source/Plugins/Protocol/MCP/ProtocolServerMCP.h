@@ -48,6 +48,7 @@ private:
 
   bool m_running = false;
 
+  FileSpec m_mcp_registry_entry_path;
   lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
   std::mutex m_mutex;

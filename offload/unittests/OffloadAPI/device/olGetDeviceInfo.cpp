@@ -145,6 +145,19 @@ TEST_P(olGetDeviceInfoTest, SuccessMaxWorkGroupSizePerDimension) {
   ASSERT_GT(Value.z, 0u);
 }
 
+OL_DEVICE_INFO_TEST_VALUE_GT(MaxWorkSize, uint32_t,
+                             OL_DEVICE_INFO_MAX_WORK_SIZE, 0);
+
+TEST_P(olGetDeviceInfoTest, SuccessMaxWorkSizePerDimension) {
+  ol_dimensions_t Value{0, 0, 0};
+  ASSERT_SUCCESS(olGetDeviceInfo(Device,
+                                 OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION,
+                                 sizeof(Value), &Value));
+  ASSERT_GT(Value.x, 0u);
+  ASSERT_GT(Value.y, 0u);
+  ASSERT_GT(Value.z, 0u);
+}
+
 OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(VendorId, uint32_t,
                                     OL_DEVICE_INFO_VENDOR_ID, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(VendorId, uint32_t, OL_DEVICE_INFO_VENDOR_ID);

@@ -382,14 +382,14 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 class VXForm_VTB5_RA5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, vrrc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [PO VRT RA RB XO].
 // Destructive (insert) forms are suffixed with _ins.
 class VXForm_VRT5_RAB5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, gprc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [ PO BF // VRA VRB XO ]
 class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -1395,7 +1395,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
                              [(set v2i64:$XT,
                                    (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
                                                    i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
+                             RegConstraint<"$XTi = $XT">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -1466,13 +1466,13 @@ let Predicates = [IsISA3_1] in {
              "vinsw $VD, $VB, $VA", IIC_VecGeneral,
              [(set v4i32:$VD,
                    (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSD :
     VXForm_1<463, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, g8rc:$VB),
              "vinsd $VD, $VB, $VA", IIC_VecGeneral,
              [(set v2i64:$VD,
                    (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$VD,
@@ -1538,13 +1538,13 @@ let Predicates = [IsISA3_1] in {
              "vinsdlx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdlx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VINSDRX :
     VXForm_1<975, (outs vrrc:$VD), (ins vrrc:$VDi, g8rc:$VA, g8rc:$VB),
              "vinsdrx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdrx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$VD), (ins vrrc:$VB),
                                       "vextractbm $VD, $VB", IIC_VecGeneral,
                                       [(set i32:$VD,
@@ -1915,7 +1915,7 @@ let Predicates = [IsISA3_1] in {
                         [(set v1i128:$VD,
                           (int_ppc_altivec_vrlqmi v1i128:$VA, v1i128:$VB,
                                                   v1i128:$VDi))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
   def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
   def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
   def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", []>;

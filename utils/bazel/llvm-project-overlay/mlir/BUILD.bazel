@@ -6594,6 +6594,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PtrToLLVM",
+    srcs = glob([
+        "lib/Conversion/PtrToLLVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/PtrToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":PtrDialect",
+    ],
+)
+
 td_library(
     name = "SMTTdFiles",
     srcs = [
@@ -9277,6 +9296,7 @@ cc_library(
         ":NVGPUTransformOps",
         ":NVVMToLLVM",
         ":OpenMPToLLVM",
+        ":PtrToLLVM",
         ":ROCDLToLLVMIRTranslation",
         ":SCFToEmitC",
         ":SCFTransformOps",

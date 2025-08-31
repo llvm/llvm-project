@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 

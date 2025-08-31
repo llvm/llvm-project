@@ -1,9 +1,5 @@
 // RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// MSan doesn't catch this because internally it translates 0-byte allocations
-// into 1-byte
-// XFAIL: *
-
 #include <malloc.h>
 #include <stdio.h>
 

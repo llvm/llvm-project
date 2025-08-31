@@ -157,6 +157,9 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The namespace in which this encoding exists.
+  StringRef DecoderNamespace;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
@@ -189,6 +192,9 @@ public:
 
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
+
+  /// Returns the namespace in which this encoding exists.
+  StringRef getDecoderNamespace() const { return DecoderNamespace; }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -326,7 +332,7 @@ struct DecoderTableInfo {
   }
 };
 
-using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
+using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
@@ -1052,8 +1058,6 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
                                            const OperandInfo &OpInfo) const {
-  const std::string &Decoder = OpInfo.Decoder;
-
   bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
 
   if (UseInsertBits) {
@@ -1076,6 +1080,7 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
+  StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1932,19 +1937,6 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
 }
 
 void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
-  const Record &Def = *Inst->TheDef;
-
-  // Gather the outputs/inputs of the instruction, so we can find their
-  // positions in the encoding.  This assumes for now that they appear in the
-  // MCInst in the order that they're listed.
-  std::vector<std::pair<const Init *, StringRef>> InOutOperands;
-  const DagInit *Out = Def.getValueAsDag("OutOperandList");
-  const DagInit *In = Def.getValueAsDag("InOperandList");
-  for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
-    InOutOperands.emplace_back(Arg, Out->getArgNameStr(Idx));
-  for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
-    InOutOperands.emplace_back(Arg, In->getArgNameStr(Idx));
-
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
@@ -1967,48 +1959,28 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 
   // For each operand, see if we can figure out where it is encoded.
-  for (const auto &Op : InOutOperands) {
-    const Init *OpInit = Op.first;
-    StringRef OpName = Op.second;
-
-    // We're ready to find the instruction encoding locations for this
-    // operand.
-
-    // First, find the operand type ("OpInit"), and sub-op names
-    // ("SubArgDag") if present.
-    const DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
-    if (SubArgDag)
-      OpInit = SubArgDag->getOperator();
-    const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
-    // Lookup the sub-operands from the operand type record (note that only
-    // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
-    const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
-                                ? OpTypeRec->getValueAsDag("MIOperandInfo")
-                                : nullptr;
-
+  for (const CGIOperandList::OperandInfo &Op : Inst->Operands) {
     // Lookup the decoder method and construct a new OperandInfo to hold our
     // result.
-    OperandInfo OpInfo = getOpInfo(OpTypeRec);
+    OperandInfo OpInfo = getOpInfo(Op.Rec);
 
     // If we have named sub-operands...
-    if (SubArgDag) {
+    if (Op.MIOperandInfo && !Op.SubOpNames[0].empty()) {
       // Then there should not be a custom decoder specified on the top-level
       // type.
       if (!OpInfo.Decoder.empty()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
-                       OpInit->getAsString() +
+                   "DecoderEmitter: operand \"" + Op.Name + "\" has type \"" +
+                       Op.Rec->getName() +
                        "\" with a custom DecoderMethod, but also named "
                        "sub-operands.");
         continue;
       }
 
       // Decode each of the sub-ops separately.
-      assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
-      for (const auto &[I, Arg] : enumerate(SubOps->getArgs())) {
-        StringRef SubOpName = SubArgDag->getArgNameStr(I);
-        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(Arg)->getDef());
-
+      for (auto [SubOpName, SubOp] :
+           zip_equal(Op.SubOpNames, Op.MIOperandInfo->getArgs())) {
+        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(SubOp)->getDef());
         addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName, SubOpInfo);
         Operands.push_back(std::move(SubOpInfo));
       }
@@ -2017,25 +1989,20 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
 
     // Otherwise, if we have an operand with sub-operands, but they aren't
     // named...
-    if (SubOps && OpInfo.Decoder.empty()) {
-      // If it's a single sub-operand, and no custom decoder, use the decoder
-      // from the one sub-operand.
-      if (SubOps->getNumArgs() == 1)
-        OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
-
-      // If we have multiple sub-ops, there'd better have a custom
-      // decoder. (Otherwise we don't know how to populate them properly...)
-      if (SubOps->getNumArgs() > 1) {
+    if (Op.MIOperandInfo && OpInfo.Decoder.empty()) {
+      // If we have sub-ops, we'd better have a custom decoder.
+      // (Otherwise we don't know how to populate them properly...)
+      if (Op.MIOperandInfo->getNumArgs()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName +
-                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                   "DecoderEmitter: operand \"" + Op.Name +
+                       "\" has non-empty MIOperandInfo, but doesn't "
                        "have a custom decoder!");
         debugDumpRecord(*EncodingDef);
         continue;
       }
     }
 
-    addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+    addOneOperandFields(EncodingDef, Bits, TiedNames, Op.Name, OpInfo);
     // FIXME: it should be an error not to find a definition for a given
     // operand, rather than just failing to add it to the resulting
     // instruction! (This is a longstanding bug, which will be addressed in an
@@ -2055,6 +2022,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     Name = (EncodingDef->getName() + Twine(':')).str();
   Name.append(InstDef->getName());
 
+  DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2317,8 +2285,8 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
   for (const auto &MS : CGH.getHwModeSelects()) {
     for (auto [HwModeID, EncodingDef] : MS.second.Items) {
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
-        std::string DecoderNamespace =
-            EncodingDef->getValueAsString("DecoderNamespace").str();
+        StringRef DecoderNamespace =
+            EncodingDef->getValueAsString("DecoderNamespace");
         NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
@@ -2340,9 +2308,7 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-    std::string DecoderNamespace =
-        InstDef->getValueAsString("DecoderNamespace").str();
+    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2515,8 +2481,7 @@ namespace {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
       EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }

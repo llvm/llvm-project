@@ -2536,7 +2536,6 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("convergent"),
     StringLiteral("denormal-fp-math"),
     StringLiteral("denormal-fp-math-f32"),
@@ -2703,10 +2702,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
       attr.isStringAttribute())
     funcOp.setNoNansFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
-      attr.isStringAttribute())
-    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
