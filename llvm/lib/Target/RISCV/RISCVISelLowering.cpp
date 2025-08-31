@@ -4272,7 +4272,7 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
           0);
 
     // Manually optimize away the ANDs if we can, DAGCombiner will
-    // sometimes end of perturbing codegen if we don't.
+    // sometimes end up perturbing codegen if we don't.
     if (DAG.computeKnownBits(A).countMinLeadingZeros() < ZeroPrefix)
       A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
     if (DAG.computeKnownBits(B).countMinLeadingZeros() < ZeroPrefix)
