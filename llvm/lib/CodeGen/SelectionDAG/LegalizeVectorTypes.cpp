@@ -53,6 +53,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to scalarize the result of this "
                        "operator!\n");
 
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+    R = ScalarizeVecRes_LOOP_DEPENDENCE_MASK(N);
+    break;
   case ISD::MERGE_VALUES:      R = ScalarizeVecRes_MERGE_VALUES(N, ResNo);break;
   case ISD::BITCAST:           R = ScalarizeVecRes_BITCAST(N); break;
   case ISD::BUILD_VECTOR:      R = ScalarizeVecRes_BUILD_VECTOR(N); break;
@@ -394,6 +398,22 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
                                                        unsigned ResNo) {
   SDValue Op = DisintegrateMERGE_VALUES(N, ResNo);
   return GetScalarizedVector(Op);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDValue SourceValue = N->getOperand(0);
+  SDValue SinkValue = N->getOperand(1);
+  SDValue EltSize = N->getOperand(2);
+  EVT PtrVT = SourceValue->getValueType(0);
+  SDLoc DL(N);
+
+  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                     Diff.getValueType());
+  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  return DAG.getNode(ISD::OR, DL, CmpVT,
+                     DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
+                     DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {

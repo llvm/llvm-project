@@ -784,3 +784,115 @@ entry:
   %0 = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 3)
   ret <16 x i1> %0
 }
+
+define <1 x i1> @whilewr_8_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_8_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 1)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilewr_16_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_16_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 2)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilewr_32_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_32_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #3
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 4)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilewr_64_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilewr_64_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #7
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %a, ptr %b, i64 8)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilerw_8_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilerw_8_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 1)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilerw_16_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilerw_16_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 2)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilerw_32_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilerw_32_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #3
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 4)
+  ret <1 x i1> %0
+}
+
+define <1 x i1> @whilerw_64_scalarize(ptr %a, ptr %b) {
+; CHECK-LABEL: whilerw_64_scalarize:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cmp x8, #7
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    csinc w0, w8, wzr, ne
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <1 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %a, ptr %b, i64 8)
+  ret <1 x i1> %0
+}
