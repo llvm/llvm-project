@@ -242,7 +242,7 @@ set(MLIR_SRC_SHARDER_TABLEGEN_TARGET "${MLIR_SRC_SHARDER_TABLEGEN_TARGET}" CACHE
 # individual libs below) assume that such a target may exist,
 # but we cannot define the actual dylib until after all individual libs
 # are defined.
-if (MLIR_LINK_MLIR_DYLIB)
+if (MLIR_BUILD_MLIR_DYLIB)
   add_library(MLIRDylib INTERFACE)
   add_mlir_library_install(MLIRDylib)
 endif()
