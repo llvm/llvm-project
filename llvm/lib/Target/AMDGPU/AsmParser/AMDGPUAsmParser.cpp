@@ -1007,7 +1007,7 @@ public:
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
-    return [=](){ return P(*this); };
+    return [this, P]() { return P(*this); };
   }
 
   StringRef getToken() const {
@@ -6410,12 +6410,24 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  if (isGFX1250()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
+            UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
+  }
 
   int64_t IVal = 0;
   if (!KD.kernarg_size->evaluateAsAbsolute(IVal))

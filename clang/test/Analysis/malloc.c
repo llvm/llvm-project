@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
+// RUN:   -Wno-alloc-size \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
