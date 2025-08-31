@@ -183,8 +183,8 @@ base::current_impl(size_t skip, size_t max_depth) {
 
     if (!(*dbghelp.StackWalk64)(
           machine, proc, thread, &frame, &ccx, nullptr,
-          (PFUNCTION_TABLE_ACCESS_ROUTINE64) (void*) dbghelp.SymFunctionTableAccess64,
-          (PGET_MODULE_BASE_ROUTINE64) (void*) dbghelp.SymGetModuleBase64,
+          (void*) dbghelp.SymFunctionTableAccess64,
+          (void*) dbghelp.SymGetModuleBase64,
           nullptr)) {
       break;
     }
