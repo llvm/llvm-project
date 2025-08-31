@@ -2,6 +2,8 @@
 ; RUN: opt -passes=constraint-elimination -S %s | FileCheck %s
 
 @g = private unnamed_addr constant [5 x i8] c"test\00"
+@g_overaligned = private unnamed_addr constant [5 x i8] c"test\00", align 8
+@g_external = external global [5 x i8]
 
 declare void @free(ptr allocptr noundef captures(none)) mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc"
 declare ptr @malloc(i64) mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc"
@@ -24,6 +26,23 @@ define i8 @load_global(i64 %idx) {
   ret i8 %add
 }
 
+define i8 @load_global_atomic(i64 %idx) {
+; CHECK-LABEL: define i8 @load_global_atomic(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i8, ptr [[GEP]] unordered, align 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
+  %load = load atomic i8, ptr %gep unordered, align 1
+  %cmp = icmp ult i64 %idx, 5
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
+
 define i1 @store_global(i64 %idx) {
 ; CHECK-LABEL: define i1 @store_global(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
@@ -33,6 +52,19 @@ define i1 @store_global(i64 %idx) {
 ;
   %gep = getelementptr nuw i8, ptr @g, i64 %idx
   store i8 0, ptr %gep
+  %cmp = icmp ult i64 %idx, 5
+  ret i1 %cmp
+}
+
+define i1 @store_global_atomic(i64 %idx) {
+; CHECK-LABEL: define i1 @store_global_atomic(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    store atomic i8 0, ptr [[GEP]] release, align 1
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
+  store atomic i8 0, ptr %gep release, align 1
   %cmp = icmp ult i64 %idx, 5
   ret i1 %cmp
 }
@@ -143,6 +175,42 @@ next:
 
 ; Negative tests.
 
+define i8 @load_global_overaligned(i64 %idx) {
+; CHECK-LABEL: define i8 @load_global_overaligned(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g_overaligned, i64 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep = getelementptr nuw i8, ptr @g_overaligned, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp ult i64 %idx, 5
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
+
+define i8 @load_global_external(i64 %idx) {
+; CHECK-LABEL: define i8 @load_global_external(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g_external, i64 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep = getelementptr nuw i8, ptr @g_external, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp ult i64 %idx, 5
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
+
 define i8 @load_from_non_gep(ptr %p, i64 %idx) {
 ; CHECK-LABEL: define i8 @load_from_non_gep(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[IDX:%.*]]) {
@@ -231,6 +299,20 @@ define i8 @load_global_volatile(i64 %idx) {
   %zext = zext i1 %cmp to i8
   %add = add i8 %load, %zext
   ret i8 %add
+}
+
+define i1 @store_global_volatile(i64 %idx) {
+; CHECK-LABEL: define i1 @store_global_volatile(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i64 [[IDX]]
+; CHECK-NEXT:    store volatile i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX]], 5
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr nuw i8, ptr @g, i64 %idx
+  store volatile i8 0, ptr %gep
+  %cmp = icmp ult i64 %idx, 5
+  ret i1 %cmp
 }
 
 define i8 @load_global_vscale(i64 %idx) {

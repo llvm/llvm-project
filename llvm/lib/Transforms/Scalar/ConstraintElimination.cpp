@@ -1128,6 +1128,9 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   ObjectSizeOpts Opts;
   // Workaround for gep inbounds, ptr null, idx.
   Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
   ObjectSizeOffsetVisitor Visitor(DL, &TLI, GEP.getContext(), Opts);
   SizeOffsetAPInt Data = Visitor.compute(Offset.BasePtr);
   if (!Data.bothKnown() || !Data.Offset.isZero())
@@ -1191,11 +1194,11 @@ void State::addInfoFor(BasicBlock &BB) {
     };
 
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (LI->isSimple())
+      if (!LI->isVolatile())
         AddFactFromMemoryAccess(LI->getPointerOperand(), LI->getAccessType());
     }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
-      if (SI->isSimple())
+      if (!SI->isVolatile())
         AddFactFromMemoryAccess(SI->getPointerOperand(), SI->getAccessType());
     }
 
