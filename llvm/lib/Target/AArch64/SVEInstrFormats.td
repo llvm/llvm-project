@@ -5228,7 +5228,8 @@ class sve_int_arith_imm0<bits<2> sz8_64, bits<3> opc, string asm,
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op,
+                              SDPatternOperator inv_op = null_frag> {
   def _B : sve_int_arith_imm0<0b00, opc, asm, ZPR8,  addsub_imm8_opt_lsl_i8>;
   def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
   def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
@@ -5238,6 +5239,12 @@ multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
+
+  // Extra patterns for add(x, splat(-ve)) -> sub(x, +ve). There is no i8
+  // pattern as all i8 constants can be handled by an add.
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, inv_op, ZPR16, i32, SVEAddSubNegImm16Pat, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, inv_op, ZPR32, i32, SVEAddSubNegImm32Pat, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, inv_op, ZPR64, i64, SVEAddSubNegImm64Pat, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_arith_imm0_ssat<bits<3> opc, string asm, SDPatternOperator op,
