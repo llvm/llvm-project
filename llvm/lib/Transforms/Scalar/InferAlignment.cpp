@@ -45,17 +45,16 @@ static bool tryToImproveAlign(
   switch (II->getIntrinsicID()) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_store: {
+    int AlignOpIdx = II->getIntrinsicID() == Intrinsic::masked_load ? 1 : 2;
     Value *PtrOp = II->getIntrinsicID() == Intrinsic::masked_load
                        ? II->getArgOperand(0)
                        : II->getArgOperand(1);
-    Value *AlignOp = II->getIntrinsicID() == Intrinsic::masked_load
-                         ? II->getArgOperand(1)
-                         : II->getArgOperand(2);
     Type *Type = II->getIntrinsicID() == Intrinsic::masked_load
                      ? II->getType()
                      : II->getArgOperand(0)->getType();
 
-    Align OldAlign = cast<ConstantInt>(AlignOp)->getAlignValue();
+    Align OldAlign =
+        cast<ConstantInt>(II->getArgOperand(AlignOpIdx))->getAlignValue();
     Align PrefAlign = DL.getPrefTypeAlign(Type);
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
     if (NewAlign <= OldAlign)
@@ -63,10 +62,7 @@ static bool tryToImproveAlign(
 
     Value *V =
         ConstantInt::get(Type::getInt32Ty(II->getContext()), NewAlign.value());
-    if (II->getIntrinsicID() == Intrinsic::masked_load)
-      II->setOperand(1, V);
-    else
-      II->setOperand(2, V);
+    II->setOperand(AlignOpIdx, V);
     return true;
   }
   default:
