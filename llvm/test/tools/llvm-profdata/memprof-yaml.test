@@ -13,6 +13,18 @@
 ; RUN: llvm-profdata show --memory %t/memprof-out-v3.indexed > %t/memprof-out-v3.yaml
 ; RUN: diff -b %t/memprof-out-v3.yaml %t/memprof-in-v3.yaml
 
+; Make sure we can ingest a YAML profile containing AllocSites only.
+; That is, CallSites are missing.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-alloc-sites-only.yaml -o %t/memprof-out-alloc-sites-only.indexed
+; RUN: llvm-profdata show --memory %t/memprof-out-alloc-sites-only.indexed > %t/memprof-out-alloc-sites-only.yaml
+; RUN: diff -b %t/memprof-out-alloc-sites-only.yaml %t/memprof-in-alloc-sites-only.yaml
+
+; Make sure we can ingest a YAML profile containing CallSites only.
+; That is, AllocSites are missing.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-call-sites-only.yaml -o %t/memprof-out-call-sites-only.indexed
+; RUN: llvm-profdata show --memory %t/memprof-out-call-sites-only.indexed > %t/memprof-out-call-sites-only.yaml
+; RUN: diff -b %t/memprof-out-call-sites-only.yaml %t/memprof-in-call-sites-only.yaml
+
 ; memprof-in-no-dap.yaml has empty data access profiles.
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-dap.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out-no-dap.yaml
@@ -116,6 +128,58 @@ HeapProfileRecords:
       - Frames:
         - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
         - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
+...
+;--- memprof-in-alloc-sites-only.yaml
+---
+# MemProfSummary:
+#   Total contexts: 2
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 666
+#   Maximum hot context total size: 0
+---
+HeapProfileRecords:
+  - GUID:            0xdeadbeef12345678
+    AllocSites:
+      - Callstack:
+          - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
+          - { Function: 0x2222222222222222, LineOffset: 22, Column: 20, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      111
+          TotalSize:       222
+          TotalLifetime:   333
+          TotalLifetimeAccessDensity: 444
+      - Callstack:
+          - { Function: 0x3333333333333333, LineOffset: 33, Column: 30, IsInlineFrame: false }
+          - { Function: 0x4444444444444444, LineOffset: 44, Column: 40, IsInlineFrame: true }
+        MemInfoBlock:
+          AllocCount:      555
+          TotalSize:       666
+          TotalLifetime:   777
+          TotalLifetimeAccessDensity: 888
+...
+;--- memprof-in-call-sites-only.yaml
+---
+# MemProfSummary:
+#   Total contexts: 0
+#   Total cold contexts: 0
+#   Total hot contexts: 0
+#   Maximum cold context total size: 0
+#   Maximum warm context total size: 0
+#   Maximum hot context total size: 0
+---
+HeapProfileRecords:
+  - GUID:            0xdeadbeef12345678
+    CallSites:
+      - Frames:
+        - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
+        - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
+        CalleeGuids: [ 0x100, 0x200 ]
+      - Frames:
+        - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
+        - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
+        CalleeGuids: [ 0x300 ]
 ...
 ;--- memprof-in-no-dap.yaml
 ---
