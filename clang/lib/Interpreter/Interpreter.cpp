@@ -420,6 +420,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
+#ifndef _WIN32
   if (OutOfProcessConfig != std::nullopt &&
       OutOfProcessConfig->IsOutOfProcess) {
     const TargetInfo &TI = CI->getTarget();
@@ -447,6 +448,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI,
       OutOfProcessConfig->OrcRuntimePath = *OrcRuntimePathOrErr;
     }
   }
+#endif
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
       std::move(CI), Err, JB ? std::move(JB) : nullptr, nullptr,
