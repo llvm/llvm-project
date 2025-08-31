@@ -222,7 +222,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         llvm::StringSwitch<StringRef>(separator.trim())
             .Case("|", "parseOptionalVerticalBar")
             .Case(",", "parseOptionalComma")
-            .Default("error, enum seperator must be '|' or ','");
+            .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
                   enumInfo.getSummary(), casesList, separator,
                   parseSeparatorFn);

@@ -4949,44 +4949,44 @@ defm : BranchSimpleMnemonic1<"dzf", "", 2>;
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
-                  (BCC bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCC (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#pm#" $dst",
-                  (BCC bibo, CR0, condbrtarget:$dst)>;
+                  (BCC (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"a"#pm#" $cc, $dst",
-                  (BCCA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"a"#pm#" $dst",
-                  (BCCA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lr"#pm#" $cc",
-                  (BCCLR bibo, crrc:$cc)>;
+                  (BCCLR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lr"#pm,
-                  (BCCLR bibo, CR0)>;
+                  (BCCLR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctr"#pm#" $cc",
-                  (BCCCTR bibo, crrc:$cc)>;
+                  (BCCCTR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctr"#pm,
-                  (BCCCTR bibo, CR0)>;
+                  (BCCCTR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"l"#pm#" $cc, $dst",
-                  (BCCL bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"l"#pm#" $dst",
-                  (BCCL bibo, CR0, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"la"#pm#" $cc, $dst",
-                  (BCCLA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"la"#pm#" $dst",
-                  (BCCLA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lrl"#pm#" $cc",
-                  (BCCLRL bibo, crrc:$cc)>;
+                  (BCCLRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lrl"#pm,
-                  (BCCLRL bibo, CR0)>;
+                  (BCCLRL (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctrl"#pm#" $cc",
-                  (BCCCTRL bibo, crrc:$cc)>;
+                  (BCCCTRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctrl"#pm,
-                  (BCCCTRL bibo, CR0)>;
+                  (BCCCTRL (pred bibo, CR0))>;
 }
 multiclass BranchExtendedMnemonic<string name, int bibo> {
   defm : BranchExtendedMnemonicPM<name, "", bibo>;

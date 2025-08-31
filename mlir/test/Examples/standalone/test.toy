@@ -2,10 +2,13 @@
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
-# RUN: -DPython3_EXECUTABLE=%python
-# RUN: "%cmake_exe" --build . --target check-standalone | tee %t | FileCheck %s
+# RUN: -DPython3_EXECUTABLE=%python \
+# RUN: -DPython_EXECUTABLE=%python
+# RUN: "%cmake_exe" --build . --target check-standalone | tee %t
+# RUN: FileCheck --input-file=%t %s
 
 # Note: The number of checked tests is not important. The command will fail
 # if any fail.
 # CHECK: Passed
+# CHECK-NOT: Failed
 # UNSUPPORTED: target={{.*(windows|android).*}}

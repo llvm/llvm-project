@@ -507,8 +507,8 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_a_key_bti:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp10:
 ; PAUTHLR-NEXT:    paciasppc
 ; PAUTHLR-NEXT:    adrp x16, .Ltmp10
@@ -521,8 +521,8 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; COMPAT-LABEL: leaf_sign_all_b_key_bti:
 ; COMPAT:       // %bb.0:
+; COMPAT-NEXT:   .cfi_b_key_frame
 ; COMPAT-NEXT:    hint #34
-; COMPAT-NEXT:    .cfi_b_key_frame
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:  .Ltmp11:
@@ -535,8 +535,8 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; V83A-LABEL: leaf_sign_all_b_key_bti:
 ; V83A:       // %bb.0:
-; V83A-NEXT:    hint #34
 ; V83A-NEXT:    .cfi_b_key_frame
+; V83A-NEXT:    hint #34
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:  .Ltmp11:
@@ -548,9 +548,9 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_b_key_bti:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
 ; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp11:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    adrp x16, .Ltmp11
@@ -563,9 +563,9 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    hint #34
-; CHECK-NEXT:    .cfi_b_key_frame
-; CHECK-NEXT:    hint #39
+; CHECK-NEXT:   .cfi_b_key_frame
+; CHECK-NEXT:   hint #34
+; CHECK-NEXT:   hint #39
 ; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp12:
 ; CHECK-NEXT:    pacibsp
@@ -576,9 +576,9 @@ define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "si
 ;
 ; PAUTHLR-LABEL: leaf_sign_all_v83_b_key_bti:
 ; PAUTHLR:       // %bb.0:
-; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:    .cfi_b_key_frame
 ; PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
+; PAUTHLR-NEXT:    bti c
 ; PAUTHLR-NEXT:  .Ltmp12:
 ; PAUTHLR-NEXT:    pacibsppc
 ; PAUTHLR-NEXT:    adrp x16, .Ltmp12

@@ -14,12 +14,12 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm0
 ; CHECK-NEXT:    vpslld $15, %xmm2, %xmm3
-; CHECK-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm3
+; CHECK-NEXT:    vpor %xmm0, %xmm3, %xmm3
+; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm0
 ; CHECK-NEXT:    vpslld $13, %xmm2, %xmm4
-; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm0, %xmm3
-; CHECK-NEXT:    vpxor %xmm2, %xmm3, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm4, %xmm0
+; CHECK-NEXT:    vpxor %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %ecx, %xmm4
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm1

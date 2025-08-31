@@ -96,7 +96,7 @@ int textual(int *p) {
 // `safe_buffers_test_base`. (So the module dependencies form a DAG.)
 
 // No expected warnings from base.h, test_sub1, or test_sub2 because they are
-// in seperate modules, and the explicit commands that builds them have no
+// in separate modules, and the explicit commands that builds them have no
 // `-Wunsafe-buffer-usage`.
 
 int foo(int * p) {
@@ -122,7 +122,7 @@ int foo(int * p) {
 // `safe_buffers_test_base`. (So the module dependencies form a DAG.)
 
 // No expected warnings from base.h, test_sub1, or test_sub2 because they are
-// in seperate modules, and the explicit commands that builds them have no
+// in separate modules, and the explicit commands that builds them have no
 // `-Wunsafe-buffer-usage`.
 
 int foo(int * p) {

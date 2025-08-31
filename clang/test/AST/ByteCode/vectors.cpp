@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -flax-vector-conversions=none %s
-// RUN: %clang_cc1 -verify=ref,both -flax-vector-conversions=none %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -fexperimental-new-constant-interpreter -verify=expected,both -flax-vector-conversions=none %s
+// RUN: %clang_cc1 -Wno-c++20-extensions -verify=ref,both -flax-vector-conversions=none %s
 
 typedef int __attribute__((vector_size(16))) VI4;
 constexpr VI4 A = {1,2,3,4};
@@ -147,7 +147,7 @@ namespace {
 namespace Assign {
   constexpr int a2() {
       VI a = {0, 0, 0, 0};
-      VI b; // both-warning {{C++20 extension}}
+      VI b;
 
       b = {1,1,1,1};
       return b[0] + b[1] + b[2] + b[3];
@@ -161,7 +161,7 @@ namespace Assign {
 
   constexpr bool invalid() {
     v2int16_t a = {0, 0};
-    v2int_t b; // both-warning {{C++20 extension}}
+    v2int_t b;
     b = a; // both-error {{incompatible type}}
 
     return true;

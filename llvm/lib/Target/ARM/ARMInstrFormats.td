@@ -160,7 +160,7 @@ def CondCodeOperand : AsmOperandClass {
   let DefaultMethod = "defaultCondCodeOp";
   let IsOptional = true;
 }
-def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
+def pred : PredicateOperand<OtherVT, (ops i32imm, CCR),
                                      (ops (i32 14), (i32 zero_reg))> {
   let PrintMethod = "printPredicateOperand";
   let ParserMatchClass = CondCodeOperand;

@@ -755,7 +755,7 @@ private:
 
       return getReplacementMDNode(N);
     };
-    // Seperate recursive doRemap and operator [] into 2 lines to avoid
+    // Separate recursive doRemap and operator [] into 2 lines to avoid
     // out-of-order evaluations since both of them can access the same memory
     // location in map Replacements.
     auto Value = doRemap(N);

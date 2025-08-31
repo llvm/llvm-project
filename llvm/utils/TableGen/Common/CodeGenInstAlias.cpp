@@ -15,137 +15,11 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-
-/// tryAliasOpMatch - This is a helper function for the CodeGenInstAlias
-/// constructor.  It checks if an argument in an InstAlias pattern matches
-/// the corresponding operand of the instruction.  It returns true on a
-/// successful match, with ResOp set to the result operand to be used.
-bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
-                                       unsigned AliasOpNo,
-                                       const Record *InstOpRec, bool hasSubOps,
-                                       ArrayRef<SMLoc> Loc,
-                                       const CodeGenTarget &T,
-                                       ResultOperand &ResOp) {
-  const Init *Arg = Result->getArg(AliasOpNo);
-  const DefInit *ADI = dyn_cast<DefInit>(Arg);
-  const Record *ResultRecord = ADI ? ADI->getDef() : nullptr;
-
-  if (ADI && ADI->getDef() == InstOpRec) {
-    // If the operand is a record, it must have a name, and the record type
-    // must match up with the instruction's argument type.
-    if (!Result->getArgName(AliasOpNo))
-      PrintFatalError(Loc, "result argument #" + Twine(AliasOpNo) +
-                               " must have a name!");
-    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ResultRecord);
-    return true;
-  }
-
-  // For register operands, the source register class can be a subclass
-  // of the instruction register class, not just an exact match.
-  if (InstOpRec->isSubClassOf("RegisterOperand"))
-    InstOpRec = InstOpRec->getValueAsDef("RegClass");
-
-  if (ADI && ADI->getDef()->isSubClassOf("RegisterOperand"))
-    ADI = ADI->getDef()->getValueAsDef("RegClass")->getDefInit();
-
-  if (ADI && ADI->getDef()->isSubClassOf("RegisterClass")) {
-    if (!InstOpRec->isSubClassOf("RegisterClass"))
-      return false;
-    if (!T.getRegisterClass(InstOpRec).hasSubClass(
-            &T.getRegisterClass(ADI->getDef())))
-      return false;
-    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ResultRecord);
-    return true;
-  }
-
-  // Handle explicit registers.
-  if (ADI && ADI->getDef()->isSubClassOf("Register")) {
-    if (InstOpRec->isSubClassOf("OptionalDefOperand")) {
-      const DagInit *DI = InstOpRec->getValueAsDag("MIOperandInfo");
-      // The operand info should only have a single (register) entry. We
-      // want the register class of it.
-      InstOpRec = cast<DefInit>(DI->getArg(0))->getDef();
-    }
-
-    if (!InstOpRec->isSubClassOf("RegisterClass"))
-      return false;
-
-    if (!T.getRegisterClass(InstOpRec).contains(
-            T.getRegBank().getReg(ADI->getDef())))
-      PrintFatalError(Loc, "fixed register " + ADI->getDef()->getName() +
-                               " is not a member of the " +
-                               InstOpRec->getName() + " register class!");
-
-    if (Result->getArgName(AliasOpNo))
-      PrintFatalError(Loc, "result fixed register argument must "
-                           "not have a name!");
-
-    ResOp = ResultOperand(ResultRecord);
-    return true;
-  }
-
-  // Handle "zero_reg" for optional def operands.
-  if (ADI && ADI->getDef()->getName() == "zero_reg") {
-
-    // Check if this is an optional def.
-    // Tied operands where the source is a sub-operand of a complex operand
-    // need to represent both operands in the alias destination instruction.
-    // Allow zero_reg for the tied portion. This can and should go away once
-    // the MC representation of things doesn't use tied operands at all.
-    // if (!InstOpRec->isSubClassOf("OptionalDefOperand"))
-    //  throw TGError(Loc, "reg0 used for result that is not an "
-    //                "OptionalDefOperand!");
-
-    ResOp = ResultOperand(nullptr);
-    return true;
-  }
-
-  // Literal integers.
-  if (const IntInit *II = dyn_cast<IntInit>(Arg)) {
-    if (hasSubOps || !InstOpRec->isSubClassOf("Operand"))
-      return false;
-    // Integer arguments can't have names.
-    if (Result->getArgName(AliasOpNo))
-      PrintFatalError(Loc, "result argument #" + Twine(AliasOpNo) +
-                               " must not have a name!");
-    ResOp = ResultOperand(II->getValue());
-    return true;
-  }
-
-  // Bits<n> (also used for 0bxx literals)
-  if (const BitsInit *BI = dyn_cast<BitsInit>(Arg)) {
-    if (hasSubOps || !InstOpRec->isSubClassOf("Operand"))
-      return false;
-    if (!BI->isComplete())
-      return false;
-    // Convert the bits init to an integer and use that for the result.
-    std::optional<int64_t> Value = BI->convertInitializerToInt();
-    if (!Value)
-      return false;
-    ResOp = ResultOperand(*Value);
-    return true;
-  }
-
-  // If both are Operands with the same MVT, allow the conversion. It's
-  // up to the user to make sure the values are appropriate, just like
-  // for isel Pat's.
-  if (InstOpRec->isSubClassOf("Operand") && ADI &&
-      ADI->getDef()->isSubClassOf("Operand")) {
-    // FIXME: What other attributes should we check here? Identical
-    // MIOperandInfo perhaps?
-    if (InstOpRec->getValueInit("Type") != ADI->getDef()->getValueInit("Type"))
-      return false;
-    ResOp =
-        ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ADI->getDef());
-    return true;
-  }
-
-  return false;
-}
 
 unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   if (!isRecord())
@@ -162,6 +36,104 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   }
 
   return MIOpInfo->getNumArgs();
+}
+
+static const Record *getInitValueAsRegClass(const Init *V) {
+  if (const auto *VDefInit = dyn_cast<DefInit>(V)) {
+    const Record *R = VDefInit->getDef();
+    if (R->isSubClassOf("RegisterClass"))
+      return R;
+    if (R->isSubClassOf("RegisterOperand"))
+      return R->getValueAsDef("RegClass");
+  }
+  return nullptr;
+}
+
+using ResultOperand = CodeGenInstAlias::ResultOperand;
+
+static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
+                                                  const StringInit *ArgName,
+                                                  const Record *Op,
+                                                  const CodeGenTarget &T) {
+  if (Op->isSubClassOf("RegisterClass") ||
+      Op->isSubClassOf("RegisterOperand")) {
+    const Record *OpRC =
+        Op->isSubClassOf("RegisterClass") ? Op : Op->getValueAsDef("RegClass");
+
+    if (const auto *ArgDef = dyn_cast<DefInit>(Arg)) {
+      const Record *ArgRec = ArgDef->getDef();
+
+      // Match 'RegClass:$name' or 'RegOp:$name'.
+      if (const Record *ArgRC = getInitValueAsRegClass(Arg)) {
+        if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+          return createStringError(
+              "argument register class" + ArgRC->getName() +
+              " is not a subclass of operand register class " +
+              OpRC->getName());
+        if (!ArgName)
+          return createStringError("register class argument must have a name");
+        return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
+                                           ArgRec);
+      }
+
+      // Match 'Reg'.
+      if (ArgRec->isSubClassOf("Register")) {
+        if (!T.getRegisterClass(OpRC).contains(T.getRegBank().getReg(ArgRec)))
+          return createStringError(
+              "register argument " + ArgRec->getName() +
+              " is not a member of operand register class " + OpRC->getName());
+        if (ArgName)
+          return createStringError("register argument must not have a name");
+        return ResultOperand::createRegister(ArgRec);
+      }
+
+      // Match 'zero_reg'.
+      if (ArgRec->getName() == "zero_reg") {
+        if (ArgName)
+          return createStringError("register argument must not have a name");
+        return ResultOperand::createRegister(nullptr);
+      }
+    }
+
+    return createStringError("argument must be a subclass of RegisterClass, "
+                             "RegisterOperand, or zero_reg");
+  }
+
+  if (Op->isSubClassOf("Operand")) {
+    // Match integer or bits.
+    if (const auto *ArgInt = dyn_cast_or_null<IntInit>(
+            Arg->convertInitializerTo(IntRecTy::get(Arg->getRecordKeeper())))) {
+      if (ArgName)
+        return createStringError("integer argument must not have a name");
+      return ResultOperand::createImmediate(ArgInt->getValue());
+    }
+
+    // Match a subclass of Operand.
+    if (const auto *ArgDef = dyn_cast<DefInit>(Arg);
+        ArgDef && ArgDef->getDef()->isSubClassOf("Operand")) {
+      if (!ArgName)
+        return createStringError("argument must have a name");
+      return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
+                                         ArgDef->getDef());
+    }
+
+    return createStringError("argument must be a subclass of Operand");
+  }
+
+  llvm_unreachable("Unknown operand kind");
+}
+
+static Expected<ResultOperand> matchComplexOperand(const Init *Arg,
+                                                   const StringInit *ArgName,
+                                                   const Record *Op) {
+  assert(Op->isSubClassOf("Operand"));
+  const auto *ArgDef = dyn_cast<DefInit>(Arg);
+  if (!ArgDef || !ArgDef->getDef()->isSubClassOf("Operand"))
+    return createStringError("argument must be a subclass of Operand");
+  if (!ArgName)
+    return createStringError("argument must have a name");
+  return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
+                                     ArgDef->getDef());
 }
 
 CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
@@ -197,7 +169,7 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
   }
 
   // Decode and validate the arguments of the result.
-  unsigned AliasOpNo = 0;
+  unsigned ArgIdx = 0;
   for (auto [OpIdx, OpInfo] : enumerate(ResultInst->Operands)) {
     // Tied registers don't have an entry in the result dag unless they're part
     // of a complex operand, in which case we include them anyways, as we
@@ -211,71 +183,64 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
         continue;
     }
 
-    if (AliasOpNo >= Result->getNumArgs())
+    if (ArgIdx >= Result->getNumArgs())
       PrintFatalError(R->getLoc(), "not enough arguments for instruction!");
 
-    const Record *InstOpRec = OpInfo.Rec;
-    unsigned NumSubOps = OpInfo.MINumOperands;
-    ResultOperand ResOp(static_cast<int64_t>(0));
-    if (tryAliasOpMatch(Result, AliasOpNo, InstOpRec, (NumSubOps > 1),
-                        R->getLoc(), T, ResOp)) {
-      // If this is a simple operand, or a complex operand with a custom match
-      // class, then we can match is verbatim.
-      if (NumSubOps == 1 || (InstOpRec->getValue("ParserMatchClass") &&
-                             InstOpRec->getValueAsDef("ParserMatchClass")
-                                     ->getValueAsString("Name") != "Imm")) {
-        ResultOperands.push_back(std::move(ResOp));
-        ResultInstOperandIndex.emplace_back(OpIdx, -1);
-        ++AliasOpNo;
-
-        // Otherwise, we need to match each of the suboperands individually.
+    const Record *Op = OpInfo.Rec;
+    if (Op->isSubClassOf("Operand") && !OpInfo.MIOperandInfo->arg_empty()) {
+      // Complex operand (a subclass of Operand with non-empty MIOperandInfo).
+      // The argument can be a DAG or a subclass of Operand.
+      if (auto *ArgDag = dyn_cast<DagInit>(Result->getArg(ArgIdx))) {
+        // The argument is a DAG. The operator must be the name of the operand.
+        if (auto *Operator = dyn_cast<DefInit>(ArgDag->getOperator());
+            !Operator || Operator->getDef()->getName() != Op->getName())
+          PrintFatalError(R, "argument #" + Twine(ArgIdx) +
+                                 " operator must be " + Op->getName());
+        // The number of sub-arguments and the number of sub-operands
+        // must match exactly.
+        unsigned NumSubOps = OpInfo.MIOperandInfo->getNumArgs();
+        unsigned NumSubArgs = ArgDag->getNumArgs();
+        if (NumSubArgs != NumSubOps)
+          PrintFatalError(R, "argument #" + Twine(ArgIdx) +
+                                 " must have exactly " + Twine(NumSubOps) +
+                                 " sub-arguments");
+        // Match sub-operands individually.
+        for (unsigned SubOpIdx = 0; SubOpIdx != NumSubOps; ++SubOpIdx) {
+          const Record *SubOp =
+              cast<DefInit>(OpInfo.MIOperandInfo->getArg(SubOpIdx))->getDef();
+          Expected<ResultOperand> ResOpOrErr = matchSimpleOperand(
+              ArgDag->getArg(SubOpIdx), ArgDag->getArgName(SubOpIdx), SubOp, T);
+          if (!ResOpOrErr)
+            PrintFatalError(R, "in argument #" + Twine(ArgIdx) + "." +
+                                   Twine(SubOpIdx) + ": " +
+                                   toString(ResOpOrErr.takeError()));
+          ResultOperands.push_back(*ResOpOrErr);
+          ResultInstOperandIndex.emplace_back(OpIdx, SubOpIdx);
+        }
       } else {
-        const DagInit *MIOI = OpInfo.MIOperandInfo;
-        for (unsigned SubOp = 0; SubOp != NumSubOps; ++SubOp) {
-          const Record *SubRec = cast<DefInit>(MIOI->getArg(SubOp))->getDef();
-
-          // Take care to instantiate each of the suboperands with the correct
-          // nomenclature: $foo.bar
-          ResultOperands.emplace_back(
-              Result->getArgName(AliasOpNo)->getAsUnquotedString() + "." +
-                  MIOI->getArgName(SubOp)->getAsUnquotedString(),
-              SubRec);
-          ResultInstOperandIndex.emplace_back(OpIdx, SubOp);
-        }
-        ++AliasOpNo;
+        // Match complex operand as a whole.
+        Expected<ResultOperand> ResOpOrErr = matchComplexOperand(
+            Result->getArg(ArgIdx), Result->getArgName(ArgIdx), Op);
+        if (!ResOpOrErr)
+          PrintFatalError(R, "in argument #" + Twine(ArgIdx) + ": " +
+                                 toString(ResOpOrErr.takeError()));
+        ResultOperands.push_back(*ResOpOrErr);
+        ResultInstOperandIndex.emplace_back(OpIdx, -1);
       }
-      continue;
+    } else {
+      // Simple operand (RegisterClass, RegisterOperand or Operand with empty
+      // MIOperandInfo).
+      Expected<ResultOperand> ResOpOrErr = matchSimpleOperand(
+          Result->getArg(ArgIdx), Result->getArgName(ArgIdx), Op, T);
+      if (!ResOpOrErr)
+        PrintFatalError(R, "in argument #" + Twine(ArgIdx) + ": " +
+                               toString(ResOpOrErr.takeError()));
+      ResultOperands.push_back(*ResOpOrErr);
+      ResultInstOperandIndex.emplace_back(OpIdx, -1);
     }
-
-    // If the argument did not match the instruction operand, and the operand
-    // is composed of multiple suboperands, try matching the suboperands.
-    if (NumSubOps > 1) {
-      const DagInit *MIOI = OpInfo.MIOperandInfo;
-      for (unsigned SubOp = 0; SubOp != NumSubOps; ++SubOp) {
-        if (AliasOpNo >= Result->getNumArgs())
-          PrintFatalError(R->getLoc(), "not enough arguments for instruction!");
-        const Record *SubRec = cast<DefInit>(MIOI->getArg(SubOp))->getDef();
-        if (tryAliasOpMatch(Result, AliasOpNo, SubRec, false, R->getLoc(), T,
-                            ResOp)) {
-          ResultOperands.push_back(ResOp);
-          ResultInstOperandIndex.emplace_back(OpIdx, SubOp);
-          ++AliasOpNo;
-        } else {
-          PrintFatalError(
-              R->getLoc(),
-              "result argument #" + Twine(AliasOpNo) +
-                  " does not match instruction operand class " +
-                  (SubOp == 0 ? InstOpRec->getName() : SubRec->getName()));
-        }
-      }
-      continue;
-    }
-    PrintFatalError(R->getLoc(),
-                    "result argument #" + Twine(AliasOpNo) +
-                        " does not match instruction operand class " +
-                        InstOpRec->getName());
+    ArgIdx++;
   }
 
-  if (AliasOpNo != Result->getNumArgs())
+  if (ArgIdx != Result->getNumArgs())
     PrintFatalError(R->getLoc(), "too many operands for instruction!");
 }

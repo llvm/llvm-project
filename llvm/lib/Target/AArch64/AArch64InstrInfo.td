@@ -2663,13 +2663,17 @@ defm ADD : AddSub<0, "add", "sub", add>;
 defm SUB : AddSub<1, "sub", "add">;
 
 def : InstAlias<"mov $dst, $src",
-                (ADDWri GPR32sponly:$dst, GPR32sp:$src, 0, 0)>;
+                (ADDWri GPR32sponly:$dst, GPR32sp:$src,
+                        (addsub_shifted_imm32 0, 0))>;
 def : InstAlias<"mov $dst, $src",
-                (ADDWri GPR32sp:$dst, GPR32sponly:$src, 0, 0)>;
+                (ADDWri GPR32sp:$dst, GPR32sponly:$src,
+                        (addsub_shifted_imm32 0, 0))>;
 def : InstAlias<"mov $dst, $src",
-                (ADDXri GPR64sponly:$dst, GPR64sp:$src, 0, 0)>;
+                (ADDXri GPR64sponly:$dst, GPR64sp:$src,
+                        (addsub_shifted_imm64 0, 0))>;
 def : InstAlias<"mov $dst, $src",
-                (ADDXri GPR64sp:$dst, GPR64sponly:$src, 0, 0)>;
+                (ADDXri GPR64sp:$dst, GPR64sponly:$src,
+                        (addsub_shifted_imm64 0, 0))>;
 
 defm ADDS : AddSubS<0, "adds", AArch64add_flag, "cmn", "subs", "cmp">;
 defm SUBS : AddSubS<1, "subs", AArch64sub_flag, "cmp", "adds", "cmn">;
@@ -2729,19 +2733,31 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
-def : InstAlias<"neg $dst, $src", (SUBWrs GPR32:$dst, WZR, GPR32:$src, 0), 3>;
-def : InstAlias<"neg $dst, $src", (SUBXrs GPR64:$dst, XZR, GPR64:$src, 0), 3>;
+def : InstAlias<"neg $dst, $src",
+                (SUBWrs GPR32:$dst, WZR,
+                        (arith_shifted_reg32 GPR32:$src, 0)), 3>;
+def : InstAlias<"neg $dst, $src",
+                (SUBXrs GPR64:$dst, XZR,
+                        (arith_shifted_reg64 GPR64:$src, 0)), 3>;
 def : InstAlias<"neg $dst, $src$shift",
-                (SUBWrs GPR32:$dst, WZR, GPR32:$src, arith_shift32:$shift), 2>;
+                (SUBWrs GPR32:$dst, WZR,
+                        (arith_shifted_reg32 GPR32:$src, arith_shift32:$shift)), 2>;
 def : InstAlias<"neg $dst, $src$shift",
-                (SUBXrs GPR64:$dst, XZR, GPR64:$src, arith_shift64:$shift), 2>;
+                (SUBXrs GPR64:$dst, XZR,
+                        (arith_shifted_reg64 GPR64:$src, arith_shift64:$shift)), 2>;
 
-def : InstAlias<"negs $dst, $src", (SUBSWrs GPR32:$dst, WZR, GPR32:$src, 0), 3>;
-def : InstAlias<"negs $dst, $src", (SUBSXrs GPR64:$dst, XZR, GPR64:$src, 0), 3>;
+def : InstAlias<"negs $dst, $src",
+                (SUBSWrs GPR32:$dst, WZR,
+                         (arith_shifted_reg32 GPR32:$src, 0)), 3>;
+def : InstAlias<"negs $dst, $src",
+                (SUBSXrs GPR64:$dst, XZR,
+                         (arith_shifted_reg64 GPR64:$src, 0)), 3>;
 def : InstAlias<"negs $dst, $src$shift",
-                (SUBSWrs GPR32:$dst, WZR, GPR32:$src, arith_shift32:$shift), 2>;
+                (SUBSWrs GPR32:$dst, WZR,
+                         (arith_shifted_reg32 GPR32:$src, arith_shift32:$shift)), 2>;
 def : InstAlias<"negs $dst, $src$shift",
-                (SUBSXrs GPR64:$dst, XZR, GPR64:$src, arith_shift64:$shift), 2>;
+                (SUBSXrs GPR64:$dst, XZR,
+                         (arith_shifted_reg64 GPR64:$src, arith_shift64:$shift)), 2>;
 
 
 // Unsigned/Signed divide
@@ -3168,16 +3184,26 @@ defm ORN  : LogicalReg<0b01, 1, "orn",
                        BinOpFrag<(or node:$LHS, (not node:$RHS))>>;
 defm ORR  : LogicalReg<0b01, 0, "orr", or>;
 
-def : InstAlias<"mov $dst, $src", (ORRWrs GPR32:$dst, WZR, GPR32:$src, 0), 2>;
-def : InstAlias<"mov $dst, $src", (ORRXrs GPR64:$dst, XZR, GPR64:$src, 0), 2>;
+def : InstAlias<"mov $dst, $src",
+                (ORRWrs GPR32:$dst, WZR,
+                        (logical_shifted_reg32 GPR32:$src, 0)), 2>;
+def : InstAlias<"mov $dst, $src", 
+                (ORRXrs GPR64:$dst, XZR,
+                        (logical_shifted_reg64 GPR64:$src, 0)), 2>;
 
-def : InstAlias<"mvn $Wd, $Wm", (ORNWrs GPR32:$Wd, WZR, GPR32:$Wm, 0), 3>;
-def : InstAlias<"mvn $Xd, $Xm", (ORNXrs GPR64:$Xd, XZR, GPR64:$Xm, 0), 3>;
+def : InstAlias<"mvn $Wd, $Wm",
+                (ORNWrs GPR32:$Wd, WZR,
+                        (logical_shifted_reg32 GPR32:$Wm, 0)), 3>;
+def : InstAlias<"mvn $Xd, $Xm",
+                (ORNXrs GPR64:$Xd, XZR,
+                        (logical_shifted_reg64 GPR64:$Xm, 0)), 3>;
 
 def : InstAlias<"mvn $Wd, $Wm$sh",
-                (ORNWrs GPR32:$Wd, WZR, GPR32:$Wm, logical_shift32:$sh), 2>;
+                (ORNWrs GPR32:$Wd, WZR,
+                        (logical_shifted_reg32 GPR32:$Wm, logical_shift32:$sh)), 2>;
 def : InstAlias<"mvn $Xd, $Xm$sh",
-                (ORNXrs GPR64:$Xd, XZR, GPR64:$Xm, logical_shift64:$sh), 2>;
+                (ORNXrs GPR64:$Xd, XZR,
+                        (logical_shifted_reg64 GPR64:$Xm, logical_shift64:$sh)), 2>;
 
 def : InstAlias<"tst $src1, $src2",
                 (ANDSWri WZR, GPR32:$src1, logical_imm32:$src2), 2>;
@@ -3185,14 +3211,18 @@ def : InstAlias<"tst $src1, $src2",
                 (ANDSXri XZR, GPR64:$src1, logical_imm64:$src2), 2>;
 
 def : InstAlias<"tst $src1, $src2",
-                        (ANDSWrs WZR, GPR32:$src1, GPR32:$src2, 0), 3>;
+                (ANDSWrs WZR, GPR32:$src1,
+                         (logical_shifted_reg32 GPR32:$src2, 0)), 3>;
 def : InstAlias<"tst $src1, $src2",
-                        (ANDSXrs XZR, GPR64:$src1, GPR64:$src2, 0), 3>;
+                (ANDSXrs XZR, GPR64:$src1,
+                         (logical_shifted_reg64 GPR64:$src2, 0)), 3>;
 
 def : InstAlias<"tst $src1, $src2$sh",
-               (ANDSWrs WZR, GPR32:$src1, GPR32:$src2, logical_shift32:$sh), 2>;
+                (ANDSWrs WZR, GPR32:$src1,
+                         (logical_shifted_reg32 GPR32:$src2, logical_shift32:$sh)), 2>;
 def : InstAlias<"tst $src1, $src2$sh",
-               (ANDSXrs XZR, GPR64:$src1, GPR64:$src2, logical_shift64:$sh), 2>;
+                (ANDSXrs XZR, GPR64:$src1,
+                         (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
