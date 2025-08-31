@@ -38676,13 +38676,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Opc == X86ISD::VSHLI) {
-      Known.Zero <<= ShAmt;
-      Known.One <<= ShAmt;
+      Known <<= ShAmt;
       // Low bits are known zero.
       Known.Zero.setLowBits(ShAmt);
     } else if (Opc == X86ISD::VSRLI) {
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
       // High bits are known zero.
       Known.Zero.setHighBits(ShAmt);
     } else {
@@ -44518,8 +44516,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero <<= ShAmt;
-    Known.One <<= ShAmt;
+    Known <<= ShAmt;
 
     // Low bits known zero.
     Known.Zero.setLowBits(ShAmt);
@@ -44549,8 +44546,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero.lshrInPlace(ShAmt);
-    Known.One.lshrInPlace(ShAmt);
+    Known >>= ShAmt;
 
     // High bits known zero.
     Known.Zero.setHighBits(ShAmt);
@@ -44598,8 +44594,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero.lshrInPlace(ShAmt);
-    Known.One.lshrInPlace(ShAmt);
+    Known >>= ShAmt;
 
     // If the input sign bit is known to be zero, or if none of the top bits
     // are demanded, turn this into an unsigned shift right.
@@ -44957,6 +44952,32 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     Known.Zero.setLowBits(Known2.countMinTrailingZeros());
     return false;
   }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    KnownBits KnownOp0, KnownOp1;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
+    //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
+    //  operand 2).
+    APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
+    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, KnownOp0,
+                             TLO, Depth + 1))
+      return true;
+
+    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
+                             TLO, Depth + 1))
+      return true;
+
+    // X * 0 + Y --> Y
+    // TODO: Handle cases where lower/higher 52 of bits of Op0 * Op1 are known
+    // zeroes.
+    if (KnownOp0.trunc(52).isZero() || KnownOp1.trunc(52).isZero())
+      return TLO.CombineTo(Op, Op2);
+
+    // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
+    break;
+  }
   }
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
@@ -45132,6 +45153,14 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE bit logic.
+  case X86ISD::FAND:
+  case X86ISD::FOR:
+  case X86ISD::FXOR:
+  case X86ISD::FANDN:
+  case X86ISD::ANDNP:
+  case X86ISD::VPTERNLOG:
+    return false;
   // SSE vector insert/extracts use modulo indices.
   case X86ISD::PINSRB:
   case X86ISD::PINSRW:
@@ -45166,6 +45195,11 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     return false;
   // SSE signbit extraction.
   case X86ISD::MOVMSK:
+    return false;
+  // GFNI instructions.
+  case X86ISD::GF2P8AFFINEINVQB:
+  case X86ISD::GF2P8AFFINEQB:
+  case X86ISD::GF2P8MULB:
     return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
@@ -56247,7 +56281,13 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   SDValue Masked = BroadcastOp;
   if (N != 0) {
-    APInt Mask = APInt::getLowBitsSet(BroadcastOpVT.getSizeInBits(), Len);
+    unsigned BroadcastOpBitWidth = BroadcastOpVT.getSizeInBits();
+    unsigned NumDefinedElts = UndefElts.countTrailingZeros();
+
+    if (NumDefinedElts > BroadcastOpBitWidth)
+      return SDValue();
+
+    APInt Mask = APInt::getLowBitsSet(BroadcastOpBitWidth, NumDefinedElts);
     SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
                                        DAG.getConstant(N, DL, BroadcastOpVT));
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,
@@ -60068,6 +60108,19 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Simplify VPMADD52L/VPMADD52H operations.
+static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumEltBits = VT.getScalarSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
+                               DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -60705,6 +60758,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PMULUDQ:     return combinePMULDQ(N, DAG, DCI, Subtarget);
   case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD:    return combineVPMADD(N, DAG, DCI);
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H:    return combineVPMADD52LH(N, DAG, DCI);
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);

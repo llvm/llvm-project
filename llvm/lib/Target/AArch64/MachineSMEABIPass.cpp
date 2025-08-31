@@ -139,8 +139,8 @@ StringRef getZAStateString(ZAState State) {
 #undef MAKE_CASE
 }
 
-static bool isZAorZT0RegOp(const TargetRegisterInfo &TRI,
-                           const MachineOperand &MO) {
+static bool isZAorZTRegOp(const TargetRegisterInfo &TRI,
+                          const MachineOperand &MO) {
   if (!MO.isReg() || !MO.getReg().isPhysical())
     return false;
   return any_of(TRI.subregs_inclusive(MO.getReg()), [](const MCPhysReg &SR) {
@@ -166,7 +166,7 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
     return {ZAOffAtReturn ? ZAState::OFF : ZAState::ACTIVE, InsertPt};
 
   for (auto &MO : MI.operands()) {
-    if (isZAorZT0RegOp(TRI, MO))
+    if (isZAorZTRegOp(TRI, MO))
       return {ZAState::ACTIVE, InsertPt};
   }
 
@@ -266,7 +266,7 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
   State.Blocks.resize(MF->getNumBlockIDs());
   for (MachineBasicBlock &MBB : *MF) {
     BlockInfo &Block = State.Blocks[MBB.getNumber()];
-    if (&MBB == &MF->front()) {
+    if (MBB.isEntryBlock()) {
       // Entry block:
       Block.FixedEntryState = SMEFnAttrs.hasPrivateZAInterface()
                                   ? ZAState::CALLER_DORMANT

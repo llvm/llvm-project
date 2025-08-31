@@ -10421,41 +10421,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
-  case Intrinsic::amdgcn_s_barrier:
-  case Intrinsic::amdgcn_s_barrier_signal:
-  case Intrinsic::amdgcn_s_barrier_wait: {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
-      unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
-      if (WGSize <= ST.getWavefrontSize()) {
-        // If the workgroup fits in a wave, remove s_barrier_signal and lower
-        // s_barrier/s_barrier_wait to wave_barrier.
-        if (IntrinsicID == Intrinsic::amdgcn_s_barrier_signal)
-          return Op.getOperand(0);
-        else
-          return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL,
-                                            MVT::Other, Op.getOperand(0)),
-                         0);
-      }
-    }
-
-    if (ST.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
-      // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-      SDValue K =
-          DAG.getSignedTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
-      SDValue BarSignal =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
-                                     MVT::Other, K, Op.getOperand(0)),
-                  0);
-      SDValue BarWait =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other, K,
-                                     BarSignal.getValue(0)),
-                  0);
-      return BarWait;
-    }
-
-    return SDValue();
-  };
 
   case Intrinsic::amdgcn_struct_tbuffer_store:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
@@ -17823,7 +17788,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       DL.getTypeSizeInBits(RMW->getType()) == 64 &&
       flatInstrMayAccessPrivate(RMW))
-    return AtomicExpansionKind::Expand;
+    return AtomicExpansionKind::CustomExpand;
 
   auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -17840,26 +17805,83 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
   auto Op = RMW->getOperation();
   switch (Op) {
-  case AtomicRMWInst::Xchg: {
+  case AtomicRMWInst::Xchg:
     // PCIe supports add and xchg for system atomics.
     return isAtomicRMWLegalXChgTy(RMW)
                ? TargetLowering::AtomicExpansionKind::None
                : TargetLowering::AtomicExpansionKind::CmpXChg;
-  }
   case AtomicRMWInst::Add:
-  case AtomicRMWInst::And:
-  case AtomicRMWInst::UIncWrap:
-  case AtomicRMWInst::UDecWrap:
+    // PCIe supports add and xchg for system atomics.
     return atomicSupportedIfLegalIntType(RMW);
   case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
   case AtomicRMWInst::Or:
-  case AtomicRMWInst::Xor: {
-    // Atomic sub/or/xor do not work over PCI express, but atomic add
-    // does. InstCombine transforms these with 0 to or, so undo that.
-    if (HasSystemScope && AMDGPU::isFlatGlobalAddrSpace(AS)) {
-      if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
-          ConstVal && ConstVal->isNullValue())
-        return AtomicExpansionKind::Expand;
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap: {
+    if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
+        AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      if (Subtarget->hasEmulatedSystemScopeAtomics())
+        return atomicSupportedIfLegalIntType(RMW);
+
+      // On most subtargets, for atomicrmw operations other than add/xchg,
+      // whether or not the instructions will behave correctly depends on where
+      // the address physically resides and what interconnect is used in the
+      // system configuration. On some some targets the instruction will nop,
+      // and in others synchronization will only occur at degraded device scope.
+      //
+      // If the allocation is known local to the device, the instructions should
+      // work correctly.
+      if (RMW->hasMetadata("amdgpu.no.remote.memory"))
+        return atomicSupportedIfLegalIntType(RMW);
+
+      // If fine-grained remote memory works at device scope, we don't need to
+      // do anything.
+      if (!HasSystemScope &&
+          Subtarget->supportsAgentScopeFineGrainedRemoteMemoryAtomics())
+        return atomicSupportedIfLegalIntType(RMW);
+
+      // If we are targeting a remote allocated address, it depends what kind of
+      // allocation the address belongs to.
+      //
+      // If the allocation is fine-grained (in host memory, or in PCIe peer
+      // device memory), the operation will fail depending on the target.
+      //
+      // Note fine-grained host memory access does work on APUs or if XGMI is
+      // used, but we do not know if we are targeting an APU or the system
+      // configuration from the ISA version/target-cpu.
+      if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
+        return atomicSupportedIfLegalIntType(RMW);
+
+      if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+          Op == AtomicRMWInst::Xor) {
+        // Atomic sub/or/xor do not work over PCI express, but atomic add
+        // does. InstCombine transforms these with 0 to or, so undo that.
+        if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+            ConstVal && ConstVal->isNullValue())
+          return AtomicExpansionKind::CustomExpand;
+      }
+
+      // If the allocation could be in remote, fine-grained memory, the rmw
+      // instructions may fail. cmpxchg should work, so emit that. On some
+      // system configurations, PCIe atomics aren't supported so cmpxchg won't
+      // even work, so you're out of luck anyway.
+
+      // In summary:
+      //
+      // Cases that may fail:
+      //   - fine-grained pinned host memory
+      //   - fine-grained migratable host memory
+      //   - fine-grained PCIe peer device
+      //
+      // Cases that should work, but may be treated overly conservatively.
+      //   - fine-grained host memory on an APU
+      //   - fine-grained XGMI peer device
+      return AtomicExpansionKind::CmpXChg;
     }
 
     return atomicSupportedIfLegalIntType(RMW);
@@ -17970,9 +17992,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // fadd.
         if (Subtarget->hasLDSFPAtomicAddF32()) {
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
         }
       }
     }
@@ -18014,18 +18036,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     return AtomicExpansionKind::CmpXChg;
   }
-  case AtomicRMWInst::Min:
-  case AtomicRMWInst::Max:
-  case AtomicRMWInst::UMin:
-  case AtomicRMWInst::UMax: {
-    if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
-        AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      if (HasSystemScope && !Subtarget->hasEmulatedSystemScopeAtomics())
-        return AtomicExpansionKind::CmpXChg;
-    }
-
-    return atomicSupportedIfLegalIntType(RMW);
-  }
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FSub:
   default:
@@ -18064,7 +18074,7 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
 
   // If a 64-bit flat atomic may alias private, we need to avoid using the
   // atomic in the private case.
-  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::CustomExpand
                                            : AtomicExpansionKind::None;
 }
 

@@ -132,7 +132,7 @@ public:
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
 
-  bool preferAlternateOpcodeVectorization() const override { return false; }
+  bool preferAlternateOpcodeVectorization() const override;
 
   bool preferEpilogueVectorization() const override {
     // Epilogue vectorization is usually unprofitable - tail folding or
@@ -372,6 +372,8 @@ public:
 
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
