@@ -1,11 +1,17 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 
 using namespace llvm;
+
+extern cl::opt<bool> AnnotateStaticDataSectionPrefix;
+
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
@@ -28,65 +34,79 @@ StaticDataProfileInfo::getConstantProfileCount(const Constant *C) const {
   return I->second;
 }
 
-std::optional<StringRef>
-StaticDataProfileInfo::getDataHotnessBasedOnProfileCount(
-    const Constant *C, const ProfileSummaryInfo *PSI) const {
-  auto Count = getConstantProfileCount(C);
-  // The constant `C` doesn't have a profile count. `C` might be a external
-  // linkage global variable, whose PGO-based counter is not tracked within one
-  // IR module.
-  if (!Count)
-    return std::nullopt;
+StaticDataProfileInfo::StaticDataHotness
+StaticDataProfileInfo::getSectionHotnessUsingProfileCount(
+    const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const {
   // The accummulated counter shows the constant is hot. Return 'hot' whether
   // this variable is seen by unprofiled functions or not.
-  if (PSI->isHotCount(*Count))
-    return "hot";
+  if (PSI->isHotCount(Count))
+    return StaticDataHotness::Hot;
   // The constant is not hot, and seen by unprofiled functions. We don't want to
   // assign it to unlikely sections, even if the counter says 'cold'. So return
   // an empty prefix before checking whether the counter is cold.
   if (ConstantWithoutCounts.count(C))
-    return std::nullopt;
+    return StaticDataHotness::LukewarmOrUnknown;
   // The accummulated counter shows the constant is cold. Return 'unlikely'.
-  if (PSI->isColdCount(*Count)) {
+  if (PSI->isColdCount(Count))
+    return StaticDataHotness::Cold;
+
+  return StaticDataHotness::LukewarmOrUnknown;
+}
+
+StringRef StaticDataProfileInfo::hotnessToStr(
+    StaticDataProfileInfo::StaticDataHotness Hotness) const {
+  switch (Hotness) {
+  case StaticDataProfileInfo::StaticDataHotness::Cold:
     return "unlikely";
-  }
-  return "";
-}
-
-static StringRef reconcileHotness(StringRef SectionPrefix, StringRef Hotness) {
-  assert((SectionPrefix == "hot" || SectionPrefix == "unlikely") &&
-         "Section prefix must be 'hot' or 'unlikely'");
-
-  if (SectionPrefix == "hot" || Hotness == "hot")
+  case StaticDataProfileInfo::StaticDataHotness::Hot:
     return "hot";
-  assert(SectionPrefix == "unlikely" && "Section prefix must be 'unlikely'.");
-  return Hotness;
+  default:
+    return "";
+  }
 }
 
-static StringRef
-reconcileOptionalHotness(std::optional<StringRef> SectionPrefix,
-                         std::optional<StringRef> Hotness) {
-  if (!SectionPrefix)
-    return Hotness.value_or("");
-  if (!Hotness)
-    return SectionPrefix.value_or("");
-
-  return reconcileHotness(*SectionPrefix, *Hotness);
+StaticDataProfileInfo::StaticDataHotness
+StaticDataProfileInfo::getSectionHotnessUsingDAP(
+    std::optional<StringRef> MaybeSectionPrefix) const {
+  if (!MaybeSectionPrefix)
+    return StaticDataProfileInfo::StaticDataHotness::LukewarmOrUnknown;
+  StringRef Prefix = *MaybeSectionPrefix;
+  assert((Prefix == "hot" || Prefix == "unlikely") &&
+         "Expect section_prefix to be one of hot or unlikely");
+  return Prefix == "hot" ? StaticDataProfileInfo::StaticDataHotness::Hot
+                         : StaticDataProfileInfo::StaticDataHotness::Cold;
 }
 
 StringRef StaticDataProfileInfo::getConstantSectionPrefix(
     const Constant *C, const ProfileSummaryInfo *PSI) const {
-  std::optional<StringRef> HotnessBasedOnCount =
-      getDataHotnessBasedOnProfileCount(C, PSI);
-  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C))
-    return reconcileOptionalHotness(GV->getSectionPrefix(),
-                                    HotnessBasedOnCount);
+  auto Count = getConstantProfileCount(C);
 
-  return HotnessBasedOnCount.value_or("");
+  if (HasDataAccessProf) {
+    // Module flag `HasDataAccessProf` is 1 -> empty section prefix means uknown
+    // hotness except for string literals.
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(C);
+        GV && !GV->getName().starts_with(".str")) {
+      auto HotnessFromDAP = getSectionHotnessUsingDAP(GV->getSectionPrefix());
+
+      if (!Count)
+        return hotnessToStr(HotnessFromDAP);
+
+      auto HotnessFromPGO = getSectionHotnessUsingProfileCount(C, PSI, *Count);
+      return hotnessToStr(std::max(HotnessFromDAP, HotnessFromPGO));
+    }
+  }
+
+  if (!Count)
+    return "";
+  return hotnessToStr(getSectionHotnessUsingProfileCount(C, PSI, *Count));
 }
 
 bool StaticDataProfileInfoWrapperPass::doInitialization(Module &M) {
-  Info.reset(new StaticDataProfileInfo());
+  bool HasDataAccessProf = false;
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("HasDataAccessProf")))
+    HasDataAccessProf = MD->getZExtValue();
+  Info.reset(new StaticDataProfileInfo(HasDataAccessProf));
   return false;
 }
 

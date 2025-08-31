@@ -1,6 +1,7 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
@@ -9,6 +10,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+cl::opt<bool> AnnotateStaticDataSectionPrefix(
+    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
+    cl::desc("If true, annotate the static data section prefix"));
 namespace memprof {
 
 // If `Map` has an entry keyed by `Str`, returns the entry iterator. Otherwise,

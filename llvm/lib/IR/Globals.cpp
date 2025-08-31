@@ -289,9 +289,26 @@ void GlobalObject::setSection(StringRef S) {
 }
 
 void GlobalObject::setSectionPrefix(StringRef Prefix) {
+  if (Prefix.empty()) {
+    setMetadata(LLVMContext::MD_section_prefix, nullptr);
+    return;
+  }
   MDBuilder MDB(getContext());
   setMetadata(LLVMContext::MD_section_prefix,
               MDB.createGlobalObjectSectionPrefix(Prefix));
+}
+
+bool GlobalObject::updateSectionPrefix(StringRef Prefix) {
+  auto MD = getMetadata(LLVMContext::MD_section_prefix);
+  StringRef ExistingPrefix; // Empty by default.
+  if (MD != nullptr)
+    ExistingPrefix = cast<MDString>(MD->getOperand(1))->getString();
+
+  if (ExistingPrefix != Prefix) {
+    setSectionPrefix(Prefix);
+    return true;
+  }
+  return false;
 }
 
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {

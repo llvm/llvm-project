@@ -109,9 +109,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; section prefix. PGO counter analysis categorizes it as cold, so it will have
 ; section name `.data.unlikely`.
 ; COMMON:      .type data3,@object
-; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,8
-; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+; SYM-NEXT:    .section	.data.data3,"aw",@progbits
+; UNIQ-NEXT:   .section	.data,"aw",@progbits,unique,8
+; AGG-NEXT:    .data
 
 ; For @data_with_unknown_hotness
 ; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
@@ -119,8 +119,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; UNIQ:        .section  .data,"aw",@progbits,unique,9
 ; The `.section` directive is omitted for .data with -unique-section-names=false.
 ; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
-; AGG:         .data
-; COMMON:      .Ldata_with_unknown_hotness:
 
 ; For @hot_data_custom_bar_section
 ; It has an explicit section attribute 'var' and shouldn't have hot or unlikely suffix.
@@ -130,20 +128,27 @@ target triple = "x86_64-unknown-linux-gnu"
 ; UNIQ:        .section bar,"aw",@progbits
 ; AGG:         .section bar,"aw",@progbits
 
+; For @external_cold_bss
+; COMMON:      .type external_cold_bss,@object
+; SYM-NEXT:    .section	.bss.external_cold_bss,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss,"aw",@nobits,unique,
+; AVG-NEXT:    .bss
+
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
 @hot_relro_array = internal constant [2 x ptr] [ptr @bss2, ptr @data3]
 @hot_data = internal global i32 5
 @hot_bss = internal global i32 0
 @.str.2 = private unnamed_addr constant [14 x i8] c"cold%d\09%d\09%d\0A\00", align 1
-@cold_bss = internal global i32 0
-@cold_data = internal global i32 4
+@cold_bss = internal global i32 0, !section_prefix !18
+@cold_data = internal global i32 4, !section_prefix !18
 @cold_data_custom_foo_section = internal global i32 100, section "foo"
-@cold_relro_array = internal constant [2 x ptr] [ptr @data3, ptr @bss2]
+@cold_relro_array = internal constant [2 x ptr] [ptr @data3, ptr @bss2], !section_prefix !18
 @bss2 = internal global i32 0, !section_prefix !17
 @data3 = internal global i32 3
 @data_with_unknown_hotness = private global i32 5
 @hot_data_custom_bar_section = internal global i32 101 #0
+@external_cold_bss = global i32 0
 
 define void @cold_func(i32 %0) !prof !15 {
   %2 = load i32, ptr @cold_bss
@@ -156,7 +161,8 @@ define void @cold_func(i32 %0) !prof !15 {
   %9 = load i32, ptr @data_with_unknown_hotness
   %11 = load i32, ptr @hot_data
   %12 = load i32, ptr @cold_data_custom_foo_section
-  %13 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.2, i32 %2, i32 %3, i32 %8, i32 %9, i32 %11, i32 %12)
+  %val = load i32, ptr @external_cold_bss
+  %13 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.2, i32 %2, i32 %3, i32 %8, i32 %9, i32 %11, i32 %12, i32 %val)
   ret void
 }
 
@@ -216,8 +222,9 @@ declare i32 @func_taking_arbitrary_param(...)
 
 attributes #0 = {"data-section"="bar"}
 
-!llvm.module.flags = !{!1}
+!llvm.module.flags = !{!0, !1}
 
+!0 = !{i32 2, !"HasDataAccessProf", i32 1}
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
 !3 = !{!"ProfileFormat", !"InstrProf"}
@@ -235,3 +242,5 @@ attributes #0 = {"data-section"="bar"}
 !15 = !{!"function_entry_count", i64 1}
 !16 = !{!"branch_weights", i32 1, i32 99999}
 !17 = !{!"section_prefix", !"hot"}
+!18 = !{!"section_prefix", !"unlikely"}
+
