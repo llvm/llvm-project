@@ -75,25 +75,32 @@ define void @test_2xi64_with_wide_load(ptr noalias %data, ptr noalias %factor) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 2
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP7]]
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = load <2 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC3]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <4 x i64> [[WIDE_VEC3]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT3]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[STRIDED_VEC2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT3]], [[STRIDED_VEC5]]
-; CHECK-NEXT:    store <2 x i64> [[TMP15]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP16]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP17]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i64> [[TMP11]], <2 x i64> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC6:%.*]] = shufflevector <4 x i64> [[TMP18]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC6]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
