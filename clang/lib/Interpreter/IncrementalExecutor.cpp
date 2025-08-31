@@ -208,11 +208,11 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
       SlabSize, SREPC, SAs);
 }
 
+#ifndef _WIN32
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
                                     bool UseSharedMemory,
-                                    llvm::StringRef SlabAllocateSizeString,
-                                    std::function<void()> CustomizeFork) {
+                                    llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -254,9 +254,6 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
     // Close the parent ends of the pipes
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
-
-    if (CustomizeFork)
-      CustomizeFork();
 
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
@@ -393,5 +390,6 @@ IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
       std::move(S), *SockFD, *SockFD);
 #endif
 }
+#endif // _WIN32
 
 } // namespace clang

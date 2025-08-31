@@ -37,13 +37,6 @@ set(CLANG_REPL_TEST_SOURCES
   CodeCompletionTest.cpp
 )
 
-if(TARGET compiler-rt)
-  list(APPEND CLANG_REPL_TEST_SOURCES
-    OutOfProcessInterpreterTests.cpp
-  )
-  message(STATUS "Compiler-RT found, enabling out of process JIT tests")
-endif()
-
 add_distinct_clang_unittest(ClangReplInterpreterTests
   ${CLANG_REPL_TEST_SOURCES}
 

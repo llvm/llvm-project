@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/RemoteJITUtils.h"
-
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -19,7 +17,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
-#include "clang/Interpreter/OutOfProcessJITConfig.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
@@ -278,7 +275,7 @@ int main(int argc, const char **argv) {
 
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
-  clang::OutOfProcessJITConfig OutOfProcessConfig;
+  clang::Interpreter::OutOfProcessJITConfig OutOfProcessConfig;
   OutOfProcessConfig.IsOutOfProcess =
       !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   OutOfProcessConfig.OOPExecutor = OOPExecutor;

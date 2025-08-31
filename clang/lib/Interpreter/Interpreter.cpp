@@ -41,8 +41,6 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Interpreter/Interpreter.h"
-#include "clang/Interpreter/OutOfProcessJITConfig.h"
-#include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Lookup.h"
@@ -463,6 +461,7 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
+#ifndef _WIN32
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
 Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
@@ -471,8 +470,7 @@ Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
         OutOfProcessConfig.OOPExecutor, OutOfProcessConfig.UseSharedMemory,
-        OutOfProcessConfig.SlabAllocateSizeString,
-        OutOfProcessConfig.CustomizeFork);
+        OutOfProcessConfig.SlabAllocateSizeString);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
@@ -499,6 +497,7 @@ Interpreter::outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig) {
 
   return std::make_pair(std::move(JB), childPid);
 }
+
 llvm::Expected<std::string>
 Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
   std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
@@ -525,6 +524,7 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
       llvm::Twine("OrcRuntime library not found in: ") + (*CompilerRTPath),
       std::error_code());
 }
+#endif
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI,
@@ -759,6 +759,7 @@ llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
+#ifndef _WIN32
   pid_t OOPChildPid = -1;
   if (OOPConfig.IsOutOfProcess) {
     if (!JITBuilder) {
@@ -773,6 +774,7 @@ llvm::Error Interpreter::CreateExecutor(OutOfProcessJITConfig OOPConfig) {
           "Operation failed. No LLJITBuilder for out-of-process JIT",
           std::error_code());
   }
+#endif
 
   if (!JITBuilder) {
     const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;

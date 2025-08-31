@@ -16,7 +16,6 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Driver/ToolChain.h"
-#include "clang/Interpreter/OutOfProcessJITConfig.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
@@ -122,16 +121,39 @@ class Interpreter {
   /// An optional compiler instance for CUDA offloading
   std::unique_ptr<CompilerInstance> DeviceCI;
 
+public:
+  struct OutOfProcessJITConfig {
+    /// Indicates whether out-of-process JIT execution is enabled.
+    bool IsOutOfProcess;
+    /// Path to the out-of-process JIT executor.
+    std::string OOPExecutor;
+    std::string OOPExecutorConnect;
+    /// Indicates whether to use shared memory for communication.
+    bool UseSharedMemory;
+    /// String representing the slab allocation size for memory management.
+    std::string SlabAllocateSizeString;
+    /// Path to the ORC runtime library.
+    std::string OrcRuntimePath;
+
+    OutOfProcessJITConfig()
+      : IsOutOfProcess(false),
+        OOPExecutor(""),
+        OOPExecutorConnect(""),
+        UseSharedMemory(false),
+        SlabAllocateSizeString(""),
+        OrcRuntimePath("") {}
+  };
+
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
               std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
               std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
-              OutOfProcessJITConfig OOPConfig = {});
+              OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error CreateExecutor(OutOfProcessJITConfig OOPConfig = {});
+  llvm::Error CreateExecutor(OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
@@ -148,11 +170,13 @@ public:
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
                      llvm::StringRef OrcRuntimePath);
+#ifndef _WIN32
   static llvm::Expected<
       std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, pid_t>>
   outOfProcessJITBuilder(OutOfProcessJITConfig OutOfProcessConfig);
   static llvm::Expected<std::string>
   getOrcRuntimePath(const driver::ToolChain &TC);
+#endif
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
@@ -187,8 +211,9 @@ public:
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
                                       std::unique_ptr<llvm::Module> M = {},
                                       IncrementalAction *Action = nullptr);
-
+#ifndef _WIN32
   pid_t getOutOfProcessExecutorPID() const;
+#endif
 
 private:
   size_t getEffectivePTUSize() const;

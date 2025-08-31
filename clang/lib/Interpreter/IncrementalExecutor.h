@@ -72,20 +72,23 @@ public:
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
 
+#ifndef _WIN32
   pid_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
+#endif
 
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
 
+#ifndef _WIN32
   static llvm::Expected<
       std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, pid_t>>
   launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-                 llvm::StringRef SlabAllocateSizeString,
-                 std::function<void()> CustomizeFork = nullptr);
+                 llvm::StringRef SlabAllocateSizeString);
 
   static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
   connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                    llvm::StringRef SlabAllocateSizeString);
+#endif
 };
 
 } // end namespace clang
