@@ -80,28 +80,52 @@ protected:
 
 /// SRLW: Logical Shift Right
 TEST_F(RISCVSelectionDAGTest, computeKnownBits_SRLW) {
-  // Following DAG is created from this IR snippet:
+  // Given the following IR snippet:
+  //  define i64 @f(i32 %x, i32 %y) {
+  //   %a = and i32 %x, 2147483647  ; zeros the MSB for %x
+  //   %b = lshr i32 %a, %y
+  //   %c = zext i32 %b to i64 ; makes the most significant 32 bits 0
+  //   ret i64 %c
+  //  }
+  // The Optimized SelectionDAG as show by llc -mtriple="riscv64" -debug-only=isel-dump 
+  // is:
+  //      t0: ch,glue = EntryToken
+  //          t2: i64,ch = CopyFromReg t0, Register:i64 %0
+  //        t18: i64 = and t2, Constant:i64<2147483647>
+  //        t4: i64,ch = CopyFromReg t0, Register:i64 %1
+  //      t20: i64 = RISCVISD::SRLW t18, t4
+  //    t22: i64 = and t20, Constant:i64<4294967295>
+  //  t13: ch,glue = CopyToReg t0, Register:i64 $x10, t22
+  //  t14: ch = RISCVISD::RET_GLUE t13, Register:i64 $x10, t13:1
   //
-  // define i64 @f(i32 %x, i32 %y) {
-  //  %a = and i32 %x, 2147483647  ; zeros the MSB for %x
-  //  %b = lshr i32 %a, %y
-  //  %c = zext i32 %b to i64 ; makes the most significant 32 bits 0
-  //  ret i64 %c
-  // }
+  // The DAG created below is derived from this
   SDLoc Loc;
-  auto IntVT = EVT::getIntegerVT(Context, 32);
   auto Int64VT = EVT::getIntegerVT(Context, 64);
-  auto Px = DAG->getRegister(0, IntVT);
-  auto Py = DAG->getConstant(2147483647, Loc, IntVT);
-  auto N1 = DAG->getNode(ISD::AND, Loc, IntVT, Px, Py);
+  auto Px = DAG->getRegister(0, Int64VT);
+  auto Py = DAG->getConstant(2147483647, Loc, Int64VT);
+  auto N1 = DAG->getNode(ISD::AND, Loc, Int64VT, Px, Py);
   auto Qx = DAG->getRegister(0, Int64VT);
   auto N2 = DAG->getNode(RISCVISD::SRLW, Loc, Int64VT, N1, Qx);
-  auto N3 = DAG->getNode(ISD::ZERO_EXTEND, Loc, Int64VT, N2);
-  // N1 = 0???????????????????????????????
-  // N2 = 0???????????????????????????????
-  // N3 = 000000000000000000000000000000000???????????????????????????????
-  // After zero extend, we expect 33 most significant zeros to be known:
-  // 32 from sign extension and 1 from AND operation
+  auto Py2 = DAG->getConstant(4294967295, Loc, Int64VT);
+  auto N3 = DAG->getNode(ISD::AND, Loc, Int64VT, N2, Py2);
+  // N1 = Px & 0x7FFFFFFF
+  // The first AND ensures that the input to the shift has bit 31 cleared.
+  // This means bits [63:31] of N1 are known to be zero.
+  //
+  // N2 = SRLW N1, Qx
+  // SRLW performs a 32-bit logical right shift and then sign-extends the
+  // 32-bit result to 64 bits. Because we know N1's bit 31 is 0, the
+  // 32-bit result of the shift will also have its sign bit (bit 31) as 0.
+  // Therefore, the sign-extension is guaranteed to be a zero-extension.
+  //
+  // N3 = N2 & 0xFFFFFFFF
+  // This second AND is part of the canonical pattern to clear the upper
+  // 32 bits, explicitly performing the zero-extension. From a KnownBits
+  // perspective, it's redundant, as N2's upper bits are already known zero.
+  //
+  // As a result, for N3, we know the upper 32 bits are zero (from the effective
+  // zero-extension) and we also know bit 31 is zero (from the initial AND).
+  // This gives us 33 known most-significant zero bits.
   KnownBits Known = DAG->computeKnownBits(N3);
   EXPECT_EQ(Known.Zero, APInt(64, -2147483648));
   EXPECT_EQ(Known.One, APInt(64, 0));
