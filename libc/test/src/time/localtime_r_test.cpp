@@ -34,6 +34,12 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
   ASSERT_EQ(0, result->tm_isdst);
 }
 
+TEST(LlvmLibcLocaltime, NullPtr) {
+  EXPECT_DEATH([] {
+    LIBC_NAMESPACE::localtime_r(nullptr, nullptr);
+  }, 4);
+}
+
 // TODO(zimirza): These tests does not expect the correct output of localtime as
 // per specification. This is due to timezone functions removed from
 // https://github.com/llvm/llvm-project/pull/110363.
