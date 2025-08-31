@@ -1,8 +1,8 @@
-// RUN: tco -emit-final-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
-// RUN: tco -emit-final-mlir -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
-// RUN: tco -emit-final-mlir -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
-// RUN: tco -emit-final-mlir -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
-// RUN: tco -test-gen %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -emit-final-mlir --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
+// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
+// RUN: tco -emit-final-mlir --force-no-alias=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
+// RUN: tco -emit-final-mlir --force-no-alias=false -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
+// RUN: tco -test-gen --force-no-alias=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
 
 // Just a dummy function that exhibits all of the things we want to turn on and off
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg3: !fir.ref<i32> {fir.bindc_name = "step"}) {

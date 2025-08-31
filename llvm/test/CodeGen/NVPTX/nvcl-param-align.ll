@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-nvcl -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas-sm_60 %{ llc < %s -mtriple=nvptx64-nvidia-nvcl -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-nvcl -mcpu=sm_60 | %ptxas-verify %}
 
 target triple = "nvptx-unknown-nvcl"
 
