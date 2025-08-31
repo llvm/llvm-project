@@ -1,7 +1,7 @@
 ; RUN: llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32
 ; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64
 ; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64
-; RUN: %if ptxas-ptr32 %{ llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
 

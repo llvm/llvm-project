@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 ; CHECK: .func ({{.*}}) device_func
