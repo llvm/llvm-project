@@ -1339,8 +1339,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  case TargetOpcode::G_ABDS:
-    return Helper.lowerAbsDiffToMinMax(MI);
   // TODO: G_FCONSTANT
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
