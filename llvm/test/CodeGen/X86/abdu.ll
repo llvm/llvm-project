@@ -958,20 +958,18 @@ define i32 @abdu_select(i32 %x, i32 %y) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    negl %edx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    subl %eax, %edx
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbel %edx, %eax
+; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abdu_select:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    subl %esi, %edi
-; X64-NEXT:    cmoval %edi, %eax
+; X64-NEXT:    subl %edi, %esi
+; X64-NEXT:    cmovael %esi, %eax
 ; X64-NEXT:    retq
   %sub = sub i32 %x, %y
   %cmp = icmp ugt i32 %x, %y

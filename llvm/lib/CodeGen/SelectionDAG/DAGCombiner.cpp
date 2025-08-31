@@ -12284,27 +12284,45 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   case ISD::SETGT:
   case ISD::SETGE:
   case ISD::SETUGT:
-  case ISD::SETUGE:
-    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
-        sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))))
-      return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
-        sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
-        hasOperation(ABDOpc, VT))
-      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+  case ISD::SETUGE: {
+    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS)))) {
+      if (sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))))
+        return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+
+      if (sd_match(False, m_Neg(m_Sub(m_Specific(LHS), m_Specific(RHS)))))
+        return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+    }
+
+    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS)))) {
+      if (sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))))
+        return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+
+      if (sd_match(False, m_Neg(m_Sub(m_Specific(RHS), m_Specific(LHS)))))
+        return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+    }
     break;
+  }
   case ISD::SETLT:
   case ISD::SETLE:
   case ISD::SETULT:
-  case ISD::SETULE:
-    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
-        sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))))
-      return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
-    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS))) &&
-        sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))) &&
-        hasOperation(ABDOpc, VT))
-      return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+  case ISD::SETULE: {
+    if (sd_match(True, m_Sub(m_Specific(RHS), m_Specific(LHS)))) {
+      if (sd_match(False, m_Sub(m_Specific(LHS), m_Specific(RHS))))
+        return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+
+      if (sd_match(False, m_Neg(m_Sub(m_Specific(RHS), m_Specific(LHS)))))
+        return DAG.getNode(ABDOpc, DL, VT, LHS, RHS);
+    }
+
+    if (sd_match(True, m_Sub(m_Specific(LHS), m_Specific(RHS)))) {
+      if (sd_match(False, m_Sub(m_Specific(RHS), m_Specific(LHS))))
+        return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+
+      if (sd_match(False, m_Neg(m_Sub(m_Specific(LHS), m_Specific(RHS)))))
+        return DAG.getNegative(DAG.getNode(ABDOpc, DL, VT, LHS, RHS), DL, VT);
+    }
     break;
+  }
   default:
     break;
   }
