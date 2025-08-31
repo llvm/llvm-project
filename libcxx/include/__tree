@@ -24,6 +24,7 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__new/launder.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -566,8 +567,7 @@ public:
 };
 
 template <class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG
-__tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
+class __tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
 public:
   using pointer                            = __rebind_pointer_t<_VoidPtr, __tree_node_base>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
@@ -609,21 +609,35 @@ error> is not a constant expression
 };
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
+class __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
+// We use a union to avoid initialization during member initialization, which allows us
+// to use the allocator from the container to allocate the node itself
+#ifndef _LIBCPP_CXX03_LANG
+
+private:
   union {
     __node_value_type __value_;
   };
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_value_type& __get_value() { return __value_; }
+#else
+
+private:
+  _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
+
+public:
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_value_type& __get_value() { return *reinterpret_cast<__node_value_type*>(__buffer_); }
+#endif
 
   template <class _Alloc, class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree_node(_Alloc& __na, _Args&&... __args) {
-    allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
+    allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
   }
+
 // TODO: workaround for arm CI which uses clang-19.1.4
 /*
 note: non-literal type 'std::__tree_node<std::__value_type<int, int>, void *>' cannot be used in a constant expression
@@ -1958,7 +1972,7 @@ typename __tree<_Tp, _Compare, _Allocator>::iterator _LIBCPP_CONSTEXPR_SINCE_CXX
 __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p, _Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__value_);
+  __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__get_value());
   __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
   return iterator(static_cast<__node_pointer>(__h.release()));
 }
@@ -1971,7 +1985,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const value_type& __v, _
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   bool __inserted              = false;
   if (__child == nullptr) {
-    __assign_value(__nd->__value_, __v);
+    __assign_value(__nd->__get_value(), __v);
     __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__nd));
     __r        = __nd;
     __inserted = true;
@@ -1983,7 +1997,7 @@ template <class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
   __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__value_);
+  __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__get_value());
   __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__nd));
   return iterator(__nd);
 }
