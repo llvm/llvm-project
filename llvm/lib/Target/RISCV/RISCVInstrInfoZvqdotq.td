@@ -65,13 +65,12 @@ defm : VPatBinaryVL_VV_VX<riscv_vqdotsu_vl, "PseudoVQDOTSU", AllE32Vectors>;
 
 // These VPat definitions are for vqdot because they have a different operand
 // order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)
-multiclass VPatTernaryV_VX_AAXASwapped<string intrinsic, string instruction,
-                                       list<VTypeInfoToWide> info_pairs> {
+multiclass VPatTernaryV_VX_AABX<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> info_pairs> {
   foreach pair = info_pairs in {
     defvar VdInfo = pair.Wti;
     defvar Vs2Info = pair.Vti;
     let Predicates = GetVTypePredicates<VdInfo>.Predicates in
-    // we have op1 and op2 swapped here
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
                                  "V"#VdInfo.ScalarSuffix,
                                  VdInfo.Vector, Vs2Info.Vector, Vs2Info.Scalar,
@@ -81,13 +80,12 @@ multiclass VPatTernaryV_VX_AAXASwapped<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatTernaryV_VV_AAXASwapped<string intrinsic, string instruction,
-                                       list<VTypeInfoToWide> info_pairs> {
+multiclass VPatTernaryV_VV_AABX<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> info_pairs> {
   foreach pair = info_pairs in {
     defvar VdInfo = pair.Wti;
     defvar Vs2Info = pair.Vti;
     let Predicates = GetVTypePredicates<VdInfo>.Predicates in
-    // we have op1 and op2 swapped here
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
                                  "VV",
                                  VdInfo.Vector, Vs2Info.Vector, Vs2Info.Vector,
@@ -97,10 +95,10 @@ multiclass VPatTernaryV_VV_AAXASwapped<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatTernaryV_VV_VX_AAXASwapped<string intrinsic, string instruction,
-                                          list<VTypeInfoToWide> info_pairs>
-    : VPatTernaryV_VV_AAXASwapped<intrinsic, instruction, info_pairs>,
-      VPatTernaryV_VX_AAXASwapped<intrinsic, instruction, info_pairs>;
+multiclass VPatTernaryV_VV_VX_AABX<string intrinsic, string instruction,
+                                   list<VTypeInfoToWide> info_pairs>
+    : VPatTernaryV_VV_AABX<intrinsic, instruction, info_pairs>,
+      VPatTernaryV_VX_AABX<intrinsic, instruction, info_pairs>;
 
 defset list<VTypeInfoToWide> VQDOTInfoPairs = {
   def : VTypeInfoToWide<VI8MF2, VI32MF2>;
@@ -111,12 +109,8 @@ defset list<VTypeInfoToWide> VQDOTInfoPairs = {
 }
 
 let Predicates = [HasStdExtZvqdotq] in {
-  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdot", "PseudoVQDOT",
-                                        VQDOTInfoPairs>;
-  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdotu", "PseudoVQDOTU",
-                                        VQDOTInfoPairs>;
-  defm : VPatTernaryV_VV_VX_AAXASwapped<"int_riscv_vqdotsu", "PseudoVQDOTSU",
-                                        VQDOTInfoPairs>;
-  defm : VPatTernaryV_VX_AAXASwapped<"int_riscv_vqdotus", "PseudoVQDOTUS",
-                                     VQDOTInfoPairs>;
+  defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdot", "PseudoVQDOT", VQDOTInfoPairs>;
+  defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdotu", "PseudoVQDOTU", VQDOTInfoPairs>;
+  defm : VPatTernaryV_VV_VX_AABX<"int_riscv_vqdotsu", "PseudoVQDOTSU", VQDOTInfoPairs>;
+  defm : VPatTernaryV_VX_AABX<"int_riscv_vqdotus", "PseudoVQDOTUS", VQDOTInfoPairs>;
 }

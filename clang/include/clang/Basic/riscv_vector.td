@@ -2548,6 +2548,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   }
 }
 
+// Zvqdotq
 multiclass RVVVQDOTQBuiltinSet<list<list<string>> suffixes_prototypes> {
   let UnMaskedPolicyScheme = HasPolicyOperand,
       HasMaskedOffOperand = false,
