@@ -4257,7 +4257,6 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue Mask = DAG.getConstant(
       APInt::getLowBitsSet(XLenVT.getSizeInBits(), ElemSizeInBits), DL, XLenVT);
-  unsigned ZeroPrefix = XLenVT.getSizeInBits() - ElemSizeInBits;
   auto pack = [&](SDValue A, SDValue B) {
     // Bias the scheduling of the inserted operations to near the
     // definition of the element - this tends to reduce register
@@ -4273,9 +4272,9 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
 
     // Manually optimize away the ANDs if we can, DAGCombiner will
     // sometimes end up perturbing codegen if we don't.
-    if (DAG.computeKnownBits(A).countMinLeadingZeros() < ZeroPrefix)
+    if (DAG.computeKnownBits(A).countMaxActiveBits() > ElemSizeInBits)
       A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
-    if (DAG.computeKnownBits(B).countMinLeadingZeros() < ZeroPrefix)
+    if (DAG.computeKnownBits(B).countMaxActiveBits() > ElemSizeInBits)
       B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
     SDValue ShtAmt = DAG.getConstant(ElemSizeInBits, ElemDL, XLenVT);
     return DAG.getNode(ISD::OR, ElemDL, XLenVT, A,
