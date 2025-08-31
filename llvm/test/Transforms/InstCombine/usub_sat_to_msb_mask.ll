@@ -252,3 +252,64 @@ define i32 @multi_use_select(i32 %a, i32 %b) {
 }
 
 
+define i8 @no_fold_usub_extra_use(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @no_fold_usub_extra_use(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 -33)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 -17)
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 0, i8 -128
+; CHECK-NEXT:    call void @use(i8 [[A_SUB]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %a_sub = call i8 @llvm.usub.sat.i8(i8 %a, i8 223)
+  %b_sub = call i8 @llvm.usub.sat.i8(i8 %b, i8 239)
+  %or = or i8 %a_sub, %b_sub
+  %cmp = icmp eq i8 %or, 0
+  %res = select i1 %cmp, i8 0, i8 128
+  call void @use(i8 %a_sub)
+  ret i8 %res
+}
+
+define i8 @no_fold_or_extra_use(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @no_fold_or_extra_use(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 -33)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 -17)
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 0, i8 -128
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %a_sub = call i8 @llvm.usub.sat.i8(i8 %a, i8 223)
+  %b_sub = call i8 @llvm.usub.sat.i8(i8 %b, i8 239)
+  %or = or i8 %a_sub, %b_sub
+  %cmp = icmp eq i8 %or, 0
+  %res = select i1 %cmp, i8 0, i8 128
+  call void @use(i8 %or)
+  ret i8 %res
+}
+
+define i8 @no_fold_usub_b_extra_use(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @no_fold_usub_b_extra_use(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[A_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 -33)
+; CHECK-NEXT:    [[B_SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[B]], i8 -17)
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A_SUB]], [[B_SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 0, i8 -128
+; CHECK-NEXT:    call void @use(i8 [[B_SUB]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %a_sub = call i8 @llvm.usub.sat.i8(i8 %a, i8 223)
+  %b_sub = call i8 @llvm.usub.sat.i8(i8 %b, i8 239)
+  %or = or i8 %a_sub, %b_sub
+  %cmp = icmp eq i8 %or, 0
+  %res = select i1 %cmp, i8 0, i8 128
+  call void @use(i8 %b_sub)
+  ret i8 %res
+}
+
+declare void @use(i8)

@@ -2014,10 +2014,10 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
   const APInt *Constant1, *Constant2;
   if (!match(SI.getCondition(),
              m_ICmp(Pred,
-                    m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
-                                                          m_APInt(Constant1)),
-                         m_Intrinsic<Intrinsic::usub_sat>(m_Value(B),
-                                                          m_APInt(Constant2))),
+                    m_OneUse(m_Or(m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
+                                      m_Value(A), m_APInt(Constant1))),
+                                  m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
+                                      m_Value(B), m_APInt(Constant2))))),
                     m_Zero())))
     return nullptr;
 
