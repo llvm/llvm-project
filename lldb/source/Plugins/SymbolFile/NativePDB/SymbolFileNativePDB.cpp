@@ -2045,14 +2045,17 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   if (!ts)
     return nullptr;
 
-  ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
+  auto *typedef_decl = ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
+
+  CompilerType ct = target_type->GetForwardCompilerType();
+  if (auto *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get()))
+    ct = clang->GetType(clang->getASTContext().getTypeDeclType(typedef_decl));
 
   Declaration decl;
   return MakeType(toOpaqueUid(id), ConstString(udt.Name),
                   llvm::expectedToOptional(target_type->GetByteSize(nullptr)),
                   nullptr, target_type->GetID(),
-                  lldb_private::Type::eEncodingIsTypedefUID, decl,
-                  target_type->GetForwardCompilerType(),
+                  lldb_private::Type::eEncodingIsTypedefUID, decl, ct,
                   lldb_private::Type::ResolveState::Forward);
 }
 
