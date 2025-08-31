@@ -539,35 +539,13 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
-PartialTranslationUnit &
-Interpreter::RegisterPTU(TranslationUnitDecl *TU,
-                         std::unique_ptr<llvm::Module> M /*={}*/,
-                         IncrementalAction *Action) {
-  PTUs.emplace_back(PartialTranslationUnit());
-  PartialTranslationUnit &LastPTU = PTUs.back();
-  LastPTU.TUPart = TU;
-
-  if (!M)
-    M = GenModule(Action);
-
-  assert((!getCodeGen(Action) || M) &&
-         "Must have a llvm::Module at this point");
-
-  LastPTU.TheModule = std::move(M);
-  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
-                          << ": [TU=" << LastPTU.TUPart);
-  if (LastPTU.TheModule)
-    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
-                            << LastPTU.TheModule->getName() << ")");
-  LLVM_DEBUG(llvm::dbgs() << "]\n");
-  return LastPTU;
-}
-
+#ifndef _WIN32
 pid_t Interpreter::getOutOfProcessExecutorPID() const {
   if (IncrExecutor)
     return IncrExecutor->getOutOfProcessChildPid();
   return -1;
 }
+#endif
 
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {

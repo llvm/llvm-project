@@ -45,7 +45,9 @@ class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
   std::unique_ptr<llvm::orc::LLJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
+#ifndef _WIN32
   pid_t OutOfProcessChildPid = -1;
+#endif
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;

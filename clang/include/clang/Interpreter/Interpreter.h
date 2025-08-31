@@ -200,10 +200,6 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
-  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {},
-                                      IncrementalAction *Action = nullptr);
 #ifndef _WIN32
   pid_t getOutOfProcessExecutorPID() const;
 #endif
