@@ -859,4 +859,80 @@ define i32 @abs_range_metadata(i32 %x) {
   %b = and i32 %a, 15
   ret i32 %b
 }
+
 !1 = !{i32 0, i32 16}
+
+define i32 @abs_diff(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_ge(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_ge(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i32 [[SUB1]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sge i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
