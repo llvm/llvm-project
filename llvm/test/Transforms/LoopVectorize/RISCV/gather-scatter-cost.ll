@@ -2,8 +2,8 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+rva23u64 -S | FileCheck %s -check-prefixes=CHECK,RVA23
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+rva23u64,+zvl1024b -S | FileCheck %s -check-prefixes=CHECK,RVA23ZVL1024B
 
-define i32 @getNeighborBoxes(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
-; CHECK-LABEL: @getNeighborBoxes(
+define void @predicated_uniform_load(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
+; CHECK-LABEL: @predicated_uniform_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IBOX:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
@@ -55,49 +55,49 @@ define i32 @getNeighborBoxes(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    br i1 false, label [[EXIT_CRIT_EDGE:%.*]], label [[IF:%.*]]
-; CHECK:       exit_crit_edge:
-; CHECK-NEXT:    br label [[LOOP_EXIT]]
-; CHECK:       if:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 false, label [[LOOP_THEN:%.*]], label [[LOOP_ELSE:%.*]]
+; CHECK:       loop.then:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.else:
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[BOXES]], align 4
-; CHECK-NEXT:    br label [[LOOP_EXIT]]
-; CHECK:       loop.exit:
-; CHECK-NEXT:    [[IBOX_0_I:%.*]] = phi i32 [ [[TMP17]], [[IF]] ], [ 0, [[EXIT_CRIT_EDGE]] ]
-; CHECK-NEXT:    store i32 [[IBOX_0_I]], ptr [[NBRBOXES]], align 4
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[STORE:%.*]] = phi i32 [ [[TMP17]], [[LOOP_ELSE]] ], [ 0, [[LOOP_THEN]] ]
+; CHECK-NEXT:    store i32 [[STORE]], ptr [[NBRBOXES]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[IV]], [[IBOX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
 
 loop:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.exit ]
-  br i1 false, label %exit_crit_edge, label %if
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 false, label %loop.then, label %loop.else
 
-exit_crit_edge:
-  br label %loop.exit
+loop.then:
+  br label %loop.latch
 
-if:
+loop.else:
   %0 = load i32, ptr %boxes, align 4
-  br label %loop.exit
+  br label %loop.latch
 
-loop.exit:
-  %iBox.0.i = phi i32 [ %0, %if ], [ 0, %exit_crit_edge ]
-  store i32 %iBox.0.i, ptr %nbrBoxes, align 4
+loop.latch:
+  %store = phi i32 [%0, %loop.else], [0, %loop.then]
+  store i32 %store, ptr %nbrBoxes, align 4
   %iv.next = add i32 %iv, 1
   %exitcond = icmp sgt i32 %iv, %iBox
   br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret i32 0
+  ret void
 }
 
-define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
-; RVA23-LABEL: @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE(
+define void @predicated_strided_store(ptr %start) {
+; RVA23-LABEL: @predicated_strided_store(
 ; RVA23-NEXT:  entry:
 ; RVA23-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; RVA23:       vector.ph:
@@ -113,7 +113,7 @@ define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
 ; RVA23-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[TMP3]], i64 0
 ; RVA23-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
 ; RVA23-NEXT:    [[TMP4:%.*]] = mul <vscale x 16 x i64> [[VEC_IND]], splat (i64 7)
-; RVA23-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, <vscale x 16 x i64> [[TMP4]]
+; RVA23-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START:%.*]], <vscale x 16 x i64> [[TMP4]]
 ; RVA23-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> align 1 [[TMP5]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; RVA23-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP2]] to i64
 ; RVA23-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
@@ -127,7 +127,7 @@ define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
 ; RVA23:       loop:
 ; RVA23-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; RVA23-NEXT:    [[TMP8:%.*]] = mul i64 [[IV]], 7
-; RVA23-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr null, i64 [[TMP8]]
+; RVA23-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP8]]
 ; RVA23-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1
 ; RVA23-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; RVA23-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 585
@@ -135,7 +135,7 @@ define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
 ; RVA23:       exit:
 ; RVA23-NEXT:    ret void
 ;
-; RVA23ZVL1024B-LABEL: @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE(
+; RVA23ZVL1024B-LABEL: @predicated_strided_store(
 ; RVA23ZVL1024B-NEXT:  entry:
 ; RVA23ZVL1024B-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; RVA23ZVL1024B:       vector.ph:
@@ -151,7 +151,7 @@ define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
 ; RVA23ZVL1024B-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
 ; RVA23ZVL1024B-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; RVA23ZVL1024B-NEXT:    [[TMP4:%.*]] = mul <vscale x 2 x i64> [[VEC_IND]], splat (i64 7)
-; RVA23ZVL1024B-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, <vscale x 2 x i64> [[TMP4]]
+; RVA23ZVL1024B-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START:%.*]], <vscale x 2 x i64> [[TMP4]]
 ; RVA23ZVL1024B-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x ptr> align 1 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; RVA23ZVL1024B-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP2]] to i64
 ; RVA23ZVL1024B-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
@@ -165,7 +165,7 @@ define void @_Z9BM_MemCmpILi7E12LessThanZero5FirstEvRN9benchmark5StateE() {
 ; RVA23ZVL1024B:       loop:
 ; RVA23ZVL1024B-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; RVA23ZVL1024B-NEXT:    [[TMP8:%.*]] = mul i64 [[IV]], 7
-; RVA23ZVL1024B-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr null, i64 [[TMP8]]
+; RVA23ZVL1024B-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP8]]
 ; RVA23ZVL1024B-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1
 ; RVA23ZVL1024B-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; RVA23ZVL1024B-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 585
@@ -179,7 +179,7 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %0 = mul i64 %iv, 7
-  %add.ptr = getelementptr i8, ptr null, i64 %0
+  %add.ptr = getelementptr i8, ptr %start, i64 %0
   store i8 0, ptr %add.ptr, align 1
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv, 585
