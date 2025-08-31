@@ -28,6 +28,7 @@ add_llvm_target(ARMCodeGen
   ARMBranchTargets.cpp
   ARMCallingConv.cpp
   ARMCallLowering.cpp
+  ARMConditionOptimizer.cpp
   ARMConstantIslandPass.cpp
   ARMConstantPoolValue.cpp
   ARMExpandPseudoInsts.cpp

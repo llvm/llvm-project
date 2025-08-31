@@ -1862,8 +1862,8 @@ define i32 @ustest_f64i32_mm(double %x) {
 ; SOFT-NEXT:    bl __aeabi_d2lz
 ; SOFT-NEXT:    mov r2, r0
 ; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    cmp r1, #1
-; SOFT-NEXT:    blt .LBB29_2
+; SOFT-NEXT:    cmp r1, #0
+; SOFT-NEXT:    ble .LBB29_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mvns r2, r0
 ; SOFT-NEXT:  .LBB29_2: @ %entry
@@ -1994,8 +1994,8 @@ define i32 @ustest_f32i32_mm(float %x) {
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    mov r2, r0
 ; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    cmp r1, #1
-; SOFT-NEXT:    blt .LBB32_2
+; SOFT-NEXT:    cmp r1, #0
+; SOFT-NEXT:    ble .LBB32_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mvns r2, r0
 ; SOFT-NEXT:  .LBB32_2: @ %entry
@@ -2140,8 +2140,8 @@ define i32 @ustest_f16i32_mm(half %x) {
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    mov r2, r0
 ; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    cmp r1, #1
-; SOFT-NEXT:    blt .LBB35_2
+; SOFT-NEXT:    cmp r1, #0
+; SOFT-NEXT:    ble .LBB35_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mvns r2, r0
 ; SOFT-NEXT:  .LBB35_2: @ %entry
