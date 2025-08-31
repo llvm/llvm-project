@@ -290,7 +290,7 @@ constexpr bool match_v64qu(__m512i _v, unsigned char __e00, unsigned char __e01,
          v[56] == __e56 && v[57] == __e57 && v[58] == __e58 && v[59] == __e59 && v[60] == __e60 && v[61] == __e61 && v[62] == __e62 && v[63] == __e63;
 }
 
-#define TEST_CONSTEXPR(...) static_assert(__VA_ARGS__)
+#define TEST_CONSTEXPR(...) static_assert(__VA_ARGS__, #__VA_ARGS__)
 
 #else
 
