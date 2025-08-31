@@ -21,12 +21,14 @@ namespace clang::tidy::readability {
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/use-concise-preprocessor-directives.html
 class UseConcisePreprocessorDirectivesCheck : public ClangTidyCheck {
 public:
-  using ClangTidyCheck::ClangTidyCheck;
+  UseConcisePreprocessorDirectivesCheck(StringRef Name,
+                                        ClangTidyContext *Context);
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return true;
-  }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const bool PreserveConsistency;
 };
 
 } // namespace clang::tidy::readability
