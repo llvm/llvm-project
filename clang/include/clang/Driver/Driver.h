@@ -135,6 +135,10 @@ class Driver {
   /// interpretation.
   bool ModulesModeCXX20;
 
+  /// Set if the dirver should plan the compilation after scanning module
+  /// dependencies, using the scan results (set by -f(no-)modules-driver.)
+  bool DriverManagedModulesBuild;
+
   /// LTO mode selected via -f(no-)?lto(=.*)? options.
   LTOKind LTOMode;
 
@@ -796,13 +800,6 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
-  /// Scans the leading lines of the C++ source inputs to detect C++20 module
-  /// usage.
-  ///
-  /// \returns True if module usage is detected, false otherwise, or an error on
-  /// read failure.
-  llvm::ErrorOr<bool>
-  ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them

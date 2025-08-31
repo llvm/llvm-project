@@ -60,6 +60,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
+#include "clang/Driver/ModulesDriver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -1473,33 +1474,6 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   return false;
 }
 
-static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
-  const auto IsTypeCXXModule = [](const auto &Input) -> bool {
-    const auto TypeID = Input.first;
-    return (TypeID == types::TY_CXXModule);
-  };
-  return llvm::any_of(Inputs, IsTypeCXXModule);
-}
-
-llvm::ErrorOr<bool>
-Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
-  const auto CXXInputs = llvm::make_filter_range(
-      Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
-  for (const auto &Input : CXXInputs) {
-    StringRef Filename = Input.second->getSpelling();
-    auto ErrOrBuffer = VFS->getBufferForFile(Filename);
-    if (!ErrOrBuffer)
-      return ErrOrBuffer.getError();
-    const auto Buffer = std::move(*ErrOrBuffer);
-
-    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
-      Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
-      return true;
-    }
-  }
-  return false;
-}
-
 Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 
@@ -1853,6 +1827,18 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     }
   }
 
+  if (C->getArgs().hasFlag(options::OPT_fmodules_driver,
+                           options::OPT_fno_modules_driver, false)) {
+    // The detection logic for this is kept here only for diagnostics until
+    // is enabled by default.
+    modules::shouldEnableModulesDriver(Inputs, getVFS(), Diags);
+    Diags.Report(diag::remark_performing_driver_managed_module_build);
+    if (C->getArgs().hasFlag(options::OPT_fimplicit_import_std,
+                             options::OPT_fno_implicit_import_std, true)) {
+      modules::ensureNamedModuleStdLibraryInputs(*C, Inputs);
+    }
+  }
+
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
 
@@ -1862,26 +1848,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     BuildUniversalActions(*C, C->getDefaultToolChain(), Inputs);
   else
     BuildActions(*C, C->getArgs(), Inputs, C->getActions());
-
-  if (C->getArgs().hasFlag(options::OPT_fmodules_driver,
-                           options::OPT_fno_modules_driver, false)) {
-    // TODO: When -fmodules-driver is no longer experimental, it should be
-    // enabled by default only if both conditions are met: (1) there are two or
-    // more C++ source inputs; and (2) at least one input uses C++20 named
-    // modules.
-    // The detection logic for this is kept here only for diagnostics until
-    // is enabled by default.
-    bool UsesCXXModules = hasCXXModuleInputType(Inputs);
-    if (!UsesCXXModules) {
-      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
-      if (!ErrOrScanResult) {
-        Diags.Report(diag::err_cannot_open_file)
-            << ErrOrScanResult.getError().message();
-      }
-      UsesCXXModules = *ErrOrScanResult;
-    }
-    Diags.Report(diag::remark_performing_driver_managed_module_build);
-  }
 
   if (CCCPrintPhases) {
     PrintActions(*C);
@@ -4236,10 +4202,20 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
-  if (Args.hasArgNoClaim(options::OPT_fmodules_driver))
-    // TODO: Check against all incompatible -fmodules-driver arguments
-    if (!ModulesModeCXX20 && !Args.hasArgNoClaim(options::OPT_fmodules))
-      Args.eraseArg(options::OPT_fmodules_driver);
+  if (Args.hasArgNoClaim(options::OPT_fmodules_driver)) {
+    // HACK: This should be only added for the Standard library jobs, explicitly
+    // created by the modules driver.
+    MakeInputArg(Args, getOpts(),
+                 Args.MakeArgString("-Wno-reserved-module-identifier"));
+    if (Args.hasArg(options::OPT_fmodules)) {
+      Args.eraseArg(options::OPT_fmodules);
+      Arg *Arg = Args.MakeSeparateArg(
+          nullptr, getOpts().getOption(options::OPT_fimplicit_modules),
+          Args.MakeArgString(("-fimplicit-modules")));
+      Arg->claim();
+      Args.append(Arg);
+    }
+  }
 
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
@@ -5426,6 +5402,12 @@ void Driver::BuildJobs(Compilation &C) const {
         }
       }
     }
+  }
+  if (C.getArgs().hasFlag(options::OPT_fmodules_driver,
+                          options::OPT_fno_modules_driver, false)) {
+    auto Success = modules::performDriverModuleBuild(C, C.getDriver().Diags);
+    if (!Success)
+      return;
   }
 }
 
