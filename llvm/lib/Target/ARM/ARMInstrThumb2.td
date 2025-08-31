@@ -2222,11 +2222,11 @@ def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPRnopc:$Rm), IIC_iMOVr,
   let Inst{7-4} = 0b0000;
 }
 def : t2InstAlias<"mov${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                                pred:$p, zero_reg)>;
+                                                pred:$p, (cc_out zero_reg))>;
 def : t2InstAlias<"movs${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                                 pred:$p, CPSR)>;
+                                                 pred:$p, (cc_out CPSR))>;
 def : t2InstAlias<"movs${p} $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
-                                               pred:$p, CPSR)>;
+                                               pred:$p, (cc_out CPSR))>;
 
 // AddedComplexity to ensure isel tries t2MOVi before t2MOVi16.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1,
@@ -2244,14 +2244,14 @@ def t2MOVi : T2sOneRegImm<(outs rGPR:$Rd), (ins t2_so_imm:$imm), IIC_iMOVi,
 // cc_out is handled as part of the explicit mnemonic in the parser for 'mov'.
 // Use aliases to get that to play nice here.
 def : t2InstAlias<"movs${p}.w $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                pred:$p, CPSR)>;
+                                                pred:$p, (cc_out CPSR))>;
 def : t2InstAlias<"movs${p} $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                pred:$p, CPSR)>;
+                                                pred:$p, (cc_out CPSR))>;
 
 def : t2InstAlias<"mov${p}.w $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                                 pred:$p, zero_reg)>;
+                                                 pred:$p, (cc_out zero_reg))>;
 def : t2InstAlias<"mov${p} $Rd, $imm", (t2MOVi rGPR:$Rd, t2_so_imm:$imm,
-                                               pred:$p, zero_reg)>;
+                                               pred:$p, (cc_out zero_reg))>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in
 def t2MOVi16 : T2I<(outs rGPR:$Rd), (ins imm0_65535_expr:$imm), IIC_iMOVi,
@@ -5122,8 +5122,10 @@ def : InstAlias<"isb${p}.w", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 
 // Non-predicable aliases of a predicable DSB: the predicate is (14, zero_reg) where
 // 14 = AL (always execute) and zero_reg = "instruction doesn't read the CPSR".
-def : InstAlias<"ssbb", (t2DSB 0x0, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
-def : InstAlias<"pssbb", (t2DSB 0x4, 14, zero_reg), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"ssbb", (t2DSB 0x0, (pred 14, zero_reg)), 1>,
+      Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, (pred 14, zero_reg)), 1>,
+      Requires<[HasDB, IsThumb2]>;
 
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
@@ -5340,7 +5342,8 @@ def : t2InstAlias<"sxth${p} $Rd, $Rm$rot",
 // "mov Rd, t2_so_imm_not" can be handled via "mvn" in assembly, just like
 // for isel.
 def : t2InstSubst<"mov${p} $Rd, $imm",
-                  (t2MVNi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, zero_reg)>;
+                  (t2MVNi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p,
+                          (cc_out zero_reg))>;
 def : t2InstSubst<"mvn${s}${p} $Rd, $imm",
                   (t2MOVi rGPR:$Rd, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
 // Same for AND <--> BIC

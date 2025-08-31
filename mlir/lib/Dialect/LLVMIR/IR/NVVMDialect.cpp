@@ -50,7 +50,6 @@ using namespace NVVM;
 
 // This verifier is shared among the following Ops:
 // CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
-// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
 // CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
 static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
                                                      bool isIm2Col,
@@ -82,8 +81,27 @@ LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
-  if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported.");
+  TMAStoreMode mode = getMode();
+  // We lower through inline-ptx when getPredicate() is true.
+  // a) Only TILE mode is supported
+  // b) Cache-hint is not supported
+  if (getPredicate()) {
+    if (mode != TMAStoreMode::TILE)
+      return emitError("Inline-ptx lowering supported only for Tile mode.");
+    if (getL2CacheHint())
+      return emitError("Inline-ptx lowering unsupported with L2 cache-hint.");
+  }
+
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    if (dims != 5)
+      return emitError("Scatter4 mode expects 5 coordinates");
+  }
   return success();
 }
 
@@ -98,17 +116,59 @@ LogicalResult CpAsyncOp::verify() {
   return success();
 }
 
+// This verify params can be shared across TMA Load and Prefetch Ops.
+static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
+                                         TMALoadMode mode, Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
+
+  auto checkTMALoadParams = [&](TMALoadMode mode, bool isIm2col,
+                                size_t expectedIm2colOff) -> LogicalResult {
+    if (isIm2col && (tensorDims < 3))
+      return emitError(loc)
+             << "to use " << stringifyEnum(mode)
+             << " mode, the tensor has to be at least 3-dimensional";
+
+    if (numIm2colOff != expectedIm2colOff)
+      return emitError(loc) << " im2col offsets expected " << expectedIm2colOff
+                            << " (provided " << numIm2colOff << ")";
+
+    return success();
+  };
+
+  switch (mode) {
+  case TMALoadMode::TILE:
+    return checkTMALoadParams(mode, false, 0);
+  case TMALoadMode::IM2COL:
+    return checkTMALoadParams(mode, true, tensorDims - 2);
+  case TMALoadMode::IM2COL_W:
+  case TMALoadMode::IM2COL_W_128:
+    return checkTMALoadParams(mode, true, 2);
+  case TMALoadMode::TILE_GATHER4:
+    return (tensorDims == 5)
+               ? checkTMALoadParams(mode, false, 0)
+               : emitError(loc, "Gather4 mode expects 5 coordinates");
+  }
+  return success();
+}
+
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
+  return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
+                             getMode(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorReduceOp::verify() {
-  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
-                                         getLoc());
+  TMAStoreMode mode = getMode();
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
+  }
+  return success();
 }
 
 LogicalResult ConvertFloatToTF32Op::verify() {
@@ -1435,28 +1495,102 @@ mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
-llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
-                                                                bool isIm2Col) {
-  switch (tensorDims) {
-  case 1:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
-  case 2:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
-  case 3:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
-  case 4:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
-  case 5:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
-  default:
-    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
-  }
+mlir::NVVM::IDArgPair CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+  for (auto v : thisOp.getIm2colOffsets())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d}};
+
+  static_assert(getMaxEnumValForTMALoadMode() == std::size(IDTable) - 1,
+                "TMALoadModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable("Invalid intrinsic for CpAsyncBulkTensorPrefetchOp.");
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair
+CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+
+  static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
+                "TMAStoreModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable(
+        "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
+
+  return {id, std::move(args)};
 }
 
 #define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
@@ -1925,19 +2059,31 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
       attrName == NVVMDialect::getReqntidAttrName() ||
       attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
-    if (!values || values.empty() || values.size() > 3)
+    if (!values || values.empty() || values.size() > 3) {
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
+    }
   }
   // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
   // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName() ||
       attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
-    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+    }
+  }
+  // blocksareclusters must be used along with reqntid and cluster_dim
+  if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
+    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+      return op->emitError()
+             << "'" << attrName << "' attribute must be used along with "
+             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
+             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+    }
   }
 
   return success();
