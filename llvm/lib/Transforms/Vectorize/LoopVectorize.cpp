@@ -7213,11 +7213,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                              BestVPlan, BestVF, VScale);
   }
 
-  if (!VectorizingEpilogue) {
-    // Checks are the same for all VPlans, added to BestVPlan only for
-    // compactness.
-    attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
-  }
+  // Checks are the same for all VPlans, added to BestVPlan only for
+  // compactness.
+  attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
@@ -9248,7 +9246,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 void LoopVectorizationPlanner::attachRuntimeChecks(
     VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
-  if (SCEVCheckBlock) {
+  if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessors(0)) {
     assert((!CM.OptForSize ||
             CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
            "Cannot SCEV check stride or overflow when optimizing for size");
@@ -9256,7 +9254,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                                       HasBranchWeights);
   }
   const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
-  if (MemCheckBlock) {
+  if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
     assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
