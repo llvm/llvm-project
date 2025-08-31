@@ -402,7 +402,8 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
   let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
 }
 
-def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
+def EmitC_ConstantOp
+    : EmitC_Op<"constant", [ConstantLike, CExpressionInterface]> {
   let summary = "Constant operation";
   let description = [{
     The `emitc.constant` operation produces an SSA value equal to some constant
@@ -429,6 +430,13 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getResult().getType());
+    }
+  }];
 }
 
 def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
