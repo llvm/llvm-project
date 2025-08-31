@@ -136,12 +136,9 @@ public:
     std::string OrcRuntimePath;
 
     OutOfProcessJITConfig()
-      : IsOutOfProcess(false),
-        OOPExecutor(""),
-        OOPExecutorConnect(""),
-        UseSharedMemory(false),
-        SlabAllocateSizeString(""),
-        OrcRuntimePath("") {}
+        : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
+          UseSharedMemory(false), SlabAllocateSizeString(""),
+          OrcRuntimePath("") {}
   };
 
 protected:
@@ -153,7 +150,8 @@ protected:
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error CreateExecutor(OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
+  llvm::Error
+  CreateExecutor(OutOfProcessJITConfig OOPConfig = OutOfProcessJITConfig());
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
