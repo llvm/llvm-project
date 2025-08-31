@@ -171,6 +171,32 @@ def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 
+def LinalgConvertToDPSPass : Pass<"linalg-convert-to-dps"> {
+  let summary = "Convert ops to destination-passing-style";
+  let description = [{
+    Converts ops that operate on tensors but are not in
+    destination passing style (DPS) to equivalent linalg
+    generic which is in DPS. e.g.
+    ```mlir
+      %0 = arith.uitofp %arg0 : tensor<?xi32> to tensor<?xf32>
+    ```
+    gets rewritten as:
+    ```mlir
+       %c0 = arith.constant 0 : index
+       %dim = tensor.dim %arg0, %c0 : tensor<?xi32>
+       %0 = tensor.empty(%dim) : tensor<?xf32>
+       %1 = linalg.generic
+           {indexing_maps = [#map, #map], iterator_types = ["parallel"]}
+           ins(%arg0 : tensor<?xi32>) outs(%0 : tensor<?xf32>) {
+           ^bb0(%in: i32, %out: f32):
+             %2 = arith.uitofp %in : i32 to f32
+             linalg.yield %2 : f32
+       } -> tensor<?xf32>
+     ```
+   }];
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
 def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInterface"> {
   let summary = "Detensorize linalg ops";
   let dependentDialects = [];

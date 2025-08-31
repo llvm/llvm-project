@@ -1377,6 +1377,23 @@ rewriteInDestinationPassingStyle(RewriterBase &rewriter,
 FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
                                                         tensor::PadOp padOp);
 
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::UIToFPOp op);
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::SIToFPOp op);
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::FPToUIOp op);
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::FPToSIOp op);
+
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::AddIOp op);
+
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::AddFOp op);
+FailureOr<Operation *> rewriteInDestinationPassingStyle(RewriterBase &rewriter,
+                                                        arith::DivFOp op);
+
 /// Convert linalg.conv_2d_nhwc_hwcf into linalg.generic (for img2col packing)
 /// and linalg.matmul.
 ///
