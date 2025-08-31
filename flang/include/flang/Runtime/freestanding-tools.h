@@ -73,16 +73,14 @@
 #define STD_TOUPPER_UNSUPPORTED 1
 #endif
 
-#if defined(OMP_OFFLOAD_BUILD) || defined(OMP_NOHOST_BUILD)
-// #pragma message "Using replacements for unsupported std functions"
+#if defined(OMP_OFFLOAD_BUILD) && defined(OMP_NOHOST_BUILD) && \
+    defined(__clang__)
 #define STD_FILL_N_UNSUPPORTED 1
 #define STD_MEMSET_USE_BUILTIN 1
 #define STD_MEMSET_UNSUPPORTED 1
 #define STD_MEMCPY_USE_BUILTIN 1
 #define STD_MEMCPY_UNSUPPORTED 1
-// #define STD_MEMMOVE_USE_BUILTIN 1  // address now taken in assign.h
 #define STD_MEMMOVE_UNSUPPORTED 1
-// #define STD_STRLEN_USE_BUILTIN 1  // still resolves to strlen
 #define STD_STRLEN_UNSUPPORTED 1
 #define STD_MEMCMP_UNSUPPORTED 1
 #define STD_REALLOC_UNSUPPORTED 1
@@ -90,6 +88,8 @@
 #define STD_STRCPY_UNSUPPORTED 1
 #define STD_STRCMP_UNSUPPORTED 1
 #define STD_TOUPPER_UNSUPPORTED 1
+#define STD_ABORT_USE_BUILTIN 1
+#define STD_ABORT_UNSUPPORTED 1
 #endif
 
 namespace Fortran::runtime {
@@ -142,7 +142,6 @@ static inline RT_API_ATTRS void memcpy(
   while (count--) {
     *to++ = *from++;
   }
-  return;
 }
 #else
 using std::memcpy;
@@ -186,8 +185,7 @@ using std::memmove;
 using MemmoveFct = void *(*)(void *, const void *, std::size_t);
 
 #ifdef RT_DEVICE_COMPILATION
-[[maybe_unused]]
-static RT_API_ATTRS void *MemmoveWrapper(
+[[maybe_unused]] static RT_API_ATTRS void *MemmoveWrapper(
     void *dest, const void *src, std::size_t count) {
   return Fortran::runtime::memmove(dest, src, count);
 }

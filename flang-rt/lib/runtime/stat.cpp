@@ -84,10 +84,10 @@ RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat) {
       std::size_t bufferLength{errmsg->ElementBytes()};
       std::size_t msgLength{Fortran::runtime::strlen(msg)};
       if (msgLength >= bufferLength) {
-        Fortran::runtime::memcpy(buffer, msg, bufferLength);
+        runtime::memcpy(buffer, msg, bufferLength);
       } else {
-        Fortran::runtime::memcpy(buffer, msg, msgLength);
-        Fortran::runtime::memset(buffer + msgLength, ' ', bufferLength - msgLength);
+        runtime::memcpy(buffer, msg, msgLength);
+        runtime::memset(buffer + msgLength, ' ', bufferLength - msgLength);
       }
     }
   }
