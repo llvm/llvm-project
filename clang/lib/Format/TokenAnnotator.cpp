@@ -1051,7 +1051,7 @@ private:
   // DagArgList   ::=  "," DagArg [DagArgList]
   // This parses SimpleValue 6's [DagArgList] part.
   bool parseTableGenDAGArgList(FormatToken *Opener, bool BreakInside) {
-    ScopedContextCreator ContextCreator(*this, tok::l_paren, 1);
+    ScopedContextCreator ContextCreator(*this, tok::l_paren, 0);
     Contexts.back().IsTableGenDAGArgList = true;
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {

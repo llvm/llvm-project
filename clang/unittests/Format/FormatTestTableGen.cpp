@@ -185,8 +185,8 @@ TEST_F(FormatTestTableGen, SimpleValue6) {
                "      i32:$dst6,                                // dst6\n"
                "      i32:$dst7                                 // dst7\n"
                "  );\n"
-               "  let DAGArgBang =\n"
-               "      (!cast<SomeType>(\"Some\") i32:$src1, i32:$src2);\n"
+               "  let DAGArgBang = (!cast<SomeType>(\"Some\") i32:$src1,\n"
+               "      i32:$src2);\n"
                "  let NestedDAGArg = ((DAGArg1 (v111 v112, v113), v12) v2,\n"
                "      (DAGArg3 (v31 v32)));\n"
                "}");
