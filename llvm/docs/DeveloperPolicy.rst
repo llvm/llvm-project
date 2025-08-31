@@ -149,18 +149,18 @@ Actions and opinions of maintainers have equal weight to those of other contribu
 Conflicts are resolved by the area teams (defined in `LP0004
 <https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_).
 
-The main responsibilities of a maintainer are to:
+The main responsibilities of a maintainer are:
 * **Code Review**: ensure that commits receive high-quality review, either by the
-maintainer or by someone else,
+maintainer or by someone else.
 * **RFC Engagement**: actively engage with relevant RFCs, provide feedback, and
-help drive discussions to conclusion,
+help drive discussions to conclusion.
 * **Mediation**: mediate code review and RFC disagreements through collaboration
 with other maintainers (and other reviewers) to come to a consensus on how best
-to proceed with disputed changes, by finding a common ground,
+to proceed with disputed changes, by finding a common ground.
 * **Triage**: help to confirm and comment on issues, aid release managers with
-backporting and other release-related activities,
+backporting and other release-related activities.
 * **Point of Contact**: be a contact for contributors who need help (answering questions
-on Discord/Discourse or holding office hours),
+on Discord/Discourse or holding office hours).
 * **Behaviour**: ensuring that they, and the community members they interact with,
 abide by the :ref:`LLVM Community Code of Conduct`.
 
@@ -170,7 +170,7 @@ met for that project.
 
 This role is like any other maintainer role, except the responsibilities
 span the project rather than a limited area within the project.
-The hierarchy creates clear points of contact for contributors, where local
+The nesting creates clear points of contact for contributors, where local
 maintainers should be contacted first.
 If you cannot reach a maintainer or don't know which
 maintainer to reach out to, a lead maintainer is always a good choice.
@@ -192,10 +192,10 @@ the responsibilities above consistently for at least three months in the previou
 six months.
 
 In the interest of having a wider coverage of maintainers, we encourage any active
-collaborator to volunteer to a maintainer role, especially in areas currently without
+collaborator to volunteer for a maintainer role, especially in areas currently without
 a maintainer.
 New projects are encouraged to seek out maintainers early in their development.
-As long as new project proponents are committed to the responsibilities of a maintainer
+As long as new project contributors are committed to the responsibilities of a maintainer
 and have the support of the community, the time-frame restriction above can be waived.
 
 We recognize that priorities shift, job changes happen, burnout is real,
