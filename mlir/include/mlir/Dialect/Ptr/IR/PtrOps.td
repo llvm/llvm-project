@@ -131,8 +131,8 @@ def Ptr_LoadOp : Pointer_Op<"load", [
     The `load` operation is used to read from memory. A load may be marked as
     atomic, volatile, and/or nontemporal.
 
-    An atomic load only supports a limited set of pointer, integer, and
-    floating point types, and requires an explicit alignment.
+    An atomic load only supports a limited set of value types, and requires
+    an explicit alignment.
 
     Examples:
     ```mlir
@@ -145,6 +145,9 @@ def Ptr_LoadOp : Pointer_Op<"load", [
     // An atomic load of an integer variable.
     %0 = ptr.load %ptr atomic monotonic alignment = 8 : !ptr.ptr -> i64
     ```
+
+    See the following link for more details on the load op:
+    https://llvm.org/docs/LangRef.html#load-instruction
   }];
   let arguments = (ins Ptr_PtrType:$ptr,
                        AlignmentProp:$alignment,
@@ -186,22 +189,12 @@ def Ptr_LoadOp : Pointer_Op<"load", [
 def Ptr_StoreOp : Pointer_Op<"store", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]> {
-  let arguments = (ins AnyType:$value,
-                       Ptr_PtrType:$ptr,
-                       AlignmentProp:$alignment,
-                       UnitProp:$volatile_,
-                       UnitProp:$nontemporal,
-                       UnitProp:$invariantGroup,
-                       DefaultValuedProp<
-                         AtomicOrderingProp,
-                         "AtomicOrdering::not_atomic">:$ordering,
-                       OptionalAttr<StrAttr>:$syncscope);
   let description = [{
     The `store` operation is used to write to memory. A store may be marked as
     atomic, volatile, and/or nontemporal.
 
-    An atomic store only supports a limited set of pointer, integer, and
-    floating point types, and requires an explicit alignment.
+    An atomic store only supports a limited set of value types, and requires
+    an explicit alignment.
 
     Examples:
     ```mlir
@@ -214,7 +207,20 @@ def Ptr_StoreOp : Pointer_Op<"store", [
     // An atomic store of an integer variable.
     ptr.store %val, %ptr atomic monotonic alignment = 8: i64, !ptr.ptr
     ```
+
+    See the following link for more details on the store op:
+    https://llvm.org/docs/LangRef.html#store-instruction
   }];
+  let arguments = (ins AnyType:$value,
+                       Ptr_PtrType:$ptr,
+                       AlignmentProp:$alignment,
+                       UnitProp:$volatile_,
+                       UnitProp:$nontemporal,
+                       UnitProp:$invariantGroup,
+                       DefaultValuedProp<
+                         AtomicOrderingProp,
+                         "AtomicOrdering::not_atomic">:$ordering,
+                       OptionalAttr<StrAttr>:$syncscope);
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $ptr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
