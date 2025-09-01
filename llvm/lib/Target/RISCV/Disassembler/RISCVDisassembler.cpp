@@ -558,7 +558,7 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
+static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint16_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
   uint32_t Rs1 = fieldFromInstruction(Insn, 7, 5);
@@ -701,6 +701,12 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
 
+// Define bitwidths for various types used to instantiate the decoder.
+template <> static constexpr uint32_t llvm::MCD::InsnBitWidth<uint16_t> = 16;
+template <> static constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
+// Use uint64_t to represent 48 bit instructions.
+template <> static constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 48;
+
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
@@ -711,9 +717,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   }
   Size = 4;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read32le(Bytes.data());
+  uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -759,9 +763,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   }
   Size = 2;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read16le(Bytes.data());
+  uint16_t Insn = support::endian::read16le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList16) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
