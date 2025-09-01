@@ -1825,6 +1825,51 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
   }
+  case BTT_LtSynthesisesFromSpaceship:
+  case BTT_LeSynthesisesFromSpaceship:
+  case BTT_GtSynthesisesFromSpaceship:
+  case BTT_GeSynthesisesFromSpaceship: {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        Self, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
+    Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
+
+    OpaqueValueExpr LHS(KeyLoc, LhsT.getNonReferenceType(),
+                        LhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : LhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+    OpaqueValueExpr RHS(KeyLoc, RhsT.getNonReferenceType(),
+                        RhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : RhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+
+    auto OpKind = [&] {
+      switch (BTT) {
+      case BTT_LtSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_LT;
+      case BTT_LeSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_LE;
+      case BTT_GtSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_GT;
+      case BTT_GeSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_GE;
+      default:
+        llvm_unreachable("Trying to Synthesize non-comparison operator?");
+      }
+    }();
+
+    UnresolvedSet<16> Functions;
+    Self.LookupBinOp(Self.TUScope, KeyLoc, OpKind, Functions);
+
+    ExprResult Result =
+        Self.CreateOverloadedBinOp(KeyLoc, OpKind, Functions, &LHS, &RHS);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    return isa<CXXRewrittenBinaryOperator>(Result.get());
+  }
   default:
     llvm_unreachable("not a BTT");
   }
