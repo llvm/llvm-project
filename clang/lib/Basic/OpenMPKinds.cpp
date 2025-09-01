@@ -185,7 +185,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ALLOCATE_unknown);
-    case OMPC_threadset: {
+  case OMPC_threadset: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_THREADSET_KIND(Name) .Case(#Name, OMPC_THREADSET_##Name)
 #include "clang/Basic/OpenMPKinds.def"
