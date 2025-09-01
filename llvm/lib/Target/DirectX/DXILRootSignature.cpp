@@ -72,11 +72,11 @@ analyzeModule(Module &M) {
   if (RootSignatureNode == nullptr)
     return RSDMap;
 
-  for (const auto &RSDefNode : RootSignatureNode->operands()) {
+  auto HandleNode = [&Ctx, &RSDMap](MDNode *RSDefNode) {
     if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid Root Signature metadata - expected function, "
                        "signature, and version.");
-      continue;
+      return;
     }
 
     // Function was pruned during compilation.
@@ -84,38 +84,38 @@ analyzeModule(Module &M) {
     if (FunctionPointerMdNode == nullptr) {
       reportError(
           Ctx, "Function associated with Root Signature definition is null.");
-      continue;
+      return;
     }
 
     ValueAsMetadata *VAM =
         llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
     if (VAM == nullptr) {
       reportError(Ctx, "First element of root signature is not a Value");
-      continue;
+      return;
     }
 
     Function *F = dyn_cast<Function>(VAM->getValue());
     if (F == nullptr) {
       reportError(Ctx, "First element of root signature is not a Function");
-      continue;
+      return;
     }
 
     Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
 
     if (RootElementListOperand == nullptr) {
       reportError(Ctx, "Root Element mdnode is null.");
-      continue;
+      return;
     }
 
     MDNode *RootElementListNode = dyn_cast<MDNode>(RootElementListOperand);
     if (RootElementListNode == nullptr) {
       reportError(Ctx, "Root Element is not a metadata node.");
-      continue;
+      return;
     }
     std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2);
     if (!V.has_value()) {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
-      continue;
+      return;
     }
 
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
@@ -126,7 +126,7 @@ analyzeModule(Module &M) {
       handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
         Ctx->emitError(EIB.message());
       });
-      continue;
+      return;
     }
 
     auto &RSD = *RSDOrErr;
@@ -140,7 +140,11 @@ analyzeModule(Module &M) {
     RSD.StaticSamplersOffset = 0u;
 
     RSDMap.insert(std::make_pair(F, RSD));
+  };
   }
+
+  for (MDNode *RSDefNode : RootSignatureNode->operands())
+    HandleNode(RSDefNode);
 
   return RSDMap;
 }
