@@ -23833,21 +23833,20 @@ public:
       stable_sort(PossibleRedValsVect, [](const auto &P1, const auto &P2) {
         return P1.size() > P2.size();
       });
-      int NewIdx = -1;
+      bool First = true;
       for (ArrayRef<Value *> Data : PossibleRedValsVect) {
-        if (NewIdx < 0 ||
-            (!isGoodForReduction(Data) &&
-             (!isa<LoadInst>(Data.front()) ||
-              !isa<LoadInst>(ReducedVals[NewIdx].front()) ||
-              getUnderlyingObject(
-                  cast<LoadInst>(Data.front())->getPointerOperand()) !=
-                  getUnderlyingObject(
-                      cast<LoadInst>(ReducedVals[NewIdx].front())
-                          ->getPointerOperand())))) {
-          NewIdx = ReducedVals.size();
+        if (First) {
+          First = false;
           ReducedVals.emplace_back();
+        } else if (!isGoodForReduction(Data)) {
+          auto *LI = dyn_cast<LoadInst>(Data.front());
+          auto *LastLI = dyn_cast<LoadInst>(ReducedVals.back().front());
+          if (!LI || !LastLI ||
+              getUnderlyingObject(LI->getPointerOperand()) !=
+                  getUnderlyingObject(LastLI->getPointerOperand()))
+            ReducedVals.emplace_back();
         }
-        ReducedVals[NewIdx].append(Data.rbegin(), Data.rend());
+        ReducedVals.back().append(Data.rbegin(), Data.rend());
       }
     }
     // Sort the reduced values by number of same/alternate opcode and/or pointer
