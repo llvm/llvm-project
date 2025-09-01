@@ -149,6 +149,7 @@
     <_LLVMBuildArgs Include='-DCMAKE_C_FLAGS="$(_CFlags) "' />
     <_LLVMBuildArgs Include='-DCMAKE_CXX_FLAGS="$(_CFlags) "' />
     <_LLVMBuildArgs Include='-DCMAKE_SHARED_LINKER_FLAGS_INIT="$(_SharedLinkerFlags)" ' />
+    <_LLVMBuildArgs Include='-DCMAKE_EXE_LINKER_FLAGS_INIT="$(_SharedLinkerFlags)" ' />
   </ItemGroup>
 
   <Target Name="_LLVMBeforeBuild">
