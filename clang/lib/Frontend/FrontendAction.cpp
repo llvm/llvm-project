@@ -29,6 +29,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/SARIFDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
@@ -827,6 +828,16 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   assert(!Input.isEmpty() && "Unexpected empty filename!");
   setCurrentInput(Input);
   setCompilerInstance(&CI);
+
+  if (CI.getHeaderSearchOpts().NoScanIPC) {
+    FrontendOptions &Options = CI.getFrontendOpts();
+    std::string OutputPath = Options.OutputFile.empty()
+                                 ? Options.ModuleOutputPath
+                                 : Options.OutputFile;
+    if (const auto &r = N2978::makeIPCManagerCompiler(OutputPath); r) {
+      N2978::managerCompiler = new N2978::IPCManagerCompiler(r.value());
+    }
+  }
 
   bool HasBegunSourceFile = false;
   bool ReplayASTFile = Input.getKind().getFormat() == InputKind::Precompiled &&
