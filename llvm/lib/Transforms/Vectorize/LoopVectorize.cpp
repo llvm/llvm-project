@@ -2572,7 +2572,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
 
   // Remove redundant induction instructions.
   cse(HeaderBB);
-
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
@@ -7301,10 +7300,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
     SCEVCheckBlock->moveAfter(EntryBB);
 
-MDNode *LID = OrigLoop->getLoopID();
+  MDNode *LID = OrigLoop->getLoopID();
   std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
-      LID,
-      {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
+      LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
   unsigned OrigLoopInvocationWeight = 0;
   std::optional<unsigned> OrigAverageTripCount =
       getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
