@@ -432,7 +432,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // .maxclusterrank directive requires SM_90 or higher, make sure that we
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto *STI = NTM.getSubtargetImpl();
+  const NVPTXSubtarget *STI = &NTM.getSubtarget<NVPTXSubtarget>(F);
 
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
@@ -669,7 +669,7 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // rest of NVPTX isn't friendly to change subtargets per function and
   // so the default TargetMachine will have all of the options.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto *STI = NTM.getSubtargetImpl();
+  const NVPTXSubtarget *STI = NTM.getSubtargetImpl();
   SmallString<128> Str1;
   raw_svector_ostream OS1(Str1);
 
