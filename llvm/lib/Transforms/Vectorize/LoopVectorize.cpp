@@ -7268,8 +7268,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  BasicBlock *EntryBB =
-      cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
                         State.CFG.PrevBB->getSingleSuccessor());
@@ -7302,13 +7300,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // the cost-model.
   //
   //===------------------------------------------------===//
-
-  // Move check blocks to their final position.
-  // TODO: Move as part of VPIRBB execute and update impacted tests.
-  if (BasicBlock *MemCheckBlock = ILV.RTChecks.getMemRuntimeChecks().second)
-    MemCheckBlock->moveAfter(EntryBB);
-  if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
-    SCEVCheckBlock->moveAfter(EntryBB);
 
   BestVPlan.execute(&State);
 
