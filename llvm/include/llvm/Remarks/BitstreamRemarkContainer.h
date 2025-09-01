@@ -96,7 +96,8 @@ constexpr StringLiteral MetaExternalFileName("External File");
 constexpr StringLiteral RemarkHeaderName("Remark header");
 constexpr StringLiteral RemarkDebugLocName("Remark debug location");
 constexpr StringLiteral RemarkHotnessName("Remark hotness");
-constexpr StringLiteral RemarkArgWithDebugLocName("Argument with debug location");
+constexpr StringLiteral
+    RemarkArgWithDebugLocName("Argument with debug location");
 constexpr StringLiteral RemarkArgWithoutDebugLocName("Argument");
 
 } // end namespace remarks
