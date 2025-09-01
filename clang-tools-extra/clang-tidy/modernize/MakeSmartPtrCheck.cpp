@@ -17,6 +17,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static constexpr char ConstructorCall[] = "constructorCall";
+static constexpr char DirectVar[] = "directVar";
 static constexpr char ResetCall[] = "resetCall";
 static constexpr char NewExpression[] = "newExpression";
 
@@ -78,18 +79,18 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   auto IsPlacement = hasAnyPlacementArg(anything());
 
   Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          cxxBindTemporaryExpr(has(ignoringParenImpCasts(
-              cxxConstructExpr(
-                  hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
-                  hasArgument(
-                      0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                        equalsBoundNode(PointerType))))),
-                                    CanCallCtor, unless(IsPlacement))
-                             .bind(NewExpression)),
-                  unless(isInTemplateInstantiation()))
-                  .bind(ConstructorCall))))),
+      traverse(TK_AsIs,
+               cxxConstructExpr(
+                   anyOf(hasParent(cxxBindTemporaryExpr()),
+                         hasParent(varDecl().bind(DirectVar))),
+                   hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
+                   hasArgument(
+                       0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                                         equalsBoundNode(PointerType))))),
+                                     CanCallCtor, unless(IsPlacement))
+                              .bind(NewExpression)),
+                   unless(isInTemplateInstantiation()))
+                   .bind(ConstructorCall)),
       this);
 
   Finder->addMatcher(
@@ -116,6 +117,7 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
   SourceManager &SM = *Result.SourceManager;
   const auto *Construct =
       Result.Nodes.getNodeAs<CXXConstructExpr>(ConstructorCall);
+  const auto *DVar = Result.Nodes.getNodeAs<VarDecl>(DirectVar);
   const auto *Reset = Result.Nodes.getNodeAs<CXXMemberCallExpr>(ResetCall);
   const auto *Type = Result.Nodes.getNodeAs<QualType>(PointerType);
   const auto *New = Result.Nodes.getNodeAs<CXXNewExpr>(NewExpression);
@@ -138,13 +140,14 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Initializes && IgnoreDefaultInitialization)
     return;
   if (Construct)
-    checkConstruct(SM, Result.Context, Construct, Type, New);
+    checkConstruct(SM, Result.Context, Construct, DVar, Type, New);
   else if (Reset)
     checkReset(SM, Result.Context, Reset, New);
 }
 
 void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
                                        const CXXConstructExpr *Construct,
+                                       const VarDecl *DVar,
                                        const QualType *Type,
                                        const CXXNewExpr *New) {
   SourceLocation ConstructCallStart = Construct->getExprLoc();
@@ -187,9 +190,14 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(LAngle);
   }
 
+  std::string FinalMakeSmartPtrFunctionName = MakeSmartPtrFunctionName.str();
+  if (DVar)
+    FinalMakeSmartPtrFunctionName =
+        ExprStr.str() + " = " + MakeSmartPtrFunctionName.str();
+
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(ConstructCallStart, ConstructCallEnd),
-      MakeSmartPtrFunctionName);
+      FinalMakeSmartPtrFunctionName);
 
   // If the smart_ptr is built with brace enclosed direct initialization, use
   // parenthesis instead.
