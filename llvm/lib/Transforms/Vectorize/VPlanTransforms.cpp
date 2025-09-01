@@ -3159,8 +3159,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
       [&](bool IsZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
-          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt,
-          unsigned Opcode) -> bool {
+          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -3202,12 +3201,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   MulR, RecipeA, RecipeB, nullptr, Opcode)) {
+                                   MulR, RecipeA, RecipeB, nullptr)) {
       return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr,
-                                   Opcode))
+    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr))
       return new VPExpressionRecipe(MulR, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
@@ -3225,7 +3223,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   Mul, Ext0, Ext1, Ext, Opcode)) {
+                                   Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
           Ext0->getDebugLoc());
