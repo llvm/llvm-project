@@ -1,3 +1,4 @@
+REQUIRES: rdar159531316
 // Test target.swift-framework-search-paths works in the REPL.
 // REQUIRES: system-darwin
 // REQUIRES: swift

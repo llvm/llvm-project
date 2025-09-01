@@ -4,6 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
+@skipIf(bugnumber = "rdar://159531233")
 class TestSwiftFModuleFlags(TestBase):
     @skipIf(macos_version=["<", "14.0"])
     @skipIfDarwinEmbedded

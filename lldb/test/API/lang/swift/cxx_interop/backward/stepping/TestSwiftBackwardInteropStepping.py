@@ -5,7 +5,7 @@ Test that Swift types are displayed correctly in C++
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
-
+@skipIf(bugnumber="rdar://159531057")
 class TestSwiftBackwardInteropStepping(TestBase):
 
     def setup(self, bkpt_str):

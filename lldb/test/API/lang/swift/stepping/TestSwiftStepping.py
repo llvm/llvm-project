@@ -19,6 +19,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import platform
 
+@skipIf(bugnumber="rdar://159531088")
 class TestSwiftStepping(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
