@@ -45,6 +45,7 @@ Using Clang as a Compiler
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
+   PointerAuthentication
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage

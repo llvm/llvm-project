@@ -24,7 +24,7 @@ def int_dx_flattened_thread_id_in_group : Intrinsic<[llvm_i32_ty], [], [IntrNoMe
 def int_dx_resource_handlefrombinding
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
-          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
           [IntrNoMem]>;
 
 // Create resource handle with implicit binding in given register space.
@@ -33,7 +33,7 @@ def int_dx_resource_handlefrombinding
 def int_dx_resource_handlefromimplicitbinding
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
-          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_ptr_ty],
+          [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
           [IntrNoMem]>;
 
 def int_dx_resource_getpointer

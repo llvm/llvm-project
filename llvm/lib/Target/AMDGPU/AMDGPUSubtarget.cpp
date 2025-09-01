@@ -229,11 +229,31 @@ AMDGPUSubtarget::getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
   return getEffectiveWavesPerEU(Requested, FlatWorkGroupSizes, LDSBytes);
 }
 
-static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
+std::optional<unsigned>
+AMDGPUSubtarget::getReqdWorkGroupSize(const Function &Kernel,
+                                      unsigned Dim) const {
   auto *Node = Kernel.getMetadata("reqd_work_group_size");
   if (Node && Node->getNumOperands() == 3)
     return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
-  return std::numeric_limits<unsigned>::max();
+  return std::nullopt;
+}
+
+bool AMDGPUSubtarget::hasWavefrontsEvenlySplittingXDim(
+    const Function &F, bool RequiresUniformYZ) const {
+  auto *Node = F.getMetadata("reqd_work_group_size");
+  if (!Node || Node->getNumOperands() != 3)
+    return false;
+  unsigned XLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  unsigned YLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue();
+  unsigned ZLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
+
+  bool Is1D = YLen <= 1 && ZLen <= 1;
+  bool IsXLargeEnough =
+      isPowerOf2_32(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
+  return Is1D || IsXLargeEnough;
 }
 
 bool AMDGPUSubtarget::isMesaKernel(const Function &F) const {
@@ -242,9 +262,9 @@ bool AMDGPUSubtarget::isMesaKernel(const Function &F) const {
 
 unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
                                            unsigned Dimension) const {
-  unsigned ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
-  if (ReqdSize != std::numeric_limits<unsigned>::max())
-    return ReqdSize - 1;
+  std::optional<unsigned> ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
+  if (ReqdSize)
+    return *ReqdSize - 1;
   return getFlatWorkGroupSizes(Kernel).second - 1;
 }
 
@@ -295,9 +315,9 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
       }
 
       if (Dim <= 3) {
-        unsigned ReqdSize = getReqdWorkGroupSize(*Kernel, Dim);
-        if (ReqdSize != std::numeric_limits<unsigned>::max())
-          MinSize = MaxSize = ReqdSize;
+        std::optional<unsigned> ReqdSize = getReqdWorkGroupSize(*Kernel, Dim);
+        if (ReqdSize)
+          MinSize = MaxSize = *ReqdSize;
       }
     }
   }

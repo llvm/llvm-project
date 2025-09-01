@@ -22,6 +22,8 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
+include_directories(${LIBOMP_INCLUDE_DIR})
+
 set(OMPTEST_HEADERS
   ./include/AssertMacros.h
   ./include/InternalEvent.h

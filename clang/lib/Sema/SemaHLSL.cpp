@@ -1159,15 +1159,14 @@ struct PerVisibilityBindingChecker {
     bool HadOverlap = false;
 
     using llvm::hlsl::BindingInfoBuilder;
-    auto ReportOverlap = [this, &HadOverlap](
-                             const BindingInfoBuilder &Builder,
-                             const BindingInfoBuilder::Binding &Reported) {
+    auto ReportOverlap = [this,
+                          &HadOverlap](const BindingInfoBuilder &Builder,
+                                       const llvm::hlsl::Binding &Reported) {
       HadOverlap = true;
 
       const auto *Elem =
           static_cast<const hlsl::RootSignatureElement *>(Reported.Cookie);
-      const BindingInfoBuilder::Binding &Previous =
-          Builder.findOverlapping(Reported);
+      const llvm::hlsl::Binding &Previous = Builder.findOverlapping(Reported);
       const auto *PrevElem =
           static_cast<const hlsl::RootSignatureElement *>(Previous.Cookie);
 

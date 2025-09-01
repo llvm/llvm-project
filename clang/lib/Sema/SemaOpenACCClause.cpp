@@ -1784,9 +1784,10 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
       ValidVars.push_back(Res.get());
 
       VarDecl *InitRecipe =
-          SemaRef.CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
+          SemaRef
+              .CreateInitRecipe(OpenACCClauseKind::Reduction,
+                                Clause.getReductionOp(), Res.get())
               .first;
-      // TODO: OpenACC: Create the reduction operation recipe here too.
       Recipes.push_back({InitRecipe});
     }
   }
@@ -1968,7 +1969,8 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
   }
 
   auto IsValidMemberOfComposite = [](QualType Ty) {
-    return Ty->isDependentType() || Ty->isScalarType();
+    return Ty->isDependentType() ||
+           (Ty->isScalarType() && !Ty->isPointerType());
   };
 
   auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {

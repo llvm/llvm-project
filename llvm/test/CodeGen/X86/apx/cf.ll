@@ -229,3 +229,21 @@ entry:
   call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr %p, i32 1, <1 x i1> %1)
   ret void
 }
+
+define i64 @redundant_test(i64 %num, ptr %p1, i64 %in) {
+; CHECK-LABEL: redundant_test:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl $-32, %edi
+; CHECK-NEXT:    cfcmoveq (%rsi), %rax
+; CHECK-NEXT:    {nf} addq %rdx, %rax
+; CHECK-NEXT:    cmovneq %rdi, %rax
+; CHECK-NEXT:    retq
+  %and = and i64 %num, 4294967264
+  %cmp = icmp eq i64 %and, 0
+  %mask = bitcast i1 %cmp to <1 x i1>
+  %condload = tail call <1 x i64> @llvm.masked.load.v1i64.p0(ptr %p1, i32 8, <1 x i1> %mask, <1 x i64> poison)
+  %v = bitcast <1 x i64> %condload to i64
+  %add = add i64 %v, %in
+  %sel = select i1 %cmp, i64 %add, i64 %num
+  ret i64 %sel
+}

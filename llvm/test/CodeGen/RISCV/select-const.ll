@@ -85,8 +85,8 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV32ZICOND-LABEL: select_const_int_harder:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    li a1, 32
-; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV32ZICOND-NEXT:    xori a0, a0, 1
+; RV32ZICOND-NEXT:    slli a0, a0, 5
 ; RV32ZICOND-NEXT:    addi a0, a0, 6
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -112,8 +112,8 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV64ZICOND-LABEL: select_const_int_harder:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    li a1, 32
-; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
+; RV64ZICOND-NEXT:    xori a0, a0, 1
+; RV64ZICOND-NEXT:    slli a0, a0, 5
 ; RV64ZICOND-NEXT:    addiw a0, a0, 6
 ; RV64ZICOND-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38
@@ -636,8 +636,7 @@ define i32 @diff_shl_addi(i32 signext %x) {
 ; RV32ZICOND-LABEL: diff_shl_addi:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    srli a0, a0, 31
-; RV32ZICOND-NEXT:    lui a1, 4
-; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZICOND-NEXT:    slli a0, a0, 14
 ; RV32ZICOND-NEXT:    addi a0, a0, 25
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -666,8 +665,7 @@ define i32 @diff_shl_addi(i32 signext %x) {
 ; RV64ZICOND-LABEL: diff_shl_addi:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    srli a0, a0, 63
-; RV64ZICOND-NEXT:    lui a1, 4
-; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    slli a0, a0, 14
 ; RV64ZICOND-NEXT:    addiw a0, a0, 25
 ; RV64ZICOND-NEXT:    ret
   %cmp = icmp sgt i32 %x, -1

@@ -22,11 +22,12 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
 
 static uint32_t rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
                                            uint32_t Offset) {
+  uint32_t ByteOffset = Stream.tell();
   uint32_t Value =
       support::endian::byte_swap<uint32_t, llvm::endianness::little>(
-          Stream.tell());
+          ByteOffset);
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
-  return Value;
+  return ByteOffset;
 }
 
 size_t RootSignatureDesc::getSize() const {
@@ -105,7 +106,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     const RootParameterInfo &Info = ParametersContainer.getInfo(I);
     switch (Info.Type) {
     case dxbc::RootParameterType::Constants32Bit: {
-      const dxbc::RTS0::v1::RootConstants &Constants =
+      const mcdxbc::RootConstants &Constants =
           ParametersContainer.getConstant(Info.Location);
       support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
@@ -118,7 +119,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV: {
-      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+      const mcdxbc::RootDescriptor &Descriptor =
           ParametersContainer.getRootDescriptor(Info.Location);
 
       support::endian::write(BOS, Descriptor.ShaderRegister,

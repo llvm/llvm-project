@@ -70,6 +70,7 @@ GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS = 8
 # by trial and error).
 GRAFANA_METRIC_MAX_AGE_MN = 120
 
+
 @dataclass
 class JobMetrics:
     job_name: str
@@ -242,6 +243,7 @@ def clean_up_libcxx_job_name(old_name: str) -> str:
     remainder = remainder.replace("+", "x")
     new_name = stage + "_" + remainder
     return new_name
+
 
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]

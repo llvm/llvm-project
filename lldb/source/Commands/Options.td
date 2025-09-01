@@ -250,9 +250,12 @@ let Command = "breakpoint delete" in {
   def breakpoint_delete_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
     Group<1>, Desc<"Delete Dummy breakpoints - i.e. breakpoints set before a "
     "file is provided, which prime new targets.">;
-  def breakpoint_delete_disabled : Option<"disabled", "d">, Group<1>,
-    Desc<"Delete all breakpoints which are currently disabled.  When using the disabled option "
-    "any breakpoints listed on the command line are EXCLUDED from deletion.">;
+  def breakpoint_delete_disabled
+      : Option<"disabled", "d">,
+        Group<1>,
+        Desc<"Delete all breakpoints which are currently disabled. When using "
+             "the disabled option any breakpoints listed on the command line "
+             "are EXCLUDED from deletion.">;
 }
 
 let Command = "breakpoint name" in {
@@ -342,8 +345,10 @@ let Command = "disassemble" in {
     Desc<"Override the CPU for disassembling.">;
   def disassemble_options_features : Option<"features", "Y">, Arg<"CPUFeatures">,
     Desc<"Specify additional CPU features for disassembling.">;
-  def disassemble_options_arch : Option<"arch", "A">, Arg<"Architecture">,
-    Desc<"Specify the architecture to use from cross disassembly.">;
+  def disassemble_options_arch
+      : Option<"arch", "A">,
+        Arg<"Architecture">,
+        Desc<"Specify the architecture to use for cross disassembly.">;
   def disassemble_options_start_address : Option<"start-address", "s">,
     Groups<[1,2]>, Arg<"AddressOrExpression">, Required,
     Desc<"Address at which to start disassembling.">;
@@ -366,6 +371,8 @@ let Command = "disassemble" in {
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
     Desc<"Force disassembly of large functions.">;
+  def disassemble_options_variable : Option<"variable", "v">,
+    Desc<"Enable variable disassembly annotations for this invocation.">;
 }
 
 let Command = "diagnostics dump" in {
@@ -446,13 +453,17 @@ let Command = "frame recognizer add" in {
     Desc<"Give the name of a Python class to use for this frame recognizer.">;
   def frame_recognizer_regex : Option<"regex", "x">,
     Desc<"Function name and module name are actually regular expressions.">;
-  def frame_recognizer_first_instruction_only : Option<"first-instruction-only", "f">, Arg<"Boolean">,
-    Desc<"If true, only apply this recognizer to frames whose PC currently points to the "
-    "first instruction of the specified function. If false, the recognizer "
-    "will always be applied, regardless of the current position within the specified function. The "
-    "implementer should keep in mind that some features, e.g. accessing function argument "
-    "values via $arg<N>, are not guaranteed to work reliably in this case, so extra care must "
-    "be taken to make the recognizer operate correctly. Defaults to true.">;
+  def frame_recognizer_first_instruction_only
+      : Option<"first-instruction-only", "f">,
+        Arg<"Boolean">,
+        Desc<"If true, only apply this recognizer to frames whose PC currently "
+             "points to the first instruction of the specified function. If "
+             "false, the recognizer will always be applied, regardless of the "
+             "current position within the specified function. The implementer "
+             "should keep in mind that some features, e.g., accessing function "
+             "argument values via $arg<N>, are not guaranteed to work reliably "
+             "in this case, so extra care must be taken to make the recognizer "
+             "operate correctly. Defaults to true.">;
 }
 
 let Command = "history" in {
@@ -670,9 +681,10 @@ let Command = "platform process list" in {
   def platform_process_list_show_args : Option<"show-args", "A">,
     GroupRange<1, 6>,
     Desc<"Show process arguments instead of the process executable basename.">;
-  def platform_process_list_all_users: Option<"all-users", "x">,
-    GroupRange<1,6>,
-    Desc<"Show processes matching all user IDs.">;
+  def platform_process_list_all_users
+      : Option<"all-users", "x">,
+        GroupRange<1, 6>,
+        Desc<"Show processes matching all user IDs.">;
   def platform_process_list_verbose : Option<"verbose", "v">, GroupRange<1, 6>,
     Desc<"Enable verbose output.">;
 }
@@ -741,35 +753,32 @@ let Command = "process launch" in {
 }
 
 let Command = "process attach" in {
-  def process_attach_continue
-      : Option<"continue", "c">,
-        Desc<"Immediately ${ansi.underline}c${ansi.normal}ontinue the process "
-             "once attached.">;
-  def process_attach_plugin
-      : Option<"plugin", "P">,
-        Arg<"Plugin">,
-        Desc<"Name of the process ${ansi.underline}p${ansi.normal}lugin you "
-             "want to use.">;
+  def process_attach_continue : Option<"continue", "c">,
+                                Desc<"Immediately ${c}ontinue the process "
+                                     "once attached.">;
+  def process_attach_plugin : Option<"plugin", "P">,
+                              Arg<"Plugin">,
+                              Desc<"Name of the process ${p}lugin you "
+                                   "want to use.">;
   def process_attach_pid : Option<"pid", "p">,
                            Group<1>,
                            Arg<"Pid">,
-                           Desc<"The ${ansi.underline}p${ansi.normal}rocess ID "
+                           Desc<"The ${p}rocess ID "
                                 "of an existing process to attach to.">;
   def process_attach_name : Option<"name", "n">,
                             Group<2>,
                             Arg<"ProcessName">,
-                            Desc<"The ${ansi.underline}n${ansi.normal}ame of "
+                            Desc<"The ${n}ame of "
                                  "the process to attach to.">;
   def process_attach_include_existing
       : Option<"include-existing", "i">,
         Group<2>,
-        Desc<"${ansi.underline}I${ansi.normal}nclude existing processes when "
+        Desc<"${I}nclude existing processes when "
              "doing attach -w.">;
-  def process_attach_waitfor
-      : Option<"waitfor", "w">,
-        Group<2>,
-        Desc<"${ansi.underline}W${ansi.normal}ait for the process with "
-             "<process-name> to launch.">;
+  def process_attach_waitfor : Option<"waitfor", "w">,
+                               Group<2>,
+                               Desc<"${W}ait for the process with "
+                                    "<process-name> to launch.">;
 }
 
 let Command = "process continue" in {
@@ -927,8 +936,11 @@ let Command = "source list" in {
     "indicate valid places to set source level breakpoints.">;
   def source_list_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
     Completion<"SourceFile">, Desc<"The file from which to display source.">;
-  def source_list_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
-    Desc<"The line number at which to start the display source.">;
+  def source_list_line
+      : Option<"line", "l">,
+        Group<1>,
+        Arg<"LineNum">,
+        Desc<"The line number at which to start displaying source.">;
   def source_list_name : Option<"name", "n">, Group<2>, Arg<"Symbol">,
     Completion<"Symbol">,
     Desc<"The name of a function whose source to display.">;
@@ -1090,12 +1102,14 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
     Arg<"Boolean">, Desc<"The stop-hook will auto-continue after running its"
     " commands.">;
-  def target_stop_hook_add_at_initial_stop : Option<"at-initial-stop", "I">,
-    Arg<"Boolean">, Desc<"Whether the stop-hook will trigger when lldb  "
-    "initially gains control of the process.  For a process launch, this "
-    "initial stop may happen very early on - before the loader has run.  You "
-    "can use this option if you do not want some stop-hooks to run then.  "
-    "Defaults to true.">;
+  def target_stop_hook_add_at_initial_stop
+      : Option<"at-initial-stop", "I">,
+        Arg<"Boolean">,
+        Desc<"Whether the stop-hook will trigger when lldb "
+             "initially gains control of the process. For a process launch, "
+             "this initial stop may happen very early on - before the loader "
+             "has run. You can use this option if you do not want some "
+             "stop-hooks to run then. Defaults to true.">;
 }
 
 let Command = "thread backtrace" in {
@@ -1121,12 +1135,16 @@ let Command = "thread step scope" in {
   def thread_step_scope_count : Option<"count", "c">, Group<1>, Arg<"Count">,
     Desc<"How many times to perform the stepping operation - currently only "
     "supported for step-inst and next-inst.">;
-  def thread_step_scope_end_linenumber : Option<"end-linenumber", "e">,
-    Group<1>, Arg<"LineNum">, Desc<"The line at which to stop stepping - "
-      "defaults to the next line and only supported for step-in and step-over."
-      "  You can also pass the string 'block' to step to the end of the current"
-      " block.  This is particularly use  in conjunction with --step-target to"
-      " step through a complex calling sequence.">;
+  def thread_step_scope_end_linenumber
+      : Option<"end-linenumber", "e">,
+        Group<1>,
+        Arg<"LineNum">,
+        Desc<"The line at which to stop stepping - "
+             "defaults to the next line and only supported for step-in and "
+             "step-over. You can also pass the string 'block' to step to the "
+             "end of the current block. This is particularly useful in "
+             "conjunction with --step-target to step through a complex calling "
+             "sequence.">;
   def thread_step_scope_run_mode : Option<"run-mode", "m">, Group<1>,
     EnumArg<"RunMode">, Desc<"Determine how to run other "
     "threads while stepping the current thread.">;
@@ -1171,9 +1189,13 @@ let Command = "thread jump" in {
     Completion<"SourceFile">, Desc<"Specifies the source file to jump to.">;
   def thread_jump_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
     Required, Desc<"Specifies the line number to jump to.">;
-  def thread_jump_by : Option<"by", "b">, Group<2>, Arg<"Offset">, Required,
-    Desc<"Jumps by a relative line offset from the current line,"
-    "can be a positive or negative offset">;
+  def thread_jump_by
+      : Option<"by", "b">,
+        Group<2>,
+        Arg<"Offset">,
+        Required,
+        Desc<"Jumps by a relative line offset from the current line, "
+             "can be a positive or negative offset.">;
   def thread_jump_address : Option<"address", "a">, Group<3>,
     Arg<"AddressOrExpression">, Required, Desc<"Jumps to a specific address.">;
   def thread_jump_force : Option<"force", "r">, Groups<[1,2,3]>,
@@ -1395,8 +1417,10 @@ let Command = "type category enable" in {
 }
 
 let Command = "type category disable" in {
-  def type_category_disable_language : Option<"language", "l">, Arg<"Language">,
-    Desc<"Enable the category for this language.">;
+  def type_category_disable_language
+      : Option<"language", "l">,
+        Arg<"Language">,
+        Desc<"Disable the category for this language.">;
 }
 
 let Command = "type filter add" in {

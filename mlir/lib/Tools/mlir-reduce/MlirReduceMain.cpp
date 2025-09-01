@@ -65,6 +65,11 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
           "Disable implicit addition of a top-level module op during parsing"),
       llvm::cl::init(false)};
 
+  static llvm::cl::opt<bool> allowUnregisteredDialects(
+      "allow-unregistered-dialect",
+      llvm::cl::desc("Allow operation with no registered dialects"),
+      llvm::cl::init(false));
+
   llvm::cl::HideUnrelatedOptions(mlirReduceCategory);
 
   llvm::InitLLVM y(argc, argv);
@@ -79,6 +84,8 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
     llvm::cl::PrintHelpMessage();
     return success();
   }
+  if (allowUnregisteredDialects)
+    context.allowUnregisteredDialects();
 
   std::string errorMessage;
 

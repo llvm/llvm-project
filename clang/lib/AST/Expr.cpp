@@ -2395,6 +2395,7 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+  assert(getType()->isSignedIntegerType() && "IntTy should be signed");
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,

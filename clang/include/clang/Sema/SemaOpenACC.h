@@ -244,7 +244,14 @@ public:
   //  'temporary' created for the init (in the case of a copy), such as with
   //  firstprivate.
   std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
-                                                   const Expr *VarExpr);
+                                                   const Expr *VarExpr) {
+    assert(CK != OpenACCClauseKind::Reduction);
+    return CreateInitRecipe(CK, OpenACCReductionOperator::Invalid, VarExpr);
+  }
+  std::pair<VarDecl *, VarDecl *>
+  CreateInitRecipe(OpenACCClauseKind CK,
+                   OpenACCReductionOperator ReductionOperator,
+                   const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {

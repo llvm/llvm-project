@@ -794,7 +794,9 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
     for (const auto &ExpandedTok : Expansion->Expanded) {
       ExpansionText += ExpandedTok.text(SM);
       ExpansionText += " ";
-      if (ExpansionText.size() > 2048) {
+      const Config &Cfg = Config::current();
+      const size_t Limit = static_cast<size_t>(Cfg.Hover.MacroContentsLimit);
+      if (Limit && ExpansionText.size() > Limit) {
         ExpansionText.clear();
         break;
       }

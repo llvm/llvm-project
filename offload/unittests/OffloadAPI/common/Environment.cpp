@@ -41,9 +41,9 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
   size_t Size;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size);
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
   std::vector<char> Name(Size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data());
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
