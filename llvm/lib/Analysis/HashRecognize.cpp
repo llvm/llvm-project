@@ -73,60 +73,10 @@ using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "hash-recognize"
 
-/// Check the well-formedness of the (most|least) significant bit check \p SI,
-/// where \p BitShift is the bit-shift branch: the other branch must be a
-/// bit-shift-and-xor-poly branch, as already checked by
-/// matchConditionalRecurrence. We check that the compare is `>= 0` in the
-/// big-endian case, and `== 0` in the little-endian case (or the inverse, in
-/// which case the branches of the compare are swapped). We check LCR against
-/// CheckLCR, which is full-set in the big-endian case, and [0, 2) in the
-/// little-endian case: CheckLCR checks that the comparison is `>= 0` in the
-/// big-endian case, and that the compare is to 0 or 1 in the little-endian case
-/// (as a value and'ed with 1 is passed as the operand). We then check
-/// AllowedByR against CheckAllowedByR, which is [0, smin) in the big-endian
-/// case, and [0, 1) in the little-endian case: CheckAllowedByR checks for
-/// significant-bit-clear, and this must be equal to \p BitShift for
-/// well-formedness.
-static bool isSignificantBitCheckWellFormed(const SelectInst *SI,
-                                            const BinaryOperator *BitShift,
-                                            bool ByteOrderSwapped) {
-  DataLayout DL = SI->getParent()->getDataLayout();
-  CmpPredicate Pred;
-  Value *L, *R;
-  Instruction *TV, *FV;
-  [[maybe_unused]] bool Match =
-      match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_Value(R)),
-                         m_Instruction(TV), m_Instruction(FV)));
-  assert(Match && "Select(ICmp()) expected in signficant-bit-check");
-
-  KnownBits KnownL = computeKnownBits(L, DL);
-  unsigned ICmpBW = KnownL.getBitWidth();
-  auto LCR = ConstantRange::fromKnownBits(KnownL, false);
-  auto CheckLCR = ConstantRange::getNonEmpty(
-      APInt::getZero(ICmpBW),
-      ByteOrderSwapped ? APInt::getZero(ICmpBW) : APInt(ICmpBW, 2));
-  if (LCR != CheckLCR)
-    return false;
-
-  KnownBits KnownR = computeKnownBits(R, DL);
-  auto RCR = ConstantRange::fromKnownBits(KnownR, false);
-  auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
-  ConstantRange CheckAllowedByR(
-      APInt::getZero(ICmpBW),
-      ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
-
-  if (AllowedByR == CheckAllowedByR)
-    return TV == BitShift;
-  if (AllowedByR.inverse() == CheckAllowedByR)
-    return FV == BitShift;
-  return false;
-}
-
-/// Checks if Loop \p L contains instructions unreachable or unhandled from \p
-/// Roots on the use-def chain.
-static bool
-containsUnreachableOrUnhandled(const Loop &L,
-                               ArrayRef<const Instruction *> Roots) {
+/// Checks if Loop \p L contains instructions unreachable \p Roots on the
+/// use-def chain.
+static bool containsUnreachable(const Loop &L,
+                                ArrayRef<const Instruction *> Roots) {
   SmallPtrSet<const Instruction *, 16> Visited;
   BasicBlock *Latch = L.getLoopLatch();
 
@@ -138,9 +88,6 @@ containsUnreachableOrUnhandled(const Loop &L,
     if (isa<PHINode>(I))
       continue;
 
-    if (!isa<TruncInst, BinaryOperator, SelectInst, CmpInst, BranchInst>(I))
-      return true;
-
     for (const Use &U : I->operands()) {
       if (auto *UI = dyn_cast<Instruction>(U)) {
         if (!L.contains(UI))
@@ -148,8 +95,6 @@ containsUnreachableOrUnhandled(const Loop &L,
         Worklist.push_back(UI);
         continue;
       }
-      if (!isa<ConstantInt, BasicBlock>(U))
-        return true;
     }
   }
   return std::distance(Latch->begin(), Latch->end()) != Visited.size();
@@ -203,6 +148,60 @@ private:
       Instruction *V,
       Instruction::BinaryOps BOWithConstOpToMatch = Instruction::BinaryOpsEnd);
 };
+
+/// Check the well-formedness of the (most|least) significant bit check given \p
+/// ConditionalRecurrence, \p SimpleRecurrence, depending on \p
+/// ByteOrderSwapped. We check that ConditionalRecurrence.Step is a
+/// Select(Cmp()) where the compare is `>= 0` in the big-endian case, and `== 0`
+/// in the little-endian case (or the inverse, in which case the branches of the
+/// compare are swapped). We check that the LHS is (ConditionalRecurrence.Phi
+/// [xor SimpleRecurrence.Phi]) in the big-endian case, and additionally check
+/// for an AND with one in the little-endian case. We then check AllowedByR
+/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and [0,
+/// 1) in the little-endian case: CheckAllowedByR checks for
+/// significant-bit-clear, and this must be equal to ConditionalRecurrence.BO
+/// (which is the bit-shift, as already checked by isBigEndianBitShift) for
+/// well-formedness.
+static bool
+isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
+                                const RecurrenceInfo &SimpleRecurrence,
+                                bool ByteOrderSwapped) {
+  auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
+  DataLayout DL = SI->getParent()->getDataLayout();
+  CmpPredicate Pred;
+  const Value *L;
+  const APInt *R;
+  Instruction *TV, *FV;
+  if (!match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_APInt(R)),
+                          m_Instruction(TV), m_Instruction(FV))))
+    return false;
+
+  // Match predicate with or without a SimpleRecurrence (the corresponding data
+  // is LHSAux).
+  auto MatchPred =
+      m_CombineOr(m_Specific(ConditionalRecurrence.Phi),
+                  m_c_Xor(m_CastOrSelf(m_Specific(ConditionalRecurrence.Phi)),
+                          m_CastOrSelf(m_Specific(SimpleRecurrence.Phi))));
+  bool LWellFormed = ByteOrderSwapped ? match(L, MatchPred)
+                                      : match(L, m_c_And(MatchPred, m_One()));
+  if (!LWellFormed)
+    return false;
+
+  KnownBits KnownR = KnownBits::makeConstant(*R);
+  unsigned BW = KnownR.getBitWidth();
+  auto RCR = ConstantRange::fromKnownBits(KnownR, false);
+  auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
+  ConstantRange CheckAllowedByR(APInt::getZero(BW),
+                                ByteOrderSwapped ? APInt::getSignedMinValue(BW)
+                                                 : APInt(BW, 1));
+
+  BinaryOperator *BitShift = ConditionalRecurrence.BO;
+  if (AllowedByR == CheckAllowedByR)
+    return TV == BitShift;
+  if (AllowedByR.inverse() == CheckAllowedByR)
+    return FV == BitShift;
+  return false;
+}
 
 /// Wraps llvm::matchSimpleRecurrence. Match a simple first order recurrence
 /// cycle of the form:
@@ -375,7 +374,7 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
 /// of \p SI's condition, ignoring any casts. The purpose of this function is to
 /// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
-/// computation. We cannot check the correctness of casts at this point.
+/// computation.
 ///
 /// In other words, it checks for the following pattern:
 ///
@@ -497,9 +496,8 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
          "Expected ExtraConst in conditional recurrence");
   const APInt &GenPoly = *ConditionalRecurrence.ExtraConst;
 
-  if (!isSignificantBitCheckWellFormed(
-          cast<SelectInst>(ConditionalRecurrence.Step),
-          ConditionalRecurrence.BO, *ByteOrderSwapped))
+  if (!isSignificantBitCheckWellFormed(ConditionalRecurrence, SimpleRecurrence,
+                                       *ByteOrderSwapped))
     return "Malformed significant-bit check";
 
   SmallVector<const Instruction *> Roots(
@@ -508,8 +506,8 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
        L.getLatchCmpInst(), Latch->getTerminator()});
   if (SimpleRecurrence)
     Roots.push_back(SimpleRecurrence.BO);
-  if (containsUnreachableOrUnhandled(L, Roots))
-    return "Found stray unvisited or unhandled instructions";
+  if (containsUnreachable(L, Roots))
+    return "Found stray unvisited instructions";
 
   return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *ByteOrderSwapped,
                         LHSAux);

@@ -1109,7 +1109,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.unknown.value(i16 %msg, i16 %checksum, i16 %corrupt) {
 ; CHECK-LABEL: 'not.crc.unknown.value'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -1137,7 +1137,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.unknown.call.outside.loop(i16 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.unknown.call.outside.loop'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   %corrupt = call i16 @side.effect()
@@ -1250,7 +1250,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.stray.unvisited.call(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.stray.unvisited.call'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
+; CHECK-NEXT:  Reason: Found stray unvisited instructions
 ;
 entry:
   br label %loop
@@ -1276,7 +1276,7 @@ declare void @print(i16)
 define i16 @not.crc.call.sb.check(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.call.sb.check'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -1320,8 +1320,8 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.knownbits.sb.check.fail(i16 %crc.init) {
-; CHECK-LABEL: 'not.crc.knownbits.sb.check.fail'
+define i16 @not.crc.sb.check.patternmatch.fail(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.sb.check.patternmatch.fail'
 ; CHECK-NEXT:  Did not find a hash algorithm
 ; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
@@ -1346,8 +1346,8 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.knownbits.sb.check.fail.call.outside.loop(i16 %crc.init) {
-; CHECK-LABEL: 'not.crc.knownbits.sb.check.fail.call.outside.loop'
+define i16 @not.crc.sb.check.patternmatch.fail.call.outside.loop(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.sb.check.patternmatch.fail.call.outside.loop'
 ; CHECK-NEXT:  Did not find a hash algorithm
 ; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
