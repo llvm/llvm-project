@@ -465,13 +465,13 @@ for.end12:                                        ; preds = %for.end12.loopexit,
 define void @gcd7(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd7'
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: store i32 %7, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: %11 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: %11 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %11, ptr %B.addr.12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
@@ -640,13 +640,13 @@ for.end15:                                        ; preds = %for.end15.loopexit,
 define void @gcd9(i32 %n, ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-LABEL: 'gcd9'
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: store i32 %7, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: %11 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %7, ptr %arrayidx6, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: %11 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %11 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %11, ptr %B.addr.12, align 4 --> Dst: store i32 %11, ptr %B.addr.12, align 4

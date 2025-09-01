@@ -3414,9 +3414,24 @@ SCEVSignedMonotonicityChecker::SCEVSignedMonotonicityChecker(
     ScalarEvolution *SE, const Loop *OutermostLoop, const Value *Ptr)
     : SE(SE), OutermostLoop(OutermostLoop) {
   if (Ptr) {
-    // TODO: This seems incorrect. Maybe we should check the reachability from
-    // the GEP to the target instruction. E.g., in the following case, maybe
-    // no-wrap is not guaranteed:
+    // Perform reasoning similar to LoopAccessAnalysis. If an AddRec would wrap
+    // and the GEP would have nusw, the wrapped memory location would become
+    // like as follows (in the mathmatical sense, assuming the step recurrence
+    // is positive):
+    //
+    //   (previously accessed location) + (step recurrence) - 2^N
+    //
+    // where N is the size of the pointer index type. Since the value of step
+    // recurrence is less than 2^(N-1), the distance between the previously
+    // accessed location and the wrapped location will be greater than 2^(N-1),
+    // which is larger than half the pointer index type space. The size of
+    // allocated object must not exceed the largest signed integer that fits
+    // into the index type, so the GEP value would be poison and any memory
+    // access using it would be immediate UB when executed.
+    //
+    // TODO: We don't check if the result of the GEP is always used. Maybe we
+    // should check the reachability from the GEP to the target instruction.
+    // E.g., in the following case, no-wrap would not trigger immediate UB:
     //
     //  entry:
     //    ...
@@ -3441,8 +3456,6 @@ MonotonicityType SCEVSignedMonotonicityChecker::checkMonotonicity(
     const Value *Ptr) {
   SCEVSignedMonotonicityChecker Checker(SE, OutermostLoop, Ptr);
   MonotonicityType MT = Checker.visit(Expr);
-  if (MT == MonotonicityType::Unknown && Checker.NoWrapFromGEP)
-    MT = MonotonicityType::NoSignedWrap;
 
 #ifndef NDEBUG
   switch (MT) {
@@ -3532,8 +3545,6 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   const SCEV *Start = Expr->getStart();
   const SCEV *Step = Expr->getStepRecurrence(*SE);
 
-  bool IsNSW = Expr->hasNoSignedWrap();
-
   MonotonicityType StartRes = visit(Start);
   if (StartRes == MonotonicityType::Unknown)
     return unknownMonotonicity(Expr);
@@ -3543,7 +3554,7 @@ SCEVSignedMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     return unknownMonotonicity(Expr);
 
   // TODO: Enhance the inference here.
-  if (!IsNSW) {
+  if (!Expr->hasNoSignedWrap() && !NoWrapFromGEP) {
     if (!SE->isKnownNegative(Step))
       // If the coefficient can be positive value, ensure that the AddRec is
       // monotonically increasing.
@@ -3787,9 +3798,10 @@ bool DependenceInfo::tryDelinearizeParametricSize(
           LI->getLoopFor(Src->getParent())->getOutermostLoop();
 
       // TODO: In general, reasoning about monotonicity of a subscript from the
-      // base pointer would not be allowed. Probably we need to check the loops
-      // associated with this subscript are disjoint from those associated with
-      // the other subscripts. The validation would be something like:
+      // base pointer would lead incorrect result. Probably we need to check
+      // the loops associated with this subscript are disjoint from those
+      // associated with the other subscripts. The validation would be
+      // something like:
       //
       //   LoopsI = collectCommonLoops(SrcSubscripts[I])
       //   LoopsOthers = collectCommonLoops(SrcSCEV - SrcSubscripts[I])

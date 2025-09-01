@@ -332,3 +332,48 @@ loop:
 exit:
   ret void
 }
+
+; The value of step reccurence is not invariant with respect to the outer most
+; loop (the i-loop).
+;
+; offset_i = 0;
+; for (int i = 0; i < 100; i++) {
+;   for (int j = 0; j < 100; j++)
+;     a[offset_i + j] = 0;
+;   offset_i += (i % 2 == 0) ? 0 : 3;
+; }
+;
+define void @step_is_variant(ptr %a) {
+; CHECK-LABEL: 'step_is_variant'
+; CHECK: Failed to prove monotonicity for: %offset.i
+; CHECK: Failed to prove monotonicity for: {%offset.i,+,1}<nuw><nsw><%loop.j>
+; CHECK: Monotonicity: Unknown expr: {%offset.i,+,1}<nuw><nsw><%loop.j>
+;
+entry:
+  br label %loop.i.header
+
+loop.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.i.latch ]
+  %offset.i = phi i64 [ 0, %entry ], [ %offset.i.next, %loop.i.latch ]
+  %step.i.0 = phi i64 [ 0, %entry ], [ %step.i.1, %loop.i.latch ]
+  %step.i.1 = phi i64 [ 3, %entry ], [ %step.i.0, %loop.i.latch ]
+  br label %loop.j
+
+loop.j:
+  %j = phi i64 [ 0, %loop.i.header ], [ %j.inc, %loop.j ]
+  %offset = add nsw i64 %offset.i, %j
+  %idx = getelementptr inbounds i8, ptr %a, i64 %offset
+  store i8 0, ptr %idx
+  %j.inc = add nsw i64 %j, 1
+  %exitcond.j = icmp eq i64 %j.inc, 100
+  br i1 %exitcond.j, label %loop.i.latch, label %loop.j
+
+loop.i.latch:
+  %i.inc = add nsw i64 %i, 1
+  %offset.i.next = add nsw i64 %offset.i, %step.i.0
+  %exitcond.i = icmp eq i64 %i.inc, 100
+  br i1 %exitcond.i, label %exit, label %loop.i.header
+
+exit:
+  ret void
+}
