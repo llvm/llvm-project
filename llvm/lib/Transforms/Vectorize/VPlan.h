@@ -979,6 +979,10 @@ public:
     Not,
     SLPLoad,
     SLPStore,
+    // Creates a mask where each lane is active (true) whilst the current
+    // counter (first operand + index) is less than the second operand. i.e.
+    //    mask[i] = icmpt ult (op0 + i), op1
+    // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
     CalculateTripCountMinusVF,
@@ -2002,6 +2006,9 @@ public:
   virtual VPValue *getBackedgeValue() {
     return getOperand(1);
   }
+
+  /// Update the incoming value from the loop backedge.
+  void setBackedgeValue(VPValue *V) { setOperand(1, V); }
 
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.

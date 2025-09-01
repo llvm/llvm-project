@@ -40,6 +40,10 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
+cl::opt<bool> EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide get active lane mask instructions"));
+
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
@@ -1475,6 +1479,102 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
+/// Try to replace multiple active lane masks used for control flow with
+/// a single, wide active lane mask instruction followed by multiple
+/// extract subvector intrinsics. This applies to the active lane mask
+/// instructions both in the loop and in the preheader.
+/// Incoming values of all ActiveLaneMaskPHIs are updated to use the
+/// new extracts from the first active lane mask, which has it's last
+/// operand (multiplier) set to UF.
+static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
+                                       unsigned UF) {
+  if (!EnableWideActiveLaneMask || !VF.isVector() || UF == 1)
+    return false;
+
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
+  auto *Term = &ExitingVPBB->back();
+
+  using namespace llvm::VPlanPatternMatch;
+  if (!match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
+                       m_VPValue(), m_VPValue(), m_VPValue())))))
+    return false;
+
+  auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
+  LLVMContext &Ctx = Plan.getContext();
+
+  auto ExtractFromALM = [&](VPInstruction *ALM,
+                            SmallVectorImpl<VPValue *> &Extracts) {
+    DebugLoc DL = ALM->getDebugLoc();
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      SmallVector<VPValue *> Ops;
+      Ops.append({ALM, Plan.getOrAddLiveIn(
+                           ConstantInt::get(IntegerType::getInt64Ty(Ctx),
+                                            VF.getKnownMinValue() * Part))});
+      auto *Ext = new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
+                                             IntegerType::getInt1Ty(Ctx), DL);
+      Extracts[Part] = Ext;
+      Ext->insertAfter(ALM);
+    }
+  };
+
+  // Create a list of each active lane mask phi, ordered by unroll part.
+  SmallVector<VPActiveLaneMaskPHIRecipe *> Phis(UF, nullptr);
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *Phi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
+    if (!Phi)
+      continue;
+    VPValue *Index = nullptr;
+    match(Phi->getBackedgeValue(),
+          m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
+    assert(Index && "Expected index from ActiveLaneMask instruction");
+
+    auto *II = dyn_cast<VPInstruction>(Index);
+    if (II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
+      auto Part = cast<ConstantInt>(II->getOperand(1)->getLiveInIRValue());
+      Phis[Part->getZExtValue()] = Phi;
+    } else
+      // Anything other than a CanonicalIVIncrementForPart is part 0
+      Phis[0] = Phi;
+  }
+
+  assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
+         "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
+
+  auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
+  auto *LoopALM = cast<VPInstruction>(Phis[0]->getBackedgeValue());
+
+  assert((EntryALM->getOpcode() == VPInstruction::ActiveLaneMask &&
+          LoopALM->getOpcode() == VPInstruction::ActiveLaneMask) &&
+         "Expected incoming values of Phi to be ActiveLaneMasks");
+
+  // When using wide lane masks, the return type of the get.active.lane.mask
+  // intrinsic is VF x UF (last operand).
+  VPValue *ALMMultiplier =
+      Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::getInt64Ty(Ctx), UF));
+  EntryALM->setOperand(2, ALMMultiplier);
+  LoopALM->setOperand(2, ALMMultiplier);
+
+  // Create UF x extract vectors and insert into preheader.
+  SmallVector<VPValue *> EntryExtracts(UF);
+  ExtractFromALM(EntryALM, EntryExtracts);
+
+  // Create UF x extract vectors and insert before the loop compare & branch,
+  // updating the compare to use the first extract.
+  SmallVector<VPValue *> LoopExtracts(UF);
+  ExtractFromALM(LoopALM, LoopExtracts);
+  VPInstruction *Not = cast<VPInstruction>(Term->getOperand(0));
+  Not->setOperand(0, LoopExtracts[0]);
+
+  // Update the incoming values of active lane mask phis.
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    Phis[Part]->setStartValue(EntryExtracts[Part]);
+    Phis[Part]->setBackedgeValue(LoopExtracts[Part]);
+  }
+
+  return true;
+}
+
 /// Try to simplify the branch condition of \p Plan. This may restrict the
 /// resulting plan to \p BestVF and \p BestUF.
 static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -1486,8 +1586,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPValue *Cond;
   ScalarEvolution &SE = *PSE.getSE();
   if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
-      match(Term, m_BranchOnCond(
-                      m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue()))))) {
+      match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
+                      m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if TC <= VF * UF when the latch
     // terminator is   BranchOnCount or BranchOnCond where the input is
     // Not(ActiveLaneMask).
@@ -1566,8 +1666,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange =
-      simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
+  bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
+  MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
   if (MadeChange) {
@@ -2050,9 +2150,11 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  auto *EntryALM =
-      Builder.createNaryOp(VPInstruction::ActiveLaneMask, {EntryIncrement, TC},
-                           DL, "active.lane.mask.entry");
+  VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
+      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
+  auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                        {EntryIncrement, TC, ALMMultiplier}, DL,
+                                        "active.lane.mask.entry");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
@@ -2067,8 +2169,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
                                   {IncrementValue}, {false, false}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TripCount}, DL,
-                                   "active.lane.mask.next");
+                                   {InLoopIncrement, TripCount, ALMMultiplier},
+                                   DL, "active.lane.mask.next");
   LaneMaskPhi->addOperand(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
@@ -2144,9 +2246,12 @@ void VPlanTransforms::addActiveLaneMask(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
-    LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
-                              {WideCanonicalIV, Plan.getTripCount()}, nullptr,
-                              "active.lane.mask");
+    VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
+        ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
+    LaneMask =
+        B.createNaryOp(VPInstruction::ActiveLaneMask,
+                       {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
+                       nullptr, "active.lane.mask");
   }
 
   // Walk users of WideCanonicalIV and replace the header mask of the form
