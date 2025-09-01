@@ -2189,7 +2189,7 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
         Register Reg = MO.getReg();
         if (!MRI.getType(Reg).isValid())
           continue;
-	KnownBits Known = VTA.getKnownBits(Reg);
+        KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
         OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
            << '\n';
