@@ -377,9 +377,9 @@ define i1 @pr93017(i64 %idx) {
 ; Mask is 0b10101010
 define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch1(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr @g_i32_lo, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 170
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_lo, i32 %idx
@@ -393,9 +393,9 @@ define i1 @load_vs_array_type_mismatch1(i32 %idx) {
 ; Mask is 0b01010101
 define i1 @load_vs_array_type_mismatch2(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch2(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr @g_i32_hi, i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 1, [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 85
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds i16, ptr @g_i32_hi, i32 %idx
@@ -409,9 +409,8 @@ define i1 @load_vs_array_type_mismatch2(i32 %idx) {
 ; idx == 1 || idx == 3
 define i1 @load_vs_array_type_mismatch_offset1(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch_offset1(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i16, i16 }, ptr @g_i16_1, i32 [[IDX:%.*]], i32 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IDX:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds {i16, i16}, ptr @g_i16_1, i32 %idx, i32 1
@@ -425,9 +424,8 @@ define i1 @load_vs_array_type_mismatch_offset1(i32 %idx) {
 ; idx == 0 || idx == 2
 define i1 @load_vs_array_type_mismatch_offset2(i32 %idx) {
 ; CHECK-LABEL: @load_vs_array_type_mismatch_offset2(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds { i16, i16 }, ptr @g_i16_2, i32 [[IDX:%.*]], i32 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IDX:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds {i16, i16}, ptr @g_i16_2, i32 %idx, i32 1
