@@ -38994,8 +38994,48 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       computeKnownBitsForPSADBW(LHS, RHS, Known, DemandedElts, DAG, Depth);
       break;
     }
+    
     }
     break;
+  }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    EVT VT = Op.getValueType();
+    if (!VT.isVector() || VT.getScalarSizeInBits() != 64) {
+      Known.resetAll();
+      return;
+    }
+
+    const unsigned BW = 64;
+    APInt Low52 = APInt::getLowBitsSet(BW, 52);
+    APInt High12 = APInt::getBitsSetFrom(BW, 52);
+
+    KnownBits K0 =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits K1 =
+        DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    KnownBits KAcc =
+        DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+
+    if ((K0.Zero & Low52) == Low52 || (K1.Zero & Low52) == Low52) {
+      Known = KAcc;
+      return;
+    }
+
+    KnownBits AddendKB(BW);
+    AddendKB.Zero |= High12;
+
+    KnownBits OutKB =
+        KnownBits::computeForAddSub(true, false, false, KAcc, AddendKB);
+    Known = OutKB;
+
+    if ((KAcc.Zero & Low52) == Low52) {
+      Known.One |= (KAcc.One & High12);
+      Known.Zero |= (KAcc.Zero & High12);
+      Known.Zero &= ~Known.One;
+    }
+
+    return;
   }
   }
 
