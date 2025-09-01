@@ -16,8 +16,12 @@
 #define LLVM_CLANG_DRIVER_DEPENDENCYSCANNER_H
 
 #include "clang/Driver/Types.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/VirtualFileSystem.h"
+
+namespace llvm {
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+} // namespace llvm
 
 namespace clang {
 class DiagnosticsEngine;
@@ -43,9 +47,13 @@ bool shouldEnableModulesDriver(const InputList &Inputs,
                                DiagnosticsEngine &Diags);
 
 /// Appends the std and std.compat module inputs.
-bool ensureNamedModuleStdLibraryInputs(Compilation &C, InputList &Inputs);
+bool ensureNamedModuleStdLibraryInputs(clang::driver::Compilation &C,
+                                       InputList &Inputs);
 
-bool performDriverModuleBuild(Compilation &C, DiagnosticsEngine &Diags);
+/// Modifies the compilations JobList to support Clang and C++20 named  module
+/// imports between source files, importing Standard library modules
+bool performDriverModuleBuild(clang::driver::Compilation &C,
+                              clang::DiagnosticsEngine &Diags);
 
 } // namespace clang::driver::modules
 

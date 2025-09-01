@@ -3,11 +3,14 @@
 // This does not test importing a Clang module into a C++20 named module 
 // interface unit, or vice versa, is not yet supported.
 // TODO: Support imports between different module types.
+// Because the std library is not available in the CI, this does not test for it.
+// TODO: Add tests for the Standard library modules.
 
 // RUN: split-file %s %t
 // RUN: %clang++ -std=c++23 -fmodules -fmodules-driver \
 // RUN:   -fmodule-map-file=%t/module.modulemap %t/main.cpp \
-// RUN:   %t/A.cpp %t/A-B.cpp %t/A-C.cpp %t/B.cpp
+// RUN:   %t/A.cpp %t/A-part1.cpp %t/A-part1-impl.cpp %t/A-part2.cpp \
+// RUN:   %t/B.cppm
 
 //--- main.cpp
 #include "root.h"
@@ -15,51 +18,50 @@ import A;
 import B;
 
 int main()  {
- sayHello();
- helloWorld();
- sayGoodbye();
- sayGoodbyeTwice();
+ // *** Testing C++20 named modules ***
+ A();       // From the A's primary module partition interface .
+ APart1();  // From a public module partition interface unit of A.
+
+ // *** Testing Clang modules ***
+ theAnswer();
 }
 
 //--- A.cpp
 export module A;
-export import :B;
-import std;
-import :C;
+export import :part1;
+import :part2;
+import B;
 
-
-export void sayHello() {
-  sayHelloImpl();
-  std::println("!");
+export int A() {
+  doesNothing(); // Imported from B
+  return APart1() + APart2(); // From public and private module partition interface units.
 }
 
-//--- A-B.cpp
-module;
-export module A:B;
-import std;
-import :C;
+//--- A-part1.cpp
+export module A:part1;
 
-export void helloWorld() {
-  sayHelloImpl();	
-  std::print(" World!\n");
+export int APart1(); // Implemented in module implementation unit A-part1-impl.cpp.
+
+//--- A-part1-impl.cpp
+module A:part1_impl;
+import :part2;
+
+int APart1() {
+  return 2 + APart2();
 }
 
-//--- A-C.cpp
-export module A:C;
-import std;
+//--- A-part2.cpp
+export module A:part2;
 
-void sayHelloImpl() {
-  std::print("Hello");
+export int APart2() {
+  return 2;
 }
 
-//--- B.cpp
-module;
+//--- B.cppm
 export module B;
-import A;
 
-export void sayHelloWorldTwice() {
-  helloWorld();
-  helloWorld();
+export void doesNothing() {
+  return;
 }
 
 //--- module.modulemap
@@ -72,23 +74,31 @@ module transitive2 { header "transitive2.h" export * }
 //--- root.h
 #include "direct1.h"
 #include "direct2.h"
-void sayGoodbyeTwice() {
-  std::println("Goodbye!");
-  std::println("Goodbye!");
+int theAnswer() {
+  return fromDirect1() + fromDirect2();
 }
 
 //--- direct1.h
 #include "transitive1.h"
 #include "transitive2.h"
 
+int fromDirect1() {
+  return fromTransitive1() + fromTransitive2();
+}
+
 //--- direct2.h
 #include "transitive1.h"
 
+int fromDirect2() {
+  return fromTransitive1() + 2;
+}
+
 //--- transitive1.h
-#include <print>
-void sayGoodbye() {
-  std::println("Goodbye!");
+int fromTransitive1() {
+  return 10;
 }
 
 //--- transitive2.h
-// empty
+int fromTransitive2() {
+  return 10;
+}
