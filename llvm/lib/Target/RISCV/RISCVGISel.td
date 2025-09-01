@@ -16,6 +16,18 @@
 include "RISCV.td"
 include "RISCVCombine.td"
 
+// (setult reg, imm12) → SLTIU
+def : Pat<(XLenVT (setult (XLenVT GPR:$rs1), simm12:$imm)),
+          (SLTIU GPR:$rs1, simm12:$imm)>;
+
+let Predicates = [HasStdExtZbb, IsRV64] in {
+  def : Pat<(i64 (sext (i16 GPR:$rs))), (SEXT_H GPR:$rs)>;
+  def : Pat<(i64 (zext (i16 GPR:$rs))), (ZEXT_H_RV64 GPR:$rs)>;
+}
+let Predicates = [HasStdExtZbb, IsRV32] in {
+  def : Pat<(i32 (zext (i16 GPR:$rs))), (ZEXT_H_RV32 GPR:$rs)>;
+}
+
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 def simm12Plus1i32 : ImmLeaf<i32, [{

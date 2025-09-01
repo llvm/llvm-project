@@ -85,14 +85,14 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VFREDUSUM_VS: {
       unsigned VL = VT.getVectorMinNumElements();
       if (!VT.isFixedLengthVector())
-        VL *= *getVScaleForTuning();
+        VL *= getVScaleForTuning().value_or(1);
       Cost += Log2_32_Ceil(VL);
       break;
     }
     case RISCV::VFREDOSUM_VS: {
       unsigned VL = VT.getVectorMinNumElements();
       if (!VT.isFixedLengthVector())
-        VL *= *getVScaleForTuning();
+        VL *= getVScaleForTuning().value_or(1);
       Cost += VL;
       break;
     }
@@ -242,7 +242,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // One more or less than a power of 2 can use SLLI+ADD/SUB.
     if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2())
       return TTI::TCC_Free;
-    // FIXME: There is no MULI instruction.
+    // No MULI in RISC-V, but 12-bit immediates can still be used in sequences.
     Takes12BitImm = true;
     break;
   case Instruction::Sub:
@@ -1342,7 +1342,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         Op = RISCV::VSADD_VV;
         break;
       case Intrinsic::ssub_sat:
-        Op = RISCV::VSSUBU_VV;
+        Op = RISCV::VSSUB_VV;
         break;
       case Intrinsic::uadd_sat:
         Op = RISCV::VSADDU_VV;
@@ -1766,7 +1766,7 @@ unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) const {
   if (isa<ScalableVectorType>(Ty)) {
     const unsigned EltSize = DL.getTypeSizeInBits(Ty->getElementType());
     const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinValue();
-    const unsigned VectorBits = *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
+    const unsigned VectorBits = getVScaleForTuning().value_or(1) * RISCV::RVVBitsPerBlock;
     return RISCVTargetLowering::computeVLMAX(VectorBits, EltSize, MinSize);
   }
   return cast<FixedVectorType>(Ty)->getNumElements();
@@ -2510,9 +2510,13 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     Op = RISCV::VADD_VV;
     break;
   case ISD::SHL:
-  case ISD::SRL:
-  case ISD::SRA:
     Op = RISCV::VSLL_VV;
+    break;
+  case ISD::SRL:
+    Op = RISCV::VSRL_VV;
+    break;
+  case ISD::SRA:
+    Op = RISCV::VSRA_VV;
     break;
   case ISD::AND:
   case ISD::OR:
