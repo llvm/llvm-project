@@ -82,9 +82,9 @@ public:
   CheckerNameRef CheckNames[CK_NumCheckKinds];
 
 private:
-  typedef void (PthreadLockChecker::*FnCheck)(const CallEvent &Call,
-                                              CheckerContext &C,
-                                              CheckerKind CheckKind) const;
+  using FnCheck = void (PthreadLockChecker::*)(const CallEvent &Call,
+                                               CheckerContext &C,
+                                               CheckerKind CheckKind) const;
   CallDescriptionMap<FnCheck> PThreadCallbacks = {
       // Init.
       {{CDM::CLibrary, {"pthread_mutex_init"}, 2},

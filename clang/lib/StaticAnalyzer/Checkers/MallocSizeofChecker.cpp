@@ -26,8 +26,8 @@ using namespace ento;
 
 namespace {
 
-typedef std::pair<const TypeSourceInfo *, const CallExpr *> TypeCallPair;
-typedef llvm::PointerUnion<const Stmt *, const VarDecl *> ExprParent;
+using TypeCallPair = std::pair<const TypeSourceInfo *, const CallExpr *>;
+using ExprParent = llvm::PointerUnion<const Stmt *, const VarDecl *>;
 
 class CastedAllocFinder
   : public ConstStmtVisitor<CastedAllocFinder, TypeCallPair> {
@@ -47,7 +47,7 @@ public:
         ExplicitCastType(ExplicitCastType), AllocCall(AllocCall) {}
   };
 
-  typedef std::vector<CallRecord> CallVec;
+  using CallVec = std::vector<CallRecord>;
   CallVec Calls;
 
   CastedAllocFinder(ASTContext *Ctx) :

@@ -38,8 +38,8 @@ class DebugContainerModeling
   void analyzerContainerEnd(const CallExpr *CE, CheckerContext &C) const;
   ExplodedNode *reportDebugMsg(llvm::StringRef Msg, CheckerContext &C) const;
 
-  typedef void (DebugContainerModeling::*FnCheck)(const CallExpr *,
-                                                 CheckerContext &) const;
+  using FnCheck = void (DebugContainerModeling::*)(const CallExpr *,
+                                                   CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
       {{CDM::SimpleFunc, {"clang_analyzer_container_begin"}, 1},

@@ -152,12 +152,11 @@ void BindingKey::dump() const { llvm::errs() << *this; }
 // Actual Store type.
 //===----------------------------------------------------------------------===//
 
-typedef llvm::ImmutableMap<BindingKey, SVal>    ClusterBindings;
-typedef llvm::ImmutableMapRef<BindingKey, SVal> ClusterBindingsRef;
-typedef std::pair<BindingKey, SVal> BindingPair;
+using ClusterBindings = llvm::ImmutableMap<BindingKey, SVal>;
+using ClusterBindingsRef = llvm::ImmutableMapRef<BindingKey, SVal>;
+using BindingPair = std::pair<BindingKey, SVal>;
 
-typedef llvm::ImmutableMap<const MemRegion *, ClusterBindings>
-        RegionBindings;
+using RegionBindings = llvm::ImmutableMap<const MemRegion *, ClusterBindings>;
 
 namespace {
 class RegionBindingsRef : public llvm::ImmutableMapRef<const MemRegion *,
@@ -176,8 +175,7 @@ class RegionBindingsRef : public llvm::ImmutableMapRef<const MemRegion *,
   bool IsMainAnalysis;
 
 public:
-  typedef llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>
-          ParentTy;
+  using ParentTy = llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>;
 
   RegionBindingsRef(ClusterBindings::Factory &CBFactory,
                     const RegionBindings::TreeTy *T,
@@ -396,8 +394,8 @@ private:
   std::optional<unsigned> BindingsLeft;
 };
 
-typedef const RegionBindingsRef& RegionBindingsConstRef;
-typedef const LimitedRegionBindingsRef &LimitedRegionBindingsConstRef;
+using RegionBindingsConstRef = const RegionBindingsRef &;
+using LimitedRegionBindingsConstRef = const LimitedRegionBindingsRef &;
 
 std::optional<SVal>
 RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
@@ -474,10 +472,11 @@ public:
   RegionBindings::Factory RBFactory;
   mutable ClusterBindings::Factory CBFactory;
 
-  typedef std::vector<SVal> SValListTy;
+  using SValListTy = std::vector<SVal>;
+
 private:
-  typedef llvm::DenseMap<const LazyCompoundValData *,
-                         SValListTy> LazyBindingsMapTy;
+  using LazyBindingsMapTy =
+      llvm::DenseMap<const LazyCompoundValData *, SValListTy>;
   LazyBindingsMapTy LazyBindingsMap;
 
   /// The largest number of fields a struct can have and still be
@@ -860,9 +859,9 @@ enum GlobalsFilterKind {
 template <typename DERIVED>
 class ClusterAnalysis  {
 protected:
-  typedef llvm::DenseMap<const MemRegion *, const ClusterBindings *> ClusterMap;
-  typedef const MemRegion * WorkListElement;
-  typedef SmallVector<WorkListElement, 10> WorkList;
+  using ClusterMap = llvm::DenseMap<const MemRegion *, const ClusterBindings *>;
+  using WorkListElement = const MemRegion *;
+  using WorkList = SmallVector<WorkListElement, 10>;
 
   llvm::SmallPtrSet<const ClusterBindings *, 16> Visited;
 
@@ -972,7 +971,7 @@ static inline bool isUnionField(const FieldRegion *FR) {
   return FR->getDecl()->getParent()->isUnion();
 }
 
-typedef SmallVector<const FieldDecl *, 8> FieldVector;
+using FieldVector = SmallVector<const FieldDecl *, 8>;
 
 static void getSymbolicOffsetFields(BindingKey K, FieldVector &Fields) {
   assert(K.hasSymbolicOffset() && "Not implemented for concrete offset keys");
@@ -1729,7 +1728,7 @@ RegionStoreManager::findLazyBinding(RegionBindingsConstRef B,
       return std::make_pair(V->getStore(), V->getRegion());
   }
 
-  typedef std::pair<Store, const SubRegion *> StoreRegionPair;
+  using StoreRegionPair = std::pair<Store, const SubRegion *>;
   StoreRegionPair Result = StoreRegionPair();
 
   if (const ElementRegion *ER = dyn_cast<ElementRegion>(R)) {

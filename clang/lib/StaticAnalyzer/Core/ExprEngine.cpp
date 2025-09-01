@@ -183,8 +183,8 @@ public:
 };
 } // namespace
 
-typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
-    ObjectsUnderConstructionMap;
+using ObjectsUnderConstructionMap =
+    llvm::ImmutableMap<ConstructedObjectKey, SVal>;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
                                  ObjectsUnderConstructionMap)
 
@@ -194,22 +194,20 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
 // memory region, which is important for multi-dimensional arrays. E.g:: int
 // arr[2][2]; assume arr[1][1] will be the next element under construction, so
 // the index is 3.
-typedef llvm::ImmutableMap<
-    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
-    IndexOfElementToConstructMap;
+using IndexOfElementToConstructMap = llvm::ImmutableMap<
+    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(IndexOfElementToConstruct,
                                  IndexOfElementToConstructMap)
 
 // This trait is responsible for holding our pending ArrayInitLoopExprs.
 // It pairs the LocationContext and the initializer CXXConstructExpr with
 // the size of the array that's being copy initialized.
-typedef llvm::ImmutableMap<
-    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
-    PendingInitLoopMap;
+using PendingInitLoopMap = llvm::ImmutableMap<
+    std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingInitLoop, PendingInitLoopMap)
 
-typedef llvm::ImmutableMap<const LocationContext *, unsigned>
-    PendingArrayDestructionMap;
+using PendingArrayDestructionMap =
+    llvm::ImmutableMap<const LocationContext *, unsigned>;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingArrayDestruction,
                                  PendingArrayDestructionMap)
 

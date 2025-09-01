@@ -71,8 +71,8 @@ public:
                   const char *NL, const char *Sep) const override;
 
 private:
-  typedef std::pair<SymbolRef, const AllocationState*> AllocationPair;
-  typedef SmallVector<AllocationPair, 2> AllocationPairVec;
+  using AllocationPair = std::pair<SymbolRef, const AllocationState *>;
+  using AllocationPairVec = SmallVector<AllocationPair, 2>;
 
   enum APIKind {
     /// Denotes functions tracked by this checker.

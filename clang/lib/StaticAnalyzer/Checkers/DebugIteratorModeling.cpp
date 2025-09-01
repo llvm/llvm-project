@@ -39,8 +39,8 @@ class DebugIteratorModeling
   void analyzerIteratorValidity(const CallExpr *CE, CheckerContext &C) const;
   ExplodedNode *reportDebugMsg(llvm::StringRef Msg, CheckerContext &C) const;
 
-  typedef void (DebugIteratorModeling::*FnCheck)(const CallExpr *,
-                                                 CheckerContext &) const;
+  using FnCheck = void (DebugIteratorModeling::*)(const CallExpr *,
+                                                  CheckerContext &) const;
 
   CallDescriptionMap<FnCheck> Callbacks = {
       {{CDM::SimpleFunc, {"clang_analyzer_iterator_position"}, 1},

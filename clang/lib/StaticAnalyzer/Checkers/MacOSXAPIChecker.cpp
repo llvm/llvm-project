@@ -40,9 +40,9 @@ public:
   void CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
                          StringRef FName) const;
 
-  typedef void (MacOSXAPIChecker::*SubChecker)(CheckerContext &,
-                                               const CallExpr *,
-                                               StringRef FName) const;
+  using SubChecker = void (MacOSXAPIChecker::*)(CheckerContext &,
+                                                const CallExpr *,
+                                                StringRef FName) const;
 };
 } //end anonymous namespace
 

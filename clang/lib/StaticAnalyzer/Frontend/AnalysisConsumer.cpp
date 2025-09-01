@@ -72,7 +72,7 @@ class AnalysisConsumer : public AnalysisASTConsumer,
     AM_Syntax = 0x1,
     AM_Path = 0x2
   };
-  typedef unsigned AnalysisMode;
+  using AnalysisMode = unsigned;
 
   /// Mode of the analyzes while recursively visiting Decls.
   AnalysisMode RecVisitorMode;

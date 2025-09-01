@@ -397,8 +397,8 @@ namespace {
     Preprocessor &PP;
     ASTContext &C;
 
-    typedef SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>
-    DeferredLocsTy;
+    using DeferredLocsTy =
+        SmallVector<std::pair<const CFGBlock *, const Stmt *>, 12>;
 
     DeferredLocsTy DeferredLocs;
 

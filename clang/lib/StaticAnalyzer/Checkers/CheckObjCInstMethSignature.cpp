@@ -86,7 +86,7 @@ static void CheckObjCInstMethSignature(const ObjCImplementationDecl *ID,
   ASTContext &Ctx = BR.getContext();
 
   // Build a DenseMap of the methods for quick querying.
-  typedef llvm::DenseMap<Selector,ObjCMethodDecl*> MapTy;
+  using MapTy = llvm::DenseMap<Selector, ObjCMethodDecl *>;
   MapTy IMeths;
   unsigned NumMethods = 0;
 
