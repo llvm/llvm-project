@@ -39,7 +39,7 @@ These features are:
 <li><a href="#libraryarch">Library based architecture</a></li>
 <li><a href="#diverseclients">Support diverse clients</a></li>
 <li><a href="#ideintegration">Integration with IDEs</a></li>
-<li><a href="#license">Use the LLVM 'Apache 2' License</a></li>
+<li><a href="#license">Use the LLVM 'BSD' License</a></li>
 </ul>
 
 <p>Internal Design and Implementation:</p>
@@ -208,7 +208,7 @@ problem in clang.</p>
 <p>The problem with this goal is that different clients have very different
 requirements.  Consider code generation, for example: a simple front-end that
 parses for code generation must analyze the code for validity and emit code
-in some intermediate form to pass off to a optimizer or backend.  Because
+in some intermediate form to pass off to an optimizer or backend.  Because
 validity analysis and code generation can largely be done on the fly, there is
 not hard requirement that the front-end actually build up a full AST for all
 the expressions and statements in the code.  TCC and GCC are examples of
