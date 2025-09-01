@@ -306,11 +306,11 @@ public:
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value base = adaptor.getBase();
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       base, ptr, adaptor.getIndexVec(), vType);
+                       base, ptr, adaptor.getIndices(), vType);
 
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
@@ -362,10 +362,10 @@ public:
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       adaptor.getBase(), ptr, adaptor.getIndexVec(), vType);
+                       adaptor.getBase(), ptr, adaptor.getIndices(), vType);
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(

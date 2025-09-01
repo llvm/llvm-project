@@ -144,33 +144,28 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
       layout.getAddressPointIndices();
   unsigned nextVTableThunkIndex = 0;
 
-  if (layout.getNumVTables() > 1)
-    cgm.errorNYI("emitVTableDefinitions: multiple vtables");
-
-  // We'll need a loop here to handle multiple vtables, but for now we only
-  // support one.
-  unsigned vtableIndex = 0;
-  size_t vtableStart = layout.getVTableOffset(vtableIndex);
-  size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
-
-  // Build a ConstArrayAttr of the vtable components.
-  llvm::SmallVector<mlir::Attribute> components;
-  for (size_t componentIndex = vtableStart; componentIndex < vtableEnd;
-       ++componentIndex) {
-    components.push_back(
-        getVTableComponent(layout, componentIndex, rtti, nextVTableThunkIndex,
-                           addressPoints[vtableIndex], vtableHasLocalLinkage));
-  }
-
   mlir::MLIRContext *mlirContext = &cgm.getMLIRContext();
 
-  // Create a ConstArrayAttr to hold the components.
-  auto arr = cir::ConstArrayAttr::get(
-      cir::ArrayType::get(componentType, components.size()),
-      mlir::ArrayAttr::get(mlirContext, components));
+  SmallVector<mlir::Attribute> vtables;
+  for (auto [vtableIndex, addressPoint] : llvm::enumerate(addressPoints)) {
+    // Build a ConstArrayAttr of the vtable components.
+    size_t vtableStart = layout.getVTableOffset(vtableIndex);
+    size_t vtableEnd = vtableStart + layout.getVTableSize(vtableIndex);
+    llvm::SmallVector<mlir::Attribute> components;
+    components.reserve(vtableEnd - vtableStart);
+    for (size_t componentIndex : llvm::seq(vtableStart, vtableEnd))
+      components.push_back(
+          getVTableComponent(layout, componentIndex, rtti, nextVTableThunkIndex,
+                             addressPoint, vtableHasLocalLinkage));
+    // Create a ConstArrayAttr to hold the components.
+    auto arr = cir::ConstArrayAttr::get(
+        cir::ArrayType::get(componentType, components.size()),
+        mlir::ArrayAttr::get(mlirContext, components));
+    vtables.push_back(arr);
+  }
 
   // Create a ConstRecordAttr to hold the component array.
-  const auto members = mlir::ArrayAttr::get(mlirContext, {arr});
+  const auto members = mlir::ArrayAttr::get(mlirContext, vtables);
   cir::ConstRecordAttr record = cgm.getBuilder().getAnonConstRecord(members);
 
   // Create a VTableAttr

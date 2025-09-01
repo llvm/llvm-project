@@ -99,6 +99,10 @@ private:
 
   InstructionWorklist Worklist;
 
+  /// Next instruction to iterate. It will be updated when it is erased by
+  /// RecursivelyDeleteTriviallyDeadInstructions.
+  Instruction *NextInst;
+
   // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
   //       parameter. That should be updated to specific sub-classes because the
   //       run loop was changed to dispatch on opcode.
@@ -169,13 +173,16 @@ private:
     // further folds that were hindered by OneUse limits.
     SmallPtrSet<Value *, 4> Visited;
     for (Value *Op : Ops) {
-      if (Visited.insert(Op).second) {
+      if (!Visited.contains(Op)) {
         if (auto *OpI = dyn_cast<Instruction>(Op)) {
           if (RecursivelyDeleteTriviallyDeadInstructions(
-                  OpI, nullptr, nullptr, [this](Value *V) {
-                    if (auto I = dyn_cast<Instruction>(V)) {
+                  OpI, nullptr, nullptr, [&](Value *V) {
+                    if (auto *I = dyn_cast<Instruction>(V)) {
                       LLVM_DEBUG(dbgs() << "VC: Erased: " << *I << '\n');
                       Worklist.remove(I);
+                      if (I == NextInst)
+                        NextInst = NextInst->getNextNode();
+                      Visited.insert(I);
                     }
                   }))
             continue;
@@ -4519,12 +4526,20 @@ bool VectorCombine::run() {
     if (!DT.isReachableFromEntry(&BB))
       continue;
     // Use early increment range so that we can erase instructions in loop.
-    for (Instruction &I : make_early_inc_range(BB)) {
-      if (I.isDebugOrPseudoInst())
-        continue;
-      MadeChange |= FoldInst(I);
+    // make_early_inc_range is not applicable here, as the next iterator may
+    // be invalidated by RecursivelyDeleteTriviallyDeadInstructions.
+    // We manually maintain the next instruction and update it when it is about
+    // to be deleted.
+    Instruction *I = &BB.front();
+    while (I) {
+      NextInst = I->getNextNode();
+      if (!I->isDebugOrPseudoInst())
+        MadeChange |= FoldInst(*I);
+      I = NextInst;
     }
   }
+
+  NextInst = nullptr;
 
   while (!Worklist.isEmpty()) {
     Instruction *I = Worklist.removeOne();

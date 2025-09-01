@@ -219,6 +219,9 @@ public:
   size_t getNumSuccessors() const { return Successors.size(); }
   size_t getNumPredecessors() const { return Predecessors.size(); }
 
+  /// Returns true if this block has any predecessors.
+  bool hasPredecessors() const { return !Predecessors.empty(); }
+
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
   /// has successors. \return the root enclosing block if all enclosing blocks
@@ -400,7 +403,7 @@ class LLVM_ABI_FOR_TEST VPRecipeBase
 
 public:
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
-               DebugLoc DL = {})
+               DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
   virtual ~VPRecipeBase() = default;
@@ -518,11 +521,11 @@ protected:
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = {})
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                    Value *UV, DebugLoc DL = {})
+                    Value *UV, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -864,7 +867,7 @@ public:
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      DebugLoc DL = {})
+                      DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags() {}
 
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
@@ -872,7 +875,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
       : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()), VPIRFlags(I) {}
 
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      const VPIRFlags &Flags, DebugLoc DL = {})
+                      const VPIRFlags &Flags,
+                      DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -1014,7 +1018,8 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
-    // operand as additional operands.
+    // operand as additional operands. AnyOf is poison-safe as all operands
+    // will be frozen.
     AnyOf,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
@@ -1080,13 +1085,13 @@ private:
 #endif
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
-                const Twine &Name = "")
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = {},
+                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
                 const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
@@ -1479,7 +1484,8 @@ public:
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    const VPIRFlags &Flags = {}, DebugLoc DL = {})
+                    const VPIRFlags &Flags = {},
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
         VPIRMetadata(), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
@@ -1537,7 +1543,7 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         DebugLoc DL = {})
+                         DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
@@ -1546,7 +1552,7 @@ public:
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         DebugLoc DL = {})
+                         DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
@@ -1615,7 +1621,8 @@ class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
-                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
+                    ArrayRef<VPValue *> CallArguments,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
         VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
@@ -1644,10 +1651,8 @@ public:
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
 
-  operand_range args() { return make_range(op_begin(), std::prev(op_end())); }
-  const_operand_range args() const {
-    return make_range(op_begin(), std::prev(op_end()));
-  }
+  operand_range args() { return drop_end(operands()); }
+  const_operand_range args() const { return drop_end(operands()); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1667,7 +1672,7 @@ class VPHistogramRecipe : public VPRecipeBase {
 
 public:
   VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = {})
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
 
   ~VPHistogramRecipe() override = default;
@@ -2229,8 +2234,8 @@ protected:
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
-                   const Twine &Name = "")
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+                   DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
       : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
         Name(Name.str()) {
     if (Start)
@@ -2381,9 +2386,8 @@ public:
   }
 
   VPBlendRecipe *clone() override {
-    SmallVector<VPValue *> Ops(operands());
-    return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()), Ops,
-                             getDebugLoc());
+    return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()),
+                             operands(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
@@ -2561,14 +2565,14 @@ protected:
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
   VPReductionRecipe(const RecurKind RdxKind, FastMathFlags FMFs,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, nullptr,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
@@ -2686,7 +2690,7 @@ public:
 class LLVM_ABI_FOR_TEST VPReductionEVLRecipe : public VPReductionRecipe {
 public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
-                       DebugLoc DL = {})
+                       DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceKind(),
             R.getFastMathFlags(),
@@ -3537,7 +3541,8 @@ public:
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step, VPValue *VF, DebugLoc DL = {})
+                        VPValue *Step, VPValue *VF,
+                        DebugLoc DL = DebugLoc::getUnknown())
       : VPScalarIVStepsRecipe(
             IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
@@ -4142,7 +4147,7 @@ public:
   /// Returns an iterator range over all VFs of the plan.
   iterator_range<SmallSetVector<ElementCount, 2>::iterator>
   vectorFactors() const {
-    return {VFs.begin(), VFs.end()};
+    return VFs;
   }
 
   bool hasScalarVFOnly() const {
@@ -4299,9 +4304,8 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return count_if(ExitBlocks,
-                    [](VPIRBasicBlock *EB) {
-                      return EB->getNumPredecessors() != 0;
-                    }) > 1 ||
+                    [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
+               1 ||
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 
@@ -4309,7 +4313,7 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return !(getScalarPreheader()->getNumPredecessors() == 0 ||
+    return !(!getScalarPreheader()->hasPredecessors() ||
              getScalarPreheader()->getSinglePredecessor() == getEntry());
   }
 };

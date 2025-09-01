@@ -143,7 +143,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
 
   for (unsigned i = 0; i < WorkList.size(); i++) {
     T *Current = WorkList[i];
-    if (Current->getNumPredecessors() == 0)
+    if (!Current->hasPredecessors())
       return Current;
     auto &Predecessors = Current->getPredecessors();
     WorkList.insert_range(Predecessors);
@@ -216,7 +216,7 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
   // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
   // VPBB as its entry, i.e., free of predecessors.
   if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && VPBB->getNumPredecessors() == 0;
+    return !R->isReplicator() && !VPBB->hasPredecessors();
 
   // A header dominates its second predecessor (the latch), with the other
   // predecessor being the preheader
@@ -809,7 +809,7 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
 const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
   const VPBlockBase *Pred = nullptr;
-  if (getNumPredecessors() > 0) {
+  if (hasPredecessors()) {
     Pred = getPredecessors()[Idx];
   } else {
     auto *Region = getParent();
@@ -1183,14 +1183,14 @@ VPlan *VPlan::duplicate() {
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;
-  if (getScalarHeader()->getNumPredecessors() == 0) {
-    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
-  } else {
+  if (getScalarHeader()->hasPredecessors()) {
     NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
         vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
           auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
           return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
         }));
+  } else {
+    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
@@ -1473,7 +1473,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
-  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
   // Integer or FP constants with different types will result in he same string
   // due to stripping types.
   if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
@@ -1481,7 +1481,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // If it is already used by C > 0 other VPValues, increase the version counter
   // C and use it for V.
-  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
+  const auto &[C, UseInserted] = BaseName2Version.try_emplace(BaseName, 0);
   if (!UseInserted) {
     C->second++;
     A->second = (BaseName + Twine(".") + Twine(C->second)).str();
