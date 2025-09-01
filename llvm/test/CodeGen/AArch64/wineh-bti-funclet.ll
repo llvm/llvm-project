@@ -21,9 +21,9 @@ define dso_local void @wineh_funclet() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    mov x0, #-2 // =0xfffffffffffffffe
 ; CHECK-NEXT:    stur x0, [x29, #16]
-; CHECK-NEXT:  .Ltmp0: // EH_LABEL
+; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    bl may_throw
-; CHECK-NEXT:  .Ltmp1: // EH_LABEL
+; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  .LBB0_1: // Block address taken
 ; CHECK-NEXT:    // %try.cont
 ; CHECK-NEXT:  $ehgcr_0_1:
