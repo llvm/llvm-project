@@ -7537,7 +7537,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::HLSLRootSignature:
-    // Will be handled by attached function
+    getHLSLRuntime().addRootSignature(cast<HLSLRootSignatureDecl>(D));
     break;
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
