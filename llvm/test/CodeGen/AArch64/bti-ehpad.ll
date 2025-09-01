@@ -18,14 +18,14 @@ define void @test() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:  .Ltmp0: // EH_LABEL
+; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    bl may_throw
-; CHECK-NEXT:  .Ltmp1: // EH_LABEL
+; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  // %bb.1: // %common.ret
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %lpad
-; CHECK-NEXT:  .Ltmp2: // EH_LABEL
+; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    bti j
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
