@@ -42,7 +42,7 @@ static bool isRealCharType(const clang::QualType &Ty) {
 
 /// If possible, return the text name of the signed type that corresponds to the
 /// passed integer type. If the passed type is already signed then its name is
-/// just returned. Only supports BuiltinTypes.
+/// just returned. Supports BuiltinTypes and types from <cstdint>
 static std::optional<std::string>
 getCorrespondingSignedTypeName(const clang::QualType &QT) {
   using namespace clang;
@@ -79,6 +79,10 @@ getCorrespondingSignedTypeName(const clang::QualType &QT) {
   StringRef SimplifiedTypeName{TypeName};
   const bool InStd = SimplifiedTypeName.consume_front("std::");
   const StringRef Prefix = InStd ? "std::" : "";
+
+  if (SimplifiedTypeName.starts_with("int") &&
+      SimplifiedTypeName.ends_with("_t"))
+    return (Twine(Prefix) + SimplifiedTypeName).str();
 
   if (SimplifiedTypeName.starts_with("uint") &&
       SimplifiedTypeName.ends_with("_t"))
@@ -453,8 +457,36 @@ bool FormatStringConverter::emitIntegerArgument(
     // std::format will print bool as either "true" or "false" by default,
     // but printf prints them as "0" or "1". Be compatible with printf by
     // requesting decimal output.
-    FormatSpec.push_back('d');
+
+    // In cases where `x` or `X` was specified in the format string
+    // these will technically have no effect, since the bool can only be zero or
+    // one. However, it seems best to leave them as-is anyway.
+    switch (ArgKind) {
+    case ConversionSpecifier::Kind::xArg:
+      FormatSpec.push_back('x'); // Not strictly needed
+      break;
+    case ConversionSpecifier::Kind::XArg:
+      FormatSpec.push_back('X');
+      break;
+    default:
+      FormatSpec.push_back('d');
+    }
+
   } else if (ArgType->isEnumeralType()) {
+
+    // If the format string contained `x` or `X`, then use these
+    // format modifiers. Otherwise the default will work.
+    switch (ArgKind) {
+    case ConversionSpecifier::Kind::xArg:
+      FormatSpec.push_back('x');
+      break;
+    case ConversionSpecifier::Kind::XArg:
+      FormatSpec.push_back('X');
+      break;
+    default:
+      break;
+    }
+
     // std::format will try to find a specialization to print the enum
     // (and probably fail), whereas printf would have just expected it to
     // be passed as its underlying type. However, printf will have forced
@@ -477,10 +509,21 @@ bool FormatStringConverter::emitIntegerArgument(
     // Even -Wformat doesn't warn for this. std::format will format as
     // unsigned unless we cast it.
     if (const std::optional<std::string> MaybeCastType =
-            castTypeForArgument(ArgKind, ArgType))
+            castTypeForArgument(ArgKind, ArgType)) {
+      switch (ArgKind) {
+      case ConversionSpecifier::Kind::xArg:
+        FormatSpec.push_back('x');
+        break;
+      case ConversionSpecifier::Kind::XArg:
+        FormatSpec.push_back('X');
+        break;
+      default:
+        break;
+      }
+
       ArgFixes.emplace_back(
           ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
-    else
+    } else
       return conversionNotPossible(
           (Twine("argument ") + Twine(ArgIndex) + " cannot be cast to " +
            Twine(ArgKind == ConversionSpecifier::Kind::uArg ? "unsigned"
@@ -488,9 +531,20 @@ bool FormatStringConverter::emitIntegerArgument(
            " integer type to match format"
            " specifier and StrictMode is enabled")
               .str());
-  } else if (isRealCharType(ArgType) || !ArgType->isIntegerType()) {
-    // Only specify integer if the argument is of a different type
-    FormatSpec.push_back('d');
+  } else {
+    switch (ArgKind) {
+    case ConversionSpecifier::Kind::xArg:
+      FormatSpec.push_back('x');
+      break;
+    case ConversionSpecifier::Kind::XArg:
+      FormatSpec.push_back('X');
+      break;
+    default:
+      if (isRealCharType(ArgType) || !ArgType->isIntegerType()) {
+        // Only specify integer if the argument is of a different type
+        FormatSpec.push_back('d');
+      }
+    }
   }
   return true;
 }
@@ -514,6 +568,8 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
   case ConversionSpecifier::Kind::dArg:
   case ConversionSpecifier::Kind::iArg:
   case ConversionSpecifier::Kind::uArg:
+  case ConversionSpecifier::Kind::xArg:
+  case ConversionSpecifier::Kind::XArg:
     if (!emitIntegerArgument(ArgKind, Arg, FS.getArgIndex() + ArgsOffset,
                              FormatSpec))
       return false;
@@ -526,12 +582,6 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
                             "static_cast<const void *>(");
     break;
   }
-  case ConversionSpecifier::Kind::xArg:
-    FormatSpec.push_back('x');
-    break;
-  case ConversionSpecifier::Kind::XArg:
-    FormatSpec.push_back('X');
-    break;
   case ConversionSpecifier::Kind::oArg:
     FormatSpec.push_back('o');
     break;
