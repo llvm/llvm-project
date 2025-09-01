@@ -1947,6 +1947,15 @@ let TargetPrefix = "riscv" in {
   defm pusati_h : RVPBinaryAABIntrinsics;
   defm pusati_w : RVPBinaryAABIntrinsics;
   defm usati    : RVPBinaryAABIntrinsics;
+  defm psrai_b  : RVPBinaryAABIntrinsics;
+  defm psrai_h  : RVPBinaryAABIntrinsics;
+  defm psrai_w  : RVPBinaryAABIntrinsics;
+  defm psrari_h : RVPBinaryAABIntrinsics;
+  defm psrari_w : RVPBinaryAABIntrinsics;
+  defm srari    : RVPBinaryAABIntrinsics;
+  defm psati_h  : RVPBinaryAABIntrinsics;
+  defm psati_w  : RVPBinaryAABIntrinsics;
+  defm sati     : RVPBinaryAABIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions

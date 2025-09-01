@@ -907,6 +907,10 @@ def : PatGprGpr<int_riscv_psshar_hs, PSSHAR_HS>;
 def : PatGprImm<int_riscv_psrli_b,   PSRLI_B,  uimm3>;
 def : PatGprImm<int_riscv_psrli_h,   PSRLI_H,  uimm4>;
 def : PatGprImm<int_riscv_pusati_h,  PUSATI_H, uimm4>;
+def : PatGprImm<int_riscv_psrai_b,   PSRAI_B,  uimm3>;
+def : PatGprImm<int_riscv_psrai_h,   PSRAI_H,  uimm4>;
+def : PatGprImm<int_riscv_psrari_h,  PSRARI_H, uimm4>;
+def : PatGprImm<int_riscv_psati_h,   PSATI_H,  uimm4>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -914,6 +918,8 @@ def : PatGprImm<int_riscv_sslai, SSLAI, uimm5>;
 def : PatGprGpr<int_riscv_ssha,  SSHA>;
 def : PatGprGpr<int_riscv_sshar, SSHAR>;
 def : PatGprImm<int_riscv_usati, USATI_RV32, uimm5>;
+def : PatGprImm<int_riscv_srari, SRARI_RV32, uimm5>;
+def : PatGprImm<int_riscv_sati,  SATI_RV32,  uimm5>;
 def : PatGprGpr<int_riscv_sadd,  SADD>;
 } // Predicates = [HasStdExtP, IsRV32]
 
@@ -929,4 +935,9 @@ def : PatGprGpr<int_riscv_shar,      SHAR>;
 def : PatGprImm<int_riscv_psrli_w,   PSRLI_W,  uimm5>;
 def : PatGprImm<int_riscv_pusati_w,  PUSATI_W, uimm5>;
 def : PatGprImm<int_riscv_usati,     USATI_RV64, uimm6>;
+def : PatGprImm<int_riscv_psrai_w,   PSRAI_W,    uimm5>;
+def : PatGprImm<int_riscv_psrari_w,  PSRARI_W,   uimm5>;
+def : PatGprImm<int_riscv_srari,     SRARI_RV64, uimm6>;
+def : PatGprImm<int_riscv_psati_w,   PSATI_W,    uimm5>;
+def : PatGprImm<int_riscv_sati,      SATI_RV64,  uimm6>;
 } // Predicates = [HasStdExtP, IsRV64]

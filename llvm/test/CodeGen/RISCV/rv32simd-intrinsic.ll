@@ -178,6 +178,72 @@ define i32 @usati(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.psrai.b.i32.i32(i32, i32)
+
+define i32 @psrai_b(i32 %a, i32 %b) {
+; RV32P-LABEL: psrai_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrai.b a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrai.b.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psrai.h.i32.i32(i32, i32)
+
+define i32 @psrai_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psrai_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrai.h a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrai.h.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psrari.h.i32.i32(i32, i32)
+
+define i32 @psrari_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psrari_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrari.h a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrari.h.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.srari.i32.i32(i32, i32)
+
+define i32 @srari_32(i32 %a, i32 %b) {
+; RV32P-LABEL: srari_32:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    srari a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.srari.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psati.h.i32.i32(i32, i32)
+
+define i32 @psati_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psati_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psati.h a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psati.h.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.sati.i32.i32(i32, i32)
+
+define i32 @sati(i32 %a, i32 %b) {
+; RV32P-LABEL: sati:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    sati a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.sati.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {

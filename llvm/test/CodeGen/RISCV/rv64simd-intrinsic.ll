@@ -254,3 +254,102 @@ define i64 @usati(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.usati.i64.i64(i64 %a, i64 1)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psrai.b.i64.i64(i64, i64)
+
+define i64 @psrai_b(i64 %a, i64 %b) {
+; RV64P-LABEL: psrai_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrai.b a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrai.b.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrai.h.i64.i64(i64, i64)
+
+define i64 @psrai_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psrai_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrai.h a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrai.h.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrai.w.i64.i64(i64, i64)
+
+define i64 @psrai_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psrai_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrai.w a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrai.w.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrari.h.i64.i64(i64, i64)
+
+define i64 @psrari_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psrari_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrari.h a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrari.h.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrari.w.i64.i64(i64, i64)
+
+define i64 @psrari_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psrari_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrari.w a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrari.w.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.srari.i64.i64(i64, i64)
+
+define i64 @srari_64(i64 %a, i64 %b) {
+; RV64P-LABEL: srari_64:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    srari a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.srari.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psati.h.i64.i64(i64, i64)
+
+define i64 @psati_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psati_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psati.h a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psati.h.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psati.w.i64.i64(i64, i64)
+
+define i64 @psati_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psati_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psati.w a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psati.w.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.sati.i64.i64(i64, i64)
+
+define i64 @sati(i64 %a, i64 %b) {
+; RV64P-LABEL: sati:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    sati a0, a0, 1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.sati.i64.i64(i64 %a, i64 1)
+    ret i64 %tmp
+}
