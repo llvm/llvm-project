@@ -574,7 +574,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__end_node_pointer>(__p); }
 
   _LIBCPP_HIDE_FROM_ABI __tree_node_base()             = default;
-  _LIBCPP_HIDE_FROM_ABI ~__tree_node_base()            = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
