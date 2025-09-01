@@ -14,6 +14,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
@@ -364,9 +365,10 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (hasDeferredEmission(user))
     return false;
 
-  // Do not inline expressions used by ops with the CExpressionInterface. If
-  // this was intended, the user could have been merged into the expression op.
-  return !isa<emitc::CExpressionInterface>(*user);
+  // Do not inline expressions used by other expressions or by ops with the
+  // CExpressionInterface. If this was intended, the user could have been merged
+  // into the expression op.
+  return !isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user);
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
@@ -1531,6 +1533,20 @@ LogicalResult CppEmitter::emitOperand(Value value) {
   auto expressionOp = value.getDefiningOp<ExpressionOp>();
   if (expressionOp && shouldBeInlined(expressionOp))
     return emitExpression(expressionOp);
+
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
+    // If this operand is a block argument of an expression, emit instead the
+    // matching expression parameter.
+    Operation *argOp = arg.getParentBlock()->getParentOp();
+    if (auto expressionOp = dyn_cast<ExpressionOp>(argOp)) {
+      // This scenario is only expected when one of the operations within the
+      // expression being emitted references one of the expression's block
+      // arguments.
+      assert(expressionOp == emittedExpression &&
+             "Expected expression being emitted");
+      value = expressionOp->getOperand(arg.getArgNumber());
+    }
+  }
 
   os << getOrCreateName(value);
   return success();
