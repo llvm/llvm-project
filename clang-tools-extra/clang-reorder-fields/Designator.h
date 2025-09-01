@@ -154,7 +154,6 @@ private:
   /// expression is found.
   bool enterImplicitInitLists(const Expr *Init);
 
-  const InitListExpr *ILE;
   const ASTContext *Context;
   SmallVector<Designator, 1> DesignatorList;
 };

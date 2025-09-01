@@ -967,9 +967,7 @@ class BinOpSameOpcodeHelper {
       return false;
     }
     bool equal(unsigned Opcode) {
-      if (Opcode == I->getOpcode())
-        return trySet(MainOpBIT, MainOpBIT);
-      return false;
+      return Opcode == I->getOpcode() && trySet(MainOpBIT, MainOpBIT);
     }
     unsigned getOpcode() const {
       MaskType Candidate = Mask & SeenBefore;
@@ -24179,9 +24177,7 @@ public:
         // previous vectorization attempts.
         if (any_of(VL, [&V](Value *RedVal) {
               auto *RedValI = dyn_cast<Instruction>(RedVal);
-              if (!RedValI)
-                return false;
-              return V.isDeleted(RedValI);
+              return RedValI && V.isDeleted(RedValI);
             }))
           break;
         V.buildTree(VL, IgnoreList);
