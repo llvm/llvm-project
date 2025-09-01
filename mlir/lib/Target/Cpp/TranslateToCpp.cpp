@@ -35,7 +35,7 @@ using llvm::formatv;
 /// on each element doesn't return a string.
 template <typename ForwardIterator, typename UnaryFunctor,
           typename NullaryFunctor>
-inline LogicalResult
+static inline LogicalResult
 interleaveWithError(ForwardIterator begin, ForwardIterator end,
                     UnaryFunctor eachFn, NullaryFunctor betweenFn) {
   if (begin == end)
@@ -52,16 +52,16 @@ interleaveWithError(ForwardIterator begin, ForwardIterator end,
 }
 
 template <typename Container, typename UnaryFunctor, typename NullaryFunctor>
-inline LogicalResult interleaveWithError(const Container &c,
-                                         UnaryFunctor eachFn,
-                                         NullaryFunctor betweenFn) {
+static inline LogicalResult interleaveWithError(const Container &c,
+                                                UnaryFunctor eachFn,
+                                                NullaryFunctor betweenFn) {
   return interleaveWithError(c.begin(), c.end(), eachFn, betweenFn);
 }
 
 template <typename Container, typename UnaryFunctor>
-inline LogicalResult interleaveCommaWithError(const Container &c,
-                                              raw_ostream &os,
-                                              UnaryFunctor eachFn) {
+static inline LogicalResult interleaveCommaWithError(const Container &c,
+                                                     raw_ostream &os,
+                                                     UnaryFunctor eachFn) {
   return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << ", "; });
 }
 
@@ -1787,7 +1787,7 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     case 16: {
       if (llvm::isa<Float16Type>(type))
         return (os << "_Float16"), success();
-      else if (llvm::isa<BFloat16Type>(type))
+      if (llvm::isa<BFloat16Type>(type))
         return (os << "__bf16"), success();
       else
         return emitError(loc, "cannot emit float type ") << type;
