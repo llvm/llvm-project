@@ -9,7 +9,7 @@ declare void @f16_user(half)
 ; CHECK-LABEL: define void @loadf32
 define void @loadf32() {
   %buffer = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.CBufRet.f32 @dx.op.cbufferLoadLegacy.f32(i32 59, %dx.types.Handle %{{.*}}, i32 0)
   %load = call {float, float, float, float} @llvm.dx.resource.load.cbufferrow.4(
@@ -28,7 +28,7 @@ define void @loadf32() {
 define void @loadf64() {
   %buffer = call
       target("dx.CBuffer", target("dx.Layout", {double, double, double, double}, 64, 0, 8, 16, 24))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.CBufRet.f64 @dx.op.cbufferLoadLegacy.f64(i32 59, %dx.types.Handle %{{.*}}, i32 1)
   %load = call {double, double} @llvm.dx.resource.load.cbufferrow.2(
@@ -47,7 +47,7 @@ define void @loadf64() {
 define void @loadf16() {
   %buffer = call
       target("dx.CBuffer", target("dx.Layout", {half}, 2, 0))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.CBufRet.f16.8 @dx.op.cbufferLoadLegacy.f16(i32 59, %dx.types.Handle %{{.*}}, i32 0)
   %load = call {half, half, half, half, half, half, half, half} @llvm.dx.resource.load.cbufferrow.8(

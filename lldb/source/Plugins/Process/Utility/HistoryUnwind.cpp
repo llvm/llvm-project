@@ -24,9 +24,8 @@ using namespace lldb_private;
 // Constructor
 
 HistoryUnwind::HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs,
-                             bool pcs_are_call_addresses)
-    : Unwind(thread), m_pcs(pcs),
-      m_pcs_are_call_addresses(pcs_are_call_addresses) {}
+                             HistoryPCType pc_type)
+    : Unwind(thread), m_pcs(pcs), m_pc_type(pc_type) {}
 
 // Destructor
 
@@ -52,6 +51,17 @@ HistoryUnwind::DoCreateRegisterContextForFrame(StackFrame *frame) {
   return rctx;
 }
 
+static bool BehavesLikeZerothFrame(HistoryPCType pc_type, uint32_t frame_idx) {
+  switch (pc_type) {
+  case HistoryPCType::Returns:
+    return (frame_idx == 0);
+  case HistoryPCType::ReturnsNoZerothFrame:
+    return false;
+  case HistoryPCType::Calls:
+    return true;
+  }
+}
+
 bool HistoryUnwind::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
                                           lldb::addr_t &pc,
                                           bool &behaves_like_zeroth_frame) {
@@ -61,10 +71,7 @@ bool HistoryUnwind::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
   if (frame_idx < m_pcs.size()) {
     cfa = frame_idx;
     pc = m_pcs[frame_idx];
-    if (m_pcs_are_call_addresses)
-      behaves_like_zeroth_frame = true;
-    else
-      behaves_like_zeroth_frame = (frame_idx == 0);
+    behaves_like_zeroth_frame = BehavesLikeZerothFrame(m_pc_type, frame_idx);
     return true;
   }
   return false;

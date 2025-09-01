@@ -176,10 +176,10 @@ iterator_range<typename SFrameParser<E>::fre_iterator>
 SFrameParser<E>::fres(const sframe::FuncDescEntry<E> &FDE, Error &Err) const {
   uint64_t Offset = getFREBase() + FDE.StartFREOff;
   fre_iterator BeforeBegin = make_fallible_itr(
-      FallibleFREIterator(Data, FDE.getFREType(), -1, FDE.NumFREs, Offset),
+      FallibleFREIterator(Data, FDE.Info.getFREType(), -1, FDE.NumFREs, Offset),
       Err);
   fre_iterator End = make_fallible_end(
-      FallibleFREIterator(Data, FDE.getFREType(), FDE.NumFREs, FDE.NumFREs,
+      FallibleFREIterator(Data, FDE.Info.getFREType(), FDE.NumFREs, FDE.NumFREs,
                           /*Offset=*/0));
   return {++BeforeBegin, End};
 }

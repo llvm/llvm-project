@@ -4271,14 +4271,39 @@ TEST(VectorSadTest, sse2_psad_bw) {
 }
 
 TEST(VectorMaddTest, mmx_pmadd_wd) {
-  V4x16 a = {Poisoned<U2>(), 1, 2, 3};
+  V4x16 a = {Poisoned<U2>(0), 1, 2, 3};
   V4x16 b = {100, 101, 102, 103};
   V2x32 c = _mm_madd_pi16(a, b);
+  // Multiply step:
+  //    {Poison * 100, 1 * 101, 2 * 102, 3 * 103}
+  // == {Poison,       1 * 101, 2 * 102, 3 * 103}
+  //    Notice that for the poisoned value, we ignored the concrete zero value.
+  //
+  // Horizontal add step:
+  //    {Poison + 1 * 101, 2 * 102 + 3 * 103}
+  // == {Poison,           2 * 102 + 3 * 103}
 
   EXPECT_POISONED(c[0]);
   EXPECT_NOT_POISONED(c[1]);
 
   EXPECT_EQ((unsigned)(2 * 102 + 3 * 103), c[1]);
+
+  V4x16 d = {Poisoned<U2>(0), 1, 0, 3};
+  V4x16 e = {100, 101, Poisoned<U2>(102), 103};
+  V2x32 f = _mm_madd_pi16(d, e);
+  // Multiply step:
+  //    {Poison * 100, 1 * 101, 0 * Poison, 3 * 103}
+  // == {Poison,       1 * 101, 0         , 3 * 103}
+  //    Notice that 0 * Poison == 0.
+  //
+  // Horizontal add step:
+  //    {Poison + 1 * 101, 0 + 3 * 103}
+  // == {Poison,           3 * 103}
+
+  EXPECT_POISONED(f[0]);
+  EXPECT_NOT_POISONED(f[1]);
+
+  EXPECT_EQ((unsigned)(3 * 103), f[1]);
 }
 
 TEST(VectorCmpTest, mm_cmpneq_ps) {

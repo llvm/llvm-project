@@ -141,6 +141,38 @@ static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
   return success();
 }
 
+static ArrayAttr getLLVMAlignParamForCompressExpand(OpBuilder &builder,
+                                                    bool isExpandLoad,
+                                                    uint64_t alignment = 1) {
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The pointer alignment defaults to 1.
+  if (alignment == 1) {
+    return nullptr;
+  }
+
+  auto emptyDictAttr = builder.getDictionaryAttr({});
+  auto alignmentAttr = builder.getI64IntegerAttr(alignment);
+  auto namedAttr =
+      builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+  SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+  auto alignDictAttr = builder.getDictionaryAttr(attrs);
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The align parameter attribute can be provided for [expandload]'s first
+  //   argument. The align parameter attribute can be provided for
+  //   [compressstore]'s second argument.
+  int pos = isExpandLoad ? 0 : 1;
+  return pos == 0 ? builder.getArrayAttr(
+                        {alignDictAttr, emptyDictAttr, emptyDictAttr})
+                  : builder.getArrayAttr(
+                        {emptyDictAttr, alignDictAttr, emptyDictAttr});
+}
+
 //===----------------------------------------------------------------------===//
 // Operand bundle helpers.
 //===----------------------------------------------------------------------===//
@@ -836,8 +868,9 @@ static bool isTypeCompatibleWithAtomicOp(Type type,
 
 /// Verifies the attributes and the type of atomic memory access operations.
 template <typename OpTy>
-LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
-                                ArrayRef<AtomicOrdering> unsupportedOrderings) {
+static LogicalResult
+verifyAtomicMemOp(OpTy memOp, Type valueType,
+                  ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
     DataLayout dataLayout = DataLayout::closest(memOp);
     if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
@@ -1087,7 +1120,7 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
 /// Verify that the parameter and return types of the variadic callee type match
 /// the `callOp` argument and result types.
 template <typename OpTy>
-LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
   std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
   if (!varCalleeType)
     return success();
@@ -2500,7 +2533,7 @@ LogicalResult GlobalOp::verifyRegions() {
 // LLVM::GlobalCtorsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
+static LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
   if (data.empty())
     return success();
 
@@ -4114,6 +4147,32 @@ LogicalResult LLVM::masked_scatter::verify() {
     return emitOpError("expected operand #2 type to be ")
            << expectedPtrsVectorType;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// masked_expandload (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
+                                    mlir::TypeRange resTys, Value ptr,
+                                    Value mask, Value passthru,
+                                    uint64_t align) {
+  ArrayAttr argAttrs = getLLVMAlignParamForCompressExpand(builder, true, align);
+  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+// masked_compressstore (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_compressstore::build(OpBuilder &builder,
+                                       OperationState &state, Value value,
+                                       Value ptr, Value mask, uint64_t align) {
+  ArrayAttr argAttrs =
+      getLLVMAlignParamForCompressExpand(builder, false, align);
+  build(builder, state, value, ptr, mask, /*arg_attrs=*/argAttrs,
+        /*res_attrs=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//

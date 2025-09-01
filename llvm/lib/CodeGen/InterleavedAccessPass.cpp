@@ -537,28 +537,26 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    APInt GapMask(Factor, 0);
     std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor,
                                       ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
-    // We haven't supported gap mask for stores. Yet it is possible that we
-    // already changed the IR, hence returning true here.
-    if (GapMask.popcount() != Factor)
-      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
                       << *Store << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
 
   // Try to create target specific intrinsics to replace the store and
   // shuffle.
-  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor, GapMask))
     return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
@@ -596,8 +594,26 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
-        F && F == Factor && llvm::all_equal(IMI->args())) {
-      return {IMI->getArgOperand(0), GapMask};
+        F && F == Factor) {
+      Value *RefArg = nullptr;
+      // Check if all the intrinsic arguments are the same, except those that
+      // are zeros, which we mark as gaps in the gap mask.
+      for (auto [Idx, Arg] : enumerate(IMI->args())) {
+        if (auto *C = dyn_cast<Constant>(Arg); C && C->isZeroValue()) {
+          GapMask.clearBit(Idx);
+          continue;
+        }
+
+        if (!RefArg)
+          RefArg = Arg;
+        else if (RefArg != Arg)
+          return {nullptr, GapMask};
+      }
+
+      // In a very rare occasion, all the intrinsic arguments might be zeros,
+      // in which case we still want to return an all-zeros constant instead of
+      // nullptr.
+      return {RefArg ? RefArg : IMI->getArgOperand(0), GapMask};
     }
   }
 

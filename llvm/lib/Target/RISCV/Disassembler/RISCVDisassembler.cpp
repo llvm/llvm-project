@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "riscv-disassembler"
 
@@ -71,6 +73,10 @@ LLVMInitializeRISCVDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheRISCV32Target(),
                                          createRISCVDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheRISCV64Target(),
+                                         createRISCVDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheRISCV32beTarget(),
+                                         createRISCVDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheRISCV64beTarget(),
                                          createRISCVDisassembler);
 }
 
@@ -552,16 +558,6 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
-#include "RISCVGenDisassemblerTables.inc"
-
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
@@ -601,6 +597,8 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
   return S;
 }
+
+#include "RISCVGenDisassemblerTables.inc"
 
 // Add implied SP operand for C.*SP compressed instructions. The SP operand
 // isn't explicitly encoded in the instruction.
@@ -658,6 +656,13 @@ static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecflushdlone,
 };
 
+static constexpr FeatureBitset XMIPSGroup = {
+    RISCV::FeatureVendorXMIPSLSP,
+    RISCV::FeatureVendorXMIPSCMov,
+    RISCV::FeatureVendorXMIPSCBOP,
+    RISCV::FeatureVendorXMIPSEXECTL,
+};
+
 static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadBa,      RISCV::FeatureVendorXTHeadBb,
     RISCV::FeatureVendorXTHeadBs,      RISCV::FeatureVendorXTHeadCondMov,
@@ -672,6 +677,8 @@ static constexpr FeatureBitset XAndesGroup = {
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
@@ -684,14 +691,9 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
-    {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},
-    {DecoderTableXmipscmov32,
-     {RISCV::FeatureVendorXMIPSCMov},
-     "MIPS mips.ccmov"},
-    {DecoderTableXmipscbop32,
-     {RISCV::FeatureVendorXMIPSCBOP},
-     "MIPS mips.pref"},
+    {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
+    {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     // Standard Extensions
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
