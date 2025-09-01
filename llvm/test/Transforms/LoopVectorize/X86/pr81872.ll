@@ -37,16 +37,16 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, [[SCALAR_PH:%.+]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP17:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[LOOP_LATCH]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[LOOP_LATCH]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NEXT:    [[GETELEMENTPTR19:%.*]] = getelementptr inbounds i64, ptr [[ARR]], i64 [[OR]]
@@ -55,7 +55,7 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[ICMP22:%.*]] = icmp eq i64 [[IV_NEXT]], 90
-; CHECK-NEXT:    br i1 [[ICMP22]], label [[BB6]], label [[LOOP_HEADER]], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP22]], label [[BB6]], label [[LOOP_HEADER]], !prof [[PROF6:![0-9]+]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
@@ -94,9 +94,10 @@ attributes #0 = {"target-cpu"="haswell" "target-features"="+avx2" }
 
 
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 1, i32 95}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 23}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 95}
 ;.

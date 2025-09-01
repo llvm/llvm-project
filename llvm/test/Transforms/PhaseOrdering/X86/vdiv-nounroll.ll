@@ -20,9 +20,6 @@ define void @vdiv(ptr %a, float %b) #0 {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -30,22 +27,7 @@ define void @vdiv(ptr %a, float %b) #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[TMP0]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 16
-; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x float>, ptr [[TMP7]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[WIDE_LOAD_1]], [[TMP4]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP7]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
-; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[WIDE_LOAD_2]], [[TMP2]]
-; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP10]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP12]], i64 48
-; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x float>, ptr [[TMP13]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[WIDE_LOAD_3]], [[TMP15]]
-; CHECK-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP13]], align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.cond.cleanup:

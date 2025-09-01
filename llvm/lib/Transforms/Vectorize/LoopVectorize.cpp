@@ -2573,26 +2573,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Remove redundant induction instructions.
   cse(HeaderBB);
 
-  if (!Plan.getScalarPreheader()->hasPredecessors())
-    return;
-
-  // Set/update profile weights for the vector and remainder loops as original
-  // loop iterations are now distributed among them. Note that original loop
-  // becomes the scalar remainder loop after vectorization.
-  //
-  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
-  // end up getting slightly roughened result but that should be OK since
-  // profile is not inherently precise anyway. Note also possible bypass of
-  // vector code caused by legality checks is ignored, assigning all the weight
-  // to the vector loop, optimistically.
-  //
-  // For scalable vectorization we can't know at compile time how many
-  // iterations of the loop are handled in one vector iteration, so instead
-  // use the value of vscale used for tuning.
-  Loop *VectorLoop = LI->getLoopFor(HeaderBB);
-  unsigned EstimatedVFxUF =
-      estimateElementCount(VF * UF, Cost->getVScaleForTuning());
-  setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
@@ -7325,6 +7305,9 @@ MDNode *LID = OrigLoop->getLoopID();
   std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
       LID,
       {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
+  unsigned OrigLoopInvocationWeight = 0;
+  std::optional<unsigned> OrigAverageTripCount =
+      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
 
   BestVPlan.execute(&State);
 
@@ -7394,6 +7377,38 @@ MDNode *LID = OrigLoop->getLoopID();
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
     if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
       addRuntimeUnrollDisableMetaData(L);
+  }
+
+  // Set/update profile weights for the vector and remainder loops as original
+  // loop iterations are now distributed among them. Note that original loop
+  // becomes the scalar remainder loop after vectorization.
+  //
+  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
+  // end up getting slightly roughened result but that should be OK since
+  // profile is not inherently precise anyway. Note also possible bypass of
+  // vector code caused by legality checks is ignored, assigning all the weight
+  // to the vector loop, optimistically.
+  //
+  // For scalable vectorization we can't know at compile time how many
+  // iterations of the loop are handled in one vector iteration, so instead
+  // use the value of vscale used for tuning.
+  if (OrigAverageTripCount) {
+    unsigned EstimatedVFxUF =
+        estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning());
+    // Calculate number of iterations in unrolled loop.
+    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+
+    if (HeaderVPBB) {
+      Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
+      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                                OrigLoopInvocationWeight);
+    }
+    if (BestVPlan.getScalarPreheader()->hasPredecessors()) {
+      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                                OrigLoopInvocationWeight);
+    }
   }
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
