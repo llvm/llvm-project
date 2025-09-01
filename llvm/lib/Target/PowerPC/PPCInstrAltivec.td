@@ -261,6 +261,13 @@ def immEQOneV : PatLeaf<(build_vector), [{
     return C->isOne();
   return false;
 }]>;
+
+def VSRVSRO : PatFrag<(ops node:$input, node:$shift), 
+                      (int_ppc_altivec_vsr 
+                        (int_ppc_altivec_vsro node:$input, node:$shift), 
+                        node:$shift), 
+                      [{ return N->getOperand(1).hasOneUse(); }]>;
+
 //===----------------------------------------------------------------------===//
 // Helpers for defining instructions that directly correspond to intrinsics.
 
