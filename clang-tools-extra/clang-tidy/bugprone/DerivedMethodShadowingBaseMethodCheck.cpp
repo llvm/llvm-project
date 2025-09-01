@@ -44,7 +44,6 @@ bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {
 AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   const CXXRecordDecl *DerivedClass = Node.getParent();
   for (const auto &Base : DerivedClass->bases()) {
-    // SmallVector instead of std::stack, to avoid allications in most cases
     llvm::SmallVector<const CXXBaseSpecifier *, 8> Stack;
     Stack.push_back(&Base);
     while (!Stack.empty()) {
