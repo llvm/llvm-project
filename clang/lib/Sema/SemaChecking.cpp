@@ -286,6 +286,9 @@ static bool BuiltinFunctionStart(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 1))
     return true;
 
+  if (TheCall->getArg(0)->containsErrors())
+    return true;
+
   ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
   if (Arg.isInvalid())
     return true;
@@ -2307,7 +2310,9 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << "__builtin_masked_load" << MaskTy << PointeeTy);
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << PointeeTy);
 
   TheCall->setType(PointeeTy);
   return TheCall;
@@ -2341,7 +2346,9 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
       MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << "__builtin_masked_store" << MaskTy << PointeeTy);
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << PointeeTy);
 
   if (!S.Context.hasSameType(ValTy, PointeeTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
@@ -2607,8 +2614,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // TheCall will be freed by the smart pointer here, but that's fine, since
     // BuiltinShuffleVector guts it, but then doesn't release it.
   case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load:
     return BuiltinMaskedLoad(*this, TheCall);
   case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store:
     return BuiltinMaskedStore(*this, TheCall);
   case Builtin::BI__builtin_invoke:
     return BuiltinInvoke(*this, TheCall);
@@ -15867,6 +15876,54 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
   return false;
 }
 
+/// Check if all arguments have the same type. If the types don't match, emit an
+/// error message and return true. Otherwise return false.
+///
+/// For scalars we directly compare their unqualified types. But even if we
+/// compare unqualified vector types, a difference in qualifiers in the element
+/// types can make the vector types be considered not equal. For example,
+/// vector of 4 'const float' values vs vector of 4 'float' values.
+/// So we compare unqualified types of their elements and number of elements.
+static bool checkBuiltinVectorMathArgTypes(Sema &SemaRef,
+                                           ArrayRef<Expr *> Args) {
+  assert(!Args.empty() && "Should have at least one argument.");
+
+  Expr *Arg0 = Args.front();
+  QualType Ty0 = Arg0->getType();
+
+  auto EmitError = [&](Expr *ArgI) {
+    SemaRef.Diag(Arg0->getBeginLoc(),
+                 diag::err_typecheck_call_different_arg_types)
+        << Arg0->getType() << ArgI->getType();
+  };
+
+  // Compare scalar types.
+  if (!Ty0->isVectorType()) {
+    for (Expr *ArgI : Args.drop_front())
+      if (!SemaRef.Context.hasSameUnqualifiedType(Ty0, ArgI->getType())) {
+        EmitError(ArgI);
+        return true;
+      }
+
+    return false;
+  }
+
+  // Compare vector types.
+  const auto *Vec0 = Ty0->castAs<VectorType>();
+  for (Expr *ArgI : Args.drop_front()) {
+    const auto *VecI = ArgI->getType()->getAs<VectorType>();
+    if (!VecI ||
+        !SemaRef.Context.hasSameUnqualifiedType(Vec0->getElementType(),
+                                                VecI->getElementType()) ||
+        Vec0->getNumElements() != VecI->getNumElements()) {
+      EmitError(ArgI);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 std::optional<QualType>
 Sema::BuiltinVectorMath(CallExpr *TheCall,
                         EltwiseBuiltinArgTyRestriction ArgTyRestr) {
@@ -15888,15 +15945,12 @@ Sema::BuiltinVectorMath(CallExpr *TheCall,
 
   SourceLocation LocA = Args[0]->getBeginLoc();
   QualType TyA = Args[0]->getType();
-  QualType TyB = Args[1]->getType();
 
   if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
     return std::nullopt;
 
-  if (!Context.hasSameUnqualifiedType(TyA, TyB)) {
-    Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
+  if (checkBuiltinVectorMathArgTypes(*this, Args))
     return std::nullopt;
-  }
 
   TheCall->setArg(0, Args[0]);
   TheCall->setArg(1, Args[1]);
@@ -15931,17 +15985,11 @@ bool Sema::BuiltinElementwiseTernaryMath(
       return true;
   }
 
-  TheCall->setArg(0, Args[0]);
-  for (int I = 1; I < 3; ++I) {
-    if (Args[0]->getType().getCanonicalType() !=
-        Args[I]->getType().getCanonicalType()) {
-      return Diag(Args[0]->getBeginLoc(),
-                  diag::err_typecheck_call_different_arg_types)
-             << Args[0]->getType() << Args[I]->getType();
-    }
+  if (checkBuiltinVectorMathArgTypes(*this, Args))
+    return true;
 
+  for (int I = 0; I < 3; ++I)
     TheCall->setArg(I, Args[I]);
-  }
 
   TheCall->setType(Args[0]->getType());
   return false;
