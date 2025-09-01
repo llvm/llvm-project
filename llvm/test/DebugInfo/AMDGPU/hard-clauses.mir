@@ -4,7 +4,7 @@
 # CHECK-LABEL: name: debug_instrs
 # CHECK-LABEL: debugValueSubstitutions:
 # CHECK-NEXT: - { srcinst: 3, srcop: 0, dstinst: 4, dstop: 0, subreg: 0 }
-# CHECK-NEXT: - { srcinst: 2, srcop: 0, dstinst: 4, dstop: 3, subreg: 0 }
+# CHECK-NEXT: - { srcinst: 2, srcop: 0, dstinst: 4, dstop: 1, subreg: 0 }
 
 ---
 name: debug_instrs
@@ -37,7 +37,7 @@ body: |
 
 # CHECK-LABEL: name: only_last_instr
 # CHECK-LABEL: debugValueSubstitutions:
-# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 3, subreg: 0 }
+# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 1, subreg: 0 }
 
 ---
 name: only_last_instr

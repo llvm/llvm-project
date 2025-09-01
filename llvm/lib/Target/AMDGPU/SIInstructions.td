@@ -66,7 +66,7 @@ defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
   //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
 let OtherPredicates = [isNotGFX90APlus] in {
-let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
+let Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
@@ -77,7 +77,7 @@ defm V_INTERP_P2_F32 : VINTRP_m <
   [(set f32:$vdst, (int_amdgcn_interp_p2 f32:$src0, f32:$vsrc,
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
-} // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
+} // End Constraints = "$src0 = $vdst"
 
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,

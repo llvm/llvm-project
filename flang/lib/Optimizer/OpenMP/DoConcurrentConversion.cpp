@@ -18,6 +18,7 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Support/OpenMP-utils.h"
+#include "flang/Utils/OpenMP.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -214,9 +215,11 @@ public:
 
   DoConcurrentConversion(
       mlir::MLIRContext *context, bool mapToDevice,
-      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip)
+      llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip,
+      mlir::SymbolTable &moduleSymbolTable)
       : OpConversionPattern(context), mapToDevice(mapToDevice),
-        concurrentLoopsToSkip(concurrentLoopsToSkip) {}
+        concurrentLoopsToSkip(concurrentLoopsToSkip),
+        moduleSymbolTable(moduleSymbolTable) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DoConcurrentOp doLoop, OpAdaptor adaptor,
@@ -473,8 +476,8 @@ private:
                loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
-        auto localizer = mlir::SymbolTable::lookupNearestSymbolFrom<
-            fir::LocalitySpecifierOp>(loop, sym);
+        auto localizer = moduleSymbolTable.lookup<fir::LocalitySpecifierOp>(
+            sym.getLeafReference());
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit)
           TODO(localizer.getLoc(),
@@ -493,6 +496,8 @@ private:
         cloneFIRRegionToOMP(localizer.getDeallocRegion(),
                             privatizer.getDeallocRegion());
 
+        moduleSymbolTable.insert(privatizer);
+
         wsloopClauseOps.privateVars.push_back(op);
         wsloopClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
@@ -503,28 +508,34 @@ private:
                loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
                loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionReduceArgs())) {
-        auto firReducer =
-            mlir::SymbolTable::lookupNearestSymbolFrom<fir::DeclareReductionOp>(
-                loop, sym);
+        auto firReducer = moduleSymbolTable.lookup<fir::DeclareReductionOp>(
+            sym.getLeafReference());
 
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(firReducer);
+        std::string ompReducerName = sym.getLeafReference().str() + ".omp";
 
-        auto ompReducer = mlir::omp::DeclareReductionOp::create(
-            rewriter, firReducer.getLoc(),
-            sym.getLeafReference().str() + ".omp",
-            firReducer.getTypeAttr().getValue());
+        auto ompReducer =
+            moduleSymbolTable.lookup<mlir::omp::DeclareReductionOp>(
+                rewriter.getStringAttr(ompReducerName));
 
-        cloneFIRRegionToOMP(firReducer.getAllocRegion(),
-                            ompReducer.getAllocRegion());
-        cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
-                            ompReducer.getInitializerRegion());
-        cloneFIRRegionToOMP(firReducer.getReductionRegion(),
-                            ompReducer.getReductionRegion());
-        cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
-                            ompReducer.getAtomicReductionRegion());
-        cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
-                            ompReducer.getCleanupRegion());
+        if (!ompReducer) {
+          ompReducer = mlir::omp::DeclareReductionOp::create(
+              rewriter, firReducer.getLoc(), ompReducerName,
+              firReducer.getTypeAttr().getValue());
+
+          cloneFIRRegionToOMP(firReducer.getAllocRegion(),
+                              ompReducer.getAllocRegion());
+          cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
+                              ompReducer.getInitializerRegion());
+          cloneFIRRegionToOMP(firReducer.getReductionRegion(),
+                              ompReducer.getReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
+                              ompReducer.getAtomicReductionRegion());
+          cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
+                              ompReducer.getCleanupRegion());
+          moduleSymbolTable.insert(ompReducer);
+        }
 
         wsloopClauseOps.reductionVars.push_back(op);
         wsloopClauseOps.reductionByref.push_back(byRef);
@@ -631,7 +642,7 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    return Fortran::common::openmp::createMapInfoOp(
+    return Fortran::utils::openmp::createMapInfoOp(
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
@@ -720,7 +731,7 @@ private:
     // MemoryEffectFree, or else copy them to a new temporary and add them to
     // the map and block_argument lists and replace their uses with the new
     // temporary.
-    Fortran::common::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
+    Fortran::utils::openmp::cloneOrMapRegionOutsiders(builder, targetOp);
     rewriter.setInsertionPoint(
         rewriter.create<mlir::omp::TerminatorOp>(targetOp.getLoc()));
 
@@ -753,11 +764,11 @@ private:
              llvm::zip_equal(targetShapeCreationInfo.startIndices,
                              targetShapeCreationInfo.extents)) {
           shapeShiftOperands.push_back(
-              Fortran::common::openmp::mapTemporaryValue(
+              Fortran::utils::openmp::mapTemporaryValue(
                   builder, targetOp, startIndex,
                   liveInName + ".start_idx.dim" + std::to_string(shapeIdx)));
           shapeShiftOperands.push_back(
-              Fortran::common::openmp::mapTemporaryValue(
+              Fortran::utils::openmp::mapTemporaryValue(
                   builder, targetOp, extent,
                   liveInName + ".extent.dim" + std::to_string(shapeIdx)));
           ++shapeIdx;
@@ -772,7 +783,7 @@ private:
       llvm::SmallVector<mlir::Value> shapeOperands;
       size_t shapeIdx = 0;
       for (auto extent : targetShapeCreationInfo.extents) {
-        shapeOperands.push_back(Fortran::common::openmp::mapTemporaryValue(
+        shapeOperands.push_back(Fortran::utils::openmp::mapTemporaryValue(
             builder, targetOp, extent,
             liveInName + ".extent.dim" + std::to_string(shapeIdx)));
         ++shapeIdx;
@@ -809,6 +820,7 @@ private:
 
   bool mapToDevice;
   llvm::DenseSet<fir::DoConcurrentOp> &concurrentLoopsToSkip;
+  mlir::SymbolTable &moduleSymbolTable;
 };
 
 class DoConcurrentConversionPass
@@ -822,12 +834,9 @@ public:
       : DoConcurrentConversionPassBase(options) {}
 
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-
-    if (func.isDeclaration())
-      return;
-
+    mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *context = &getContext();
+    mlir::SymbolTable moduleSymbolTable(module);
 
     if (mapTo != flangomp::DoConcurrentMappingKind::DCMK_Host &&
         mapTo != flangomp::DoConcurrentMappingKind::DCMK_Device) {
@@ -841,7 +850,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
-        concurrentLoopsToSkip);
+        concurrentLoopsToSkip, moduleSymbolTable);
     mlir::ConversionTarget target(*context);
     target.addDynamicallyLegalOp<fir::DoConcurrentOp>(
         [&](fir::DoConcurrentOp op) {
@@ -850,8 +859,8 @@ public:
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
 
-    if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+    if (mlir::failed(
+            mlir::applyFullConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }
   }

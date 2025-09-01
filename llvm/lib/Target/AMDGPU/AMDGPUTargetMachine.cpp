@@ -585,6 +585,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
+  initializeAMDGPULowerIntrinsicsLegacyPass(*PR);
   initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteAGPRCopyMFMALegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -1058,28 +1059,10 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 std::optional<dwarf::AddressSpace>
 AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
-  using AS = dwarf::AddressSpace;
-
-  static_assert(
-      AMDGPUAS::FLAT_ADDRESS == 0 && AMDGPUAS::GLOBAL_ADDRESS == 1 &&
-          AMDGPUAS::REGION_ADDRESS == 2 && AMDGPUAS::LOCAL_ADDRESS == 3 &&
-          AMDGPUAS::CONSTANT_ADDRESS == 4 && AMDGPUAS::PRIVATE_ADDRESS == 5,
-      "LLVMToDwarfAddrSpaceMapping entries must be in the same order as the "
-      "associated DWARF address-space values.");
-
-  // FIXME: This mapping should likely be driven from tablegen or an ".inc"
-  // header.
-  static const dwarf::AddressSpace LLVMToDWARFAddrSpaceMapping[] = {
-      AS::DW_ASPACE_LLVM_AMDGPU_generic,
-      AS::DW_ASPACE_LLVM_none,
-      AS::DW_ASPACE_LLVM_AMDGPU_region,
-      AS::DW_ASPACE_LLVM_AMDGPU_local,
-      AS::DW_ASPACE_LLVM_none,
-      AS::DW_ASPACE_LLVM_AMDGPU_private_lane};
-
-  if (LLVMAddrSpace < std::size(LLVMToDWARFAddrSpaceMapping))
-    return LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
-  return std::nullopt;
+  int AS = AMDGPU::mapToDWARFAddrSpace(LLVMAddrSpace);
+  if (AS == -1)
+    return std::nullopt;
+  return static_cast<dwarf::AddressSpace>(AS);
 }
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
@@ -1480,6 +1463,7 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // nodes out of the graph, which leads to function-level passes not
     // being run on them, which causes crashes in the resource usage analysis).
     addPass(createAMDGPULowerBufferFatPointersPass());
+    addPass(createAMDGPULowerIntrinsicsLegacyPass());
     // In accordance with the above FIXME, manually force all the
     // function-level passes into a CGSCCPassManager.
     addPass(new DummyCGSCCPass());
@@ -2329,8 +2313,9 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // nodes out of the graph, which leads to function-level passes not
   // being run on them, which causes crashes in the resource usage analysis).
   addPass(AMDGPULowerBufferFatPointersPass(TM));
-
   addPass.requireCGSCCOrder();
+
+  addPass(AMDGPULowerIntrinsicsPass(TM));
 
   Base::addCodeGenPrepare(addPass);
 

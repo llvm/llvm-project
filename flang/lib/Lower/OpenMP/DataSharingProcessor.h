@@ -127,7 +127,8 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps);
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                 std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -182,7 +183,8 @@ public:
   // before the operation is created since the bounds of the MLIR OpenMP
   // operation can be privatised.
   void processStep1();
-  void processStep2(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
+  void processStep2(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+                    std::optional<llvm::omp::Directive> dir = std::nullopt);
   void processStep3(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
@@ -199,7 +201,8 @@ public:
   }
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       mlir::omp::PrivateClauseOps *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps,
+                       std::optional<llvm::omp::Directive> dir = std::nullopt);
 };
 
 } // namespace omp

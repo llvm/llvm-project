@@ -2,6 +2,7 @@
 ; RUN: llc -amdgpu-global-isel-new-legality -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -simplify-mir -stop-after=regbankselect -regbankselect-fast -o - %s | FileCheck %s -check-prefix=GFX7
 ; RUN: llc -amdgpu-global-isel-new-legality -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -simplify-mir -stop-after=regbankselect -regbankselect-greedy -o - %s | FileCheck %s -check-prefix=GFX7
 ; RUN: llc -amdgpu-global-isel-new-legality -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -simplify-mir -stop-after=regbankselect -o - %s | FileCheck %s -check-prefix=GFX12
+; RUN: llc -amdgpu-global-isel-new-legality -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 -simplify-mir -stop-after=regbankselect -o - %s | FileCheck %s -check-prefix=GFX12
 
 ; Natural mapping
 define amdgpu_ps i32 @s_buffer_load_i32(<4 x i32> inreg %rsrc, i32 inreg %soffset) {

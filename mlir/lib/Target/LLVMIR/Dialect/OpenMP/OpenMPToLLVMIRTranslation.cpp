@@ -2714,6 +2714,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     alignment = builder.getInt64(intAttr.getInt());
     assert(ty->isPointerTy() && "Invalid type for aligned variable");
     assert(alignment && "Invalid alignment value");
+
+    // Check if the alignment value is not a power of 2. If so, skip emitting
+    // alignment.
+    if (!intAttr.getValue().isPowerOf2())
+      continue;
+
     auto curInsert = builder.saveIP();
     builder.SetInsertPoint(sourceBlock);
     llvmVal = builder.CreateLoad(ty, llvmVal);
@@ -3661,20 +3667,23 @@ static void collectMapDataFromMapOperands(
               mapOp, mapOp.getMapperIdAttr()));
     else
       mapData.Mappers.push_back(nullptr);
-    bool hasMapDescriptor =
-        (mapData.Types.back() &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
-    mapData.IsAMapping.push_back(!hasMapDescriptor);
+    mapData.IsAMapping.push_back(true);
     mapData.IsAMember.push_back(checkIsAMember(mapVars, mapOp));
   }
 
   auto findMapInfo = [&mapData](llvm::Value *val,
-                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy) {
+                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy,
+                                size_t memberCount) {
     unsigned index = 0;
     bool found = false;
     for (llvm::Value *basePtr : mapData.OriginalValue) {
-      if (basePtr == val && mapData.IsAMapping[index]) {
+      auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[index]);
+      // TODO/FIXME: Currently we define an equivelant mapping as
+      // the same base pointer and an equivelant member count, but
+      // that is a loose definition, we may have to extend to check
+      // for other fields (varPtrPtr/invidiual members being mapped)
+      if (basePtr == val && mapData.IsAMapping[index] &&
+          memberCount == mapOp.getMembers().size()) {
         found = true;
         mapData.Types[index] |=
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
@@ -3695,7 +3704,7 @@ static void collectMapDataFromMapOperands(
       llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
 
       // Check if map info is already present for this entry.
-      if (!findMapInfo(origValue, devInfoTy)) {
+      if (!findMapInfo(origValue, devInfoTy, mapOp.getMembers().size())) {
         mapData.OriginalValue.push_back(origValue);
         mapData.Pointers.push_back(mapData.OriginalValue.back());
         mapData.IsDeclareTarget.push_back(false);
@@ -5896,71 +5905,6 @@ static void updateDebugInfoForDeclareTargetVariables(
   }
 }
 
-static void addAllocasForDeclareTargetFunctionPointerArgs(
-    llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  llvm::Module &M = ompBuilder->M;
-
-  if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
-    return;
-
-  if (Fn->empty())
-    return;
-
-  llvm::IRBuilderBase &builder = ompBuilder->Builder;
-  llvm::OpenMPIRBuilder::InsertPointTy curInsert = builder.saveIP();
-  unsigned int allocaAS = M.getDataLayout().getAllocaAddrSpace();
-  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
-
-  builder.SetInsertPoint(Fn->getEntryBlock().getFirstInsertionPt());
-
-  llvm::Type *PtrTy = builder.getPtrTy(defaultAS);
-  llvm::Type *AllocaPtrTy = builder.getPtrTy(allocaAS);
-  llvm::DIExprBuilder EB(Fn->getContext());
-  EB.append<llvm::DIOp::Arg>(0u, AllocaPtrTy);
-  EB.append<llvm::DIOp::Deref>(PtrTy);
-  EB.append<llvm::DIOp::Deref>(PtrTy);
-  llvm::DIExpression *Expr = EB.intoExpression();
-
-  // flang does not generate allocas for the arguments that are passed by ref.
-  // When the Argument is the location, the quality of the debug information is
-  // poor. The variables are defines on very few addresses and show up as
-  // optimized in most places. One of the reason is the interaction of DI-Op
-  // based ops and regular ones.
-  // Generating alloca seems like the best thing which is done in the loop
-  // below. The users are updated accordingly.
-  for (auto &Arg : Fn->args()) {
-    if (Arg.getType()->isPointerTy()) {
-      llvm::Value *AllocaV =
-          builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
-      llvm::Value *GenericV = allocaAS == defaultAS
-                                  ? AllocaV
-                                  : ompBuilder->Builder.CreateAddrSpaceCast(
-                                        AllocaV, builder.getPtrTy(defaultAS));
-      llvm::StoreInst *Store = builder.CreateStore(&Arg, GenericV);
-      llvm::Value *Load = builder.CreateLoad(Arg.getType(), GenericV);
-      llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
-      llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
-      llvm::findDbgUsers(&Arg, DPUsers);
-      for (auto *DVI : DbgUsers) {
-        DVI->replaceVariableLocationOp(&Arg, AllocaV);
-        DVI->setExpression(Expr);
-      }
-      for (auto *DVR : DPUsers) {
-        DVR->replaceVariableLocationOp(&Arg, AllocaV);
-        DVR->setExpression(Expr);
-      }
-      Arg.replaceUsesWithIf(Load, [&](const llvm::Use &U) -> bool {
-        // We dont want to replace Arg from the store we created above.
-        if (const auto *SI = dyn_cast<llvm::StoreInst>(U.getUser()))
-          return SI != Store;
-        return true;
-      });
-    }
-  }
-  builder.restoreIP(curInsert);
-}
-
 // This function Add DIOp based expressions to the debug records in the
 // declare target functions.
 
@@ -5984,13 +5928,16 @@ static void updateDebugInfoForDeclareTargetFunctions(
     if (DR->getNumVariableLocationOps() != 1u)
       return;
     auto Loc = DR->getVariableLocationOp(0u);
-    if (!isa<llvm::AllocaInst>(Loc->stripPointerCasts()))
-      return;
-    llvm::AllocaInst *AI = cast<llvm::AllocaInst>(Loc->stripPointerCasts());
-    DR->replaceVariableLocationOp(0u, AI);
     llvm::DIExprBuilder EB(Fn->getContext());
-    EB.append<llvm::DIOp::Arg>(0u, AI->getType());
-    EB.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+    if (auto AI = dyn_cast<llvm::AllocaInst>(Loc->stripPointerCasts())) {
+      DR->replaceVariableLocationOp(0u, AI);
+      EB.append<llvm::DIOp::Arg>(0u, AI->getType());
+      EB.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+    } else if (Loc->getType()->isPointerTy()) {
+      EB.append<llvm::DIOp::Arg>(0u, Loc->getType());
+      EB.append<llvm::DIOp::Deref>(Loc->getType());
+    } else
+      EB.append<llvm::DIOp::Arg>(0u, Loc->getType());
     DR->setExpression(EB.intoExpression());
   };
 
@@ -6027,11 +5974,8 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvmFunc->dropAllReferences();
         llvmFunc->eraseFromParent();
-      } else {
-        addAllocasForDeclareTargetFunctionPointerArgs(llvmFunc,
-                                                      moduleTranslation);
+      } else
         updateDebugInfoForDeclareTargetFunctions(llvmFunc, moduleTranslation);
-      }
     }
     return success();
   }

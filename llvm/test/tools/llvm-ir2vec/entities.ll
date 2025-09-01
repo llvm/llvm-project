@@ -1,6 +1,6 @@
 ; RUN: llvm-ir2vec entities | FileCheck %s
 
-CHECK: 93
+CHECK: 84
 CHECK-NEXT: Ret     0
 CHECK-NEXT: Br      1
 CHECK-NEXT: Switch  2
@@ -70,27 +70,18 @@ CHECK-NEXT: InsertValue     65
 CHECK-NEXT: LandingPad      66
 CHECK-NEXT: Freeze  67
 CHECK-NEXT: FloatTy 68
-CHECK-NEXT: FloatTy 69
-CHECK-NEXT: FloatTy 70
-CHECK-NEXT: FloatTy 71
-CHECK-NEXT: FloatTy 72
-CHECK-NEXT: FloatTy 73
-CHECK-NEXT: FloatTy 74
-CHECK-NEXT: VoidTy  75
-CHECK-NEXT: LabelTy 76
-CHECK-NEXT: MetadataTy      77
-CHECK-NEXT: UnknownTy       78
-CHECK-NEXT: TokenTy 79
-CHECK-NEXT: IntegerTy       80
-CHECK-NEXT: FunctionTy      81
-CHECK-NEXT: PointerTy       82
-CHECK-NEXT: StructTy        83
-CHECK-NEXT: ArrayTy 84
-CHECK-NEXT: VectorTy        85
-CHECK-NEXT: VectorTy        86
-CHECK-NEXT: PointerTy       87
-CHECK-NEXT: UnknownTy       88
-CHECK-NEXT: Function        89
-CHECK-NEXT: Pointer 90
-CHECK-NEXT: Constant        91
-CHECK-NEXT: Variable        92
+CHECK-NEXT: VoidTy  69
+CHECK-NEXT: LabelTy 70
+CHECK-NEXT: MetadataTy      71
+CHECK-NEXT: VectorTy        72
+CHECK-NEXT: TokenTy 73
+CHECK-NEXT: IntegerTy       74
+CHECK-NEXT: FunctionTy      75
+CHECK-NEXT: PointerTy       76
+CHECK-NEXT: StructTy        77
+CHECK-NEXT: ArrayTy 78
+CHECK-NEXT: UnknownTy       79
+CHECK-NEXT: Function        80
+CHECK-NEXT: Pointer 81
+CHECK-NEXT: Constant        82
+CHECK-NEXT: Variable        83
