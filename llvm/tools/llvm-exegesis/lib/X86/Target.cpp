@@ -725,7 +725,7 @@ public:
                                          ProcessID);
   }
 
-  enum ReservedRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };
+  enum ArgumentRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };
 
 private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override;
@@ -1166,7 +1166,7 @@ void ExegesisX86Target::generateUpperMunmap(
   // Load in the size of the snippet to RDI from from the argument register.
   GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
                               .addReg(X86::RDI)
-                              .addReg(ReservedRegisters::CodeSize));
+                              .addReg(ArgumentRegisters::CodeSize));
   // Add the length of the snippet (in %RDI) to the current instruction pointer
   // (%R8) to get the address where we should start unmapping at.
   GeneratedCode.push_back(MCInstBuilder(X86::ADD64rr)
@@ -1236,7 +1236,7 @@ void ExegesisX86Target::generateMmapAuxMem(
       loadImmediate(X86::R10, 64, APInt(64, MAP_SHARED | MAP_FIXED_NOREPLACE)));
   GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
                               .addReg(X86::R8)
-                              .addReg(ReservedRegisters::AuxiliaryMemoryFD));
+                              .addReg(ArgumentRegisters::AuxiliaryMemoryFD));
   GeneratedCode.push_back(loadImmediate(X86::R9, 64, APInt(64, 0)));
   generateSyscall(SYS_mmap, GeneratedCode);
 }
@@ -1244,10 +1244,10 @@ void ExegesisX86Target::generateMmapAuxMem(
 void ExegesisX86Target::moveArgumentRegisters(
     std::vector<MCInst> &GeneratedCode) const {
   GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
-                              .addReg(ReservedRegisters::CodeSize)
+                              .addReg(ArgumentRegisters::CodeSize)
                               .addReg(X86::RDI));
   GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
-                              .addReg(ReservedRegisters::AuxiliaryMemoryFD)
+                              .addReg(ArgumentRegisters::AuxiliaryMemoryFD)
                               .addReg(X86::RSI));
 }
 
