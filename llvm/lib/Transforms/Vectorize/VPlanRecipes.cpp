@@ -471,7 +471,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Store:
-  case VPInstruction::ActiveLaneMask:
   case VPInstruction::BranchOnCount:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -481,6 +480,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::WideIVStep:
     return 2;
   case Instruction::Select:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ReductionStartVector:
     return 3;
@@ -620,7 +620,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                Name);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = VectorType::get(Int1Ty, State.VF);
+    auto PredTy = VectorType::get(
+        Int1Ty, State.VF * cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
+                               ->getZExtValue());
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
@@ -1091,7 +1093,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
-    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    unsigned Multiplier =
+        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue();
+    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
