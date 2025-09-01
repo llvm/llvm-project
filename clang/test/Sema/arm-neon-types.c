@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -Wvector-conversion -ffreestanding -verify %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple thumbv7-apple-darwin10 -target-cpu cortex-a8 -fsyntax-only -Wvector-conversion -ffreestanding -verify %s
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
 #ifndef INCLUDE
