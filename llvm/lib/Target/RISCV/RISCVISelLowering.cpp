@@ -16084,6 +16084,13 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                         m_Value(Inserted))))))
     return SDValue();
 
+  KnownBits Known = DAG.computeKnownBits(Inserted);
+
+  // Check if all zero bits in CMask are also zero in Inserted
+  APInt CMaskZeroBits = ~CMask;
+  if (!CMaskZeroBits.isSubsetOf(Known.Zero))
+    return SDValue();
+
   if (N->getValueType(0) != MVT::i32)
     return SDValue();
 

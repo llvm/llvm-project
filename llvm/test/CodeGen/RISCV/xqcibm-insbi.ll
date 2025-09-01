@@ -170,3 +170,24 @@ define i64 @insb_i64(i64 %in1, i64 %in2) {
   %xor2 = xor i64 %xor1, %in1
   ret i64 %xor2
 }
+
+define i8 @tgt2_insb_neg(i8 %x, i8 %y) {
+; RV32I-LABEL: tgt2_insb_neg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a2, a0, -2
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    xor a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32XQCIBM-LABEL: tgt2_insb_neg:
+; RV32XQCIBM:       # %bb.0:
+; RV32XQCIBM-NEXT:    andi a2, a0, -2
+; RV32XQCIBM-NEXT:    xor a0, a0, a1
+; RV32XQCIBM-NEXT:    xor a0, a0, a2
+; RV32XQCIBM-NEXT:    ret
+  %and = and i8 %x, -2
+  %xor1 = xor i8 %and, %y
+  %xor2 = xor i8 %x, %xor1
+  ret i8 %xor2
+}
+
