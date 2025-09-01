@@ -70,7 +70,7 @@ bool isLegalShaderModel(Triple &T) {
   return false;
 }
 
-std::optional<std::string> tryParseProfile(StringRef Profile) {
+std::optional<llvm::Triple> tryParseTriple(StringRef Profile) {
   // [ps|vs|gs|hs|ds|cs|ms|as]_[major]_[minor]
   SmallVector<StringRef, 3> Parts;
   Profile.split(Parts, "_");
@@ -152,8 +152,14 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +
               VersionTuple(Major, Minor).getAsString());
   T.setEnvironment(Kind);
-  if (isLegalShaderModel(T))
-    return T.getTriple();
+
+  return T;
+}
+
+std::optional<std::string> tryParseProfile(StringRef Profile) {
+  std::optional<llvm::Triple> MaybeT = tryParseTriple(Profile);
+  if (MaybeT && isLegalShaderModel(*MaybeT))
+    return MaybeT->getTriple();
   else
     return std::nullopt;
 }
