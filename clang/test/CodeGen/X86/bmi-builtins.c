@@ -22,30 +22,55 @@ unsigned short test_tzcnt_u16(unsigned short __X) {
 // TZCNT: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
   return _tzcnt_u16(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_tzcnt_u16(0x0000) == 16);
+TEST_CONSTEXPR(_tzcnt_u16(0x0001) == 0);
+TEST_CONSTEXPR(_tzcnt_u16(0x0010) == 4);
+#endif
 
 unsigned short test__tzcnt_u16(unsigned short __X) {
 // TZCNT-LABEL: test__tzcnt_u16
 // TZCNT: i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
   return __tzcnt_u16(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__tzcnt_u16(0x0000) == 16);
+TEST_CONSTEXPR(__tzcnt_u16(0x0001) == 0);
+TEST_CONSTEXPR(__tzcnt_u16(0x0010) == 4);
+#endif
 
 unsigned int test__tzcnt_u32(unsigned int __X) {
 // TZCNT-LABEL: test__tzcnt_u32
 // TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
   return __tzcnt_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__tzcnt_u32(0x00000000) == 32);
+TEST_CONSTEXPR(__tzcnt_u32(0x00000001) == 0);
+TEST_CONSTEXPR(__tzcnt_u32(0x00000080) == 7);
+#endif
 
 int test_mm_tzcnt_32(unsigned int __X) {
 // TZCNT-LABEL: test_mm_tzcnt_32
 // TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
   return _mm_tzcnt_32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_mm_tzcnt_32(0x00000000) == 32);
+TEST_CONSTEXPR(_mm_tzcnt_32(0x00000001) == 0);
+TEST_CONSTEXPR(_mm_tzcnt_32(0x00000080) == 7);
+#endif
 
 unsigned int test_tzcnt_u32(unsigned int __X) {
 // TZCNT-LABEL: test_tzcnt_u32
 // TZCNT: i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
   return _tzcnt_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_tzcnt_u32(0x00000000) == 32);
+TEST_CONSTEXPR(_tzcnt_u32(0x00000001) == 0);
+TEST_CONSTEXPR(_tzcnt_u32(0x00000080) == 7);
+#endif
 
 #ifdef __x86_64__
 unsigned long long test__tzcnt_u64(unsigned long long __X) {
@@ -53,18 +78,33 @@ unsigned long long test__tzcnt_u64(unsigned long long __X) {
 // TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return __tzcnt_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__tzcnt_u64(0x0000000000000000ULL) == 64);
+TEST_CONSTEXPR(__tzcnt_u64(0x0000000000000001ULL) == 0);
+TEST_CONSTEXPR(__tzcnt_u64(0x0000000800000000ULL) == 35);
+#endif
 
 long long test_mm_tzcnt_64(unsigned long long __X) {
 // TZCNT-LABEL: test_mm_tzcnt_64
 // TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _mm_tzcnt_64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000000ULL) == 64);
+TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000001ULL) == 0);
+TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000800000000ULL) == 35);
+#endif
 
 unsigned long long test_tzcnt_u64(unsigned long long __X) {
 // TZCNT-LABEL: test_tzcnt_u64
 // TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _tzcnt_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000000ULL) == 64);
+TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000001ULL) == 0);
+TEST_CONSTEXPR(_tzcnt_u64(0x0000000800000000ULL) == 35);
+#endif
 #endif
 
 #if !defined(TEST_TZCNT)
@@ -74,12 +114,20 @@ unsigned int test__andn_u32(unsigned int __X, unsigned int __Y) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return __andn_u32(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98));
+#endif
 
 unsigned int test__bextr_u32(unsigned int __X, unsigned int __Y) {
 // CHECK-LABEL: test__bextr_u32
 // CHECK: i32 @llvm.x86.bmi.bextr.32(i32 %{{.*}}, i32 %{{.*}})
   return __bextr_u32(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__bextr_u32(0x00000000, 0x00000000) == 0x00000000);
+TEST_CONSTEXPR(__bextr_u32(0x000003F0, 0xFFFF1004) == 0x0000003F);
+TEST_CONSTEXPR(__bextr_u32(0x000003F0, 0xFFFF3008) == 0x00000003);
+#endif
 
 unsigned int test__blsi_u32(unsigned int __X) {
 // CHECK-LABEL: test__blsi_u32
@@ -87,6 +135,9 @@ unsigned int test__blsi_u32(unsigned int __X) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return __blsi_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF));
+#endif
 
 unsigned int test__blsmsk_u32(unsigned int __X) {
 // CHECK-LABEL: test__blsmsk_u32
@@ -94,6 +145,9 @@ unsigned int test__blsmsk_u32(unsigned int __X) {
 // CHECK: xor i32 %{{.*}}, %{{.*}}
   return __blsmsk_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)));
+#endif
 
 unsigned int test__blsr_u32(unsigned int __X) {
 // CHECK-LABEL: test__blsr_u32
@@ -101,6 +155,9 @@ unsigned int test__blsr_u32(unsigned int __X) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return __blsr_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)));
+#endif
 
 #ifdef __x86_64__
 unsigned long long test__andn_u64(unsigned long __X, unsigned long __Y) {
@@ -109,12 +166,20 @@ unsigned long long test__andn_u64(unsigned long __X, unsigned long __Y) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return __andn_u64(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL));
+#endif
 
 unsigned long long test__bextr_u64(unsigned long __X, unsigned long __Y) {
 // CHECK-LABEL: test__bextr_u64
 // CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return __bextr_u64(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
+TEST_CONSTEXPR(__bextr_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL);
+TEST_CONSTEXPR(__bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL);
+#endif
 
 unsigned long long test__blsi_u64(unsigned long long __X) {
 // CHECK-LABEL: test__blsi_u64
@@ -122,6 +187,9 @@ unsigned long long test__blsi_u64(unsigned long long __X) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return __blsi_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL));
+#endif
 
 unsigned long long test__blsmsk_u64(unsigned long long __X) {
 // CHECK-LABEL: test__blsmsk_u64
@@ -129,6 +197,9 @@ unsigned long long test__blsmsk_u64(unsigned long long __X) {
 // CHECK: xor i64 %{{.*}}, %{{.*}}
   return __blsmsk_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)));
+#endif
 
 unsigned long long test__blsr_u64(unsigned long long __X) {
 // CHECK-LABEL: test__blsr_u64
@@ -136,6 +207,9 @@ unsigned long long test__blsr_u64(unsigned long long __X) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return __blsr_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(__blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
+#endif
 #endif
 
 // Intel intrinsics
@@ -146,6 +220,9 @@ unsigned int test_andn_u32(unsigned int __X, unsigned int __Y) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return _andn_u32(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98));
+#endif
 
 unsigned int test_bextr_u32(unsigned int __X, unsigned int __Y,
                             unsigned int __Z) {
@@ -157,12 +234,22 @@ unsigned int test_bextr_u32(unsigned int __X, unsigned int __Y,
 // CHECK: i32 @llvm.x86.bmi.bextr.32(i32 %{{.*}}, i32 %{{.*}})
   return _bextr_u32(__X, __Y, __Z);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_bextr_u32(0x00000000, 0x00000000, 0x00000000) == 0x00000000);
+TEST_CONSTEXPR(_bextr_u32(0x000003F0, 0xFFFFFF04, 0xFFFFFF10) == 0x0000003F);
+TEST_CONSTEXPR(_bextr_u32(0x000003F0, 0xFFFFFF08, 0xFFFFFF30) == 0x00000003);
+#endif
 
 unsigned int test_bextr2_u32(unsigned int __X, unsigned int __Y) {
 // CHECK-LABEL: test_bextr2_u32
 // CHECK: i32 @llvm.x86.bmi.bextr.32(i32 %{{.*}}, i32 %{{.*}})
   return _bextr2_u32(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_bextr2_u32(0x00000000, 0x00000000) == 0x00000000);
+TEST_CONSTEXPR(_bextr2_u32(0x000003F0, 0xFFFF1004) == 0x0000003F);
+TEST_CONSTEXPR(_bextr2_u32(0x000003F0, 0xFFFF3008) == 0x00000003);
+#endif
 
 unsigned int test_blsi_u32(unsigned int __X) {
 // CHECK-LABEL: test_blsi_u32
@@ -170,6 +257,9 @@ unsigned int test_blsi_u32(unsigned int __X) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return _blsi_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF));
+#endif
 
 unsigned int test_blsmsk_u32(unsigned int __X) {
 // CHECK-LABEL: test_blsmsk_u32
@@ -177,6 +267,9 @@ unsigned int test_blsmsk_u32(unsigned int __X) {
 // CHECK: xor i32 %{{.*}}, %{{.*}}
   return _blsmsk_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)));
+#endif
 
 unsigned int test_blsr_u32(unsigned int __X) {
 // CHECK-LABEL: test_blsr_u32
@@ -184,6 +277,9 @@ unsigned int test_blsr_u32(unsigned int __X) {
 // CHECK: and i32 %{{.*}}, %{{.*}}
   return _blsr_u32(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)));
+#endif
 
 #ifdef __x86_64__
 unsigned long long test_andn_u64(unsigned long __X, unsigned long __Y) {
@@ -192,6 +288,9 @@ unsigned long long test_andn_u64(unsigned long __X, unsigned long __Y) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return _andn_u64(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL));
+#endif
 
 unsigned long long test_bextr_u64(unsigned long __X, unsigned int __Y,
                                   unsigned int __Z) {
@@ -204,6 +303,11 @@ unsigned long long test_bextr_u64(unsigned long __X, unsigned int __Y,
 // CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return _bextr_u64(__X, __Y, __Z);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
+TEST_CONSTEXPR(_bextr_u64(0xF000000000000001ULL, 0x0000000000000001ULL, 0x0000000000000040ULL) == 0x7800000000000000ULL);
+TEST_CONSTEXPR(_bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFFFF01ULL, 0xFFFFFFFFFFFFFF10ULL) == 0x0000000000000000ULL);
+#endif
 
 unsigned long long test_bextr2_u64(unsigned long long __X,
                                    unsigned long long __Y) {
@@ -211,6 +315,11 @@ unsigned long long test_bextr2_u64(unsigned long long __X,
 // CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return _bextr2_u64(__X, __Y);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_bextr2_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
+TEST_CONSTEXPR(_bextr2_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL);
+TEST_CONSTEXPR(_bextr2_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL);
+#endif
 
 unsigned long long test_blsi_u64(unsigned long long __X) {
 // CHECK-LABEL: test_blsi_u64
@@ -218,6 +327,9 @@ unsigned long long test_blsi_u64(unsigned long long __X) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return _blsi_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL));
+#endif
 
 unsigned long long test_blsmsk_u64(unsigned long long __X) {
 // CHECK-LABEL: test_blsmsk_u64
@@ -225,6 +337,9 @@ unsigned long long test_blsmsk_u64(unsigned long long __X) {
 // CHECK: xor i64 %{{.*}}, %{{.*}}
   return _blsmsk_u64(__X);
 }
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+TEST_CONSTEXPR(_blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)));
+#endif
 
 unsigned long long test_blsr_u64(unsigned long long __X) {
 // CHECK-LABEL: test_blsr_u64
@@ -232,91 +347,7 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
 // CHECK: and i64 %{{.*}}, %{{.*}}
   return _blsr_u64(__X);
 }
-#endif
-
-#endif // !defined(TEST_TZCNT)
-
-// Test constexpr handling.
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-TEST_CONSTEXPR(__andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98));
-TEST_CONSTEXPR(_andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98));
-
-TEST_CONSTEXPR(__bextr_u32(0x00000000, 0x00000000) == 0x00000000);
-TEST_CONSTEXPR(__bextr_u32(0x000003F0, 0xFFFF1004) == 0x0000003F);
-TEST_CONSTEXPR(__bextr_u32(0x000003F0, 0xFFFF3008) == 0x00000003);
-
-TEST_CONSTEXPR(_bextr2_u32(0x00000000, 0x00000000) == 0x00000000);
-TEST_CONSTEXPR(_bextr2_u32(0x000003F0, 0xFFFF1004) == 0x0000003F);
-TEST_CONSTEXPR(_bextr2_u32(0x000003F0, 0xFFFF3008) == 0x00000003);
-
-TEST_CONSTEXPR(_bextr_u32(0x00000000, 0x00000000, 0x00000000) == 0x00000000);
-TEST_CONSTEXPR(_bextr_u32(0x000003F0, 0xFFFFFF04, 0xFFFFFF10) == 0x0000003F);
-TEST_CONSTEXPR(_bextr_u32(0x000003F0, 0xFFFFFF08, 0xFFFFFF30) == 0x00000003);
-
-TEST_CONSTEXPR(__blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF));
-TEST_CONSTEXPR(_blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF));
-
-TEST_CONSTEXPR(__blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)));
-TEST_CONSTEXPR(_blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)));
-
-TEST_CONSTEXPR(__blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)));
-TEST_CONSTEXPR(_blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)));
-
-TEST_CONSTEXPR(__tzcnt_u16(0x0000) == 16);
-TEST_CONSTEXPR(__tzcnt_u16(0x0001) == 0);
-TEST_CONSTEXPR(__tzcnt_u16(0x0010) == 4);
-
-TEST_CONSTEXPR(_tzcnt_u16(0x0000) == 16);
-TEST_CONSTEXPR(_tzcnt_u16(0x0001) == 0);
-TEST_CONSTEXPR(_tzcnt_u16(0x0010) == 4);
-
-TEST_CONSTEXPR(__tzcnt_u32(0x00000000) == 32);
-TEST_CONSTEXPR(__tzcnt_u32(0x00000001) == 0);
-TEST_CONSTEXPR(__tzcnt_u32(0x00000080) == 7);
-
-TEST_CONSTEXPR(_tzcnt_u32(0x00000000) == 32);
-TEST_CONSTEXPR(_tzcnt_u32(0x00000001) == 0);
-TEST_CONSTEXPR(_tzcnt_u32(0x00000080) == 7);
-
-TEST_CONSTEXPR(_mm_tzcnt_32(0x00000000) == 32);
-TEST_CONSTEXPR(_mm_tzcnt_32(0x00000001) == 0);
-TEST_CONSTEXPR(_mm_tzcnt_32(0x00000080) == 7);
-
-#ifdef __x86_64__
-TEST_CONSTEXPR(__andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL));
-TEST_CONSTEXPR(_andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL));
-
-TEST_CONSTEXPR(__bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
-TEST_CONSTEXPR(__bextr_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL);
-TEST_CONSTEXPR(__bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL);
-
-TEST_CONSTEXPR(_bextr2_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
-TEST_CONSTEXPR(_bextr2_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL);
-TEST_CONSTEXPR(_bextr2_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL);
-
-TEST_CONSTEXPR(_bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL);
-TEST_CONSTEXPR(_bextr_u64(0xF000000000000001ULL, 0x0000000000000001ULL, 0x0000000000000040ULL) == 0x7800000000000000ULL);
-TEST_CONSTEXPR(_bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFFFF01ULL, 0xFFFFFFFFFFFFFF10ULL) == 0x0000000000000000ULL);
-
-TEST_CONSTEXPR(__blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL));
-TEST_CONSTEXPR(_blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL));
-
-TEST_CONSTEXPR(__blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)));
-TEST_CONSTEXPR(_blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)));
-
-TEST_CONSTEXPR(__blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
 TEST_CONSTEXPR(_blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
-
-TEST_CONSTEXPR(__tzcnt_u64(0x0000000000000000ULL) == 64);
-TEST_CONSTEXPR(__tzcnt_u64(0x0000000000000001ULL) == 0);
-TEST_CONSTEXPR(__tzcnt_u64(0x0000000800000000ULL) == 35);
-
-TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000000ULL) == 64);
-TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000001ULL) == 0);
-TEST_CONSTEXPR(_tzcnt_u64(0x0000000800000000ULL) == 35);
-
-TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000000ULL) == 64);
-TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000001ULL) == 0);
-TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000800000000ULL) == 35);
 #endif
-#endif
+#endif // !defined(TEST_TZCNT)
