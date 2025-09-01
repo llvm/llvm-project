@@ -698,11 +698,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         # Breakpoints can only have been triggered if we've hit one.
         stop_reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
         if stop_reason != StopReason.BREAKPOINT:
-            return []
+            return set()
         breakpoint_ids = set(
             [
                 dex_id
                 for dap_id in self._debugger_state.stopped_bps
+                if dap_id in self.dap_id_to_dex_ids
                 for dex_id in self.dap_id_to_dex_ids[dap_id]
             ]
         )
