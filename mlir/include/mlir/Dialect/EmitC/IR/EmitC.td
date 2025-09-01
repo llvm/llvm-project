@@ -43,7 +43,8 @@ class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getOperand().getType());
     }
   }];
 }
@@ -57,7 +58,9 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If both operands are fundamental types, the operation is pure.
+      return !isFundamentalType(getOperand(0).getType()) ||
+        !isFundamentalType(getOperand(1).getType());
     }
   }];
 }
@@ -1051,6 +1054,8 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+    %1 = "emitc.member" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1058,7 +1063,7 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
@@ -1073,6 +1078,9 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.lvalue<i32>
+    %1 = "emitc.member_of_ptr" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
+        -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1080,7 +1088,7 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
