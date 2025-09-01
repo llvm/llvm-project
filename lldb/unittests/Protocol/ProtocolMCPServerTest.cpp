@@ -5,10 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#ifndef _WIN32 // DISABLE TEST ON WINDOWS
 #include "ProtocolMCPTestUtilities.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/Host/PipeTestUtilities.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
+#include "Plugins/Protocol/MCP/MCPError.h"
+#include "Plugins/Protocol/MCP/ProtocolServerMCP.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -302,3 +306,4 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   EXPECT_THAT_ERROR(Run(), Succeeded());
   EXPECT_TRUE(handler_called);
 }
+#endif // DISABLE TEST ON WINDOWS

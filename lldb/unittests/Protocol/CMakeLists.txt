@@ -7,4 +7,4 @@ add_lldb_unittest(ProtocolTests
     lldbProtocolMCP
     lldbUtility
     LLVMTestingSupport
-  )
+)
