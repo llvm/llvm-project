@@ -54,31 +54,31 @@ let Predicates = [IsISAFuture] in {
 let Predicates = [HasVSX, IsISAFuture] in {
   let mayLoad = 1 in {
     def LXVRL
-        : XX1Form_memOp<31, 525, (outs vsrc:$XT), (ins memr:$RA, g8rc:$RB),
-                        "lxvrl $XT, $RA, $RB", IIC_LdStLoad, []>;
+        : XX1Form_memOp<31, 525, (outs vsrc:$XT), (ins (memr $RA):$addr, g8rc:$RB),
+                        "lxvrl $XT, $addr, $RB", IIC_LdStLoad, []>;
     def LXVRLL
-        : XX1Form_memOp<31, 557, (outs vsrc:$XT), (ins memr:$RA, g8rc:$RB),
-                        "lxvrll $XT, $RA, $RB", IIC_LdStLoad, []>;
+        : XX1Form_memOp<31, 557, (outs vsrc:$XT), (ins (memr $RA):$addr, g8rc:$RB),
+                        "lxvrll $XT, $addr, $RB", IIC_LdStLoad, []>;
     def LXVPRL
-        : XForm_XTp5_XAB5<31, 589, (outs vsrprc:$XTp), (ins memr:$RA, g8rc:$RB),
-                          "lxvprl $XTp, $RA, $RB", IIC_LdStLFD, []>;
+        : XForm_XTp5_XAB5<31, 589, (outs vsrprc:$XTp), (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvprl $XTp, $addr, $RB", IIC_LdStLFD, []>;
     def LXVPRLL
-        : XForm_XTp5_XAB5<31, 621, (outs vsrprc:$XTp), (ins memr:$RA, g8rc:$RB),
-                          "lxvprll $XTp, $RA, $RB", IIC_LdStLFD, []>;
+        : XForm_XTp5_XAB5<31, 621, (outs vsrprc:$XTp), (ins (memr $RA):$addr, g8rc:$RB),
+                          "lxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 
   let mayStore = 1 in {
     def STXVRL
-        : XX1Form_memOp<31, 653, (outs), (ins vsrc:$XT, memr:$RA, g8rc:$RB),
-                        "stxvrl $XT, $RA, $RB", IIC_LdStLoad, []>;
+        : XX1Form_memOp<31, 653, (outs), (ins vsrc:$XT, (memr $RA):$addr, g8rc:$RB),
+                        "stxvrl $XT, $addr, $RB", IIC_LdStLoad, []>;
     def STXVRLL
-        : XX1Form_memOp<31, 685, (outs), (ins vsrc:$XT, memr:$RA, g8rc:$RB),
-                        "stxvrll $XT, $RA, $RB", IIC_LdStLoad, []>;
+        : XX1Form_memOp<31, 685, (outs), (ins vsrc:$XT, (memr $RA):$addr, g8rc:$RB),
+                        "stxvrll $XT, $addr, $RB", IIC_LdStLoad, []>;
     def STXVPRL : XForm_XTp5_XAB5<31, 717, (outs),
-                                  (ins vsrprc:$XTp, memr:$RA, g8rc:$RB),
-                                  "stxvprl $XTp, $RA, $RB", IIC_LdStLFD, []>;
+                                  (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                                  "stxvprl $XTp, $addr, $RB", IIC_LdStLFD, []>;
     def STXVPRLL : XForm_XTp5_XAB5<31, 749, (outs),
-                                   (ins vsrprc:$XTp, memr:$RA, g8rc:$RB),
-                                   "stxvprll $XTp, $RA, $RB", IIC_LdStLFD, []>;
+                                   (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
+                                   "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
 }
