@@ -2625,10 +2625,9 @@ public:
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);
 
-      if (SizeReg != getNoRegister() && WrittenRegs.anyCommon(SizeRegAliases)) {
-        if (auto ExtractedSize = extractMoveImmediate(Inst, SizeReg))
-          return *ExtractedSize;
-      }
+      if (SizeReg != getNoRegister() && WrittenRegs.anyCommon(SizeRegAliases);
+          auto ExtractedSize = extractMoveImmediate(Inst, SizeReg))
+        return *ExtractedSize;
     }
     return std::nullopt;
   }
