@@ -131,6 +131,12 @@ bool mlir::emitc::isPointerWideType(Type type) {
       type);
 }
 
+bool mlir::emitc::isFundamentalType(Type type) {
+  return llvm::isa<IndexType>(type) || isPointerWideType(type) ||
+         isSupportedIntegerType(type) || isSupportedFloatType(type) ||
+         isa<emitc::PointerType>(type);
+}
+
 /// Check that the type of the initial value is compatible with the operations
 /// result type.
 static LogicalResult verifyInitializationAttribute(Operation *op,

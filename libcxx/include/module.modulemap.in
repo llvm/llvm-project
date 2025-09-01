@@ -335,6 +335,7 @@ module std_core [system] {
       header "__type_traits/is_union.h"
       export std_core.type_traits.integral_constant
     }
+    module is_unqualified { header "__type_traits/is_unqualified.h" }
     module is_unsigned {
       header "__type_traits/is_unsigned.h"
       export std_core.type_traits.integral_constant
