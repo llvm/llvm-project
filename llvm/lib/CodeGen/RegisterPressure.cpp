@@ -354,7 +354,7 @@ void RegPressureTracker::closeRegion() {
 /// can never drop below this pressure.
 void RegPressureTracker::initLiveThru(const RegPressureTracker &RPTracker) {
   LiveThruPressure.assign(TRI->getNumRegPressureSets(), 0);
-  assert(isBottomClosed() && "need bottom-up tracking to intialize.");
+  assert(isBottomClosed() && "need bottom-up tracking to initialize.");
   for (const VRegMaskOrUnit &Pair : P.LiveOutRegs) {
     Register RegUnit = Pair.RegUnit;
     if (RegUnit.isVirtual() && !RPTracker.hasUntiedDef(RegUnit))

@@ -184,7 +184,7 @@ class CtorDelegationTest1 {
 public:
   CtorDelegationTest1(int)
       : a(9) {
-    // leaves 'b' unintialized, but we'll never check this function
+    // leaves 'b' uninitialized, but we'll never check this function
   }
 
   CtorDelegationTest1()
@@ -205,7 +205,7 @@ class CtorDelegationTest2 {
 public:
   CtorDelegationTest2(int)
       : b(11) {
-    // leaves 'a' unintialized, but we'll never check this function
+    // leaves 'a' uninitialized, but we'll never check this function
   }
 
   CtorDelegationTest2()
