@@ -26,6 +26,65 @@
 
 using namespace llvm;
 
+static bool tryFoldBinaryFMul(BinaryOperator *BI, Value *MulOperand,
+                              Value *OtherOperand, bool IsFirstOperand,
+                              bool IsFSub) {
+  auto *FMul = dyn_cast<BinaryOperator>(MulOperand);
+  if (!FMul || FMul->getOpcode() != Instruction::FMul || !FMul->hasOneUse() ||
+      !FMul->hasAllowContract())
+    return false;
+
+  LLVM_DEBUG({
+    const char *OpName = IsFSub ? "FSub" : "FAdd";
+    dbgs() << "Found " << OpName << " with FMul (single use) as "
+           << (IsFirstOperand ? "first" : "second") << " operand: " << *BI
+           << "\n";
+  });
+
+  Value *MulOp0 = FMul->getOperand(0);
+  Value *MulOp1 = FMul->getOperand(1);
+  IRBuilder<> Builder(BI);
+  Value *FMA = nullptr;
+
+  if (!IsFSub) {
+    // fadd(fmul(a, b), c) => fma(a, b, c)
+    // fadd(c, fmul(a, b)) => fma(a, b, c)
+    FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
+                                  {MulOp0, MulOp1, OtherOperand});
+  } else {
+    if (IsFirstOperand) {
+      // fsub(fmul(a, b), c) => fma(a, b, fneg(c))
+      Value *NegOtherOp =
+          Builder.CreateFNegFMF(OtherOperand, BI->getFastMathFlags());
+      FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
+                                    {MulOp0, MulOp1, NegOtherOp});
+    } else {
+      // fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
+      Value *NegMulOp0 =
+          Builder.CreateFNegFMF(MulOp0, FMul->getFastMathFlags());
+      FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
+                                    {NegMulOp0, MulOp1, OtherOperand});
+    }
+  }
+
+  // Combine fast-math flags from the original instructions
+  auto *FMAInst = cast<Instruction>(FMA);
+  FastMathFlags BinaryFMF = BI->getFastMathFlags();
+  FastMathFlags FMulFMF = FMul->getFastMathFlags();
+  FastMathFlags NewFMF = FastMathFlags::intersectRewrite(BinaryFMF, FMulFMF) |
+                         FastMathFlags::unionValue(BinaryFMF, FMulFMF);
+  FMAInst->setFastMathFlags(NewFMF);
+
+  LLVM_DEBUG({
+    const char *OpName = IsFSub ? "FSub" : "FAdd";
+    dbgs() << "Replacing " << OpName << " with FMA: " << *FMA << "\n";
+  });
+  BI->replaceAllUsesWith(FMA);
+  BI->eraseFromParent();
+  FMul->eraseFromParent();
+  return true;
+}
+
 static bool foldFMA(Function &F) {
   bool Changed = false;
   SmallVector<BinaryOperator *, 16> FAddFSubInsts;
@@ -49,66 +108,6 @@ static bool foldFMA(Function &F) {
       FAddFSubInsts.push_back(BI);
     }
   }
-
-  auto tryFoldBinaryFMul = [](BinaryOperator *BI, Value *MulOperand,
-                              Value *OtherOperand, bool IsFirstOperand,
-                              bool IsFSub) -> bool {
-    auto *FMul = dyn_cast<BinaryOperator>(MulOperand);
-    if (!FMul || FMul->getOpcode() != Instruction::FMul || !FMul->hasOneUse() ||
-        !FMul->hasAllowContract())
-      return false;
-
-    LLVM_DEBUG({
-      const char *OpName = IsFSub ? "FSub" : "FAdd";
-      dbgs() << "Found " << OpName << " with FMul (single use) as "
-             << (IsFirstOperand ? "first" : "second") << " operand: " << *BI
-             << "\n";
-    });
-
-    Value *MulOp0 = FMul->getOperand(0);
-    Value *MulOp1 = FMul->getOperand(1);
-    IRBuilder<> Builder(BI);
-    Value *FMA = nullptr;
-
-    if (!IsFSub) {
-      // fadd(fmul(a, b), c) => fma(a, b, c)
-      // fadd(c, fmul(a, b)) => fma(a, b, c)
-      FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
-                                    {MulOp0, MulOp1, OtherOperand});
-    } else {
-      if (IsFirstOperand) {
-        // fsub(fmul(a, b), c) => fma(a, b, fneg(c))
-        Value *NegOtherOp = Builder.CreateFNeg(OtherOperand);
-        cast<Instruction>(NegOtherOp)->setFastMathFlags(BI->getFastMathFlags());
-        FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
-                                      {MulOp0, MulOp1, NegOtherOp});
-      } else {
-        // fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
-        Value *NegMulOp0 = Builder.CreateFNeg(MulOp0);
-        cast<Instruction>(NegMulOp0)->setFastMathFlags(
-            FMul->getFastMathFlags());
-        FMA = Builder.CreateIntrinsic(Intrinsic::fma, {BI->getType()},
-                                      {NegMulOp0, MulOp1, OtherOperand});
-      }
-    }
-
-    // Combine fast-math flags from the original instructions
-    auto *FMAInst = cast<Instruction>(FMA);
-    FastMathFlags BinaryFMF = BI->getFastMathFlags();
-    FastMathFlags FMulFMF = FMul->getFastMathFlags();
-    FastMathFlags NewFMF = FastMathFlags::intersectRewrite(BinaryFMF, FMulFMF) |
-                           FastMathFlags::unionValue(BinaryFMF, FMulFMF);
-    FMAInst->setFastMathFlags(NewFMF);
-
-    LLVM_DEBUG({
-      const char *OpName = IsFSub ? "FSub" : "FAdd";
-      dbgs() << "Replacing " << OpName << " with FMA: " << *FMA << "\n";
-    });
-    BI->replaceAllUsesWith(FMA);
-    BI->eraseFromParent();
-    FMul->eraseFromParent();
-    return true;
-  };
 
   for (auto *BI : FAddFSubInsts) {
     Value *Op0 = BI->getOperand(0);
@@ -142,5 +141,10 @@ FunctionPass *llvm::createNVPTXFoldFMAPass() { return new NVPTXFoldFMA(); }
 
 PreservedAnalyses NVPTXFoldFMAPass::run(Function &F,
                                         FunctionAnalysisManager &) {
-  return foldFMA(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!foldFMA(F))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
