@@ -1037,7 +1037,7 @@ public:
   /// no changes occurred in the meantime.
   LLVM_ABI bool
   canSplitCriticalEdge(const MachineBasicBlock *Succ,
-                       const SplitCriticalEdgeAnalyses &Analyses = {}) const;
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }

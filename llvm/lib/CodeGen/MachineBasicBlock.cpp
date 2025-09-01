@@ -1160,7 +1160,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
     std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
-  if (!canSplitCriticalEdge(Succ, Analyses))
+  if (!canSplitCriticalEdge(Succ, Analyses.MLI))
     return nullptr;
 
   MachineFunction *MF = getParent();
@@ -1388,9 +1388,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   return NMBB;
 }
 
-bool MachineBasicBlock::canSplitCriticalEdge(
-    const MachineBasicBlock *Succ,
-    const SplitCriticalEdgeAnalyses &Analyses) const {
+bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                                             const MachineLoopInfo *MLI) const {
   // Splitting the critical edge to a landing pad block is non-trivial. Don't do
   // it in this generic function.
   if (Succ->isEHPad())
@@ -1407,7 +1406,7 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   // However, if `Succ` is a loop header, splitting the critical edge will not
   // break structured CFG.
   auto SuccIsLoopHeader = [&]() {
-    if (MachineLoopInfo *MLI = Analyses.MLI)
+    if (MLI)
       if (MachineLoop *L = MLI->getLoopFor(Succ); L && L->getHeader() == Succ)
         return true;
     return false;
