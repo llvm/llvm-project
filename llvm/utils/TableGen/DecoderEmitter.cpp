@@ -2485,7 +2485,7 @@ namespace {
 // it an invalid type for use as `InsnType` when instantiating the decoder.
 // Individual targets are expected to provide specializations for these based
 // on their usage.
-template <typename T> static constexpr uint32_t InsnBitWidth = 0;
+template <typename T> constexpr uint32_t InsnBitWidth = 0;
 
 )";
 
