@@ -769,11 +769,6 @@ private:
     std::fill(Bits.begin() + NumWords - Count, Bits.begin() + NumWords, 0);
   }
 
-  int next_unset_in_word(int WordIndex, BitWord Word) const {
-    unsigned Result = WordIndex * BITWORD_SIZE + llvm::countr_one(Word);
-    return Result < size() ? Result : -1;
-  }
-
   unsigned NumBitWords(unsigned S) const {
     return (S + BITWORD_SIZE-1) / BITWORD_SIZE;
   }
