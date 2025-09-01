@@ -1402,6 +1402,24 @@ LogicalResult NVVM::PrefetchOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
+  switch (getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    if (!getType().isInteger(1))
+      return emitOpError("is_canceled query type returns an i1");
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    if (!getType().isInteger(32)) {
+      return emitOpError("get_first_cta_id_x, get_first_cta_id_y, "
+                         "get_first_cta_id_z query types return an i32");
+    }
+    break;
+  }
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -2086,6 +2104,51 @@ bool NVVM::InlinePtxOp::getAsmValues(
   if (getPredicate())
     asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
   return false; // No manual mapping needed
+}
+
+NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlTryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  args.push_back(mt.lookupValue(curOp.getMbar()));
+
+  return curOp.getMulticast()
+             ? NVVM::IDArgPair(
+                   {llvm::Intrinsic::
+                        nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared,
+                    args})
+             : NVVM::IDArgPair(
+                   {llvm::Intrinsic::
+                        nvvm_clusterlaunchcontrol_try_cancel_async_shared,
+                    args});
+}
+
+NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlQueryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getTryCancelResponse()));
+
+  switch (curOp.getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    return {llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled,
+            args};
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+    return {llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x,
+            args};
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+    return {llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y,
+            args};
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    return {llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z,
+            args};
+  default:
+    llvm_unreachable("Invalid query type");
+  }
 }
 
 //===----------------------------------------------------------------------===//
