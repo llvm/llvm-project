@@ -52,8 +52,9 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
 }
 
 /// This is to create optimal 3-variable boolean logic from truth tables.
-/// currently it supports the cases pertaining to the issue 97044. More cases
-/// can be added based on real-world justification for specific 3 input cases.
+/// Currently it supports the cases for canonicalizing to the form ~((Op1 | Op2)
+/// ^ Op0). More cases can be systematically added based on real-world
+/// justification for specific 3 input cases.
 static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
                                        Value *Op1, Value *Op2, Value *Root,
                                        IRBuilderBase &Builder) {
@@ -95,6 +96,12 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
   return Result;
 }
 
+/// Extracts exactly 3 variables for truth table optimization from a boolean
+/// expression tree. Traverses single-use instructions, handles non-bitwise ops
+/// as leaf variables, and validates the expression tree structure before
+/// returning the variables in deterministic order. Returns {nullptr, nullptr,
+/// nullptr} if the pattern doesn't match 3-variable optimization criteria in
+/// order to enable an early return.
 static std::tuple<Value *, Value *, Value *>
 extractThreeVariablesAndInstructions(
     Value *Root, SmallVectorImpl<Instruction *> &Instructions) {
@@ -209,6 +216,12 @@ extractThreeVariablesAndInstructions(
   return {SortedVars[0], SortedVars[1], SortedVars[2]};
 }
 
+/// Computes the 8-bit truth table for a 3-variable boolean expression using
+/// symbolic execution. Assigns each variable a bit pattern representing when
+/// it's true across all 8 input combinations, then simulates each instruction
+/// with bitwise operations to obtain the final truth table. Returns the
+/// resulting pattern where each bit represents the output for one input
+/// combination.
 static std::optional<std::bitset<8>>
 evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
                           const SmallVector<Instruction *> &Instructions) {
@@ -249,7 +262,7 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
   return std::bitset<8>(Computed.at(Expr));
 }
 
-/// Entry point for the 3-variable boolean expression folding. Handles early
+/// Entry point for the 3-variable boolean expression folding and handles early
 /// returns.
 static Value *foldThreeVarBoolExpr(Instruction &Root,
                                    InstCombiner::BuilderTy &Builder) {
