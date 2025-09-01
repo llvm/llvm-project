@@ -856,9 +856,7 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
   // Make sure we eat all the tokens when we report the errors so parsing
   // can continue.
   if (!Allowed) {
-    Diags.Report(LD.Location, diag::err_mmap_submodule_link_decl);
-    HadError = true;
-    return std::nullopt;
+    Diags.Report(LD.Location, diag::warn_mmap_submodule_link_decl);
   }
 
   auto [It, Inserted] =
@@ -866,8 +864,6 @@ std::optional<LinkDecl> ModuleMapFileParser::parseLinkDecl(
   if (!Inserted) {
     Diags.Report(LD.Location, diag::warn_mmap_link_redeclaration) << Library;
     Diags.Report(It->second, diag::note_mmap_prev_link_declaration);
-    HadError = true;
-    return std::nullopt;
   }
 
   return std::move(LD);

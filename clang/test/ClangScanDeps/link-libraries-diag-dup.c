@@ -51,7 +51,7 @@ module C {
 
 // Note that module D does not report an error because it is explicit.
 // Therefore we can use CHECK-NEXT for the redeclaration error on line 15.
-// CHECK:      module.modulemap:6:5:  error: link declaration is not allowed in submodules
+// CHECK:      module.modulemap:6:5:  error: link declaration is not allowed in submodules [-Wmodule-submodule-link-decl]
 // CHECK-NEXT: module.modulemap:15:3: error: redeclaration of link library 'libraryA' [-Wmodule-link-redeclaration]
 // CHECK-NEXT: module.modulemap:14:3: note: previously declared here
 // CHECK-NOT:  module.modulemap:20:3: error: redeclaration of link library 'libraryA'
