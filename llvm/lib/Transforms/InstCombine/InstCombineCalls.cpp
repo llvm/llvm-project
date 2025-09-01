@@ -3406,8 +3406,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         MaybeSimplifyHint(OBU.Inputs[1]);
       }
 
-      // Try to fold alignment assumption into a load's !align metadata, if the
-      // assumption is valid in the load's context and remove redundant ones.
+      // Try to remove redundant alignment assumptions.
       if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
         RetainedKnowledge RK = getKnowledgeFromBundle(
             *cast<AssumeInst>(II), II->bundle_op_info_begin()[Idx]);
@@ -3422,12 +3421,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
-        KnownBits Known = computeKnownBits(RK.WasOn, nullptr);
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
         unsigned TZ = std::min(Known.countMinTrailingZeros(), 63u);
         if ((1ULL << TZ) < RK.ArgValue)
           continue;
-        auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
-        return New;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
