@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <stdint.h>
 #include <string>
 
@@ -7,9 +8,12 @@ template <typename T> struct CustomAlloc {
   using const_pointer = const value_type *;
   using size_type = std::size_t;
 
-  pointer allocate(size_type) { return new T; }
+  pointer allocate(size_type n) { return (T *)malloc(n * sizeof(T)); }
 
-  void deallocate(pointer p, size_type) { delete p; }
+  void deallocate(pointer p, size_type) {
+    if (p)
+      free(p);
+  }
 };
 
 using CustomString =
@@ -124,13 +128,14 @@ int main() {
 
   CustomString custom_str("hello!");
   CustomWString custom_wstr(L"hello!");
-  CustomStringU16 custom_u16(u16_string);
+  CustomStringU16 custom_u16(u16_string.c_str());
   CustomStringU16 custom_u16_empty(u"");
-  CustomStringU32 custom_u32(u32_string);
+  CustomStringU32 custom_u32(u32_string.c_str());
   CustomStringU32 custom_u32_empty(U"");
 
   S.assign(L"!!!!!"); // Set break point at this line.
   std::string *not_a_string = (std::string *)0x0;
   touch_string(*not_a_string);
+
   return 0;
 }
