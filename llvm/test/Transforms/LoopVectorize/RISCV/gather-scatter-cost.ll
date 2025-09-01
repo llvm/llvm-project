@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+rva23u64 -S | FileCheck %s -check-prefixes=CHECK,RVA23
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -mattr=+rva23u64,+zvl1024b -S | FileCheck %s -check-prefixes=CHECK,RVA23ZVL1024B
 
-define void @predicated_uniform_load(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
+define void @predicated_uniform_load(ptr %src, i32 %n, ptr %dst, i1 %cond) {
 ; CHECK-LABEL: @predicated_uniform_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IBOX:%.*]] to i64
@@ -28,6 +28,9 @@ define void @predicated_uniform_load(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[COND:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT1]], splat (i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[BOXES]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[NBRBOXES]], i64 0
@@ -40,12 +43,10 @@ define void @predicated_uniform_load(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <vscale x 4 x i32> [[TMP11]], [[BROADCAST_SPLAT6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP14:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i1> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 4 x i1> [[TMP15]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP14:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -56,7 +57,7 @@ define void @predicated_uniform_load(ptr %boxes, i32 %iBox, ptr %nbrBoxes) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    br i1 false, label [[LOOP_THEN:%.*]], label [[LOOP_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_THEN:%.*]], label [[LOOP_ELSE:%.*]]
 ; CHECK:       loop.then:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.else:
@@ -76,20 +77,20 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  br i1 false, label %loop.then, label %loop.else
+  br i1 %cond, label %loop.then, label %loop.else
 
 loop.then:
   br label %loop.latch
 
 loop.else:
-  %0 = load i32, ptr %boxes, align 4
+  %0 = load i32, ptr %src, align 4
   br label %loop.latch
 
 loop.latch:
   %store = phi i32 [%0, %loop.else], [0, %loop.then]
-  store i32 %store, ptr %nbrBoxes, align 4
+  store i32 %store, ptr %dst, align 4
   %iv.next = add i32 %iv, 1
-  %exitcond = icmp sgt i32 %iv, %iBox
+  %exitcond = icmp sgt i32 %iv, %n
   br i1 %exitcond, label %exit, label %loop
 
 exit:
