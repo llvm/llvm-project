@@ -541,8 +541,14 @@ static LogicalResult generateLoopNestUsingForallOp(
   } else {
     SmallVector<OpFoldResult> lbs, ubs, steps;
     if (tileDistributionFn) {
-      std::tie(lbs, ubs, steps, updateInductionVar) =
+      SmallVector<Range> ranges;
+      std::tie(ranges, updateInductionVar) =
           tileDistributionFn(rewriter, loc, loopRanges, tileSizes);
+      for (const auto& range : ranges) {
+          lbs.push_back(range.offset);
+          ubs.push_back(range.size);
+          steps.push_back(range.stride);
+      }
     } else {
       std::tie(lbs, ubs, steps) =
           getLoopBounds(rewriter, loc, loopRanges, tileSizes);

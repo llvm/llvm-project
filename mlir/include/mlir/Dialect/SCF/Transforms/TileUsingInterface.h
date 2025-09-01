@@ -44,15 +44,12 @@ using SCFUpdateInductionVarFn = std::function<SmallVector<Value>(
 /// \param loopRanges Array of Range objects specifying the iteration domain.
 /// \param tileSizes Array of tile sizes for each loop dimension.
 /// \returns A tuple containing:
-///   - lbs: Lower bounds for the scf.forall loop.
-///   - ubs: Upper bounds for the scf.forall loop.
-///   - steps: Step sizes for the scf.forall loop.
+///   - ranges : loop bounds for the scf.forall loop (lbs, ubs, steps).
 ///   - updateInductionVarFn: Function to compute original tile indices from
 ///   new induction variables.
 
-using SCFTileDistributionFn = std::function<
-    std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
-               SmallVector<OpFoldResult>, SCFUpdateInductionVarFn>(
+using SCFTileDistributionFn =
+    std::function<std::tuple<SmallVector<Range>, SCFUpdateInductionVarFn>(
         RewriterBase &, Location, ArrayRef<Range> loopRanges,
         ArrayRef<OpFoldResult> tileSizes)>;
 
