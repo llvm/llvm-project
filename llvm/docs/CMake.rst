@@ -40,7 +40,7 @@ We use here the command-line, non-interactive CMake interface.
    through the ``PATH`` environment variable.
 
 #. Create a build directory. Building LLVM in the source
-   directory is not supported. cd to this directory:
+   directory is not supported. ``cd`` to this directory:
 
    .. code-block:: console
 
@@ -108,7 +108,7 @@ Basic CMake usage
 
 This section explains basic aspects of CMake for daily use.
 
-CMake comes with extensive documentation, in the form of html files, and as
+CMake comes with extensive documentation, in the form of HTML files, and as
 online help accessible via the ``cmake`` executable itself. Execute ``cmake
 --help`` for further help options.
 
@@ -139,7 +139,7 @@ A given development platform can have more than one adequate
 generator. If you use Visual Studio, "NMake Makefiles" is a generator you can use
 for building with NMake. By default, CMake chooses the most specific generator
 supported by your development environment. If you want an alternative generator,
-you must tell this to CMake with the ``-G`` option.
+you must specify this to CMake with the ``-G`` option.
 
 .. todo::
 
@@ -206,7 +206,7 @@ used variables that control features of LLVM and enabled subprojects.
 
   * Optimizations make LLVM/Clang run faster but can be an impediment for
     step-by-step debugging.
-  * Builds with debug information can use a lot of RAM and disk space and is
+  * Builds with debug information can use a lot of RAM and disk space and are
     usually slower to run. You can improve RAM usage by using ``lld``, see
     the :ref:`LLVM_USE_LINKER <llvm_use_linker>` option.
   * Assertions are internal checks to help you find bugs. They typically slow
@@ -257,10 +257,10 @@ description is in `LLVM-related variables`_ below.
 
 **LLVM_PARALLEL_{COMPILE,LINK}_JOBS**:STRING
   Building the llvm toolchain can use a lot of resources, particularly
-  linking. These options, when you use the Ninja generator, allow you
+  during linking. These options, when you use the Ninja generator, allow you
   to restrict the parallelism. For example, to avoid OOMs or going
-  into swap, permit only one link job per 15GB of RAM available on a
-  32GB machine, specify ``-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2``.
+  into swap, permit only one link job per 15 GB of RAM available on a
+  32 GB machine, specify ``-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2``.
 
 **LLVM_TARGETS_TO_BUILD**:STRING
   Control which targets are enabled. For example, you may only need to enable
@@ -324,13 +324,13 @@ its enabled sub-projects. Nearly all of these variable names begin with
   Used to decide if LLVM should be built with ABI breaking checks or
   not.  Allowed values are `WITH_ASSERTS` (default), `FORCE_ON` and
   `FORCE_OFF`.  `WITH_ASSERTS` turns on ABI breaking checks in an
-  assertion enabled build.  `FORCE_ON` (`FORCE_OFF`) turns them on
+  assertion-enabled build.  `FORCE_ON` (`FORCE_OFF`) turns them on
   (off) irrespective of whether normal (`NDEBUG`-based) assertions are
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
 
 **LLVM_ADDITIONAL_BUILD_TYPES**:LIST
-  Adding a semicolon separated list of additional build types to this flag
+  Adding a semicolon-separated list of additional build types to this flag
   allows for them to be specified as values in ``CMAKE_BUILD_TYPE`` without
   encountering a fatal error during the configuration process.
 
@@ -346,7 +346,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
   determine it.
 
 **LLVM_FORCE_VC_REVISION**:STRING
-  Force a specific Git revision id rather than calling to git to determine it.
+  Force a specific Git revision id rather than calling git to determine it.
   This is useful in environments where git is not available or non-functional
   but the VC revision is available through other means.
 
@@ -358,9 +358,9 @@ its enabled sub-projects. Nearly all of these variable names begin with
   Adds benchmarks to the list of default targets. Defaults to OFF.
 
 **LLVM_BUILD_DOCS**:BOOL
-  Adds all *enabled* documentation targets (i.e. Doxygen and Sphinx targets) as
+  Adds all *enabled* documentation targets (i.e., Doxygen and Sphinx targets) as
   dependencies of the default build targets.  This results in all of the (enabled)
-  documentation targets being as part of a normal build.  If the ``install``
+  documentation targets being built as part of a normal build.  If the ``install``
   target is run, then this also enables all built documentation targets to be
   installed. Defaults to OFF.  To enable a particular documentation target, see
   ``LLVM_ENABLE_SPHINX`` and ``LLVM_ENABLE_DOXYGEN``.
@@ -414,17 +414,17 @@ its enabled sub-projects. Nearly all of these variable names begin with
   variables, respectively.
 
 **LLVM_CODE_COVERAGE_TARGETS**:STRING
-  If set to a semicolon separated list of targets, those targets will be used
+  If set to a semicolon-separated list of targets, those targets will be used
   to drive the code coverage reports. If unset, the target list will be
   constructed using the LLVM build's CMake export list.
 
 **LLVM_COVERAGE_SOURCE_DIRS**:STRING
-  If set to a semicolon separated list of directories, the coverage reports
+  If set to a semicolon-separated list of directories, the coverage reports
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
 **LLVM_CREATE_XCODE_TOOLCHAIN**:BOOL
-  macOS Only: If enabled, CMake will generate a target named
+  macOS only: If enabled, CMake will generate a target named
   'install-xcode-toolchain'. This target will create a directory at
   ``$CMAKE_INSTALL_PREFIX/Toolchains`` containing an xctoolchain directory which can
   be used to override the default system tools.
@@ -588,8 +588,8 @@ its enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of projects to build, or *all* for building all
   (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
   are checked out side-by-side and not nested, i.e. clang needs to be in
-  parallel of llvm instead of nested in ``llvm/tools``. This feature allows
-  to have one build for only LLVM and another for clang+llvm using the same
+  parallel to llvm instead of nested in ``llvm/tools``. This feature allows
+  having one build for only LLVM and another for clang+llvm using the same
   source checkout.
 
   The full list is:
@@ -657,11 +657,11 @@ its enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_EXPERIMENTAL_TARGETS_TO_BUILD**:STRING
   Semicolon-separated list of experimental targets to build and linked into
   llvm. This will build the experimental target without needing it to add to the
-  list of all the targets available in the LLVM's main CMakeLists.txt.
+  list of all the targets available in the LLVM's main ``CMakeLists.txt``.
 
 **LLVM_EXTERNAL_PROJECTS**:STRING
   Semicolon-separated list of additional external projects to build as part of
-  llvm. For each project LLVM_EXTERNAL_<NAME>_SOURCE_DIR have to be specified
+  llvm. For each project, ``LLVM_EXTERNAL_<NAME>_SOURCE_DIR`` has to be specified
   with the path for the source code of the project. Example:
   ``-DLLVM_EXTERNAL_PROJECTS="Foo;Bar"
   -DLLVM_EXTERNAL_FOO_SOURCE_DIR=/src/foo
@@ -676,7 +676,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
   to a valid path, then that project will not be built.
 
 **LLVM_EXTERNALIZE_DEBUGINFO**:BOOL
-  Generate dSYM files and strip executables and libraries (Darwin Only).
+  Generate dSYM files and strip executables and libraries (Darwin only).
   Defaults to OFF.
 
 **LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
@@ -751,7 +751,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
     $ D:\git> git clone https://github.com/mjansson/rpmalloc
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
-  This option needs to be used along with the static CRT, ie. if building the
+  This option needs to be used along with the static CRT, i.e., if building the
   Release target, add ``-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded``.
   Note that rpmalloc is also supported natively in-tree, see option below.
 
@@ -778,7 +778,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_LIT_TOOLS_DIR**:PATH
   The path to GnuWin32 tools for tests. Valid on Windows host.  Defaults to
   the empty string, in which case lit will look for tools needed for tests
-  (e.g. ``grep``, ``sort``, etc.) in your ``%PATH%``. If GnuWin32 is not in your
+  (e.g., ``grep``, ``sort``, etc.) in your ``%PATH%``. If GnuWin32 is not in your
   ``%PATH%``, then you can set this variable to the GnuWin32 directory so that
   lit can find tools needed for tests in that directory.
 
@@ -797,7 +797,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
   set to non-standard values.
 
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
-  If enabled and building a debug or asserts build, the CMake build system will
+  If enabled and building a debug or assert build, the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
   during the build. Enabling this option can significantly speed up build times,
   especially when building LLVM in Debug configurations.
@@ -818,7 +818,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
   ``LLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS`` variable is
   overwritten by computing the memory size divided by the
   specified value. The largest memory user is linking, but remember
-  that jobs in the other categories might run in parallel to the link
+  that jobs in the other categories might run in parallel with the link
   jobs, and you need to consider their memory requirements when
   in a memory-limited environment. Using a
   ``-DLLVM_RAM_PER_LINK_JOB=10000`` is a good approximation. On ELF
@@ -869,7 +869,7 @@ its enabled sub-projects. Nearly all of these variable names begin with
   the default set of UBSan flags.
 
 **LLVM_UNREACHABLE_OPTIMIZE**:BOOL
-  This flag controls the behavior of ``llvm_unreachable()`` in release build
+  This flag controls the behavior of ``llvm_unreachable()`` in a release build
   (when assertions are disabled in general). When ON (default) then
   ``llvm_unreachable()`` is considered "undefined behavior" and optimized as
   such. When OFF it is instead replaced with a guaranteed "trap".
@@ -879,9 +879,9 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_USE_LINKER**:STRING
   Add ``-fuse-ld={name}`` to the link invocation. The possible values depend on
-  your compiler, for clang the value can be an absolute path to your custom
+  your compiler. For clang, the value can be an absolute path to your custom
   linker, otherwise clang will prefix the name with ``ld.`` and apply its usual
-  search. For example to link LLVM with the Gold linker, cmake can be invoked
+  search. For example, to link LLVM with the Gold linker, cmake can be invoked
   with ``-DLLVM_USE_LINKER=gold``.
 
 **LLVM_USE_OPROFILE**:BOOL
@@ -892,11 +892,11 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_USE_RELATIVE_PATHS_IN_FILES**:BOOL
   Rewrite absolute source paths in sources and debug info to relative ones. The
-  source prefix can be adjusted via the LLVM_SOURCE_PREFIX variable.
+  source prefix can be adjusted via the ``LLVM_SOURCE_PREFIX`` variable.
 
 **LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO**:BOOL
   Rewrite absolute source paths in debug info to relative ones. The source prefix
-  can be adjusted via the LLVM_SOURCE_PREFIX variable.
+  can be adjusted via the ``LLVM_SOURCE_PREFIX`` variable.
 
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
@@ -916,9 +916,9 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **SPHINX_OUTPUT_HTML**:BOOL
   If enabled (and ``LLVM_ENABLE_SPHINX`` is enabled) then the targets for
-  building the documentation as html are added (but not built by default unless
+  building the documentation as HTML are added (but not built by default unless
   ``LLVM_BUILD_DOCS`` is enabled). There is a target for each project in the
-  source tree that uses sphinx (e.g.  ``docs-llvm-html``, ``docs-clang-html``
+  source tree that uses sphinx (e.g.,  ``docs-llvm-html``, ``docs-clang-html``
   and ``docs-lld-html``). Defaults to ON.
 
 **SPHINX_OUTPUT_MAN**:BOOL
@@ -973,15 +973,15 @@ A few notes about CMake Caches:
 
 - Order of command line arguments is important
 
-  - ``-D`` arguments specified before -C are set before the cache is processed and
+  - ``-D`` arguments specified before ``-C`` are set before the cache is processed and
     can be read inside the cache file
-  - ``-D`` arguments specified after -C are set after the cache is processed and
+  - ``-D`` arguments specified after ``-C`` are set after the cache is processed and
     are unset inside the cache file
 
 - All ``-D`` arguments will override cache file settings
 - CMAKE_TOOLCHAIN_FILE is evaluated after both the cache file and the command
   line arguments
-- It is recommended that all ``-D`` options should be specified *before* -C
+- It is recommended that all ``-D`` options be specified *before* ``-C``
 
 For more information about some of the advanced build configurations supported
 via Cache files see :doc:`AdvancedBuilds`.
@@ -1004,7 +1004,7 @@ Cross compiling
 
 See `this wiki page <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/CrossCompiling>`_ for
 generic instructions on how to cross-compile with CMake. It goes into detailed
-explanations and may seem daunting, but it is not. On the wiki page there are
+explanations and may seem daunting, but it is not. The wiki page has
 several examples including toolchain files. Go directly to the
 ``Information how to set up various cross compiling toolchains`` section
 for a quick solution.
@@ -1015,12 +1015,12 @@ cross-compiling.
 Embedding LLVM in your project
 ==============================
 
-From LLVM 3.5 onwards the CMake build system exports LLVM libraries as
+From LLVM 3.5 onward, the CMake build system exports LLVM libraries as
 importable CMake targets. This means that clients of LLVM can now reliably use
 CMake to develop their own LLVM-based projects against an installed version of
 LLVM regardless of how it was built.
 
-Here is a simple example of a CMakeLists.txt file that imports the LLVM libraries
+Here is a simple example of a ``CMakeLists.txt`` file that imports the LLVM libraries
 and uses them to build a simple application ``simple-tool``.
 
 .. code-block:: cmake
@@ -1054,9 +1054,9 @@ and uses them to build a simple application ``simple-tool``.
 
 The ``find_package(...)`` directive when used in CONFIG mode (as in the above
 example) will look for the ``LLVMConfig.cmake`` file in various locations (see
-cmake manual for details).  It creates an ``LLVM_DIR`` cache entry to save the
+CMake manual for details).  It creates an ``LLVM_DIR`` cache entry to save the
 directory where ``LLVMConfig.cmake`` is found or allows the user to specify the
-directory (e.g. by passing ``-DLLVM_DIR=/usr/lib/cmake/llvm`` to
+directory (e.g., by passing ``-DLLVM_DIR=/usr/lib/cmake/llvm`` to
 the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
@@ -1081,7 +1081,7 @@ The ``LLVMConfig.cmake`` file sets various useful variables. Notable variables
 include:
 
 ``LLVM_CMAKE_DIR``
-  The path to the LLVM CMake directory (i.e. the directory containing
+  The path to the LLVM CMake directory (i.e., the directory containing
   ``LLVMConfig.cmake``).
 
 ``LLVM_DEFINITIONS``
@@ -1106,7 +1106,7 @@ include:
   (${LLVM_PACKAGE_VERSION} VERSION_LESS "3.5")``.
 
 ``LLVM_TOOLS_BINARY_DIR``
-  The path to the directory containing the LLVM tools (e.g. ``llvm-as``).
+  The path to the directory containing the LLVM tools (e.g., ``llvm-as``).
 
 Notice that in the above example we link ``simple-tool`` against several LLVM
 libraries. The list of libraries is determined by using the
@@ -1122,7 +1122,7 @@ and will be removed in a future version of LLVM.
 Developing LLVM passes out of source
 ------------------------------------
 
-You can develop LLVM passes out of LLVM's source tree (i.e. against an
+You can develop LLVM passes out of LLVM's source tree (i.e., against an
 installed or built LLVM). An example of a project layout is provided below.
 
 .. code-block:: none
@@ -1197,6 +1197,6 @@ Windows
   Studio 2010 CMake generator. 0 means use all processors. Default is 0.
 
 **CMAKE_MT**:STRING
-  When compiling with clang-cl, CMake may use `llvm-mt` as the Manifest Tool
-  when available. `llvm-mt` is only present when libxml2 is found at build-time.
+  When compiling with clang-cl, CMake may use ``llvm-mt`` as the Manifest Tool
+  when available. ```llvm-mt``` is only present when libxml2 is found at build-time.
   To ensure using Microsoft's Manifest Tool set `CMAKE_MT=mt`.
