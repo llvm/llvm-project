@@ -1085,7 +1085,7 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
                             /*name=*/pub.Name,
                             /*type=*/type,
                             /*external=*/true,
-                            /*is_debug=*/false,
+                            /*is_debug=*/true,
                             /*is_trampoline=*/false,
                             /*is_artificial=*/false,
                             /*section_sp=*/section_sp,
