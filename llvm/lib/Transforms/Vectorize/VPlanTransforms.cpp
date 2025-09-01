@@ -1822,13 +1822,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Default([](auto *) { return std::nullopt; });
   }
 
-  /// During CSE, we can only handle certain recipes that don't read from
-  /// memory: if they read from memory, there could be an intervening write to
-  /// memory before the next instance is CSE'd, leading to an incorrect result.
-  /// We can extend the list of handled recipes in the future, provided we
-  /// account for the data embedded in them while checking for equality or
-  /// hashing.
+  /// Returns true if recipe \p Def can be safely handed for CSE.
   static bool canHandle(const VPSingleDefRecipe *Def) {
+    // We can extend the list of handled recipes in the future,
+    // provided we account for the data embedded in them while checking for
+    // equality or hashing.
     auto C = getOpcodeOrIntrinsicID(Def);
 
     // The issue with (Insert|Extract)Value is that the index of the
@@ -1837,6 +1835,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (!C || (!C->first && (C->second == Instruction::InsertValue ||
                              C->second == Instruction::ExtractValue)))
       return false;
+
+    // During CSE, we can only handle recipes that don't read from memory: if
+    // they read from memory, there could be an intervening write to memory
+    // before the next instance is CSE'd, leading to an incorrect result.
     return !Def->mayReadFromMemory();
   }
 
