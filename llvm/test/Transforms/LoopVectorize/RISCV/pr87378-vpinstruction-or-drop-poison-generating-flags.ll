@@ -12,11 +12,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP6]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP7]]
@@ -33,17 +29,14 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <vscale x 8 x i32> [[TMP10]], [[BROADCAST_SPLAT8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> [[TMP14]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <vscale x 8 x i1> [[TMP13]], splat (i1 true)
-; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP9]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 8 x i1> [[TMP14]], splat (i1 true)
-; CHECK-NEXT:    [[TMP28:%.*]] = select <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> [[TMP20]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP28]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = or <vscale x 8 x i1> [[TMP19]], [[TMP28]]
+; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP14]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP29:%.*]] = xor <vscale x 8 x i1> [[TMP14]], splat (i1 true)
+; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP15]], [[TMP29]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP14]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <vscale x 8 x i1> [[TMP17]], [[TMP14]]
+; CHECK-NEXT:    [[TMP22:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP12]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i1> [[TMP21]], i32 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP23]], i64 poison, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i16, ptr [[ARG]], i64 [[PREDPHI]]

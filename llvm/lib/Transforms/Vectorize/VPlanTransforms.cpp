@@ -996,8 +996,7 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
 }
 
 /// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo,
-                           VPValue *HeaderMask) {
+static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = R.getParent()->getPlan();
 
   auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
@@ -1120,13 +1119,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo,
     return;
   }
 
-  // Reassociate the header mask so it has more opportunities to be simplified.
-  // (headermask && x) && y -> headermask && (x && y)
-  if (HeaderMask && match(Def, m_LogicalAnd(m_LogicalAnd(m_Specific(HeaderMask),
-                                                         m_VPValue(X)),
-                                            m_VPValue(Y))))
+  // (x & y) & z -> x & (y & z)
+  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_VPValue(Z))))
     return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
+        Builder.createLogicalAnd(X, Builder.createLogicalAnd(X, Y)));
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
@@ -1272,61 +1269,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo,
   }
 }
 
-/// Collect the header mask with the pattern:
-///   (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
-/// TODO: Introduce explicit recipe for header-mask instead of searching
-/// for the header-mask pattern manually.
-static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
-  SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
-                                            IsaPred<VPWidenCanonicalIVRecipe>);
-  assert(count_if(Plan.getCanonicalIV()->users(),
-                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
-         "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
-    auto *WideCanonicalIV =
-        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-    WideCanonicalIVs.push_back(WideCanonicalIV);
-  }
-
-  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
-  // version of the canonical induction.
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
-      WideCanonicalIVs.push_back(WidenOriginalIV);
-  }
-
-  // Walk users of wide canonical IVs and find the single compare of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  VPSingleDefRecipe *HeaderMask = nullptr;
-  for (auto *Wide : WideCanonicalIVs) {
-    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
-      auto *VPI = dyn_cast<VPInstruction>(U);
-      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
-        continue;
-
-      assert(VPI->getOperand(0) == Wide &&
-             "WidenCanonicalIV must be the first operand of the compare");
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = VPI;
-    }
-  }
-  return HeaderMask;
-}
-
 void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
-  VPValue *HeaderMask = nullptr;
-  // Ignore post-unrolling as there can be multiple header masks.
-  if (!Plan.isUnrolled())
-    HeaderMask = findHeaderMask(Plan);
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo, HeaderMask);
+      simplifyRecipe(R, TypeInfo);
     }
   }
 }
@@ -2247,6 +2196,50 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
   OriginalTerminator->eraseFromParent();
   return LaneMaskPhi;
+}
+
+/// Collect the header mask with the pattern:
+///   (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// for the header-mask pattern manually.
+static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
+  SmallVector<VPValue *> WideCanonicalIVs;
+  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
+                                            IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(Plan.getCanonicalIV()->users(),
+                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
+
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and find the single compare of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  VPSingleDefRecipe *HeaderMask = nullptr;
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
+        continue;
+
+      assert(VPI->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = VPI;
+    }
+  }
+  return HeaderMask;
 }
 
 void VPlanTransforms::addActiveLaneMask(
