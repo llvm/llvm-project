@@ -3238,6 +3238,19 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                drop_end(Indices), "", GEP.getNoWrapFlags()));
   }
 
+  // Strip leading zero indices.
+  auto *FirstIdx = dyn_cast<Constant>(Indices.front());
+  if (FirstIdx && FirstIdx->isNullValue() &&
+      !FirstIdx->getType()->isVectorTy()) {
+    gep_type_iterator GTI = gep_type_begin(GEP);
+    ++GTI;
+    if (!GTI.isStruct())
+      return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
+                                                        GEP.getPointerOperand(),
+                                                        drop_begin(Indices), "",
+                                                        GEP.getNoWrapFlags()));
+  }
+
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
   // Note that this looses information about undef lanes; we run it after
   // demanded bits to partially mitigate that loss.

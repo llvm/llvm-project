@@ -18,7 +18,7 @@ declare i64 @strlen(ptr)
 
 define i64 @fold_strlen_s3_pi_s5(i1 %X, i64 %I) {
 ; CHECK-LABEL: @fold_strlen_s3_pi_s5(
-; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds i8, ptr @s3, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], ptr [[PS3_PI]], ptr @s5
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
@@ -40,7 +40,7 @@ define i64 @fold_strlen_s3_pi_p1_s5(i1 %0, i64 %1) {
 ; XFAIL-CHECK-NEXT:    [[SEL:%.*]] = select i1 %0, i64 [[DIF_I]], i64 5
 ; XFAIL-CHECK-NEXT:    ret i64 [[SEL]]
 ; CHECK-LABEL: @fold_strlen_s3_pi_p1_s5(
-; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[TMP1:%.*]]
+; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds i8, ptr @s3, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[PS3_PI_P1:%.*]] = getelementptr i8, ptr [[PS3_PI]], i64 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], ptr [[PS3_PI_P1]], ptr @s5
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
@@ -61,7 +61,7 @@ define i64 @fold_strlen_s3_pi_p1_s5(i1 %0, i64 %1) {
 
 define i64 @call_strlen_s5_3_pi_s5(i1 %0, i64 %1) {
 ; CHECK-LABEL: @call_strlen_s5_3_pi_s5(
-; CHECK-NEXT:    [[PS5_3_PI:%.*]] = getelementptr inbounds [10 x i8], ptr @s5_3, i64 0, i64 [[TMP1:%.*]]
+; CHECK-NEXT:    [[PS5_3_PI:%.*]] = getelementptr inbounds i8, ptr @s5_3, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], ptr [[PS5_3_PI]], ptr @s5
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
@@ -78,7 +78,7 @@ define i64 @call_strlen_s5_3_pi_s5(i1 %0, i64 %1) {
 
 define i64 @call_strlen_s5_3_s5_pj(i1 %X, i64 %J) {
 ; CHECK-LABEL: @call_strlen_s5_3_s5_pj(
-; CHECK-NEXT:    [[PS5:%.*]] = getelementptr inbounds [6 x i8], ptr @s5, i64 0, i64 [[J:%.*]]
+; CHECK-NEXT:    [[PS5:%.*]] = getelementptr inbounds i8, ptr @s5, i64 [[J:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], ptr @s5_3, ptr [[PS5]]
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
@@ -95,7 +95,7 @@ define i64 @call_strlen_s5_3_s5_pj(i1 %X, i64 %J) {
 
 define i64 @fold_strlen_s3_s5_pj(i1 %X, i64 %J) {
 ; CHECK-LABEL: @fold_strlen_s3_s5_pj(
-; CHECK-NEXT:    [[PS5_PJ:%.*]] = getelementptr inbounds [6 x i8], ptr @s5, i64 0, i64 [[J:%.*]]
+; CHECK-NEXT:    [[PS5_PJ:%.*]] = getelementptr inbounds i8, ptr @s5, i64 [[J:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], ptr @s3, ptr [[PS5_PJ]]
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
@@ -114,7 +114,7 @@ define i64 @fold_strlen_s3_s5_pj(i1 %X, i64 %J) {
 
 define i64 @call_strlen_s3_s5_3_pj(i1 %0, i64 %1) {
 ; CHECK-LABEL: @call_strlen_s3_s5_3_pj(
-; CHECK-NEXT:    [[PS5_3_PJ:%.*]] = getelementptr inbounds [10 x i8], ptr @s5_3, i64 0, i64 [[TMP1:%.*]]
+; CHECK-NEXT:    [[PS5_3_PJ:%.*]] = getelementptr inbounds i8, ptr @s5_3, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], ptr @s3, ptr [[PS5_3_PJ]]
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
@@ -131,8 +131,8 @@ define i64 @call_strlen_s3_s5_3_pj(i1 %0, i64 %1) {
 
 define i64 @fold_strlen_s3_pi_s5_pj(i1 %X, i64 %I, i64 %J) {
 ; CHECK-LABEL: @fold_strlen_s3_pi_s5_pj(
-; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[PS5_PJ:%.*]] = getelementptr inbounds [6 x i8], ptr @s5, i64 0, i64 [[J:%.*]]
+; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds i8, ptr @s3, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PS5_PJ:%.*]] = getelementptr inbounds i8, ptr @s5, i64 [[J:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], ptr [[PS3_PI]], ptr [[PS5_PJ]]
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]

@@ -175,6 +175,7 @@
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
 // CHECK-NEXT:     xmipscbop            1.0       'XMIPSCBOP' (MIPS Software Prefetch)
 // CHECK-NEXT:     xmipscmov            1.0       'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov))
+// CHECK-NEXT:     xmipsexectl          1.0       'XMIPSEXECTL' (MIPS execution control)
 // CHECK-NEXT:     xmipslsp             1.0       'XMIPSLSP' (MIPS optimization for hardware load-store bonding)
 // CHECK-NEXT:     xsfcease             1.0       'XSfcease' (SiFive sf.cease Instruction)
 // CHECK-NEXT:     xsfmm128t            0.6       'XSfmm128t' (TE=128 configuration)

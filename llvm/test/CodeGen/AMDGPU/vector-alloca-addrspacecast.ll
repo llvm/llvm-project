@@ -7,7 +7,7 @@
 ; OPT: store i32 0, ptr addrspace(5) %alloca, align 4
 ; OPT: store i32 1, ptr addrspace(5) %a1, align 4
 ; OPT: store i32 2, ptr addrspace(5) %a2, align 4
-; OPT: %tmp = getelementptr [3 x i32], ptr addrspace(5) %alloca, i64 0, i64 %index
+; OPT: %tmp = getelementptr i32, ptr addrspace(5) %alloca, i64 %index
 ; OPT: %ac = addrspacecast ptr addrspace(5) %tmp to ptr
 ; OPT: %data = load i32, ptr %ac, align 4
 define amdgpu_kernel void @vector_addrspacecast(ptr addrspace(1) %out, i64 %index) {

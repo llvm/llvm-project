@@ -111,7 +111,7 @@ define void @test_range_ref1a(i32 %x) {
 ; CHECK-NEXT:  Classifying expressions for: @test_range_ref1a
 ; CHECK-NEXT:    %i.01.0 = phi i32 [ 100, %entry ], [ %tmp4, %bb ]
 ; CHECK-NEXT:    --> {100,+,-1}<nsw><%bb> U: [0,101) S: [0,101) Exits: 0 LoopDispositions: { %bb: Computable }
-; CHECK-NEXT:    %tmp1 = getelementptr [101 x i32], ptr @array, i32 0, i32 %i.01.0
+; CHECK-NEXT:    %tmp1 = getelementptr i32, ptr @array, i32 %i.01.0
 ; CHECK-NEXT:    --> {(400 + @array)<nuw>,+,-4}<nw><%bb> U: [0,-3) S: [-2147483648,2147483645) Exits: @array LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %i.01.0, -1
 ; CHECK-NEXT:    --> {99,+,-1}<nsw><%bb> U: [-1,100) S: [-1,100) Exits: -1 LoopDispositions: { %bb: Computable }
