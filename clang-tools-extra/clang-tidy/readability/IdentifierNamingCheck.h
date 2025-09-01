@@ -90,23 +90,23 @@ public:
 
   struct HungarianNotation {
   public:
-    bool checkOptionValid(int StyleKindIndex) const;
-    bool isOptionEnabled(StringRef OptionKey,
-                         const llvm::StringMap<std::string> &StrMap) const;
+    static bool checkOptionValid(int StyleKindIndex);
+    static bool isOptionEnabled(StringRef OptionKey,
+                                const llvm::StringMap<std::string> &StrMap);
 
-    size_t getAsteriskCount(const std::string &TypeName) const;
+    static size_t getAsteriskCount(const std::string &TypeName);
     size_t getAsteriskCount(const std::string &TypeName,
                             const NamedDecl *ND) const;
 
-    void loadDefaultConfig(
-        IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
-    void loadFileConfig(
-        const ClangTidyCheck::OptionsView &Options,
-        IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
+    static void
+    loadDefaultConfig(IdentifierNamingCheck::HungarianNotationOption &HNOption);
+    static void
+    loadFileConfig(const ClangTidyCheck::OptionsView &Options,
+                   IdentifierNamingCheck::HungarianNotationOption &HNOption);
 
-    bool removeDuplicatedPrefix(
+    static bool removeDuplicatedPrefix(
         SmallVector<StringRef, 8> &Words,
-        const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
+        const IdentifierNamingCheck::HungarianNotationOption &HNOption);
 
     std::string getPrefix(
         const Decl *D,
@@ -120,7 +120,7 @@ public:
         const CXXRecordDecl *CRD,
         const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
 
-    std::string getEnumPrefix(const EnumConstantDecl *ECD) const;
+    static std::string getEnumPrefix(const EnumConstantDecl *ECD);
     std::string getDeclTypeName(const NamedDecl *ND) const;
   };
 
@@ -191,8 +191,8 @@ public:
       const IdentifierNamingCheck::HungarianNotationOption &HNOption,
       StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const;
 
-  bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
-                                 bool IncludeMainLike) const;
+  static bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
+                                        bool IncludeMainLike);
 
 private:
   std::optional<FailureInfo>
@@ -212,13 +212,13 @@ private:
       const FieldDecl *AnonField,
       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
-  StyleKind findStyleKindForField(
-      const FieldDecl *Field, QualType Type,
-      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+  static StyleKind
+  findStyleKindForField(const FieldDecl *Field, QualType Type,
+                        ArrayRef<std::optional<NamingStyle>> NamingStyles);
 
-  StyleKind
+  static StyleKind
   findStyleKindForVar(const VarDecl *Var, QualType Type,
-                      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+                      ArrayRef<std::optional<NamingStyle>> NamingStyles);
 
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.

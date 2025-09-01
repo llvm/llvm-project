@@ -66,7 +66,7 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
     return true;
   }
 
-  bool isImmutableToken(const Token &Tok) {
+  static bool isImmutableToken(const Token &Tok) {
     switch (Tok.getKind()) {
     case tok::eod:
     case tok::eof:

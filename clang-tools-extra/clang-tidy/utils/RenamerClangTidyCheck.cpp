@@ -219,9 +219,9 @@ public:
       : Check(Check), SM(SM),
         AggressiveDependentMemberLookup(AggressiveDependentMemberLookup) {}
 
-  bool shouldVisitTemplateInstantiations() const { return true; }
+  static bool shouldVisitTemplateInstantiations() { return true; }
 
-  bool shouldVisitImplicitCode() const { return false; }
+  static bool shouldVisitImplicitCode() { return false; }
 
   bool VisitCXXConstructorDecl(CXXConstructorDecl *Decl) {
     if (Decl->isImplicit())

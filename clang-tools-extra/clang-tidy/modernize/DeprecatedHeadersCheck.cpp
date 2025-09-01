@@ -53,8 +53,8 @@ public:
   ExternCRefutationVisitor(std::vector<IncludeMarker> &IncludesToBeProcessed,
                            SourceManager &SM)
       : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM) {}
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-  bool shouldVisitLambdaBody() const { return false; }
+  static bool shouldWalkTypesOfTypeLocs() { return false; }
+  static bool shouldVisitLambdaBody() { return false; }
 
   bool VisitLinkageSpecDecl(LinkageSpecDecl *LinkSpecDecl) const {
     if (LinkSpecDecl->getLanguage() != LinkageSpecLanguageIDs::C ||

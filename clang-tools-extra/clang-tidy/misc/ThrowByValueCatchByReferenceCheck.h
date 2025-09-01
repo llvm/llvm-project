@@ -38,8 +38,8 @@ private:
   void diagnoseThrowLocations(const CXXThrowExpr *ThrowExpr);
   void diagnoseCatchLocations(const CXXCatchStmt *CatchStmt,
                               ASTContext &Context);
-  bool isFunctionParameter(const DeclRefExpr *DeclRefExpr);
-  bool isCatchVariable(const DeclRefExpr *DeclRefExpr);
+  static bool isFunctionParameter(const DeclRefExpr *DeclRefExpr);
+  static bool isCatchVariable(const DeclRefExpr *DeclRefExpr);
   bool isFunctionOrCatchVar(const DeclRefExpr *DeclRefExpr);
   const bool CheckAnonymousTemporaries;
   const bool WarnOnLargeObject;

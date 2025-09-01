@@ -417,7 +417,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
 IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
-    int StyleKindIndex) const {
+    int StyleKindIndex) {
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -429,7 +429,7 @@ bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
 }
 
 bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
-    StringRef OptionKey, const llvm::StringMap<std::string> &StrMap) const {
+    StringRef OptionKey, const llvm::StringMap<std::string> &StrMap) {
   if (OptionKey.empty())
     return false;
 
@@ -442,7 +442,7 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
 
 void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
     const ClangTidyCheck::OptionsView &Options,
-    IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+    IdentifierNamingCheck::HungarianNotationOption &HNOption) {
 
   static constexpr StringRef HNOpts[] = {"TreatStructAsClass"};
   static constexpr StringRef HNDerivedTypes[] = {"Array", "Pointer",
@@ -535,7 +535,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getPrefix(
 
 bool IdentifierNamingCheck::HungarianNotation::removeDuplicatedPrefix(
     SmallVector<StringRef, 8> &Words,
-    const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+    const IdentifierNamingCheck::HungarianNotationOption &HNOption) {
   if (Words.size() <= 1)
     return true;
 
@@ -652,7 +652,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
-    const EnumConstantDecl *ECD) const {
+    const EnumConstantDecl *ECD) {
   const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
@@ -697,7 +697,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
 }
 
 size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
-    const std::string &TypeName) const {
+    const std::string &TypeName) {
   size_t Pos = TypeName.find('*');
   size_t Count = 0;
   for (; Pos < TypeName.length(); Pos++, Count++) {
@@ -719,7 +719,7 @@ size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
 }
 
 void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
-    IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
+    IdentifierNamingCheck::HungarianNotationOption &HNOption) {
 
   // Options
   static constexpr std::pair<StringRef, StringRef> General[] = {
@@ -1024,7 +1024,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
 }
 
 bool IdentifierNamingCheck::isParamInMainLikeFunction(
-    const ParmVarDecl &ParmDecl, bool IncludeMainLike) const {
+    const ParmVarDecl &ParmDecl, bool IncludeMainLike) {
   const auto *FDecl =
       dyn_cast_or_null<FunctionDecl>(ParmDecl.getParentFunctionOrMethod());
   if (!FDecl)
@@ -1472,7 +1472,7 @@ StyleKind IdentifierNamingCheck::findStyleKindForAnonField(
 
 StyleKind IdentifierNamingCheck::findStyleKindForField(
     const FieldDecl *Field, QualType Type,
-    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) {
   if (!Type.isNull() && Type.isConstQualified()) {
     if (NamingStyles[SK_ConstantMember])
       return SK_ConstantMember;
@@ -1498,7 +1498,7 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
-    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) {
   if (Var->isConstexpr() && NamingStyles[SK_ConstexprVariable])
     return SK_ConstexprVariable;
 

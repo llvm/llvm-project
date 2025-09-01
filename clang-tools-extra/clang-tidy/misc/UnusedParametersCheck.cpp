@@ -99,7 +99,7 @@ public:
     return Index[Fn->getCanonicalDecl()].OtherRefs;
   }
 
-  bool shouldTraversePostOrder() const { return true; }
+  static bool shouldTraversePostOrder() { return true; }
 
   bool WalkUpFromDeclRefExpr(DeclRefExpr *DeclRef) {
     if (const auto *Fn = dyn_cast<FunctionDecl>(DeclRef->getDecl())) {

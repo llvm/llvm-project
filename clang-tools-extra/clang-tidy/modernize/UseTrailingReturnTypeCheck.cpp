@@ -51,7 +51,7 @@ public:
 
   bool Collision = false;
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
+  static bool shouldWalkTypesOfTypeLocs() { return false; }
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.

@@ -98,7 +98,7 @@ void CloexecCheck::insertStringFlag(
 }
 
 StringRef CloexecCheck::getSpellingArg(const MatchFinder::MatchResult &Result,
-                                       int N) const {
+                                       int N) {
   const auto *MatchedCall = Result.Nodes.getNodeAs<CallExpr>(FuncBindingStr);
   const SourceManager &SM = *Result.SourceManager;
   return Lexer::getSourceText(

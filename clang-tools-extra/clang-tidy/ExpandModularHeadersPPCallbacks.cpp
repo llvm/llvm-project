@@ -51,7 +51,7 @@ public:
 
   /// Makes sure we have contents for all the files we were interested in.
   /// Ideally `FilesToRecord` should be empty.
-  void checkAllFilesRecorded() {
+  static void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
         llvm::dbgs() << "Did not record contents for input file: "

@@ -85,8 +85,8 @@ protected:
                         const char Mode, const int ArgPos);
 
   /// Helper function to get the spelling of a particular argument.
-  StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
-                           int N) const;
+  static StringRef
+  getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result, int N);
 
   /// Binding name of the FuncDecl of a function call.
   static const char *FuncDeclBindingStr;

@@ -36,7 +36,8 @@ public:
 private:
   std::optional<StorageParams> Storage;
 
-  void printUserFriendlyTable(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
+  static void printUserFriendlyTable(llvm::raw_ostream &OS,
+                                     llvm::TimerGroup &TG);
   void printAsJSON(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
   void storeProfileData(llvm::TimerGroup &TG);
 
