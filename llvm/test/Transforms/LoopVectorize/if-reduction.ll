@@ -1192,14 +1192,13 @@ define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP9]], <4 x float> [[TMP8]]
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[WIDE_LOAD]], <4 x float> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[PREDPHI]], <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP10]] = fadd fast <4 x float> [[PREDPHI1]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1315,14 +1314,13 @@ define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonl
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI1]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI1]] = select <4 x i1> [[TMP4]], <4 x float> [[PREDPHI]], <4 x float> [[TMP7]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]

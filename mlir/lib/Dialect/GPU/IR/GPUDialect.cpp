@@ -2486,8 +2486,7 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  auto yield =
-      cast<YieldOp>(getWarpRegion().getBlocks().begin()->getTerminator());
+  gpu::YieldOp yield = getTerminator();
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");
@@ -2509,6 +2508,50 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
 bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
   return succeeded(
       verifyDistributedType(lhs, rhs, getWarpSize(), getOperation()));
+}
+
+gpu::YieldOp WarpExecuteOnLane0Op::getTerminator() {
+  return cast<gpu::YieldOp>(getBody()->getTerminator());
+}
+
+//===----------------------------------------------------------------------===//
+// GPU_SubgroupBroadcastOp
+//===----------------------------------------------------------------------===//
+
+void gpu::SubgroupBroadcastOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), argRanges.front());
+}
+
+Speculation::Speculatability gpu::SubgroupBroadcastOp::getSpeculatability() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_active_lane:
+    // Cannot speculate first_lane broadcast, because speculating it across
+    // control flow can change the active lanes.
+    return Speculation::NotSpeculatable;
+  case BroadcastType::any_lane:
+    LLVM_FALLTHROUGH;
+  case BroadcastType::specific_lane:
+    // Speculation should be safe as long as we inside structured control flow.
+    return Speculation::Speculatable;
+  }
+}
+
+LogicalResult gpu::SubgroupBroadcastOp::verify() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_active_lane:
+    LLVM_FALLTHROUGH;
+  case BroadcastType::any_lane:
+    if (getLane())
+      return emitOpError()
+             << "lane can only be specified for `specific_lane` broadcast";
+    return success();
+  case BroadcastType::specific_lane:
+    if (!getLane())
+      return emitOpError()
+             << "lane must be specified for `specific_lane` broadcast";
+    return success();
+  }
 }
 
 //===----------------------------------------------------------------------===//

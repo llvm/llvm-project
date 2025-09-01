@@ -128,8 +128,8 @@ protected:
   /// SmallVectorStorage is properly-aligned even for small-size of 0.
   void *getFirstEl() const {
     return const_cast<void *>(reinterpret_cast<const void *>(
-        reinterpret_cast<const SmallVectorAlignmentAndSize<T> *>(this)
-            ->FirstEl));
+        reinterpret_cast<const char *>(this) +
+        offsetof(SmallVectorAlignmentAndSize<T>, FirstEl)));
   }
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 

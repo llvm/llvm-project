@@ -3466,9 +3466,9 @@ bool SMSchedule::onlyHasLoopCarriedOutputOrOrderPreds(
 }
 
 /// Determine transitive dependences of unpipelineable instructions
-SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
+SmallPtrSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DoNotPipeline;
+  SmallPtrSet<SUnit *, 8> DoNotPipeline;
   SmallVector<SUnit *, 8> Worklist;
 
   for (auto &SU : SSD->SUnits)
@@ -3498,7 +3498,7 @@ SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
 // and ensure that they are in stage 0.  If unable to do so, return false.
 bool SMSchedule::normalizeNonPipelinedInstructions(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
+  SmallPtrSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
 
   int NewLastCycle = INT_MIN;
   for (SUnit &SU : SSD->SUnits) {

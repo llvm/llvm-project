@@ -1320,10 +1320,8 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
         CompleteTypeErr = true;
       }
       if (!CompleteTypeErr) {
-        const RecordType *RecordTy = PropertyIvarType->getAs<RecordType>();
-        if (RecordTy && RecordTy->getOriginalDecl()
-                            ->getDefinitionOrSelf()
-                            ->hasFlexibleArrayMember()) {
+        if (const auto *RD = PropertyIvarType->getAsRecordDecl();
+            RD && RD->hasFlexibleArrayMember()) {
           Diag(PropertyIvarLoc, diag::err_synthesize_variable_sized_ivar)
             << PropertyIvarType;
           CompleteTypeErr = true; // suppress later diagnostics about the ivar

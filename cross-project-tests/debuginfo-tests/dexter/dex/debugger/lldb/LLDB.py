@@ -204,7 +204,7 @@ class LLDB(DebuggerBase):
         assert num_stopped_threads > 0
         assert self._thread, (self._process, self._thread)
 
-    def step(self):
+    def step_in(self):
         self._thread.StepInto()
         stop_reason = self._thread.GetStopReason()
         # If we (1) completed a step and (2) are sitting at a breakpoint,
@@ -528,6 +528,16 @@ class LLDBDAP(DAP):
         manually check conditions here."""
         confirmed_breakpoint_ids = set()
         for dex_bp_id in dex_bp_ids:
+            # Function and instruction breakpoints don't use conditions.
+            # FIXME: That's not a DAP restriction, so they could in future.
+            if dex_bp_id not in self.bp_info:
+                assert (
+                    dex_bp_id in self.function_bp_info
+                    or dex_bp_id in self.instruction_bp_info
+                )
+                confirmed_breakpoint_ids.add(dex_bp_id)
+                continue
+
             _, _, cond = self.bp_info[dex_bp_id]
             if cond is None:
                 confirmed_breakpoint_ids.add(dex_bp_id)

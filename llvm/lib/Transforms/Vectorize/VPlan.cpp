@@ -295,27 +295,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (hasVectorValue(Def))
     return Data.VPV2Vector[Def];
 
-  auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+  auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
-      if (LoopVectorPreHeader)
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    }
-
-    // Place the code for broadcasting invariant variables in the new preheader.
     // Broadcast the scalar into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-
     return Shuf;
   };
 
@@ -371,6 +355,9 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     set(Def, VectorValue);
   } else {
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    assert(isa<VPInstruction>(Def) &&
+           "Explicit BuildVector recipes must have"
+           "handled packing for non-VPInstructions.");
     // Initialize packing with insertelements to start from poison.
     VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
     for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
@@ -950,22 +937,6 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(VPTransformState &State) {
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
-  // FIXME: Model VF * UF computation completely in VPlan.
-  unsigned UF = getUF();
-  if (VF.getNumUsers()) {
-    Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
-    VF.setUnderlyingValue(RuntimeVF);
-    VFxUF.setUnderlyingValue(
-        UF > 1 ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, UF))
-               : RuntimeVF);
-  } else {
-    VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
-  }
-}
-
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
   auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
     return VPIRBB->getIRBasicBlock() == IRBB;
@@ -1502,7 +1473,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string BaseName = (Twine(Prefix) + Name + Twine(">")).str();
 
   // First assign the base name for V.
-  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  const auto &[A, _] = VPValue2Name.try_emplace(V, BaseName);
   // Integer or FP constants with different types will result in he same string
   // due to stripping types.
   if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
@@ -1510,7 +1481,7 @@ void VPSlotTracker::assignName(const VPValue *V) {
 
   // If it is already used by C > 0 other VPValues, increase the version counter
   // C and use it for V.
-  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
+  const auto &[C, UseInserted] = BaseName2Version.try_emplace(BaseName, 0);
   if (!UseInserted) {
     C->second++;
     A->second = (BaseName + Twine(".") + Twine(C->second)).str();

@@ -239,7 +239,6 @@ class FLAT_Load_Pseudo<
   let enabled_saddr = EnableSaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -335,7 +334,6 @@ class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   let enabled_saddr = EnableSaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 multiclass FLAT_Global_Load_AddTid_Pseudo<string opName, RegisterClass regClass,
@@ -568,7 +566,6 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let sve = EnableVaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0,
@@ -1274,7 +1271,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasTransposeLoadF4F6Insts in {
   defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
 }
