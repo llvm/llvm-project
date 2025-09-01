@@ -110,9 +110,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
-          "apply_patterns_and_fold_greedily_for_op",
+          "apply_patterns_and_fold_greedily_with_op",
           [](MlirOperation op, MlirFrozenRewritePatternSet set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyForOp(op, set, {});
+            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(op, set, {});
             if (mlirLogicalResultIsFailure(status))
               // FIXME: Not sure this is the right error to throw here.
               throw nb::value_error("pattern application failed to converge");

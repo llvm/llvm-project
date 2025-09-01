@@ -58,7 +58,7 @@ def testCustomPass():
 
             def run(self, m):
                 frozen = PDLModule(pdl_module).freeze()
-                apply_patterns_and_fold_greedily_for_op(m, frozen)
+                apply_patterns_and_fold_greedily_with_op(m, frozen)
 
         module = ModuleOp.parse(
             r"""

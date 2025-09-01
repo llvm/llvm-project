@@ -295,9 +295,9 @@ mlirApplyPatternsAndFoldGreedily(MlirModule op,
 }
 
 MlirLogicalResult
-mlirApplyPatternsAndFoldGreedilyForOp(MlirOperation op,
-                                      MlirFrozenRewritePatternSet patterns,
-                                      MlirGreedyRewriteDriverConfig) {
+mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
+                                       MlirFrozenRewritePatternSet patterns,
+                                       MlirGreedyRewriteDriverConfig) {
   return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
 }
 
