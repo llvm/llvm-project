@@ -3523,8 +3523,35 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     PatchedName = Name;
 
   // Hacks to handle 'data16' and 'data32'
-  if (PatchedName == "data16" && is16BitMode()) {
-    return Error(NameLoc, "redundant data16 prefix");
+  if (PatchedName == "data16") {
+    if (is16BitMode())
+      return Error(NameLoc, "redundant data16 prefix");
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      StringRef Next = Parser.getTok().getString();
+      getLexer().Lex();
+      // data16 effectively changes the instruction suffix.
+      // TODO Generalize.
+      if (Next == "call")
+        Next = "callw";
+      if (Next == "ljmp")
+        Next = "ljmpw";
+      if (Next == "retf")
+        Next = "retfw";
+      if (Next == "lgdt") {
+        if (is64BitMode()) {
+          // Use the special lgdtq variant with OpSize16 flag.
+          // I think the CPU ignores the prefix anyway--but hey.
+          Next = "lgdtq16";
+        } else {
+          Next = "lgdtw";
+        }
+      }
+
+      Name = Next;
+      PatchedName = Name;
+      ForcedDataPrefix = X86::Is16Bit;
+      IsPrefix = false;
+    }
   }
   if (PatchedName == "data32") {
     if (is32BitMode())
