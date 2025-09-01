@@ -13,7 +13,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2522,6 +2521,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       Opc = ID == Intrinsic::vector_reduce_fadd
                 ? TargetOpcode::G_VECREDUCE_SEQ_FADD
                 : TargetOpcode::G_VECREDUCE_SEQ_FMUL;
+      if (!MRI->getType(VecSrc).isVector())
+        Opc = ID == Intrinsic::vector_reduce_fadd ? TargetOpcode::G_FADD
+                                                  : TargetOpcode::G_FMUL;
       MIRBuilder.buildInstr(Opc, {Dst}, {ScalarSrc, VecSrc},
                             MachineInstr::copyFlagsFromInstruction(CI));
       return true;

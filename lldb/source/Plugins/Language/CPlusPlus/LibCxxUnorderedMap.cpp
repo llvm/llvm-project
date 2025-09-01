@@ -130,22 +130,17 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 
 CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetNodeType() {
-  auto node_sp = m_backend.GetChildAtNamePath({"__table_", "__first_node_"});
+  auto table_sp = m_backend.GetChildMemberWithName("__table_");
+  if (!table_sp)
+    return {};
 
-  if (!node_sp) {
-    auto p1_sp = m_backend.GetChildAtNamePath({"__table_", "__p1_"});
-    if (!p1_sp)
-      return {};
+  auto [node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      *table_sp, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  if (is_compressed_pair)
+    node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
 
-    if (!isOldCompressedPairLayout(*p1_sp))
-      return {};
-
-    node_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
-    if (!node_sp)
-      return {};
-  }
-
-  assert(node_sp);
+  if (!node_sp)
+    return {};
 
   return node_sp->GetCompilerType().GetTypeTemplateArgument(0).GetPointeeType();
 }
@@ -223,19 +218,15 @@ lldb::ValueObjectSP lldb_private::formatters::
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildrenImpl(ValueObject &table) {
-  if (auto size_sp = table.GetChildMemberWithName("__size_"))
+  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      table, /*anon_struct_idx=*/2, "__size_", "__p2_");
+  if (!is_compressed_pair && size_sp)
     return size_sp->GetValueAsUnsigned(0);
 
-  ValueObjectSP p2_sp = table.GetChildMemberWithName("__p2_");
-  if (!p2_sp)
-    return llvm::createStringError(
-        "Unexpected std::unordered_map layout: __p2_ member not found.");
+  if (!is_compressed_pair)
+    return llvm::createStringError("Unsupported std::unordered_map layout.");
 
-  if (!isOldCompressedPairLayout(*p2_sp))
-    return llvm::createStringError("Unexpected std::unordered_map layout: old "
-                                   "__compressed_pair layout not found.");
-
-  ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*p2_sp);
+  ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*size_sp);
 
   if (!num_elements_sp)
     return llvm::createStringError(
@@ -246,19 +237,13 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 }
 
 static ValueObjectSP GetTreePointer(ValueObject &table) {
-  ValueObjectSP tree_sp = table.GetChildMemberWithName("__first_node_");
-  if (!tree_sp) {
-    ValueObjectSP p1_sp = table.GetChildMemberWithName("__p1_");
-    if (!p1_sp)
-      return nullptr;
+  auto [tree_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      table, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  if (is_compressed_pair)
+    tree_sp = GetFirstValueOfLibCXXCompressedPair(*tree_sp);
 
-    if (!isOldCompressedPairLayout(*p1_sp))
-      return nullptr;
-
-    tree_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
-    if (!tree_sp)
-      return nullptr;
-  }
+  if (!tree_sp)
+    return nullptr;
 
   return tree_sp->GetChildMemberWithName("__next_");
 }

@@ -175,6 +175,7 @@
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
 // CHECK-NEXT:     xmipscbop            1.0       'XMIPSCBOP' (MIPS Software Prefetch)
 // CHECK-NEXT:     xmipscmov            1.0       'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov))
+// CHECK-NEXT:     xmipsexectl          1.0       'XMIPSEXECTL' (MIPS execution control)
 // CHECK-NEXT:     xmipslsp             1.0       'XMIPSLSP' (MIPS optimization for hardware load-store bonding)
 // CHECK-NEXT:     xsfcease             1.0       'XSfcease' (SiFive sf.cease Instruction)
 // CHECK-NEXT:     xsfmm128t            0.6       'XSfmm128t' (TE=128 configuration)
@@ -210,11 +211,12 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.14      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.15      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
+// CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
 // CHECK-NEXT:     zvqdotq              0.0       'Zvqdotq' (Vector quad widening 4D Dot Product)
 // CHECK-NEXT:     svukte               0.3       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)

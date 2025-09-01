@@ -309,7 +309,7 @@ TEST(SMEAttributes, Transitions) {
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresDisablingZABeforeCall());
-  ASSERT_TRUE(CA(ZA_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_Shared, Private_ZA).requiresEnablingZAAfterCall());
 
   // Shared ZT0 -> Private ZA Interface
   ASSERT_TRUE(CA(ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
@@ -328,7 +328,7 @@ TEST(SMEAttributes, Transitions) {
   // Shared ZA & ZT0 -> Private ZA Interface
   ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresDisablingZABeforeCall());
   ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresPreservingZT0());
-  ASSERT_TRUE(CA(ZA_ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
+  ASSERT_FALSE(CA(ZA_ZT0_Shared, Private_ZA).requiresEnablingZAAfterCall());
 
   // Shared ZA -> Shared ZA Interface
   ASSERT_FALSE(CA(ZA_Shared, ZT0_Shared).requiresDisablingZABeforeCall());

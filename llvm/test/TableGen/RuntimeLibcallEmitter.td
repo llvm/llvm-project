@@ -176,9 +176,9 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 
 // CHECK: iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::lookupLibcallImplNameImpl(StringRef Name) {
 // CHECK: static constexpr uint16_t HashTableNameToEnum[16] = {
-// CHECK: 2, // 0x000000705301b8, ___memset
+// CHECK: 2,
 // CHECK: 0,
-// CHECK: 6, // 0x0000001417a2af, calloc
+// CHECK: 6,
 // CHECK: 0,
 // CHECK: };
 
@@ -189,7 +189,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
 // CHECK-NEXT:  struct LibcallImplPair {
 // CHECK-NEXT:    RTLIB::Libcall Func;
 // CHECK-NEXT:    RTLIB::LibcallImpl Impl;
