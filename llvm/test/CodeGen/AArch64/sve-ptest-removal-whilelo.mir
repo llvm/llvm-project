@@ -571,7 +571,6 @@ body:             |
     ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_D]], killed [[COPY2]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
