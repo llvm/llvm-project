@@ -478,10 +478,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_UITOFP)
       .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .customIf([=](const LegalityQuery &Query) {
-        return !HasAVX512 &&
-               ((HasSSE1 && typeIs(0, s32)(Query)) ||
-                (HasSSE2 && typeIs(0, s64)(Query))) &&
-               scalarNarrowerThan(1, Is64Bit ? 64 : 32)(Query);
+        if (!HasAVX512 &&
+            ((HasSSE1 && typeIs(0, s32)(Query)) ||
+             (HasSSE2 && typeIs(0, s64)(Query))) &&
+            scalarNarrowerThan(1, Is64Bit ? 64 : 32)(Query))
+          return true;
+        return typeInSet(0, {s32, s64, s80})(Query) &&
+               typeInSet(1, {s8, s16, s32, s64})(Query);
       })
       .lowerIf([=](const LegalityQuery &Query) {
         // Lower conversions from s64
@@ -823,7 +826,12 @@ bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
 
   // Simply reuse SITOFP when it is possible to widen the type
   if (SrcTy.getSizeInBits() <= 32) {
-    auto Ext = MIRBuilder.buildZExt(SrcTy == s32 ? s64 : s32, Src);
+    const LLT s8 = LLT::scalar(8);
+    const LLT s16 = LLT::scalar(16);
+    auto Ext = MIRBuilder.buildZExt((SrcTy == s8    ? s16
+                                     : SrcTy == s32 ? s64
+                                                    : s32),
+                                    Src);
     MIRBuilder.buildSITOFP(Dst, Ext);
     MI.eraseFromParent();
     return true;
