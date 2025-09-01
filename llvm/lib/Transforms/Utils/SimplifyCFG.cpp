@@ -6961,7 +6961,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                         Results, DL, TTI))
       return false;
 
-    // Append the result  and result types from this case to the list for each
+    // Append the result and result types from this case to the list for each
     // phi.
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
