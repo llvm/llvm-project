@@ -4005,6 +4005,9 @@ __m128d test_mm_cvtepu32_pd(__m128i __A) {
   // CHECK: uitofp <2 x i32> %{{.*}} to <2 x double>
   return _mm_cvtepu32_pd(__A);
 }
+
+TEST_CONSTEXPR(match_m128d(_mm_cvtepu32_pd((__m128i)(__v4su){1, 2, 4, 8}), 1.0, 2.0));
+
 __m128d test_mm_mask_cvtepu32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtepu32_pd
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
