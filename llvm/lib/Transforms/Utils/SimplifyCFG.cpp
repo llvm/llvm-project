@@ -6775,18 +6775,16 @@ static bool isSwitchDense(ArrayRef<int64_t> Values) {
 // TODO: We could support larger than legal types by limiting based on the
 // number of loads required and/or table size. If the constants are small we
 // could use smaller table entries and extend after the load.
-static bool
-shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
-                       const TargetTransformInfo &TTI, const DataLayout &DL,
-                       const SmallDenseMap<PHINode *, Type *> &ResultTypes) {
+static bool shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
+                                   const TargetTransformInfo &TTI,
+                                   const DataLayout &DL,
+                                   const SmallVector<Type *> &ResultTypes) {
   if (SI->getNumCases() > TableSize)
     return false; // TableSize overflowed.
 
   bool AllTablesFitInRegister = true;
   bool HasIllegalType = false;
-  for (const auto &I : ResultTypes) {
-    Type *Ty = I.second;
-
+  for (const auto &Ty : ResultTypes) {
     // Saturate this flag to true.
     HasIllegalType = HasIllegalType || !isTypeLegalForLookupTable(Ty, TTI, DL);
 
@@ -6815,7 +6813,7 @@ shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
 
 static bool shouldUseSwitchConditionAsTableIndex(
     ConstantInt &MinCaseVal, const ConstantInt &MaxCaseVal,
-    bool HasDefaultResults, const SmallDenseMap<PHINode *, Type *> &ResultTypes,
+    bool HasDefaultResults, const SmallVector<Type *> &ResultTypes,
     const DataLayout &DL, const TargetTransformInfo &TTI) {
   if (MinCaseVal.isNullValue())
     return true;
@@ -6823,10 +6821,9 @@ static bool shouldUseSwitchConditionAsTableIndex(
       MaxCaseVal.getLimitedValue() == std::numeric_limits<uint64_t>::max() ||
       !HasDefaultResults)
     return false;
-  return all_of(ResultTypes, [&](const auto &KV) {
+  return all_of(ResultTypes, [&](const auto &ResultType) {
     return SwitchReplacement::wouldFitInRegister(
-        DL, MaxCaseVal.getLimitedValue() + 1 /* TableSize */,
-        KV.second /* ResultType */);
+        DL, MaxCaseVal.getLimitedValue() + 1 /* TableSize */, ResultType);
   });
 }
 
@@ -6953,7 +6950,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   SmallDenseMap<PHINode *, ResultListTy> ResultLists;
 
   SmallDenseMap<PHINode *, Constant *> DefaultResults;
-  SmallDenseMap<PHINode *, Type *> ResultTypes;
+  SmallVector<Type *> ResultTypes;
   SmallVector<PHINode *, 4> PHIs;
 
   for (SwitchInst::CaseIt E = SI->case_end(); CI != E; ++CI) {
@@ -6979,7 +6976,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       if (Inserted)
         PHIs.push_back(PHI);
       It->second.push_back(std::make_pair(CaseVal, Value));
-      ResultTypes[PHI] = ResultLists[PHI][0].second->getType();
+      ResultTypes.push_back(PHI->getType());
     }
   }
 
@@ -7052,9 +7049,10 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // TODO: Consider growing the table also when it doesn't fit in a register
       // if no optsize is specified.
       const uint64_t UpperBound = CR.getUpper().getLimitedValue();
-      if (!CR.isUpperWrapped() && all_of(ResultTypes, [&](const auto &KV) {
-            return SwitchReplacement::wouldFitInRegister(
-                DL, UpperBound, KV.second /* ResultType */);
+      if (!CR.isUpperWrapped() &&
+          all_of(ResultTypes, [&](const auto &ResultType) {
+            return SwitchReplacement::wouldFitInRegister(DL, UpperBound,
+                                                         ResultType);
           })) {
         // There may be some case index larger than the UpperBound (unreachable
         // case), so make sure the table size does not get smaller.
