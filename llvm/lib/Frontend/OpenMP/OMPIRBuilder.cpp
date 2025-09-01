@@ -4983,8 +4983,10 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
   RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
   if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
     RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), NoLoop));
   }
-  RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), NoLoop));
+  else
+    RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
 
   Builder.CreateCall(RTLFn, RealArgs);
 }

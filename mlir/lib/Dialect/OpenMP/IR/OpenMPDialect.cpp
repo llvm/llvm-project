@@ -2106,18 +2106,18 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
-/// Check if we can promote SPMD kernel to No-Loop kernel
+/// Check if we can promote SPMD kernel to No-Loop kernel.
 static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
                                WsloopOp *wsLoopOp) {
-  // num_teams clause can break no-loop teams/threads assumption
+  // num_teams clause can break no-loop teams/threads assumption.
   if (teamsOp.getNumTeamsUpper())
     return false;
-  // reduction kernels are slower in no-loop mode
+  // Reduction kernels are slower in no-loop mode.
   if (teamsOp.getNumReductionVars())
     return false;
   if (wsLoopOp->getNumReductionVars())
     return false;
-  // check if the user allows the promotion of kernels to no-loop mode
+  // Check if the user allows the promotion of kernels to no-loop mode.
   OffloadModuleInterface offloadMod =
       capturedOp->getParentOfType<omp::OffloadModuleInterface>();
   if (!offloadMod)
