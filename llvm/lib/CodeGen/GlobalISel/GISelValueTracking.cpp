@@ -2058,7 +2058,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
-  KnownBits Known = getKnownBits(R, DemandedElts, Depth);
+  KnownBits Known;
+  computeKnownBitsImpl(R, Known, DemandedElts, Depth + 1);
   APInt Mask;
   if (Known.isNonNegative()) { // sign bit is 0
     Mask = Known.Zero;
@@ -2079,7 +2080,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
-  return computeNumSignBits(R, DemandedElts, Depth);
+  assert(ComputeKnownBitsCache.empty() && "Cache should be empty");
+  unsigned numSignBits = computeNumSignBits(R, DemandedElts, Depth);
+  ComputeKnownBitsCache.clear();
+  return numSignBits;
 }
 
 std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(
@@ -2185,7 +2189,7 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
         Register Reg = MO.getReg();
         if (!MRI.getType(Reg).isValid())
           continue;
-        KnownBits Known = VTA.getKnownBits(Reg);
+	KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
         OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
            << '\n';
