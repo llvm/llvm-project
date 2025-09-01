@@ -21252,7 +21252,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // the truncation then we can use PACKSS by converting the srl to a sra.
   // SimplifyDemandedBits often relaxes sra to srl so we need to reverse it.
   if (In.getOpcode() == ISD::SRL && In->hasOneUse())
-    if (std::optional<uint64_t> ShAmt = DAG.getValidShiftAmount(In)) {
+    if (std::optional<unsigned> ShAmt = DAG.getValidShiftAmount(In)) {
       if (*ShAmt == MinSignBits) {
         PackOpcode = X86ISD::PACKSS;
         return DAG.getNode(ISD::SRA, DL, SrcVT, In->ops());
@@ -44957,6 +44957,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     KnownBits KnownOp0, KnownOp1;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
     //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
     //  operand 2).
     APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
@@ -44967,6 +44968,13 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
                              TLO, Depth + 1))
       return true;
+
+    // X * 0 + Y --> Y
+    // TODO: Handle cases where lower/higher 52 of bits of Op0 * Op1 are known
+    // zeroes.
+    if (KnownOp0.trunc(52).isZero() || KnownOp1.trunc(52).isZero())
+      return TLO.CombineTo(Op, Op2);
+
     // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
     break;
   }
@@ -48375,7 +48383,7 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
   // If Src came from a SHL (probably from an expanded SIGN_EXTEND_INREG), then
   // peek through and adjust the TEST bit.
   if (Src.getOpcode() == ISD::SHL) {
-    if (std::optional<uint64_t> ShiftAmt = DAG.getValidShiftAmount(Src)) {
+    if (std::optional<unsigned> ShiftAmt = DAG.getValidShiftAmount(Src)) {
       Src = Src.getOperand(0);
       BitMask.lshrInPlace(*ShiftAmt);
     }
@@ -54161,10 +54169,10 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
 static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
                                           const SDLoc &DL) {
   assert(N.getOpcode() == ISD::SRL && "Unknown shift opcode");
-  std::optional<uint64_t> ValidSrlConst = DAG.getValidShiftAmount(N);
+  std::optional<unsigned> ValidSrlConst = DAG.getValidShiftAmount(N);
   if (!ValidSrlConst)
     return SDValue();
-  uint64_t SrlConstVal = *ValidSrlConst;
+  unsigned SrlConstVal = *ValidSrlConst;
 
   SDValue Op = N.getOperand(0);
   unsigned Opcode = Op.getOpcode();

@@ -1517,7 +1517,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-  
+
   let hasVerifier = 1;
 }
 
@@ -3213,6 +3213,54 @@ def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
     /// Get the terminator of the warp region.
     gpu::YieldOp getTerminator();
   }];
+}
+
+def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
+    "a lane to broadcast from",
+    [
+      I32EnumAttrCase<"first_active_lane", 0>,
+      I32EnumAttrCase<"any_lane", 1>,
+      I32EnumAttrCase<"specific_lane", 2>
+    ]>{
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::gpu";
+}
+def GPU_BroadcastTypeAttr : EnumAttr<GPU_Dialect, GPU_BroadcastType, "broadcast">;
+
+def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
+    [NoMemoryEffect, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src,
+                 Optional<I32>:$lane,
+                 GPU_BroadcastTypeAttr:$broadcast_type)> {
+  let summary = "Broadcasts a value from the specific lane across subgroup";
+  let description = [{
+      Broadcasts a value from one lane to all active lanes in a subgroup. The
+      result is guaranteed to be uniform across the active lanes in subgroup.
+
+      The possible broadcast types are:
+
+      * `first_active_lane` - broadcasts the value from the first active lane
+      in the subgroup.
+      * `specific_lane` - broadcasts from the specified lane. The lane index
+      must be uniform and within the subgroup size. The result is poison if the
+      lane index is invalid, non subgroup-uniform, or if the source lane is not
+      active.
+      * `any_lane` - broadcasts the value from any lane of the subgroup,
+      assuming the input is already subgroup uniform. The result is poison if
+      the input is not uniform. This is useful to convey uniformity to the
+      compiler to enable more optimizations. Also, it allows more speculation
+      opportunities than `first_active_lane` since `first_active_lane` results
+      can depend on active lanes which may change during speculation across
+      control flow.
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // GPU_OPS

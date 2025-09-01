@@ -1134,7 +1134,10 @@ public:
   CallWideningDecision getCallWideningDecision(CallInst *CI,
                                                ElementCount VF) const {
     assert(!VF.isScalar() && "Expected vector VF");
-    return CallWideningDecisions.at({CI, VF});
+    auto I = CallWideningDecisions.find({CI, VF});
+    if (I == CallWideningDecisions.end())
+      return {CM_Unknown, nullptr, Intrinsic::not_intrinsic, std::nullopt, 0};
+    return I->second;
   }
 
   /// Return True if instruction \p I is an optimizable truncate whose operand
@@ -1657,7 +1660,9 @@ private:
     Instruction *I = dyn_cast<Instruction>(V);
     if (VF.isScalar() || !I || !TheLoop->contains(I) ||
         TheLoop->isLoopInvariant(I) ||
-        getWideningDecision(I, VF) == CM_Scalarize)
+        getWideningDecision(I, VF) == CM_Scalarize ||
+        (isa<CallInst>(I) &&
+         getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize))
       return false;
 
     // Assume we can vectorize V (and hence we need extraction) if the
@@ -7208,11 +7213,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                              BestVPlan, BestVF, VScale);
   }
 
-  if (!VectorizingEpilogue) {
-    // Checks are the same for all VPlans, added to BestVPlan only for
-    // compactness.
-    attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
-  }
+  // Checks are the same for all VPlans, added to BestVPlan only for
+  // compactness.
+  attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
@@ -9243,7 +9246,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 void LoopVectorizationPlanner::attachRuntimeChecks(
     VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
-  if (SCEVCheckBlock) {
+  if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessors(0)) {
     assert((!CM.OptForSize ||
             CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
            "Cannot SCEV check stride or overflow when optimizing for size");
@@ -9251,7 +9254,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                                       HasBranchWeights);
   }
   const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
-  if (MemCheckBlock) {
+  if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
     assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
@@ -10206,6 +10209,24 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   bool DisableRuntimeUnroll = false;
   MDNode *OrigLoopID = L->getLoopID();
+
+  // Report the vectorization decision.
+  if (VF.Width.isScalar()) {
+    using namespace ore;
+    assert(IC > 1);
+    ORE->emit([&]() {
+      return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
+                                L->getHeader())
+             << "interleaved loop (interleaved count: "
+             << NV("InterleaveCount", IC) << ")";
+    });
+  } else {
+    // Report the vectorization decision.
+    reportVectorization(ORE, L, VF, IC);
+  }
+  if (ORE->allowExtraAnalysis(LV_NAME))
+    checkMixedPrecision(L, ORE);
+
   // If we decided that it is *legal* to interleave or vectorize the loop, then
   // do it.
 
@@ -10276,22 +10297,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (!Checks.hasChecks() && !VF.Width.isScalar())
       DisableRuntimeUnroll = true;
   }
-  if (VF.Width.isScalar()) {
-    using namespace ore;
-    assert(IC > 1);
-    ORE->emit([&]() {
-      return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
-                                L->getHeader())
-             << "interleaved loop (interleaved count: "
-             << NV("InterleaveCount", IC) << ")";
-    });
-  } else {
-    // Report the vectorization decision.
-    reportVectorization(ORE, L, VF, IC);
-  }
-
-  if (ORE->allowExtraAnalysis(LV_NAME))
-    checkMixedPrecision(L, ORE);
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");

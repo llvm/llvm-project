@@ -1473,26 +1473,13 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
 
   // We have finished with the filter processings.  Now it's time to choose
   // the best performing filter.
-  unsigned BestIndex = 0;
-  bool AllUseless = true;
-  unsigned BestScore = 0;
-
-  for (const auto &[Idx, Filter] : enumerate(Filters)) {
-    unsigned Usefulness = Filter->usefulness();
-
-    if (Usefulness)
-      AllUseless = false;
-
-    if (Usefulness > BestScore) {
-      BestIndex = Idx;
-      BestScore = Usefulness;
-    }
-  }
-
-  if (AllUseless)
+  auto MaxIt = llvm::max_element(Filters, [](const std::unique_ptr<Filter> &A,
+                                             const std::unique_ptr<Filter> &B) {
+    return A->usefulness() < B->usefulness();
+  });
+  if (MaxIt == Filters.end() || (*MaxIt)->usefulness() == 0)
     return nullptr;
-
-  return std::move(Filters[BestIndex]);
+  return std::move(*MaxIt);
 }
 
 std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
@@ -1937,19 +1924,6 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
 }
 
 void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
-  const Record &Def = *Inst->TheDef;
-
-  // Gather the outputs/inputs of the instruction, so we can find their
-  // positions in the encoding.  This assumes for now that they appear in the
-  // MCInst in the order that they're listed.
-  std::vector<std::pair<const Init *, StringRef>> InOutOperands;
-  const DagInit *Out = Def.getValueAsDag("OutOperandList");
-  const DagInit *In = Def.getValueAsDag("InOperandList");
-  for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
-    InOutOperands.emplace_back(Arg, Out->getArgNameStr(Idx));
-  for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
-    InOutOperands.emplace_back(Arg, In->getArgNameStr(Idx));
-
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
@@ -1972,48 +1946,28 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 
   // For each operand, see if we can figure out where it is encoded.
-  for (const auto &Op : InOutOperands) {
-    const Init *OpInit = Op.first;
-    StringRef OpName = Op.second;
-
-    // We're ready to find the instruction encoding locations for this
-    // operand.
-
-    // First, find the operand type ("OpInit"), and sub-op names
-    // ("SubArgDag") if present.
-    const DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
-    if (SubArgDag)
-      OpInit = SubArgDag->getOperator();
-    const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
-    // Lookup the sub-operands from the operand type record (note that only
-    // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
-    const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
-                                ? OpTypeRec->getValueAsDag("MIOperandInfo")
-                                : nullptr;
-
+  for (const CGIOperandList::OperandInfo &Op : Inst->Operands) {
     // Lookup the decoder method and construct a new OperandInfo to hold our
     // result.
-    OperandInfo OpInfo = getOpInfo(OpTypeRec);
+    OperandInfo OpInfo = getOpInfo(Op.Rec);
 
     // If we have named sub-operands...
-    if (SubArgDag) {
+    if (Op.MIOperandInfo && !Op.SubOpNames[0].empty()) {
       // Then there should not be a custom decoder specified on the top-level
       // type.
       if (!OpInfo.Decoder.empty()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
-                       OpInit->getAsString() +
+                   "DecoderEmitter: operand \"" + Op.Name + "\" has type \"" +
+                       Op.Rec->getName() +
                        "\" with a custom DecoderMethod, but also named "
                        "sub-operands.");
         continue;
       }
 
       // Decode each of the sub-ops separately.
-      assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
-      for (const auto &[I, Arg] : enumerate(SubOps->getArgs())) {
-        StringRef SubOpName = SubArgDag->getArgNameStr(I);
-        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(Arg)->getDef());
-
+      for (auto [SubOpName, SubOp] :
+           zip_equal(Op.SubOpNames, Op.MIOperandInfo->getArgs())) {
+        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(SubOp)->getDef());
         addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName, SubOpInfo);
         Operands.push_back(std::move(SubOpInfo));
       }
@@ -2022,25 +1976,20 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
 
     // Otherwise, if we have an operand with sub-operands, but they aren't
     // named...
-    if (SubOps && OpInfo.Decoder.empty()) {
-      // If it's a single sub-operand, and no custom decoder, use the decoder
-      // from the one sub-operand.
-      if (SubOps->getNumArgs() == 1)
-        OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
-
-      // If we have multiple sub-ops, there'd better have a custom
-      // decoder. (Otherwise we don't know how to populate them properly...)
-      if (SubOps->getNumArgs() > 1) {
+    if (Op.MIOperandInfo && OpInfo.Decoder.empty()) {
+      // If we have sub-ops, we'd better have a custom decoder.
+      // (Otherwise we don't know how to populate them properly...)
+      if (Op.MIOperandInfo->getNumArgs()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName +
-                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                   "DecoderEmitter: operand \"" + Op.Name +
+                       "\" has non-empty MIOperandInfo, but doesn't "
                        "have a custom decoder!");
         debugDumpRecord(*EncodingDef);
         continue;
       }
     }
 
-    addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+    addOneOperandFields(EncodingDef, Bits, TiedNames, Op.Name, OpInfo);
     // FIXME: it should be an error not to find a definition for a given
     // operand, rather than just failing to add it to the resulting
     // instruction! (This is a longstanding bug, which will be addressed in an

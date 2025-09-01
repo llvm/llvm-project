@@ -123,7 +123,6 @@ class R600_1OP <bits<11> inst, string opName, list<dag> pattern,
   let HasNativeOperands = 1;
   let Op1 = 1;
   let ALUInst = 1;
-  let DisableEncoding = "$literal";
   let UseNamedOperandTable = 1;
 
   let Inst{31-0}  = Word0;
@@ -161,7 +160,6 @@ class R600_2OP <bits<11> inst, string opName, list<dag> pattern,
   let HasNativeOperands = 1;
   let Op2 = 1;
   let ALUInst = 1;
-  let DisableEncoding = "$literal";
   let UseNamedOperandTable = 1;
 
   let Inst{31-0}  = Word0;
@@ -201,7 +199,6 @@ class R600_3OP <bits<5> inst, string opName, list<dag> pattern,
     R600ALU_Word1_OP3<inst>{
 
   let HasNativeOperands = 1;
-  let DisableEncoding = "$literal";
   let Op3 = 1;
   let UseNamedOperandTable = 1;
   let ALUInst = 1;
@@ -1783,7 +1780,7 @@ def : DwordAddrPat  <i32, R600_Reg32>;
 def getLDSNoRetOp : InstrMapping {
   let FilterClass = "R600_LDS_1A1D";
   let RowFields = ["BaseOp"];
-  let ColFields = ["DisableEncoding"];
-  let KeyCol = ["$dst"];
-  let ValueCols = [[""""]];
+  let ColFields = ["usesCustomInserter"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }

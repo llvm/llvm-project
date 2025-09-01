@@ -79,6 +79,7 @@ CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/PowerPC/P10-stack-alignment.ll
+CodeGen/WebAssembly/memory-interleave.ll
 CodeGen/X86/masked_gather_scatter.ll
 CodeGen/X86/nocfivalue.ll
 DebugInfo/AArch64/ir-outliner.ll
@@ -111,6 +112,7 @@ Instrumentation/AddressSanitizer/asan-funclet.ll
 Instrumentation/AddressSanitizer/asan-masked-load-store.ll
 Instrumentation/AddressSanitizer/asan-optimize-callbacks.ll
 Instrumentation/AddressSanitizer/asan-pass-second-run.ll
+Instrumentation/AddressSanitizer/asan-scalable-vector.ll
 Instrumentation/AddressSanitizer/asan-stack-safety.ll
 Instrumentation/AddressSanitizer/asan-struct-scalable.ll
 Instrumentation/AddressSanitizer/asan-vp-load-store.ll
@@ -1468,11 +1470,13 @@ Transforms/LoopVectorize/vplan-sink-scalars-and-merge-vf1.ll
 Transforms/LoopVectorize/vplan-vectorize-inner-loop-reduction.ll
 Transforms/LoopVectorize/vplan-widen-call-instruction.ll
 Transforms/LoopVectorize/vplan-widen-select-instruction.ll
+Transforms/LoopVectorize/WebAssembly/memory-interleave.ll
 Transforms/LoopVectorize/X86/avx1.ll
 Transforms/LoopVectorize/X86/avx512.ll
 Transforms/LoopVectorize/X86/consecutive-ptr-uniforms.ll
 Transforms/LoopVectorize/X86/constant-fold.ll
 Transforms/LoopVectorize/X86/conversion-cost.ll
+Transforms/LoopVectorize/X86/cost-conditional-branches.ll
 Transforms/LoopVectorize/X86/cost-constant-known-via-scev.ll
 Transforms/LoopVectorize/X86/CostModel/handle-iptr-with-data-layout-to-not-assert.ll
 Transforms/LoopVectorize/X86/CostModel/interleaved-load-f32-stride-3.ll
