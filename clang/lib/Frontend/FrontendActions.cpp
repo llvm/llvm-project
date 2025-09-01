@@ -1315,18 +1315,22 @@ void HLSLFrontendAction::ExecuteAction() {
   auto &TargetInfo = CI.getASTContext().getTargetInfo();
   bool IsRootSignatureTarget =
       TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+  StringRef HLSLEntry = TargetInfo.getTargetOpts().HLSLEntry;
 
   // Register HLSL specific callbacks
   auto LangOpts = CI.getLangOpts();
+  StringRef RootSigName =
+      IsRootSignatureTarget ? HLSLEntry : LangOpts.HLSLRootSigOverride;
+
   auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
-      S, LangOpts.HLSLRootSigOverride, LangOpts.HLSLRootSigVer);
+      S, RootSigName, LangOpts.HLSLRootSigVer);
 
   Preprocessor &PP = CI.getPreprocessor();
   PP.addPPCallbacks(std::move(MacroCallback));
 
   // If we are targeting a root signature, invoke custom handling
   if (IsRootSignatureTarget)
-    return hlsl::HandleRootSignatureTarget(S);
+    return hlsl::HandleRootSignatureTarget(S, HLSLEntry);
   else // otherwise, invoke as normal
     return WrapperFrontendAction::ExecuteAction();
 }
