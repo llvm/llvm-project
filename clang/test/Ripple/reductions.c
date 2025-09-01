@@ -1,6 +1,8 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
-// RUN: %clang -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
-// RUN: %clang -x c++ -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKCLANGGEN --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -x c++ -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKCLANGGEN --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -fenable-ripple -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKRIPPLEGEN --implicit-check-not="warning:" --implicit-check-not="error:"
+// RUN: %clang -fenable-ripple -x c++ -Wpedantic -S -O1 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECKALL,CHECKRIPPLEGEN --implicit-check-not="warning:" --implicit-check-not="error:"
 
 #include <ripple.h>
 
@@ -9,23 +11,25 @@ extern "C" {
 #endif
 
 void check_reduceadd_u8(uint8_t a[128], uint8_t *OutPtr) {
-  // CHECK: check_reduceadd_u8
+  // CHECKALL: check_reduceadd_u8
   ripple_block_t BS = ripple_set_block_shape(0, 128);
   int idx_x = ripple_id(BS, 0);
   uint8_t tmp = a[idx_x];
   uint8_t out = ripple_reduceadd(0x1, tmp);
-  // CHECK: @llvm.ripple.reduce.add.i8(i64 1, i8
+  // CHECKCLANGGEN: @llvm.ripple.reduce.add.i8(i64 1, i8
+  // CHECKRIPPLEGEN: call i8 @llvm.vector.reduce.add.v128i8
   OutPtr[0] = out;
 }
 
 #define gen_reduce_test(N, OP, LONGTYPE, SHORTTYPE)                            \
   void check_reduction_##OP##_##SHORTTYPE(LONGTYPE arg[N], LONGTYPE *OutPtr) { \
-    ripple_block_t BS = ripple_set_block_shape(0, N);                                               \
-    int idx_x = ripple_id(BS, 0);                                               \
+    ripple_block_t BS = ripple_set_block_shape(0, N);                          \
+    int idx_x = ripple_id(BS, 0);                                              \
     LONGTYPE tmp = arg[idx_x];                                                 \
-    LONGTYPE out = ripple_reduce##OP(0x1, tmp);                                \
+    LONGTYPE tmp2 = arg[idx_x + N];                                            \
+    LONGTYPE out = ripple_reduce##OP(0x1, tmp2);                               \
     LONGTYPE out_rval = ripple_reduce##OP(0x1, (LONGTYPE)(tmp + (LONGTYPE)3)); \
-    OutPtr[0] = out + out_rval;                                                \
+    OutPtr[0] = out / out_rval;                                                \
   }
 
 typedef signed char sc;
@@ -368,3 +372,7 @@ gen_reduce_test (128, or, sll, sll)
 gen_reduce_test (128, or, ull, ull)
 
 // }}}
+
+#ifdef __cpluplus
+}
+#endif

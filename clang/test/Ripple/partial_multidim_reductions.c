@@ -1,5 +1,7 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -g -fenable-ripple -O0 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang -g -fenable-ripple -O0 -S -emit-llvm -ffinite-math-only -o - %s | FileCheck --check-prefix=FINITEMATHCHECK %s
+// RUN: %clang -g -fenable-ripple -O0 -S -emit-llvm -ffast-math -o - %s | FileCheck --check-prefix=FASTMATHCHECK %s
 // RUN: %clang -g -fenable-ripple -O2 -S -emit-llvm -o - %s
 
 #include <ripple.h>
