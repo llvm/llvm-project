@@ -28,6 +28,7 @@ add_entrypoint_object(
     ../localtime.h
     time_utils.h
   DEPENDS
+    .time_utils
     libc.hdr.types.struct_tm
     libc.hdr.types.time_t
 )
@@ -40,6 +41,7 @@ add_entrypoint_object(
     ../localtime.h
     time_utils.h
   DEPENDS
+    .time_utils
     libc.hdr.types.struct_tm
     libc.hdr.types.time_t
 )
