@@ -157,13 +157,16 @@ class InstructionEncoding {
   /// The name of this encoding (for debugging purposes).
   std::string Name;
 
+  /// The namespace in which this encoding exists.
+  StringRef DecoderNamespace;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
 
   /// Mask of bits that should be considered unknown during decoding.
   /// This is the value of the `SoftFail` field.
-  APInt SoftFailBits;
+  APInt SoftFailMask;
 
   /// The name of the function to use for decoding. May be an empty string,
   /// meaning the decoder is generated.
@@ -190,6 +193,9 @@ public:
   /// Returns the name of this encoding, for debugging purposes.
   StringRef getName() const { return Name; }
 
+  /// Returns the namespace in which this encoding exists.
+  StringRef getDecoderNamespace() const { return DecoderNamespace; }
+
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
 
@@ -197,7 +203,7 @@ public:
   const KnownBits &getInstBits() const { return InstBits; }
 
   /// Returns a mask of bits that should be considered unknown during decoding.
-  const APInt &getSoftFailBits() const { return SoftFailBits; }
+  const APInt &getSoftFailMask() const { return SoftFailMask; }
 
   /// Returns the known bits of this encoding that must match for
   /// successful decoding.
@@ -205,8 +211,8 @@ public:
     KnownBits EncodingBits = InstBits;
     // Mark all bits that are allowed to change according to SoftFail mask
     // as unknown.
-    EncodingBits.Zero &= ~SoftFailBits;
-    EncodingBits.One &= ~SoftFailBits;
+    EncodingBits.Zero &= ~SoftFailMask;
+    EncodingBits.One &= ~SoftFailMask;
     return EncodingBits;
   }
 
@@ -326,7 +332,7 @@ struct DecoderTableInfo {
   }
 };
 
-using NamespacesHwModesMap = std::map<std::string, std::set<unsigned>>;
+using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
 
 class DecoderEmitter {
   const RecordKeeper &RK;
@@ -425,15 +431,6 @@ struct Filter {
   Filter(ArrayRef<InstructionEncoding> Encodings,
          ArrayRef<unsigned> EncodingIDs, unsigned StartBit, unsigned NumBits);
 
-  bool hasSingleFilteredID() const {
-    return FilteredIDs.size() == 1 && FilteredIDs.begin()->second.size() == 1;
-  }
-
-  unsigned getSingletonEncodingID() const {
-    assert(hasSingleFilteredID());
-    return FilteredIDs.begin()->second.front();
-  }
-
   // Returns the number of fanout produced by the filter.  More fanout implies
   // the filter distinguishes more categories of instructions.
   unsigned usefulness() const;
@@ -483,12 +480,6 @@ class FilterChooser {
   // Links to the FilterChooser above us in the decoding tree.
   const FilterChooser *Parent;
 
-  /// Some targets (ARM) specify more encoding bits in Inst that Size allows.
-  /// This field allows us to ignore the extra bits.
-  unsigned MaxFilterWidth;
-
-  const CodeGenTarget &Target;
-
   /// If the selected filter matches multiple encodings, then this is the
   /// starting position and the width of the filtered range.
   unsigned StartBit;
@@ -522,16 +513,12 @@ class FilterChooser {
 public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
-                ArrayRef<unsigned> EncodingIDs, unsigned MaxFilterWidth,
-                const CodeGenTarget &Target)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr),
-        MaxFilterWidth(MaxFilterWidth), Target(Target) {
+                ArrayRef<unsigned> EncodingIDs)
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
     // Sort encoding IDs once.
     stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     FilterBits = KnownBits(FilterWidth);
     doFilter();
   }
@@ -540,15 +527,12 @@ public:
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
                 ArrayRef<unsigned> EncodingIDs, const KnownBits &FilterBits,
                 const FilterChooser &Parent)
-      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent),
-        MaxFilterWidth(Parent.MaxFilterWidth), Target(Parent.Target) {
+      : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
     assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
-    // Cap it as necessary.
-    FilterWidth = std::min(FilterWidth, MaxFilterWidth);
     this->FilterBits = FilterBits.anyext(FilterWidth);
     doFilter();
   }
@@ -690,14 +674,6 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
-  }
-
-  // No need to recurse for a singleton filtered instruction.
-  // See also Filter::emit*().
-  if (F.hasSingleFilteredID()) {
-    SingletonEncodingID = F.getSingletonEncodingID();
-    assert(VariableFC && "Shouldn't have created a filter for one encoding!");
-    return;
   }
 
   // Otherwise, create sub choosers.
@@ -1082,8 +1058,6 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
                                            const OperandInfo &OpInfo) const {
-  const std::string &Decoder = OpInfo.Decoder;
-
   bool UseInsertBits = OpInfo.numFields() != 1 || OpInfo.InitValue != 0;
 
   if (UseInsertBits) {
@@ -1106,6 +1080,7 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << ";\n";
   }
 
+  StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1273,32 +1248,13 @@ void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
 void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   const KnownBits &InstBits = Encoding.getInstBits();
-  const APInt &SFBits = Encoding.getSoftFailBits();
+  const APInt &SoftFailMask = Encoding.getSoftFailMask();
 
-  if (SFBits.isZero())
+  if (SoftFailMask.isZero())
     return;
 
-  unsigned EncodingWidth = InstBits.getBitWidth();
-  APInt PositiveMask(EncodingWidth, 0);
-  APInt NegativeMask(EncodingWidth, 0);
-  for (unsigned i = 0; i != EncodingWidth; ++i) {
-    if (!SFBits[i])
-      continue;
-
-    if (InstBits.Zero[i]) {
-      // The bit is meant to be false, so emit a check to see if it is true.
-      PositiveMask.setBit(i);
-    } else if (InstBits.One[i]) {
-      // The bit is meant to be true, so emit a check to see if it is false.
-      NegativeMask.setBit(i);
-    }
-  }
-
-  bool NeedPositiveMask = PositiveMask.getBoolValue();
-  bool NeedNegativeMask = NegativeMask.getBoolValue();
-
-  if (!NeedPositiveMask && !NeedNegativeMask)
-    return;
+  APInt PositiveMask = InstBits.Zero & SoftFailMask;
+  APInt NegativeMask = InstBits.One & SoftFailMask;
 
   TableInfo.Table.insertOpcode(MCD::OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
@@ -1517,26 +1473,13 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
 
   // We have finished with the filter processings.  Now it's time to choose
   // the best performing filter.
-  unsigned BestIndex = 0;
-  bool AllUseless = true;
-  unsigned BestScore = 0;
-
-  for (const auto &[Idx, Filter] : enumerate(Filters)) {
-    unsigned Usefulness = Filter->usefulness();
-
-    if (Usefulness)
-      AllUseless = false;
-
-    if (Usefulness > BestScore) {
-      BestIndex = Idx;
-      BestScore = Usefulness;
-    }
-  }
-
-  if (AllUseless)
+  auto MaxIt = llvm::max_element(Filters, [](const std::unique_ptr<Filter> &A,
+                                             const std::unique_ptr<Filter> &B) {
+    return A->usefulness() < B->usefulness();
+  });
+  if (MaxIt == Filters.end() || (*MaxIt)->usefulness() == 0)
     return nullptr;
-
-  return std::move(Filters[BestIndex]);
+  return std::move(*MaxIt);
 }
 
 std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
@@ -1659,6 +1602,8 @@ void FilterChooser::dump() const {
 }
 
 void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
+  DecoderTable &Table = TableInfo.Table;
+
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
   if (FC.VariableFC)
@@ -1670,9 +1615,23 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     // fully defined, but we still need to check if the remaining (unfiltered)
     // bits are valid for this encoding. We also need to check predicates etc.
     emitSingletonTableEntry(FC);
+  } else if (FC.FilterChooserMap.size() == 1) {
+    // If there is only one possible field value, emit a combined OPC_CheckField
+    // instead of OPC_ExtractField + OPC_FilterValue.
+    const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.begin();
+    Table.insertOpcode(!TableInfo.isOutermostScope()
+                           ? MCD::OPC_CheckField
+                           : MCD::OPC_CheckFieldOrFail);
+    Table.insertULEB128(FC.StartBit);
+    Table.insertUInt8(FC.NumBits);
+    Table.insertULEB128(FilterVal);
+    if (!TableInfo.isOutermostScope())
+      TableInfo.FixupStack.back().push_back(TableInfo.Table.insertNumToSkip());
+
+    // Emit table entries for the only case.
+    emitTableEntries(*Delegate);
   } else {
     // The general case: emit a switch over the field value.
-    DecoderTable &Table = TableInfo.Table;
     Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(FC.StartBit);
     Table.insertUInt8(FC.NumBits);
@@ -1751,7 +1710,7 @@ OperandInfo getOpInfo(const Record *TypeRecord) {
 
 void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
   InstBits = KnownBits(VLI.size());
-  SoftFailBits = APInt(VLI.size(), 0);
+  SoftFailMask = APInt(VLI.size(), 0);
 
   // Parse Inst field.
   unsigned I = 0;
@@ -1820,7 +1779,7 @@ void InstructionEncoding::parseFixedLenEncoding(
   ArrayRef<const Init *> ActiveInstBits =
       RecordInstBits.getBits().take_front(BitWidth);
   InstBits = KnownBits(BitWidth);
-  SoftFailBits = APInt(BitWidth, 0);
+  SoftFailMask = APInt(BitWidth, 0);
 
   // Parse Inst field.
   for (auto [I, V] : enumerate(ActiveInstBits)) {
@@ -1862,7 +1821,7 @@ void InstructionEncoding::parseFixedLenEncoding(
                            "to be fully defined (0 or 1, not '?')",
                            I));
       }
-      SoftFailBits.setBit(I);
+      SoftFailMask.setBit(I);
     }
   }
 }
@@ -1965,19 +1924,6 @@ static void addOneOperandFields(const Record *EncodingDef, const BitsInit &Bits,
 }
 
 void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
-  const Record &Def = *Inst->TheDef;
-
-  // Gather the outputs/inputs of the instruction, so we can find their
-  // positions in the encoding.  This assumes for now that they appear in the
-  // MCInst in the order that they're listed.
-  std::vector<std::pair<const Init *, StringRef>> InOutOperands;
-  const DagInit *Out = Def.getValueAsDag("OutOperandList");
-  const DagInit *In = Def.getValueAsDag("InOperandList");
-  for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
-    InOutOperands.emplace_back(Arg, Out->getArgNameStr(Idx));
-  for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
-    InOutOperands.emplace_back(Arg, In->getArgNameStr(Idx));
-
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
@@ -2000,48 +1946,28 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 
   // For each operand, see if we can figure out where it is encoded.
-  for (const auto &Op : InOutOperands) {
-    const Init *OpInit = Op.first;
-    StringRef OpName = Op.second;
-
-    // We're ready to find the instruction encoding locations for this
-    // operand.
-
-    // First, find the operand type ("OpInit"), and sub-op names
-    // ("SubArgDag") if present.
-    const DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
-    if (SubArgDag)
-      OpInit = SubArgDag->getOperator();
-    const Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
-    // Lookup the sub-operands from the operand type record (note that only
-    // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
-    const DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
-                                ? OpTypeRec->getValueAsDag("MIOperandInfo")
-                                : nullptr;
-
+  for (const CGIOperandList::OperandInfo &Op : Inst->Operands) {
     // Lookup the decoder method and construct a new OperandInfo to hold our
     // result.
-    OperandInfo OpInfo = getOpInfo(OpTypeRec);
+    OperandInfo OpInfo = getOpInfo(Op.Rec);
 
     // If we have named sub-operands...
-    if (SubArgDag) {
+    if (Op.MIOperandInfo && !Op.SubOpNames[0].empty()) {
       // Then there should not be a custom decoder specified on the top-level
       // type.
       if (!OpInfo.Decoder.empty()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
-                       OpInit->getAsString() +
+                   "DecoderEmitter: operand \"" + Op.Name + "\" has type \"" +
+                       Op.Rec->getName() +
                        "\" with a custom DecoderMethod, but also named "
                        "sub-operands.");
         continue;
       }
 
       // Decode each of the sub-ops separately.
-      assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
-      for (const auto &[I, Arg] : enumerate(SubOps->getArgs())) {
-        StringRef SubOpName = SubArgDag->getArgNameStr(I);
-        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(Arg)->getDef());
-
+      for (auto [SubOpName, SubOp] :
+           zip_equal(Op.SubOpNames, Op.MIOperandInfo->getArgs())) {
+        OperandInfo SubOpInfo = getOpInfo(cast<DefInit>(SubOp)->getDef());
         addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName, SubOpInfo);
         Operands.push_back(std::move(SubOpInfo));
       }
@@ -2050,25 +1976,20 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
 
     // Otherwise, if we have an operand with sub-operands, but they aren't
     // named...
-    if (SubOps && OpInfo.Decoder.empty()) {
-      // If it's a single sub-operand, and no custom decoder, use the decoder
-      // from the one sub-operand.
-      if (SubOps->getNumArgs() == 1)
-        OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
-
-      // If we have multiple sub-ops, there'd better have a custom
-      // decoder. (Otherwise we don't know how to populate them properly...)
-      if (SubOps->getNumArgs() > 1) {
+    if (Op.MIOperandInfo && OpInfo.Decoder.empty()) {
+      // If we have sub-ops, we'd better have a custom decoder.
+      // (Otherwise we don't know how to populate them properly...)
+      if (Op.MIOperandInfo->getNumArgs()) {
         PrintError(EncodingDef,
-                   "DecoderEmitter: operand \"" + OpName +
-                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                   "DecoderEmitter: operand \"" + Op.Name +
+                       "\" has non-empty MIOperandInfo, but doesn't "
                        "have a custom decoder!");
         debugDumpRecord(*EncodingDef);
         continue;
       }
     }
 
-    addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+    addOneOperandFields(EncodingDef, Bits, TiedNames, Op.Name, OpInfo);
     // FIXME: it should be an error not to find a definition for a given
     // operand, rather than just failing to add it to the resulting
     // instruction! (This is a longstanding bug, which will be addressed in an
@@ -2088,6 +2009,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     Name = (EncodingDef->getName() + Twine(':')).str();
   Name.append(InstDef->getName());
 
+  DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2350,8 +2272,8 @@ void DecoderEmitter::collectHwModesReferencedForEncodings(
   for (const auto &MS : CGH.getHwModeSelects()) {
     for (auto [HwModeID, EncodingDef] : MS.second.Items) {
       if (EncodingDef->isSubClassOf("InstructionEncoding")) {
-        std::string DecoderNamespace =
-            EncodingDef->getValueAsString("DecoderNamespace").str();
+        StringRef DecoderNamespace =
+            EncodingDef->getValueAsString("DecoderNamespace");
         NamespacesWithHwModes[DecoderNamespace].insert(HwModeID);
         BV.set(HwModeID);
       }
@@ -2373,9 +2295,7 @@ void DecoderEmitter::handleHwModesUnrelatedEncodings(
     break;
   }
   case SUPPRESSION_LEVEL1: {
-    const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
-    std::string DecoderNamespace =
-        InstDef->getValueAsString("DecoderNamespace").str();
+    StringRef DecoderNamespace = Encodings[EncodingID].getDecoderNamespace();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (unsigned HwModeID : It->second)
@@ -2548,8 +2468,7 @@ namespace {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
       const Record *EncodingDef = Encoding.getRecord();
       unsigned Size = EncodingDef->getValueAsInt("Size");
-      StringRef DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+      StringRef DecoderNamespace = Encoding.getDecoderNamespace();
       EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
     }
   }
@@ -2562,7 +2481,7 @@ namespace {
     auto [DecoderNamespace, HwModeID, Size] = Key;
     const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
     // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs, BitWidth, Target);
+    FilterChooser FC(Encodings, EncodingIDs);
 
     // The decode table is cleared for each top level decoder function. The
     // predicates and decoders themselves, however, are shared across all
