@@ -29,6 +29,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -2084,12 +2085,10 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 /// for the header-mask pattern manually.
 static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser =
-      find_if(Plan.getCanonicalIV()->users(),
-              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
+                                            IsaPred<VPWidenCanonicalIVRecipe>);
   assert(count_if(Plan.getCanonicalIV()->users(),
-                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
-             1 &&
+                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
   if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
     auto *WideCanonicalIV =
@@ -2132,9 +2131,8 @@ void VPlanTransforms::addActiveLaneMask(
          "DataAndControlFlowWithoutRuntimeCheck implies "
          "UseActiveLaneMaskForControlFlow");
 
-  auto *FoundWidenCanonicalIVUser =
-      find_if(Plan.getCanonicalIV()->users(),
-              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  auto *FoundWidenCanonicalIVUser = find_if(Plan.getCanonicalIV()->users(),
+                                            IsaPred<VPWidenCanonicalIVRecipe>);
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
@@ -2540,6 +2538,46 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
                          Plan.getOrAddLiveIn(ConstantInt::getNullValue(AVLTy)));
   Builder.createNaryOp(VPInstruction::BranchOnCond, Cmp);
   LatchExitingBr->eraseFromParent();
+}
+
+void VPlanTransforms::replaceSymbolicStrides(
+    VPlan &Plan, PredicatedScalarEvolution &PSE,
+    const DenseMap<Value *, const SCEV *> &StridesMap) {
+  // Replace VPValues for known constant strides guaranteed by predicate scalar
+  // evolution.
+  auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
+    auto *R = cast<VPRecipeBase>(&U);
+    return R->getParent()->getParent() ||
+           R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
+  };
+  for (const SCEV *Stride : StridesMap.values()) {
+    using namespace SCEVPatternMatch;
+    auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+    const APInt *StrideConst;
+    if (!match(PSE.getSCEV(StrideV), m_scev_APInt(StrideConst)))
+      // Only handle constant strides for now.
+      continue;
+
+    auto *CI =
+        Plan.getOrAddLiveIn(ConstantInt::get(Stride->getType(), *StrideConst));
+    if (VPValue *StrideVPV = Plan.getLiveIn(StrideV))
+      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+
+    // The versioned value may not be used in the loop directly but through a
+    // sext/zext. Add new live-ins in those cases.
+    for (Value *U : StrideV->users()) {
+      if (!isa<SExtInst, ZExtInst>(U))
+        continue;
+      VPValue *StrideVPV = Plan.getLiveIn(U);
+      if (!StrideVPV)
+        continue;
+      unsigned BW = U->getType()->getScalarSizeInBits();
+      APInt C =
+          isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
+      VPValue *CI = Plan.getOrAddLiveIn(ConstantInt::get(U->getType(), C));
+      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+    }
+  }
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
@@ -3615,12 +3653,12 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop)
+  if (!VectorLoop)
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
-  unsigned FixedVF = VF.getFixedValue();
+  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
@@ -3656,7 +3694,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF, TypeInfo,
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
                                       VectorRegWidth))
       return;
 
@@ -3775,10 +3813,21 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
-                         CanIV->getScalarType(), 1 * Plan.getUF())));
-  Plan.getVF().replaceAllUsesWith(
-      Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  VPBuilder PHBuilder(Plan.getVectorPreheader());
+
+  VPValue *UF = Plan.getOrAddLiveIn(
+      ConstantInt::get(CanIV->getScalarType(), 1 * Plan.getUF()));
+  if (VF.isScalable()) {
+    VPValue *VScale = PHBuilder.createElementCount(
+        CanIV->getScalarType(), ElementCount::getScalable(1));
+    VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
+    Inc->setOperand(1, VScaleUF);
+    Plan.getVF().replaceAllUsesWith(VScale);
+  } else {
+    Inc->setOperand(1, UF);
+    Plan.getVF().replaceAllUsesWith(
+        Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  }
   removeDeadRecipes(Plan);
 }
 
