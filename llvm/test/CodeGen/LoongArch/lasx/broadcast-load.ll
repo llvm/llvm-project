@@ -33,6 +33,32 @@ define <4 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst) {
   ret <4 x i64> %tmp2
 }
 
+define <16 x i16> @should_not_be_optimized_sext_load(ptr %ptr) {
+; CHECK-LABEL: should_not_be_optimized_sext_load:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.b $a0, $a0, 0
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a0
+; CHECK-NEXT:    ret
+  %tmp = load i8, ptr %ptr
+  %tmp1 = sext i8 %tmp to i16
+  %tmp2 = insertelement <16 x i16> zeroinitializer, i16 %tmp1, i32 0
+  %tmp3 = shufflevector <16 x i16> %tmp2, <16 x i16> poison, <16 x i32> zeroinitializer
+  ret <16 x i16> %tmp3
+}
+
+define <16 x i16> @should_not_be_optimized_zext_load(ptr %ptr) {
+; CHECK-LABEL: should_not_be_optimized_zext_load:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld.bu $a0, $a0, 0
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a0
+; CHECK-NEXT:    ret
+  %tmp = load i8, ptr %ptr
+  %tmp1 = zext i8 %tmp to i16
+  %tmp2 = insertelement <16 x i16> zeroinitializer, i16 %tmp1, i32 0
+  %tmp3 = shufflevector <16 x i16> %tmp2, <16 x i16> poison, <16 x i32> zeroinitializer
+  ret <16 x i16> %tmp3
+}
+
 define <4 x i64> @xvldrepl_d_unaligned_offset(ptr %ptr) {
 ; LA32-LABEL: xvldrepl_d_unaligned_offset:
 ; LA32:       # %bb.0:
