@@ -1125,7 +1125,7 @@ private:
         bulkLoadElementType = mlirF16TypeGet(context);
       } else if (format == "?") {
         // i1
-        // The i1 type needs to be bit-packed, so we will handle it seperately
+        // The i1 type needs to be bit-packed, so we will handle it separately
         return getBitpackedAttributeFromBooleanBuffer(view, explicitShape,
                                                       context);
       } else if (isSignedIntegerFormat(format)) {

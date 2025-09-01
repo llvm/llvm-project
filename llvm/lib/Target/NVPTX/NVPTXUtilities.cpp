@@ -55,15 +55,6 @@ void clearAnnotationCache(const Module *Mod) {
   AC.Cache.erase(Mod);
 }
 
-static void readIntVecFromMDNode(const MDNode *MetadataNode,
-                                 std::vector<unsigned> &Vec) {
-  for (unsigned i = 0, e = MetadataNode->getNumOperands(); i != e; ++i) {
-    ConstantInt *Val =
-        mdconst::extract<ConstantInt>(MetadataNode->getOperand(i));
-    Vec.push_back(Val->getZExtValue());
-  }
-}
-
 static void cacheAnnotationFromMD(const MDNode *MetadataNode,
                                   key_val_pair_t &retval) {
   auto &AC = getAnnotationCache();
@@ -83,19 +74,8 @@ static void cacheAnnotationFromMD(const MDNode *MetadataNode,
     if (ConstantInt *Val = mdconst::dyn_extract<ConstantInt>(
             MetadataNode->getOperand(i + 1))) {
       retval[Key].push_back(Val->getZExtValue());
-    } else if (MDNode *VecMd =
-                   dyn_cast<MDNode>(MetadataNode->getOperand(i + 1))) {
-      // note: only "grid_constant" annotations support vector MDNodes.
-      // assert: there can only exist one unique key value pair of
-      // the form (string key, MDNode node). Operands of such a node
-      // shall always be unsigned ints.
-      auto [It, Inserted] = retval.try_emplace(Key);
-      if (Inserted) {
-        readIntVecFromMDNode(VecMd, It->second);
-        continue;
-      }
     } else {
-      llvm_unreachable("Value operand not a constant int or an mdnode");
+      llvm_unreachable("Value operand not a constant int");
     }
   }
 }
@@ -179,16 +159,13 @@ static bool globalHasNVVMAnnotation(const Value &V, const std::string &Prop) {
 }
 
 static bool argHasNVVMAnnotation(const Value &Val,
-                                 const std::string &Annotation,
-                                 const bool StartArgIndexAtOne = false) {
+                                 const std::string &Annotation) {
   if (const Argument *Arg = dyn_cast<Argument>(&Val)) {
     const Function *Func = Arg->getParent();
     std::vector<unsigned> Annot;
     if (findAllNVVMAnnotation(Func, Annotation, Annot)) {
-      const unsigned BaseOffset = StartArgIndexAtOne ? 1 : 0;
-      if (is_contained(Annot, BaseOffset + Arg->getArgNo())) {
+      if (is_contained(Annot, Arg->getArgNo()))
         return true;
-      }
     }
   }
   return false;
@@ -250,8 +227,7 @@ bool isParamGridConstant(const Argument &Arg) {
   }
 
   // "grid_constant" counts argument indices starting from 1
-  if (argHasNVVMAnnotation(Arg, "grid_constant",
-                           /*StartArgIndexAtOne*/ true))
+  if (Arg.hasAttribute("nvvm.grid_constant"))
     return true;
 
   return false;
