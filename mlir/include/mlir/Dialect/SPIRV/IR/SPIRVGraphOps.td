@@ -129,6 +129,13 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
     ```mlir
     %0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
     ```
+
+    GraphConstantID is a unique identifier which is use to map the contants
+    defined by GraphConstantARM in the SPIRV module with the one provided at
+    shader creation time via the VkDataGraphPipelineShaderModuleCreateInfoARM.
+    That Vulkan structure provides a list of VkDataGraphPipelineConstantARM
+    which contains the bindings from id to data. (For more details see
+    https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#graphs)
   }];
 
   let arguments = (ins

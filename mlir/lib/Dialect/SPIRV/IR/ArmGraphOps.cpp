@@ -144,13 +144,11 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
 
     ValueTypeRange<OperandRange> graphOutputOperandTypes =
         op.getValue().getType();
-    for (unsigned i = 0, size = graphOutputOperandTypes.size(); i < size; ++i) {
-      Type graphOutputOperandType = graphOutputOperandTypes[i];
-      Type grResultType = grType.getResult(i);
-      if (graphOutputOperandType != grResultType)
+    for (const auto [index, type] : llvm::enumerate(graphOutputOperandTypes)) {
+      if (type != grType.getResult(index))
         return op.emitError("type of return operand ")
-               << i << " (" << graphOutputOperandType
-               << ") doesn't match graph result type (" << grResultType << ")";
+               << index << " (" << type << ") doesn't match graph result type ("
+               << grType.getResult(index) << ")";
     }
     return WalkResult::advance();
   });
@@ -196,12 +194,12 @@ LogicalResult spirv::GraphOutputsARMOp::verify() {
            << getNumOperands() << " operands, but enclosing  spirv.ARM.Graph (@"
            << graph.getName() << ") returns " << results.size();
 
-  for (const auto &result : llvm::enumerate(results))
-    if (getOperand(result.index()).getType() != result.value())
-      return emitError() << "type of return operand " << result.index() << " ("
-                         << getOperand(result.index()).getType()
+  for (const auto &[index, result] : llvm::enumerate(results))
+    if (getOperand(index).getType() != result)
+      return emitError() << "type of return operand " << index << " ("
+                         << getOperand(index).getType()
                          << ") doesn't match  spirv.ARM.Graph result type ("
-                         << result.value() << ")"
+                         << result << ")"
                          << " in graph @" << graph.getName();
   return success();
 }
