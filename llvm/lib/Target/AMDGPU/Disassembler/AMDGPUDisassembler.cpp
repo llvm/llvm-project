@@ -448,12 +448,12 @@ static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
 #include "AMDGPUGenDisassemblerTables.inc"
 
 // Define bitwidths for various types used to instantiate the decoder.
-template <> static constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
-template <> static constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 64;
+template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
+template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 64;
 template <>
-static constexpr uint32_t llvm::MCD::InsnBitWidth<std::bitset<96>> = 96;
+inline constexpr uint32_t llvm::MCD::InsnBitWidth<std::bitset<96>> = 96;
 template <>
-static constexpr uint32_t llvm::MCD::InsnBitWidth<std::bitset<128>> = 128;
+inline constexpr uint32_t llvm::MCD::InsnBitWidth<std::bitset<128>> = 128;
 
 //===----------------------------------------------------------------------===//
 //
