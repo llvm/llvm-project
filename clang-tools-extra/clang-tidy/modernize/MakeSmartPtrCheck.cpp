@@ -16,10 +16,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-constexpr char ConstructorCall[] = "constructorCall";
-constexpr char DirectVar[] = "directVar";
-constexpr char ResetCall[] = "resetCall";
-constexpr char NewExpression[] = "newExpression";
+static constexpr char ConstructorCall[] = "constructorCall";
+static constexpr char DirectVar[] = "directVar";
+static constexpr char ResetCall[] = "resetCall";
+static constexpr char NewExpression[] = "newExpression";
 
 static std::string getNewExprName(const CXXNewExpr *NewExpr,
                                   const SourceManager &SM,
