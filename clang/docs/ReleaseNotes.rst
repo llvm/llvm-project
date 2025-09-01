@@ -246,6 +246,8 @@ Improvements to Clang's diagnostics
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
 
+- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
+
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
 

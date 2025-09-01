@@ -194,6 +194,11 @@ namespace ModifyingCapture {
     [=] {
       n = 1; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
     };
+    const int cn = 0;
+    // cxx03-cxx11-warning@+1 {{initialized lambda captures are a C++14 extension}}
+    [&cnr = cn]{ // expected-note {{variable 'cnr' declared const here}}
+      cnr = 1; // expected-error {{cannot assign to variable 'cnr' with const-qualified type 'const int &'}}
+    };
   }
 }
 
