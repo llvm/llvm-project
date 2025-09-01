@@ -160,3 +160,26 @@ func.func @expression_with_load(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i1 {
   %c = emitc.cmp lt, %b, %arg0 :(i32, i32) -> i1
   return %c : i1
 }
+
+// CHECK-LABEL:   func.func @opaque_type_expression(%arg0: i32, %arg1: !emitc.opaque<"T0">, %arg2: i32) -> i1 {
+// CHECK:           %0 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
+// CHECK:           %1 = emitc.expression : i32 {
+// CHECK:             %3 = mul %arg0, %0 : (i32, i32) -> i32
+// CHECK:             %4 = sub %3, %arg1 : (i32, !emitc.opaque<"T0">) -> i32
+// CHECK:             yield %4 : i32
+// CHECK:           }
+// CHECK:           %2 = emitc.expression : i1 {
+// CHECK:             %3 = cmp lt, %1, %arg2 : (i32, i32) -> i1
+// CHECK:             yield %3 : i1
+// CHECK:           }
+// CHECK:           return %2 : i1
+// CHECK:         }
+
+
+func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2: i32) -> i1 {
+  %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
+  %b = emitc.sub %a, %arg1 : (i32, !emitc.opaque<"T0">) -> i32
+  %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
+  return %c : i1
+}
