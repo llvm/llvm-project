@@ -161,16 +161,21 @@ getKnownTypeFromMaskedOp(Value *Mask, VectorType *Ty) {
                        m_ConstantInt(Op0), m_ConstantInt(Op1))))
     return std::nullopt;
 
-  uint64_t LaneMaskLo = Op0->getZExtValue();
-  uint64_t LaneMaskHi = Op1->getZExtValue();
-  if ((LaneMaskHi == 0) || (LaneMaskHi <= LaneMaskLo))
+  APInt LaneMaskLo = Op0->getValue();
+  APInt LaneMaskHi = Op1->getValue();
+  if (LaneMaskHi.ule(LaneMaskLo))
     return std::nullopt;
 
-  uint64_t NumElts = LaneMaskHi - LaneMaskLo;
-  if (NumElts > Ty->getElementCount().getKnownMinValue())
-    return std::nullopt;
+  APInt NumElts = LaneMaskHi - LaneMaskLo;
+  if (NumElts.ugt(Ty->getElementCount().getKnownMinValue())) {
+    if (isa<ScalableVectorType>(Ty))
+      return std::nullopt;
+    // Unlike scalable vectors, fixed vector types are guaranteed to handle the
+    // KnownMinValue and can be clamped
+    NumElts = Ty->getElementCount().getKnownMinValue();
+  }
 
-  return FixedVectorType::get(Ty->getElementType(), NumElts);
+  return FixedVectorType::get(Ty->getElementType(), NumElts.getZExtValue());
 }
 
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
@@ -243,7 +248,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
-      return MemoryLocation(Arg, DL.getTypeStoreSize(Ty), AATags);
+      return MemoryLocation(
+          Arg, LocationSize::upperBound(DL.getTypeStoreSize(Ty)), AATags);
     }
     case Intrinsic::masked_store: {
       assert(ArgIdx == 1 && "Invalid argument index");
@@ -252,7 +258,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(3), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
-      return MemoryLocation(Arg, DL.getTypeStoreSize(Ty), AATags);
+      return MemoryLocation(
+          Arg, LocationSize::upperBound(DL.getTypeStoreSize(Ty)), AATags);
     }
 
     case Intrinsic::invariant_end:
