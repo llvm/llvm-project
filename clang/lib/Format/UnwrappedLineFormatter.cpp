@@ -251,10 +251,13 @@ private:
                 : Limit - TheLine->Last->TotalLength;
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
-        TheLine->First == TheLine->Last &&
-        !Style.BraceWrapping.SplitEmptyFunction &&
-        NextLine.First->is(tok::r_brace)) {
-      return tryMergeSimpleBlock(I, E, Limit);
+        TheLine->First == TheLine->Last) {
+      const bool EmptyFunctionBody = NextLine.First->is(tok::r_brace);
+      if ((EmptyFunctionBody && !Style.BraceWrapping.SplitEmptyFunction) ||
+          (!EmptyFunctionBody &&
+           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -864,7 +867,8 @@ private:
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
         Tok->SpacesRequiredBefore =
-            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
+            Style.SpaceInEmptyBraces != FormatStyle::SIEB_Never ||
+            Line.Last->is(tok::comment);
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&

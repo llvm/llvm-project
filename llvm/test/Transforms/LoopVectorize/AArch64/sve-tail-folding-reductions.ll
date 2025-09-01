@@ -15,7 +15,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
@@ -60,7 +60,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 4
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
@@ -123,7 +123,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
@@ -167,7 +167,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
@@ -228,7 +228,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i64 [[TMP21]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[N:%.*]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
@@ -245,7 +245,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP14]], i32 4, <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_MASKED_LOAD1]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i32> [[TMP17]], <vscale x 4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> [[TMP17]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP20]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP22]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
@@ -285,7 +285,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 4
 ; CHECK-IN-LOOP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-IN-LOOP-NEXT:    [[TMP7:%.*]] = sub i64 [[N:%.*]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0

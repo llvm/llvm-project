@@ -34,8 +34,8 @@
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64le-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,BAD   %}
 ; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv32-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
-; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,BAD   %}
-; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,BAD   %}
+; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK %}
+; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if spirv-registered-target       %{ llc %s -o - -mtriple=spirv-unknown-unknown           | FileCheck %s --check-prefixes=NOCRASH   %}
 ; RUN: %if systemz-registered-target     %{ llc %s -o - -mtriple=s390x-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if ve-registered-target          %{ llc %s -o - -mtriple=ve-unknown-unknown              | FileCheck %s --check-prefixes=ALL,BAD   %}

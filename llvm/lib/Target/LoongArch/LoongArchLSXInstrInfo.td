@@ -22,7 +22,7 @@ def SDT_LoongArchVShuf : SDTypeProfile<1, 3, [SDTCisVec<0>,
 def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                      SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                        SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+                                        SDTCisSameAs<0,1>, SDTCisVT<2, GRLenVT>]>;
 def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
@@ -70,6 +70,8 @@ def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
 
 def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
 def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
+
+def loongarch_vhaddw : SDNode<"LoongArchISD::VHADDW", SDT_LoongArchV2R>;
 
 def loongarch_vldrepl
     : SDNode<"LoongArchISD::VLDREPL",
@@ -1364,6 +1366,17 @@ multiclass PatVrVrVr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vd, LSX128:$vj, LSX128:$vk)>;
 }
 
+multiclass PatVrVrW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode(v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode(v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode(v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_D") LSX128:$vj, LSX128:$vk)>;
+}
+
 multiclass PatShiftVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (and vsplati8_imm_eq_7,
                                              (v16i8 LSX128:$vk))),
@@ -1708,6 +1721,9 @@ def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
 def : Pat<(bswap (v4i32 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b00011011)>;
 def : Pat<(bswap (v2i64 LSX128:$vj)),
           (VSHUF4I_W (VSHUF4I_B LSX128:$vj, 0b00011011), 0b10110001)>;
+
+// VHADDW_{H_B/W_H/D_W/Q_D}
+defm : PatVrVrW<loongarch_vhaddw, "VHADDW">;
 
 // VFADD_{S/D}
 defm : PatVrVrF<fadd, "VFADD">;

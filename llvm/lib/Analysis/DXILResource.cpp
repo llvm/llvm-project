@@ -20,6 +20,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <optional>
@@ -28,20 +29,6 @@
 
 using namespace llvm;
 using namespace dxil;
-
-static StringRef getResourceClassName(ResourceClass RC) {
-  switch (RC) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-  llvm_unreachable("Unhandled ResourceClass");
-}
 
 static StringRef getResourceKindName(ResourceKind RK) {
   switch (RK) {
@@ -799,7 +786,7 @@ StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
     llvm_unreachable("unexpected handle creation intrinsic");
   case Intrinsic::dx_resource_handlefrombinding:
   case Intrinsic::dx_resource_handlefromimplicitbinding:
-    Op = CI->getArgOperand(5);
+    Op = CI->getArgOperand(4);
     break;
   }
 
@@ -1023,7 +1010,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           int32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-          Value *Name = CI->getArgOperand(5);
+          Value *Name = CI->getArgOperand(4);
 
           // negative size means unbounded resource array;
           // upper bound register overflow should be detected in Sema

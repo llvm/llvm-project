@@ -17,7 +17,7 @@ target triple = "armv7a-none-eabi"
 define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT-LABEL: define void @always_vectorize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
@@ -31,10 +31,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; DEFAULT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
@@ -47,7 +46,7 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ;
 ; OPTSIZE-LABEL: define void @always_vectorize(
 ; OPTSIZE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
 ; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
@@ -61,10 +60,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
 ; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
 ; OPTSIZE-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; OPTSIZE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
@@ -77,7 +75,7 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ;
 ; MINSIZE-LABEL: define void @always_vectorize(
 ; MINSIZE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
 ; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
@@ -91,10 +89,9 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
 ; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
 ; MINSIZE-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; MINSIZE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
@@ -484,7 +481,7 @@ for.cond.cleanup:
 ; we don't account for the addressing mode difference.
 define void @dont_vectorize_with_minsize() {
 ; DEFAULT-LABEL: define void @dont_vectorize_with_minsize() {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -506,10 +503,9 @@ define void @dont_vectorize_with_minsize() {
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; DEFAULT-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; DEFAULT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
@@ -528,7 +524,7 @@ define void @dont_vectorize_with_minsize() {
 ;
 ; OPTSIZE-LABEL: define void @dont_vectorize_with_minsize(
 ; OPTSIZE-SAME: ) #[[ATTR0]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
 ; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -550,10 +546,9 @@ define void @dont_vectorize_with_minsize() {
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
 ; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; OPTSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
@@ -572,7 +567,7 @@ define void @dont_vectorize_with_minsize() {
 ;
 ; MINSIZE-LABEL: define void @dont_vectorize_with_minsize(
 ; MINSIZE-SAME: ) #[[ATTR0]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
 ; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -594,10 +589,9 @@ define void @dont_vectorize_with_minsize() {
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
 ; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; MINSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; MINSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
@@ -644,7 +638,7 @@ for.cond.cleanup:
 ; FIXME: We currently use width 2 as the load/store cost is incorrect.
 define void @vectorization_forced() {
 ; DEFAULT-LABEL: define void @vectorization_forced() {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -666,10 +660,9 @@ define void @vectorization_forced() {
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; DEFAULT-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; DEFAULT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
@@ -688,7 +681,7 @@ define void @vectorization_forced() {
 ;
 ; OPTSIZE-LABEL: define void @vectorization_forced(
 ; OPTSIZE-SAME: ) #[[ATTR0]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
 ; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -710,10 +703,9 @@ define void @vectorization_forced() {
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
 ; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; OPTSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
@@ -732,7 +724,7 @@ define void @vectorization_forced() {
 ;
 ; MINSIZE-LABEL: define void @vectorization_forced(
 ; MINSIZE-SAME: ) #[[ATTR0]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
 ; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -754,10 +746,9 @@ define void @vectorization_forced() {
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
 ; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
 ; MINSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; MINSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
