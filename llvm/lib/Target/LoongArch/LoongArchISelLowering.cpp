@@ -5282,7 +5282,7 @@ static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                      Src.getOperand(0));
 }
 
-// Perform combines for BR_CC conditions.
+// Perform common combines for BR_CC and SELECT_CC conditions.
 static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
                        SelectionDAG &DAG, const LoongArchSubtarget &Subtarget) {
   ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
@@ -5319,6 +5319,29 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     return true;
   }
 
+  // Fold ((srl (and X, 1<<C), C), 0, eq/ne) -> ((shl X, GRLen-1-C), 0, ge/lt)
+  if (isNullConstant(RHS) && LHS.getOpcode() == ISD::SRL && LHS.hasOneUse() &&
+      LHS.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue LHS0 = LHS.getOperand(0);
+    if (LHS0.getOpcode() == ISD::AND &&
+        LHS0.getOperand(1).getOpcode() == ISD::Constant) {
+      uint64_t Mask = LHS0.getConstantOperandVal(1);
+      uint64_t ShAmt = LHS.getConstantOperandVal(1);
+      if (isPowerOf2_64(Mask) && Log2_64(Mask) == ShAmt) {
+        CCVal = CCVal == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+        CC = DAG.getCondCode(CCVal);
+
+        ShAmt = LHS.getValueSizeInBits() - 1 - ShAmt;
+        LHS = LHS0.getOperand(0);
+        if (ShAmt != 0)
+          LHS =
+              DAG.getNode(ISD::SHL, DL, LHS.getValueType(), LHS0.getOperand(0),
+                          DAG.getConstant(ShAmt, DL, LHS.getValueType()));
+        return true;
+      }
+    }
+  }
+
   // (X, 1, setne) -> (X, 0, seteq) if we can prove X is 0/1.
   // This can occur when legalizing some floating point comparisons.
   APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
@@ -5343,6 +5366,57 @@ static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
   if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
     return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
                        N->getOperand(0), LHS, RHS, CC, N->getOperand(4));
+
+  return SDValue();
+}
+
+static SDValue performSELECT_CCCombine(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const LoongArchSubtarget &Subtarget) {
+  // Transform
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CC = N->getOperand(2);
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
+  SDValue TrueV = N->getOperand(3);
+  SDValue FalseV = N->getOperand(4);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // If the True and False values are the same, we don't need a select_cc.
+  if (TrueV == FalseV)
+    return TrueV;
+
+  // (select (x < 0), y, z)  -> x >> (GRLEN - 1) & (y - z) + z
+  // (select (x >= 0), y, z) -> x >> (GRLEN - 1) & (z - y) + y
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
+      isNullConstant(RHS) &&
+      (CCVal == ISD::CondCode::SETLT || CCVal == ISD::CondCode::SETGE)) {
+    if (CCVal == ISD::CondCode::SETGE)
+      std::swap(TrueV, FalseV);
+
+    int64_t TrueSImm = cast<ConstantSDNode>(TrueV)->getSExtValue();
+    int64_t FalseSImm = cast<ConstantSDNode>(FalseV)->getSExtValue();
+    // Only handle simm12, if it is not in this range, it can be considered as
+    // register.
+    if (isInt<12>(TrueSImm) && isInt<12>(FalseSImm) &&
+        isInt<12>(TrueSImm - FalseSImm)) {
+      SDValue SRA =
+          DAG.getNode(ISD::SRA, DL, VT, LHS,
+                      DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT));
+      SDValue AND =
+          DAG.getNode(ISD::AND, DL, VT, SRA,
+                      DAG.getSignedConstant(TrueSImm - FalseSImm, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, AND, FalseV);
+    }
+
+    if (CCVal == ISD::CondCode::SETGE)
+      std::swap(TrueV, FalseV);
+  }
+
+  if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
+    return DAG.getNode(LoongArchISD::SELECT_CC, DL, N->getValueType(0),
+                       {LHS, RHS, CC, TrueV, FalseV});
 
   return SDValue();
 }
@@ -6041,6 +6115,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
     return performBR_CCCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::SELECT_CC:
+    return performSELECT_CCCombine(N, DAG, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performINTRINSIC_WO_CHAINCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVGR2FR_W_LA64:
