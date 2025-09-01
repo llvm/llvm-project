@@ -66,8 +66,7 @@ VariantMatcher VariantMatcher::SingleMatcher(DynMatcher matcher) {
 VariantMatcher
 VariantMatcher::VariadicOperatorMatcher(DynMatcher::VariadicOperator varOp,
                                         ArrayRef<VariantMatcher> args) {
-  return VariantMatcher(
-      std::make_shared<VariadicOpPayload>(varOp, std::move(args)));
+  return VariantMatcher(std::make_shared<VariadicOpPayload>(varOp, args));
 }
 
 std::optional<DynMatcher> VariantMatcher::MatcherOps::constructVariadicOperator(
