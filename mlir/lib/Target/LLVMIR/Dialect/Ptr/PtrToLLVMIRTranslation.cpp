@@ -60,8 +60,8 @@ convertPtrAddOp(PtrAddOp ptrAddOp, llvm::IRBuilderBase &builder,
     return ptrAddOp.emitError("Failed to lookup operands");
 
   // Create GEP instruction for pointer arithmetic
-  llvm::GetElementPtrInst *gep = llvm::GetElementPtrInst::Create(
-      builder.getInt8Ty(), basePtr, {offset}, "", builder.GetInsertBlock());
+  auto *gep = cast<llvm::GetElementPtrInst>(
+      builder.CreateGEP(builder.getInt8Ty(), basePtr, {offset}));
 
   // Set the appropriate flags
   switch (ptrAddOp.getFlags()) {
@@ -96,9 +96,11 @@ static LogicalResult convertLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
     return loadOp.emitError("Failed to convert result type");
 
   // Create the load instruction.
+  llvm::MaybeAlign alignment = loadOp.getAlignment()
+                                   ? llvm::MaybeAlign(*loadOp.getAlignment())
+                                   : llvm::MaybeAlign();
   llvm::LoadInst *loadInst = builder.CreateAlignedLoad(
-      resultType, ptr, llvm::MaybeAlign(loadOp.getAlignment().value_or(0)),
-      loadOp.getVolatile_());
+      resultType, ptr, alignment, loadOp.getVolatile_());
 
   // Set op flags and metadata.
   loadInst->setAtomic(convertAtomicOrdering(loadOp.getOrdering()));
@@ -145,9 +147,11 @@ convertStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
     return storeOp.emitError("Failed to lookup operands");
 
   // Create the store instruction.
-  llvm::StoreInst *storeInst = builder.CreateAlignedStore(
-      value, ptr, llvm::MaybeAlign(storeOp.getAlignment().value_or(0)),
-      storeOp.getVolatile_());
+  llvm::MaybeAlign alignment = storeOp.getAlignment()
+                                   ? llvm::MaybeAlign(*storeOp.getAlignment())
+                                   : llvm::MaybeAlign();
+  llvm::StoreInst *storeInst =
+      builder.CreateAlignedStore(value, ptr, alignment, storeOp.getVolatile_());
 
   // Set op flags and metadata.
   storeInst->setAtomic(convertAtomicOrdering(storeOp.getOrdering()));
