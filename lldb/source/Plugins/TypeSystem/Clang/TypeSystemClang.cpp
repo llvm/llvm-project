@@ -9589,7 +9589,8 @@ void TypeSystemClang::RequireCompleteType(CompilerType type) {
   bool is_constant_array = qual_type->isConstantArrayType();
   bool is_cxx_record = qual_type->getAsCXXRecordDecl() != nullptr;
   if (is_constant_array || is_cxx_record)
-    type.GetCompleteType();
+    if (type.GetCompleteType())
+      return;
 
   if (!is_cxx_record)
     return;
