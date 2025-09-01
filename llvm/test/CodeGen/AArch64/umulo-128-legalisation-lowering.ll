@@ -47,8 +47,7 @@ define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4
 ; AARCH-NEXT:    eor x9, x1, x0, asr #63
 ; AARCH-NEXT:    str wzr, [x4]
 ; AARCH-NEXT:    orr x8, x9, x8
-; AARCH-NEXT:    cmp x8, #1
-; AARCH-NEXT:    b.ne .LBB1_2
+; AARCH-NEXT:    cbz x8, .LBB1_2
 ; AARCH-NEXT:  // %bb.1: // %overflow
 ; AARCH-NEXT:    asr x9, x1, #63
 ; AARCH-NEXT:    umulh x10, x0, x2
