@@ -205,10 +205,6 @@ static cl::opt<bool>
     EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
                           cl::desc("Enable the LoopInterchange Pass"));
 
-static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
-                                      cl::Hidden,
-                                      cl::desc("Enable the LoopFuse Pass"));
-
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
                                         cl::init(false), cl::Hidden,
                                         cl::desc("Enable Unroll And Jam Pass"));
@@ -318,7 +314,6 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = EnableLoopInterchange;
-  LoopFusion = EnableLoopFusion;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
@@ -1559,7 +1554,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // FIXME: This may not be the right place in the pipeline.
   // We need to have the data to support the right place.
-  if (PTO.LoopFusion || EnableLoopFusion)
+  if (PTO.LoopFusion)
     OptimizePM.addPass(LoopFusePass());
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
