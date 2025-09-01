@@ -333,7 +333,7 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto loadSlice = vector::MaskedLoadOp::create(rewriter, loc, tileSliceType,
                                                   tileLoadOp.getBase(),
                                                   memrefIndices, maskOp1D,
-                                                  /*passthru=*/pad1DOp);
+                                                  /*passthrough=*/pad1DOp);
 
     // Create 'arm_sme.insert_tile_slice' to insert slice into tile.
     auto insertSlice = arm_sme::InsertTileSliceOp::create(

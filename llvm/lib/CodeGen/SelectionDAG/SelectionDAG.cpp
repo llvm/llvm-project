@@ -3299,7 +3299,7 @@ SelectionDAG::getValidShiftAmountRange(SDValue V, const APInt &DemandedElts,
   return std::nullopt;
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidShiftAmount(SDValue V, const APInt &DemandedElts,
                                   unsigned Depth) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3312,7 +3312,7 @@ SelectionDAG::getValidShiftAmount(SDValue V, const APInt &DemandedElts,
   return std::nullopt;
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidShiftAmount(SDValue V, unsigned Depth) const {
   EVT VT = V.getValueType();
   APInt DemandedElts = VT.isFixedLengthVector()
@@ -3321,7 +3321,7 @@ SelectionDAG::getValidShiftAmount(SDValue V, unsigned Depth) const {
   return getValidShiftAmount(V, DemandedElts, Depth);
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
                                          unsigned Depth) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3333,7 +3333,7 @@ SelectionDAG::getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
   return std::nullopt;
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidMinimumShiftAmount(SDValue V, unsigned Depth) const {
   EVT VT = V.getValueType();
   APInt DemandedElts = VT.isFixedLengthVector()
@@ -3342,7 +3342,7 @@ SelectionDAG::getValidMinimumShiftAmount(SDValue V, unsigned Depth) const {
   return getValidMinimumShiftAmount(V, DemandedElts, Depth);
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
                                          unsigned Depth) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3354,7 +3354,7 @@ SelectionDAG::getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
   return std::nullopt;
 }
 
-std::optional<uint64_t>
+std::optional<unsigned>
 SelectionDAG::getValidMaximumShiftAmount(SDValue V, unsigned Depth) const {
   EVT VT = V.getValueType();
   APInt DemandedElts = VT.isFixedLengthVector()
@@ -3828,7 +3828,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::shl(Known, Known2, NUW, NSW, ShAmtNonZero);
 
     // Minimum shift low bits are known zero.
-    if (std::optional<uint64_t> ShMinAmt =
+    if (std::optional<unsigned> ShMinAmt =
             getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Known.Zero.setLowBits(*ShMinAmt);
     break;
@@ -3840,7 +3840,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
                             Op->getFlags().hasExact());
 
     // Minimum shift high bits are known zero.
-    if (std::optional<uint64_t> ShMinAmt =
+    if (std::optional<unsigned> ShMinAmt =
             getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Known.Zero.setHighBits(*ShMinAmt);
     break;
@@ -4887,15 +4887,15 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // SRA X, C -> adds C sign bits.
-    if (std::optional<uint64_t> ShAmt =
+    if (std::optional<unsigned> ShAmt =
             getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
-      Tmp = std::min<uint64_t>(Tmp + *ShAmt, VTBits);
+      Tmp = std::min(Tmp + *ShAmt, VTBits);
     return Tmp;
   case ISD::SHL:
     if (std::optional<ConstantRange> ShAmtRange =
             getValidShiftAmountRange(Op, DemandedElts, Depth + 1)) {
-      uint64_t MaxShAmt = ShAmtRange->getUnsignedMax().getZExtValue();
-      uint64_t MinShAmt = ShAmtRange->getUnsignedMin().getZExtValue();
+      unsigned MaxShAmt = ShAmtRange->getUnsignedMax().getZExtValue();
+      unsigned MinShAmt = ShAmtRange->getUnsignedMin().getZExtValue();
       // Try to look through ZERO/SIGN/ANY_EXTEND. If all extended bits are
       // shifted out, then we can compute the number of sign bits for the
       // operand being extended. A future improvement could be to pass along the
@@ -4906,7 +4906,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         EVT ExtVT = Ext.getValueType();
         SDValue Extendee = Ext.getOperand(0);
         EVT ExtendeeVT = Extendee.getValueType();
-        uint64_t SizeDifference =
+        unsigned SizeDifference =
             ExtVT.getScalarSizeInBits() - ExtendeeVT.getScalarSizeInBits();
         if (SizeDifference <= MinShAmt) {
           Tmp = SizeDifference +

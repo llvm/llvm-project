@@ -10539,19 +10539,11 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Generate the operation with flags
-  SDValue OpWithFlags;
-  if (Opcode == ARMISD::ADDC) {
-    // Use ADDC: LHS + RHS (where RHS was 0 - X, now X)
-    OpWithFlags = DAG.getNode(ARMISD::ADDC, dl,
-                              DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
-  } else {
-    // Use ARMISD::SUBC to generate SUBS instruction (subtract with flags)
-    OpWithFlags = DAG.getNode(ARMISD::SUBC, dl,
-                              DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
-  }
+  SDValue OpWithFlags =
+      DAG.getNode(Opcode, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
 
-  SDValue OpResult = OpWithFlags.getValue(0); // The operation result
-  SDValue Flags = OpWithFlags.getValue(1);    // The flags
+  SDValue OpResult = OpWithFlags.getValue(0);
+  SDValue Flags = OpWithFlags.getValue(1);
 
   // Constants for conditional moves
   SDValue One = DAG.getConstant(1, dl, MVT::i32);

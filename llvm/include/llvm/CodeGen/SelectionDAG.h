@@ -2350,35 +2350,35 @@ public:
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, const APInt &DemandedElts,
                       unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has a uniform shift amount
   /// that is less than the element bit-width of the shift node, return it.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the minimum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMinimumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
   /// If a SHL/SRA/SRL node \p V has shift amounts that are all less than the
   /// element bit-width of the shift node, return the maximum possible value.
-  LLVM_ABI std::optional<uint64_t>
+  LLVM_ABI std::optional<unsigned>
   getValidMaximumShiftAmount(SDValue V, unsigned Depth = 0) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction

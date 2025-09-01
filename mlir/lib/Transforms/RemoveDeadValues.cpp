@@ -344,8 +344,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // being returned, in order to optimize our IR. So, this demonstrates how we
   // can make our optimization strong by even removing a live return value (%0),
   // since it forwards only to non-live value(s) (%1#1).
-  Operation *lastReturnOp = funcOp.back().getTerminator();
-  size_t numReturns = lastReturnOp->getNumOperands();
+  size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();

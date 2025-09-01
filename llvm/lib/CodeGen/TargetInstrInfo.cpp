@@ -1456,11 +1456,13 @@ void TargetInstrInfo::reassociateOps(
   MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB1->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   MIB2->setFlags(IntersectedFlags);
   MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB2->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 

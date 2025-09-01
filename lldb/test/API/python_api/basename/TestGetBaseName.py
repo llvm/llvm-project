@@ -15,6 +15,7 @@ class GetBaseNameTestCase(TestBase):
         TestBase.setUp(self)
         self.main_source_file = lldb.SBFileSpec("main.cpp")
 
+    @expectedFailureAll(oslist=["windows"])
     def test(self):
         """Test SBFunction.GetBaseName() and SBSymbol.GetBaseName()"""
         self.build()

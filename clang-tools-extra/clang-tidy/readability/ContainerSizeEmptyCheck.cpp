@@ -89,10 +89,6 @@ AST_MATCHER(Expr, usedInBooleanContext) {
   return Result;
 }
 
-AST_MATCHER(CXXConstructExpr, isDefaultConstruction) {
-  return Node.getConstructor()->isDefaultConstructor();
-}
-
 AST_MATCHER(QualType, isIntegralType) {
   return Node->isIntegralType(Finder->getASTContext());
 }
@@ -211,7 +207,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto WrongComparend =
       anyOf(stringLiteral(hasSize(0)),
             userDefinedLiteral(hasLiteral(stringLiteral(hasSize(0)))),
-            cxxConstructExpr(isDefaultConstruction()),
+            cxxConstructExpr(argumentCountIs(0)),
             cxxUnresolvedConstructExpr(argumentCountIs(0)));
   // Match the object being compared.
   const auto STLArg =

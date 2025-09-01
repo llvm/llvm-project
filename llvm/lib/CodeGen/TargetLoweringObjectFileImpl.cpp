@@ -1920,6 +1920,13 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   }
 
   emitCGProfileMetadata(Streamer, M);
+  emitPseudoProbeDescMetadata(Streamer, M, [](MCStreamer &Streamer) {
+    if (MCSymbol *Sym =
+            static_cast<MCSectionCOFF *>(Streamer.getCurrentSectionOnly())
+                ->getCOMDATSymbol())
+      if (Sym->isUndefined())
+        Streamer.emitLabel(Sym);
+  });
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(

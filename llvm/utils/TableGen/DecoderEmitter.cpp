@@ -1473,26 +1473,13 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
 
   // We have finished with the filter processings.  Now it's time to choose
   // the best performing filter.
-  unsigned BestIndex = 0;
-  bool AllUseless = true;
-  unsigned BestScore = 0;
-
-  for (const auto &[Idx, Filter] : enumerate(Filters)) {
-    unsigned Usefulness = Filter->usefulness();
-
-    if (Usefulness)
-      AllUseless = false;
-
-    if (Usefulness > BestScore) {
-      BestIndex = Idx;
-      BestScore = Usefulness;
-    }
-  }
-
-  if (AllUseless)
+  auto MaxIt = llvm::max_element(Filters, [](const std::unique_ptr<Filter> &A,
+                                             const std::unique_ptr<Filter> &B) {
+    return A->usefulness() < B->usefulness();
+  });
+  if (MaxIt == Filters.end() || (*MaxIt)->usefulness() == 0)
     return nullptr;
-
-  return std::move(Filters[BestIndex]);
+  return std::move(*MaxIt);
 }
 
 std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
@@ -1990,18 +1977,12 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
     // Otherwise, if we have an operand with sub-operands, but they aren't
     // named...
     if (Op.MIOperandInfo && OpInfo.Decoder.empty()) {
-      // If it's a single sub-operand, and no custom decoder, use the decoder
-      // from the one sub-operand.
-      if (Op.MIOperandInfo->getNumArgs() == 1)
-        OpInfo =
-            getOpInfo(cast<DefInit>(Op.MIOperandInfo->getArg(0))->getDef());
-
-      // If we have multiple sub-ops, there'd better have a custom
-      // decoder. (Otherwise we don't know how to populate them properly...)
-      if (Op.MIOperandInfo->getNumArgs() > 1) {
+      // If we have sub-ops, we'd better have a custom decoder.
+      // (Otherwise we don't know how to populate them properly...)
+      if (Op.MIOperandInfo->getNumArgs()) {
         PrintError(EncodingDef,
                    "DecoderEmitter: operand \"" + Op.Name +
-                       "\" uses MIOperandInfo with multiple ops, but doesn't "
+                       "\" has non-empty MIOperandInfo, but doesn't "
                        "have a custom decoder!");
         debugDumpRecord(*EncodingDef);
         continue;
