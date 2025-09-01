@@ -1473,7 +1473,7 @@ IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
   return DeclIdent;
 }
 
-void HandleRootSignatureTarget(Sema &S) {
+void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
   ASTConsumer *Consumer = &S.getASTConsumer();
 
   // Minimally initalize the parser. This does a couple things:
@@ -1487,6 +1487,16 @@ void HandleRootSignatureTarget(Sema &S) {
   if (HaveLexer) {
     P->Initialize();
     S.ActOnStartOfTranslationUnit();
+
+    HLSLRootSignatureDecl *SignatureDecl =
+        S.HLSL().lookupRootSignatureOverrideDecl(
+            S.getASTContext().getTranslationUnitDecl());
+
+    if (SignatureDecl)
+      Consumer->HandleTopLevelDecl(DeclGroupRef(SignatureDecl));
+    else
+      S.getDiagnostics().Report(diag::err_hlsl_rootsignature_entry)
+          << EntryRootSig;
   }
 
   Consumer->HandleTranslationUnit(S.getASTContext());
