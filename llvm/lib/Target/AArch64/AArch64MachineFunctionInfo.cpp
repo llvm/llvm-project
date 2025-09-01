@@ -25,7 +25,10 @@ using namespace llvm;
 
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
-    : HasRedZone(MFI.hasRedZone()) {}
+    : HasRedZone(MFI.hasRedZone()),
+      StackSizeSVE(MFI.hasCalculatedStackSizeSVE()
+                       ? std::optional<uint64_t>(MFI.getStackSizeSVE())
+                       : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -35,6 +38,8 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
+  if (YamlMFI.StackSizeSVE)
+    setStackSizeSVE(*YamlMFI.StackSizeSVE);
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
@@ -74,7 +79,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
 
 static bool hasELFSignedGOTHelper(const Function &F,
                                   const AArch64Subtarget *STI) {
-  if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
+  if (!STI->getTargetTriple().isOSBinFormatELF())
     return false;
   const Module *M = F.getParent();
   const auto *Flag = mdconst::extract_or_null<ConstantInt>(
@@ -99,6 +104,9 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
+
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

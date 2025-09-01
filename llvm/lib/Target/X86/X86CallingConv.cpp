@@ -68,23 +68,23 @@ static ArrayRef<MCPhysReg> CC_X86_VectorCallGetSSEs(const MVT &ValVT) {
   if (ValVT.is512BitVector()) {
     static const MCPhysReg RegListZMM[] = {X86::ZMM0, X86::ZMM1, X86::ZMM2,
                                            X86::ZMM3, X86::ZMM4, X86::ZMM5};
-    return ArrayRef(std::begin(RegListZMM), std::end(RegListZMM));
+    return RegListZMM;
   }
 
   if (ValVT.is256BitVector()) {
     static const MCPhysReg RegListYMM[] = {X86::YMM0, X86::YMM1, X86::YMM2,
                                            X86::YMM3, X86::YMM4, X86::YMM5};
-    return ArrayRef(std::begin(RegListYMM), std::end(RegListYMM));
+    return RegListYMM;
   }
 
   static const MCPhysReg RegListXMM[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                          X86::XMM3, X86::XMM4, X86::XMM5};
-  return ArrayRef(std::begin(RegListXMM), std::end(RegListXMM));
+  return RegListXMM;
 }
 
 static ArrayRef<MCPhysReg> CC_X86_64_VectorCallGetGPRs() {
   static const MCPhysReg RegListGPR[] = {X86::RCX, X86::RDX, X86::R8, X86::R9};
-  return ArrayRef(std::begin(RegListGPR), std::end(RegListGPR));
+  return RegListGPR;
 }
 
 static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,
@@ -338,6 +338,71 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     LocInfo = CCValAssign::ZExt;
   }
   return false;
+}
+
+/// Special handling for i128: Either allocate the value to two consecutive
+/// i64 registers, or to the stack. Do not partially allocate in registers,
+/// and do not reserve any registers when allocating to the stack.
+static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                           CCValAssign::LocInfo &LocInfo,
+                           ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  assert(ValVT == MVT::i64 && "Should have i64 parts");
+  SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
+  PendingMembers.push_back(
+      CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+
+  if (!ArgFlags.isInConsecutiveRegsLast())
+    return true;
+
+  unsigned NumRegs = PendingMembers.size();
+  assert(NumRegs == 2 && "Should have two parts");
+
+  static const MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX,
+                                   X86::RCX, X86::R8,  X86::R9};
+  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
+  if (!Allocated.empty()) {
+    PendingMembers[0].convertToReg(Allocated[0]);
+    PendingMembers[1].convertToReg(Allocated[1]);
+  } else {
+    int64_t Offset = State.AllocateStack(16, Align(16));
+    PendingMembers[0].convertToMem(Offset);
+    PendingMembers[1].convertToMem(Offset + 8);
+  }
+  State.addLoc(PendingMembers[0]);
+  State.addLoc(PendingMembers[1]);
+  PendingMembers.clear();
+  return true;
+}
+
+/// Special handling for i128 and fp128: on x86-32, i128 and fp128 get legalized
+/// as four i32s, but fp128 must be passed on the stack with 16-byte alignment.
+/// Technically only fp128 has a specified ABI, but it makes sense to handle
+/// i128 the same until we hear differently.
+static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                 CCValAssign::LocInfo &LocInfo,
+                                 ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  assert(ValVT == MVT::i32 && "Should have i32 parts");
+  SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
+  PendingMembers.push_back(
+      CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+
+  if (!ArgFlags.isInConsecutiveRegsLast())
+    return true;
+
+  assert(PendingMembers.size() == 4 && "Should have four parts");
+
+  int64_t Offset = State.AllocateStack(16, Align(16));
+  PendingMembers[0].convertToMem(Offset);
+  PendingMembers[1].convertToMem(Offset + 4);
+  PendingMembers[2].convertToMem(Offset + 8);
+  PendingMembers[3].convertToMem(Offset + 12);
+
+  State.addLoc(PendingMembers[0]);
+  State.addLoc(PendingMembers[1]);
+  State.addLoc(PendingMembers[2]);
+  State.addLoc(PendingMembers[3]);
+  PendingMembers.clear();
+  return true;
 }
 
 // Provides entry points of CC_X86 and RetCC_X86.

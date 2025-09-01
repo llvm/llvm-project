@@ -232,11 +232,13 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
   if (Size > SizeLimit)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Integer types smaller than a register are extended.
   if (Size < 64 && Ty->isIntegerType())
@@ -253,7 +255,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
   // If a C++ object has either a non-trivial copy constructor or a non-trivial
   // destructor, it is passed with an explicit indirect pointer / sret pointer.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   // This is a small aggregate type that should be passed in registers.
   // Build a coercion type from the LLVM struct type.
@@ -300,6 +303,7 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
+  case ABIArgInfo::TargetSpecific:
     llvm_unreachable("Unsupported ABI kind for va_arg");
 
   case ABIArgInfo::Extend: {

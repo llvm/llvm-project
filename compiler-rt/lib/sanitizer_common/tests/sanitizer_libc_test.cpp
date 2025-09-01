@@ -352,6 +352,7 @@ TEST(SanitizerCommon, ReportFile) {
   // This will close tmpfile.
   report_file.SetReportPath("stderr");
   Unlink(tmpfile);
+  Unlink(path);
 }
 
 TEST(SanitizerCommon, FileExists) {

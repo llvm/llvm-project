@@ -102,7 +102,7 @@ void SBBreakpointLocation::SetEnabled(bool enabled) {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->SetEnabled(enabled);
+    llvm::consumeError(loc_sp->SetEnabled(enabled));
   }
 }
 
@@ -160,7 +160,7 @@ void SBBreakpointLocation::SetCondition(const char *condition) {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->SetCondition(condition);
+    loc_sp->SetCondition(StopCondition(condition));
   }
 }
 
@@ -173,7 +173,7 @@ const char *SBBreakpointLocation::GetCondition() {
 
   std::lock_guard<std::recursive_mutex> guard(
       loc_sp->GetTarget().GetAPIMutex());
-  return ConstString(loc_sp->GetConditionText()).GetCString();
+  return ConstString(loc_sp->GetCondition().GetText()).GetCString();
 }
 
 void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {

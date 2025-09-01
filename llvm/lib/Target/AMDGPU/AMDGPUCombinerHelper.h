@@ -28,7 +28,7 @@ protected:
 public:
   using CombinerHelper::CombinerHelper;
   AMDGPUCombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                       bool IsPreLegalize, GISelKnownBits *KB,
+                       bool IsPreLegalize, GISelValueTracking *VT,
                        MachineDominatorTree *MDT, const LegalizerInfo *LI,
                        const GCNSubtarget &STI);
 
@@ -43,6 +43,8 @@ public:
   bool matchCombineFmulWithSelectToFldexp(
       MachineInstr &MI, MachineInstr &Sel,
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
+  bool matchConstantIs32BitMask(Register Reg) const;
 };
 
 } // namespace llvm

@@ -35,22 +35,23 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 0, "add">;
-def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 1, "mul">;
-def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 2, "max">;
-def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 3, "min">;
-def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 4, "iand">;
-def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"AccIor", 5, "ior">;
-def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"AccXor", 6, "xor">;
-def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 7, "eqv">;
-def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 8, "neqv">;
-def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 9, "land">;
-def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 10, "lor">;
+def OpenACC_ReductionOperatorNone    : I32EnumAttrCase<"AccNone", 0, "none">;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 1, "add">;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 2, "mul">;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 3, "max">;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 4, "min">;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 5, "iand">;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"AccIor", 6, "ior">;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"AccXor", 7, "xor">;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 8, "eqv">;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 9, "neqv">;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 10, "land">;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 11, "lor">;
 
 def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOperatorAdd, OpenACC_ReductionOperatorMul,
-     OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
+    [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd, 
+     OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
      OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
      OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
      OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
@@ -63,6 +64,92 @@ def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
                                              OpenACC_ReductionOperator,
                                              "reduction_operator"> {
   let assemblyFormat = [{ ```<` $value `>` }];
+}
+
+// OpenACC variable type categorization. This is needed because OpenACC
+// dialect is used with other dialects, and each dialect defines its own
+// types. Thus, in order to be able to classify types and apply right semantics,
+// it is needed to ensure the types can be categorized.
+def OpenACC_VariableTypeUncategorized : I32BitEnumAttrCaseNone<"uncategorized">;
+
+// The OpenACC spec definition of scalar type is as follows (from 3.3 spec,
+// line 5454):
+// Scalar datatype - an intrinsic or built-in datatype that is not an array or
+// aggregate datatype. In Fortran, scalar datatypes are integer, real, double
+// precision, complex, or logical. In C, scalar datatypes are char (signed or
+// unsigned), int (signed or unsigned, with optional short, long or long long
+// attribute), enum, float, double, long double, Complex (with optional float
+// or long attribute), or any pointer datatype. In C++, scalar datatypes are
+// char (signed or unsigned), wchar t, int (signed or unsigned, with optional
+// short, long or long long attribute), enum, bool, float, double, long double,
+// or any pointer datatype. Not all implementations or targets will support all
+// of these datatypes.
+// From an MLIR type perspective, the types that those language types map to
+// will be categorized as scalar.
+def OpenACC_VariableTypeScalar : I32BitEnumAttrCaseBit<"scalar", 0>;
+
+// Not in OpenACC spec glossary as its own definition but used throughout the
+// spec. One definition of array that can be assumed for purposes of type
+// categorization is that it is a collection of elements of same type.
+def OpenACC_VariableTypeArray : I32BitEnumAttrCaseBit<"array", 1>;
+
+// The OpenACC spec definition of composite type is as follows (from 3.3 spec,
+// line 5354):
+// Composite datatype - a derived type in Fortran, or a struct or union type in
+// C, or a class, struct, or union type in C++. (This is different from the use
+// of the term composite data type in the C and C++ languages.)
+def OpenACC_VariableTypeComposite : I32BitEnumAttrCaseBit<"composite", 2>;
+
+// The OpenACC spec uses the type category "aggregate" to capture both arrays
+// and composite types. However, it includes types which do not fall in either
+// of those categories. Thus create a case for the others.
+// For example, reading the definition of "Aggregate Variables" in the 3.3
+// spec line 5346 shows this distinction:
+// Aggregate variables - a variable of any non-scalar datatype, including array
+// or composite variables. In Fortran, this includes any variable with
+// allocatable or pointer attribute and character variables
+def OpenACC_VariableTypeOtherNonScalar : I32BitEnumAttrCaseBit<"nonscalar", 3>;
+
+// The OpenACC spec definition of aggregate type is as follows (from 3.3 spec,
+// line 5342):
+// Aggregate datatype - any non-scalar datatype such as array and composite
+// datatypes. In Fortran, aggregate datatypes include arrays, derived types,
+// character types. In C, aggregate datatypes include arrays, targets of
+// pointers, structs, and unions. In C++, aggregate datatypes include arrays,
+// targets of pointers, classes, structs, and unions.
+def OpenACC_VariableTypeAggregate : I32BitEnumAttrCaseGroup<"aggregate",
+  [OpenACC_VariableTypeArray, OpenACC_VariableTypeComposite,
+  OpenACC_VariableTypeOtherNonScalar]>;
+
+def OpenACC_VariableTypeCategory : I32BitEnumAttr<
+    "VariableTypeCategory",
+    "Captures different type categories described in OpenACC spec",
+    [
+      OpenACC_VariableTypeUncategorized, OpenACC_VariableTypeScalar,
+      OpenACC_VariableTypeArray, OpenACC_VariableTypeComposite,
+      OpenACC_VariableTypeOtherNonScalar, OpenACC_VariableTypeAggregate]> {
+  let separator = ",";
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+// These are parallelism determination modes for `acc loop`.
+// In the enum names, we use the "loop_" prefix because "auto" is
+// a language keyword - and thus for consistency all other cases
+// do the same.
+def OpenACC_LoopSeq : I32EnumAttrCase<"loop_seq", 0>;
+def OpenACC_LoopAuto : I32EnumAttrCase<"loop_auto", 1>;
+def OpenACC_LoopIndependent : I32EnumAttrCase<"loop_independent", 2>;
+
+def OpenACC_LoopParMode : I32EnumAttr<
+    "LoopParMode",
+    "Encodes the options for loop parallelism determination mode",
+    [
+      OpenACC_LoopAuto, OpenACC_LoopIndependent,
+      OpenACC_LoopSeq]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
 }
 
 // Type used in operation below.
@@ -129,6 +216,41 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
 
 def OpenACC_DataClauseAttr : EnumAttr<OpenACC_Dialect, OpenACC_DataClauseEnum,
                                       "data_clause">;
+
+// Data clause modifiers:
+// * readonly: Added in OpenACC 2.7 to copyin and cache.
+// * zero: Added in OpenACC 3.0 for create and copyout.
+// * always, alwaysin, alwaysout: Added in OpenACC 3.4 for
+//       copy, copyin, and copyout clauses.
+// * capture: Added in OpenACC 3.4 for copy, copyin, copyout and create clauses.
+def OpenACC_DataClauseModifierNone : I32BitEnumAttrCaseNone<"none">;
+// All of the modifiers below are bit flags - so the value noted is `1 << bit`.
+// Thus the `zero` modifier is `1 << 0` = 1, `readonly` is `1 << 1` = 2, etc.
+def OpenACC_DataClauseModifierZero : I32BitEnumAttrCaseBit<"zero", 0>;
+def OpenACC_DataClauseModifierReadonly : I32BitEnumAttrCaseBit<"readonly", 1>;
+def OpenACC_DataClauseModifierAlwaysIn : I32BitEnumAttrCaseBit<"alwaysin", 2>;
+def OpenACC_DataClauseModifierAlwaysOut : I32BitEnumAttrCaseBit<"alwaysout", 3>;
+def OpenACC_DataClauseModifierAlways : I32BitEnumAttrCaseGroup<"always",
+  [OpenACC_DataClauseModifierAlwaysIn, OpenACC_DataClauseModifierAlwaysOut]>;
+def OpenACC_DataClauseModifierCapture : I32BitEnumAttrCaseBit<"capture", 4>;
+
+def OpenACC_DataClauseModifierEnum : I32BitEnumAttr<
+    "DataClauseModifier",
+    "Captures data clause modifiers",
+    [
+      OpenACC_DataClauseModifierNone, OpenACC_DataClauseModifierZero,
+      OpenACC_DataClauseModifierReadonly, OpenACC_DataClauseModifierAlwaysIn,
+      OpenACC_DataClauseModifierAlwaysOut, OpenACC_DataClauseModifierAlways,
+      OpenACC_DataClauseModifierCapture]> {
+  let separator = ",";
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def OpenACC_DataClauseModifierAttr : EnumAttr<OpenACC_Dialect,
+                                      OpenACC_DataClauseModifierEnum,
+                                      "data_clause_modifier">;
 
 class OpenACC_Attr<string name, string attrMnemonic,
                    list<Trait> traits = [],
@@ -309,6 +431,13 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
+    The `stride` represents the distance between consecutive elements. For
+    multi-dimensional arrays, the `stride` for each outer dimension must account
+    for the complete size of all inner dimensions.
+
+    The `strideInBytes` flag indicates that the `stride` is specified in bytes
+    rather than the number of elements.
+
     Examples below show copying a slice of 10-element array except first element.
     Note that the examples use extent in data clause for C++ and upperbound
     for Fortran (as per 2.7.1). To simplify examples, the constants are used
@@ -321,7 +450,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     ```
     =>
     ```mlir
-    acc.bounds lb(1) ub(9) extent(9) startIdx(0)
+    acc.bounds lb(1) ub(9) extent(9) startIdx(0) stride(1)
     ```
 
     Fortran:
@@ -331,7 +460,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     ```
     =>
     ```mlir
-    acc.bounds lb(1) ub(9) extent(9) startIdx(1)
+    acc.bounds lb(1) ub(9) extent(9) startIdx(1) stride(1)
     ```
   }];
 
@@ -401,6 +530,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           DefaultValuedAttr<OpenACC_DataClauseAttr, clause>:$dataClause,
           DefaultValuedAttr<BoolAttr, "true">:$structured,
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
+          DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
+            "mlir::acc::DataClauseModifier::none">:$modifiers,
           OptionalAttr<StrAttr>:$name));
 
   let description = !strconcat(extraDescription, [{
@@ -430,6 +561,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `modifiers`: Keeps track of the data clause modifiers (eg zero, readonly, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
     The async values attached to the data entry operation imply that the data
@@ -486,68 +618,63 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     oilist(
         `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
       | `bounds` `(` $bounds `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
     ) `->` type($accVar) attr-dict
   }];
 
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
-                   "bool":$structured, "bool":$implicit,
-                   "const ::llvm::Twine &":$name,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
-        build($_builder, $_state, varPtr.getType(), varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
-          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
-          /*asyncOperandsDeviceType=*/nullptr,
-          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
-          /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
-          /*name=*/$_builder.getStringAttr(name));
-      }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
-                   "bool":$structured, "bool":$implicit,
-                   CArg<"::mlir::ValueRange", "{}">:$bounds),
-      [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+    OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                   CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>];
+      }]>,
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
+                   "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
+          asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -761,9 +888,7 @@ def OpenACC_CacheOp : OpenACC_DataEntryOp<"cache",
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     /// Check if this is a cache with readonly modifier.
-    bool isCacheReadonly() {
-      return getDataClause() == acc::DataClause::acc_cache_readonly;
-    }
+    bool isCacheReadonly();
   }];
 }
 
@@ -784,6 +909,8 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
                        DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
+                         "mlir::acc::DataClauseModifier::none">:$modifiers,
                        OptionalAttr<StrAttr>:$name));
 
   let description = !strconcat(extraDescription, [{
@@ -805,6 +932,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `modifiers`: Keeps track of the data clause modifiers (eg zero, always, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
     The async values attached to the data exit operation imply that the data
@@ -859,49 +987,69 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           "- `varPtr`: The address of variable to copy back to.",
           [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                           MemWrite<OpenACC_RuntimeCounters>]>],
-          (ins Arg<OpenACC_PointerLikeTypeInterface,
+          (ins Arg<OpenACC_AnyPointerOrMappableType,
                    "Accelerator mapped variable", [MemRead]>:$accVar,
-              Arg<OpenACC_PointerLikeTypeInterface,
+              Arg<OpenACC_AnyPointerOrMappableType,
                   "Host variable", [MemWrite]>:$var,
               TypeAttr:$varType)> {
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     `to` custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
     attr-dict
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
-                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
+                   "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr, varPtr,
-          /*varType=*/::mlir::TypeAttr::get(
-            varPtr.getType().getElementType()),
+        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
+          var.getType());
+        build($_builder, $_state, accVar, var,
+          /*varType=*/ptrLikeTy ?
+            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
+            ::mlir::TypeAttr::get(var.getType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>];
+      }]>,
+    OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVar, var, varType, bounds,
+          asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    ];
 
   code extraClassDeclarationDataExit = [{
     mlir::TypedValue<mlir::acc::PointerLikeType> getVarPtr() {
@@ -917,39 +1065,51 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
     OpenACC_DataExitOp<mnemonic, clause, "",
       [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
                     MemWrite<OpenACC_RuntimeCounters>]>],
-      (ins Arg<OpenACC_PointerLikeTypeInterface,"Accelerator mapped variable",
+      (ins Arg<OpenACC_AnyPointerOrMappableType,"Accelerator mapped variable",
            [MemRead]>:$accVar)> {
   let assemblyFormat = [{
     custom<AccVar>($accVar, type($accVar))
     (`bounds` `(` $bounds^ `)` )?
-    (`async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType)^ `)`)?
+    (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     attr-dict
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+    OpBuilder<(ins "::mlir::Value":$accVar,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accPtr,
+        build($_builder, $_state, accVar,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
-      }]>
+      }]>,
+    OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit, "::mlir::StringAttr":$name),
+      [{
+        build($_builder, $_state, accVar, bounds, asyncOperands,
+              asyncOperandsDeviceType, asyncOnly, dataClause, structured,
+              implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
   ];
 
   code extraClassDeclarationDataExit = [{
@@ -1008,8 +1168,9 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOpWithVarPtr<"update_host",
 // 2.5.13 private clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_PrivateRecipeOp
+    : OpenACC_Op<"private.recipe", [IsolatedFromAbove, Symbol, RecipeInterface,
+                                    AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1065,8 +1226,10 @@ def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
 // 2.5.14 firstprivate clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_FirstprivateRecipeOp
+    : OpenACC_Op<"firstprivate.recipe", [IsolatedFromAbove, Symbol,
+                                         RecipeInterface,
+                                         AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -1131,13 +1294,15 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
-    [IsolatedFromAbove, Symbol, RecipeInterface]> {
+def OpenACC_ReductionRecipeOp
+    : OpenACC_Op<"reduction.recipe", [IsolatedFromAbove, Symbol,
+                                      RecipeInterface,
+                                      AutomaticAllocationScope]> {
   let summary = "reduction recipe";
 
   let description = [{
     Declares an OpenACC reduction recipe. The operation requires two
-    mandatory regions.
+    mandatory regions and one optional region.
 
       1. The initializer region specifies how to initialize the local reduction
          value. The region has a first argument that contains the value of the
@@ -1148,6 +1313,8 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
          values of the reduction type into one. It has at least two arguments
          and it is expected to `acc.yield` the combined value. Extra arguments
          can be added to deal with dynamic arrays.
+      3. The optional destroy region specifies how to destruct the value when it
+         reaches its end of life. It takes the reduction value as argument.
 
     Example:
 
@@ -1164,6 +1331,10 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
       // two values into one.
       %2 = arith.addi %0, %1 : i64
       acc.yield %2 : i64
+    } destroy {
+    ^bb0(%0: i64)
+      // destroy region contains a sequence of operations to destruct the
+      // created copy.
     }
 
     // The reduction symbol is then used in the corresponding operation.
@@ -1197,12 +1368,14 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
 
   let regions = (region AnyRegion:$initRegion,
-                        AnyRegion:$combinerRegion);
+                        AnyRegion:$combinerRegion,
+                        AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
     $sym_name `:` $type attr-dict-with-keyword
     `reduction_operator` $reductionOperator
     `init` $initRegion `combiner` $combinerRegion
+    (`destroy` $destroyRegion^)?
   }];
 
   let hasRegionVerifier = 1;
@@ -1260,9 +1433,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1342,23 +1515,61 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_parallel;
     }
+    /// Add a value to 'num_workers' with the current list of device types.
+    void addNumWorkersOperand(MLIRContext *, mlir::Value,
+                              llvm::ArrayRef<DeviceType>);
+    /// Add a value to 'vector_length' with the current list of device types.
+    void addVectorLengthOperand(MLIRContext *, mlir::Value,
+                                llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry to the 'num_gangs' with the current list of
+    /// device types.
+    void addNumGangsOperands(MLIRContext *, mlir::ValueRange,
+                             llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizations)
+            type($firstprivateOperands), $firstprivatizationRecipes)
         `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizationRecipes)
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
@@ -1420,9 +1631,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1469,19 +1680,45 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_serial;
     }
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizations)
+            type($firstprivateOperands), $firstprivatizationRecipes)
         `)`
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizationRecipes)
         `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -1613,14 +1850,39 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     static mlir::acc::Construct getConstructId() {
       return mlir::acc::Construct::acc_construct_kernels;
     }
+    /// Add a value to 'num_workers' with the current list of device types.
+    void addNumWorkersOperand(MLIRContext *, mlir::Value,
+                              llvm::ArrayRef<DeviceType>);
+    /// Add a value to 'vector_length' with the current list of device types.
+    void addVectorLengthOperand(MLIRContext *, mlir::Value,
+                                llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry to the 'num_gangs' with the current list of
+    /// device types.
+    void addNumGangsOperands(MLIRContext *, mlir::ValueRange,
+                             llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
     ( `combined` `(` `loop` `)` $combined^)?
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
@@ -1719,13 +1981,28 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     /// Return the wait devnum value clause for the given device_type if
     /// present.
     mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments) for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -1783,14 +2060,35 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async'. DeviceType array is supplied even though it
+    /// should always be empty, so this can mirror other versions of this
+    /// function.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait'. DeviceType array is supplied
+    /// even though it should always be empty, so this can mirror other versions
+    /// of this function.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -1835,14 +2133,36 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async'. DeviceType array is supplied even though it
+    /// should always be empty, so this can mirror other versions of this
+    /// function.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait'. DeviceType array is supplied
+    /// even though it should always be empty, so this can mirror other versions
+    /// of this function.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
@@ -1955,7 +2275,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       OptionalAttr<DeviceTypeArrayAttr>:$tileOperandsDeviceType,
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
@@ -1980,6 +2300,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
     /// Used to retrieve the block inside the op's region.
     Block &getBody() { return getLoopRegions().front()->front(); }
+
+    /// Used to determine if this operation is merely a container for a loop
+    /// operation instead of being loop-like itself.
+    bool isLoopLike() { return !getLowerbound().empty(); }
+    bool isContainerLike() { return !isLoopLike(); }
 
     /// Return true if the op has the auto attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -2047,11 +2372,75 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Return the value of the worker clause for the given device_type 
     /// if present.
     mlir::Value getGangValue(mlir::acc::GangArgType gangArgType, mlir::acc::DeviceType deviceType);
+
+    // Add an entry to the 'seq' attribute for each additional device types.
+    void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'independent' attribute for each additional device
+    // types.
+    void addIndependent(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'auto' attribute for each additional device types.
+    void addAuto(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Sets the collapse value for this 'loop' for a set of DeviceTypes. Note
+    // that this may only be set once per DeviceType, and will fail the verifier
+    // if this is set multiple times.
+    void setCollapseForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                                   llvm::APInt);
+    // Sets the tile values for this 'loop' for a set of DeviceTypes. All of the
+    // values should be integral constants, with the '*' represented as a '-1'.
+    void setTileForDeviceTypes(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                               mlir::ValueRange);
+
+    // Add a value to the 'vector' list with a current list of device_types.
+    void addVectorOperand(MLIRContext *, mlir::Value,
+                          llvm::ArrayRef<DeviceType>);
+    // Add an empty value to the 'vector' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'vector'.
+    void addEmptyVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add a value to the 'worker' list with a current list of device_types.
+    void addWorkerNumOperand(MLIRContext *, mlir::Value,
+                             llvm::ArrayRef<DeviceType>);
+    // Add an empty value to the 'worker' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'worker'.
+    void addEmptyWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Adds a collection of operands for a 'gang' clause that has various types
+    // corresponding to each operand.
+    void addGangOperands(MLIRContext *, llvm::ArrayRef<DeviceType>,
+                         llvm::ArrayRef<GangArgType>, mlir::ValueRange);
+
+    // Add an empty value to the 'gang' list with a current list of
+    // device_types. This is for the case where there is no expression specified
+    // in a 'gang'.
+    void addEmptyGang(MLIRContext *, llvm::ArrayRef<DeviceType>);
+
+    // Return whether this LoopOp has an auto, seq, or independent for the
+    // specified device-type.
+    bool hasParallelismFlag(DeviceType);
+
+    // Return whether this LoopOp has a gang, worker, or vector applying to the
+    // 'default'/None device-type.
+    bool hasDefaultGangWorkerVector();
+
+    // Used to obtain the parallelism mode for the requested device type.
+    // This first checks if the mode is set for the device_type requested.
+    // And if not, it returns the non-device_type mode.
+    LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
+
+    /// Adds a private clause variable to this operation, including its recipe.
+    void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
+                          mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
-    custom<CombinedConstructsLoop>($combined)
+    ( `combined` `(` custom<CombinedConstructsLoop>($combined)^ `)` )?
     oilist(
         `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
@@ -2062,7 +2451,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       | `vector` `` custom<DeviceTypeOperandsWithKeywordOnly>($vectorOperands,
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations) `)`
+            $privateOperands, type($privateOperands), $privatizationRecipes) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
@@ -2078,6 +2467,53 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "::mlir::ValueRange":$lowerbounds,
+                   "::mlir::ValueRange":$upperbounds,
+                   "::mlir::ValueRange":$steps,
+                   "LoopParMode":$parMode), [{
+        auto deviceNoneAttr = mlir::acc::DeviceTypeAttr::get(
+          $_builder.getContext(), mlir::acc::DeviceType::None);
+        auto arrOfDeviceNone = mlir::ArrayAttr::get(
+          $_builder.getContext(), deviceNoneAttr);
+        build($_builder, $_state,
+          /*results=*/{},
+          /*lowerbound=*/lowerbounds,
+          /*upperbound=*/upperbounds,
+          /*step=*/steps,
+          /*inclusiveUpperbound=*/nullptr,
+          /*collapse=*/nullptr,
+          /*collapseDeviceType=*/nullptr,
+          /*gangOperands=*/{},
+          /*gangOperandsArgType=*/nullptr,
+          /*gangOperandsSegments=*/nullptr,
+          /*gangOperandsDeviceType=*/nullptr,
+          /*workerNumOperands=*/{},
+          /*workerNumOperandsDeviceType=*/nullptr,
+          /*vectorOperands=*/{},
+          /*vectorOperandsDeviceType=*/nullptr,
+          /*seq=*/parMode == LoopParMode::loop_seq ?
+            arrOfDeviceNone : nullptr,
+          /*independent=*/parMode == LoopParMode::loop_independent ?
+            arrOfDeviceNone : nullptr,
+          /*auto_=*/parMode == LoopParMode::loop_auto ?
+            arrOfDeviceNone : nullptr,
+          /*gang=*/nullptr,
+          /*worker=*/nullptr,
+          /*vector=*/nullptr,
+          /*tileOperands=*/{},
+          /*tileOperandsSegments=*/nullptr,
+          /*tileOperandsDeviceType=*/nullptr,
+          /*cacheOperands=*/{},
+          /*privateOperands=*/{},
+          /*privatizationRecipes=*/nullptr,
+          /*reductionOperands=*/{},
+          /*reductionRecipes=*/nullptr,
+          /*combined=*/nullptr);
+      }]
+    >
+  ];
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
@@ -2445,18 +2881,17 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     must be modified as well.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       SymbolNameAttr:$func_name,
-                       OptionalAttr<StrArrayAttr>:$bindName,
-                       OptionalAttr<DeviceTypeArrayAttr>:$bindNameDeviceType,
-                       OptionalAttr<DeviceTypeArrayAttr>:$worker,
-                       OptionalAttr<DeviceTypeArrayAttr>:$vector,
-                       OptionalAttr<DeviceTypeArrayAttr>:$seq,
-                       UnitAttr:$nohost,
-                       UnitAttr:$implicit,
-                       OptionalAttr<DeviceTypeArrayAttr>:$gang,
-                       OptionalAttr<I64ArrayAttr>:$gangDim,
-                       OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
+  let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
+      OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
+      OptionalAttr<StrArrayAttr>:$bindStrName,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$bindStrNameDeviceType,
+      OptionalAttr<DeviceTypeArrayAttr>:$worker,
+      OptionalAttr<DeviceTypeArrayAttr>:$vector,
+      OptionalAttr<DeviceTypeArrayAttr>:$seq, UnitAttr:$nohost,
+      UnitAttr:$implicit, OptionalAttr<DeviceTypeArrayAttr>:$gang,
+      OptionalAttr<I64ArrayAttr>:$gangDim,
+      OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
 
   let extraClassDeclaration = [{
     static StringRef getGangDimKeyword() { return "dim"; }
@@ -2492,14 +2927,14 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     std::optional<int64_t> getGangDimValue();
     std::optional<int64_t> getGangDimValue(mlir::acc::DeviceType deviceType);
 
-    std::optional<llvm::StringRef> getBindNameValue();
-    std::optional<llvm::StringRef> getBindNameValue(mlir::acc::DeviceType deviceType);
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
   }];
 
   let assemblyFormat = [{
     $sym_name `func` `(` $func_name `)`
     oilist (
-        `bind` `(` custom<BindName>($bindName, $bindNameDeviceType) `)`
+        `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
       | `worker` custom<DeviceTypeArrayAttr>($worker)
       | `vector` custom<DeviceTypeArrayAttr>($vector)
@@ -2545,11 +2980,16 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
-                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
+  let extraClassDeclaration = [{
+    /// Adds a device type to the list of device types for this directive.
+    void addDeviceType(MLIRContext *, mlir::acc::DeviceType);
+  }];
+
   let assemblyFormat = [{
-    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
       | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
@@ -2576,11 +3016,16 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
-                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
+  let extraClassDeclaration = [{
+    /// Adds a device type to the list of device types for this directive.
+    void addDeviceType(MLIRContext *, mlir::acc::DeviceType);
+  }];
+
   let assemblyFormat = [{
-    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
     |`if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
@@ -2649,7 +3094,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
   let arguments = (ins Optional<I1>:$ifCond,
       Variadic<IntOrIndex>:$asyncOperands,
       OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-      OptionalAttr<DeviceTypeArrayAttr>:$async,
+      OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
       Variadic<IntOrIndex>:$waitOperands,
       OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
       OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
@@ -2692,14 +3137,28 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
     /// Return the wait devnum value clause for the given device_type if
     /// present.
     mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async' with the current list of device types.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments)for each of the additional device types (or a none if it is
+    /// empty).
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait' with the current list of device
+    /// types.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>(
-            $asyncOperands, type($asyncOperands),
-            $asyncOperandsDeviceType, $async)
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
@@ -2744,9 +3203,11 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    oilist(`async` `(` $asyncOperand `:` type($asyncOperand) `)`
-      |`wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      |`if` `(` $ifCond `)`
+    oilist(
+        `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $async)
+      |  `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;

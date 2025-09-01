@@ -8,12 +8,16 @@
 
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(character-conversion-warnings): -Wno-character-conversion
 // MSVC warning C4245: conversion from 'int' to 'wchar_t', signed/unsigned mismatch
 // MSVC warning C4305: truncation from 'int' to 'bool'
 // MSVC warning C4310: cast truncates constant value
 // MSVC warning C4389: '==': signed/unsigned mismatch
 // MSVC warning C4805: '==': unsafe mix of type 'char' and type 'bool' in operation
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4245 /wd4305 /wd4310 /wd4389 /wd4805
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <algorithm>
 
@@ -24,10 +28,12 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <vector>
 #include <type_traits>
 
+#include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
@@ -215,9 +221,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   Test<TriviallyComparable<wchar_t>, TriviallyComparable<wchar_t>>().operator()<TriviallyComparable<wchar_t>*>();
 #endif
 
-  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
-  // experimental anymore
-#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+#if TEST_STD_VER >= 20
   {
     std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     auto view                         = vec | std::views::join;
@@ -226,6 +230,52 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #endif
 
   types::for_each(types::integral_types(), TestIntegerPromotions());
+
+  {
+    // Test vector<bool>::iterator optimization
+    std::vector<bool> vec(256 + 8);
+    for (ptrdiff_t i = 8; i <= 256; i *= 2) {
+      for (size_t offset = 0; offset < 8; offset += 2) {
+        std::fill(vec.begin(), vec.end(), false);
+        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+        assert(std::find(vec.begin(), vec.end(), true) == vec.begin() + offset);
+        assert(std::find(vec.begin() + offset, vec.end(), false) == vec.begin() + offset + i);
+      }
+    }
+
+    // Verify that the std::vector<bool>::iterator optimization works properly for allocators with custom size types
+    // Fix https://github.com/llvm/llvm-project/issues/122528
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(199, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, unsigned short, short>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(205, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(257, false, Alloc(1));
+      in[in.size() - 2] = true;
+      assert(std::find(in.begin(), in.end(), true) == in.end() - 2);
+    }
+  }
 
   return true;
 }

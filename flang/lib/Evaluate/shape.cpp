@@ -16,12 +16,17 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
+  return symbol.owner().context().foldingContext();
+}
 
 bool IsImpliedShape(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
@@ -483,7 +488,7 @@ static MaybeExtentExpr GetAssociatedExtent(
     const Symbol &symbol, int dimension) {
   if (const auto *assoc{symbol.detailsIf<semantics::AssocEntityDetails>()};
       assoc && !assoc->rank()) { // not SELECT RANK case
-    if (auto shape{GetShape(assoc->expr())};
+    if (auto shape{GetShape(GetFoldingContextFrom(symbol), assoc->expr())};
         shape && dimension < static_cast<int>(shape->size())) {
       if (auto &extent{shape->at(dimension)};
           // Don't return a non-constant extent, as the variables that
@@ -519,7 +524,8 @@ MaybeExtentExpr GetExtent(
   }
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (IsImpliedShape(symbol) && details->init()) {
-      if (auto shape{GetShape(symbol, invariantOnly)}) {
+      if (auto shape{
+              GetShape(GetFoldingContextFrom(symbol), symbol, invariantOnly)}) {
         if (dimension < static_cast<int>(shape->size())) {
           return std::move(shape->at(dimension));
         }
@@ -568,7 +574,8 @@ MaybeExtentExpr GetExtent(const Subscript &subscript, const NamedEntity &base,
                 MaybeExtentExpr{triplet.stride()});
           },
           [&](const IndirectSubscriptIntegerExpr &subs) -> MaybeExtentExpr {
-            if (auto shape{GetShape(subs.value())};
+            if (auto shape{GetShape(
+                    GetFoldingContextFrom(base.GetLastSymbol()), subs.value())};
                 shape && GetRank(*shape) == 1) {
               // vector-valued subscript
               return std::move(shape->at(0));
@@ -616,7 +623,7 @@ MaybeExtentExpr GetRawUpperBound(
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt;
-      } else {
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
         return ComputeUpperBound(
             GetRawLowerBound(base, dimension), GetExtent(base, dimension));
       }
@@ -671,9 +678,11 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt; // UBOUND() folding replaces with -1
-      } else if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
-        return ComputeUpperBound(
-            std::move(*lb), GetExtent(base, dimension, invariantOnly));
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
+        if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
+          return ComputeUpperBound(
+              std::move(*lb), GetExtent(base, dimension, invariantOnly));
+        }
       }
     }
   } else if (const auto *assoc{
@@ -884,20 +893,7 @@ auto GetShapeHelper::operator()(const ArrayRef &arrayRef) const -> Result {
 }
 
 auto GetShapeHelper::operator()(const CoarrayRef &coarrayRef) const -> Result {
-  NamedEntity base{coarrayRef.GetBase()};
-  if (coarrayRef.subscript().empty()) {
-    return (*this)(base);
-  } else {
-    Shape shape;
-    int dimension{0};
-    for (const Subscript &ss : coarrayRef.subscript()) {
-      if (ss.Rank() > 0) {
-        shape.emplace_back(GetExtent(ss, base, dimension));
-      }
-      ++dimension;
-    }
-    return shape;
-  }
+  return (*this)(coarrayRef.base());
 }
 
 auto GetShapeHelper::operator()(const Substring &substring) const -> Result {
@@ -953,7 +949,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        if (IsAssumedRank(*call.arguments().front())) {
+        if (semantics::IsAssumedRank(*call.arguments().front())) {
           return Shape{MaybeExtentExpr{}};
         } else {
           return Shape{
@@ -1079,8 +1075,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         }
       }
     } else if (intrinsic->name == "spread") {
-      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with NCOPIES inserted
-      // at position DIM.
+      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with MAX(0,NCOPIES)
+      // inserted at position DIM.
       if (call.arguments().size() == 3) {
         auto arrayShape{
             (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))};
@@ -1092,7 +1088,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  ConvertToType<ExtentType>(common::Clone(*nCopies)));
+                  Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
+                      ConvertToType<ExtentType>(common::Clone(*nCopies))});
               return std::move(*arrayShape);
             }
           }
@@ -1166,8 +1163,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (call.arguments().size() >= 2) {
         return (*this)(call.arguments()[1]); // MASK=
       }
-    } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
+    } else if (intrinsic->characteristics.value().attrs.test(
+                   characteristics::Procedure::Attr::NullPointer) ||
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results

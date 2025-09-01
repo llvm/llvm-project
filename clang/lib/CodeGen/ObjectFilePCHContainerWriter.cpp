@@ -146,7 +146,7 @@ public:
       : CI(CI), Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
-        FS(&CI.getVirtualFileSystem()),
+        FS(CI.getVirtualFileSystemPtr()),
         HeaderSearchOpts(CI.getHeaderSearchOpts()),
         PreprocessorOpts(CI.getPreprocessorOpts()),
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
@@ -255,7 +255,7 @@ public:
     if (Diags.hasErrorOccurred())
       return;
 
-    M->setTargetTriple(Ctx.getTargetInfo().getTriple().getTriple());
+    M->setTargetTriple(Ctx.getTargetInfo().getTriple());
     M->setDataLayout(Ctx.getTargetInfo().getDataLayoutString());
 
     // PCH files don't have a signature field in the control block,
@@ -274,7 +274,7 @@ public:
     // Ensure the target exists.
     std::string Error;
     auto Triple = Ctx.getTargetInfo().getTriple();
-    if (!llvm::TargetRegistry::lookupTarget(Triple.getTriple(), Error))
+    if (!llvm::TargetRegistry::lookupTarget(Triple, Error))
       llvm::report_fatal_error(llvm::Twine(Error));
 
     // Emit the serialized Clang AST into its own section.
@@ -322,16 +322,16 @@ public:
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
       clang::emitBackendOutput(
-          CI, Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+          CI, CodeGenOpts, Ctx.getTargetInfo().getDataLayoutString(), M.get(),
           BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::emitBackendOutput(CI, Ctx.getTargetInfo().getDataLayoutString(),
-                             M.get(), BackendAction::Backend_EmitObj, FS,
-                             std::move(OS));
+    clang::emitBackendOutput(CI, CodeGenOpts,
+                             Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+                             BackendAction::Backend_EmitObj, FS, std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;

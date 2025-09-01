@@ -15,7 +15,7 @@ $_ZNSt6vectorIiSaIiEEixEm = comdat any
 
 define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8 dereferenceable(24) %data, i64 noundef %numElems) {
 ; O1-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
-; O1-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O1-SAME: (ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  entry:
 ; O1-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
@@ -40,7 +40,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O1-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]], !llvm.loop [[LOOP6:![0-9]+]]
 ;
 ; O2-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
-; O2-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O2-SAME: (ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:  entry:
 ; O2-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
@@ -88,7 +88,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 ; O3-LABEL: define {{[^@]+}}@_Z7computeRSt6vectorIiSaIiEEy
-; O3-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O3-SAME: (ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O3-NEXT:  entry:
 ; O3-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
@@ -143,7 +143,7 @@ entry:
   %j = alloca i64, align 8
   store ptr %data, ptr %data.addr, align 8, !tbaa !3
   store i64 %numElems, ptr %numElems.addr, align 8, !tbaa !7
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   store i64 0, ptr %i, align 8, !tbaa !7
   br label %for.cond
 
@@ -154,11 +154,11 @@ for.cond:
 
 for.cond.cleanup:
   store i32 2, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   br label %for.end8
 
 for.body:
-  call void @llvm.lifetime.start.p0(i64 8, ptr %j)
+  call void @llvm.lifetime.start.p0(ptr %j)
   store i64 0, ptr %j, align 8, !tbaa !7
   br label %for.cond1
 
@@ -170,7 +170,7 @@ for.cond1:
 
 for.cond.cleanup3:
   store i32 5, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %j)
+  call void @llvm.lifetime.end.p0(ptr %j)
   br label %for.end
 
 for.body4:
@@ -201,7 +201,7 @@ for.end8:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 define linkonce_odr dso_local noundef nonnull align 4 dereferenceable(4) ptr @_ZNSt6vectorIiSaIiEEixEm(ptr noundef nonnull align 8 dereferenceable(24) %this, i64 noundef %__n) comdat align 2 {
 entry:
@@ -217,7 +217,7 @@ entry:
   ret ptr %add.ptr
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"uwtable", i32 2}

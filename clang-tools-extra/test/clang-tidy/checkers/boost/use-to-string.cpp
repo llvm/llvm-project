@@ -18,7 +18,7 @@ T lexical_cast(const V &) {
 
 struct my_weird_type {};
 
-std::string fun(const std::string &) {}
+std::string fun(const std::string &) { return {}; }
 
 void test_to_string1() {
 
@@ -75,7 +75,7 @@ void test_to_string2() {
   fun(boost::lexical_cast<std::string>(j));
 }
 
-std::string fun(const std::wstring &) {}
+std::string fun(const std::wstring &);
 
 void test_to_wstring() {
   int a;

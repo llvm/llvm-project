@@ -20,13 +20,12 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
 
 using namespace llvm;
@@ -35,7 +34,7 @@ namespace {
 
 class WasmAsmParser : public MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
-  MCAsmLexer *Lexer = nullptr;
+  AsmLexer *Lexer = nullptr;
 
   template<bool (WasmAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
@@ -193,7 +192,7 @@ public:
 
     // TODO: Parse UniqueID
     MCSectionWasm *WS = getContext().getWasmSection(
-        Name, *Kind, Flags, GroupName, MCContext::GenericSectionID);
+        Name, *Kind, Flags, GroupName, MCSection::NonUniqueID);
 
     if (WS->getSegmentFlags() != Flags)
       Parser->Error(loc, "changed section flags for " + Name +
@@ -224,7 +223,7 @@ public:
       return true;
     if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    auto WasmSym = cast<MCSymbolWasm>(Sym);
+    auto WasmSym = static_cast<const MCSymbolWasm *>(Sym);
     if (WasmSym->isFunction()) {
       // Ignore .size directives for function symbols.  They get their size
       // set automatically based on their content.
@@ -241,9 +240,9 @@ public:
     if (!Lexer->is(AsmToken::Identifier))
       return error("Expected label after .type directive, got: ",
                    Lexer->getTok());
-    auto WasmSym = cast<MCSymbolWasm>(
-                     getStreamer().getContext().getOrCreateSymbol(
-                       Lexer->getTok().getString()));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(
+        getStreamer().getContext().getOrCreateSymbol(
+            Lexer->getTok().getString()));
     Lex();
     if (!(isNext(AsmToken::Comma) && isNext(AsmToken::At) &&
           Lexer->is(AsmToken::Identifier)))
@@ -252,7 +251,7 @@ public:
     if (TypeName == "function") {
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       auto *Current =
-          cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+          static_cast<MCSectionWasm *>(getStreamer().getCurrentSectionOnly());
       if (Current->getGroup())
         WasmSym->setComdat(true);
     } else if (TypeName == "global")

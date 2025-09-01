@@ -1204,9 +1204,10 @@ void SystemZDAGToDAGISel::loadVectorConstant(
     SDValue BitCast = CurDAG->getNode(ISD::BITCAST, DL, VT, Op);
     ReplaceNode(Node, BitCast.getNode());
     SelectCode(BitCast.getNode());
-  } else { // float or double
-    unsigned SubRegIdx =
-        (VT.getSizeInBits() == 32 ? SystemZ::subreg_h32 : SystemZ::subreg_h64);
+  } else { // half, float or double
+    unsigned SubRegIdx = (VT.getSizeInBits() == 16   ? SystemZ::subreg_h16
+                          : VT.getSizeInBits() == 32 ? SystemZ::subreg_h32
+                                                     : SystemZ::subreg_h64);
     ReplaceNode(
         Node, CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, Op).getNode());
   }
@@ -1498,8 +1499,8 @@ bool SystemZDAGToDAGISel::canUseBlockOperation(StoreSDNode *Store,
   if (V1 == V2 && End1 == End2)
     return false;
 
-  return AA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
-                       MemoryLocation(V2, End2, Store->getAAInfo()));
+  return BatchAA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
+                            MemoryLocation(V2, End2, Store->getAAInfo()));
 }
 
 bool SystemZDAGToDAGISel::storeLoadCanUseMVC(SDNode *N) const {

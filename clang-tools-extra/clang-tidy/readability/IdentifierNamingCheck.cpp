@@ -14,10 +14,8 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -496,7 +494,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
     StringRef Val = Options.get(Buffer, "");
     if (!Val.empty()) {
       std::string Type = PrimType.str();
-      std::replace(Type.begin(), Type.end(), '-', ' ');
+      llvm::replace(Type, '-', ' ');
       HNOption.PrimitiveType[Type] = Val.str();
     }
   }
@@ -955,7 +953,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_LowerCase:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word != &Words.front())
         Fixup += "_";
       Fixup += Word.lower();
@@ -963,7 +961,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_UpperCase:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word != &Words.front())
         Fixup += "_";
       Fixup += Word.upper();
@@ -971,14 +969,14 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_CamelCase:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
     break;
 
   case IdentifierNamingCheck::CT_CamelBack:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word == &Words.front()) {
         Fixup += Word.lower();
       } else {
@@ -989,7 +987,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_CamelSnakeCase:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word != &Words.front())
         Fixup += "_";
       Fixup += toupper(Word.front());
@@ -998,7 +996,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_CamelSnakeBack:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
         Fixup += "_";
         Fixup += toupper(Word.front());
@@ -1010,7 +1008,7 @@ std::string IdentifierNamingCheck::fixupWithCase(
     break;
 
   case IdentifierNamingCheck::CT_LeadingUpperSnakeCase:
-    for (auto const &Word : Words) {
+    for (const auto &Word : Words) {
       if (&Word != &Words.front()) {
         Fixup += "_";
         Fixup += Word.lower();
@@ -1358,7 +1356,7 @@ IdentifierNamingCheck::getFailureInfo(
   std::string KindName =
       fixupWithCase(Type, StyleNames[SK], ND, Style, HNOption,
                     IdentifierNamingCheck::CT_LowerCase);
-  std::replace(KindName.begin(), KindName.end(), '_', ' ');
+  llvm::replace(KindName, '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
   if (StringRef(Fixup) == Name) {

@@ -28,20 +28,22 @@ extensions = [
     "sphinx.ext.autodoc",
 ]
 
-# When building man pages, we do not use the markdown pages,
-# So, we can continue without the myst_parser dependencies.
-# Doing so reduces dependencies of some packaged llvm distributions.
 try:
     import myst_parser
 
     extensions.append("myst_parser")
 except ImportError:
-    if not tags.has("builder-man"):
-        raise
+    raise ImportError(
+        "myst_parser is required to build documentation, including man pages."
+    )
 
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 myst_heading_anchors = 6
 
 import sphinx
@@ -227,7 +229,15 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = []
+man_pages = [
+    (
+        "index",
+        "flang",
+        "flang - the Flang Fortran compiler",
+        ["Flang Contributors"],
+        1,
+    )
+]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False

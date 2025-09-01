@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -104,7 +105,7 @@ class NameOrPattern {
 public:
   // ErrorCallback is used to handle recoverable errors. An Error returned
   // by the callback aborts the parsing and is then returned by this function.
-  static Expected<NameOrPattern>
+  LLVM_ABI static Expected<NameOrPattern>
   create(StringRef Pattern, MatchStyle MS,
          llvm::function_ref<Error(Error)> ErrorCallback);
 
@@ -281,6 +282,11 @@ struct CommonConfig {
 
   SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
       compressSections;
+
+  // ErrorCallback is used to handle recoverable errors. An Error returned
+  // by the callback aborts the execution and is then returned to the caller.
+  // If the callback is not set, the errors are not issued.
+  std::function<Error(Error)> ErrorCallback;
 };
 
 } // namespace objcopy

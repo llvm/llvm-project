@@ -544,7 +544,7 @@ func.func @while_invalid_terminator() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
+  // expected-error@+1 {{'scf.while' op region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
   scf.while : () -> () {
     scf.condition(%true)
   } do {
@@ -557,7 +557,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
+  // expected-error@+1 {{'scf.while' op along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
   %0 = scf.while : () -> (i1) {
     scf.condition(%true) %true : i1
   } do {
@@ -570,7 +570,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_result_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
+  // expected-error@+1 {{'scf.while' op region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   scf.while : () -> () {
     scf.condition(%true) %true : i1
   } do {
@@ -672,6 +672,36 @@ func.func @mismatched_mapping(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>
 
 // -----
 
+func.func @forall_wrong_terminator_op() -> () {
+  %c100 = arith.constant 100 : index
+  // expected-error @+2 {{'scf.forall' op expects regions to end with 'scf.forall.in_parallel', found 'llvm.return'}}
+  // expected-note @below {{in custom textual format, the absence of terminator implies 'scf.forall.in_parallel'}}
+  scf.forall (%arg0) in (%c100) {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @at_most_one_masking_attribute(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+  %c1 = arith.constant 1 : index
+  %num_threads = arith.constant 100 : index
+
+  // expected-error @below {{"mapping" supports at most one device masking attribute}}
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
+      %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
+  }  { mapping = [#gpu.thread<x>, #gpu.mask<0x1>, #gpu.mask<0x2>] }
+
+  return
+}
+
+// -----
+
 func.func @switch_wrong_case_count(%arg0: index) {
   // expected-error @below {{'scf.index_switch' op has 0 case regions but 1 case values}}
   "scf.index_switch"(%arg0) ({
@@ -747,3 +777,13 @@ func.func @parallel_missing_terminator(%0 : index) {
   return
 }
 
+// -----
+
+func.func @invalid_reference(%a: index) {
+  // expected-error @below{{use of undeclared SSA value name}}
+  scf.for %x = %a to %a step %a iter_args(%var = %foo) -> tensor<?xf32> {
+    %foo = "test.inner"() : () -> (tensor<?xf32>)
+    scf.yield %foo : tensor<?xf32>
+  }
+  return
+}

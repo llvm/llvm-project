@@ -23,6 +23,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -162,7 +163,7 @@ private:
 
   /// Returns true if the global is a function definition with the nobuiltin
   /// attribute.
-  bool isNobuiltinFnDef() const;
+  LLVM_ABI bool isNobuiltinFnDef() const;
 
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
@@ -240,7 +241,7 @@ public:
   }
 
   bool hasComdat() const { return getComdat() != nullptr; }
-  const Comdat *getComdat() const;
+  LLVM_ABI const Comdat *getComdat() const;
   Comdat *getComdat() {
     return const_cast<Comdat *>(
                            static_cast<const GlobalValue *>(this)->getComdat());
@@ -289,7 +290,7 @@ public:
   }
 
   bool hasSection() const { return !getSection().empty(); }
-  StringRef getSection() const;
+  LLVM_ABI StringRef getSection() const;
 
   /// Global values are always pointers.
   PointerType *getType() const { return cast<PointerType>(User::getType()); }
@@ -310,8 +311,8 @@ public:
   bool hasPartition() const {
     return HasPartition;
   }
-  StringRef getPartition() const;
-  void setPartition(StringRef Part);
+  LLVM_ABI StringRef getPartition() const;
+  LLVM_ABI void setPartition(StringRef Part);
 
   // ASan, HWASan and Memtag sanitizers have some instrumentation that applies
   // specifically to global variables.
@@ -354,14 +355,14 @@ public:
   };
 
   bool hasSanitizerMetadata() const { return HasSanitizerMetadata; }
-  const SanitizerMetadata &getSanitizerMetadata() const;
+  LLVM_ABI const SanitizerMetadata &getSanitizerMetadata() const;
   // Note: Not byref as it's a POD and otherwise it's too easy to call
   // G.setSanitizerMetadata(G2.getSanitizerMetadata()), and the argument becomes
   // dangling when the backing storage allocates the metadata for `G`, as the
   // storage is shared between `G1` and `G2`.
-  void setSanitizerMetadata(SanitizerMetadata Meta);
-  void removeSanitizerMetadata();
-  void setNoSanitizeMetadata();
+  LLVM_ABI void setSanitizerMetadata(SanitizerMetadata Meta);
+  LLVM_ABI void removeSanitizerMetadata();
+  LLVM_ABI void setNoSanitizeMetadata();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
@@ -506,8 +507,8 @@ public:
   /// *arbitrary* definition at link time or load time. We cannot do any IPO or
   /// inlining across interposable call edges, since the callee can be
   /// replaced with something arbitrary.
-  bool isInterposable() const;
-  bool canBenefitFromLocalAlias() const;
+  LLVM_ABI bool isInterposable() const;
+  LLVM_ABI bool canBenefitFromLocalAlias() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
   bool hasAvailableExternallyLinkage() const {
@@ -555,7 +556,7 @@ public:
 protected:
   /// Copy all additional attributes (those not needed to create a GlobalValue)
   /// from the GlobalValue Src to this one.
-  void copyAttributesFrom(const GlobalValue *Src);
+  LLVM_ABI void copyAttributesFrom(const GlobalValue *Src);
 
 public:
   /// If the given string begins with the GlobalValue name mangling escape
@@ -570,30 +571,35 @@ public:
     return Name;
   }
 
-  /// Return the modified name for a global value suitable to be
-  /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  /// The value's original name is \c Name and has linkage of type
-  /// \c Linkage. The value is defined in module \c FileName.
-  static std::string getGlobalIdentifier(StringRef Name,
-                                         GlobalValue::LinkageTypes Linkage,
-                                         StringRef FileName);
-
-  /// Return the modified name for this global value suitable to be
-  /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  std::string getGlobalIdentifier() const;
-
   /// Declare a type to represent a global unique identifier for a global value.
   /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
   /// unique way to identify a symbol.
   using GUID = uint64_t;
 
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName);
+  /// Return the modified name for a global value suitable to be
+  /// used as the key for a global lookup (e.g. profile or ThinLTO).
+  /// The value's original name is \c Name and has linkage of type
+  /// \c Linkage. The value is defined in module \c FileName.
+  LLVM_ABI static std::string
+  getGlobalIdentifier(StringRef Name, GlobalValue::LinkageTypes Linkage,
+                      StringRef FileName);
+
+private:
+  /// Return the modified name for this global value suitable to be
+  /// used as the key for a global lookup (e.g. profile or ThinLTO).
+  LLVM_ABI std::string getGlobalIdentifier() const;
+
+public:
+  /// Return a 64-bit global unique ID constructed from the name of a global
+  /// symbol. Since this call doesn't supply the linkage or defining filename,
+  /// the GUID computation will assume that the global has external linkage.
+  LLVM_ABI static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
+  GUID getGUID() const {
+    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
@@ -605,16 +611,16 @@ public:
   /// If this function's Module is being lazily streamed in functions from disk
   /// or some other source, this method can be used to check to see if the
   /// function has been read in yet or not.
-  bool isMaterializable() const;
+  LLVM_ABI bool isMaterializable() const;
 
   /// Make sure this GlobalValue is fully read.
-  Error materialize();
+  LLVM_ABI Error materialize();
 
-/// @}
+  /// @}
 
   /// Return true if the primary definition of this global value is outside of
   /// the current translation unit.
-  bool isDeclaration() const;
+  LLVM_ABI bool isDeclaration() const;
 
   bool isDeclarationForLinker() const {
     if (hasAvailableExternallyLinkage())
@@ -633,25 +639,25 @@ public:
     return !(isDeclarationForLinker() || isWeakForLinker());
   }
 
-  const GlobalObject *getAliaseeObject() const;
+  LLVM_ABI const GlobalObject *getAliaseeObject() const;
   GlobalObject *getAliaseeObject() {
     return const_cast<GlobalObject *>(
         static_cast<const GlobalValue *>(this)->getAliaseeObject());
   }
 
   /// Returns whether this is a reference to an absolute symbol.
-  bool isAbsoluteSymbolRef() const;
+  LLVM_ABI bool isAbsoluteSymbolRef() const;
 
   /// If this is an absolute symbol reference, returns the range of the symbol,
   /// otherwise returns std::nullopt.
-  std::optional<ConstantRange> getAbsoluteSymbolRange() const;
+  LLVM_ABI std::optional<ConstantRange> getAbsoluteSymbolRange() const;
 
   /// This method unlinks 'this' from the containing module, but does not delete
   /// it.
-  void removeFromParent();
+  LLVM_ABI void removeFromParent();
 
   /// This method unlinks 'this' from the containing module and deletes it.
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
 
   /// Get the module that this global value is contained inside of...
   Module *getParent() { return Parent; }
@@ -660,7 +666,7 @@ public:
   /// Get the data layout of the module this global belongs to.
   ///
   /// Requires the global to have a parent module.
-  const DataLayout &getDataLayout() const;
+  LLVM_ABI const DataLayout &getDataLayout() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -675,7 +681,7 @@ public:
   /// is not normally profitable to omit them from the .o symbol table. Using
   /// this analysis makes sense when the information can be passed down to the
   /// linker or we are in LTO.
-  bool canBeOmittedFromSymbolTable() const;
+  LLVM_ABI bool canBeOmittedFromSymbolTable() const;
 };
 
 } // end namespace llvm

@@ -204,15 +204,15 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
-   * - Floating Point Working Group
-     - Every 3rd Wednesday of the month
-     - `ics <https://calendar.google.com/calendar/ical/02582507bac79d186900712566ec3fc69b33ac24d7de0a8c76c7b19976f190c0%40group.calendar.google.com/private-6e35506dbfe13812e92e9aa8cd5d761d/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
-     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
    * - Vectorizer Improvement Working Group
-     - Every 3rd Thursday of the month
+     - 3rd Tuesday of the month
      - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
+   * - LLVM Qualification Working Group
+     - 1st Tuesday/Wednesday of the month
+     - `ics <https://calendar.google.com/calendar/ical/c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
 
 
 For event owners, our Discord bot also supports sending automated announcements
@@ -354,11 +354,6 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Every first Friday of the month, 14:00 UK time, for 60 minutes.
     - `Google meet <https://meet.google.com/jps-twgq-ivz>`__
     - English, Portuguese
-  * - Rotating hosts
-    - Getting Started, beginner questions, new contributors.
-    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
-    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
-    - English
 
 For event owners, our Discord bot also supports sending automated announcements
 of upcoming office hours. Please see the :ref:`discord-bot-event-pings` section
@@ -392,7 +387,7 @@ Discord
 -------
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found on the community's `Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
+can be found on the community's `Discord <https://discord.gg/xS7Z362>`_
 chat server. The server is actively moderated.
 
 The #buildbot-status channel has a bot for

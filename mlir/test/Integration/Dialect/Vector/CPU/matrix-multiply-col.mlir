@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -O0 -enable-matrix -matrix-allow-contract -matrix-default-layout=column-major \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -39,7 +39,7 @@ func.func @entry() {
   //           x          =                  |/ | column-major!
   // ( 1, 3 )     (5, 7)     ( 19, 27 )
   //
-  %c = vector.matrix_multiply %a, %b
+  %c = llvm.intr.matrix.multiply %a, %b
       { lhs_rows = 2: i32, lhs_columns = 2: i32 , rhs_columns = 2: i32 }
       : (vector<4xf64>, vector<4xf64>) -> vector<4xf64>
 

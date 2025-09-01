@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx11.0.0"
 
 define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @partial_unroll_forced(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture readonly [[SRC:%.*]], ptr noalias nocapture writeonly [[DST:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr readonly captures(none) [[SRC:%.*]], ptr noalias writeonly captures(none) [[DST:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP141:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP141]], label [[LOOP_LATCH_PREHEADER:%.*]], label [[EXIT:%.*]]
@@ -74,7 +74,7 @@ exit:
 
 define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @cse_matching_load_from_previous_unrolled_iteration(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture readonly [[SRC:%.*]], ptr noalias nocapture writeonly [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr readonly captures(none) [[SRC:%.*]], ptr noalias writeonly captures(none) [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_4:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[SRC_12:%.*]] = getelementptr i8, ptr [[SRC]], i64 12

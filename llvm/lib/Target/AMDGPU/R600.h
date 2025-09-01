@@ -45,6 +45,9 @@ extern char &R600VectorRegMergerID;
 void initializeR600PacketizerPass(PassRegistry &);
 extern char &R600PacketizerID;
 
+void initializeR600EmitClauseMarkersPass(PassRegistry &);
+void initializeR600MachineCFGStructurizerPass(PassRegistry &);
+
 } // End namespace llvm
 
 #endif

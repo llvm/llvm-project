@@ -285,21 +285,22 @@ template <typename DSV>
 std::optional<std::pair<SomeExpr, bool>>
 DataInitializationCompiler<DSV>::ConvertElement(
     const SomeExpr &expr, const evaluate::DynamicType &type) {
+  evaluate::FoldingContext &foldingContext{exprAnalyzer_.GetFoldingContext()};
+  evaluate::CheckRealWidening(expr, type, foldingContext);
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
   }
   // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
   // (most) other Fortran compilers do.
-  if (auto converted{evaluate::HollerithToBOZ(
-          exprAnalyzer_.GetFoldingContext(), expr, type)}) {
+  if (auto converted{evaluate::HollerithToBOZ(foldingContext, expr, type)}) {
     return {std::make_pair(std::move(*converted), true)};
   }
   SemanticsContext &context{exprAnalyzer_.context()};
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
     if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
-            exprAnalyzer_.GetFoldingContext(), type, expr)}) {
+            foldingContext, type, expr)}) {
       context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
-          exprAnalyzer_.GetFoldingContext().messages().at(),
+          foldingContext.messages().at(),
           "nonstandard usage: initialization of %s with %s"_port_en_US,
           type.AsFortran(), expr.GetType().value().AsFortran());
       return {std::make_pair(std::move(*converted), false)};
@@ -381,7 +382,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
     if (static_cast<std::size_t>(offsetSymbol.offset() + offsetSymbol.size()) >
         symbol.size()) {
       OutOfRangeError();
-    } else if (evaluate::IsNullPointer(*expr)) {
+    } else if (evaluate::IsNullPointer(expr)) {
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
@@ -414,7 +415,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
-  } else if (evaluate::IsNullPointer(*expr)) {
+  } else if (evaluate::IsNullPointer(expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
   } else if (evaluate::IsProcedureDesignator(*expr)) {
@@ -900,7 +901,7 @@ void ConstructInitializer(const Symbol &symbol,
           mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
         }
       } else {
-        CHECK(evaluate::IsNullProcedurePointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(&*expr));
         mutableProc.set_init(nullptr);
       }
     } else {

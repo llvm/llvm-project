@@ -5,17 +5,18 @@ add_flang_library(HLFIRTransforms
   ConvertToFIR.cpp
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
+  InlineHLFIRCopyIn.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
   SimplifyHLFIRIntrinsics.cpp
   OptimizedBufferization.cpp
+  PropagateFortranVariableAttributes.cpp
 
   DEPENDS
   CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
-  ${dialect_libs}
 
   LINK_LIBS
   CUFAttrs
@@ -26,12 +27,17 @@ add_flang_library(HLFIRTransforms
   FIRSupport
   FIRTransforms
   FlangOpenMPTransforms
+  FortranEvaluate
+  FortranSupport
   HLFIRDialect
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  ${dialect_libs}
 
   MLIR_LIBS
   MLIRIR

@@ -381,13 +381,13 @@ struct A {
   struct B {
     void e();
   };
-  
+
   void f();
-  
+
   struct D {
     void g();
   };
-  
+
   T h();
 
   template<T U>
@@ -399,13 +399,13 @@ struct A<int> {
   struct B {
     void e();
   };
-  
+
   int f();
-  
+
   struct D {
     void g();
   };
-  
+
   template<int U>
   int i();
 };
@@ -420,25 +420,25 @@ class C {
 
   template<class T>
   friend struct A<T>::B;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend void A<T>::f();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
   template<class T>
   friend void A<T>::D::g();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D::' for friend class declaration is not supported; turning off access control for 'C'}}
-  
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D' for friend class declaration is not supported; turning off access control for 'C'}}
+
   template<class T>
   friend int *A<T*>::h();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T *>::' for friend class declaration is not supported; turning off access control for 'C'}}
-  
+  // expected-warning@-1 {{dependent nested name specifier 'A<T *>' for friend class declaration is not supported; turning off access control for 'C'}}
+
   template<class T>
   template<T U>
   friend T A<T>::i();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 };
 
 C c;
@@ -451,7 +451,7 @@ template<class T>
 void A<T>::f() { (void)c.private_int; }
 int A<int>::f() { (void)c.private_int; return 0; }
 
-// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int' 
+// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
 void A<int>::D::g() { (void)c.private_int; }
@@ -564,11 +564,12 @@ struct A {
 namespace ex2 {
 #if __cplusplus >= 201103L
 struct Bar {
-  struct Baz {
+  struct Baz { // #cwg1890-Baz
     int a = 0;
   };
   static_assert(__is_constructible(Baz), "");
   // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(cwg1890::ex2::Bar::Baz)'}}
+  // since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
 };
 #endif
 } // namespace ex2

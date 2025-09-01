@@ -19,36 +19,33 @@
 
 template <class C>
 TEST_CONSTEXPR_CXX20 void
-test(typename C::size_type n, const typename C::value_type& x,
-     const typename C::allocator_type& a)
-{
-    C c(n, x, a);
-    LIBCPP_ASSERT(c.__invariants());
-    assert(a == c.get_allocator());
-    assert(c.size() == n);
-    LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
-        assert(*i == x);
+test(typename C::size_type n, const typename C::value_type& x, const typename C::allocator_type& a) {
+  C c(n, x, a);
+  LIBCPP_ASSERT(c.__invariants());
+  assert(a == c.get_allocator());
+  assert(c.size() == n);
+  LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
+  for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
+    assert(*i == x);
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-    test<std::vector<int> >(0, 3, std::allocator<int>());
-    test<std::vector<int> >(50, 3, std::allocator<int>());
+  test<std::vector<int> >(0, 3, std::allocator<int>());
+  test<std::vector<int> >(50, 3, std::allocator<int>());
 #if TEST_STD_VER >= 11
-    test<std::vector<int, min_allocator<int>> >(0, 3, min_allocator<int>());
-    test<std::vector<int, min_allocator<int>> >(50, 3, min_allocator<int>());
-    test<std::vector<int, safe_allocator<int>> >(0, 3, safe_allocator<int>());
-    test<std::vector<int, safe_allocator<int>> >(50, 3, safe_allocator<int>());
+  test<std::vector<int, min_allocator<int>> >(0, 3, min_allocator<int>());
+  test<std::vector<int, min_allocator<int>> >(50, 3, min_allocator<int>());
+  test<std::vector<int, safe_allocator<int>> >(0, 3, safe_allocator<int>());
+  test<std::vector<int, safe_allocator<int>> >(50, 3, safe_allocator<int>());
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

@@ -1,7 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/internal/clc.h>
 #include <clc/relational/relational.h>
 
-_CLC_DEFINE_RELATIONAL_UNARY(int, __clc_isinf, __builtin_isinf, float)
+_CLC_DEFINE_ISFPCLASS(int, int, __clc_isinf, fcInf, float)
 
 #ifdef cl_khr_fp64
 
@@ -9,9 +17,8 @@ _CLC_DEFINE_RELATIONAL_UNARY(int, __clc_isinf, __builtin_isinf, float)
 
 // The scalar version of __clc_isinf(double) returns an int, but the vector
 // versions return long.
-_CLC_DEF _CLC_OVERLOAD int __clc_isinf(double x) { return __builtin_isinf(x); }
+_CLC_DEFINE_ISFPCLASS(int, long, __clc_isinf, fcInf, double)
 
-_CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(long, __clc_isinf, double)
 #endif
 
 #ifdef cl_khr_fp16
@@ -20,7 +27,6 @@ _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(long, __clc_isinf, double)
 
 // The scalar version of __clc_isinf(half) returns an int, but the vector
 // versions return short.
-_CLC_DEF _CLC_OVERLOAD int __clc_isinf(half x) { return __builtin_isinf(x); }
+_CLC_DEFINE_ISFPCLASS(int, short, __clc_isinf, fcInf, half)
 
-_CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(short, __clc_isinf, half)
 #endif

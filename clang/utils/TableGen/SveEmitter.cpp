@@ -27,9 +27,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <array>
 #include <cctype>
 #include <set>
@@ -181,6 +183,8 @@ class Intrinsic {
 
   SmallVector<ImmCheck, 2> ImmChecks;
 
+  bool SetsFPMR;
+
 public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
@@ -198,7 +202,9 @@ public:
 
   StringRef getSVEGuard() const { return SVEGuard; }
   StringRef getSMEGuard() const { return SMEGuard; }
-  void printGuard(raw_ostream &OS) const {
+  std::string getGuard() const {
+    std::string Guard;
+    llvm::raw_string_ostream OS(Guard);
     if (!SVEGuard.empty() && SMEGuard.empty())
       OS << SVEGuard;
     else if (SVEGuard.empty() && !SMEGuard.empty())
@@ -216,6 +222,7 @@ public:
       else
         OS << SMEGuard;
     }
+    return Guard;
   }
   ClassKind getClassKind() const { return Class; }
 
@@ -245,9 +252,7 @@ public:
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
   static bool isOverloadedIntrinsic(StringRef Name) {
-    auto BrOpen = Name.find('[');
-    auto BrClose = Name.find(']');
-    return BrOpen != std::string::npos && BrClose != std::string::npos;
+    return Name.contains('[') && Name.contains(']');
   }
 
   /// Return true if the intrinsic takes a splat operand.
@@ -278,6 +283,7 @@ public:
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
+  StringRef getFPMSuffix() const { return SetsFPMR ? "_fpm" : ""; }
   std::string mangleName(ClassKind LocalCK) const;
   std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
@@ -449,7 +455,7 @@ std::string SVEType::builtinBaseType() const {
   case TypeKind::PredicatePattern:
     return "i";
   case TypeKind::Fpm:
-    return "Wi";
+    return "UWi";
   case TypeKind::Predicate:
     return "b";
   case TypeKind::BFloat16:
@@ -457,7 +463,7 @@ std::string SVEType::builtinBaseType() const {
     return "y";
   case TypeKind::MFloat8:
     assert(ElementBitwidth == 8 && "Invalid MFloat8!");
-    return "c";
+    return "m";
   case TypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
@@ -966,10 +972,10 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
 
   auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.empty() || Guard == Base)
+      return Guard.str();
     if (Guard.contains('|'))
       return Base.str() + ",(" + Guard.str() + ")";
-    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
-      return Guard.str();
     return Base.str() + "," + Guard.str();
   };
 
@@ -983,6 +989,7 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
     std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
     SVEType T(BaseTypeSpec, Mod, NumVectors);
     Types.push_back(T);
+    SetsFPMR = T.isFpm();
 
     // Add range checks for immediates
     if (I > 0) {
@@ -1001,6 +1008,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   this->Flags |= Emitter.encodeMergeType(MergeTy);
   if (hasSplat())
     this->Flags |= Emitter.encodeSplatOperand(getSplatIdx());
+  if (SetsFPMR)
+    this->Flags |= Emitter.getEnumValueForFlag("SetsFPMR");
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {
@@ -1032,7 +1041,10 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     case '1':
     case '2':
     case '3':
-      T = SVEType(TS, Proto[C - '0']);
+      // Extract the modifier before passing to SVEType to handle numeric
+      // modifiers
+      auto [Mod, NumVectors] = getProtoModifier(Proto, (C - '0'));
+      T = SVEType(TS, Mod);
       break;
     }
 
@@ -1089,8 +1101,9 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
   }
 
   // Replace all {d} like expressions with e.g. 'u32'
-  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto()) +
-         getMergeSuffix();
+  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto())
+      .append(getMergeSuffix())
+      .append(getFPMSuffix());
 }
 
 void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
@@ -1216,8 +1229,7 @@ void SVEEmitter::createIntrinsic(
 
   // Remove duplicate type specs.
   sort(TypeSpecs);
-  TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
-                  TypeSpecs.end());
+  TypeSpecs.erase(llvm::unique(TypeSpecs), TypeSpecs.end());
 
   // Create an Intrinsic for each type spec.
   for (auto TS : TypeSpecs) {
@@ -1261,16 +1273,14 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
   // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
   // - Class (is intrinsic overloaded or not)
   // - Intrinsic name
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(
-                           I->getSVEGuard().str() + I->getSMEGuard().str(),
-                           (unsigned)I->getClassKind(), I->getName());
-                     };
-                     return ToTuple(A) < ToTuple(B);
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                             const std::unique_ptr<Intrinsic> &B) {
+    auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+      return std::make_tuple(I->getSVEGuard().str() + I->getSMEGuard().str(),
+                             (unsigned)I->getClassKind(), I->getName());
+    };
+    return ToTuple(A) < ToTuple(B);
+  });
 
   // Actually emit the intrinsic declarations.
   for (auto &I : Defs)
@@ -1472,19 +1482,19 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
     return A->getMangledName() < B->getMangledName();
   });
 
-  OS << "#ifdef GET_SVE_BUILTINS\n";
-  for (auto &Def : Defs) {
-    // Only create BUILTINs for non-overloaded intrinsics, as overloaded
-    // declarations only live in the header file.
-    if (Def->getClassKind() != ClassG) {
-      OS << "TARGET_BUILTIN(__builtin_sve_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
-      Def->printGuard(OS);
-      OS << "\")\n";
-    }
-  }
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
 
-  // Add reinterpret functions.
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getGuard());
+    }
+
+  Table.GetOrAddStringOffset("sme|sve");
+  SmallVector<std::pair<std::string, std::string>> ReinterpretBuiltins;
   for (auto [N, Suffix] :
        std::initializer_list<std::pair<unsigned, const char *>>{
            {1, ""}, {2, "_x2"}, {3, "_x3"}, {4, "_x4"}}) {
@@ -1492,14 +1502,54 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
       SVEType ToV(To.BaseType, N);
       for (const ReinterpretTypeInfo &From : Reinterprets) {
         SVEType FromV(From.BaseType, N);
-        OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
-           << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
+        std::string Name =
+            (Twine("reinterpret_") + To.Suffix + "_" + From.Suffix + Suffix)
+                .str();
+        std::string Type = ToV.builtin_str() + FromV.builtin_str();
+        Table.GetOrAddStringOffset(Name);
+        Table.GetOrAddStringOffset(Type);
+        ReinterpretBuiltins.push_back({Name, Type});
       }
     }
   }
 
-  OS << "#endif\n\n";
+  OS << "#ifdef GET_SVE_BUILTIN_ENUMERATORS\n";
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG)
+      OS << "  BI__builtin_sve_" << Def->getMangledName() << ",\n";
+  for (const auto &[Name, _] : ReinterpretBuiltins)
+    OS << "  BI__builtin_sve_" << Name << ",\n";
+  OS << "#endif // GET_SVE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_SVE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_SVE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_SVE_BUILTIN_INFOS\n";
+  for (const auto &Def : Defs) {
+    // Only create BUILTINs for non-overloaded intrinsics, as overloaded
+    // declarations only live in the header file.
+    if (Def->getClassKind() != ClassG) {
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Def->getMangledName()) << " /* "
+         << Def->getMangledName() << " */, ";
+      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+         << Def->getBuiltinTypeStr() << " */, ";
+      OS << Table.GetStringOffset("n") << " /* n */, ";
+      OS << Table.GetStringOffset(Def->getGuard()) << " /* " << Def->getGuard()
+         << " */}, ";
+      OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+    }
+  }
+  for (const auto &[Name, Type] : ReinterpretBuiltins) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, ";
+    OS << Table.GetStringOffset(Type) << " /* " << Type << " */, ";
+    OS << Table.GetStringOffset("n") << " /* n */, ";
+    OS << Table.GetStringOffset("sme|sve") << " /* sme|sve */}, ";
+    OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
+  }
+  OS << "#endif // GET_SVE_BUILTIN_INFOS\n\n";
 }
 
 void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
@@ -1672,19 +1722,44 @@ void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
     return A->getMangledName() < B->getMangledName();
   });
 
-  OS << "#ifdef GET_SME_BUILTINS\n";
-  for (auto &Def : Defs) {
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("");
+  Table.GetOrAddStringOffset("n");
+
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG) {
+      Table.GetOrAddStringOffset(Def->getMangledName());
+      Table.GetOrAddStringOffset(Def->getBuiltinTypeStr());
+      Table.GetOrAddStringOffset(Def->getGuard());
+    }
+
+  OS << "#ifdef GET_SME_BUILTIN_ENUMERATORS\n";
+  for (const auto &Def : Defs)
+    if (Def->getClassKind() != ClassG)
+      OS << "  BI__builtin_sme_" << Def->getMangledName() << ",\n";
+  OS << "#endif // GET_SME_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_SME_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_SME_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_SME_BUILTIN_INFOS\n";
+  for (const auto &Def : Defs) {
     // Only create BUILTINs for non-overloaded intrinsics, as overloaded
     // declarations only live in the header file.
     if (Def->getClassKind() != ClassG) {
-      OS << "TARGET_BUILTIN(__builtin_sme_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
-      Def->printGuard(OS);
-      OS << "\")\n";
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Def->getMangledName()) << " /* "
+         << Def->getMangledName() << " */, ";
+      OS << Table.GetStringOffset(Def->getBuiltinTypeStr()) << " /* "
+         << Def->getBuiltinTypeStr() << " */, ";
+      OS << Table.GetStringOffset("n") << " /* n */, ";
+      OS << Table.GetStringOffset(Def->getGuard()) << " /* " << Def->getGuard()
+         << " */}, ";
+      OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
     }
   }
-
-  OS << "#endif\n\n";
+  OS << "#endif // GET_SME_BUILTIN_INFOS\n\n";
 }
 
 void SVEEmitter::createSMECodeGenMap(raw_ostream &OS) {
@@ -1826,6 +1901,9 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
         !Def->getSMEGuard().empty())
       report_fatal_error("Missing VerifyRuntimeMode flag");
+    if (Def->isFlagSet(VerifyRuntimeMode) &&
+        (Def->getSVEGuard().empty() || Def->getSMEGuard().empty()))
+      report_fatal_error("VerifyRuntimeMode requires SVE and SME guards");
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());

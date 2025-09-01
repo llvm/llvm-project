@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_VERSION_STRING
 #include "llvm/Option/ArgList.h"
@@ -67,6 +65,18 @@ static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
   // the original `wasi` target in addition to the `wasip1` name.
   return TargetTriple.isOSWASI() && TargetTriple.getOSName() != "wasip1" &&
          TargetTriple.getOSName() != "wasi";
+}
+
+static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
+  bool WantsPthread =
+      Args.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false);
+
+  // If the WASI environment is "threads" then enable pthreads support
+  // without requiring -pthread, in order to prevent user error
+  if (Triple.isOSWASI() && Triple.getEnvironmentName() == "threads")
+    WantsPthread = true;
+
+  return WantsPthread;
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -150,14 +160,15 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (WantsPthread(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--shared-memory");
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (Args.hasArg(options::OPT_pthread)) {
+    if (WantsPthread(ToolChain.getTriple(), Args))
       CmdArgs.push_back("-lpthread");
-      CmdArgs.push_back("--shared-memory");
-    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
@@ -291,8 +302,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-fno-use-init-array");
 
   // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
-  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
-                         false)) {
+  if (WantsPthread(getTriple(), DriverArgs)) {
     if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
@@ -344,9 +354,15 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     }
   }
 
+  bool HasBannedIncompatibleOptionsForWasmEHSjLj = false;
+  bool HasEnabledFeaturesForWasmEHSjLj = false;
+
   // Bans incompatible options for Wasm EH / SjLj. We don't allow using
   // different modes for EH and SjLj.
   auto BanIncompatibleOptionsForWasmEHSjLj = [&](StringRef CurOption) {
+    if (HasBannedIncompatibleOptionsForWasmEHSjLj)
+      return;
+    HasBannedIncompatibleOptionsForWasmEHSjLj = true;
     if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,
                            options::OPT_mexception_handing, false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
@@ -374,6 +390,9 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   // Enable necessary features for Wasm EH / SjLj in the backend.
   auto EnableFeaturesForWasmEHSjLj = [&]() {
+    if (HasEnabledFeaturesForWasmEHSjLj)
+      return;
+    HasEnabledFeaturesForWasmEHSjLj = true;
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
     // The standardized Wasm EH spec requires multivalue and reference-types.
@@ -524,8 +543,13 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 SanitizerMask WebAssembly::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (getTriple().isOSEmscripten()) {
-    Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }
+
+  if (getTriple().isOSEmscripten() || getTriple().isOSWASI()) {
+    Res |= SanitizerKind::Address;
+  }
+
   // -fsanitize=function places two words before the function label, which are
   // -unsupported.
   Res &= ~SanitizerKind::Function;

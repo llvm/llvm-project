@@ -129,7 +129,7 @@ void Instruction::insertBefore(Instruction *BeforeI) {
 
   // Insert the LLVM IR Instructions in program order.
   for (llvm::Instruction *I : getLLVMInstrs())
-    I->insertBefore(BeforeTopI);
+    I->insertBefore(BeforeTopI->getIterator());
 }
 
 void Instruction::insertAfter(Instruction *AfterI) {
@@ -1007,6 +1007,9 @@ static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPToSI);
   case Instruction::Opcode::FPExt:
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::FPExt);
+  case Instruction::Opcode::PtrToAddr:
+    return static_cast<llvm::Instruction::CastOps>(
+        llvm::Instruction::PtrToAddr);
   case Instruction::Opcode::PtrToInt:
     return static_cast<llvm::Instruction::CastOps>(llvm::Instruction::PtrToInt);
   case Instruction::Opcode::IntToPtr:

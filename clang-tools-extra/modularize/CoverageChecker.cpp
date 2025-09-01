@@ -278,15 +278,15 @@ CoverageChecker::collectUmbrellaHeaderHeaders(StringRef UmbrellaHeaderName) {
     sys::fs::current_path(PathBuf);
 
   // Create the compilation database.
-  std::unique_ptr<CompilationDatabase> Compilations;
-  Compilations.reset(new FixedCompilationDatabase(Twine(PathBuf), CommandLine));
+  FixedCompilationDatabase Compilations(Twine(PathBuf), CommandLine);
 
   std::vector<std::string> HeaderPath;
   HeaderPath.push_back(std::string(UmbrellaHeaderName));
 
   // Create the tool and run the compilation.
-  ClangTool Tool(*Compilations, HeaderPath);
-  int HadErrors = Tool.run(new CoverageCheckerFrontendActionFactory(*this));
+  ClangTool Tool(Compilations, HeaderPath);
+  CoverageCheckerFrontendActionFactory ActionFactory(*this);
+  int HadErrors = Tool.run(&ActionFactory);
 
   // If we had errors, exit early.
   return !HadErrors;
@@ -329,10 +329,8 @@ bool CoverageChecker::collectFileSystemHeaders() {
   else {
     // Otherwise we only look at the sub-trees specified by the
     // include paths.
-    for (std::vector<std::string>::const_iterator I = IncludePaths.begin(),
-      E = IncludePaths.end();
-      I != E; ++I) {
-      if (!collectFileSystemHeaders(*I))
+    for (const std::string &IncludePath : IncludePaths) {
+      if (!collectFileSystemHeaders(IncludePath))
         return false;
     }
   }

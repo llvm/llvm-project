@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-loop-convert %t -- -- -I %S/Inputs/loop-convert
 
 #include "structures.h"
 
@@ -170,6 +170,8 @@ const int *constArray() {
   // CHECK-FIXES: for (const int & I : ConstArr)
   // CHECK-FIXES-NEXT: if (Something)
   // CHECK-FIXES-NEXT: return &I;
+
+  return nullptr;
 }
 
 struct HasArr {

@@ -33,6 +33,8 @@ Error failUnsupported(const Twine &Reason) {
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
+  if (Predicate.hasGISelLeafPredicateCode())
+    return "GICXXPred_MO_" + Predicate.getFnName();
   return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
@@ -51,26 +53,26 @@ constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
 void emitEncodingMacrosDef(raw_ostream &OS) {
   OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t(Val), uint8_t((uint16_t)Val >> 8)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t(Val), uint8_t((uint32_t)Val >> 8), "
-        "uint8_t((uint32_t)Val >> 16), uint8_t((uint32_t)Val >> 24)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(Val), uint8_t((uint64_t)Val >> 8), "
-        "uint8_t((uint64_t)Val >> 16), uint8_t((uint64_t)Val >> 24),  "
-        "uint8_t((uint64_t)Val >> 32), uint8_t((uint64_t)Val >> 40), "
-        "uint8_t((uint64_t)Val >> 48), uint8_t((uint64_t)Val >> 56)\n"
+     << " uint8_t(Val), uint8_t((Val) >> 8), "
+        "uint8_t((Val) >> 16), uint8_t((Val) >> 24),  "
+        "uint8_t(uint64_t(Val) >> 32), uint8_t(uint64_t(Val) >> 40), "
+        "uint8_t(uint64_t(Val) >> 48), uint8_t(uint64_t(Val) >> 56)\n"
      << "#else\n"
      << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t((uint16_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t((uint32_t)Val >> 24), uint8_t((uint32_t)Val >> 16), "
-        "uint8_t((uint32_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t((uint64_t)Val >> 56), uint8_t((uint64_t)Val >> 48), "
-        "uint8_t((uint64_t)Val >> 40), uint8_t((uint64_t)Val >> 32),  "
-        "uint8_t((uint64_t)Val >> 24), uint8_t((uint64_t)Val >> 16), "
-        "uint8_t((uint64_t)Val >> 8), uint8_t(Val)\n"
+     << " uint8_t(uint64_t(Val) >> 56), uint8_t(uint64_t(Val) >> 48), "
+        "uint8_t(uint64_t(Val) >> 40), uint8_t(uint64_t(Val) >> 32),  "
+        "uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
+        "uint8_t((Val) >> 8), uint8_t(Val)\n"
      << "#endif\n";
 }
 
@@ -227,31 +229,20 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes,
                           MatchTableRecord::MTRF_CommaFollows);
 }
 
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef NamedValue,
-                                        int64_t RawValue) {
-  return MatchTableRecord(std::nullopt, NamedValue, NumBytes,
-                          MatchTableRecord::MTRF_CommaFollows, RawValue);
-}
-
 MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
                                         StringRef NamedValue) {
   return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
                           NumBytes, MatchTableRecord::MTRF_CommaFollows);
 }
 
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
-                                        StringRef NamedValue,
-                                        int64_t RawValue) {
-  return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
-                          NumBytes, MatchTableRecord::MTRF_CommaFollows,
-                          RawValue);
-}
-
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
-  if (NumBytes == 1 && IntValue < 0)
-    Str = "uint8_t(" + Str + ")";
+  uint64_t UIntValue = IntValue;
+  if (NumBytes < 8)
+    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
+  std::string Str = llvm::to_string(UIntValue);
+  if (UIntValue > INT64_MAX)
+    Str += 'u';
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
@@ -300,11 +291,28 @@ MatchTableRecord MatchTable::JumpTarget(unsigned LabelID) {
 void MatchTable::emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
 
 void MatchTable::emitDeclaration(raw_ostream &OS) const {
-  unsigned Indentation = 4;
+  static constexpr unsigned BaseIndent = 4;
+  unsigned Indentation = 0;
   OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
   LineBreak.emit(OS, true, *this);
-  OS << std::string(Indentation, ' ');
 
+  // We want to display the table index of each line in a consistent
+  // manner. It has to appear as a column on the left side of the table.
+  // To determine how wide the column needs to be, check how many characters
+  // we need to fit the largest possible index in the current table.
+  const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
+
+  unsigned CurIndex = 0;
+  const auto BeginLine = [&]() {
+    OS.indent(BaseIndent);
+    std::string IdxStr = llvm::to_string(CurIndex);
+    // Pad the string with spaces to keep the size of the prefix consistent.
+    OS << " /* ";
+    OS.indent(NumColsForIdx - IdxStr.size()) << IdxStr << " */ ";
+    OS.indent(Indentation);
+  };
+
+  BeginLine();
   for (auto I = Contents.begin(), E = Contents.end(); I != E; ++I) {
     bool LineBreakIsNext = false;
     const auto &NextI = std::next(I);
@@ -320,11 +328,14 @@ void MatchTable::emitDeclaration(raw_ostream &OS) const {
 
     I->emit(OS, LineBreakIsNext, *this);
     if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
-      OS << std::string(Indentation, ' ');
+      BeginLine();
 
     if (I->Flags & MatchTableRecord::MTRF_Outdent)
       Indentation -= 2;
+
+    CurIndex += I->size();
   }
+  assert(CurIndex == CurrentSize);
   OS << "}; // Size: " << CurrentSize << " bytes\n";
 }
 
@@ -466,6 +477,14 @@ bool GroupMatcher::candidateConditionMatches(
   // ... if not empty, the group can only accomodate matchers with the exact
   // same first condition:
   return Predicate.isIdentical(RepresentativeCondition);
+}
+
+std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
+  assert(!Conditions.empty() &&
+         "Trying to pop a condition from a condition-less group");
+  std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
+  Conditions.erase(Conditions.begin());
+  return P;
 }
 
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
@@ -651,8 +670,8 @@ void SwitchMatcher::emit(MatchTable &Table) {
                 [&Table]() { return Table.allocateLabelID(); });
   const unsigned Default = Table.allocateLabelID();
 
-  const int64_t LowerBound = Values.begin()->getRawValue();
-  const int64_t UpperBound = Values.rbegin()->getRawValue() + 1;
+  const int64_t LowerBound = Values.begin()->RawValue;
+  const int64_t UpperBound = Values.rbegin()->RawValue + 1;
 
   emitPredicateSpecificOpcodes(*Condition, Table);
 
@@ -664,10 +683,11 @@ void SwitchMatcher::emit(MatchTable &Table) {
   auto VI = Values.begin();
   for (unsigned I = 0, E = Values.size(); I < E; ++I) {
     auto V = *VI++;
-    while (J++ < V.getRawValue())
+    while (J++ < V.RawValue)
       Table << MatchTable::IntValue(4, 0);
-    V.turnIntoComment();
-    Table << MatchTable::LineBreak << V << MatchTable::JumpTarget(LabelIDs[I]);
+    V.Record.turnIntoComment();
+    Table << MatchTable::LineBreak << V.Record
+          << MatchTable::JumpTarget(LabelIDs[I]);
   }
   Table << MatchTable::LineBreak;
 
@@ -680,6 +700,9 @@ void SwitchMatcher::emit(MatchTable &Table) {
 }
 
 //===- RuleMatcher --------------------------------------------------------===//
+
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
+    : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
@@ -827,7 +850,9 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
   std::string ParentName(ParentSymbolicName);
-  if (ComplexSubOperands.count(SymbolicName)) {
+  auto [It, Inserted] = ComplexSubOperands.try_emplace(
+      SymbolicName, ComplexPattern, RendererID, SubOperandID);
+  if (!Inserted) {
     const std::string &RecordedParentName =
         ComplexSubOperandsParentName[SymbolicName];
     if (RecordedParentName != ParentName)
@@ -840,7 +865,6 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
     return Error::success();
   }
 
-  ComplexSubOperands[SymbolicName] = {ComplexPattern, RendererID, SubOperandID};
   ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();
@@ -1086,6 +1110,8 @@ unsigned RuleMatcher::countRendererFns() const {
       });
 }
 
+void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+
 //===- PredicateMatcher ---------------------------------------------------===//
 
 PredicateMatcher::~PredicateMatcher() {}
@@ -1145,11 +1171,11 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
 
 std::map<LLTCodeGen, unsigned> LLTOperandMatcher::TypeIDValues;
 
-MatchTableRecord LLTOperandMatcher::getValue() const {
+RecordAndValue LLTOperandMatcher::getValue() const {
   const auto VI = TypeIDValues.find(Ty);
   if (VI == TypeIDValues.end())
     return MatchTable::NamedValue(1, getTy().getCxxEnumValue());
-  return MatchTable::NamedValue(1, getTy().getCxxEnumValue(), VI->second);
+  return {MatchTable::NamedValue(1, getTy().getCxxEnumValue()), VI->second};
 }
 
 bool LLTOperandMatcher::hasValue() const {
@@ -1167,7 +1193,8 @@ void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
           << MatchTable::ULEB128Value(InsnVarID);
   }
   Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::Comment("Type") << getValue() << MatchTable::LineBreak;
+        << MatchTable::Comment("Type") << getValue().Record
+        << MatchTable::LineBreak;
 }
 
 //===- PointerToAnyOperandMatcher -----------------------------------------===//
@@ -1317,6 +1344,19 @@ void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::LineBreak;
 }
 
+//===- OperandLeafPredicateMatcher
+//-----------------------------------------===//
+
+void OperandLeafPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIM_CheckLeafOperandPredicate")
+        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+        << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Predicate")
+        << MatchTable::NamedValue(2, getEnumNameForPredicate(Predicate))
+        << MatchTable::LineBreak;
+}
+
 //===- OperandMatcher -----------------------------------------------------===//
 
 std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
@@ -1411,12 +1451,12 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
 DenseMap<const CodeGenInstruction *, unsigned>
     InstructionOpcodeMatcher::OpcodeValues;
 
-MatchTableRecord
+RecordAndValue
 InstructionOpcodeMatcher::getInstValue(const CodeGenInstruction *I) const {
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName(),
-                                  VI->second);
+    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
+            VI->second};
   return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
 }
 
@@ -1424,18 +1464,18 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
+  for (const CodeGenInstruction *I : Target.getInstructions())
     OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
-MatchTableRecord InstructionOpcodeMatcher::getValue() const {
+RecordAndValue InstructionOpcodeMatcher::getValue() const {
   assert(Insts.size() == 1);
 
   const CodeGenInstruction *I = Insts[0];
   const auto VI = OpcodeValues.find(I);
   if (VI != OpcodeValues.end())
-    return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName(),
-                                  VI->second);
+    return {MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName()),
+            VI->second};
   return MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName());
 }
 
@@ -1447,7 +1487,7 @@ void InstructionOpcodeMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(InsnVarID);
 
   for (const CodeGenInstruction *I : Insts)
-    Table << getInstValue(I);
+    Table << getInstValue(I).Record;
   Table << MatchTable::LineBreak;
 }
 
@@ -2006,9 +2046,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   if (SubRegIdx) {
     assert(!IsDef);
     Table << MatchTable::Opcode("GIR_AddTempSubRegister");
-  } else
+  } else {
     Table << MatchTable::Opcode(NeedsFlags ? "GIR_AddTempRegister"
                                            : "GIR_AddSimpleTempRegister");
+  }
 
   Table << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
         << MatchTable::Comment("TempRegID")
@@ -2026,8 +2067,9 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
     if (IsDead)
       RegFlags += "|RegState::Dead";
     Table << MatchTable::NamedValue(2, RegFlags);
-  } else
+  } else {
     Table << MatchTable::IntValue(2, 0);
+  }
 
   if (SubRegIdx)
     Table << MatchTable::NamedValue(2, SubRegIdx->getQualifiedName());
@@ -2055,8 +2097,9 @@ void ImmRenderer::emitRenderOpcodes(MatchTable &Table,
           << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type")
           << *CImmLLT << MatchTable::Comment("Imm")
           << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
-  } else
+  } else {
     emitAddImm(Table, Rule, InsnID, Imm);
+  }
 }
 
 //===- SubRegIndexRenderer ------------------------------------------------===//
@@ -2147,8 +2190,9 @@ bool BuildMIAction::canMutate(RuleMatcher &Rule,
       if (Insn != &OM.getInstructionMatcher() ||
           OM.getOpIdx() != Renderer.index())
         return false;
-    } else
+    } else {
       return false;
+    }
   }
 
   return true;

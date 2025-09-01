@@ -239,10 +239,6 @@ ds_read_b64_tr_b16 v[2:3], v2 offset:-64
 //===----------------------------------------------------------------------===//
 // ds_read_b96_tr_b6
 //===----------------------------------------------------------------------===//
-ds_read_b96_tr_b6 v[1:3], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
-// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 ds_read_b96_tr_b6 v1, v0
 // ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

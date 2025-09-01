@@ -1,5 +1,5 @@
 // RUN: mlir-opt --split-input-file %s \
-// RUN:   --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{chipset=gfx940 saturate-fp8-truncf=true}))' \
+// RUN:   --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{chipset=gfx942 saturate-fp8-truncf=true}))' \
 // RUN:   | FileCheck %s
 
 // CHECK-LABEL: func.func @scalar_trunc

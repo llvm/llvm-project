@@ -122,8 +122,17 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   ModuleDependencyInfo Result;
 
   if (ScanningResult->Provides) {
-    ModuleNameToSource[ScanningResult->Provides->ModuleName] = FilePath;
     Result.ModuleName = ScanningResult->Provides->ModuleName;
+
+    auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
+        ScanningResult->Provides->ModuleName, FilePath);
+
+    if (!Inserted && Iter->second != FilePath) {
+      elog("Detected multiple source files ({0}, {1}) declaring the same "
+           "module: '{2}'. "
+           "Now clangd may find the wrong source in such case.",
+           Iter->second, FilePath, ScanningResult->Provides->ModuleName);
+    }
   }
 
   for (auto &Required : ScanningResult->Requires)
@@ -134,6 +143,9 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
 void ModuleDependencyScanner::globalScan(
     const ProjectModules::CommandMangler &Mangler) {
+  if (GlobalScanned)
+    return;
+
   for (auto &File : CDB->getAllFiles())
     scan(File, Mangler);
 
@@ -189,11 +201,18 @@ public:
 
   /// RequiredSourceFile is not used intentionally. See the comments of
   /// ModuleDependencyScanner for detail.
-  PathRef
-  getSourceForModuleName(llvm::StringRef ModuleName,
-                         PathRef RequiredSourceFile = PathRef()) override {
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSourceFile) override {
     Scanner.globalScan(Mangler);
-    return Scanner.getSourceForModuleName(ModuleName);
+    return Scanner.getSourceForModuleName(ModuleName).str();
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    auto ScanningResult = Scanner.scan(File, Mangler);
+    if (!ScanningResult || !ScanningResult->ModuleName)
+      return {};
+
+    return *ScanningResult->ModuleName;
   }
 
 private:

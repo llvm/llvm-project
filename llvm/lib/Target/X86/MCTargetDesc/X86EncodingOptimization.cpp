@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86EncodingOptimization.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "X86BaseInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -374,7 +375,7 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
   if (MI.getOperand(AddrOp).isExpr()) {
     const MCExpr *MCE = MI.getOperand(AddrOp).getExpr();
     if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(MCE))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
+      if (SRE->getSpecifier() == X86::S_TLVP)
         Absolute = false;
   }
   if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() ||
@@ -485,7 +486,7 @@ static bool optimizeToShortImmediateForm(MCInst &MI) {
   MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1 - SkipOperands);
   if (LastOp.isExpr()) {
     const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
-    if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)
+    if (!SRE || SRE->getSpecifier() != X86::S_ABS8)
       return false;
   } else if (LastOp.isImm()) {
     if (!isInt<8>(LastOp.getImm()))

@@ -188,6 +188,11 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+
+  /// Must be called exactly once after the writes have been completed
+  /// but before the StreamedHTTPResponseHandler object is destroyed.
+  Error commit();
+
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
@@ -207,6 +212,12 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
     FileStream = std::move(*FileStreamOrError);
   }
   *FileStream->OS << BodyChunk;
+  return Error::success();
+}
+
+Error StreamedHTTPResponseHandler::commit() {
+  if (FileStream)
+    return FileStream->commit();
   return Error::success();
 }
 
@@ -234,8 +245,7 @@ static SmallVector<std::string, 0> getHeaders() {
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
-    if (!Line.empty() && Line.back() == '\r')
-      Line = Line.drop_back();
+    Line.consume_back("\r");
     if (!isHeader(Line)) {
       if (!all_of(Line, llvm::isSpace))
         WithColor::warning()
@@ -297,6 +307,8 @@ Expected<std::string> getCachedOrDownloadArtifact(
       Request.Headers = getHeaders();
       Error Err = Client.perform(Request, Handler);
       if (Err)
+        return std::move(Err);
+      if ((Err = Handler.commit()))
         return std::move(Err);
 
       unsigned Code = Client.responseCode();
@@ -555,10 +567,10 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
   return getCachedOrDownloadDebuginfo(ID);
 }
 
-DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
-                                   DebuginfodCollection &Collection)
-    : Log(Log), Collection(Collection) {
-  cantFail(
+Error DebuginfodServer::init(DebuginfodLog &Log,
+                             DebuginfodCollection &Collection) {
+
+  Error Err =
       Server.get(R"(/buildid/(.*)/debuginfo)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -575,8 +587,11 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      }));
-  cantFail(
+      });
+  if (Err)
+    return Err;
+
+  Err =
       Server.get(R"(/buildid/(.*)/executable)", [&](HTTPServerRequest Request) {
         Log.push("GET " + Request.UrlPath);
         std::string IDString;
@@ -593,7 +608,18 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
           return;
         }
         streamFile(Request, *PathOrErr);
-      }));
+      });
+  if (Err)
+    return Err;
+  return Error::success();
+}
+
+Expected<DebuginfodServer>
+DebuginfodServer::create(DebuginfodLog &Log, DebuginfodCollection &Collection) {
+  DebuginfodServer Serverd;
+  if (llvm::Error Err = Serverd.init(Log, Collection))
+    return std::move(Err);
+  return std::move(Serverd);
 }
 
 } // namespace llvm

@@ -75,7 +75,8 @@ static void initializeUsedResources(InstrDesc &ID,
       WithColor::warning()
           << "Ignoring invalid write of zero cycles on processor resource "
           << PR.Name << "\n";
-      WithColor::note() << "found in scheduling class " << SCDesc.Name
+      WithColor::note() << "found in scheduling class "
+                        << SM.getSchedClassName(ID.SchedClassID)
                         << " (write index #" << I << ")\n";
 #endif
       continue;
@@ -634,16 +635,14 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
-    Descriptors[DKey] = std::move(ID);
-    return *Descriptors[DKey];
+    return *(Descriptors[DKey] = std::move(ID));
   }
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   assert(
       !VariantDescriptors.contains(VDKey) &&
       "Expected VariantDescriptors to not already have a value for this key.");
-  VariantDescriptors[VDKey] = std::move(ID);
-  return *VariantDescriptors[VDKey];
+  return *(VariantDescriptors[VDKey] = std::move(ID));
 }
 
 Expected<const InstrDesc &>
@@ -735,7 +734,7 @@ InstrBuilder::createInstruction(const MCInst &MCI,
       // Skip non-register operands.
       if (!Op.isReg())
         continue;
-      RegID = Op.getReg();
+      RegID = Op.getReg().id();
     } else {
       // Implicit read.
       RegID = RD.RegisterID;
@@ -800,8 +799,8 @@ InstrBuilder::createInstruction(const MCInst &MCI,
   unsigned WriteIndex = 0;
   Idx = 0U;
   for (const WriteDescriptor &WD : D.Writes) {
-    RegID = WD.isImplicitWrite() ? MCRegister(WD.RegisterID)
-                                 : MCI.getOperand(WD.OpIndex).getReg();
+    RegID = WD.isImplicitWrite() ? WD.RegisterID
+                                 : MCI.getOperand(WD.OpIndex).getReg().id();
     // Check if this is a optional definition that references NoReg or a write
     // to a constant register.
     if ((WD.IsOptionalDef && !RegID) || MRI.isConstant(RegID)) {

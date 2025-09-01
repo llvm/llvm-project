@@ -24,7 +24,7 @@ module m
 
   logical, parameter :: test_cus0    = int(0u,1) == 0
   logical, parameter :: test_cus0_k  = kind(int(0u,1)) == 1
-  !WARN: warning: conversion of 255_U1 to INTEGER(1) overflowed; result is -1
+  !WARN: warning: conversion of 255_U1 to INTEGER(1) overflowed; result is -1 [-Wfolding-exception]
   logical, parameter :: test_cus255  = int(255u_1,1) == -1
   logical, parameter :: test_cur255  = real(255u) == 255.
 

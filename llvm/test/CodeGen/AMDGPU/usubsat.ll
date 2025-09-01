@@ -86,8 +86,7 @@ define i16 @v_usubsat_i16(i16 %lhs, i16 %rhs) {
 ; GFX11-TRUE16-LABEL: v_usubsat_i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, v0.h clamp
+; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v0.l, v1.l clamp
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_usubsat_i16:
@@ -758,15 +757,25 @@ define i64 @v_usubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_usubsat_i64:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
-; GFX10PLUS-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[0:1]
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_usubsat_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
+; GFX10-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
+; GFX10-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_usubsat_i64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
+; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
+; GFX11-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[0:1]
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i64 @llvm.usub.sat.i64(i64 %lhs, i64 %rhs)
   ret i64 %result
 }

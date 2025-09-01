@@ -160,10 +160,10 @@ public:
 /// rewriting the old loop and inserting prologs and epilogs as required.
 class ModuloScheduleExpander {
 public:
-  using InstrChangesTy = DenseMap<MachineInstr *, std::pair<unsigned, int64_t>>;
+  using InstrChangesTy = DenseMap<MachineInstr *, std::pair<Register, int64_t>>;
 
 private:
-  using ValueMapTy = DenseMap<unsigned, unsigned>;
+  using ValueMapTy = DenseMap<Register, Register>;
   using MBBVectorTy = SmallVectorImpl<MachineBasicBlock *>;
   using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
 
@@ -183,7 +183,7 @@ private:
   /// The first element in the pair is the max difference in stages. The
   /// second is true if the register defines a Phi value and loop value is
   /// scheduled before the Phi.
-  std::map<unsigned, std::pair<unsigned, bool>> RegToStageDiff;
+  std::map<Register, std::pair<unsigned, bool>> RegToStageDiff;
 
   /// Instructions to change when emitting the final schedule.
   InstrChangesTy InstrChanges;
@@ -221,21 +221,21 @@ private:
   void updateInstruction(MachineInstr *NewMI, bool LastDef,
                          unsigned CurStageNum, unsigned InstrStageNum,
                          ValueMapTy *VRMap);
-  MachineInstr *findDefInLoop(unsigned Reg);
-  unsigned getPrevMapVal(unsigned StageNum, unsigned PhiStage, unsigned LoopVal,
+  MachineInstr *findDefInLoop(Register Reg);
+  Register getPrevMapVal(unsigned StageNum, unsigned PhiStage, Register LoopVal,
                          unsigned LoopStage, ValueMapTy *VRMap,
                          MachineBasicBlock *BB);
   void rewritePhiValues(MachineBasicBlock *NewBB, unsigned StageNum,
                         ValueMapTy *VRMap, InstrMapTy &InstrMap);
   void rewriteScheduledInstr(MachineBasicBlock *BB, InstrMapTy &InstrMap,
                              unsigned CurStageNum, unsigned PhiNum,
-                             MachineInstr *Phi, unsigned OldReg,
-                             unsigned NewReg, unsigned PrevReg = 0);
+                             MachineInstr *Phi, Register OldReg,
+                             Register NewReg, Register PrevReg = Register());
   bool isLoopCarried(MachineInstr &Phi);
 
   /// Return the max. number of stages/iterations that can occur between a
   /// register definition and its uses.
-  unsigned getStagesForReg(int Reg, unsigned CurStage) {
+  unsigned getStagesForReg(Register Reg, unsigned CurStage) {
     std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
     if ((int)CurStage > Schedule.getNumStages() - 1 && Stages.first == 0 &&
         Stages.second)
@@ -249,7 +249,7 @@ private:
   /// This is not the case if the loop value is scheduled prior to the
   /// Phi in the same stage.  This function returns the number of stages
   /// or iterations needed between the Phi definition and any uses.
-  unsigned getStagesForPhi(int Reg) {
+  unsigned getStagesForPhi(Register Reg) {
     std::pair<unsigned, bool> Stages = RegToStageDiff[Reg];
     if (Stages.second)
       return Stages.first;
@@ -374,7 +374,7 @@ protected:
 /// It unrolls the kernel enough to avoid overlap of register lifetime.
 class ModuloScheduleExpanderMVE {
 private:
-  using ValueMapTy = DenseMap<unsigned, unsigned>;
+  using ValueMapTy = DenseMap<Register, Register>;
   using MBBVectorTy = SmallVectorImpl<MachineBasicBlock *>;
   using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
 

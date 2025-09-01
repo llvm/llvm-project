@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_SOURCEMGR_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
@@ -61,13 +62,13 @@ private:
 
     /// Look up a given \p Ptr in the buffer, determining which line it came
     /// from.
-    unsigned getLineNumber(const char *Ptr) const;
+    LLVM_ABI unsigned getLineNumber(const char *Ptr) const;
     template <typename T>
     unsigned getLineNumberSpecialized(const char *Ptr) const;
 
     /// Return a pointer to the first character of the specified line number or
     /// null if the line number is invalid.
-    const char *getPointerForLineNumber(unsigned LineNo) const;
+    LLVM_ABI const char *getPointerForLineNumber(unsigned LineNo) const;
     template <typename T>
     const char *getPointerForLineNumberSpecialized(unsigned LineNo) const;
 
@@ -75,10 +76,10 @@ private:
     SMLoc IncludeLoc;
 
     SrcBuffer() = default;
-    SrcBuffer(SrcBuffer &&);
+    LLVM_ABI SrcBuffer(SrcBuffer &&);
     SrcBuffer(const SrcBuffer &) = delete;
     SrcBuffer &operator=(const SrcBuffer &) = delete;
-    ~SrcBuffer();
+    LLVM_ABI ~SrcBuffer();
   };
 
   /// This is all of the buffers that we are reading from.
@@ -172,8 +173,8 @@ public:
   /// If no file is found, this returns 0, otherwise it returns the buffer ID
   /// of the stacked file. The full path to the included file can be found in
   /// \p IncludedFile.
-  unsigned AddIncludeFile(const std::string &Filename, SMLoc IncludeLoc,
-                          std::string &IncludedFile);
+  LLVM_ABI unsigned AddIncludeFile(const std::string &Filename,
+                                   SMLoc IncludeLoc, std::string &IncludedFile);
 
   /// Search for a file with the specified name in the current directory or in
   /// one of the IncludeDirs, and try to open it **without** adding to the
@@ -183,13 +184,13 @@ public:
   /// If no file is found, this returns an Error, otherwise it returns the
   /// buffer of the stacked file. The full path to the included file can be
   /// found in \p IncludedFile.
-  ErrorOr<std::unique_ptr<MemoryBuffer>>
+  LLVM_ABI ErrorOr<std::unique_ptr<MemoryBuffer>>
   OpenIncludeFile(const std::string &Filename, std::string &IncludedFile);
 
   /// Return the ID of the buffer containing the specified location.
   ///
   /// 0 is returned if the buffer is not found.
-  unsigned FindBufferContainingLoc(SMLoc Loc) const;
+  LLVM_ABI unsigned FindBufferContainingLoc(SMLoc Loc) const;
 
   /// Find the line number for the specified location in the specified file.
   /// This is not a fast method.
@@ -199,49 +200,49 @@ public:
 
   /// Find the line and column number for the specified location in the
   /// specified file. This is not a fast method.
-  std::pair<unsigned, unsigned> getLineAndColumn(SMLoc Loc,
-                                                 unsigned BufferID = 0) const;
+  LLVM_ABI std::pair<unsigned, unsigned>
+  getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 
   /// Get a string with the \p SMLoc filename and line number
   /// formatted in the standard style.
-  std::string getFormattedLocationNoOffset(SMLoc Loc,
-                                           bool IncludePath = false) const;
+  LLVM_ABI std::string
+  getFormattedLocationNoOffset(SMLoc Loc, bool IncludePath = false) const;
 
   /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
   /// This will return a null SMLoc if the line/column location is invalid.
-  SMLoc FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
-                                unsigned ColNo);
+  LLVM_ABI SMLoc FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,
+                                         unsigned ColNo);
 
   /// Emit a message about the specified location with the specified string.
   ///
   /// \param ShowColors Display colored messages if output is a terminal and
   /// the default error handler is used.
-  void PrintMessage(raw_ostream &OS, SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = {},
-                    ArrayRef<SMFixIt> FixIts = {},
-                    bool ShowColors = true) const;
+  LLVM_ABI void PrintMessage(raw_ostream &OS, SMLoc Loc, DiagKind Kind,
+                             const Twine &Msg, ArrayRef<SMRange> Ranges = {},
+                             ArrayRef<SMFixIt> FixIts = {},
+                             bool ShowColors = true) const;
 
   /// Emits a diagnostic to llvm::errs().
-  void PrintMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                    ArrayRef<SMRange> Ranges = {},
-                    ArrayRef<SMFixIt> FixIts = {},
-                    bool ShowColors = true) const;
+  LLVM_ABI void PrintMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
+                             ArrayRef<SMRange> Ranges = {},
+                             ArrayRef<SMFixIt> FixIts = {},
+                             bool ShowColors = true) const;
 
   /// Emits a manually-constructed diagnostic to the given output stream.
   ///
   /// \param ShowColors Display colored messages if output is a terminal and
   /// the default error handler is used.
-  void PrintMessage(raw_ostream &OS, const SMDiagnostic &Diagnostic,
-                    bool ShowColors = true) const;
+  LLVM_ABI void PrintMessage(raw_ostream &OS, const SMDiagnostic &Diagnostic,
+                             bool ShowColors = true) const;
 
   /// Return an SMDiagnostic at the specified location with the specified
   /// string.
   ///
   /// \param Msg If non-null, the kind of message (e.g., "error") which is
   /// prefixed to the message.
-  SMDiagnostic GetMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
-                          ArrayRef<SMRange> Ranges = {},
-                          ArrayRef<SMFixIt> FixIts = {}) const;
+  LLVM_ABI SMDiagnostic GetMessage(SMLoc Loc, DiagKind Kind, const Twine &Msg,
+                                   ArrayRef<SMRange> Ranges = {},
+                                   ArrayRef<SMFixIt> FixIts = {}) const;
 
   /// Prints the names of included files and the line of the file they were
   /// included from. A diagnostic handler can use this before printing its
@@ -249,7 +250,7 @@ public:
   ///
   /// \param IncludeLoc The location of the include.
   /// \param OS the raw_ostream to print on.
-  void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
+  LLVM_ABI void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.
@@ -259,7 +260,7 @@ class SMFixIt {
   std::string Text;
 
 public:
-  SMFixIt(SMRange R, const Twine &Replacement);
+  LLVM_ABI SMFixIt(SMRange R, const Twine &Replacement);
 
   SMFixIt(SMLoc Loc, const Twine &Replacement)
       : SMFixIt(SMRange(Loc, Loc), Replacement) {}
@@ -297,10 +298,11 @@ public:
       : Filename(filename), LineNo(-1), ColumnNo(-1), Kind(Knd), Message(Msg) {}
 
   // Diagnostic with a location.
-  SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line, int Col,
-               SourceMgr::DiagKind Kind, StringRef Msg, StringRef LineStr,
-               ArrayRef<std::pair<unsigned, unsigned>> Ranges,
-               ArrayRef<SMFixIt> FixIts = {});
+  LLVM_ABI SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
+                        int Col, SourceMgr::DiagKind Kind, StringRef Msg,
+                        StringRef LineStr,
+                        ArrayRef<std::pair<unsigned, unsigned>> Ranges,
+                        ArrayRef<SMFixIt> FixIts = {});
 
   const SourceMgr *getSourceMgr() const { return SM; }
   SMLoc getLoc() const { return Loc; }
@@ -316,8 +318,9 @@ public:
 
   ArrayRef<SMFixIt> getFixIts() const { return FixIts; }
 
-  void print(const char *ProgName, raw_ostream &S, bool ShowColors = true,
-             bool ShowKindLabel = true, bool ShowLocation = true) const;
+  LLVM_ABI void print(const char *ProgName, raw_ostream &S,
+                      bool ShowColors = true, bool ShowKindLabel = true,
+                      bool ShowLocation = true) const;
 };
 
 } // end namespace llvm

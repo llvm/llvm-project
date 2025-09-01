@@ -122,8 +122,8 @@ bool
 MachineRegisterInfo::recomputeRegClass(Register Reg) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
-  const TargetRegisterClass *NewRC =
-      getTargetRegisterInfo()->getLargestLegalSuperClass(OldRC, *MF);
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  const TargetRegisterClass *NewRC = TRI->getLargestLegalSuperClass(OldRC, *MF);
 
   // Stop early if there is no room to grow.
   if (NewRC == OldRC)
@@ -134,8 +134,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
     // Apply the effect of the given operand to NewRC.
     MachineInstr *MI = MO.getParent();
     unsigned OpNo = &MO - &MI->getOperand(0);
-    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII,
-                                            getTargetRegisterInfo());
+    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
     if (!NewRC || NewRC == OldRC)
       return false;
   }
@@ -431,6 +430,11 @@ bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
 
 bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
+}
+
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
 }
 
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,

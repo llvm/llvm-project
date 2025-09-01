@@ -444,6 +444,13 @@ bool getWindowsSDKDir(vfs::FileSystem &VFS, std::optional<StringRef> WinSdkDir,
     return !WindowsSDKLibVersion.empty();
   }
   if (Major == 10) {
+    if (WinSdkVersion) {
+      // Use the user-provided version as-is.
+      WindowsSDKIncludeVersion = WinSdkVersion->str();
+      WindowsSDKLibVersion = WindowsSDKIncludeVersion;
+      return true;
+    }
+
     if (!getWindows10SDKVersionFromPath(VFS, Path, WindowsSDKIncludeVersion))
       return false;
     WindowsSDKLibVersion = WindowsSDKIncludeVersion;
@@ -474,6 +481,12 @@ bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
           "SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots", "KitsRoot10",
           Path, nullptr))
     return false;
+
+  if (WinSdkVersion) {
+    // Use the user-provided version as-is.
+    UCRTVersion = WinSdkVersion->str();
+    return true;
+  }
 
   return getWindows10SDKVersionFromPath(VFS, Path, UCRTVersion);
 }

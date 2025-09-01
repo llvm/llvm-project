@@ -35,8 +35,8 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;libclc;openmp;offload")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -44,7 +44,6 @@ if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
 endif()
 include(SortSubset)
 sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
-
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -91,6 +90,14 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+
+
+# Determine whether we are in the runtimes/runtimes-bins directory of a
+# bootstrap build.
+set(LLVM_TREE_AVAILABLE OFF)
+if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+  set(LLVM_TREE_AVAILABLE ON)
+endif()
 
 # CMake omits default compiler include paths, but in runtimes build, we use
 # -nostdinc and -nostdinc++ and control include paths manually so this behavior
@@ -152,13 +159,26 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
-endif()
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
-if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+#
+# CMAKE_REQUIRED_FLAGS is used both for C and C++ compilation. This breaks
+# compiling with GCC (and we should not need to force -nostd* for GCC anyway),
+# so apply it only with Clang. However, since there are cases when appending
+# the flag actually breaks the build, still perform the checks rather than
+# appending it unconditionally.
+#
+# TODO: find a better solution. See the discussion on:
+# https://github.com/llvm/llvm-project/issues/90332
+# https://github.com/llvm/llvm-project/pull/108357
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+  endif()
+  check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+  endif()
 endif()
 
 # Avoid checking whether the compiler is working.
@@ -246,7 +266,6 @@ foreach(entry ${runtimes})
   # will be included under here.
   set(HAVE_${canon_name} ON)
 endforeach()
-
 if(LLVM_INCLUDE_TESTS)
   # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
   # won't have llvm-lit. If built with the bootstrapping build (rooted at
@@ -259,7 +278,7 @@ if(LLVM_INCLUDE_TESTS)
     # dir rather than ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if
     # LLVM_BINARY_DIR points at an installed LLVM tree rather than a build tree).
     set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
-    get_llvm_lit_path(_base_dir _file_name)
+    get_llvm_lit_path(_base_dir _file_name ALLOW_EXTERNAL)
     set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
     # Avoid warning about missing llvm-lit from runtimes CMake files. This is
     # fine since we call configure_file() to create llvm-lit at the end of this

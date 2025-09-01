@@ -16,13 +16,22 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
+          - os: ubuntu-24.04-arm
+            compiler:
+              c_compiler: clang
+              cpp_compiler: clang++
           - os: windows-2022
+            compiler:
+              c_compiler: clang-cl
+              cpp_compiler: clang-cl
+          - os: windows-2025
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
@@ -32,7 +41,7 @@ jobs:
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
@@ -42,7 +51,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1
+      uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
@@ -81,7 +90,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=MinSizeRel
+        -DCMAKE_BUILD_TYPE=Debug
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
@@ -95,7 +104,6 @@ jobs:
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel 
-        --config MinSizeRel 
         --target libc
 
     - name: Test

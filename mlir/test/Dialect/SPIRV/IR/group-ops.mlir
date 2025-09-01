@@ -49,7 +49,7 @@ func.func @group_broadcast_negative_scope(%value: f32, %localid: vector<3xi32> )
 // -----
 
 func.func @group_broadcast_negative_locid_dtype(%value: f32, %localid: vector<3xf32> ) -> f32 {
-  // expected-error @+1 {{operand #1 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values}}
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
   %0 = spirv.GroupBroadcast <Subgroup> %value, %localid : f32, vector<3xf32>
   return %0: f32
 }
@@ -195,4 +195,64 @@ func.func @group_fmul(%value: f32) -> f32 {
   // CHECK: spirv.KHR.GroupFMul <Workgroup> <Reduce> %{{.*}} : f32
   %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
   return %0: f32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotBitCount 
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_bit_count(%value: vector<4xi32>) -> i32 {
+  // CHECK: {{%.*}} = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> {{%.*}} : vector<4xi32> -> i32
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %value : vector<4xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_scope(%value: vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Workgroup> <Reduce> %value : vector<4xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_value_len(%value: vector<3xi32>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<3xi32>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<3xi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_value_type(%value: vector<4xi8>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<4xi8>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi8> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_value_sign(%value: vector<4xsi32>) -> i32 {
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<4xsi32>'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xsi32> -> i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_result_type(%value: vector<4xi32>) -> f32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'f32'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi32> -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_bit_count_wrong_result_sign(%value: vector<4xi32>) -> si32 {
+  // expected-error @+1 {{result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi32> -> si32
+  return %0: si32
 }

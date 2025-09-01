@@ -1,4 +1,4 @@
-// RUN: tco --target=i386-unknown-linux-gnu %s | FileCheck %s --check-prefix=I32
+// RUN: tco --target=i386-unknown-linux-gnu --force-no-alias %s | FileCheck %s --check-prefix=I32
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=X64
 // RUN: tco --target=aarch64-unknown-linux-gnu %s | FileCheck %s --check-prefix=AARCH64
 // RUN: tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefix=PPC
@@ -26,7 +26,7 @@ func.func @gen4() -> complex<f32> {
   return %6 : complex<f32>
 }
 
-// I32-LABEL: define void @gen8(ptr nocapture sret({ double, double }) align 4 %
+// I32-LABEL: define void @gen8(ptr noalias sret({ double, double }) align 4 captures(none) %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
@@ -39,9 +39,9 @@ func.func @gen8() -> complex<f64> {
   %c1 = arith.constant 1 : i32
   %5 = fir.insert_value %4, %2, [1 : index] : (complex<f64>, f64) -> complex<f64>
   // I32: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
-  // I64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
-  // I64: %[[load:.*]] = load { double, double }
-  // I64: ret { double, double } %[[load]]
+  // X64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
+  // X64: %[[load:.*]] = load { double, double }
+  // X64: ret { double, double } %[[load]]
   // AARCH64: ret { double, double }
   // PPC: ret { double, double }
   return %5 : complex<f64>
@@ -68,7 +68,7 @@ func.func @call4() {
   // AARCH64: = call { float, float } @gen4()
   // PPC: = call { float, float } @gen4()
   %1 = fir.call @gen4() : () -> complex<f32>
-  // I32: call void @sink4(ptr %
+  // I32: call void @sink4(ptr byval({ float, float }) align 4 %
   // X64: call void @sink4(<2 x float> %
   // AARCH64: call void @sink4([2 x float] %
   // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
@@ -80,12 +80,12 @@ func.func @call4() {
 // X64-LABEL: define void @call8()
 // AARCH64-LABEL: define void @call8()
 func.func @call8() {
-  // I32: call void @gen8(ptr %
+  // I32: call void @gen8(ptr sret({ double, double }) align 4 %
   // X64: = call { double, double } @gen8()
   // AARCH64: = call { double, double } @gen8()
   // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> complex<f64>
-  // I32: call void @sink8(ptr %
+  // I32: call void @sink8(ptr byval({ double, double }) align 4 %
   // X64: call void @sink8(double %{{[0-9]*}}, double %{{[0-9]*}})
   // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})
@@ -93,9 +93,9 @@ func.func @call8() {
   return
 }
 
-// I32-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i32 %2, i32 %3)
-// X64-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
-// PPC-LABEL: define i64 @char1lensum(ptr nocapture %0, ptr nocapture %1, i64 %2, i64 %3)
+// I32-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i32 %2, i32 %3)
+// X64-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
   // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1

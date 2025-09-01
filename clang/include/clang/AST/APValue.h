@@ -143,7 +143,7 @@ public:
     AddrLabelDiff
   };
 
-  class LValueBase {
+  class alignas(uint64_t) LValueBase {
     typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue,
                                DynamicAllocLValue>
         PtrTy;
@@ -161,8 +161,9 @@ public:
 
     template <class T> T get() const { return cast<T>(Ptr); }
 
-    template <class T>
-    T dyn_cast() const { return Ptr.dyn_cast<T>(); }
+    template <class T> T dyn_cast() const {
+      return dyn_cast_if_present<T>(Ptr);
+    }
 
     void *getOpaqueValue() const;
 

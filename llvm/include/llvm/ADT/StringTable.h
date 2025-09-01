@@ -78,23 +78,24 @@ public:
     // support `constexpr`.
     assert(!Table.empty() && "Requires at least a valid empty string.");
     assert(Table.data()[0] == '\0' && "Offset zero must be the empty string.");
-    // Ensure that `strlen` from any offset cannot overflow the end of the table
-    // by insisting on a null byte at the end. We also insist on the last string
-    // within the table being *separately* null terminated. This structure is
-    // used to enable predictable iteration over all the strings when needed.
+    // Regardless of how many strings are in the table, the last one should also
+    // be null terminated. This also ensures that computing `strlen` on the
+    // strings can't accidentally run past the end of the table.
     assert(Table.data()[Table.size() - 1] == '\0' &&
            "Last byte must be a null byte.");
-    assert(Table.data()[Table.size() - 2] == '\0' &&
-           "Next-to-last byte must be a null byte.");
+  }
+
+  // Returns the raw C string from the table starting with the provided offset.
+  // The returned string is null terminated.
+  constexpr const char *getCString(Offset O) const {
+    assert(O.value() < Table.size() && "Out of bounds offset!");
+    return Table.data() + O.value();
   }
 
   // Get a string from the table starting with the provided offset. The returned
   // `StringRef` is in fact null terminated, and so can be converted safely to a
   // C-string if necessary for a system API.
-  constexpr StringRef operator[](Offset O) const {
-    assert(O.value() < Table.size() && "Out of bounds offset!");
-    return Table.data() + O.value();
-  }
+  constexpr StringRef operator[](Offset O) const { return getCString(O); }
 
   /// Returns the byte size of the table.
   constexpr size_t size() const { return Table.size(); }
@@ -117,6 +118,13 @@ public:
     constexpr Iterator(const Iterator &RHS) = default;
     constexpr Iterator(Iterator &&RHS) = default;
 
+    Iterator &operator=(const Iterator &RHS) {
+      Table = RHS.Table;
+      O = RHS.O;
+      S = RHS.S;
+      return *this;
+    }
+
     bool operator==(const Iterator &RHS) const {
       assert(Table == RHS.Table && "Compared iterators for unrelated tables!");
       return O == RHS.O;
@@ -131,6 +139,8 @@ public:
       O = O.value() + (*Table)[O].size() + 1;
       return *this;
     }
+
+    Offset offset() const { return O; }
   };
 
   constexpr Iterator begin() const { return Iterator(*this, 0); }

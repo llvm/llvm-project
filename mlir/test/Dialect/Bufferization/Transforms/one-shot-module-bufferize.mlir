@@ -70,7 +70,7 @@ func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   memref.copy %[[subview]], %[[alloc_no_layout]]
 // TODO: %alloc should be deallocated here, but we currently do not dealloc
-// buffers that are inserted due to to_tensor/to_memref canonicalization (when
+// buffers that are inserted due to to_tensor/to_buffer canonicalization (when
 // the buffer types have different layout maps).
 //       CHECK-NO-LAYOUT-MAP:   return %[[alloc_no_layout]]
 
@@ -669,17 +669,17 @@ func.func @call_llvm_func() {
 
 // -----
 
-// CHECK-LABEL: func @to_memref_op_unsupported(
+// CHECK-LABEL: func @to_buffer_op_unsupported(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
-func.func @to_memref_op_unsupported(
+func.func @to_buffer_op_unsupported(
     %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
     %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>) {
 
   // Insert a copy because we cannot analyze what happens with the result of a
-  // to_memref op.
+  // to_buffer op.
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: memref.copy %[[arg0]], %[[alloc]]
-  %0 = bufferization.to_memref %t1 : tensor<?xf32> to memref<?xf32>
+  %0 = bufferization.to_buffer %t1 : tensor<?xf32> to memref<?xf32>
   // CHECK: "test.foo"(%[[alloc]])
   "test.foo"(%0) : (memref<?xf32>) -> ()
 
@@ -796,3 +796,17 @@ func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
   return %1 : tensor<5xf32>
 }
 
+
+// -----
+
+// CHECK-LABEL: @outer_func({{.+}}: memref<
+func.func @outer_func(%t: tensor<5xf32>) -> tensor<5xf32> {
+  return %t : tensor<5xf32>
+}
+
+module @inner_module {
+  // CHECK: @inner_func({{.+}}: tensor<5xf32> {bufferization.writable = false})
+  func.func @inner_func(%t: tensor<5xf32> {bufferization.writable = false}) -> tensor<5xf32> {
+    return %t : tensor<5xf32>
+  }
+}

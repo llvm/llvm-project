@@ -35,6 +35,7 @@ struct CoverageViewOptions {
   bool ShowBranchPercents;
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
+  bool UnifyFunctionInstantiations;
   bool ShowFullFilenames;
   bool ShowBranchSummary;
   bool ShowMCDCSummary;

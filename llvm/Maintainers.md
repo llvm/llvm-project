@@ -260,13 +260,23 @@ Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
 amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
-Justin Fargnoli \
-jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
-Zheng Chen \
-czhengsz@cn.ibm.com (email), [chenzheng1030](https://github.com/chenzheng1030) (GitHub)
+Amy Kwan (esp. release issues) \
+Amy.Kwan1@ibm.com (email), [amy-kwan](https://github.com/amy-kwan) (GitHub) \
+Lei Huang \
+lei@ca.ibm.com (email), [lei137](https://github.com/lei137) (GitHub) \
+Sean Fertile (esp. ABI/ELF/XCOFF) \
+sfertile@ca.ibm.com (email), [mandlebug](https://github.com/mandlebug) (GitHub) \
+Zhijian Lin \
+zhijian@ca.ibm.com (email), [diggerlin](https://github.com/diggerlin) (GitHub) \
+Maryam Moghadas \
+maryammo@ca.ibm.com (email), [maryammo](https://github.com/maryammo) (GitHub) \
+Roland Froese \
+froese@ca.ibm.com (email), [RolandF77](https://github.com/RolandF77) (GitHub) \
+llvmonpower \
+powerllvm@ca.ibm.com (email), [llvmonpower](https://github.com/llvmonpower) (GitHub)
 
 #### RISCV backend
 
@@ -301,9 +311,6 @@ Kazushi Marukawa \
 marukawa@nec.com (email), [kaz7](https://github.com/kaz7) (GitHub)
 
 #### WebAssembly backend
-
-Dan Gohman \
-llvm@sunfishcode.online (email), [sunfishcode](https://github.com/sunfishcode) (GitHub)
 
 #### X86 backend
 
@@ -391,7 +398,16 @@ cyndyishida@gmail.com (email), [cyndyishida](https://github.com/cyndyishida) (Gi
 #### llvm-mca and MCA library
 
 Andrea Di Biagio \
-andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub)
+andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub) \
+Min-Yih Hsu \
+min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
+
+#### llvm-cov and Coverage parts of ProfileData
+
+Takumi Nakamura \
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub) \
+Alan Phipps \
+a-phipps@ti.com (email), [evodius96](https://github.com/evodius96) (GitHub)
 
 #### Binary Utilities
 
@@ -404,6 +420,16 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
+
+#### llvm-exegesis
+
+Aiden Grossman \
+agrossman154@yahoo.com (email), [boomanaiden154](https://github.com/boomanaiden154) (Github)
+
+#### llvm-reduce
+
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
 
 ### Other
 
@@ -436,8 +462,8 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 
 #### Exception handling
 
-Anton Korobeynikov \
-anton@korobeynikov.info (email), [asl](https://github.com/asl) (GitHub)
+Reid Kleckner \
+rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
@@ -456,9 +482,11 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.md)
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
+
+[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.rst)
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 
@@ -490,10 +518,11 @@ Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
+Justin Fargnoli (jfargnoli@nvidia.com, [justinfargnoli](https://github.com/justinfargnoli)) -- NVPTX backend \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
-Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI, Windows codegen \
+Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI, Windows codegen, Exception handling \
 Benjamin Kramer (benny.kra@gmail.com, [d0k](https://github.com/d0k)) -- DWARF Parser \
 David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
 Tim Northover (t.p.northover@gmail.com, [TNorthover](https://github.com/TNorthover)) -- AArch64 backend \
@@ -502,7 +531,9 @@ Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Releas
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
+Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
 
 ### Former maintainers of removed components
 

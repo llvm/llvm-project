@@ -43,8 +43,11 @@ def DefaultMode : HwMode<"", []>;
 // "Objects", which is a list of the same length as the list of modes.
 // The n-th element on the Objects list will be associated with the n-th
 // element on the Modes list.
-class HwModeSelect<list<HwMode> Ms> {
+class HwModeSelect<list<HwMode> Ms, int ObjectsLength> {
   list<HwMode> Modes = Ms;
+
+  assert !eq(ObjectsLength, !size(Modes)),
+     "The Objects and Modes lists must be the same length";
 }
 
 // A common class that implements a counterpart of ValueType, which is
@@ -53,7 +56,7 @@ class HwModeSelect<list<HwMode> Ms> {
 // objects could be used. This is specifically applicable to selection
 // patterns.
 class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
-    : HwModeSelect<Ms>, ValueType<0, 0> {
+    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, 0> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = Ts;
 }
@@ -64,7 +67,9 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
 // or ValueType could be used. This is specifically applicable to selection
 // patterns.
 class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
-    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+    : HwModeSelect<scalar.Modes, !size(scalar.Objects)>,
+      PtrValueType<ValueType<0, 0>, addrspace> {
+  // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = scalar.Objects;
 }
 
@@ -78,7 +83,7 @@ class RegInfo<int RS, int SS, int SA> {
 
 // The register size/alignment information, parameterized by a HW mode.
 class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<RegInfo> Objects = Ts;
 }
@@ -89,7 +94,7 @@ class SubRegRange<int size, int offset = 0> {
 }
 
 class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<SubRegRange> Objects = Ts;
 }
@@ -245,6 +250,7 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 class DAGOperand {
   string OperandNamespace = "MCOI";
   string DecoderMethod = "";
+  bit hasCompleteDecoder = true;
 }
 
 // RegisterClass - Now that all of the registers are defined, and aliases
@@ -309,7 +315,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.
@@ -533,11 +539,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.
@@ -574,7 +580,7 @@ class InstructionEncoding {
 // an EncodingByHwMode, its Inst and Size members are ignored and Ts are used
 // to encode and decode based on HwMode.
 class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<InstructionEncoding> Objects = Ts;
 }
@@ -728,10 +734,6 @@ class Instruction : InstructionEncoding {
   /// - The LLVM IR specification: Section `Output constraints` in the
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
-
-  /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
-  /// be encoded into the output machineinstr.
-  string DisableEncoding = "";
 
   string PostEncoderMethod = "";
 
@@ -998,7 +1000,6 @@ class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
   string PrintMethod = "printOperand";
   string EncoderMethod = "";
-  bit hasCompleteDecoder = true;
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 

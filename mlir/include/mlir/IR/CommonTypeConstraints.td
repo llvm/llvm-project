@@ -63,6 +63,9 @@ def IsTensorTypePred : CPred<"::llvm::isa<::mlir::TensorType>($_self)">;
 // Whether a type is a MemRefType.
 def IsMemRefTypePred : CPred<"::llvm::isa<::mlir::MemRefType>($_self)">;
 
+// Whether a type is a TensorType or a MemRefType.
+def IsTensorOrMemRefTypePred : Or<[IsTensorTypePred, IsMemRefTypePred]>;
+
 // Whether a type is an UnrankedMemRefType
 def IsUnrankedMemRefTypePred
         : CPred<"::llvm::isa<::mlir::UnrankedMemRefType>($_self)">;
@@ -426,7 +429,9 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, HasValueSemanticsPred,
   "container with value semantics">;
 
+//===----------------------------------------------------------------------===//
 // Vector types.
+//===----------------------------------------------------------------------===//
 
 class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
@@ -571,7 +576,7 @@ class NormalizeIndex<int value> {
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
   : And<[
       CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
-      CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+      CPred<"::llvm::is_contained(::llvm::ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
         # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
         #   !if(!lt(n, 0),
               "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
@@ -580,7 +585,7 @@ class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
 
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
-  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
+  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ::llvm::ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
@@ -679,6 +684,7 @@ def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
 
 //===----------------------------------------------------------------------===//
 // Tensor types.
+//===----------------------------------------------------------------------===//
 
 // Unranked tensor type whose element type is from the given `allowedTypes`
 // list, and which additionally satisfies an optional list of predicates.
@@ -754,7 +760,8 @@ class StaticShapeTensorOf<list<Type> allowedTypes>
 def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 
 //===----------------------------------------------------------------------===//
-// Memref type.
+// Memref types.
+//===----------------------------------------------------------------------===//
 
 // Any unranked memref whose element type is from the given `allowedTypes` list.
 class UnrankedMemRefOf<list<Type> allowedTypes> :
@@ -877,52 +884,51 @@ class NestedTupleOf<list<Type> allowedTypes> :
                        "nested tuple">;
 
 //===----------------------------------------------------------------------===//
+// Mixed types
+//===----------------------------------------------------------------------===//
+
+class TensorOrMemRef<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsTensorOrMemRefTypePred, "Tensor or MemRef",
+                      "::mlir::ShapedType">;
+
+//===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
-// Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts.
-class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate,
-  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
-  name>;
 
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
-  name>;
-
-
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeOrContainer<I1, "bool-like">;
+def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
-def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
+// Type constraint for signless-integer-like types: signless integers or
+// value-semantics containers of signless integers.
+def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+    AnySignlessInteger, "signless-integer">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+// or value-semantics containers of signless integers or indices.
+def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
-    AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
+// Type constraint for float-like types: floats or value-semantics containers
+// of floats.
+def FloatLike : TypeOrValueSemanticsContainer<AnyFloat, "floating-point-like">;
 
-// Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
-
-// Type constraint for signless-integer-like or float-like types.
+// Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
     SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "signless-integer-like or floating-point-like">;
+
+// Type constraint for signless-integer-or-index-like or float-like types.
+def SignlessIntegerOrIndexOrFloatLike : TypeConstraint<Or<[
+    SignlessIntegerOrIndexLike.predicate, FloatLike.predicate]>,
+    "signless-integer-or-index-like or floating-point-like">;
 
 #endif // COMMON_TYPE_CONSTRAINTS_TD

@@ -160,6 +160,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -282,6 +283,7 @@ clang_tidy_library(
         ":lib",
         ":utils",
         "//clang:analysis",
+        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],

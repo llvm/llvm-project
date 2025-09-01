@@ -11,6 +11,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AtomicInfo {
@@ -22,14 +23,15 @@ protected:
   Align AtomicAlign;
   Align ValueAlign;
   bool UseLibcall;
+  IRBuilderBase::InsertPoint AllocaIP;
 
 public:
   AtomicInfo(IRBuilderBase *Builder, Type *Ty, uint64_t AtomicSizeInBits,
              uint64_t ValueSizeInBits, Align AtomicAlign, Align ValueAlign,
-             bool UseLibcall)
+             bool UseLibcall, IRBuilderBase::InsertPoint AllocaIP)
       : Builder(Builder), Ty(Ty), AtomicSizeInBits(AtomicSizeInBits),
         ValueSizeInBits(ValueSizeInBits), AtomicAlign(AtomicAlign),
-        ValueAlign(ValueAlign), UseLibcall(UseLibcall) {}
+        ValueAlign(ValueAlign), UseLibcall(UseLibcall), AllocaIP(AllocaIP) {}
 
   virtual ~AtomicInfo() = default;
 
@@ -54,13 +56,13 @@ public:
 
   LLVMContext &getLLVMContext() const { return Builder->getContext(); }
 
-  bool shouldCastToInt(Type *ValTy, bool CmpXchg);
+  LLVM_ABI bool shouldCastToInt(Type *ValTy, bool CmpXchg);
 
-  Value *EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
-                          bool CmpXchg = false);
+  LLVM_ABI Value *EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
+                                   bool CmpXchg = false);
 
-  CallInst *EmitAtomicLibcall(StringRef fnName, Type *ResultType,
-                              ArrayRef<Value *> Args);
+  LLVM_ABI CallInst *EmitAtomicLibcall(StringRef fnName, Type *ResultType,
+                                       ArrayRef<Value *> Args);
 
   Value *getAtomicSizeValue() const {
     LLVMContext &ctx = getLLVMContext();
@@ -72,7 +74,7 @@ public:
                             AtomicSizeInBits / BitsPerByte);
   }
 
-  std::pair<Value *, Value *>
+  LLVM_ABI std::pair<Value *, Value *>
   EmitAtomicCompareExchangeLibcall(Value *ExpectedVal, Value *DesiredVal,
                                    AtomicOrdering Success,
                                    AtomicOrdering Failure);
@@ -85,17 +87,20 @@ public:
     return castToAtomicIntPointer(getAtomicPointer());
   }
 
-  std::pair<Value *, Value *>
+  LLVM_ABI std::pair<Value *, Value *>
   EmitAtomicCompareExchangeOp(Value *ExpectedVal, Value *DesiredVal,
                               AtomicOrdering Success, AtomicOrdering Failure,
                               bool IsVolatile = false, bool IsWeak = false);
 
-  std::pair<Value *, Value *>
+  LLVM_ABI std::pair<Value *, Value *>
   EmitAtomicCompareExchange(Value *ExpectedVal, Value *DesiredVal,
                             AtomicOrdering Success, AtomicOrdering Failure,
                             bool IsVolatile, bool IsWeak);
 
-  std::pair<LoadInst *, AllocaInst *> EmitAtomicLoadLibcall(AtomicOrdering AO);
+  LLVM_ABI std::pair<LoadInst *, AllocaInst *>
+  EmitAtomicLoadLibcall(AtomicOrdering AO);
+
+  LLVM_ABI void EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source);
 };
 } // end namespace llvm
 

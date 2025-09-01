@@ -154,17 +154,17 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function &F) {
+static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
+                                        const Function &F) {
   if (auto MA = F.getFnStackAlign())
     return *MA;
-  return STI->getFrameLowering()->getStackAlign();
+  return STI.getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
-    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
+    : F(F), Target(Target), STI(STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -187,18 +187,15 @@ void MachineFunction::handleChangeDesc(MachineInstr &MI,
 
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
-  Properties.set(MachineFunctionProperties::Property::IsSSA);
-  Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  if (STI->getRegisterInfo())
-    RegInfo = new (Allocator) MachineRegisterInfo(this);
-  else
-    RegInfo = nullptr;
+  Properties.setIsSSA();
+  Properties.setTracksLiveness();
+  RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
-  bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
+  bool CanRealignSP = STI.getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
   bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
                         F.hasFnAttribute("stackrealign");
@@ -212,13 +209,12 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
+  Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
   // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
-  // FIXME: Use Function::hasOptSize().
-  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (!F.hasOptSize())
     Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+                         STI.getTargetLowering()->getPrefFunctionAlignment());
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
@@ -262,6 +258,15 @@ MachineFunction::~MachineFunction() {
 
 void MachineFunction::clear() {
   Properties.reset();
+
+  // Clear JumpTableInfo first. Otherwise, every MBB we delete would do a
+  // linear search over the jump table entries to find and erase itself.
+  if (JumpTableInfo) {
+    JumpTableInfo->~MachineJumpTableInfo();
+    Allocator.Deallocate(JumpTableInfo);
+    JumpTableInfo = nullptr;
+  }
+
   // Don't call destructors on MachineInstr and MachineOperand. All of their
   // memory comes from the BumpPtrAllocator which is about to be purged.
   //
@@ -289,11 +294,6 @@ void MachineFunction::clear() {
 
   ConstantPool->~MachineConstantPool();
   Allocator.Deallocate(ConstantPool);
-
-  if (JumpTableInfo) {
-    JumpTableInfo->~MachineJumpTableInfo();
-    Allocator.Deallocate(JumpTableInfo);
-  }
 
   if (WinEHInfo) {
     WinEHInfo->~WinEHFuncInfo();
@@ -699,6 +699,26 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
+MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
+  // Numeric callee_type ids are only for indirect calls.
+  if (!CB.isIndirectCall())
+    return;
+
+  MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
+  if (!CalleeTypeList)
+    return;
+
+  for (const MDOperand &Op : CalleeTypeList->operands()) {
+    MDNode *TypeMD = cast<MDNode>(Op);
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+    // Compute numeric type id from generalized type id string
+    uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+    IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+    CalleeTypeIds.push_back(
+        ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
+  }
+}
+
 namespace llvm {
 
   template<>
@@ -833,7 +853,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.LandingPadLabel = LandingPadLabel;
 
-  const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
+  BasicBlock::const_iterator FirstI =
+      LandingPad->getBasicBlock()->getFirstNonPHIIt();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
@@ -919,7 +940,7 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
-  if (!Target.Options.EmitCallSiteInfo)
+  if (!Target.Options.EmitCallSiteInfo && !Target.Options.EmitCallGraphSection)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
@@ -948,9 +969,7 @@ void MachineFunction::eraseAdditionalCallInfo(const MachineInstr *MI) {
   if (CSIt != CallSitesInfo.end())
     CallSitesInfo.erase(CSIt);
 
-  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(CallMI);
-  if (CGIt != CalledGlobalsInfo.end())
-    CalledGlobalsInfo.erase(CGIt);
+  CalledGlobalsInfo.erase(CallMI);
 }
 
 void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
@@ -966,13 +985,13 @@ void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = CSIt->second;
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = CGIt->second;
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -990,14 +1009,14 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = std::move(CSIt->second);
     CallSitesInfo.erase(CSIt);
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = std::move(CGIt->second);
     CalledGlobalsInfo.erase(CGIt);
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -1053,7 +1072,7 @@ auto MachineFunction::salvageCopySSA(
   // Check whether this copy-like instruction has already been salvaged into
   // an operand pair.
   Register Dest;
-  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+  if (auto CopyDstSrc = TII.isCopyLikeInstr(MI)) {
     Dest = CopyDstSrc->Destination->getReg();
   } else {
     assert(MI.isSubregToReg());
@@ -1137,7 +1156,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     CurInst = Inst.getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyInstr(Inst))
+    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
       break;
     State = GetRegAndSubreg(Inst);
   };
@@ -1311,6 +1330,10 @@ const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 //  MachineJumpTableInfo implementation
 //===----------------------------------------------------------------------===//
 
+MachineJumpTableEntry::MachineJumpTableEntry(
+    const std::vector<MachineBasicBlock *> &MBBs)
+    : MBBs(MBBs), Hotness(MachineFunctionDataHotness::Unknown) {}
+
 /// Return the size of each entry in the jump table.
 unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   // The size of a jump table entry is 4 bytes unless the entry is just the
@@ -1358,6 +1381,17 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
   assert(!DestBBs.empty() && "Cannot create an empty jump table!");
   JumpTables.push_back(MachineJumpTableEntry(DestBBs));
   return JumpTables.size()-1;
+}
+
+bool MachineJumpTableInfo::updateJumpTableEntryHotness(
+    size_t JTI, MachineFunctionDataHotness Hotness) {
+  assert(JTI < JumpTables.size() && "Invalid JTI!");
+  // Record the largest hotness value.
+  if (Hotness <= JumpTables[JTI].Hotness)
+    return false;
+
+  JumpTables[JTI].Hotness = Hotness;
+  return true;
 }
 
 /// If Old is the target of any jump tables, update the jump tables to branch

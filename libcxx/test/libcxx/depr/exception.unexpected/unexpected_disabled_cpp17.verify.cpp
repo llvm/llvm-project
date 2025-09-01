@@ -8,6 +8,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// When built with modules, this test gives diagnostics like declaration of
+// 'unexpected' must be imported from module 'std.expected.unexpected' before
+// it is required. Therefore disable it in this configuration.
+// UNSUPPORTED: clang-modules-build
+
 // test unexpected
 
 #include <exception>

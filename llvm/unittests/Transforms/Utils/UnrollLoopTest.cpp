@@ -63,7 +63,7 @@ while.end:                                        ; preds = %while.cond
   DominatorTree DT(*F);
   LoopInfo LI(DT);
   AssumptionCache AC(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   ScalarEvolution SE(*F, TLI, AC, DT, LI);
 
@@ -73,6 +73,6 @@ while.end:                                        ; preds = %while.cond
 
   bool ret =
       UnrollRuntimeLoopRemainder(L, 4, true, false, false, false, &LI, &SE, &DT,
-                                 &AC, /*TTI=*/nullptr, PreserveLCSSA, 4);
+                                 &AC, /*TTI=*/nullptr, PreserveLCSSA, 4, false);
   EXPECT_FALSE(ret);
 }

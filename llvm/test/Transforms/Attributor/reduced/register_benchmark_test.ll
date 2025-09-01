@@ -201,7 +201,7 @@ declare dso_local void @_ZNSt6vectorIN12_GLOBAL__N_18TestCaseESaIS1_EED2Ev(ptr) 
 declare dso_local void @_Z11BM_functionRN9benchmark5StateE(ptr dereferenceable(144)) #0
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.start.p0(ptr nocapture) #5
 
 ; Function Attrs: alwaysinline uwtable
 declare dso_local { i64, ptr } @_ZN9benchmark5State5beginEv(ptr) #6 align 2
@@ -216,7 +216,7 @@ declare dso_local zeroext i1 @_ZNK9benchmark5State13StateIteratorneERKS1_(ptr, p
 declare dso_local void @_ZNK9benchmark5State13StateIteratordeEv(ptr) #7 align 2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #5
+declare void @llvm.lifetime.end.p0(ptr nocapture) #5
 
 ; Function Attrs: alwaysinline nounwind uwtable
 declare dso_local dereferenceable(16) ptr @_ZN9benchmark5State13StateIteratorppEv(ptr) #7 align 2

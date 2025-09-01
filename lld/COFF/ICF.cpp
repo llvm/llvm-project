@@ -21,13 +21,9 @@
 #include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Timer.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <atomic>

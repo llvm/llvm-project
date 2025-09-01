@@ -114,6 +114,7 @@ ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
       m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
+      m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
 // Destructor
@@ -320,6 +321,9 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
     } else if (type == ObjectFile::eBinaryTypeUser) {
       m_dyld_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+    } else if (type == ObjectFile::eBinaryTypeUserAllImageInfos) {
+      m_dyld_all_image_infos_addr = objfile_binary_value;
+      m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
     } else {
       const bool force_symbol_search = true;
       const bool notify = true;
@@ -422,6 +426,22 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   std::vector<addr_t> dylds_found;
   std::vector<addr_t> kernels_found;
 
+  // To do an exhaustive search, we'll need to create data extractors
+  // to get correctly sized/endianness fields.  If we had a main binary
+  // already, we would have set the Target to that - so here we'll use
+  // the corefile's cputype/cpusubtype as the best guess.
+  if (!GetTarget().GetArchitecture().IsValid()) {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid()) {
+      LLDB_LOGF(log,
+                "ProcessMachCore::%s: Setting target ArchSpec based on "
+                "corefile mach-o cputype/cpusubtype",
+                __FUNCTION__);
+      GetTarget().SetArchitecture(arch);
+    }
+  }
+
   const size_t num_core_aranges = m_core_aranges.GetSize();
   for (size_t i = 0; i < num_core_aranges; ++i) {
     const VMRangeToFileOffset::Entry *entry = m_core_aranges.GetEntryAtIndex(i);
@@ -466,6 +486,7 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   addr_t saved_user_dyld_addr = m_dyld_addr;
   m_mach_kernel_addr = LLDB_INVALID_ADDRESS;
   m_dyld_addr = LLDB_INVALID_ADDRESS;
+  m_dyld_all_image_infos_addr = LLDB_INVALID_ADDRESS;
 
   addr_t better_kernel_address =
       DynamicLoaderDarwinKernel::SearchForDarwinKernel(this);
@@ -507,6 +528,12 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
+        m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
       }
     } else {
       if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
@@ -515,6 +542,11 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
       } else if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log,
                   "ProcessMachCore::%s: Using kernel "
@@ -553,6 +585,7 @@ Status ProcessMachCore::DoLoadCore() {
     error = Status::FromErrorString("invalid core module");
     return error;
   }
+  Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Target));
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
@@ -562,20 +595,47 @@ Status ProcessMachCore::DoLoadCore() {
 
   SetCanJIT(false);
 
+  // If we have an executable binary in the Target already,
+  // use that to set the Target's ArchSpec.
+  //
+  // Don't initialize the ArchSpec based on the corefile's cputype/cpusubtype
+  // here, the corefile creator may not know the correct subtype of the code
+  // that is executing, initialize the Target to that, and if the
+  // main binary has Python code which initializes based on the Target arch,
+  // get the wrong subtype value.
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    LLDB_LOGF(log,
+              "ProcessMachCore::%s: Was given binary + corefile, setting "
+              "target ArchSpec to binary to start",
+              __FUNCTION__);
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  }
+
   CreateMemoryRegions();
 
   LoadBinariesAndSetDYLD();
 
   CleanupMemoryRegionPermissions();
 
-  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  exe_module_sp = GetTarget().GetExecutableModule();
   if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    LLDB_LOGF(log,
+              "ProcessMachCore::%s: have executable binary in the Target "
+              "after metadata/scan.  Setting Target's ArchSpec based on "
+              "that.",
+              __FUNCTION__);
     GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
   } else {
     // The corefile's architecture is our best starting point.
     ArchSpec arch(m_core_module_sp->GetArchitecture());
-    if (arch.IsValid())
+    if (arch.IsValid()) {
+      LLDB_LOGF(log,
+                "ProcessMachCore::%s: Setting target ArchSpec based on "
+                "corefile mach-o cputype/cpusubtype",
+                __FUNCTION__);
       GetTarget().SetArchitecture(arch);
+    }
   }
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
@@ -598,7 +658,6 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
       std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
@@ -763,19 +822,32 @@ void ProcessMachCore::Initialize() {
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {
-  // If we found both a user-process dyld and a kernel binary, we need to
-  // decide which to prefer.
+  // The DynamicLoader plugin will call back in to this Process
+  // method to find the virtual address of one of these:
+  //   1. The xnu mach kernel binary Mach-O header
+  //   2. The dyld binary Mach-O header
+  //   3. dyld's dyld_all_image_infos object
+  //
+  //  DynamicLoaderMacOSX will accept either the dyld Mach-O header
+  //  address or the dyld_all_image_infos interchangably, no need
+  //  to distinguish between them.  It disambiguates by the Mach-O
+  //  file magic number at the start.
   if (GetCorefilePreference() == eKernelCorefile) {
-    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
       return m_mach_kernel_addr;
-    }
-    return m_dyld_addr;
-  } else {
-    if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
       return m_dyld_addr;
-    }
-    return m_mach_kernel_addr;
+  } else {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
+      return m_dyld_addr;
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
+      return m_mach_kernel_addr;
   }
+
+  // m_dyld_addr and m_mach_kernel_addr both
+  // invalid, return m_dyld_all_image_infos_addr
+  // in case it has a useful value.
+  return m_dyld_all_image_infos_addr;
 }
 
 lldb_private::ObjectFile *ProcessMachCore::GetCoreObjectFile() {

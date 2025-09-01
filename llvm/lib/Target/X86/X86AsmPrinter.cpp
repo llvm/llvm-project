@@ -17,9 +17,12 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
+#include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm-c/Visibility.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -52,7 +55,7 @@ using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), FM(*this) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
 
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
@@ -61,6 +64,11 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+    PSI = &PSIW->getPSI();
+  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+    SDPI = &SDPIW->getStaticDataProfileInfo();
+
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);
@@ -181,8 +189,42 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // Embed the type hash in the X86::MOV32ri instruction to avoid special
   // casing object file parsers.
   EmitKCFITypePadding(MF);
+  unsigned DestReg = X86::EAX;
+
+  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+    // The ArityToRegMap assumes the 64-bit SysV ABI.
+    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
+    assert(Triple.isArch64Bit() && !Triple.isOSWindows());
+
+    // Determine the function's arity (i.e., the number of arguments) at the ABI
+    // level by counting the number of parameters that are passed
+    // as registers, such as pointers and 64-bit (or smaller) integers. The
+    // Linux x86-64 ABI allows up to 6 integer parameters to be passed in GPRs.
+    // Additional parameters or parameters larger than 64 bits may be passed on
+    // the stack, in which case the arity is denoted as 7. Floating-point
+    // arguments passed in XMM0-XMM7 are not counted toward arity because
+    // floating-point values are not relevant to enforcing kCFI at this time.
+    const unsigned ArityToRegMap[8] = {X86::EAX, X86::ECX, X86::EDX, X86::EBX,
+                                       X86::ESP, X86::EBP, X86::ESI, X86::EDI};
+    int Arity;
+    if (MF.getInfo<X86MachineFunctionInfo>()->getArgumentStackSize() > 0) {
+      Arity = 7;
+    } else {
+      Arity = 0;
+      for (const auto &LI : MF.getRegInfo().liveins()) {
+        auto Reg = LI.first;
+        if (X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg) ||
+            X86::GR32RegClass.contains(Reg) ||
+            X86::GR64RegClass.contains(Reg)) {
+          ++Arity;
+        }
+      }
+    }
+    DestReg = ArityToRegMap[Arity];
+  }
+
   EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
-                              .addReg(X86::EAX)
+                              .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
   if (MAI->hasDotTypeDotSizeDirective()) {
@@ -335,17 +377,18 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
 /// deferring to PrintOperand() if no modifier was supplied or if operand is not
 /// a register.
 void X86AsmPrinter::PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &MO = MI->getOperand(OpNo);
-  if (!Modifier || !MO.isReg())
+  if (Modifier.empty() || !MO.isReg())
     return PrintOperand(MI, OpNo, O);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
     O << '%';
   Register Reg = MO.getReg();
-  if (strncmp(Modifier, "subreg", strlen("subreg")) == 0) {
-    unsigned Size = (strcmp(Modifier+6,"64") == 0) ? 64 :
-        (strcmp(Modifier+6,"32") == 0) ? 32 :
-        (strcmp(Modifier+6,"16") == 0) ? 16 : 8;
+  if (Modifier.consume_front("subreg")) {
+    unsigned Size = (Modifier == "64")   ? 64
+                    : (Modifier == "32") ? 32
+                    : (Modifier == "16") ? 16
+                                         : 8;
     Reg = getX86SubSuperRegister(Reg, Size);
   }
   O << X86ATTInstPrinter::getRegisterName(Reg);
@@ -373,15 +416,14 @@ void X86AsmPrinter::PrintPCRelImm(const MachineInstr *MI, unsigned OpNo,
 }
 
 void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
   const MachineOperand &DispSpec = MI->getOperand(OpNo + X86::AddrDisp);
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // HasParenPart - True if we will print out the () part of the mem ref.
@@ -402,7 +444,7 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
     break;
   }
 
-  if (Modifier && strcmp(Modifier, "H") == 0)
+  if (Modifier == "H")
     O << "+8";
 
   if (HasParenPart) {
@@ -436,7 +478,8 @@ static bool isIndirectBranchOrTailCall(const MachineInstr &MI) {
          Opc == X86::TAILJMPr64 || Opc == X86::TAILJMPm64 ||
          Opc == X86::TCRETURNri || Opc == X86::TCRETURNmi ||
          Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNmi64 ||
-         Opc == X86::TAILJMPr64_REX || Opc == X86::TAILJMPm64_REX;
+         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TAILJMPr64_REX ||
+         Opc == X86::TAILJMPm64_REX;
 }
 
 void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
@@ -456,7 +499,7 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O, StringRef Modifier) {
   assert(isMem(*MI, OpNo) && "Invalid memory reference!");
   const MachineOperand &Segment = MI->getOperand(OpNo + X86::AddrSegmentReg);
   if (Segment.getReg()) {
@@ -466,10 +509,9 @@ void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
   PrintLeaMemReference(MI, OpNo, O, Modifier);
 }
 
-
 void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
                                            unsigned OpNo, raw_ostream &O,
-                                           const char *Modifier) {
+                                           StringRef Modifier) {
   const MachineOperand &BaseReg = MI->getOperand(OpNo + X86::AddrBaseReg);
   unsigned ScaleVal = MI->getOperand(OpNo + X86::AddrScaleAmt).getImm();
   const MachineOperand &IndexReg = MI->getOperand(OpNo + X86::AddrIndexReg);
@@ -478,13 +520,11 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
-  if (HasBaseReg && Modifier && !strcmp(Modifier, "no-rip") &&
-      BaseReg.getReg() == X86::RIP)
+  if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
   // If we really just want to print out displacement.
-  if (Modifier && (DispSpec.isGlobal() || DispSpec.isSymbol()) &&
-      !strcmp(Modifier, "disp-only")) {
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only") {
     HasBaseReg = false;
   }
 
@@ -719,7 +759,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         llvm_unreachable("unexpected operand type!");
       case MachineOperand::MO_GlobalAddress:
         PrintSymbolOperand(MO, O);
-        if (Subtarget->isPICStyleRIPRel())
+        if (Subtarget->is64Bit())
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
@@ -836,9 +876,9 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     }
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-    PrintIntelMemReference(MI, OpNo, O, nullptr);
+    PrintIntelMemReference(MI, OpNo, O);
   } else {
-    PrintMemReference(MI, OpNo, O, nullptr);
+    PrintMemReference(MI, OpNo, O);
   }
   return false;
 }
@@ -885,49 +925,22 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol.
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->beginCOFFSymbolDef(S);
-    OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Value = 0;
+    emitCOFFFeatureSymbol(M);
+    emitCOFFReplaceableFunctionData(M);
 
-    if (TT.getArch() == Triple::x86) {
-      // According to the PE-COFF spec, the LSB of this value marks the object
-      // for "registered SEH".  This means that all SEH handler entry points
-      // must be registered in .sxdata.  Use of any unregistered handlers will
-      // cause the process to terminate immediately.  LLVM does not know how to
-      // register any SEH handlers, so its object files should be safe.
-      Feat00Value |= COFF::Feat00Flags::SafeSEH;
-    }
-
-    if (M.getModuleFlag("cfguard")) {
-      // Object is CFG-aware.
-      Feat00Value |= COFF::Feat00Flags::GuardCF;
-    }
-
-    if (M.getModuleFlag("ehcontguard")) {
-      // Object also has EHCont.
-      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
-    }
-
-    if (M.getModuleFlag("ms-kernel")) {
-      // Object is compiled with /kernel.
-      Feat00Value |= COFF::Feat00Flags::Kernel;
-    }
-
-    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
   OutStreamer->emitSyntaxDirective();
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.
   bool is16 = TT.getEnvironment() == Triple::CODE16;
-  if (M.getModuleInlineAsm().empty() && is16)
-    OutStreamer->emitAssemblerFlag(MCAF_Code16);
+  if (M.getModuleInlineAsm().empty() && is16) {
+    auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
+    XTS->emitCode16();
+  }
 }
 
 static void
@@ -990,11 +1003,11 @@ static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
 
   for (const Function &F : M) {
     for (const Instruction &I : instructions(F)) {
-      if (I.getType()->isFPOrFPVectorTy())
+      if (I.getType()->isFloatingPointTy())
         return true;
 
       for (const auto &Op : I.operands()) {
-        if (Op->getType()->isFPOrFPVectorTy())
+        if (Op->getType()->isFloatingPointTy())
           return true;
       }
     }
@@ -1019,8 +1032,37 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     // points). If this doesn't occur, the linker can safely perform dead code
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   } else if (TT.isOSBinFormatCOFF()) {
+    // If import call optimization is enabled, emit the appropriate section.
+    // We do this whether or not we recorded any items.
+    if (EnableImportCallOptimization) {
+      OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+      // Section always starts with some magic.
+      constexpr char ImpCallMagic[12] = "RetpolineV1";
+      OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+      // Layout of this section is:
+      // Per section that contains an item to record:
+      //  uint32_t SectionSize: Size in bytes for information in this section.
+      //  uint32_t Section Number
+      //  Per call to imported function in section:
+      //    uint32_t Kind: the kind of item.
+      //    uint32_t InstOffset: the offset of the instr in its parent section.
+      for (auto &[Section, CallsToImportedFuncs] :
+           SectionToImportedFunctionCalls) {
+        unsigned SectionSize =
+            sizeof(uint32_t) * (2 + 2 * CallsToImportedFuncs.size());
+        OutStreamer->emitInt32(SectionSize);
+        OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+        for (auto &[CallsiteSymbol, Kind] : CallsToImportedFuncs) {
+          OutStreamer->emitInt32(Kind);
+          OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        }
+      }
+    }
+
     if (usesMSVCFloatingPoint(TT, M)) {
       // In Windows' libcmt.lib, there is a file which is linked in only if the
       // symbol _fltused is referenced. Linking this in causes some
@@ -1061,6 +1103,11 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     }
   }
 }
+
+char X86AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
+                false)
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff

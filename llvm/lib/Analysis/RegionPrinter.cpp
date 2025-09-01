@@ -142,7 +142,6 @@ struct RegionPrinter
   RegionPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, false, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionPrinterPass(*PassRegistry::getPassRegistry());
   }
 };
 char RegionPrinter::ID = 0;
@@ -154,7 +153,6 @@ struct RegionOnlyPrinter
   RegionOnlyPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, true, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionOnlyPrinterPass(*PassRegistry::getPassRegistry());
   }
 };
 char RegionOnlyPrinter::ID = 0;
@@ -165,9 +163,7 @@ struct RegionViewer
   static char ID;
   RegionViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, false, RegionInfo *,
-                                        RegionInfoPassGraphTraits>("reg", ID) {
-    initializeRegionViewerPass(*PassRegistry::getPassRegistry());
-  }
+                                        RegionInfoPassGraphTraits>("reg", ID) {}
 };
 char RegionViewer::ID = 0;
 
@@ -178,9 +174,7 @@ struct RegionOnlyViewer
   RegionOnlyViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, true, RegionInfo *,
                                         RegionInfoPassGraphTraits>("regonly",
-                                                                   ID) {
-    initializeRegionOnlyViewerPass(*PassRegistry::getPassRegistry());
-  }
+                                                                   ID) {}
 };
 char RegionOnlyViewer::ID = 0;
 

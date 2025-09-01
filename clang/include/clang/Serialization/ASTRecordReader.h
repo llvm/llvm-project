@@ -32,7 +32,6 @@ class OMPChildren;
 class ASTRecordReader
     : public serialization::DataStreamBasicReader<ASTRecordReader> {
   using ModuleFile = serialization::ModuleFile;
-  using LocSeq = SourceLocationSequence;
 
   ASTReader *Reader;
   ModuleFile *F;
@@ -82,12 +81,6 @@ public:
 
   /// Returns the current value in this record, without advancing.
   uint64_t peekInt() { return Record[Idx]; }
-
-  /// Returns the next N values in this record, without advancing.
-  uint64_t peekInts(unsigned N) { return Record[Idx + N]; }
-
-  /// Skips the current value.
-  void skipInt() { Idx += 1; }
 
   /// Skips the specified number of values.
   void skipInts(unsigned N) { Idx += N; }
@@ -166,7 +159,7 @@ public:
   TypeSourceInfo *readTypeSourceInfo();
 
   /// Reads the location information for a type.
-  void readTypeLoc(TypeLoc TL, LocSeq *Seq = nullptr);
+  void readTypeLoc(TypeLoc TL);
 
   /// Map a local type ID within a given AST file to a global type ID.
   serialization::TypeID getGlobalTypeID(serialization::TypeID LocalID) const {
@@ -220,6 +213,8 @@ public:
 
   TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
 
+  SpirvOperand readHLSLSpirvOperand();
+
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
   DeclarationNameLoc readDeclarationNameLoc(DeclarationName Name);
@@ -228,7 +223,7 @@ public:
   void readQualifierInfo(QualifierInfo &Info);
 
   /// Return a nested name specifier, advancing Idx.
-  // NestedNameSpecifier *readNestedNameSpecifier(); (inherited)
+  // NestedNameSpecifier readNestedNameSpecifier(); (inherited)
 
   NestedNameSpecifierLoc readNestedNameSpecifierLoc();
 
@@ -284,17 +279,20 @@ public:
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 
-  /// Read a list of OpenACC clauses into the passed SmallVector.
+  /// Read a list of OpenACC clauses into the passed SmallVector, during
+  /// statement reading.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
 
+  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
+
   /// Read a source location, advancing Idx.
-  SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
-    return Reader->ReadSourceLocation(*F, Record, Idx, Seq);
+  SourceLocation readSourceLocation() {
+    return Reader->ReadSourceLocation(*F, Record, Idx);
   }
 
   /// Read a source range, advancing Idx.
-  SourceRange readSourceRange(LocSeq *Seq = nullptr) {
-    return Reader->ReadSourceRange(*F, Record, Idx, Seq);
+  SourceRange readSourceRange() {
+    return Reader->ReadSourceRange(*F, Record, Idx);
   }
 
   /// Read an arbitrary constant value, advancing Idx.
@@ -322,6 +320,10 @@ public:
     return readInt();
   }
 
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
+  }
+
   /// Read a string, advancing Idx.
   std::string readString() {
     return Reader->ReadString(Record, Idx);
@@ -341,12 +343,7 @@ public:
   Attr *readAttr();
 
   /// Reads attributes from the current stream position, advancing Idx.
-  /// For some attributes (where type depends on itself recursively), defer
-  /// reading the attribute until the type has been read.
-  void readAttributes(AttrVec &Attrs, Decl *D = nullptr);
-
-  /// Reads one attribute from the current stream position, advancing Idx.
-  Attr *readOrDeferAttrFor(Decl *D);
+  void readAttributes(AttrVec &Attrs);
 
   /// Read an BTFTypeTagAttr object.
   BTFTypeTagAttr *readBTFTypeTagAttr() {

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "ToolChains/CommonArgs.h"
+#include "../Clang.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
@@ -134,6 +134,24 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
+  // FIXME: Now we must use -mrelax to enable relax, maybe -mrelax will be set
+  // as default in the future.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mrelax, options::OPT_mno_relax)) {
+    if (A->getOption().matches(options::OPT_mrelax)) {
+      Features.push_back("+relax");
+      // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
+      // into .debug_addr, which is currently not implemented.
+      Arg *A;
+      if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
+        D.Diag(
+            clang::diag::err_drv_loongarch_unsupported_with_linker_relaxation)
+            << A->getAsString(Args);
+    } else {
+      Features.push_back("-relax");
+    }
+  }
+
   std::string ArchName;
   const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   if (MArch)
@@ -196,16 +214,16 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     if (MSIMD == "lsx") {
       // Option -msimd=lsx depends on 64-bit FPU.
       // -m*-float and -mfpu=none/0/32 conflict with -msimd=lsx.
-      if (llvm::find(Features, "-d") != Features.end())
+      if (llvm::is_contained(Features, "-d"))
         D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LSX*/ 0;
       else
         Features.push_back("+lsx");
     } else if (MSIMD == "lasx") {
       // Option -msimd=lasx depends on 64-bit FPU and LSX.
       // -m*-float, -mfpu=none/0/32 and -mno-lsx conflict with -msimd=lasx.
-      if (llvm::find(Features, "-d") != Features.end())
+      if (llvm::is_contained(Features, "-d"))
         D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LASX*/ 1;
-      else if (llvm::find(Features, "-lsx") != Features.end())
+      else if (llvm::is_contained(Features, "-lsx"))
         D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
 
       // The command options do not contain -mno-lasx.
@@ -214,9 +232,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lasx");
       }
     } else if (MSIMD == "none") {
-      if (llvm::find(Features, "+lsx") != Features.end())
+      if (llvm::is_contained(Features, "+lsx"))
         Features.push_back("-lsx");
-      if (llvm::find(Features, "+lasx") != Features.end())
+      if (llvm::is_contained(Features, "+lasx"))
         Features.push_back("-lasx");
     } else {
       D.Diag(diag::err_drv_loongarch_invalid_msimd_EQ) << MSIMD;
@@ -234,6 +252,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
       Features.push_back("-lsx");
+      Features.push_back("-lasx");
     }
   }
 
@@ -267,6 +286,8 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                    options::OPT_mno_ld_seq_sa, "ld-seq-sa");
   AddTargetFeature(Args, Features, options::OPT_mdiv32,
                    options::OPT_mno_div32, "div32");
+  AddTargetFeature(Args, Features, options::OPT_mscq, options::OPT_mno_scq,
+                   "scq");
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

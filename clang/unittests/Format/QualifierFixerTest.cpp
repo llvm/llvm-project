@@ -1122,14 +1122,17 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
-
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
-
   EXPECT_TRUE(isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(isPossibleMacro(Tokens[1]));
   EXPECT_FALSE(isPossibleMacro(Tokens[2]));
   EXPECT_FALSE(isPossibleMacro(Tokens[3]));
+
+  Tokens = annotate("FOO::BAR");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_FALSE(isPossibleMacro(Tokens[0]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {
@@ -1289,6 +1292,21 @@ TEST_F(QualifierFixerTest, WithCpp11Attribute) {
                Style);
   verifyFormat("[[maybe_unused]] static constexpr int A",
                "[[maybe_unused]] constexpr static int A", Style);
+}
+
+TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "type", "const"};
+
+  verifyFormat("constexpr ::int64_t x{1};", "::int64_t constexpr x{1};", Style);
+  verifyFormat("constexpr std::int64_t x{123};",
+               "std::int64_t constexpr x{123};", Style);
+  verifyFormat("constexpr ::std::int64_t x{123};",
+               "::std::int64_t constexpr x{123};", Style);
+
+  Style.TypeNames.push_back("bar");
+  verifyFormat("constexpr foo::bar x{12};", "foo::bar constexpr x{12};", Style);
 }
 
 TEST_F(QualifierFixerTest, DisableRegions) {

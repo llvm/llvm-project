@@ -15,7 +15,7 @@ config.test_source_root = config.test_exec_root
 if not config.parallelism_group:
   config.parallelism_group = 'shadow-memory'
 
-if config.host_os == 'Darwin':
+if config.target_os == 'Darwin':
   # On Darwin, we default to ignore_noninstrumented_modules=1, which also
   # suppresses some races the tests are supposed to find.  See rtsan/lit.cfg.py.
   if 'RTSAN_OPTIONS' in config.environment:

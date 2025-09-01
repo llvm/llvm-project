@@ -36,6 +36,7 @@ config.test_exec_root = os.path.join(config.lld_obj_root, "test")
 
 llvm_config.use_default_substitutions()
 llvm_config.use_lld()
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
 tool_patterns = [
     "llc",
@@ -104,10 +105,8 @@ if not run_lld_main_twice:
     config.environment["LLD_IN_TEST"] = "1"
 else:
     config.environment["LLD_IN_TEST"] = "2"
-    # Many ELF tests fail in this mode.
-    config.excludes.append("ELF")
-    # Some old Mach-O backend tests fail, and it's due for removal anyway.
-    config.excludes.append("mach-o")
+    # Many wasm tests fail.
+    config.excludes.append("wasm")
     # Some new Mach-O backend tests fail; give them a way to mark themselves
     # unsupported in this mode.
     config.available_features.add("main-run-twice")

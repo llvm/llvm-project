@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeGPU.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -128,8 +129,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
   GlobalizedRD->startDefinition();
-  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(
-      EscapedDeclsForTeams.begin(), EscapedDeclsForTeams.end());
+  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(llvm::from_range,
+                                                         EscapedDeclsForTeams);
   for (const auto &Pair : GlobalizedVars) {
     const ValueDecl *VD = Pair.second;
     QualType Type = VD->getType();
@@ -321,9 +322,8 @@ class CheckVarsEscapingDeclContext final
 public:
   CheckVarsEscapingDeclContext(CodeGenFunction &CGF,
                                ArrayRef<const ValueDecl *> TeamsReductions)
-      : CGF(CGF), EscapedDecls(TeamsReductions.begin(), TeamsReductions.end()) {
-  }
-  virtual ~CheckVarsEscapingDeclContext() = default;
+      : CGF(CGF), EscapedDecls(llvm::from_range, TeamsReductions) {}
+  ~CheckVarsEscapingDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;
@@ -769,7 +769,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
   StaticRD->startDefinition();
   for (const RecordDecl *TeamReductionRec : TeamsReductions) {
-    QualType RecTy = C.getRecordType(TeamReductionRec);
+    CanQualType RecTy = C.getCanonicalTagType(TeamReductionRec);
     auto *Field = FieldDecl::Create(
         C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
         C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
@@ -779,7 +779,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     StaticRD->addDecl(Field);
   }
   StaticRD->completeDefinition();
-  QualType StaticTy = C.getRecordType(StaticRD);
+  CanQualType StaticTy = C.getCanonicalTagType(StaticRD);
   llvm::Type *LLVMReductionsBufferTy =
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
@@ -899,9 +899,10 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
-void CGOpenMPRuntimeGPU::emitNumThreadsClause(CodeGenFunction &CGF,
-                                                llvm::Value *NumThreads,
-                                                SourceLocation Loc) {
+void CGOpenMPRuntimeGPU::emitNumThreadsClause(
+    CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+    OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
+    const Expr *Message) {
   // Nothing to do.
 }
 
@@ -1020,7 +1021,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
         for (const auto &Pair : MappedDeclsFields) {
           assert(Pair.getFirst()->isCanonicalDecl() &&
                  "Expected canonical declaration");
-          Data.insert(std::make_pair(Pair.getFirst(), MappedVarData()));
+          Data.try_emplace(Pair.getFirst());
         }
       }
       Rt.emitGenericVarsProlog(CGF, Loc);
@@ -1201,18 +1202,17 @@ void CGOpenMPRuntimeGPU::emitTeamsCall(CodeGenFunction &CGF,
   emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 }
 
-void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
-                                          SourceLocation Loc,
-                                          llvm::Function *OutlinedFn,
-                                          ArrayRef<llvm::Value *> CapturedVars,
-                                          const Expr *IfCond,
-                                          llvm::Value *NumThreads) {
+void CGOpenMPRuntimeGPU::emitParallelCall(
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
+    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+    llvm::Value *NumThreads, OpenMPNumThreadsClauseModifier NumThreadsModifier,
+    OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
 
-  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond,
-                        NumThreads](CodeGenFunction &CGF,
-                                    PrePostActionTy &Action) {
+  auto &&ParallelGen = [this, Loc, OutlinedFn, CapturedVars, IfCond, NumThreads,
+                        NumThreadsModifier, Severity, Message](
+                           CodeGenFunction &CGF, PrePostActionTy &Action) {
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
@@ -1257,24 +1257,25 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     if (!NumThreadsVal)
       NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
     else
-      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty),
+      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
-      assert(IfCondVal && "Expected a value");
+    assert(IfCondVal && "Expected a value");
+    RuntimeFunction FnID = OMPRTL___kmpc_parallel_51;
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    llvm::Value *Args[] = {
-        RTLoc,
-        getThreadID(CGF, Loc),
-        IfCondVal,
-        NumThreadsVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
-        FnPtr,
-        ID,
-        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
-                                   CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
-                        Args);
+    llvm::SmallVector<llvm::Value *, 10> Args(
+        {RTLoc, getThreadID(CGF, Loc), IfCondVal, NumThreadsVal,
+         llvm::ConstantInt::get(CGF.Int32Ty, -1), FnPtr, ID,
+         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
+                                    CGF.VoidPtrPtrTy),
+         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())});
+    if (NumThreadsModifier == OMPC_NUMTHREADS_strict) {
+      FnID = OMPRTL___kmpc_parallel_60;
+      Args.append({llvm::ConstantInt::get(CGM.Int32Ty, true),
+                   emitSeverityClause(Severity),
+                   emitMessageClause(CGF, Message)});
+    }
+    CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
   };
 
   RegionCodeGenTy RCG(ParallelGen);
@@ -1659,7 +1660,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
     return;
 
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
-  bool DistributeReduction = isOpenMPDistributeDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
   ASTContext &C = CGM.getContext();
@@ -1756,11 +1756,10 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
-  return;
 }
 
 const VarDecl *
@@ -2027,7 +2026,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
   DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
-    Data.insert(std::make_pair(VD, MappedVarData()));
+    Data.try_emplace(VD);
   }
   if (!NeedToDelayGlobalization) {
     emitGenericVarsProlog(CGF, D->getBeginLoc());
@@ -2278,6 +2277,14 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
+      case OffloadArch::SM_101:
+      case OffloadArch::SM_101a:
+      case OffloadArch::SM_103:
+      case OffloadArch::SM_103a:
+      case OffloadArch::SM_120:
+      case OffloadArch::SM_120a:
+      case OffloadArch::SM_121:
+      case OffloadArch::SM_121a:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2302,8 +2309,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
       case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX940:
-      case OffloadArch::GFX941:
       case OffloadArch::GFX942:
       case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
@@ -2331,8 +2336,11 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
+      case OffloadArch::GFX1250:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::UNUSED:
       case OffloadArch::UNKNOWN:
         break;

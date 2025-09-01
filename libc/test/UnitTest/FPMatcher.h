@@ -11,12 +11,13 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
@@ -167,7 +168,7 @@ CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 
-template <typename T> struct FPTest : public Test {
+template <typename T> struct FPTest : public ErrnoCheckingTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   static constexpr StorageType STORAGE_MAX =
@@ -192,6 +193,13 @@ template <typename T> struct FPTest : public Test {
       fputil::testing::RoundingMode::Downward,
       fputil::testing::RoundingMode::TowardZero,
   };
+
+  void TearDown() override {
+    // TODO (PR 135320): Remove this override once all FPTest instances are
+    // updated to validate or ignore errno.
+    libc_errno = 0;
+    ErrnoCheckingTest::TearDown();
+  }
 };
 
 // Add facility to test Flush-Denormal-To-Zero (FTZ) and Denormal-As-Zero (DAZ)
@@ -280,8 +288,8 @@ private:
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = LIBC_NAMESPACE::libc_errno;                                 \
-      LIBC_NAMESPACE::libc_errno = 0;                                          \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       EXPECT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -289,8 +297,8 @@ private:
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = LIBC_NAMESPACE::libc_errno;                                 \
-      LIBC_NAMESPACE::libc_errno = 0;                                          \
+      int actual = libc_errno;                                                 \
+      libc_errno = 0;                                                          \
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
@@ -331,27 +339,6 @@ private:
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
-#define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
-  do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                           \
-    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-  } while (0)
-
 #define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
   do {                                                                         \
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
@@ -372,6 +359,61 @@ private:
 
 #define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING_1(expected, actual)                          \
+  do {                                                                         \
+    EXPECT_FP_EQ_ROUNDING_NEAREST((expected), (actual));                       \
+    EXPECT_FP_EQ_ROUNDING_UPWARD((expected), (actual));                        \
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD((expected), (actual));                      \
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                   \
+  } while (0)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,         \
+                                    expected_downward, expected_toward_zero,   \
+                                    actual)                                    \
+  do {                                                                         \
+    EXPECT_FP_EQ_ROUNDING_NEAREST((expected_nearest), (actual));               \
+    EXPECT_FP_EQ_ROUNDING_UPWARD((expected_upward), (actual));                 \
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));             \
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));       \
+  } while (0)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING_UNSUPPORTED(...)                             \
+  static_assert(false, "Unsupported number of arguments")
+
+#define EXPECT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5,    \
+                                              ARG6, ...)                       \
+  ARG6
+
+#define EXPECT_FP_EQ_ALL_ROUNDING_SELECTION(...)                               \
+  EXPECT_FP_EQ_ALL_ROUNDING_GET_6TH_ARG(                                       \
+      __VA_ARGS__, EXPECT_FP_EQ_ALL_ROUNDING_4,                                \
+      EXPECT_FP_EQ_ALL_ROUNDING_UNSUPPORTED,                                   \
+      EXPECT_FP_EQ_ALL_ROUNDING_UNSUPPORTED, EXPECT_FP_EQ_ALL_ROUNDING_1)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING(...)                                         \
+  EXPECT_FP_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
+
+#define ASSERT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      ASSERT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
+  ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
+
+#define ASSERT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
+  ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
+
+#define ASSERT_FP_EQ_ROUNDING_DOWNWARD(expected, actual)                       \
+  ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Downward)
+
+#define ASSERT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
+  ASSERT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
     expected, actual, expected_except, rounding_mode)                          \

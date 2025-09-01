@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; End-to-end test for https://github.com/llvm/llvm-project/issues/115595.
 define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %face_cell, ptr noalias noundef %x, ptr noalias noundef %y) #0 {
 ; CHECK-LABEL: define void @test(
-; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias nocapture noundef readonly [[FACE_CELL:%.*]], ptr noalias nocapture noundef readonly [[X:%.*]], ptr noalias nocapture noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias noundef readonly captures(none) [[FACE_CELL:%.*]], ptr noalias noundef readonly captures(none) [[X:%.*]], ptr noalias noundef captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[NFACE]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -79,9 +79,9 @@ entry:
   store ptr %face_cell, ptr %face_cell.addr, align 8, !tbaa !10
   store ptr %x, ptr %x.addr, align 8, !tbaa !10
   store ptr %y, ptr %y.addr, align 8, !tbaa !10
-  call void @llvm.lifetime.start.p0(i64 4, ptr %il) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ir) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %iface) #3
+  call void @llvm.lifetime.start.p0(ptr %il) #3
+  call void @llvm.lifetime.start.p0(ptr %ir) #3
+  call void @llvm.lifetime.start.p0(ptr %iface) #3
   store i32 0, ptr %iface, align 4, !tbaa !6
   br label %for.cond
 
@@ -92,7 +92,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %iface) #3, !llvm.access.group !12
+  call void @llvm.lifetime.end.p0(ptr %iface) #3, !llvm.access.group !12
   br label %for.end
 
 for.body:
@@ -134,12 +134,12 @@ for.inc:
   br label %for.cond, !llvm.loop !15
 
 for.end:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ir) #3
-  call void @llvm.lifetime.end.p0(i64 4, ptr %il) #3
+  call void @llvm.lifetime.end.p0(ptr %ir) #3
+  call void @llvm.lifetime.end.p0(ptr %il) #3
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 define linkonce_odr noundef nonnull align 8 dereferenceable(8) ptr @max(ptr noundef nonnull align 8 dereferenceable(8) %__a, ptr noundef nonnull align 8 dereferenceable(8) %__b) #2 {
 entry:
@@ -170,7 +170,7 @@ return:
   ret ptr %6
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { mustprogress "target-cpu" = "skylake-avx512" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

@@ -74,10 +74,7 @@ public:
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {
-    initializeAMDGPUUnifyDivergentExitNodesPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };
@@ -215,7 +212,10 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
       PDT.roots(), [&](auto BB) { return !isUniformlyReached(UA, *BB); });
 
   for (BasicBlock *BB : PDT.roots()) {
-    if (isa<ReturnInst>(BB->getTerminator())) {
+    if (auto *RI = dyn_cast<ReturnInst>(BB->getTerminator())) {
+      auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode());
+      if (CI && CI->isMustTailCall())
+        continue;
       if (HasDivergentExitBlock)
         ReturningBlocks.push_back(BB);
     } else if (isa<UnreachableInst>(BB->getTerminator())) {

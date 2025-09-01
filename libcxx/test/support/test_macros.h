@@ -148,16 +148,22 @@
 # define TEST_IS_CONSTANT_EVALUATED false
 #endif
 
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
 #if TEST_STD_VER >= 23
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
 #else
 #  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
-#if TEST_STD_VER >= 20
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#if TEST_STD_VER >= 26
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED true
 #else
-#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#  define TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
 #endif
 
 #if TEST_STD_VER >= 14
@@ -451,7 +457,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+// This is a C++20 feature, so it's never available anyways
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
+#elif defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 
@@ -533,6 +542,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(_MSC_VER) || __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
 #  define TEST_LONG_DOUBLE_IS_DOUBLE
+#endif
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
+#  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

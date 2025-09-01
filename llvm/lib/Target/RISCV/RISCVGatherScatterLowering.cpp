@@ -131,7 +131,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   }
 
   // Not a constant, maybe it's a strided constant with a splat added or
-  // multipled.
+  // multiplied.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
               BO->getOpcode() != Instruction::Or &&
@@ -167,9 +167,8 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   default:
     llvm_unreachable("Unexpected opcode");
   case Instruction::Or:
-    // TODO: We'd be better off creating disjoint or here, but we don't yet
-    // have an IRBuilder API for that.
-    [[fallthrough]];
+    Start = Builder.CreateOr(Start, Splat, "", /*IsDisjoint=*/true);
+    break;
   case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
     break;

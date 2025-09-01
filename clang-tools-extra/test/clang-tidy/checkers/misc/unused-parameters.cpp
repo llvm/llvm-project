@@ -1,11 +1,11 @@
-// RUN: echo "static void staticFunctionHeader(int i) {;}" > %T/header.h
-// RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %T/header-fixed.h
-// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t -- -header-filter='.*' -- -fno-delayed-template-parsing
-// RUN: diff %T/header.h %T/header-fixed.h
+// RUN: mkdir -p %t.dir
+// RUN: echo "static void staticFunctionHeader(int i) {;}" > %t.dir/header.h
+// RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %t.dir/header-fixed.h
+// RUN: %check_clang_tidy  --match-partial-fixes -std=c++11 %s misc-unused-parameters %t.dir/code -- -header-filter='.*' -- -fno-delayed-template-parsing
+// RUN: diff %t.dir/header.h %t.dir/header-fixed.h
 // FIXME: Make the test work in all language modes.
 
 #include "header.h"
-// CHECK-MESSAGES: header.h:1:38: warning
 
 // Basic removal
 // =============
@@ -33,9 +33,9 @@ void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
 // CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
 
-int *k([[clang::lifetimebound]] int *i) {;}
+int *k([[clang::lifetimebound]] int *i) { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) {;}{{$}}
+// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) { return nullptr; }{{$}}
 
 #define ATTR_BEFORE(x) [[clang::lifetimebound]] x
 int* m(ATTR_BEFORE(const int *i)) { return nullptr; }
@@ -306,3 +306,5 @@ void test() {
 // Do not warn on naked functions.
 [[gnu::naked]] int nakedFunction(int a, float b, const char *c) { ; }
 __attribute__((naked)) void nakedFunction(int a, int b) { ; }
+
+// CHECK-MESSAGES: header.h:1:38: warning
