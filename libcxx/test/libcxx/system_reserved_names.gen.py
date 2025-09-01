@@ -78,7 +78,7 @@ for header in public_headers:
 
 // Test that libc++ doesn't use names that collide with FreeBSD system macros.
 // newlib and picolibc also define these macros
-#if !defined(__FreeBSD__) && !_LIBCXX_LIBC_NEWLIB
+#if !defined(__FreeBSD__) && !_LIBCPP_LIBC_NEWLIB
 #  define __null_sentinel SYSTEM_RESERVED_NAME
 #  define __generic SYSTEM_RESERVED_NAME
 #endif
@@ -117,7 +117,7 @@ for header in public_headers:
 #endif
 
 // Newlib & picolibc use __input as a parameter name of a64l & l64a
-#if !_LIBCXX_LIBC_NEWLIB
+#if !_LIBCPP_LIBC_NEWLIB
 # define __input SYSTEM_RESERVED_NAME
 #endif
 #define __output SYSTEM_RESERVED_NAME

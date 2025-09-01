@@ -753,14 +753,14 @@ config_define(${LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS} _LIBCPP_HAS_VENDO
 
 # Set C library in use
 if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
-  config_define(1 _LIBCXX_LIBC_PICOLIBC)
+  config_define(1 _LIBCPP_LIBC_PICOLIBC)
   # picolibc is derived from newlib and behaves the same in regards to libc++
   # so setting both here:
-  # * _LIBCXX_LIBC_NEWLIB is used now
-  # * _LIBCXX_LIBC_PICOLIBC can be used for further customizations later
-  config_define(1 _LIBCXX_LIBC_NEWLIB)
+  # * _LIBCPP_LIBC_NEWLIB is used now
+  # * _LIBCPP_LIBC_PICOLIBC can be used for further customizations later
+  config_define(1 _LIBCPP_LIBC_NEWLIB)
 elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
-  config_define(1 _LIBCXX_LIBC_NEWLIB)
+  config_define(1 _LIBCPP_LIBC_NEWLIB)
 endif()
 
 # TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
