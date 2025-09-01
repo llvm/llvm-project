@@ -63,7 +63,6 @@ add_entrypoint_object(
     libc.hdr.types.cookie_io_functions_t
     libc.hdr.types.FILE
     libc.src.__support.CPP.new
-    libc.src.__support.File.cookie_file
     libc.src.__support.File.file
 )
 
