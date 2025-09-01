@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++23
 // ADDITIONAL_COMPILE_FLAGS: -O0 -g
+// XFAIL: availability-stacktrace-missing
 
 /*
   (19.6.4.2)

@@ -73,11 +73,17 @@
 #    endif
 #  endif
 
-#  ifndef __cpp_lib_stacktrace
-#    error "__cpp_lib_stacktrace should be defined in c++23"
-#  endif
-#  if __cpp_lib_stacktrace != 202011L
-#    error "__cpp_lib_stacktrace should have the value 202011L in c++23"
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE
+#    ifndef __cpp_lib_stacktrace
+#      error "__cpp_lib_stacktrace should be defined in c++23"
+#    endif
+#    if __cpp_lib_stacktrace != 202011L
+#      error "__cpp_lib_stacktrace should have the value 202011L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_stacktrace
+#      error "__cpp_lib_stacktrace should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE' is not met!"
+#    endif
 #  endif
 
 #elif TEST_STD_VER > 23
@@ -95,11 +101,17 @@
 #    endif
 #  endif
 
-#  ifndef __cpp_lib_stacktrace
-#    error "__cpp_lib_stacktrace should be defined in c++26"
-#  endif
-#  if __cpp_lib_stacktrace != 202011L
-#    error "__cpp_lib_stacktrace should have the value 202011L in c++26"
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE
+#    ifndef __cpp_lib_stacktrace
+#      error "__cpp_lib_stacktrace should be defined in c++26"
+#    endif
+#    if __cpp_lib_stacktrace != 202011L
+#      error "__cpp_lib_stacktrace should have the value 202011L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_stacktrace
+#      error "__cpp_lib_stacktrace should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE' is not met!"
+#    endif
 #  endif
 
 #endif // TEST_STD_VER > 23

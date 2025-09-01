@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// XFAIL: availability-stacktrace-missing
 
 #include <stacktrace>
 

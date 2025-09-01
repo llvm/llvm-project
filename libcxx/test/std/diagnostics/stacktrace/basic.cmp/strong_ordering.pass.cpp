@@ -7,48 +7,53 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// XFAIL: availability-stacktrace-missing
 
-/*
-  (19.6.4.4) Comparisons [stacktrace.basic.cmp]
-
-  template<class Allocator2>
-  friend strong_ordering operator<=>(const basic_stacktrace& x,
-                                      const basic_stacktrace<Allocator2>& y) noexcept;
-*/
+// (19.6.4.4) Comparisons [stacktrace.basic.cmp]
+// template<class Allocator2>
+// friend strong_ordering operator<=>(const basic_stacktrace& x,
+//                                    const basic_stacktrace<Allocator2>& y) noexcept;
+//
+// Returns: x.size() <=> y.size() if x.size() != y.size();
+// lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()) otherwise.
 
 #include <cassert>
 #include <stacktrace>
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test1() { return std::stacktrace::current(); }
+#include "test_macros.h"
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test2a() { return test1(); }
+// Disable TCO for calls into, and out from, the annotated function.
+#define STACKTRACE_AVOID_OPT TEST_NO_TAIL_CALLS_IN TEST_NO_TAIL_CALLS_OUT TEST_NOINLINE
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test2b() { return test1(); }
+// Some non-inlinable functions to help contrive different stacktraces:
+// main calls the "middle" funcs, and those both call "top".
+// We'll consider main the "bottom" func, even though there are other functions
+// like `_start` which call main; those are trimmed via `max_depth` argument.
 
-_LIBCPP_NO_TAIL_CALLS
-int main(int, char**) {
-  /*    
-    Returns: x.size() <=> y.size() if x.size() != y.size();
-    lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()) otherwise.
-  */
+STACKTRACE_AVOID_OPT std::stacktrace top() { return std::stacktrace::current(); }
+STACKTRACE_AVOID_OPT std::stacktrace middle1() { return top(); }
+STACKTRACE_AVOID_OPT std::stacktrace middle2() { return top(); }
 
-  auto st1a = test1(); // [test1, main, ...]
+STACKTRACE_AVOID_OPT int main(int, char**) {
+  // Collect a few different stacktraces and test `operator<=>`.
+
+  auto st1a = top(); // [top, main, ...]
   auto st1b = st1a;
 
   static_assert(noexcept(st1a <=> st1b));
 
   assert(st1a == st1b);
-  auto st2a = test2a(); // [test1, test2a, main, ...]
+  auto st2a = middle1(); // [top, middle1, main, ...]
   assert(st1a != st2a);
   std::stacktrace empty; // []
-  auto st2b = test2b();  // [test1, test2b, main, ...]
+  auto st2b = middle2(); // [top, middle2, main, ...]
   assert(st2a != st2b);
 
   // empty:  []
-  // st1a:   [test1, main, ...]
-  // st1b:   [test1, main, ...] (copy of st1a)
-  // st2a:   [test1, test2a, main:X, ...]
-  // st2b:   [test1, test2b, main:Y, ...], Y > X
+  // st1a:   [top, main, ...]
+  // st1b:   [top, main, ...] (copy of st1a)
+  // st2a:   [top, middle1, main:X, ...]
+  // st2b:   [top, middle2, main:Y, ...], Y > X
 
   assert(std::strong_ordering::equal == empty <=> empty);
   assert(std::strong_ordering::less == empty <=> st1a);

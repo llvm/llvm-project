@@ -19,28 +19,28 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 23
+#include <__assert>
+#include <__cstddef/size_t.h>
+#include <__functional/function.h>
+#include <__functional/hash.h>
+#include <__iterator/iterator.h>
+#include <__iterator/reverse_iterator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory_resource/polymorphic_allocator.h>
+#include <__new/allocate.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__vector/vector.h>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <utility>
 
-#  include <__assert>
-#  include <__cstddef/size_t.h>
-#  include <__functional/function.h>
-#  include <__functional/hash.h>
-#  include <__iterator/iterator.h>
-#  include <__iterator/reverse_iterator.h>
-#  include <__memory/allocator_traits.h>
-#  include <__memory_resource/polymorphic_allocator.h>
-#  include <__new/allocate.h>
-#  include <__type_traits/is_nothrow_constructible.h>
-#  include <__vector/vector.h>
-#  include <cstddef>
-#  include <cstdint>
-#  include <string>
-#  include <utility>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <__fwd/format.h>
+#  include <__fwd/ostream.h>
+#endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if _LIBCPP_HAS_LOCALIZATION
-#    include <__fwd/format.h>
-#    include <__fwd/ostream.h>
-#  endif // _LIBCPP_HAS_LOCALIZATION
+#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 #  include <__stacktrace/stacktrace_entry.h>
 
@@ -335,7 +335,7 @@ struct hash<basic_stacktrace<_Allocator>> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_POP_MACROS
 

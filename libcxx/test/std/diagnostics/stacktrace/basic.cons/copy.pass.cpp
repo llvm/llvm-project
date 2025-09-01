@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
+// XFAIL: availability-stacktrace-missing
 
-/*
-  (19.6.4.2)
-
-  // [stacktrace.basic.cons], creation and assignment
-  basic_stacktrace(const basic_stacktrace& other);
-  basic_stacktrace(const basic_stacktrace& other, const allocator_type& alloc);           
-  basic_stacktrace& operator=(const basic_stacktrace& other);                             
-*/
+// (19.6.4.2): [stacktrace.basic.cons], creation and assignment
+// basic_stacktrace(const basic_stacktrace& other);
+// basic_stacktrace(const basic_stacktrace& other, const allocator_type& alloc);
+// basic_stacktrace& operator=(const basic_stacktrace& other);
 
 #include <cassert>
 #include <stacktrace>
@@ -23,7 +20,7 @@
 #include "../test_allocs.h"
 
 void test_copy_construct() {
-  auto a = std::stacktrace::current();
+  std::stacktrace a = std::stacktrace::current();
   std::stacktrace b{a};
   assert(a == b);
 }
@@ -36,11 +33,11 @@ void test_copy_assign() {
                   /*_KNoExAlloc=*/true,
                   /*_KPropagate=*/false,
                   /*_KAlwaysEqual=*/false>;
-    auto s1 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1 = std::basic_stacktrace<A>::current();
     std::basic_stacktrace<A> s2{s1};
     assert(s1 == s2);
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
+    A a1 = s1.get_allocator();
+    A a2 = s2.get_allocator();
     // Allocator should not propagate
     assert(a1 != a2);
   }
@@ -51,11 +48,11 @@ void test_copy_assign() {
                   /*_KNoExAlloc=*/true,
                   /*_KPropagate=*/true,
                   /*_KAlwaysEqual=*/false>;
-    auto s1 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1 = std::basic_stacktrace<A>::current();
     std::basic_stacktrace<A> s2{s1};
     assert(s1 == s2);
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
+    A a1 = s1.get_allocator();
+    A a2 = s2.get_allocator();
     // Allocator should propagate
     assert(a1 == a2);
   }
@@ -66,11 +63,11 @@ void test_copy_assign() {
                   /*_KNoExAlloc=*/true,
                   /*_KPropagate=*/false,
                   /*_KAlwaysEqual=*/true>;
-    auto s1 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1 = std::basic_stacktrace<A>::current();
     std::basic_stacktrace<A> s2{s1};
     assert(s1 == s2);
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
+    A a1 = s1.get_allocator();
+    A a2 = s2.get_allocator();
     // Allocator should propagate
     assert(a1 == a2);
   }

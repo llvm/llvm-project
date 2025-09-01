@@ -19,20 +19,20 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 23
+#include <__assert>
+#include <__functional/function.h>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
 
-#  include <__assert>
-#  include <__functional/function.h>
-#  include <cstddef>
-#  include <cstdint>
-#  include <memory>
-#  include <optional>
-#  include <string>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <__fwd/format.h>
+#  include <__fwd/ostream.h>
+#endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if _LIBCPP_HAS_LOCALIZATION
-#    include <__fwd/format.h>
-#    include <__fwd/ostream.h>
-#  endif // _LIBCPP_HAS_LOCALIZATION
+#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -48,7 +48,6 @@ struct str_alloc {
 
   // Lambdas wrap the caller's allocator, re-bound so we can deal with `chars`.
   function<char*(size_t)> __alloc_;
-  function<result_t(size_t)> __atleast_;
   function<void(char*, size_t)> __dealloc_;
 
   // This only works with chars or other 1-byte things.
@@ -67,10 +66,8 @@ struct str_alloc {
   str_alloc& operator=(const str_alloc&) = default;
   str_alloc& operator=(str_alloc&&)      = default;
 
-  str_alloc(function<char*(size_t)> __alloc,
-            function<result_t(size_t)> __atleast,
-            function<void(char*, size_t)> __dealloc)
-      : __alloc_(std::move(__alloc)), __atleast_(std::move(__atleast)), __dealloc_(std::move(__dealloc)) {}
+  str_alloc(function<char*(size_t)> __alloc, function<void(char*, size_t)> __dealloc)
+      : __alloc_(std::move(__alloc)), __dealloc_(std::move(__dealloc)) {}
 
   template <class _A0, // some allocator; can be of any type
             class _AT = allocator_traits<_A0>,
@@ -79,12 +76,10 @@ struct str_alloc {
   static str_alloc make(_A0 __a) {
     auto __ca = _CA(__a);
     return {[__ca](size_t __n) mutable -> char* { return __ca.allocate(__n); },
-            [__ca](size_t __n) mutable -> result_t { return __ca.allocate_at_least(__n); },
             [__ca](char* __p, size_t __n) mutable { __ca.deallocate(__p, __n); }};
   }
 
   _Tp* allocate(size_t __n) { return __alloc_(__n); }
-  result_t allocate_at_least(size_t __n) { return __atleast_(__n); }
   void deallocate(_Tp* __p, size_t __n) { __dealloc_(__p, __n); }
   bool operator==(str_alloc<_Tp> const& __rhs) const { return std::addressof(__rhs) == this; }
 };
@@ -209,7 +204,7 @@ struct _LIBCPP_HIDE_FROM_ABI hash<stacktrace_entry> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_POP_MACROS
 

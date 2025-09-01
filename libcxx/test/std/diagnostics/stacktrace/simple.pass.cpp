@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++23
 // ADDITIONAL_COMPILE_FLAGS: -O0 -g
 // UNSUPPORTED: no-localization
-// ^ (This doesn't work; using macro check below)
+// XFAIL: availability-stacktrace-missing
 
 /*
 This isn't really a test; it simply takes a stacktrace and prints to stdout,

@@ -8,7 +8,7 @@
 
 // REQUIRES: std-at-least-c++23
 // UNSUPPORTED: no-localization
-// ^ (This doesn't work; using macro check below)
+// XFAIL: availability-stacktrace-missing
 
 /*
   (19.6.4.6) Non-member functions

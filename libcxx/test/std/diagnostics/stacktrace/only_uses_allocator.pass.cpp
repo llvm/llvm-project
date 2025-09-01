@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// UNSUPPORTED: asan, msan, tsan, hwasan, sanitizer-new-delete
 // ADDITIONAL_COMPILE_FLAGS: -O0 -g
+// UNSUPPORTED: asan, msan, tsan, hwasan, sanitizer-new-delete
+// XFAIL: availability-stacktrace-missing
 
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <stacktrace>
+
+#include "test_allocs.h"
 
 /*
  * This file includes tests which ensure any allocations performed by `basic_stacktrace`
