@@ -7034,6 +7034,9 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       return false;
   }
 
+  if (!shouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
+    return false;
+
   // Compute the table index value.
   Value *TableIndex;
   if (UseSwitchConditionAsTableIndex) {
@@ -7063,9 +7066,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       }
     }
   }
-
-  if (!shouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
-    return false;
 
   // Keep track of the switch replacement for each phi
   SmallDenseMap<PHINode *, SwitchReplacement> PhiToReplacementMap;
