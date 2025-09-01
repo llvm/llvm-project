@@ -2200,6 +2200,21 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::Unknown;
     }
 
+    // For WAW (Write-After-Write) dependencies, negative distances in one
+    // direction can still represent unsafe dependencies. Since we only check
+    // dependencies in program order (AIdx < BIdx), a negative distance means
+    // the later write accesses memory locations before the earlier write.
+    // However, in a vectorized loop, both writes could execute simultaneously,
+    // potentially causing incorrect behavior. Therefore, WAW with negative
+    // distances should be treated as unsafe.
+    bool IsWriteAfterWrite = (AIsWrite && BIsWrite);
+    if (IsWriteAfterWrite) {
+      LLVM_DEBUG(
+          dbgs() << "LAA: WAW dependence with negative distance is unsafe\n");
+      return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
+                                            : Dependence::Unknown;
+    }
+
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
     // Check if the first access writes to a location that is read in a later
     // iteration, where the distance between them is not a multiple of a vector

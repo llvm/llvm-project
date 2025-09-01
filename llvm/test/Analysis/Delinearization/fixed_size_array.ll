@@ -339,7 +339,7 @@ define void @a_i_j2k_i(ptr %a) {
 ; CHECK-LABEL: 'a_i_j2k_i'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
 ; CHECK-NEXT:  In Loop with Header: for.k
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1028}<%for.i.header>,+,256}<nw><%for.j.header>,+,128}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1028}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,128}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;
 entry:
@@ -391,7 +391,7 @@ define void @a_i_i_jk(ptr %a) {
 ; CHECK-LABEL: 'a_i_i_jk'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
 ; CHECK-NEXT:  In Loop with Header: for.k
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1152}<%for.i.header>,+,4}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1152}<nuw><nsw><%for.i.header>,+,4}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][288] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{{\{\{}}0,+,1}<nuw><nsw><%for.j.header>,+,1}<nuw><nsw><%for.k>]
