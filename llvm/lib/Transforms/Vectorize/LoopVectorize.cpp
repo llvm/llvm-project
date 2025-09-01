@@ -2354,12 +2354,15 @@ EpilogueVectorizerMainLoop::createIterationCountCheck(ElementCount VF,
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
-/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
-/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
-static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPlan &Plan, VPBasicBlock *VPBB,
-                                             BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = Plan.createVPIRBasicBlock(IRBB);
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. All
+/// predecessors and successors of VPBB, if any, are rewired to the new
+/// VPIRBasicBlock. If \p VPBB may be unreachable, \p Plan must be passed.
+static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
+                                             BasicBlock *IRBB,
+                                             VPlan *Plan = nullptr) {
+  if (!Plan)
+    Plan = VPBB->getPlan();
+  VPIRBasicBlock *IRVPBB = Plan->createVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
     R.moveBefore(*IRVPBB, IP);
@@ -2570,7 +2573,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Remove redundant induction instructions.
   cse(HeaderBB);
 
-  if (Plan.getScalarPreheader()->getNumPredecessors() == 0)
+  if (Plan.getScalarPreheader()->hasPredecessors())
     return;
 
   // Set/update profile weights for the vector and remainder loops as original
@@ -7274,8 +7277,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BasicBlock *EntryBB =
       cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
-  replaceVPBBWithIRVPBB(BestVPlan, BestVPlan.getScalarPreheader(),
-                        State.CFG.PrevBB->getSingleSuccessor());
+  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
+                        State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
@@ -7475,8 +7478,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     // generated here dominates the vector epilog iter check.
     EPI.TripCount = Count;
   } else {
-    VectorPHVPBB =
-        replaceVPBBWithIRVPBB(Plan, VectorPHVPBB, LoopVectorPreHeader);
+    VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
   }
 
   BranchInst &BI =
@@ -7509,7 +7511,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
   BasicBlock *VecEpilogueIterationCountCheck =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->begin(), DT, LI,
                  nullptr, "vec.epilog.iter.check", true);
-  VectorPHVPBB = replaceVPBBWithIRVPBB(Plan, VectorPHVPBB, LoopVectorPreHeader);
+  VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
 
   emitMinimumVectorEpilogueIterCountCheck(ScalarPH,
                                           VecEpilogueIterationCountCheck);
