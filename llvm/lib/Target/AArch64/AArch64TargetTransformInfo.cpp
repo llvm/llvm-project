@@ -5754,7 +5754,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.
   // This currently only handles low or high extracts to prevent SLP vectorizer
   // regressions.
-  // Note that SVE's ext instruciton is destructive, but it can be fused with
+  // Note that SVE's ext instruction is destructive, but it can be fused with
   // a movprfx to act like a constructive instruction.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
     if (LT.second.getFixedSizeInBits() >= 128 &&
