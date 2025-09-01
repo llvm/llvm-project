@@ -680,6 +680,13 @@ def FeatureStdExtV
                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>,
       RISCVExtensionBitmask<0, 21>;
 
+def FeatureStdExtZvfbfa
+    : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
+                                 [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
+def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
+                          "'Zvfbfa' (Additional BF16 vector compute support)">;
+
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
@@ -1396,19 +1403,26 @@ def HasVendorXMIPSCMov
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
 def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
-def FeatureVendorXMIPSCBOP
-    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+
+def FeatureVendorXMIPSCBOP : RISCVExtension<1, 0, "MIPS Software Prefetch">;
 def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
 def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+
+def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
+def HasVendorXMIPSEXECTL
+    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
+                         "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 

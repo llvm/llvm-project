@@ -6,8 +6,12 @@
 !$omp parallel
 ! ERROR: Expected OpenMP end directive
 !$omp task
+! ERROR: Expected OpenMP END SECTIONS directive
+!$omp sections
 ! ERROR: Expected OpenMP end directive
 !$omp parallel
 ! ERROR: Expected OpenMP end directive
 !$omp task
+! ERROR: Expected OpenMP END SECTIONS directive
+!$omp sections
 end
