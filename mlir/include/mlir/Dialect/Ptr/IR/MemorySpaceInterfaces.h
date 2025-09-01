@@ -20,8 +20,8 @@
 namespace mlir {
 class Operation;
 namespace ptr {
-enum class AtomicBinOp : uint64_t;
-enum class AtomicOrdering : uint64_t;
+enum class AtomicBinOp : uint32_t;
+enum class AtomicOrdering : uint32_t;
 } // namespace ptr
 } // namespace mlir
 

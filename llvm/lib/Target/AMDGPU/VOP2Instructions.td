@@ -105,7 +105,6 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let isCodeGenOnly = 0;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -114,7 +113,6 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -889,13 +887,13 @@ defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
 
 let mayRaiseFPException = 0 in {
 let OtherPredicates = [HasMadMacF32Insts] in {
-let Constraints = "$vdst = $src2", DisableEncoding="$src2",
+let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1 in {
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in
 defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_LEGACY_F32>;
-} // End Constraints = "$vdst = $src2", DisableEncoding="$src2",
+} // End Constraints = "$vdst = $src2",
   //     isConvertibleToThreeAddress = 1
 
 let isReMaterializable = 1 in
@@ -941,9 +939,9 @@ defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 // These are special and do not read the exec mask.
 let isConvergent = 1, Uses = []<Register> in {
 def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
-let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in" in {
 def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []>;
-} // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
+} // End IsNeverUniform, $vdst = $vdst_in
 } // End isConvergent = 1
 
 foreach vt = Reg32Types.types in {
@@ -1175,7 +1173,6 @@ let True16Predicate = UseFakeTrue16Insts in {
 } // End FPDPRounding  = 1, isReMaterializable = 1, FixedSize = 1
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in {
 let SubtargetPredicate = isGFX10Plus in {
@@ -1209,7 +1206,7 @@ let SubtargetPredicate = isGFX8GFX9 in {
 } // End isReMaterializable = 1
 
 // FIXME: Missing FPDPRounding
-let Constraints = "$vdst = $src2", DisableEncoding="$src2",
+let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1, isCommutable = 1 in {
 defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 }
@@ -1252,7 +1249,6 @@ def : GCNPat<
 >;
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding = "$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
@@ -1261,7 +1257,6 @@ defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 let SubtargetPredicate = HasFmaLegacy32 in {
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding = "$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
@@ -1270,14 +1265,12 @@ defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",
-    DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1,
     SchedRW = [WriteDoubleAdd] in
 defm V_FMAC_F64 : VOP2Inst <"v_fmac_f64", VOP_MAC_F64>;
 
 let Constraints = "$vdst = $src2",
-      DisableEncoding="$src2",
       isConvertibleToThreeAddress = 1,
       isCommutable = 1,
       IsDOT = 1 in {
@@ -1344,6 +1337,8 @@ def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
 let SubtargetPredicate = HasPkFmacF16Inst in {
+// FIXME: V_PK_FMAC_F16 is currently not used in instruction selection.
+// If this changes, ensure the DPP variant is not used for GFX11+.
 defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
 
@@ -1904,7 +1899,7 @@ multiclass VOP2_Real_FULL_with_name_gfx11_gfx12<bits<6> op, string opName,
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
-  VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>;
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;

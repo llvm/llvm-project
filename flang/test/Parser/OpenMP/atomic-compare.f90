@@ -16,7 +16,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
@@ -54,7 +54,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
@@ -108,7 +108,7 @@ end
 !PARSE-TREE: | | | Expr = 'a'
 !PARSE-TREE: | | | | Designator -> DataRef -> Name = 'a'
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
@@ -145,7 +145,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
@@ -169,7 +169,7 @@ end
 !PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | Expr = 'b'
 !PARSE-TREE: | | | | | Designator -> DataRef -> Name = 'b'
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = None
@@ -197,7 +197,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
@@ -224,7 +224,7 @@ end
 !PARSE-TREE: | | | | | Expr = 'b'
 !PARSE-TREE: | | | | | | Designator -> DataRef -> Name = 'b'
 !PARSE-TREE: | | | EndIfStmt ->
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = None
@@ -254,7 +254,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
@@ -284,7 +284,7 @@ end
 !PARSE-TREE: | | | | | | Expr = 'x'
 !PARSE-TREE: | | | | | | | Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | EndIfStmt ->
-!PARSE-TREE: | OmpDirectiveSpecification
+!PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = None

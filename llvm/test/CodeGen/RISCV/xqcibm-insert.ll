@@ -139,3 +139,208 @@ define i32 @test_single_bit_set(i32 %a) nounwind {
   %or = or i32 %a, 4096
   ret i32 %or
 }
+
+
+; Tests for INSB(I) generation from OR and AND
+
+define i32 @test1(i32 %a) {
+; RV32I-LABEL: test1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -16
+; RV32I-NEXT:    addi a0, a0, 5
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test1:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, 5, 4, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test1:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 5, 4, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i32 %a, -16 ; 0xfffffff0
+  %2 = or i32 %1, 5    ; 0x00000005
+  ret i32 %2
+}
+
+define i32 @test2(i32 %a) {
+; RV32I-LABEL: test2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1033216
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    lui a1, 10240
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test2:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, 10, 4, 22
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test2:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 10, 4, 22
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i32 %a, -62914561 ; 0xfc3fffff
+  %2 = or i32 %1, 41943040   ; 0x02800000
+  ret i32 %2
+}
+
+define i64 @test3(i64 %a) {
+; RV32I-LABEL: test3:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -8
+; RV32I-NEXT:    addi a0, a0, 5
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test3:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, 5, 3, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test3:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 5, 3, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i64 %a, -8 ; 0xfffffffffffffff8
+  %2 = or i64 %1, 5   ; 0x0000000000000005
+  ret i64 %2
+}
+
+define i64 @test4(i64 %a) {
+; RV32I-LABEL: test4:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -255
+; RV32I-NEXT:    addi a0, a0, 18
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test4:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, 9, 7, 1
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test4:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 9, 7, 1
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i64 %a, -255 ; 0xffffffffffffff01
+  %2 = or i64 %1,  18   ; 0x0000000000000012
+  ret i64 %2
+}
+
+define i32 @test5(i32 %a) {
+; RV32I-LABEL: test5:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -16
+; RV32I-NEXT:    addi a0, a0, 6
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test5:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    qc.insbi a0, 6, 4, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test5:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    qc.insbi a0, 6, 4, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i32 %a, 4294967280 ; 0xfffffff0
+  %2 = or i32 %1, 6           ; 0x00000006
+  ret i32 %2
+}
+
+define i32 @test6(i32 %a) {
+; RV32I-LABEL: test6:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1048320
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    lui a1, 182
+; RV32I-NEXT:    addi a1, a1, -1326
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test6:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    lui a1, 182
+; RV32IXQCIBM-NEXT:    addi a1, a1, -1326
+; RV32IXQCIBM-NEXT:    qc.insb a0, a1, 20, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test6:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    lui a1, 182
+; RV32IXQCIBMZBS-NEXT:    addi a1, a1, -1326
+; RV32IXQCIBMZBS-NEXT:    qc.insb a0, a1, 20, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i32 %a, 4293918720 ; 0xfff00000
+  %2 = or i32 %1, 744146      ; 0x000b5ad2
+  ret i32 %2
+}
+
+define i32 @test7(i32 %a) {
+; RV32I-LABEL: test7:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1048320
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    lui a1, 182
+; RV32I-NEXT:    addi a1, a1, -1326
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test7:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    lui a1, 91
+; RV32IXQCIBM-NEXT:    addi a1, a1, -663
+; RV32IXQCIBM-NEXT:    qc.insb a0, a1, 19, 1
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test7:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    lui a1, 91
+; RV32IXQCIBMZBS-NEXT:    addi a1, a1, -663
+; RV32IXQCIBMZBS-NEXT:    qc.insb a0, a1, 19, 1
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i32 %a, 4293918721 ; 0xfff00001
+  %2 = or i32 %1, 744146      ; 0x000b5ad2
+  ret i32 %2
+}
+
+define i64 @test8(i64 %a) {
+; RV32I-LABEL: test8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 1044480
+; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    lui a2, 496944
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    lui a2, 9
+; RV32I-NEXT:    addi a2, a2, -170
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    ret
+;
+; RV32IXQCIBM-LABEL: test8:
+; RV32IXQCIBM:       # %bb.0:
+; RV32IXQCIBM-NEXT:    lui a2, 1941
+; RV32IXQCIBM-NEXT:    addi a2, a2, 768
+; RV32IXQCIBM-NEXT:    qc.insb a0, a2, 24, 8
+; RV32IXQCIBM-NEXT:    lui a2, 9
+; RV32IXQCIBM-NEXT:    addi a2, a2, -170
+; RV32IXQCIBM-NEXT:    qc.insb a1, a2, 24, 0
+; RV32IXQCIBM-NEXT:    ret
+;
+; RV32IXQCIBMZBS-LABEL: test8:
+; RV32IXQCIBMZBS:       # %bb.0:
+; RV32IXQCIBMZBS-NEXT:    lui a2, 1941
+; RV32IXQCIBMZBS-NEXT:    addi a2, a2, 768
+; RV32IXQCIBMZBS-NEXT:    qc.insb a0, a2, 24, 8
+; RV32IXQCIBMZBS-NEXT:    lui a2, 9
+; RV32IXQCIBMZBS-NEXT:    addi a2, a2, -170
+; RV32IXQCIBMZBS-NEXT:    qc.insb a1, a2, 24, 0
+; RV32IXQCIBMZBS-NEXT:    ret
+  %1 = and i64 %a, -72057594037927681 ; 0xff000000000000ff
+  %2 = or i64 %1, 157601565442048     ; 0x00008f5679530000
+  ret i64 %2
+}

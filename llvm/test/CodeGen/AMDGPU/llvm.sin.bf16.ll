@@ -6,6 +6,23 @@
 
 declare bfloat @llvm.sin.bf16(bfloat) #0
 
+define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
+; GCN-LABEL: sin_bf16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b32 s3, 0x3e230000
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_fma_mixlo_bf16 v0, s2, s3, 0 op_sel_hi:[1,0,0]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_sin_bf16_e32 v0, v0
+; GCN-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %sin = call bfloat @llvm.sin.bf16(bfloat %src) #0
+  store bfloat %sin, ptr addrspace(1) %out, align 2
+  ret void
+}
+
 define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; GCN-LABEL: sin_bf16_constant_4:
 ; GCN:       ; %bb.0:

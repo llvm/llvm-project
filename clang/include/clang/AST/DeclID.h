@@ -77,6 +77,9 @@ enum PredefinedDeclIDs {
   /// The internal '__NSConstantString' tag type.
   PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
+  /// The predeclared 'type_info' struct.
+  PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID,
+
 #define BuiltinTemplate(BTName) PREDEF_DECL##BTName##_ID,
 #include "clang/Basic/BuiltinTemplates.inc"
 

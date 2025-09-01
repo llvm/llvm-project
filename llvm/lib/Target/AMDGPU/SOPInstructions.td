@@ -484,6 +484,24 @@ def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (o
   let isConvergent = 1;
 }
 
+def S_BARRIER_INIT_M0 : SOP1_Pseudo <"s_barrier_init m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_INIT_IMM : SOP1_Pseudo <"s_barrier_init", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -497,6 +515,12 @@ def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (out
   let Defs = [SCC];
   let Uses = [SCC];
   let usesCustomInserter = 1;
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
@@ -559,7 +583,6 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let isConvergent         = ps.isConvergent;
@@ -910,7 +933,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     >;
   } // End isReMaterializable = 1
 
-  let Constraints = "$sdst = $src2", DisableEncoding="$src2",
+  let Constraints = "$sdst = $src2",
       isCommutable = 1, AddedComplexity = 20 in {
     def S_FMAC_F32 : SOP2_Pseudo<
       "s_fmac_f32", (outs SReg_32:$sdst),
@@ -925,7 +948,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       "$sdst, $src0, $src1",
       [(set f16:$sdst, (UniformTernaryFrag<any_fma> SSrc_f16:$src0, SSrc_f16:$src1, SReg_32:$src2))]
     >;
-  } // End Constraints = "$sdst = $src2", DisableEncoding="$src2",
+  } // End Constraints = "$sdst = $src2",
     // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
@@ -970,7 +993,6 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
-  let DisableEncoding    = ps.DisableEncoding;
   let Constraints        = ps.Constraints;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -1092,8 +1114,7 @@ def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
 def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
 } // End isCompare = 1
 
-let isCommutable = 1, DisableEncoding = "$src0",
-    Constraints = "$sdst = $src0" in {
+let isCommutable = 1, Constraints = "$sdst = $src0" in {
   let Defs = [SCC] in
     def S_ADDK_I32 : SOPK_32TIE <"s_addk_i32">;
   def S_MULK_I32 : SOPK_32TIE <"s_mulk_i32">;
@@ -1588,6 +1609,17 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
+def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
+  let SchedRW = [WriteBarrier];
+  let simm16 = 0;
+  let fixed_imm = 1;
+  let isConvergent = 1;
+  let Defs = [SCC];
+}
+
+def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
+    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
+
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
   let simm16 = 0;
@@ -1621,9 +1653,18 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+// Represents the point at which a wave must wait for all outstanding direct loads to LDS.
+// Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
+
+def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
+   let hasSideEffects = 0;
+}
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
-def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
+def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {
+  let SubtargetPredicate = isNotGFX1250Plus;
+}
 
 // On SI the documentation says sleep for approximately 64 * low 2
 // bits, consistent with the reported maximum of 448. On VI the
@@ -1644,6 +1685,12 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
   let SubtargetPredicate = HasSetPrioIncWgInst;
+}
+
+def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
+  [(set i64:$sdst, (readcyclecounter))]> {
+  let SubtargetPredicate = HasSGetShaderCyclesInst;
+  let hasSideEffects = 1;
 }
 
 let Uses = [EXEC, M0] in {
@@ -2131,13 +2178,18 @@ defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_M0  : SOP1_M0_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_M0       : SOP1_M0_Real_gfx12<0x050>;
+defm S_BARRIER_INIT_M0            : SOP1_M0_Real_gfx12<0x051>;
+defm S_BARRIER_JOIN_M0            : SOP1_M0_Real_gfx12<0x052>;
 defm S_BARRIER_SIGNAL_IMM         : SOP1_IMM_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
+defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
+defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
 
 // GFX1250
+defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
@@ -2625,6 +2677,7 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
 }
 
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
+defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
 defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
 defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12<0x041>;
 defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12<0x042>;
