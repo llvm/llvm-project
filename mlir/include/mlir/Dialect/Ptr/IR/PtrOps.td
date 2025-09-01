@@ -146,7 +146,9 @@ def Ptr_LoadOp : Pointer_Op<"load", [
     %0 = ptr.load %ptr atomic monotonic alignment = 8 : !ptr.ptr -> i64
     ```
 
-    See the following link for more details on the load op:
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `nontemporal`, `invariant`, `invariant_group`, `ordering`,
+    and `syncscope`:
     https://llvm.org/docs/LangRef.html#load-instruction
   }];
   let arguments = (ins Ptr_PtrType:$ptr,
@@ -208,7 +210,8 @@ def Ptr_StoreOp : Pointer_Op<"store", [
     ptr.store %val, %ptr atomic monotonic alignment = 8: i64, !ptr.ptr
     ```
 
-    See the following link for more details on the store op:
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `nontemporal`, `invariant_group`, `ordering`, and `syncscope`:
     https://llvm.org/docs/LangRef.html#store-instruction
   }];
   let arguments = (ins AnyType:$value,
