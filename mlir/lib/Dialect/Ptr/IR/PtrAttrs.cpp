@@ -23,12 +23,14 @@ constexpr const static unsigned kBitsInByte = 8;
 
 bool GenericSpaceAttr::isValidLoad(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool GenericSpaceAttr::isValidStore(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
@@ -36,6 +38,7 @@ bool GenericSpaceAttr::isValidStore(
 bool GenericSpaceAttr::isValidAtomicOp(
     ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
     std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
@@ -43,6 +46,7 @@ bool GenericSpaceAttr::isValidAtomicOp(
 bool GenericSpaceAttr::isValidAtomicXchg(
     Type type, ptr::AtomicOrdering successOrdering,
     ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }

@@ -387,6 +387,7 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 bool TestConstMemorySpaceAttr::isValidLoad(
     Type type, mlir::ptr::AtomicOrdering ordering,
     std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
@@ -394,6 +395,7 @@ bool TestConstMemorySpaceAttr::isValidLoad(
 bool TestConstMemorySpaceAttr::isValidStore(
     Type type, mlir::ptr::AtomicOrdering ordering,
     std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -403,6 +405,7 @@ bool TestConstMemorySpaceAttr::isValidStore(
 bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
     std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
@@ -412,6 +415,7 @@ bool TestConstMemorySpaceAttr::isValidAtomicOp(
 bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
     mlir::ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   if (emitError)
     emitError() << "memory space is read-only";
