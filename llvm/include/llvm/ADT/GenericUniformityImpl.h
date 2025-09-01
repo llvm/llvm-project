@@ -446,9 +446,11 @@ private:
   /// the worklist.
   void taintAndPushAllDefs(const BlockT &JoinBlock);
 
-  /// \brief Mark all phi nodes in \p JoinBlock as divergent and push them on
-  /// the worklist.
-  void taintAndPushPhiNodes(const BlockT &JoinBlock);
+  /// \brief Mark phi nodes in \p JoinBlock as divergent and push them on
+  /// the worklist if they are divergent over the by the path \p JoinBlock
+  /// to \p DivTermBlock.
+  void taintAndPushPhiNodes(const BlockT &JoinBlock, const BlockT &DivTermBlock,
+                            const DivergenceDescriptorT &DivDesc);
 
   /// \brief Identify all Instructions that become divergent because \p DivExit
   /// is a divergent cycle exit of \p DivCycle. Mark those instructions as
@@ -902,7 +904,8 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushAllDefs(
 /// Mark divergent phi nodes in a join block
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
-    const BlockT &JoinBlock) {
+    const BlockT &JoinBlock, const BlockT &DivTermBlock,
+    const DivergenceDescriptorT &DivDesc) {
   LLVM_DEBUG(dbgs() << "taintAndPushPhiNodes in " << Context.print(&JoinBlock)
                     << "\n");
   for (const auto &Phi : JoinBlock.phis()) {
@@ -915,6 +918,44 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
     // https://reviews.llvm.org/D19013
     if (ContextT::isConstantOrUndefValuePhi(Phi))
       continue;
+
+    // Attempt to maintain uniformity for PHIs by considering control
+    // dependencies.
+    SmallVector<ConstValueRefT> Values;
+    SmallVector<const BlockT *> Blocks;
+    Context.getPhiInputs(Phi, Values, Blocks);
+    assert(Blocks.size() == Values.size());
+
+    // Allow an empty Blocks/Values list to signify getPhiInputs is not
+    // implemented; in which case no uniformity is possible.
+    bool Uniform = !Values.empty();
+
+    std::optional<ConstValueRefT> CommonValue;
+    for (unsigned I = 0; I < Blocks.size() && Uniform; ++I) {
+      if (DivDesc.CycleDivBlocks.contains(Blocks[I])) {
+        // If PHI is reachable via divergent exit it is divergent.
+        Uniform = false;
+      } else if (DT.dominates(&DivTermBlock, Blocks[I]) ||
+                 DivDesc.BlockLabels.lookup_or(Blocks[I], nullptr)) {
+        // If all edges from the marked path share a common value then
+        // uniformity is preserved when the value is itself uniform.
+        if (!CommonValue)
+          CommonValue = Values[I];
+        else
+          Uniform = Values[I] == *CommonValue;
+      }
+      // Ignore undefined values when checking definitions.
+      if (!Values[I])
+        continue;
+      // Any value defined on the divergent path is divergent.
+      const BlockT *DefBlock = Context.getDefBlock(Values[I]);
+      if (DivDesc.BlockLabels.lookup_or(DefBlock, nullptr))
+        Uniform = false;
+    }
+    if (Uniform)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "tainted: " << Phi << "\n");
     markDivergent(Phi);
   }
 }
@@ -1072,7 +1113,7 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeControlDivergence(
       DivCycles.push_back(Outermost);
       continue;
     }
-    taintAndPushPhiNodes(*JoinBlock);
+    taintAndPushPhiNodes(*JoinBlock, *DivTermBlock, DivDesc);
   }
 
   // Sort by order of decreasing depth. This allows later cycles to be skipped

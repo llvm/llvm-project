@@ -14,6 +14,7 @@
 
 #include "llvm/IR/SSAContext.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -66,6 +67,20 @@ bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   if (auto *Phi = dyn_cast<PHINode>(&Instr))
     return Phi->hasConstantOrUndefValue();
   return false;
+}
+
+template <>
+void SSAContext::getPhiInputs(
+    const Instruction &Instr, SmallVectorImpl<const Value *> &Values,
+    SmallVectorImpl<const BasicBlock *> &Blocks) const {
+  if (auto *Phi = dyn_cast<PHINode>(&Instr)) {
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+      const Value *Incoming = Phi->getIncomingValue(I);
+      const BasicBlock *Block = Phi->getIncomingBlock(I);
+      Values.push_back(!isa<UndefValue>(Incoming) ? Incoming : ValueRefNull);
+      Blocks.push_back(Block);
+    }
+  }
 }
 
 template <> Intrinsic::ID SSAContext::getIntrinsicID(const Instruction &I) {
