@@ -293,17 +293,14 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
-  /// Check whether there is a real dependency between the definition and the
-  /// use. The definition might only affect a subregister that is not actually
-  /// used. Works for both virtual and physical registers.
-  /// The bool part of the returned pair tells if we're dealing with a real
-  /// dependency.
-  /// The optional Register part of the returned pair holds the (sub)register
-  /// that is the actual dependency in cases we can determine that.
-  /// Note: WMMA an SWMMAC instructions are currently not supported.
-  std::pair<bool, std::optional<Register>>
-  getRealSchedDependency(MachineInstr *DefI, int DefOpIdx, MachineInstr *UseI,
-                         int UseOpIdx) const;
+  /// Get the register that represents the actual dependency between the
+  /// definition and the use. The definition might only affect a subregister
+  /// that is not actually used. Works for both virtual and physical registers.
+  /// Note: Currently supports VOP3P instructions (without WMMA an SWMMAC).
+  /// Returns the definition register if there is a real dependency and no
+  /// better match is found.
+  Register getRealSchedDependency(const MachineInstr *DefI, int DefOpIdx,
+                                  const MachineInstr *UseI, int UseOpIdx) const;
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
