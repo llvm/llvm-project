@@ -33,7 +33,10 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
-    return failure();
+    // Translation for ptr dialect operations to LLVM IR is currently
+    // unimplemented.
+    return op->emitError("Translation for ptr dialect operations to LLVM IR is "
+                         "not implemented.");
   }
 
   /// Attaches module-level metadata for functions marked as kernels.
@@ -41,7 +44,10 @@ public:
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
-    return success();
+    // Translation for ptr dialect operations to LLVM IR is currently
+    // unimplemented.
+    return op->emitError("Translation for ptr dialect operations to LLVM IR is "
+                         "not implemented.");
   }
 };
 } // namespace
