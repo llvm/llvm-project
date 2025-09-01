@@ -171,10 +171,14 @@ static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
 
   Out << g_lldb_func_call_label_prefix;
 
-  if (llvm::isa<clang::CXXConstructorDecl>(GD.getDecl()))
-    Out << "C" << GD.getCtorType();
-  else if (llvm::isa<clang::CXXDestructorDecl>(GD.getDecl()))
+  if (auto *Ctor = llvm::dyn_cast<clang::CXXConstructorDecl>(GD.getDecl())) {
+    Out << "C";
+    if (Ctor->getInheritedConstructor().getConstructor())
+      Out << "I";
+    Out << GD.getCtorType();
+  } else if (llvm::isa<clang::CXXDestructorDecl>(GD.getDecl())) {
     Out << "D" << GD.getDtorType();
+  }
 
   Out << label.substr(g_lldb_func_call_label_prefix.size());
 }

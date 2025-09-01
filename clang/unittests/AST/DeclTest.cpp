@@ -12,6 +12,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -174,6 +175,50 @@ TEST(Decl, AsmLabelAttr_LLDB) {
     MC->mangleName(GlobalDecl(Dtor, CXXDtorType::Dtor_Base), OS_Mangled);
 
     ASSERT_EQ(Mangled, "\x01$__lldb_func:D2:123:123:~S");
+  };
+}
+
+TEST(Decl, AsmLabelAttr_LLDB_Inherit) {
+  StringRef Code = R"(
+    struct Base {
+      Base(int x) {}
+    };
+
+    struct Derived : Base {
+      using Base::Base;
+    } d(5);
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *Ctor = selectFirst<CXXConstructorDecl>(
+      "ctor",
+      match(cxxConstructorDecl(isInheritingConstructor()).bind("ctor"), Ctx));
+
+  const_cast<CXXConstructorDecl *>(Ctor)->addAttr(
+      AsmLabelAttr::Create(Ctx, "$__lldb_func::123:123:Derived"));
+
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Complete), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI0:123:123:Derived");
+  };
+
+  {
+    std::string Mangled;
+    llvm::raw_string_ostream OS_Mangled(Mangled);
+    MC->mangleName(GlobalDecl(Ctor, CXXCtorType::Ctor_Base), OS_Mangled);
+
+    ASSERT_EQ(Mangled, "\x01$__lldb_func:CI1:123:123:Derived");
   };
 }
 
