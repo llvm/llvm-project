@@ -3696,6 +3696,9 @@ __m128d test_mm_maskz_cvtepi32_pd(__mmask8 __U, __m128i __A) {
   // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
   return _mm_maskz_cvtepi32_pd(__U,__A);
 }
+
+TEST_CONSTEXPR(match_m128d(_mm_maskz_cvtepi32_pd(/*10=*/0x2, (__m128i)(__v4si){-1, 1, -2, 2}), 0.0, 1.0));
+
 __m256d test_mm256_mask_cvtepi32_pd(__m256d __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi32_pd
   // CHECK: sitofp <4 x i32> %{{.*}} to <4 x double>

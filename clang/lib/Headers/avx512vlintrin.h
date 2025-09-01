@@ -1870,8 +1870,8 @@ _mm_mask_cvtepi32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
                                               (__v2df)__W);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtepi32_pd (__mmask8 __U, __m128i __A) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_cvtepi32_pd(__mmask8 __U, __m128i __A) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8) __U,
                                               (__v2df)_mm_cvtepi32_pd(__A),
                                               (__v2df)_mm_setzero_pd());
