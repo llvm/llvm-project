@@ -1918,7 +1918,8 @@ let Predicates = [IsISA3_1] in {
                         RegConstraint<"$VDi = $VD">;
   def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
   def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
-  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", []>;
+  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", 
+                            [(set v4i32:$VD, (PPCvsrq v4i32:$VA, v4i32:$VB))]>;
   def VRLQ : VX1_VT5_VA5_VB5<5, "vrlq", []>;
   def XSCVQPUQZ : X_VT5_XO5_VB5<63, 0, 836, "xscvqpuqz", []>;
   def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
@@ -2053,6 +2054,9 @@ let Predicates = [IsISA3_1, HasFPU] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit vsrq instruction to optimize VSR(VSRO (input, vsro_byte_shift), vsr_bit_shift)
+  // to VSRQ(input, vsrq_bit_shift)
+  def : Pat<(VSRVSRO v4i32:$vA, v4i32:$vB), (VSRQ $vA, $vB)>;
   // Exploit the vector multiply high instructions using intrinsics.
   def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
             (v4i32 (VMULHSW $vA, $vB))>;
