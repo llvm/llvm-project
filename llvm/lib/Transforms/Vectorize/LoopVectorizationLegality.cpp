@@ -1907,7 +1907,6 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // Prohibit any potential aliasing with any instruction in the loop which
   // might store to memory.
   // FIXME: Relax this constraint where possible.
-  AAResults *AA = LAIs.getAAResults();
   Value *Ptr = CriticalUncountableExitConditionLoad->getPointerOperand();
   for (auto *BB : TheLoop->blocks()) {
     for (auto &I : *BB) {
