@@ -512,11 +512,11 @@ def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
-def OMPC_Threadset : Clause<"threadset"> {
+def OMPC_Threadset : Clause<[Spelling<"threadset">]> {
   let clangClass = "OMPThreadsetClause";
   let flangClass = "OmpThreadsetClause";
 }
-def OMPC_To : Clause<"to"> {
+def OMPC_To : Clause<[Spelling<"to">]> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpToClause";
 }
