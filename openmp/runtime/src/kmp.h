@@ -2726,7 +2726,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned priority_specified : 1; /* set if the compiler provides priority
                                       setting for the task */
   unsigned detachable : 1; /* 1 == can detach */
-  unsigned free_agent_eligible : 1; /* set if task can be executed by a 
+  unsigned free_agent_eligible : 1; /* set if task can be executed by a
                                        free-agent thread */
   unsigned reserved : 8; /* reserved for compiler use */
 
