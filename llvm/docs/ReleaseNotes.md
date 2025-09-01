@@ -150,9 +150,6 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
-* modernize-use-std-format now correctly replaces signed types, and correctly 
-  adds a static_cast to the underlying type when being printed in hex.
-
 Changes to LLDB
 ---------------------------------
 
