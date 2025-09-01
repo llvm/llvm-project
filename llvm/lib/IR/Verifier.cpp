@@ -119,6 +119,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -399,6 +400,7 @@ public:
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
   bool verify(const Function &F) {
+    llvm::TimeTraceScope timeScope("Verifier");
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
 
@@ -408,8 +410,10 @@ public:
     // out-of-date dominator tree and makes it significantly more complex to run
     // this code outside of a pass manager.
     // FIXME: It's really gross that we have to cast away constness here.
-    if (!F.empty())
+    if (!F.empty()) {
+      llvm::TimeTraceScope domScope("Dominator Tree Builder");
       DT.recalculate(const_cast<Function &>(F));
+    }
 
     for (const BasicBlock &BB : F) {
       if (!BB.empty() && BB.back().isTerminator())
@@ -431,7 +435,10 @@ public:
 
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
-    visit(const_cast<Function &>(F));
+    {
+      llvm::TimeTraceScope domScope("Verifier visit");
+      visit(const_cast<Function &>(F));
+    }
     verifySiblingFuncletUnwinds();
 
     if (ConvergenceVerifyHelper.sawTokens())
@@ -2832,6 +2839,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
+  llvm::TimeTraceScope domScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {

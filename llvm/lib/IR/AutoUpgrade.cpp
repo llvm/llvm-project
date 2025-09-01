@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
@@ -5256,6 +5257,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
+  llvm::TimeTraceScope timeScope("Upgrade debug info");
   // We need to get metadata before the module is verified (i.e., getModuleFlag
   // makes assumptions that we haven't verified yet). Carefully extract the flag
   // from the metadata.

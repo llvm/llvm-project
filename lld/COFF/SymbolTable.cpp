@@ -1440,8 +1440,12 @@ void SymbolTable::compileBitcodeFiles() {
   llvm::TimeTraceScope timeScope("Compile bitcode");
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *f : bitcodeFileInstances)
-    lto->add(*f);
+  {
+    llvm::TimeTraceScope addScope("Add bitcode file instances");
+    for (BitcodeFile *f : bitcodeFileInstances)
+      lto->add(*f);
+  }
+  llvm::TimeTraceScope compileScope("LTO compile");
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();
