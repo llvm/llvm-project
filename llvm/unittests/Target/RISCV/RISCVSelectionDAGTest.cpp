@@ -87,8 +87,8 @@ TEST_F(RISCVSelectionDAGTest, computeKnownBits_SRLW) {
   //   %c = zext i32 %b to i64 ; makes the most significant 32 bits 0
   //   ret i64 %c
   //  }
-  // The Optimized SelectionDAG as show by llc -mtriple="riscv64" -debug-only=isel-dump 
-  // is:
+  // The Optimized SelectionDAG as show by llc -mtriple="riscv64"
+  // -debug-only=isel-dump is:
   //      t0: ch,glue = EntryToken
   //          t2: i64,ch = CopyFromReg t0, Register:i64 %0
   //        t18: i64 = and t2, Constant:i64<2147483647>
