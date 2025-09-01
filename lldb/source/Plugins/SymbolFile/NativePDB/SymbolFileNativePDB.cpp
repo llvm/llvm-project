@@ -1055,10 +1055,6 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
-  std::set<lldb::addr_t> existing_addresses;
-  for (size_t i = 0; i < symtab.GetNumSymbols(); i++)
-    existing_addresses.insert(symtab.SymbolAtIndex(i)->GetFileAddress());
-
   auto *section_list = m_objfile_sp->GetSectionList();
   if (!section_list)
     return;
