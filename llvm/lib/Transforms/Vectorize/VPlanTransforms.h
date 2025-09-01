@@ -199,8 +199,8 @@ struct VPlanTransforms {
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
 
-  /// Replace the symbolic strides in \p Plan, with data from \p StridesMap,
-  /// with constants when possible.
+  /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
+  /// possible.
   static void
   replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
                          const DenseMap<Value *, const SCEV *> &StridesMap);
