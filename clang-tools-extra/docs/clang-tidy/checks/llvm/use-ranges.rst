@@ -53,6 +53,7 @@ Calls to the following STL algorithms are checked:
 ``std::replace``,
 ``std::stable_sort``,
 ``std::transform``,
+``std::uninitialized_copy``,
 ``std::unique``,
 ``std::upper_bound``.
 
