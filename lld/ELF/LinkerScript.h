@@ -227,7 +227,7 @@ public:
     return c->kind == InputSectionKind;
   }
 
-  bool matchesFile(const InputFile &file) const;
+  bool matchesFile(const InputFile &file, bool ExtractFilename) const;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
