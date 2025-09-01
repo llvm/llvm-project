@@ -57,6 +57,8 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
       continue;
     if (OtherInstr.hasMemoryOperands())
       continue;
+    if (OtherInstr.Description.mayLoad() || OtherInstr.Description.mayStore())
+      continue;
     if (!ET.allowAsBackToBack(OtherInstr))
       continue;
     if (Instr->hasAliasingRegistersThrough(OtherInstr, ForbiddenRegisters))
