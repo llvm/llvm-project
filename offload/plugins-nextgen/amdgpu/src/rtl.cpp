@@ -1568,15 +1568,15 @@ public:
           CallbackData);
 
       return Plugin::check(Status, "error in hsa_amd_signal_async_handler: %s");
-    } else {
-      // No dependencies - schedule it now.
-      // Using a seperate thread because this function should run asynchronously
-      // and not block the main thread.
-      std::thread([](void *CallbackData) { callbackWrapper(0, CallbackData); },
-                  CallbackData)
-          .detach();
-      return Plugin::success();
     }
+
+    // No dependencies - schedule it now.
+    // Using a seperate thread because this function should run asynchronously
+    // and not block the main thread.
+    std::thread([](void *CallbackData) { callbackWrapper(0, CallbackData); },
+                CallbackData)
+        .detach();
+    return Plugin::success();
   }
 
   /// Synchronize with the stream. The current thread waits until all operations
