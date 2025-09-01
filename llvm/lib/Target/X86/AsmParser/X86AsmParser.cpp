@@ -3523,8 +3523,26 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     PatchedName = Name;
 
   // Hacks to handle 'data16' and 'data32'
-  if (PatchedName == "data16" && is16BitMode()) {
-    return Error(NameLoc, "redundant data16 prefix");
+  if (PatchedName == "data16") {
+    if (is16BitMode())
+      return Error(NameLoc, "redundant data16 prefix");
+    if (is64BitMode())
+      return Error(NameLoc, "'data16' is not supported in 64-bit mode");
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      StringRef Next = Parser.getTok().getString();
+      getLexer().Lex();
+      // data16 effectively changes the instruction suffix.
+      // TODO Generalize.
+      if (Next == "call")
+        Next = "callw";
+      if (Next == "ljmp")
+        Next = "ljmpw";
+
+      Name = Next;
+      PatchedName = Name;
+      ForcedDataPrefix = X86::Is16Bit;
+      IsPrefix = false;
+    }
   }
   if (PatchedName == "data32") {
     if (is32BitMode())
