@@ -67,8 +67,12 @@ constexpr bool test() {
 
   test_reference_converts_from_temporary<const int&, long, true>();
 
-#if defined(TEST_COMPILER_GCC) || (defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2100)
-  // TODO: Remove this guard once no supported Clang is affected by https://github.com/llvm/llvm-project/issues/114344.
+#if defined(TEST_COMPILER_GCC) ||                                                                                      \
+    (defined(TEST_CLANG_VER) &&                                                                                        \
+     ((!defined(__ANDROID__) && TEST_CLANG_VER >= 2100) || (defined(__ANDROID__) && TEST_CLANG_VER >= 2200))) ||       \
+    (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER >= 1800)
+  // TODO: Bump the version numbers if newer Apple Clang or Android Clang hasn't implemented LWG3819 yet.
+  // TODO: Remove this guard once no supported Clang is affected by https://llvm.org/PR114344.
 
   // Test function references.
   test_reference_converts_from_temporary<void (&)(), void(), false>();
@@ -79,7 +83,11 @@ constexpr bool test() {
   test_reference_converts_from_temporary<int&&, volatile int, true>();
 #endif
 
-#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2100
+#if !defined(TEST_COMPILER_GCC) &&                                                                                     \
+    ((defined(TEST_CLANG_VER) &&                                                                                       \
+      ((!defined(__ANDROID__) && TEST_CLANG_VER >= 2100) || (defined(__ANDROID__) && TEST_CLANG_VER >= 2200))) ||      \
+     (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER >= 1800))
+  // TODO: Bump the version numbers if newer Apple Clang or Android Clang hasn't implemented LWG3819 yet.
   // TODO: Remove this guard once supported Clang and GCC have LWG3819 implemented.
 
   // Test LWG3819: reference_meows_from_temporary should not use is_meowible.
