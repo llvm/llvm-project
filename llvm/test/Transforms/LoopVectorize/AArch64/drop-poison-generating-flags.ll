@@ -60,8 +60,8 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq <4 x double> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP28]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <4 x i1> [[TMP5]], [[TMP29]]
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP29]], i32 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP31]], i64 [[TMP25]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP29]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP27]], i64 [[TMP25]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST_1]], i64 [[PREDPHI]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> splat (i32 10), ptr [[TMP32]], i32 4, <4 x i1> [[TMP30]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

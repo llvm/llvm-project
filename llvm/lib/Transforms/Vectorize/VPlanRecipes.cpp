@@ -467,6 +467,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
+  case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -523,16 +524,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   default:
     return false;
   }
-}
-
-Value *VPInstruction::generatePerLane(VPTransformState &State,
-                                      const VPLane &Lane) {
-  IRBuilderBase &Builder = State.Builder;
-
-  assert(getOpcode() == VPInstruction::PtrAdd &&
-         "only PtrAdd opcodes are supported for now");
-  return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
-                              State.get(getOperand(1), Lane), Name);
 }
 
 /// Create a conditional branch using \p Cond branching to the successors of \p
@@ -1154,24 +1145,13 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
-  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
-                                   (vputils::onlyFirstLaneUsed(this) ||
-                                    isVectorToScalar() || isSingleScalar());
-  bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
-  if (GeneratesPerAllLanes) {
-    for (unsigned Lane = 0, NumLanes = State.VF.getFixedValue();
-         Lane != NumLanes; ++Lane) {
-      Value *GeneratedValue = generatePerLane(State, VPLane(Lane));
-      assert(GeneratedValue && "generatePerLane must produce a value");
-      State.set(this, GeneratedValue, VPLane(Lane));
-    }
-    return;
-  }
-
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
+  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
+                                   (vputils::onlyFirstLaneUsed(this) ||
+                                    isVectorToScalar() || isSingleScalar());
   assert((((GeneratedValue->getType()->isVectorTy() ||
             GeneratedValue->getType()->isStructTy()) ==
            !GeneratesPerFirstLaneOnly) ||
@@ -1209,6 +1189,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::VScale:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1244,10 +1225,11 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::Broadcast:
   case VPInstruction::ReductionStartVector:
     return true;
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
+    return getNumOperands() > 1;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::WidePtrAdd:
-    return Op == getOperand(0);
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
@@ -1370,6 +1352,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::Unpack:
+    O << "unpack-into-scalars";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
