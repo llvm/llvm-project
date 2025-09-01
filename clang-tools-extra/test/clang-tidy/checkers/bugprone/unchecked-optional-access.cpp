@@ -141,6 +141,17 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
   }
 }
 
+void assertion_handler() __attribute__((analyzer_noreturn));
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler();
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
+}
+
 template <typename T>
 void function_template_without_user(const absl::optional<T> &opt) {
   opt.value(); // no-warning
