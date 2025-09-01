@@ -62,7 +62,7 @@ bool Designator::isFinished() {
 
 Designators::Designators(const Expr *Init, const InitListExpr *ILE,
                          const ASTContext *Context)
-    : ILE(ILE), Context(Context) {
+    : Context(Context) {
   if (ILE->getType()->isArrayType()) {
     const ConstantArrayType *CAT =
         Context->getAsConstantArrayType(ILE->getType());
@@ -90,7 +90,7 @@ Designators::Designators(const Expr *Init, const InitListExpr *ILE,
 
 Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
                          const ASTContext *Context)
-    : ILE(ILE), Context(Context) {
+    : Context(Context) {
   for (const auto &D : DIE->designators()) {
     if (D.isFieldDesignator()) {
       RecordDecl *DesignatorRecord = D.getFieldDecl()->getParent();
