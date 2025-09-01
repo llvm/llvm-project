@@ -17848,11 +17848,11 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
-  Value *getVectorizedValue(const TreeEntry &E1) {
-    Value *V1 = E1.VectorizedValue;
-    if (!V1->getType()->isIntOrIntVectorTy())
-      return V1;
-    return castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
+  Value *getVectorizedValue(const TreeEntry &E) {
+    Value *Vec = E.VectorizedValue;
+    if (!Vec->getType()->isIntOrIntVectorTy())
+      return Vec;
+    return castToScalarTyElem(Vec, any_of(E.Scalars, [&](Value *V) {
                                 return !isa<PoisonValue>(V) &&
                                        !isKnownNonNegative(
                                            V, SimplifyQuery(*R.DL));
