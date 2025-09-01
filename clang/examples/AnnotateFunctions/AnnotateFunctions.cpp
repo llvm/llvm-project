@@ -65,7 +65,7 @@ public:
     Token Tok;
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
 
     if (HandledDecl) {
       DiagnosticsEngine &D = PP.getDiagnostics();

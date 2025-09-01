@@ -349,7 +349,7 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.IEEE128)
     AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
 
-  // Add the 'import' and 'module' contextual keyword.
+  // Add the 'import' and 'module' contextual keywords.
   get("import").setModulesImport(true);
   get("module").setModulesDeclaration(true);
 }

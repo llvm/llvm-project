@@ -75,7 +75,10 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
 
 /// Return true if we have an C++20 Modules contextual keyword(export, import
 /// or module).
-bool Token::isModuleContextualKeyword(bool AllowExport) const {
+bool Token::isModuleContextualKeyword(const LangOptions &LangOpts,
+                                      bool AllowExport) const {
+  if (!LangOpts.CPlusPlusModules)
+    return false;
   if (AllowExport && is(tok::kw_export))
     return true;
   if (isOneOf(tok::kw_import, tok::kw_module))
@@ -4037,9 +4040,9 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
-    if (returnedToken && Result.isModuleContextualKeyword() &&
-        LangOpts.CPlusPlusModules && !LexingRawMode && !Is_PragmaLexer &&
-        !ParsingPreprocessorDirective && PP &&
+    if (returnedToken && Result.isModuleContextualKeyword(LangOpts) &&
+        !LexingRawMode && !Is_PragmaLexer && !ParsingPreprocessorDirective &&
+        PP &&
         PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
@@ -4616,7 +4619,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
-      if (Result.isModuleContextualKeyword() &&
+      if (Result.isModuleContextualKeyword(LangOpts) &&
           PP->HandleModuleContextualKeyword(Result, Result.isAtStartOfLine())) {
         PP->HandleDirective(Result);
         return false;

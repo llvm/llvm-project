@@ -1174,7 +1174,7 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 /// Otherwise the token is treated as an identifier.
 bool Preprocessor::HandleModuleContextualKeyword(
     Token &Result, bool TokAtPhysicalStartOfLine) {
-  if (!getLangOpts().CPlusPlusModules || !Result.isModuleContextualKeyword())
+  if (!Result.isModuleContextualKeyword(getLangOpts()))
     return false;
 
   if (Result.is(tok::kw_export)) {
@@ -1188,9 +1188,8 @@ bool Preprocessor::HandleModuleContextualKeyword(
     if (!LastTokenWasExportKeyword.isAtPhysicalStartOfLine())
       return false;
     // [cpp.pre]/1.4
-    // export                  // not a preprocessing directive
-    // import foo;             // preprocessing directive (ill-formed at phase
-    // 7)
+    // export         // not a preprocessing directive
+    // import foo;    // preprocessing directive (ill-formed at phase7)
     if (TokAtPhysicalStartOfLine)
       return false;
   } else if (!TokAtPhysicalStartOfLine)
@@ -1266,7 +1265,7 @@ void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
                    /*DisableMacroExpansion*/ true, /*IsReinject*/ false);
 }
 
-// Lex a token following the 'import' contextual keyword.
+/// Lex a token following the 'import' contextual keyword.
 ///
 ///     pp-import: [C++20]
 ///           import header-name pp-import-suffix[opt] ;
@@ -1290,7 +1289,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   recomputeCurLexerKind();
 
   SmallVector<Token, 32> Suffix;
-  SmallVector<IdentifierLoc, 2> Path;
+  SmallVector<IdentifierLoc, 3> Path;
   Lex(Result);
   if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
     return CollectPPImportSuffixAndEnterStream(Suffix);

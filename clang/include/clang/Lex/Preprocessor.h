@@ -1812,7 +1812,7 @@ public:
   /// Callback invoked when the lexer sees one of export, import or module token
   /// at the start of a line.
   ///
-  /// This consumes the import, module directive, modifies the
+  /// This consumes the import/module directive, modifies the
   /// lexer/preprocessor state, and advances the lexer(s) so that the next token
   /// read is the correct one.
   bool HandleModuleContextualKeyword(Token &Result,
@@ -2537,11 +2537,15 @@ public:
 
   /// If we're importing a standard C++20 Named Modules.
   bool isImportingCXXNamedModules() const {
-    return getLangOpts().CPlusPlusModules && ImportingCXXNamedModules;
+    assert(getLangOpts().CPlusPlusModules &&
+           "Import C++ named modules are only valid for C++20 modules");
+    return ImportingCXXNamedModules;
   }
 
   bool isDeclaringCXXNamedModules() const {
-    return getLangOpts().CPlusPlusModules && DeclaringCXXNamedModules;
+    assert(getLangOpts().CPlusPlusModules &&
+           "Declare C++ named modules are only valid for C++20 modules");
+    return DeclaringCXXNamedModules;
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.

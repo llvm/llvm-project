@@ -1260,16 +1260,13 @@ void Preprocessor::HandleDirective(Token &Result) {
   // pp-directive.
   bool ReadAnyTokensBeforeDirective =CurPPLexer->MIOpt.getHasReadAnyTokensVal();
 
-  // Save the '#' token in case we need to return it later.
-  Token SavedHash = Result;
-
-  bool IsCXX20ImportOrModuleDirective =
-      getLangOpts().CPlusPlusModules &&
-      Result.isModuleContextualKeyword(/*AllowExport=*/false);
+  // Save the directive-introducing token('#' and import/module in C++20) in
+  // case we need to return it later.
+  Token Introducer = Result;
 
   // Read the next token, the directive flavor.  This isn't expanded due to
   // C99 6.10.3p8.
-  if (!IsCXX20ImportOrModuleDirective)
+  if (Introducer.is(tok::hash))
     LexUnexpandedToken(Result);
 
   // C99 6.10.3p11: Is this preprocessor directive in macro invocation?  e.g.:
@@ -1291,7 +1288,9 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_embed:
       case tok::pp_module:
         Diag(Result, diag::err_embedded_directive)
-            << IsCXX20ImportOrModuleDirective << II->getName();
+            << Introducer.isModuleContextualKeyword(getLangOpts(),
+                                                    /*AllowExport=*/false)
+            << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
@@ -1308,7 +1307,8 @@ void Preprocessor::HandleDirective(Token &Result) {
   ResetMacroExpansionHelper helper(this);
 
   if (SkippingUntilPCHThroughHeader || SkippingUntilPragmaHdrStop)
-    return HandleSkippedDirectiveWhileUsingPCH(Result, SavedHash.getLocation());
+    return HandleSkippedDirectiveWhileUsingPCH(Result,
+                                               Introducer.getLocation());
 
   switch (Result.getKind()) {
   case tok::eod:
@@ -1328,7 +1328,7 @@ void Preprocessor::HandleDirective(Token &Result) {
     // directive. However do permit it in the predefines file, as we use line
     // markers to mark the builtin macros as being in a system header.
     if (getLangOpts().AsmPreprocessor &&
-        SourceMgr.getFileID(SavedHash.getLocation()) != getPredefinesFileID())
+        SourceMgr.getFileID(Introducer.getLocation()) != getPredefinesFileID())
       break;
     return HandleDigitDirective(Result);
   default:
@@ -1340,30 +1340,32 @@ void Preprocessor::HandleDirective(Token &Result) {
     default: break;
     // C99 6.10.1 - Conditional Inclusion.
     case tok::pp_if:
-      return HandleIfDirective(Result, SavedHash, ReadAnyTokensBeforeDirective);
+      return HandleIfDirective(Result, Introducer,
+                               ReadAnyTokensBeforeDirective);
     case tok::pp_ifdef:
-      return HandleIfdefDirective(Result, SavedHash, false,
+      return HandleIfdefDirective(Result, Introducer, false,
                                   true /*not valid for miopt*/);
     case tok::pp_ifndef:
-      return HandleIfdefDirective(Result, SavedHash, true,
+      return HandleIfdefDirective(Result, Introducer, true,
                                   ReadAnyTokensBeforeDirective);
     case tok::pp_elif:
     case tok::pp_elifdef:
     case tok::pp_elifndef:
-      return HandleElifFamilyDirective(Result, SavedHash, II->getPPKeywordID());
+      return HandleElifFamilyDirective(Result, Introducer,
+                                       II->getPPKeywordID());
 
     case tok::pp_else:
-      return HandleElseDirective(Result, SavedHash);
+      return HandleElseDirective(Result, Introducer);
     case tok::pp_endif:
       return HandleEndifDirective(Result);
 
     // C99 6.10.2 - Source File Inclusion.
     case tok::pp_include:
       // Handle #include.
-      return HandleIncludeDirective(SavedHash.getLocation(), Result);
+      return HandleIncludeDirective(Introducer.getLocation(), Result);
     case tok::pp___include_macros:
       // Handle -imacros.
-      return HandleIncludeMacrosDirective(SavedHash.getLocation(), Result);
+      return HandleIncludeMacrosDirective(Introducer.getLocation(), Result);
 
     // C99 6.10.3 - Macro Replacement.
     case tok::pp_define:
@@ -1381,16 +1383,17 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     // C99 6.10.6 - Pragma Directive.
     case tok::pp_pragma:
-      return HandlePragmaDirective({PIK_HashPragma, SavedHash.getLocation()});
+      return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
       return HandleCXXModuleDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
-      if (IsCXX20ImportOrModuleDirective)
+      if (Introducer.isModuleContextualKeyword(getLangOpts(),
+                                               /*AllowExport=*/false))
         return HandleCXXImportDirective(Result);
-      return HandleImportDirective(SavedHash.getLocation(), Result);
+      return HandleImportDirective(Introducer.getLocation(), Result);
     case tok::pp_include_next:
-      return HandleIncludeNextDirective(SavedHash.getLocation(), Result);
+      return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 
     case tok::pp_warning:
       if (LangOpts.CPlusPlus)
@@ -1409,7 +1412,7 @@ void Preprocessor::HandleDirective(Token &Result) {
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
     case tok::pp_embed:
-      return HandleEmbedDirective(SavedHash.getLocation(), Result,
+      return HandleEmbedDirective(Introducer.getLocation(), Result,
                                   getCurrentFileLexer()
                                       ? *getCurrentFileLexer()->getFileEntry()
                                       : static_cast<FileEntry *>(nullptr));
@@ -1440,7 +1443,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   if (getLangOpts().AsmPreprocessor) {
     auto Toks = std::make_unique<Token[]>(2);
     // Return the # and the token after it.
-    Toks[0] = SavedHash;
+    Toks[0] = Introducer;
     Toks[1] = Result;
 
     // If the second token is a hashhash token, then we need to translate it to

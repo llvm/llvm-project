@@ -26,7 +26,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
@@ -632,8 +631,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // FIXME: We should generate better diagnostic information here to explain
     // why the module/import directive is ill-formed.
     case tok::identifier: {
-      if (getLangOpts().CPlusPlusModules &&
-          NextToken().isModuleContextualKeyword() &&
+      if (NextToken().isModuleContextualKeyword(getLangOpts()) &&
           GetLookAheadToken(2).isNot(tok::coloncolon)) {
         if (NextToken().getIdentifierInfo()->isStr(
                 tok::getKeywordSpelling(tok::kw_module)))
@@ -720,7 +718,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // 'export import' declarations. If the module/import directive is
     // well-formed, it should be converted to a keyword in preprocessor, but not
     // an identifier we saw here.
-    if (getLangOpts().CPlusPlusModules && Tok.isModuleContextualKeyword() &&
+    if (Tok.isModuleContextualKeyword(getLangOpts()) &&
         NextToken().isNot(tok::coloncolon)) {
       if (Tok.getIdentifierInfo()->isStr(
               tok::getKeywordSpelling(tok::kw_module)))
