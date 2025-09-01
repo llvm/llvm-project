@@ -76,9 +76,6 @@ public:
   };
 
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
-  // The original core.CallAndMessage checker name. This should rather be an
-  // array, as seen in MallocChecker and CStringChecker.
-  CheckerNameRef OriginalName;
 
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
@@ -680,8 +677,6 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
 
 void ento::registerCallAndMessageChecker(CheckerManager &Mgr) {
   CallAndMessageChecker *Chk = Mgr.registerChecker<CallAndMessageChecker>();
-
-  Chk->OriginalName = Mgr.getCurrentCheckerName();
 
 #define QUERY_CHECKER_OPTION(OPTION)                                           \
   Chk->ChecksEnabled[CallAndMessageChecker::CK_##OPTION] =                     \
