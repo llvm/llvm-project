@@ -35,11 +35,11 @@ class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr T two = T(2.0);
   static constexpr T neg_two = T(-2.0);
   static constexpr T three = T(3.0);
-  static constexpr T neg_one_point_one = T(-1.1);
-  static constexpr T six_halves = T(6.5);
-  static constexpr T neg_six_halves = T(-6.5);
-  static constexpr T two_quaters = T(2.25);
-  static constexpr T neg_two_quaters = T(-2.25);
+  static constexpr T val_neg_1_1 = T(-1.1);
+  static constexpr T val_6_5 = T(6.5);
+  static constexpr T val_neg_6_5 = T(-6.5);
+  static constexpr T val_2_25 = T(2.25);
+  static constexpr T val_neg_2_25 = T(-2.25);
 
 public:
   typedef T (*FModFunc)(T, T);
@@ -65,7 +65,7 @@ public:
 
     // fmod (+inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(inf, three, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(inf, neg_one_point_one, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, val_neg_1_1, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, min_denormal, aNaN, true, FE_INVALID);
@@ -76,7 +76,7 @@ public:
 
     // fmod (-inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(neg_inf, three, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, neg_one_point_one, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, val_neg_1_1, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, min_denormal, aNaN, true, FE_INVALID);
@@ -87,7 +87,7 @@ public:
 
     // fmod (x, +0) == aNaN plus invalid exception.
     TEST_SPECIAL(three, zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_one_point_one, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(zero, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, zero, aNaN, true, FE_INVALID);
@@ -96,7 +96,7 @@ public:
 
     // fmod (x, -0) == aNaN plus invalid exception.
     TEST_SPECIAL(three, neg_zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_one_point_one, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, neg_zero, aNaN, true, FE_INVALID);
@@ -175,10 +175,10 @@ public:
     TEST_SPECIAL(neg_sNaN, sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_sNaN, neg_sNaN, aNaN, false, FE_INVALID);
 
-    TEST_SPECIAL(six_halves, two_quaters, two, false, 0);
-    TEST_SPECIAL(neg_six_halves, two_quaters, neg_two, false, 0);
-    TEST_SPECIAL(six_halves, neg_two_quaters, two, false, 0);
-    TEST_SPECIAL(neg_six_halves, neg_two_quaters, neg_two, false, 0);
+    TEST_SPECIAL(val_6_5, val_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_2_25, neg_two, false, 0);
+    TEST_SPECIAL(val_6_5, val_neg_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_neg_2_25, neg_two, false, 0);
 
     TEST_SPECIAL(max_normal, max_normal, zero, false, 0);
     TEST_SPECIAL(max_normal, -max_normal, zero, false, 0);
