@@ -219,6 +219,9 @@ public:
   size_t getNumSuccessors() const { return Successors.size(); }
   size_t getNumPredecessors() const { return Predecessors.size(); }
 
+  /// Returns true if this block has any predecessors.
+  bool hasPredecessors() const { return !Predecessors.empty(); }
+
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
   /// has successors. \return the root enclosing block if all enclosing blocks
@@ -4301,9 +4304,8 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return count_if(ExitBlocks,
-                    [](VPIRBasicBlock *EB) {
-                      return EB->getNumPredecessors() != 0;
-                    }) > 1 ||
+                    [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
+               1 ||
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 
@@ -4311,7 +4313,7 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return !(getScalarPreheader()->getNumPredecessors() == 0 ||
+    return !(!getScalarPreheader()->hasPredecessors() ||
              getScalarPreheader()->getSinglePredecessor() == getEntry());
   }
 };
