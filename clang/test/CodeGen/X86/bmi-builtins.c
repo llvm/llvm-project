@@ -92,7 +92,7 @@ long long test_mm_tzcnt_64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000000ULL) == 64);
 TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000001ULL) == 0);
-TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000800000000ULL) == 35);
+TEST_CONSTEXPR(_mm_mm_tzcnt_64(0x0000000800000000ULL) == 35);
 #endif
 
 unsigned long long test_tzcnt_u64(unsigned long long __X) {
@@ -210,7 +210,7 @@ unsigned long long test__blsr_u64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(__blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
 #endif
-#endif
+#endif // !defined(TEST_TZCNT)
 
 // Intel intrinsics
 
@@ -350,4 +350,4 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(_blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
 #endif
-#endif // !defined(TEST_TZCNT)
+#endif
