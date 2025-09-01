@@ -11023,7 +11023,10 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
       }
       SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
-            return isa<PoisonValue>(V) || Values.contains(V);
+            return isa<PoisonValue>(V) || Values.contains(V) ||
+                   (S.getOpcode() == Instruction::PHI && isa<PHINode>(V) &&
+                    LI->getLoopFor(S.getMainOp()->getParent()) &&
+                    isVectorized(V));
           })) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
         return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
@@ -20529,7 +20532,9 @@ Value *BoUpSLP::vectorizeTree(
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
-            is_contained(VectorizableTree.front()->Scalars, I)))
+            is_contained(VectorizableTree.front()->Scalars, I)) &&
+          !(!VectorizableTree.front()->isGather() &&
+            VectorizableTree.front()->isCopyableElement(I)))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {

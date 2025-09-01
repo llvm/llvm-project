@@ -3615,12 +3615,12 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop)
+  if (!VectorLoop)
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
-  unsigned FixedVF = VF.getFixedValue();
+  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
@@ -3642,13 +3642,21 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (R.mayWriteToMemory() && !InterleaveR)
       return;
 
+    // Do not narrow interleave groups if there are VectorPointer recipes and
+    // the plan was unrolled. The recipe implicitly uses VF from
+    // VPTransformState.
+    // TODO: Remove restriction once the VF for the VectorPointer offset is
+    // modeled explicitly as operand.
+    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
+      return;
+
     // All other ops are allowed, but we reject uses that cannot be converted
     // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF, TypeInfo,
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
                                       VectorRegWidth))
       return;
 
@@ -3767,14 +3775,22 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
-                         CanIV->getScalarType(), 1 * Plan.getUF())));
-  Plan.getVF().replaceAllUsesWith(
-      Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  VPBuilder PHBuilder(Plan.getVectorPreheader());
+
+  VPValue *UF = Plan.getOrAddLiveIn(
+      ConstantInt::get(CanIV->getScalarType(), 1 * Plan.getUF()));
+  if (VF.isScalable()) {
+    VPValue *VScale = PHBuilder.createElementCount(
+        CanIV->getScalarType(), ElementCount::getScalable(1));
+    VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
+    Inc->setOperand(1, VScaleUF);
+    Plan.getVF().replaceAllUsesWith(VScale);
+  } else {
+    Inc->setOperand(1, UF);
+    Plan.getVF().replaceAllUsesWith(
+        Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  }
   removeDeadRecipes(Plan);
-  assert(none_of(*VectorLoop->getEntryBasicBlock(),
-                 IsaPred<VPVectorPointerRecipe>) &&
-         "All VPVectorPointerRecipes should have been removed");
 }
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
