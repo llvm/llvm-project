@@ -366,13 +366,7 @@ public:
   size_t size() const { return Matchers.size(); }
   bool empty() const { return Matchers.empty(); }
 
-  std::unique_ptr<PredicateMatcher> popFirstCondition() override {
-    assert(!Conditions.empty() &&
-           "Trying to pop a condition from a condition-less group");
-    std::unique_ptr<PredicateMatcher> P = std::move(Conditions.front());
-    Conditions.erase(Conditions.begin());
-    return P;
-  }
+  std::unique_ptr<PredicateMatcher> popFirstCondition() override;
   const PredicateMatcher &getFirstCondition() const override {
     assert(!Conditions.empty() &&
            "Trying to get a condition from a condition-less group");
@@ -410,7 +404,7 @@ class SwitchMatcher : public Matcher {
 
   /// The representative condition, with a type and a path (InsnVarID and OpIdx
   /// in most cases)  shared by all the matchers contained.
-  std::unique_ptr<PredicateMatcher> Condition = nullptr;
+  std::unique_ptr<PredicateMatcher> Condition;
 
   /// Temporary set used to check that the case values don't repeat within the
   /// same switch.
@@ -545,7 +539,7 @@ protected:
                              StringRef FlagName, GISelFlags FlagBit);
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc) : SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -704,7 +698,7 @@ public:
     return make_range(Matchers.begin(), Matchers.end());
   }
   bool insnmatchers_empty() const { return Matchers.empty(); }
-  void insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
+  void insnmatchers_pop_front();
 };
 
 template <class PredicateTy> class PredicateListMatcher {

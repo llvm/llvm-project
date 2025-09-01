@@ -145,6 +145,16 @@ inline int_pred_ty<is_all_ones> m_AllOnes() {
   return int_pred_ty<is_all_ones>();
 }
 
+struct is_zero_int {
+  bool isValue(const APInt &C) const { return C.isZero(); }
+};
+
+/// Match an integer 0 or a vector with all elements equal to 0.
+/// For vectors, this includes constants with undefined elements.
+inline int_pred_ty<is_zero_int> m_ZeroInt() {
+  return int_pred_ty<is_zero_int>();
+}
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;
@@ -218,9 +228,12 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
-           "recipe with matched opcode does not have the expected number of "
-           "operands");
+    if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
+      assert(Opcode == Instruction::PHI &&
+             "non-variadic recipe with matched opcode does not have the "
+             "expected number of operands");
+      return false;
+    }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
     if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
@@ -302,10 +315,17 @@ m_Broadcast(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExplicitVectorLength, Op0_t>
+m_EVL(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExplicitVectorLength>(Op0);
+}
+
+template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractLastElement, Op0_t>
 m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
+
 template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
@@ -345,6 +365,12 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
+template <typename Op0_t>
+inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>, Op0_t>
+m_ZExtOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), Op0);
+}
+
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Opcode, Op0_t, Op1_t> m_Binary(const Op0_t &Op0,
                                                       const Op1_t &Op1) {
@@ -379,6 +405,13 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Instruction::Mul, Op0_t, Op1_t>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
+}
+
+/// Match a binary AND operation.
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_commutative_match<Instruction::And, Op0_t, Op1_t>
+m_c_BinaryAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Binary<Instruction::And, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary OR operation. Note that while conceptually the operands can
