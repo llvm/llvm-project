@@ -156,6 +156,28 @@ define i32 @psrli_h(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.pusati.h.i32.i32(i32, i32)
+
+define i32 @pusati_h(i32 %a, i32 %b) {
+; RV32P-LABEL: pusati_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    pusati.h a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.pusati.h.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.usati.i32.i32(i32, i32)
+
+define i32 @usati(i32 %a, i32 %b) {
+; RV32P-LABEL: usati:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    usati a0, a0, 1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.usati.i32.i32(i32 %a, i32 1)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {
