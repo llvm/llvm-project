@@ -5226,7 +5226,7 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
                             DepClassTy::REQUIRED);
     if (ConstVals && ConstVals->isValidState()) {
       unsigned ShiftValue =
-          std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
+          std::min(ConstVals->getAssumedMinTrailingZeros(), 63U);
       Alignment = Align(1 << ShiftValue);
     }
     if (AlignAA && AlignAA->isValidState())
