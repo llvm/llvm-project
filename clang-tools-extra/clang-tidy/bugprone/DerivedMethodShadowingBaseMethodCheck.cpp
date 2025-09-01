@@ -9,7 +9,6 @@
 #include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include <stack>
 
 using namespace clang::ast_matchers;
 
