@@ -572,10 +572,10 @@ func.func @elect_one_leader_sync() {
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "prefetch.tensormap [$0];", "l"
-  nvvm.prefetch.tensormap %desc : !llvm.ptr
+  //CHECK: nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %desc : !llvm.ptr
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$1 prefetch.tensormap [$0];", "l,b"
-  nvvm.prefetch.tensormap %desc, predicate = %pred : !llvm.ptr, i1
+  nvvm.prefetch tensormap, %desc, predicate = %pred : !llvm.ptr, i1
   llvm.return
 }
 

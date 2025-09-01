@@ -586,7 +586,7 @@ func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: 
 }
 
 // CHECK-LABEL: @prefetch
-func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>, %const_ptr: !llvm.ptr<4>) {
   // CHECK:   nvvm.prefetch level = L1, %{{.*}}
   nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
   // CHECK:   nvvm.prefetch level = L1, %{{.*}}
@@ -599,12 +599,24 @@ func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: 
   nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
   // CHECK:   nvvm.prefetch level = L2, %{{.*}}
   nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
-  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
-  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
-  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
-  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, evict_priority = evict_last, %{{.*}}
+  nvvm.prefetch level = L2, evict_priority = evict_last, %global_ptr :
+  !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, evict_priority = evict_normal, %{{.*}}
+  nvvm.prefetch level = L2, evict_priority = evict_normal, %global_ptr : !llvm.ptr<1>
   // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
   nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %const_ptr : !llvm.ptr<4>
+  // CHECK:   nvvm.prefetch tensormap in_param_space, %{{.*}}
+  nvvm.prefetch tensormap in_param_space, %gen_ptr : !llvm.ptr
+  return
+}
+
+// CHECK-LABEL: @prefetch_tensormap
+func.func @prefetch_tensormap(%gen_ptr: !llvm.ptr, %const_ptr: !llvm.ptr<4>) {
   return
 }
 
