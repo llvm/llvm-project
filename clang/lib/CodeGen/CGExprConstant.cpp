@@ -2237,6 +2237,19 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       llvm::Constant *C = CGM.getRawFunctionPointer(FD);
+      // ForWebAssembly target we need to create thunk functions
+      // to properly handle function pointers args with a different signature
+      // Due to opaque pointers, this can not be handled in LLVM
+      // (WebAssemblyFixFunctionBitcast) anymore
+      if (CGM.getTriple().isWasm() && DestType->isFunctionPointerType()) {
+        llvm::Function *Thunk =
+            CGM.getTargetCodeGenInfo().getOrCreateWasmFunctionPointerThunk(
+                CGM, C, D->getType(), DestType);
+        if (Thunk) {
+          C = Thunk;
+        }
+      }
+
       if (FD->getType()->isCFIUncheckedCalleeFunctionType())
         C = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(C));
       return PtrAuthSign(C);
