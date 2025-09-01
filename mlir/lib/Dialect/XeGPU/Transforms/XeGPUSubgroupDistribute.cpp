@@ -1032,9 +1032,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       if (!isa<VectorType>(operand.get().getType()))
         continue;
 
-      // Vectors operands of these ops have a fixed and implicit layout.
-      if (isa<xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op))
-        continue;
       auto layout =
           xegpu::getDistributeLayoutAttrOfType<xegpu::LayoutAttr>(operand);
       if (!layout) {
