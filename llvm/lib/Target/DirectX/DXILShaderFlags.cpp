@@ -85,6 +85,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
     return false;
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
+  case Intrinsic::dx_wave_get_lane_count:
   case Intrinsic::dx_wave_any:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:

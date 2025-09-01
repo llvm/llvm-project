@@ -27,6 +27,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i32 @wave_get_lane_count() {
+entry:
+  ; CHECK: Function wave_get_lane_count : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.get.lane.count()
+  ret i32 %ret
+}
+
 define noundef i1 @wave_any(i1 %x) {
 entry:
   ; CHECK: Function wave_any : [[WAVE_FLAG]]
