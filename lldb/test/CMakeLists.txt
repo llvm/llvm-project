@@ -51,8 +51,10 @@ set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CA
 
 # Configure and create module cache directories.
 set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")
+set(LLDB_TEST_MODULE_CACHE_LLDB_SHELL "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb/lldb-shell" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running shell tests.")
 set(LLDB_TEST_MODULE_CACHE_CLANG "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-clang" CACHE PATH "The Clang module cache used by the Clang while building tests.")
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_LLDB})
+file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_LLDB_SHELL})
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_CLANG})
 
 # Windows and Linux have no built-in ObjC runtime. Turn this on in order to run tests with GNUstep.
