@@ -209,7 +209,6 @@ extractThreeVariablesAndInstructions(
   return {SortedVars[0], SortedVars[1], SortedVars[2]};
 }
 
-/// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
 static std::optional<std::bitset<8>>
 evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
                           const SmallVector<Instruction *> &Instructions) {
@@ -250,8 +249,8 @@ evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2,
   return std::bitset<8>(Computed.at(Expr));
 }
 
-// Entry point for the 3-variable boolean expression folding. Handles early
-// returns.
+/// Entry point for the 3-variable boolean expression folding. Handles early
+/// returns.
 static Value *foldThreeVarBoolExpr(Instruction &Root,
                                    InstCombiner::BuilderTy &Builder) {
 
