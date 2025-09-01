@@ -269,6 +269,19 @@ bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
   }
   return AllValid;
 }
+
+bool isRootSignatureTarget(StringRef Profile) {
+  if (std::optional<llvm::Triple> T = tryParseTriple(Profile))
+    return T->getEnvironment() == Triple::EnvironmentType::RootSignature;
+  return false;
+}
+
+bool isRootSignatureTarget(DerivedArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    return isRootSignatureTarget(A->getValue());
+  return false;
+}
+
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -327,6 +340,12 @@ void tools::hlsl::LLVMObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
     const char *Frs = Args.MakeArgString("--remove-section=RTS0");
     CmdArgs.push_back(Frs);
   }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_target_profile))
+    if (isRootSignatureTarget(A->getValue())) {
+      const char *Fos = Args.MakeArgString("--only-section=RTS0");
+      CmdArgs.push_back(Fos);
+    }
 
   assert(CmdArgs.size() > 2 && "Unnecessary invocation of objcopy.");
 
@@ -504,7 +523,8 @@ bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
 
 bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
   return Args.hasArg(options::OPT_dxc_Fo) &&
-         Args.hasArg(options::OPT_dxc_strip_rootsignature);
+         (Args.hasArg(options::OPT_dxc_strip_rootsignature) ||
+          isRootSignatureTarget(Args));
 }
 
 bool HLSLToolChain::isLastJob(DerivedArgList &Args,
