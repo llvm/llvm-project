@@ -656,6 +656,13 @@ static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecflushdlone,
 };
 
+static constexpr FeatureBitset XMIPSGroup = {
+    RISCV::FeatureVendorXMIPSLSP,
+    RISCV::FeatureVendorXMIPSCMov,
+    RISCV::FeatureVendorXMIPSCBOP,
+    RISCV::FeatureVendorXMIPSEXECTL,
+};
+
 static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadBa,      RISCV::FeatureVendorXTHeadBb,
     RISCV::FeatureVendorXTHeadBs,      RISCV::FeatureVendorXTHeadCondMov,
@@ -684,13 +691,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
-    {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},
-    {DecoderTableXmipscmov32,
-     {RISCV::FeatureVendorXMIPSCMov},
-     "MIPS mips.ccmov"},
-    {DecoderTableXmipscbop32,
-     {RISCV::FeatureVendorXMIPSCBOP},
-     "MIPS mips.pref"},
+    {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     // Standard Extensions
