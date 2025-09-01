@@ -4404,6 +4404,10 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
     Result = CompareStandardConversionSequences(S, Loc,
                                                 ICS1.Standard, ICS2.Standard);
   else if (ICS1.isUserDefined()) {
+    // With lazy template loading, it is possible to find non-canonical
+    // FunctionDecls, depending on when redecl chains are completed. Make sure
+    // to compare the canonical decls of conversion functions. This avoids
+    // ambiguity problems for templated conversion operators.
     const FunctionDecl *ConvFunc1 = ICS1.UserDefined.ConversionFunction;
     if (ConvFunc1)
       ConvFunc1 = ConvFunc1->getCanonicalDecl();
