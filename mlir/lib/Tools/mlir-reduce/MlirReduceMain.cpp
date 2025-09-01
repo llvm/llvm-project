@@ -26,9 +26,9 @@
 using namespace mlir;
 
 // Parse and verify the input MLIR file. Returns null on error.
-OwningOpRef<Operation *> loadModule(MLIRContext &context,
-                                    StringRef inputFilename,
-                                    bool insertImplictModule) {
+static OwningOpRef<Operation *> loadModule(MLIRContext &context,
+                                           StringRef inputFilename,
+                                           bool insertImplictModule) {
   // Set up the input file.
   std::string errorMessage;
   auto file = openInputFile(inputFilename, &errorMessage);
