@@ -3158,7 +3158,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
-      [&](bool IsZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
           VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
@@ -3167,7 +3167,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
-              IsZExt, Opcode, RedTy, SrcVecTy, CostKind);
+              isZExt, Opcode, RedTy, SrcVecTy, CostKind);
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
@@ -3192,7 +3192,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *MulR = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
@@ -3201,12 +3201,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   MulR, RecipeA, RecipeB, nullptr)) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
+                                   Mul, RecipeA, RecipeB, nullptr)) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr))
-      return new VPExpressionRecipe(MulR, Red);
+    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+      return new VPExpressionRecipe(Mul, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
