@@ -10,10 +10,10 @@ define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 1 for VF 8: exit condition instruction   %exitcond.not = icmp eq i64 %i.iv.next, 16
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 8: WIDEN-REDUCTION-PHI ir<{{.+}}> = phi vp<{{.+}}>, ir<{{.+}}>
 ; CHECK: Cost for VF 8: 30
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 16: WIDEN-REDUCTION-PHI ir<{{.+}}> = phi vp<{{.+}}>, ir<{{.+}}>
 ; CHECK: Cost for VF 16: 56
 ; CHECK: LV: Selecting VF: 16
 entry:

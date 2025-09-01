@@ -69,7 +69,7 @@ class UnrollState {
                                 VPBasicBlock::iterator InsertPtForPhi);
 
   VPValue *getConstantVPV(unsigned Part) {
-    Type *CanIVIntTy = Plan.getCanonicalIV()->getScalarType();
+    Type *CanIVIntTy = TypeInfo.inferScalarType(Plan.getCanonicalIV());
     return Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, Part));
   }
 
@@ -79,7 +79,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || V->isLiveIn())
+    if (Part == 0 || V->isLiveIn() || isa<VPRegionValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
