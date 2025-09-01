@@ -6,7 +6,7 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-seh.cpp
     )
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
     Unwind_AIXExtras.cpp
     )

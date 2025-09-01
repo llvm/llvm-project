@@ -720,6 +720,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
                      IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                      OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
@@ -806,6 +808,11 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(
           " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
     }
+
+    if (AMDGPU::isGFX1250(STM))
+      OutStreamer->emitRawComment(
+          " NamedBarCnt: " + getMCExprStr(CurrentProgramInfo.NamedBarCnt),
+          false);
 
     OutStreamer->emitRawComment(
         " Occupancy: " + getMCExprStr(CurrentProgramInfo.Occupancy), false);
@@ -1012,6 +1019,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
 
+  const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
+  const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
+      GetSymRefExpr(RIK::RIK_NumNamedBarrier), BarBlkConst, Ctx);
+  ProgInfo.NamedBarCnt = MCBinaryExpr::createDiv(AlignToBlk, BarBlkConst, Ctx);
+
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // The calculations related to SGPR/VGPR blocks are
@@ -1110,8 +1122,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.diagnose(Diag);
   }
 
-  if (MFI->getLDSSize() >
-      static_cast<unsigned>(STM.getAddressableLocalMemorySize())) {
+  if (MFI->getLDSSize() > STM.getAddressableLocalMemorySize()) {
     LLVMContext &Ctx = MF.getFunction().getContext();
     DiagnosticInfoResourceLimit Diag(
         MF.getFunction(), "local memory", MFI->getLDSSize(),
@@ -1252,6 +1263,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
+
+  if (AMDGPU::isGFX1250(STM))
+    ProgInfo.ComputePGMRSrc3 =
+        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
 
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,

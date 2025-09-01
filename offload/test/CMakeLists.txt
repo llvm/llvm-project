@@ -64,8 +64,6 @@ add_offload_testsuite(check-offload
   DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
-add_subdirectory(ompTest)
-
 # Add liboffload unit tests - the test binary will run on all available devices
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in

@@ -1339,3 +1339,47 @@ float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
   return __builtin_elementwise_pow(b, hi->b.yyy);
 }
+
+void test_builtin_elementwise_ctlz(int i32, int2 v2i32, short i16,
+                                   double f64, double2 v2f64) {
+  f64 = __builtin_elementwise_ctlz(f64);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'double')}}
+
+  _Complex float c1;
+  c1 = __builtin_elementwise_ctlz(c1);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was '_Complex float')}}
+
+  v2i32 = __builtin_elementwise_ctlz(v2i32, i32);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'int')}}
+
+  v2i32 = __builtin_elementwise_ctlz(v2i32, f64);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'double')}}
+
+  v2i32 = __builtin_elementwise_ctlz();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  v2i32 = __builtin_elementwise_ctlz(v2i32, v2i32, f64);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+}
+
+void test_builtin_elementwise_cttz(int i32, int2 v2i32, short i16,
+                                   double f64, double2 v2f64) {
+  f64 = __builtin_elementwise_cttz(f64);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'double')}}
+
+  _Complex float c1;
+  c1 = __builtin_elementwise_cttz(c1);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was '_Complex float')}}
+
+  v2i32 = __builtin_elementwise_cttz(v2i32, i32);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'int')}}
+
+  v2i32 = __builtin_elementwise_cttz(v2i32, f64);
+  // expected-error@-1 {{arguments are of different types ('int2' (vector of 2 'int' values) vs 'double')}}
+
+  v2i32 = __builtin_elementwise_cttz();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  v2i32 = __builtin_elementwise_cttz(v2i32, v2i32, f64);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+}

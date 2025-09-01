@@ -4691,7 +4691,6 @@ void Driver::BuildDriverManagedModuleBuildActions(
     Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
     ActionList &Actions) const {
   Diags.Report(diag::remark_performing_driver_managed_module_build);
-  return;
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP

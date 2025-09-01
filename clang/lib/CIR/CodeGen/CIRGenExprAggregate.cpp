@@ -69,6 +69,12 @@ public:
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
 
   void VisitCallExpr(const CallExpr *e);
+  void VisitStmtExpr(const StmtExpr *e) {
+    CIRGenFunction::StmtExprEvaluation eval(cgf);
+    Address retAlloca =
+        cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
+    (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca, dest);
+  }
 
   void VisitDeclRefExpr(DeclRefExpr *e) { emitAggLoadOfLValue(e); }
 

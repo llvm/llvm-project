@@ -49,8 +49,7 @@ DEPENDENTS_TO_TEST = {
         "flang",
     },
     "lld": {"bolt", "cross-project-tests"},
-    # TODO(issues/132795): LLDB should be enabled on clang changes.
-    "clang": {"clang-tools-extra", "cross-project-tests"},
+    "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {

@@ -81,6 +81,8 @@ public:
       CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
       clang::BaseSubobject base,
       const clang::CXXRecordDecl *nearestVBase) override;
+  void emitVTableDefinitions(CIRGenVTables &cgvt,
+                             const CXXRecordDecl *rd) override;
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
     return true;
@@ -268,6 +270,67 @@ bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
     return true;
 
   return false;
+}
+
+void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
+                                                const CXXRecordDecl *rd) {
+  cir::GlobalOp vtable = getAddrOfVTable(rd, CharUnits());
+  if (vtable.hasInitializer())
+    return;
+
+  ItaniumVTableContext &vtContext = cgm.getItaniumVTableContext();
+  const VTableLayout &vtLayout = vtContext.getVTableLayout(rd);
+  cir::GlobalLinkageKind linkage = cgm.getVTableLinkage(rd);
+  mlir::Attribute rtti =
+      cgm.getAddrOfRTTIDescriptor(cgm.getLoc(rd->getBeginLoc()),
+                                  cgm.getASTContext().getCanonicalTagType(rd));
+
+  // Classic codegen uses ConstantInitBuilder here, which is a very general
+  // and feature-rich class to generate initializers for global values.
+  // For now, this is using a simpler approach to create the initializer in CIR.
+  cgvt.createVTableInitializer(vtable, vtLayout, rtti,
+                               cir::isLocalLinkage(linkage));
+
+  // Set the correct linkage.
+  vtable.setLinkage(linkage);
+
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
+    vtable.setComdat(true);
+
+  // Set the right visibility.
+  cgm.setGVProperties(vtable, rd);
+
+  // If this is the magic class __cxxabiv1::__fundamental_type_info,
+  // we will emit the typeinfo for the fundamental types. This is the
+  // same behaviour as GCC.
+  const DeclContext *DC = rd->getDeclContext();
+  if (rd->getIdentifier() &&
+      rd->getIdentifier()->isStr("__fundamental_type_info") &&
+      isa<NamespaceDecl>(DC) && cast<NamespaceDecl>(DC)->getIdentifier() &&
+      cast<NamespaceDecl>(DC)->getIdentifier()->isStr("__cxxabiv1") &&
+      DC->getParent()->isTranslationUnit()) {
+    cgm.errorNYI(rd->getSourceRange(),
+                 "emitVTableDefinitions: __fundamental_type_info");
+  }
+
+  auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
+  assert(vtableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
+  // Always emit type metadata on non-available_externally definitions, and on
+  // available_externally definitions if we are performing whole program
+  // devirtualization. For WPD we need the type metadata on all vtable
+  // definitions to ensure we associate derived classes with base classes
+  // defined in headers but with a strong definition only in a shared
+  // library.
+  assert(!cir::MissingFeatures::vtableEmitMetadata());
+  if (cgm.getCodeGenOpts().WholeProgramVTables) {
+    cgm.errorNYI(rd->getSourceRange(),
+                 "emitVTableDefinitions: WholeProgramVTables");
+  }
+
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (vtContext.isRelativeLayout()) {
+    cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
+  }
 }
 
 void CIRGenItaniumCXXABI::emitDestructorCall(

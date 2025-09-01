@@ -1141,8 +1141,6 @@ namespace llvm {
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
-    void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
 
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;

@@ -33,8 +33,8 @@ int main() {
   }
 
   // clang-format off
-  // CHECK: DEVID:  0 SGN:5 {{.*}} tripcount:588 rpc:0 md:1 md_LB:0 md_UB:293
-  // CHECK: DEVID:  1 SGN:5 {{.*}} tripcount:588 rpc:0 md:1 md_LB:294 md_UB:587
+  // CHECK: DEVID:  0 SGN:7 {{.*}} tripcount:588 rpc:0 md:1 md_LB:0 md_UB:293
+  // CHECK: DEVID:  1 SGN:7 {{.*}} tripcount:588 rpc:0 md:1 md_LB:294 md_UB:587
   // clang-format on
 
   // Checking the results are correct:

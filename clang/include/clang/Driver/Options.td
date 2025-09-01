@@ -6972,10 +6972,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
@@ -9758,8 +9758,12 @@ def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
 def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
-      HelpText<"Specify the available SPIR-V extensions. If this option is not "
-               "specified, then all extensions are available.">;
+      HelpText<
+          "Specify the available SPIR-V extensions. If this option is not "
+          "specified, then all extensions are available. If KHR is specified, "
+          "then all KHR extensions will be available. If DXC is specifided, "
+          "then all extensions implemented by the DirectX Shader compiler will "
+          "be available. This option is useful for moving from DXC to Clang.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;

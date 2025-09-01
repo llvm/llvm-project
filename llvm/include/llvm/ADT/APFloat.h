@@ -605,10 +605,6 @@ public:
                          unsigned FormatMaxPadding = 3,
                          bool TruncateZero = true) const;
 
-  /// If this value has an exact multiplicative inverse, store it in inv and
-  /// return true.
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
   LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
@@ -886,8 +882,6 @@ public:
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
 
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
   LLVM_ABI friend int ilogb(const DoubleAPFloat &X);
@@ -1051,6 +1045,8 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1414,6 +1410,8 @@ public:
     return Res == cmpGreaterThan || Res == cmpEqual;
   }
 
+  // IEEE comparison with another floating point number (NaNs compare unordered,
+  // 0==-0).
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1500,9 +1498,9 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool getExactInverse(APFloat *inv) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
-  }
+  /// If this value is normal and has an exact, normal, multiplicative inverse,
+  /// store it in inv and return true.
+  bool getExactInverse(APFloat *Inv) const;
 
   // If this is an exact power of two, return the exponent while ignoring the
   // sign bit. If it's not an exact power of 2, return INT_MIN

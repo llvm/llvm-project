@@ -287,17 +287,18 @@ enum class RTLDependenceKindTy {
 };
 
 namespace xteam_red {
-// Upper limit on CU multiplier for computing number of teams.
+// Upper limit on CU multiplier for computing number of teams. Assuming a
+// maximum of 32 wave slots per CU.
 constexpr int16_t MaxCUMultiplier = 32;
 
 // Maximum number of threads allowed per CU.
 constexpr int16_t MaxThreadsPerCU = 2048;
 
-// Desired number of wavefronts per CU.
+// Desired number of wavefronts per CU. Aiming for 50% occupancy.
 constexpr int16_t DesiredWavesPerCU = 16;
 
-// Default block size, currently different from other kernel types.
-constexpr int16_t DefaultBlockSize = 1024;
+// Default block size, potentially different from other kernel types.
+constexpr int16_t DefaultBlockSize = 512;
 
 // Max block size, same as other kernel types, but maintaining it here
 // so that it is accessible for all targets.

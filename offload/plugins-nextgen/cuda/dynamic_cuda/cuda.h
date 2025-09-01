@@ -291,6 +291,7 @@ static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
 static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
 typedef void (*CUstreamCallback)(CUstream, CUresult, void *);
+typedef size_t (*CUoccupancyB2DSize)(int);
 
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
@@ -321,6 +322,16 @@ CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
 CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
 CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
+
+CUresult cuMemsetD8Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD16Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD32Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD2D8Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                           CUstream);
+CUresult cuMemsetD2D16Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
+CUresult cuMemsetD2D32Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
 
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
@@ -353,6 +364,7 @@ CUresult cuCtxSetLimit(CUlimit, size_t);
 
 CUresult cuEventCreate(CUevent *, unsigned int);
 CUresult cuEventRecord(CUevent, CUstream);
+CUresult cuEventQuery(CUevent);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
 CUresult cuEventDestroy(CUevent);
@@ -373,5 +385,7 @@ CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
 CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        const CUmemAllocationProp *prop,
                                        CUmemAllocationGranularity_flags option);
+CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
+                                          CUoccupancyB2DSize, size_t, int);
 
 #endif

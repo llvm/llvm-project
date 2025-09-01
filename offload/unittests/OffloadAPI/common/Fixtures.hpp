@@ -26,6 +26,20 @@
   } while (0)
 #endif
 
+#ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
+#define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+      GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
+      return;                                                                  \
+    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
+#endif
+
 // TODO: rework this so the EXPECTED/ACTUAL results are readable
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \

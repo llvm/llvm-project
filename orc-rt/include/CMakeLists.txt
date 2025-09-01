@@ -1,5 +1,18 @@
 set(ORC_RT_HEADERS
+    orc-rt-c/ExternC.h
+    orc-rt-c/WrapperFunctionResult.h
     orc-rt-c/orc-rt.h
+    orc-rt/BitmaskEnum.h
+    orc-rt/Compiler.h
+    orc-rt/Error.h
+    orc-rt/ExecutorAddr.h
+    orc-rt/IntervalMap.h
+    orc-rt/IntervalSet.h
+    orc-rt/Math.h
+    orc-rt/RTTI.h
+    orc-rt/WrapperFunctionResult.h
+    orc-rt/move_only_function.h
+    orc-rt/span.h
 )
 
 # TODO: Switch to filesets when we move to cmake-3.23.

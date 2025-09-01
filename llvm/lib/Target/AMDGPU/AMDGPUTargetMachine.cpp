@@ -90,6 +90,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -125,6 +126,44 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 namespace {
+//===----------------------------------------------------------------------===//
+// AMDGPU CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class AMDGPUCodeGenPassBuilder
+    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
+  using Base = CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine>;
+
+public:
+  AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
+                           const CGPassBuilderOption &Opts,
+                           PassInstrumentationCallbacks *PIC);
+
+  void addIRPasses(AddIRPass &) const;
+  void addCodeGenPrepare(AddIRPass &) const;
+  void addPreISel(AddIRPass &addPass) const;
+  void addILPOpts(AddMachinePass &) const;
+  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
+  Error addInstSelector(AddMachinePass &) const;
+  void addPreRewrite(AddMachinePass &) const;
+  void addMachineSSAOptimization(AddMachinePass &) const;
+  void addPostRegAlloc(AddMachinePass &) const;
+  void addPreEmitPass(AddMachinePass &) const;
+  void addPreEmitRegAlloc(AddMachinePass &) const;
+  Error addRegAssignmentOptimized(AddMachinePass &) const;
+  void addPreRegAlloc(AddMachinePass &) const;
+  void addOptimizedRegAlloc(AddMachinePass &) const;
+  void addPreSched2(AddMachinePass &) const;
+
+  /// Check if a pass is enabled given \p Opt option. The option always
+  /// overrides defaults if explicitly used. Otherwise its default will be used
+  /// given that a pass shall work at an optimization \p Level minimum.
+  bool isPassEnabled(const cl::opt<bool> &Opt,
+                     CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
+  void addEarlyCSEOrGVNPass(AddIRPass &) const;
+  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
+};
+
 class SGPRRegisterRegAlloc : public RegisterRegAllocBase<SGPRRegisterRegAlloc> {
 public:
   SGPRRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)

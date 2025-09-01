@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 namespace mlir {
 
 class VectorType;
@@ -127,6 +128,20 @@ void doSCFStructuralTypeConversionWithTensorType(Operation *op,
 /// GPU module operation. Returns the chip identifier if found, or nullopt
 /// if no GPU module parent or XeVM target attribute exists.
 std::optional<std::string> getChipStr(Operation *op);
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
+                                              ArrayRef<OpFoldResult> lhs,
+                                              ArrayRef<OpFoldResult> rhs);
 
 } // namespace xegpu
 

@@ -1,0 +1,52 @@
+# Test the --dump-dot-func option with multiple functions 
+# (includes tests for both mangled/unmangled names)
+
+RUN: %clang++ %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
+
+# Test 1: --dump-dot-func with specific function name (mangled)
+RUN: llvm-bolt %t.exe -o %t.bolt1 --dump-dot-func=_Z3addii -v=1 2>&1 | FileCheck %s --check-prefix=ADD
+
+# Test 2: --dump-dot-func with regex pattern (main.*)
+RUN: llvm-bolt %t.exe -o %t.bolt2 --dump-dot-func="main.*" -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-REGEX
+
+# Test 3: --dump-dot-func with multiple specific functions (mangled names)
+RUN: llvm-bolt %t.exe -o %t.bolt3 --dump-dot-func=_Z3addii,_Z8multiplyii -v=1 2>&1 | FileCheck %s --check-prefix=MULTI
+
+# Test 4: No option specified should create no dot files
+RUN: llvm-bolt %t.exe -o %t.bolt4 2>&1 | FileCheck %s --check-prefix=NONE
+
+# Test 5: --dump-dot-func with non-existent function
+RUN: llvm-bolt %t.exe -o %t.bolt5 --dump-dot-func=nonexistent -v=1 2>&1 | FileCheck %s --check-prefix=NONEXISTENT
+
+# Test 6: Backward compatibility - --dump-dot-all should still work
+RUN: llvm-bolt %t.exe -o %t.bolt6 --dump-dot-all -v=1 2>&1 | FileCheck %s --check-prefix=ALL
+
+# Test 7: Test with unmangled function name (main function)
+RUN: llvm-bolt %t.exe -o %t.bolt7 --dump-dot-func=main -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-UNMANGLED
+
+# Check that specific functions are dumped
+ADD: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to _Z11main_helperv-00_build-cfg.dot
+
+MAIN-REGEX-DAG: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MAIN-REGEX-NOT: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MAIN-REGEX-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
+
+MULTI-DAG: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MULTI-DAG: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
+MULTI-NOT: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MULTI-NOT: BOLT-INFO: dumping CFG to _Z11main_helperv-00_build-cfg.dot
+
+# Should be no dumping messages when no option is specified
+NONE-NOT: BOLT-INFO: dumping CFG
+
+# Should be no dumping messages for non-existent function
+NONEXISTENT-NOT: BOLT-INFO: dumping CFG
+
+ALL: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+
+MAIN-UNMANGLED: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MAIN-UNMANGLED-NOT: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MAIN-UNMANGLED-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot

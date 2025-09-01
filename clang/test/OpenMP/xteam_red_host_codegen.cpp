@@ -131,7 +131,7 @@ int main()
 // CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP19]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[SUM1]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[SUM2]], align 4
@@ -164,7 +164,7 @@ int main()
 // CHECK-NEXT:    [[DEFAULT_DEV:%.*]] = call i32 @omp_get_default_device()
 // CHECK-NEXT:    [[TEAM_PROCS:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV]])
 // CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TEAM_PROCS]] to i64
-// CHECK-NEXT:    [[TMP27:%.*]] = mul i64 2, [[TMP26]]
+// CHECK-NEXT:    [[TMP27:%.*]] = mul i64 4, [[TMP26]]
 // CHECK-NEXT:    [[INITIAL_DEVID:%.*]] = call i32 @omp_get_initial_device()
 // CHECK-NEXT:    [[D_TEAM_VALS_SZ:%.*]] = mul i64 8, [[TMP27]]
 // CHECK-NEXT:    [[D_TEAM_VALS20:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ]], i32 [[DEFAULT_DEV]])
@@ -390,7 +390,7 @@ int main()
 // CHECK-NEXT:    [[DEFAULT_DEV38:%.*]] = call i32 @omp_get_default_device()
 // CHECK-NEXT:    [[TEAM_PROCS39:%.*]] = call i32 @ompx_get_team_procs(i32 [[DEFAULT_DEV38]])
 // CHECK-NEXT:    [[TMP125:%.*]] = zext i32 [[TEAM_PROCS39]] to i64
-// CHECK-NEXT:    [[TMP126:%.*]] = mul i64 2, [[TMP125]]
+// CHECK-NEXT:    [[TMP126:%.*]] = mul i64 4, [[TMP125]]
 // CHECK-NEXT:    [[INITIAL_DEVID40:%.*]] = call i32 @omp_get_initial_device()
 // CHECK-NEXT:    [[D_TEAM_VALS_SZ41:%.*]] = mul i64 8, [[TMP126]]
 // CHECK-NEXT:    [[D_TEAM_VALS42:%.*]] = call ptr @omp_target_alloc(i64 [[D_TEAM_VALS_SZ41]], i32 [[DEFAULT_DEV38]])
@@ -541,18 +541,18 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP5]], ptr [[DOTADDR11]], align 8
 // CHECK-NEXT:    store ptr [[TMP6]], ptr [[DOTADDR12]], align 8
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[DOTADDR13]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8, !nonnull [[META9]], !align [[META11:![0-9]+]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[VLA_ADDR4]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VLA_ADDR6]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP20]], ptr [[N_CASTED]], align 4
 // CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -641,18 +641,18 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP5]], ptr [[DOTADDR11]], align 8
 // CHECK-NEXT:    store ptr [[TMP6]], ptr [[DOTADDR12]], align 8
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[DOTADDR13]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[VLA_ADDR4]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VLA_ADDR6]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[SUM114]], align 8
 // CHECK-NEXT:    store i32 0, ptr [[SUM215]], align 4
 // CHECK-NEXT:    store float 0.000000e+00, ptr [[SUM316]], align 4
@@ -854,18 +854,18 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP5]], ptr [[DOTADDR11]], align 8
 // CHECK-NEXT:    store ptr [[TMP6]], ptr [[DOTADDR12]], align 8
 // CHECK-NEXT:    store ptr [[TMP7]], ptr [[DOTADDR13]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[SUM1_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[SUM2_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SUM3_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
 // CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[VLA_ADDR4]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META9]], !align [[META11]]
+// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SUM4_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VLA_ADDR6]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP20]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1118,9 +1118,9 @@ int main()
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -1164,9 +1164,9 @@ int main()
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[SUM52]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1296,9 +1296,9 @@ int main()
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM5_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4

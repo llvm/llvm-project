@@ -2393,6 +2393,33 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cospif",
+    hdrs = ["src/__support/math/cospif.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
+        ":common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_cospif16",
+    hdrs = ["src/__support/math/cospif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3220,23 +3247,14 @@ libc_math_function(
 libc_math_function(
     name = "cospif",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_sincosf_utils",
-        ":common_constants",
+        ":__support_math_cospif",
     ],
 )
 
 libc_math_function(
     name = "cospif16",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_math_sincosf16_utils",
+        ":__support_math_cospif16",
     ],
 )
 
@@ -4913,6 +4931,7 @@ libc_support_library(
         "src/string/memory_utils/aarch64/inline_memcpy.h",
         "src/string/memory_utils/aarch64/inline_memmove.h",
         "src/string/memory_utils/aarch64/inline_memset.h",
+        "src/string/memory_utils/aarch64/inline_strlen.h",
         "src/string/memory_utils/arm/common.h",
         "src/string/memory_utils/arm/inline_memcpy.h",
         "src/string/memory_utils/arm/inline_memset.h",
@@ -4937,6 +4956,7 @@ libc_support_library(
         "src/string/memory_utils/x86_64/inline_memcpy.h",
         "src/string/memory_utils/x86_64/inline_memmove.h",
         "src/string/memory_utils/x86_64/inline_memset.h",
+        "src/string/memory_utils/x86_64/inline_strlen.h",
     ],
     deps = [
         ":__support_common",
@@ -4961,6 +4981,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":hdr_limits_macros",
         ":llvm_libc_types_size_t",
+        ":string_memory_utils",
         ":types_size_t",
     ],
 )
@@ -5133,6 +5154,19 @@ libc_function(
     hdrs = ["src/string/strrchr.h"],
     deps = [
         ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strsep",
+    srcs = ["src/string/strsep.cpp"],
+    hdrs = ["src/string/strsep.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":hdr_signal_macros",
+        ":string_memory_utils",
         ":string_utils",
     ],
 )
