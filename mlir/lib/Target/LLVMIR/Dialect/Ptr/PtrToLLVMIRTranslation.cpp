@@ -273,11 +273,6 @@ convertMaskedStoreOp(MaskedStoreOp maskedStoreOp, llvm::IRBuilderBase &builder,
   if (!value || !ptr || !mask)
     return maskedStoreOp.emitError("Failed to lookup operands");
 
-  // Get the value type.
-  llvm::Type *valueType = value->getType();
-  if (!valueType)
-    return maskedStoreOp.emitError("Failed to get value type");
-
   // Get the alignment.
   llvm::MaybeAlign alignment(maskedStoreOp.getAlignment().value_or(0));
 
@@ -296,11 +291,6 @@ convertScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
 
   if (!value || !ptrs || !mask)
     return scatterOp.emitError("Failed to lookup operands");
-
-  // Get the value type
-  llvm::Type *valueType = value->getType();
-  if (!valueType)
-    return scatterOp.emitError("Failed to get value type");
 
   // Get the alignment.
   llvm::MaybeAlign alignment(scatterOp.getAlignment().value_or(0));

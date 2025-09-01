@@ -316,7 +316,7 @@ def Ptr_MaskedLoadOp : Pointer_Op<"masked_load", [
     attr-dict `:` qualified(type($ptr)) `->` type($result)
   }];
   let builders = [
-    OpBuilder<(ins "Type":$resultType, "Value":$ptrs, "Value":$mask,
+    OpBuilder<(ins "Type":$resultType, "Value":$ptr, "Value":$mask,
       "Value":$passthrough, CArg<"unsigned", "0">:$alignment)>
   ];
   let hasVerifier = 1;
