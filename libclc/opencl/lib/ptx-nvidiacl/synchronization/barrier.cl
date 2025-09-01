@@ -11,7 +11,8 @@
 #include <clc/synchronization/clc_work_group_barrier.h>
 
 _CLC_DEF _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags) {
-  int memory_scope = getCLCMemoryScope(flags);
+  int memory_scope = __opencl_get_memory_scope(flags);
   int memory_order = __ATOMIC_SEQ_CST;
-  __clc_work_group_barrier(memory_scope, memory_order);
+  __CLC_MemorySemantics memory_semantics = __opencl_get_memory_semantics(flags);
+  __clc_work_group_barrier(memory_scope, memory_order, memory_semantics);
 }
