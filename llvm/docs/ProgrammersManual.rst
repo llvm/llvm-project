@@ -1143,8 +1143,8 @@ be passed by value.
 
 .. _DEBUG:
 
-The ``LLVM_DEBUG()`` macro and ``-debug`` option
-------------------------------------------------
+The ``LDBG`` and ``LLVM_DEBUG()`` macros and ``-debug`` option
+--------------------------------------------------------------
 
 Often when working on your pass you will put a bunch of debugging printouts and
 other code into your pass.  After you get it working, you want to remove it, but
@@ -1154,36 +1154,65 @@ Naturally, because of this, you don't want to delete the debug printouts, but
 you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
-The ``llvm/Support/Debug.h`` (`doxygen
-<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
-``LLVM_DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
-put arbitrary code into the argument of the ``LLVM_DEBUG`` macro, and it is only
-executed if '``opt``' (or any other tool) is run with the '``-debug``' command
-line argument:
+The ``llvm/Support/DebugLog.h`` file provides a macro named ``LDBG`` that is a
+more convenient way to add debug output to your code. It is a macro that
+provides a raw_ostream that is used to write the debug output.
 
 .. code-block:: c++
 
-  LLVM_DEBUG(dbgs() << "I am here!\n");
+  LDBG() << "I am here!";
 
-Then you can run your pass like this:
+It'll only print the output if the debug output is enabled.
+It also supports a `level` argument to control the verbosity of the output.
+
+.. code-block:: c++
+
+  LDBG(2) << "I am here!";
+
+A ``DEBUG_TYPE`` macro should be defined in the file before using ``LDBG()``.
+The file name and line number are automatically added to the output, as well as
+a terminating newline.
+
+The debug output can be enabled by passing the ``-debug`` command line argument.
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  I am here!
+  [my-pass:2] MyPass.cpp:123 I am here!
 
-Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command-line option for the debug output for your
-pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
-do not cause a performance impact at all (for the same reason, they should also
-not contain side-effects!).
+While `LDBG()` is useful to add debug output to your code, there are cases
+where you may need to guard a block of code with a debug check. The
+``llvm/Support/Debug.h`` (`doxygen
+<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
+``LLVM_DEBUG()`` that offers a solution to this problem.  You can put arbitrary
+code into the argument of the ``LLVM_DEBUG`` macro, and it is only executed if
+'``opt``' (or any other tool) is run with the '``-debug``' command
+line argument.
 
-One additional nice thing about the ``LLVM_DEBUG()`` macro is that you can enable or
-disable it directly in gdb.  Just use "``set DebugFlag=0``" or "``set
-DebugFlag=1``" from the gdb if the program is running.  If the program hasn't
-been started yet, you can always just run it with ``-debug``.
+.. code-block:: c++
+
+  LLVM_DEBUG({
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
+
+
+Using these macros instead of a home-brewed solution allows you to not have to
+create "yet another" command-line option for the debug output for your pass.
+Note that ``LDBG()`` and ``LLVM_DEBUG()`` macros are disabled for non-asserts
+builds, so they do not cause a performance impact at all (for the same reason,
+they should also not contain side-effects!).
+
+One additional nice thing about the ``LDBG()`` and ``LLVM_DEBUG()`` macros is
+that you can enable or disable it directly in gdb.  Just use
+"``set DebugFlag=0``" or "``set DebugFlag=1``" from the gdb if the program is
+running.  If the program hasn't been started yet, you can always just run it
+with ``-debug``.
 
 .. _DEBUG_TYPE:
 
@@ -1199,52 +1228,74 @@ follows:
 .. code-block:: c++
 
   #define DEBUG_TYPE "foo"
-  LLVM_DEBUG(dbgs() << "'foo' debug type\n");
-  #undef  DEBUG_TYPE
-  #define DEBUG_TYPE "bar"
-  LLVM_DEBUG(dbgs() << "'bar' debug type\n");
-  #undef  DEBUG_TYPE
+  LDBG(2) << "Hello,";
+  // DEBUG_TYPE can be overridden locally, here with "bar"
+  LDBG("bar", 3) << "'bar' debug type";
 
-Then you can run your pass like this:
+
+A more fine-grained control can be achieved by passing the ``-debug-only``
+command line argument:
 
 .. code-block:: none
 
-  $ opt < a.bc > /dev/null -mypass
-  <no output>
-  $ opt < a.bc > /dev/null -mypass -debug
-  'foo' debug type
-  'bar' debug type
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  'foo' debug type
-  $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  'bar' debug type
+  [foo:2] MyPass.cpp:123 Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  'foo' debug type
-  'bar' debug type
+  [foo:2] MyPass.cpp:123 Hello,
+  [bar:3] MyPass.cpp:124 World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar
+  [bar:3] MyPass.cpp:124 World!
 
-Of course, in practice, you should only set ``DEBUG_TYPE`` at the top of a file,
-to specify the debug type for the entire module. Be careful that you only do
-this after including ``Debug.h`` and not around any #include of headers. Also, you
-should use names more meaningful than "foo" and "bar", because there is no
-system in place to ensure that names do not conflict. If two different modules
-use the same string, they will all be turned on when the name is specified.
+The debug-only argument is a comma separated list of debug types and levels.
+The level is an optional integer setting the maximum debug level to enable:
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
+  [foo:2] MyPass.cpp:123 Hello,
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
+  [bar:3] MyPass.cpp:124 World!
+
+Instead of opting in specific debug types, the ``-debug-only`` option also
+works to filter out debug output for specific debug types, by omitting the
+level (or setting it to 0):
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:
+  [bar:3] MyPass.cpp:124 World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
+
+
+In practice, you should only set ``DEBUG_TYPE`` at the top of a file, to
+specify the debug type for the entire module. Be careful that you only do
+this after you're done including headers (in particular ``Debug.h``/``DebugLog.h``).
+Also, you should use names more meaningful than "foo" and "bar", because there
+is no system in place to ensure that names do not conflict. If two different
+modules use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
 files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
-For performance reasons, -debug-only is not available in optimized build
-(``--enable-optimized``) of LLVM.
+For performance reasons, -debug-only is not available in non-asserts build
+of LLVM.
 
-The ``DEBUG_WITH_TYPE`` macro is also available for situations where you would
-like to set ``DEBUG_TYPE``, but only for one specific ``DEBUG`` statement.  It
-takes an additional first parameter, which is the type to use.  For example, the
-preceding example could be written as:
+The ``DEBUG_WITH_TYPE`` macro is an alternative to the ``LLVM_DEBUG()`` macro
+for situations where you would like to set ``DEBUG_TYPE``, but only for one
+specific ``LLVM_DEBUG`` statement.  It takes an additional first parameter,
+which is the type to use. The example from the previous section could be
+written as:
 
 .. code-block:: c++
 
-  DEBUG_WITH_TYPE("foo", dbgs() << "'foo' debug type\n");
-  DEBUG_WITH_TYPE("bar", dbgs() << "'bar' debug type\n");
+  DEBUG_WITH_TYPE("special-type", {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG("special-type") << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
 
 .. _Statistic:
 
