@@ -575,7 +575,10 @@ def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
 
     if (
         op.a.geom in ["m16n8k16", "m16n8k32"]
-        and any(x in ["e4m3", "e5m2"] for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type))
+        and any(
+            x in ["e4m3", "e5m2"]
+            for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type)
+        )
         and ptx_version < 87
     ):
         return False
@@ -583,18 +586,19 @@ def is_mma_variant_supported(op, layout_a, layout_b, kind, satf):
     if kind != "" and (ptx_version < 87 or gpu_arch < 120 or not aa):
         return False
 
-    if (
-        kind != ""
-        and (
-            op.a.geom != "m16n8k32"
-            or op.a.mma_type.ptx_type not in ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]
-        )
+    if kind != "" and (
+        op.a.geom != "m16n8k32"
+        or op.a.mma_type.ptx_type not in ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"]
     ):
         return False
 
-    if (kind == ""
+    if (
+        kind == ""
         and op.a.geom in ["m16n8k16", "m16n8k32"]
-        and any(x in ["e3m2", "e2m3", "e2m1"] for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type))
+        and any(
+            x in ["e3m2", "e2m3", "e2m1"]
+            for x in (op.a.mma_type.ptx_type, op.b.mma_type.ptx_type)
+        )
     ):
         return False
 
@@ -1086,12 +1090,8 @@ def gen_wmma_mma_tests():
 
 
 def gen_mma_tests():
-    mma_intrinsic_template = (
-        "llvm.nvvm.mma${b1op}.${geom}.${alayout}.${blayout}${kind}${satf}.${intrinsic_signature}"
-    )
-    mma_instruction_template = (
-        "mma.sync${aligned}.${geom}.${alayout}.${blayout}${kind}${satf}.${ptx_signature}${b1op}"
-    )
+    mma_intrinsic_template = "llvm.nvvm.mma${b1op}.${geom}.${alayout}.${blayout}${kind}${satf}.${intrinsic_signature}"
+    mma_instruction_template = "mma.sync${aligned}.${geom}.${alayout}.${blayout}${kind}${satf}.${ptx_signature}${b1op}"
 
     generated_items = []
 
