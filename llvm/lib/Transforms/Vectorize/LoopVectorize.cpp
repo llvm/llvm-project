@@ -7321,8 +7321,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
     SCEVCheckBlock->moveAfter(EntryBB);
 
+MDNode *LID = OrigLoop->getLoopID();
   std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
-      OrigLoop->getLoopID(),
+      LID,
       {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
 
   BestVPlan.execute(&State);
@@ -7363,10 +7364,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     } else {
       // Keep all loop hints from the original loop on the vector loop (we'll
       // replace the vectorizer-specific hints below).
-      if (BestVPlan.getScalarPreheader()->hasPredecessors()) {
-        if (MDNode *LID = OrigLoop->getLoopID())
-          L->setLoopID(LID);
-      }
+      if (LID)
+        L->setLoopID(LID);
 
       LoopVectorizeHints Hints(L, true, *ORE);
       Hints.setAlreadyVectorized();
