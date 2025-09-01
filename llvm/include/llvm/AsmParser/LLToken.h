@@ -187,6 +187,9 @@ enum Kind {
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
+  kw_chericcallcc,
+  kw_chericcallee,
+  kw_cherilibcallcc,
 
   // Attributes:
   kw_attributes,

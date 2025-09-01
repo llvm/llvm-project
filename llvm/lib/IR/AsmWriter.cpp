@@ -430,6 +430,15 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     CC_VLS_CASE(32768)
     CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
+  case CallingConv::CHERI_CCall:
+    Out << "chericcallcc";
+    break;
+  case CallingConv::CHERI_CCallee:
+    Out << "chericcallee";
+    break;
+  case CallingConv::CHERI_LibCall:
+    Out << "cherilibcallcc";
+    break;
   }
 }
 
