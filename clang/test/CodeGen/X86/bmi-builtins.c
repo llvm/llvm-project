@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
 // RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
 
-
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -92,7 +91,7 @@ long long test_mm_tzcnt_64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000000ULL) == 64);
 TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000000000001ULL) == 0);
-TEST_CONSTEXPR(_mm_mm_tzcnt_64(0x0000000800000000ULL) == 35);
+TEST_CONSTEXPR(_mm_tzcnt_64(0x0000000800000000ULL) == 35);
 #endif
 
 unsigned long long test_tzcnt_u64(unsigned long long __X) {
@@ -105,7 +104,7 @@ TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000000ULL) == 64);
 TEST_CONSTEXPR(_tzcnt_u64(0x0000000000000001ULL) == 0);
 TEST_CONSTEXPR(_tzcnt_u64(0x0000000800000000ULL) == 35);
 #endif
-#endif
+#endif // __x86_64__
 
 #if !defined(TEST_TZCNT)
 unsigned int test__andn_u32(unsigned int __X, unsigned int __Y) {
@@ -210,6 +209,7 @@ unsigned long long test__blsr_u64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(__blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
 #endif
+#endif // __x86_64__
 #endif // !defined(TEST_TZCNT)
 
 // Intel intrinsics
@@ -350,4 +350,4 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 TEST_CONSTEXPR(_blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)));
 #endif
-#endif
+#endif // __x86_64__
