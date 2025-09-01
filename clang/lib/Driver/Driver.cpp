@@ -1856,13 +1856,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Populate the tool chains for the offloading devices, if any.
   CreateOffloadingDeviceToolChains(*C, Inputs);
 
-  // Construct the list of abstract actions to perform for this compilation. On
-  // MachO targets this uses the driver-driver and universal actions.
-  if (TC.getTriple().isOSBinFormatMachO())
-    BuildUniversalActions(*C, C->getDefaultToolChain(), Inputs);
-  else
-    BuildActions(*C, C->getArgs(), Inputs, C->getActions());
-
   if (C->getArgs().hasFlag(options::OPT_fmodules_driver,
                            options::OPT_fno_modules_driver, false)) {
     // TODO: When -fmodules-driver is no longer experimental, it should be
@@ -1882,6 +1875,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     }
     Diags.Report(diag::remark_performing_driver_managed_module_build);
   }
+
+  // Construct the list of abstract actions to perform for this compilation. On
+  // MachO targets this uses the driver-driver and universal actions.
+  if (TC.getTriple().isOSBinFormatMachO())
+    BuildUniversalActions(*C, C->getDefaultToolChain(), Inputs);
+  else
+    BuildActions(*C, C->getArgs(), Inputs, C->getActions());
 
   if (CCCPrintPhases) {
     PrintActions(*C);
