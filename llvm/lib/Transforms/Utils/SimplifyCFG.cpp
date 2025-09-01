@@ -6497,8 +6497,6 @@ private:
   bool LinearMapValWrapped = false;
 
   // For LookupTableKind, this is the table.
-  GlobalVariable *Table = nullptr;
-  ArrayType *TableTy = nullptr;
   Constant *Initializer = nullptr;
 };
 
@@ -6629,7 +6627,7 @@ SwitchReplacement::SwitchReplacement(
   }
 
   // Store the table in an array.
-  TableTy = ArrayType::get(ValueType, TableSize);
+  auto *TableTy = ArrayType::get(ValueType, TableSize);
   Initializer = ConstantArray::get(TableTy, TableContents);
 
   Kind = LookupTableKind;
@@ -6678,11 +6676,10 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case LookupTableKind: {
-    // Only build lookup table when we have a target that supports it or the
-    // attribute is notable.
-    Table = new GlobalVariable(*Func->getParent(), TableTy, /*isConstant=*/true,
-                               GlobalVariable::PrivateLinkage, Initializer,
-                               "switch.table." + Func->getName());
+    auto *Table =
+        new GlobalVariable(*Func->getParent(), Initializer->getType(),
+                           /*isConstant=*/true, GlobalVariable::PrivateLinkage,
+                           Initializer, "switch.table." + Func->getName());
     Table->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     // Set the alignment to that of an array items. We will be only loading one
     // value out of it.
