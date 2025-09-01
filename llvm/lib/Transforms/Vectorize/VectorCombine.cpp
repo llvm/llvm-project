@@ -987,7 +987,7 @@ static Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
 // bitop(castop(x), C) ->
 // bitop(castop(x), castop(InvC)) ->
 // castop(bitop(x, InvC))
-// Supports: bitcast, trunc, sext, zext
+// Supports: bitcast
 bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
   Instruction *LHS;
   Constant *C;
@@ -1006,9 +1006,6 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
   // Only handle supported cast operations
   switch (CastOpcode) {
   case Instruction::BitCast:
-  case Instruction::Trunc:
-  case Instruction::SExt:
-  case Instruction::ZExt:
     break;
   default:
     return false;
@@ -1073,16 +1070,6 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
 
   // Create the cast operation directly to ensure we get a new instruction
   Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
-
-  // Preserve cast instruction flags
-  if (RHSFlags.NNeg)
-    NewCast->setNonNeg();
-  if (RHSFlags.NSW)
-    NewCast->setHasNoSignedWrap();
-  if (RHSFlags.NUW)
-    NewCast->setHasNoUnsignedWrap();
-
-  NewCast->andIRFlags(LHSCast);
 
   // Insert the new instruction
   Value *Result = Builder.Insert(NewCast);
