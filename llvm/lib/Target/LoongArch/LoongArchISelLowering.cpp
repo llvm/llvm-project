@@ -2522,7 +2522,8 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   auto *LN = cast<LoadSDNode>(IdentitySrc);
   auto ExtType = LN->getExtensionType();
 
-  if (ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) {
+  if ((ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) &&
+      VT.getScalarSizeInBits() == LN->getMemoryVT().getScalarSizeInBits()) {
     SDVTList Tys =
         LN->isIndexed()
             ? DAG.getVTList(VT, LN->getBasePtr().getValueType(), MVT::Other)
