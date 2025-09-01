@@ -172,10 +172,10 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
-set(MLIR_BUILD_MLIR_DYLIB 0 CACHE BOOL "Builds the libMLIR shared library")
-set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL "Link tools against libMLIR.so")
+option(MLIR_BUILD_MLIR_DYLIB "Builds the libMLIR shared library" OFF)
+option(MLIR_LINK_MLIR_DYLIB "Link tools against libMLIR.so" ${LLVM_LINK_LLVM_DYLIB})
 if (MLIR_LINK_MLIR_DYLIB)
-  set(MLIR_BUILD_MLIR_DYLIB 1)
+  set(MLIR_BUILD_MLIR_DYLIB ON)
 endif()
 
 configure_file(
