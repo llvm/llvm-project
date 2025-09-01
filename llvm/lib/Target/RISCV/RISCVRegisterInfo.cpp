@@ -170,7 +170,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())
-      report_fatal_error("Graal reserved registers do not exist in RVE");
+      reportFatalUsageError("Graal reserved registers do not exist in RVE");
     markSuperRegs(Reserved, RISCV::X23_H);
     markSuperRegs(Reserved, RISCV::X27_H);
   }
@@ -216,7 +216,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        report_fatal_error(
+        reportFatalUsageError(
             "Frame size outside of the signed 32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
@@ -511,7 +511,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
   if (!isInt<32>(Offset.getFixed())) {
-    report_fatal_error(
+    reportFatalUsageError(
         "Frame offsets outside of the signed 32-bit range not supported");
   }
 
@@ -966,7 +966,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       }
     }
 
-    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.  We do this even
+    // without the fusions explicitly enabled as the impact is rarely negative
+    // and some cores do implement this fusion.
     if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
         MI.getOperand(1).isReg()) {
       const MachineBasicBlock &MBB = *MI.getParent();
@@ -974,9 +976,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Is the previous instruction a LUI or AUIPC that can be fused?
       if (I != MBB.begin()) {
         I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
-        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
-             (I->getOpcode() == RISCV::AUIPC &&
-              Subtarget.hasAUIPCADDIFusion())) &&
+        if ((I->getOpcode() == RISCV::LUI || I->getOpcode() == RISCV::AUIPC) &&
             I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
           if (OpIdx == 0)
             tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);

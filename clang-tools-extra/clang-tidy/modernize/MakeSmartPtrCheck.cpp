@@ -16,15 +16,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
 constexpr char ConstructorCall[] = "constructorCall";
 constexpr char DirectVar[] = "directVar";
 constexpr char ResetCall[] = "resetCall";
 constexpr char NewExpression[] = "newExpression";
 
-std::string getNewExprName(const CXXNewExpr *NewExpr, const SourceManager &SM,
-                           const LangOptions &Lang) {
+static std::string getNewExprName(const CXXNewExpr *NewExpr,
+                                  const SourceManager &SM,
+                                  const LangOptions &Lang) {
   StringRef WrittenName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           NewExpr->getAllocatedTypeSourceInfo()->getTypeLoc().getSourceRange()),
@@ -34,8 +33,6 @@ std::string getNewExprName(const CXXNewExpr *NewExpr, const SourceManager &SM,
   }
   return WrittenName.str();
 }
-
-} // namespace
 
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 

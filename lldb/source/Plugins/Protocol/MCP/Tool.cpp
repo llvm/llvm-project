@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Tool.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 
 using namespace lldb_private;
 using namespace lldb_protocol;
@@ -29,10 +29,10 @@ bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
          O.mapOptional("arguments", A.arguments);
 }
 
-/// Helper function to create a TextResult from a string output.
-static lldb_protocol::mcp::TextResult createTextResult(std::string output,
-                                                       bool is_error = false) {
-  lldb_protocol::mcp::TextResult text_result;
+/// Helper function to create a CallToolResult from a string output.
+static lldb_protocol::mcp::CallToolResult
+createTextResult(std::string output, bool is_error = false) {
+  lldb_protocol::mcp::CallToolResult text_result;
   text_result.content.emplace_back(
       lldb_protocol::mcp::TextContent{{std::move(output)}});
   text_result.isError = is_error;
@@ -41,7 +41,7 @@ static lldb_protocol::mcp::TextResult createTextResult(std::string output,
 
 } // namespace
 
-llvm::Expected<lldb_protocol::mcp::TextResult>
+llvm::Expected<lldb_protocol::mcp::CallToolResult>
 CommandTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
   if (!std::holds_alternative<json::Value>(args))
     return createStringError("CommandTool requires arguments");
