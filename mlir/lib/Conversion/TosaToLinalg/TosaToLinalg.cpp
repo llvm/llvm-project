@@ -1683,8 +1683,8 @@ public:
           unsigned outBitWidth = outIntType.getWidth();
           assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
 
-          Value multiplier =
-              multiplierConstant ? multiplierConstant : blockArgs[multiplierArg];
+          Value multiplier = multiplierConstant ? multiplierConstant
+                                                : blockArgs[multiplierArg];
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.isUnsignedInteger()) {
