@@ -2326,6 +2326,10 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPValue *NewAddr = GetNewAddr(S->getAddr());
         return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
       })
+      .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
+        VPValue *NewMask = GetNewMask(IR->getMask());
+        return new VPInterleaveEVLRecipe(*IR, EVL, NewMask);
+      })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
@@ -2448,16 +2452,17 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     if (!EVLRecipe)
       continue;
 
-    [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
+    unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
     assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
            "New recipe must define the same number of values as the "
            "original.");
-    assert(NumDefVal <= 1 &&
-           "Only supports recipes with a single definition or without users.");
     EVLRecipe->insertBefore(CurRecipe);
-    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
-      VPValue *CurVPV = CurRecipe->getVPSingleValue();
-      CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
+    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPInterleaveEVLRecipe>(
+            EVLRecipe)) {
+      for (unsigned I = 0; I < NumDefVal; ++I) {
+        VPValue *CurVPV = CurRecipe->getVPValue(I);
+        CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(I));
+      }
     }
     ToErase.push_back(CurRecipe);
   }
