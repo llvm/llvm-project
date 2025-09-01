@@ -1488,6 +1488,10 @@ void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
     P->Initialize();
     S.ActOnStartOfTranslationUnit();
 
+    // Skim through the file to parse to find the define
+    while (P->getCurToken().getKind() != tok::eof)
+      P->ConsumeAnyToken();
+
     HLSLRootSignatureDecl *SignatureDecl =
         S.HLSL().lookupRootSignatureOverrideDecl(
             S.getASTContext().getTranslationUnitDecl());
