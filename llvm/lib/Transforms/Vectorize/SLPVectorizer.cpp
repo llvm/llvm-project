@@ -17853,10 +17853,9 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     if (!V1->getType()->isIntOrIntVectorTy())
       return V1;
     return castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
+                                return !isa<PoisonValue>(V) &&
+                                       !isKnownNonNegative(
+                                           V, SimplifyQuery(*R.DL));
                               }));
   }
 
