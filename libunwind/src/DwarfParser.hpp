@@ -273,7 +273,7 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
           pint_t pcRange = addressSpace.getEncodedP(
               p, nextCFI, cieInfo->pointerEncoding & 0x0F);
           // Test if pc is within the function this FDE covers.
-          if ((pcStart < pc) && (pc <= pcStart + pcRange)) {
+          if ((pcStart <= pc) && (pc < pcStart + pcRange)) {
             // parse rest of info
             fdeInfo->lsda = 0;
             // check for augmentation length
