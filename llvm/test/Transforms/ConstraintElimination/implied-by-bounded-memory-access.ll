@@ -26,6 +26,25 @@ define i8 @load_global(i64 %idx) {
   ret i8 %add
 }
 
+define i8 @load_global_const_offset(i64 %idx) {
+; CHECK-LABEL: define i8 @load_global_const_offset(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr @g, i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 true to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep1 = getelementptr nuw i8, ptr @g, i64 1
+  %gep = getelementptr nuw i8, ptr %gep1, i64 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp ult i64 %idx, 4
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
+
 define i8 @load_global_atomic(i64 %idx) {
 ; CHECK-LABEL: define i8 @load_global_atomic(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {

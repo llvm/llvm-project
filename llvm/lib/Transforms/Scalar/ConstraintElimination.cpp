@@ -1131,9 +1131,9 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   // Be conservative since we are not clear on whether an out of bounds access
   // to the padding is UB or not.
   Opts.RoundToAlign = true;
-  ObjectSizeOffsetVisitor Visitor(DL, &TLI, GEP.getContext(), Opts);
-  SizeOffsetAPInt Data = Visitor.compute(Offset.BasePtr);
-  if (!Data.bothKnown() || !Data.Offset.isZero())
+  std::optional<TypeSize> Size =
+      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
     return false;
 
   // Index * Scale + ConstOffset + AccessSize <= AllocSize
@@ -1142,9 +1142,10 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   // value for Index.
   uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
   auto &[Index, Scale] = Offset.VariableOffsets.front();
-  APInt MaxIndex =
-      (Data.Size - APInt(BitWidth, AccessSize) - Offset.ConstantOffset)
-          .udiv(Scale);
+  APInt MaxIndex = (APInt(BitWidth, Size->getFixedValue() - AccessSize,
+                          /*isSigned=*/false, /*implicitTrunc=*/true) -
+                    Offset.ConstantOffset)
+                       .udiv(Scale);
   Pred = ICmpInst::ICMP_ULE;
   A = Index;
   B = ConstantInt::get(Index->getType(), MaxIndex);
