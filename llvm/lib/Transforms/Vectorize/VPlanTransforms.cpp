@@ -2038,6 +2038,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           PH->appendRecipe(NewOp);
         }
       }
+
     }
   }
 }
