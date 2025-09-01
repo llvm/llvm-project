@@ -6459,6 +6459,9 @@ public:
   static bool wouldFitInRegister(const DataLayout &DL, uint64_t TableSize,
                                  Type *ElementType);
 
+  /// Return the default value of the switch.
+  Constant *getDefaultValue();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6480,6 +6483,9 @@ private:
     // instructions from the table.
     LookupTableKind
   } Kind;
+
+  // The default value of the switch.
+  Constant *DefaultValue;
 
   // The type of the output values.
   Type *ValueType;
@@ -6505,7 +6511,8 @@ private:
 SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName) {
+    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
+    : DefaultValue(DefaultValue) {
   assert(Values.size() && "Can't build lookup table without values!");
   assert(TableSize >= Values.size() && "Can't fit values in table!");
 
@@ -6739,6 +6746,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
   return BitWidth >= 8 && isPowerOf2_32(BitWidth) &&
          DL.fitsInLegalInteger(IT->getBitWidth());
 }
+
+Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
 
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
@@ -7060,6 +7069,21 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (!shouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
     return false;
 
+  // Keep track of the switch replacement for each phi
+  SmallDenseMap<PHINode *, SwitchReplacement> PhiToReplacementMap;
+  for (PHINode *PHI : PHIs) {
+    const auto &ResultList = ResultLists[PHI];
+
+    Type *ResultType = ResultList.begin()->second->getType();
+    // Use any value to fill the lookup table holes.
+    Constant *DefaultVal =
+        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
+    StringRef FuncName = Fn->getName();
+    SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
+                                  ResultList, DefaultVal, DL, FuncName);
+    PhiToReplacementMap.insert({PHI, Replacement});
+  }
+
   Builder.SetInsertPoint(SI);
   // TableIndex is the switch condition - TableIndexOffset if we don't
   // use the condition directly
@@ -7075,27 +7099,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
                                    "switch.tableidx", /*HasNUW =*/false,
                                    /*HasNSW =*/!MayWrap);
-  }
-
-  // Keep track of the tables we create for each phi node
-  struct ReplacementParams {
-    SwitchReplacement Replacer;
-    Constant *DefaultVal;
-  };
-  // Keep track of the switch replacement for each phi
-  SmallDenseMap<PHINode *, ReplacementParams> PhiToReplacementMap;
-  for (PHINode *PHI : PHIs) {
-    const auto &ResultList = ResultLists[PHI];
-
-    Type *ResultType = ResultList.begin()->second->getType();
-    // Use any value to fill the lookup table holes.
-    Constant *DefaultVal =
-        AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
-    StringRef FuncName = Fn->getName();
-    SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
-                                  ResultList, DefaultVal, DL, FuncName);
-    ReplacementParams Parameters = {Replacement, DefaultVal};
-    PhiToReplacementMap.insert({PHI, Parameters});
   }
 
   std::vector<DominatorTree::UpdateType> Updates;
@@ -7186,9 +7189,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
-    auto TableInfo = PhiToReplacementMap.at(PHI);
-    auto *Result =
-        TableInfo.Replacer.replaceSwitch(TableIndex, Builder, DL, Fn);
+    auto Replacement = PhiToReplacementMap.at(PHI);
+    auto *Result = Replacement.replaceSwitch(TableIndex, Builder, DL, Fn);
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
     if (!TableHasHoles && HasDefaultResults && RangeCheckBranch) {
@@ -7196,7 +7198,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // Search for compare instructions which use the phi.
       for (auto *User : PHI->users()) {
         reuseTableCompare(User, PhiBlock, RangeCheckBranch,
-                          TableInfo.DefaultVal, ResultList);
+                          Replacement.getDefaultValue(), ResultList);
       }
     }
 
