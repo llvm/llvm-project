@@ -289,7 +289,7 @@ class IntEnum<string name, string summary, list<EnumCase> cases, int width>
 class I32Enum<string name, string summary, list<EnumCase> cases>
     : IntEnum<name, summary, cases, 32>;
 class I64Enum<string name, string summary, list<EnumCase> cases>
-    : IntEnum<name, summary, cases, 32>;
+    : IntEnum<name, summary, cases, 64>;
 
 // An enum attribute backed by IntegerAttr.
 //
