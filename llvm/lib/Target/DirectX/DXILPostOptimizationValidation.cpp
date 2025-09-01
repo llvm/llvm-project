@@ -182,7 +182,7 @@ static void validateRootSignature(Module &M,
     dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      dxbc::RTS0::v1::RootConstants Const =
+      mcdxbc::RootConstants Const =
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
@@ -193,7 +193,7 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::CBV: {
-      dxbc::RTS0::v2::RootDescriptor Desc =
+      mcdxbc::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
       Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
                            Desc.ShaderRegister, Desc.ShaderRegister,
