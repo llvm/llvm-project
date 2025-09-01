@@ -13,6 +13,13 @@
 using namespace llvm;
 using namespace llvm::objcopy;
 
+Expected<const ELFConfig &> ConfigManager::getELFConfig() const {
+  if (!Common.ExtractSection.empty())
+    return createStringError(llvm::errc::invalid_argument,
+                             "option is not supported for ELF");
+  return ELF;
+}
+
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
       !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
