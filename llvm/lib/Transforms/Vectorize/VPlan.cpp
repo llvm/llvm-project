@@ -973,12 +973,23 @@ void VPlan::execute(VPTransformState *State) {
   LLVM_DEBUG(dump());
 
   BasicBlock *ScalarPh = State->CFG.ExitBB;
-  if (getScalarPreheader()->getNumPredecessors() > 0) {
+  if (getScalarPreheader()->hasPredecessors()) {
     // Disconnect scalar preheader and scalar header, as the dominator tree edge
     // will be updated as part of VPlan execution. This allows keeping the DTU
     // logic generic during VPlan execution.
     State->CFG.DTU.applyUpdates(
         {{DominatorTree::Delete, ScalarPh, ScalarPh->getSingleSuccessor()}});
+  } else {
+    Loop *OrigLoop = State->LI->getLoopFor(
+        cast<VPIRBasicBlock>(getScalarPreheader()->getSingleSuccessor())
+            ->getIRBasicBlock());
+    // If the original loop is unreachable, we need to delete it.
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(
+        cast<VPIRBasicBlock>(getScalarPreheader())->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      State->LI->removeBlock(BB);
+    State->LI->erase(OrigLoop);
   }
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(

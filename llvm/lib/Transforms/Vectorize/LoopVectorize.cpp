@@ -2573,7 +2573,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Remove redundant induction instructions.
   cse(HeaderBB);
 
-  if (Plan.getScalarPreheader()->hasPredecessors())
+  if (!Plan.getScalarPreheader()->hasPredecessors())
     return;
 
   // Set/update profile weights for the vector and remainder loops as original
@@ -7230,7 +7230,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::removeBranchOnConst(BestVPlan);
   if (BestVPlan.getEntry()->getSingleSuccessor() ==
       BestVPlan.getScalarPreheader()) {
-    // TODO: Should not even try to vectorize.
+    // TODO: The vector loop would be dead, should not even try to vectorize.
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
+             << "Created vector loop never executes.";
+    });
     return DenseMap<const SCEV *, Value *>();
   }
 
@@ -7315,6 +7321,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
     SCEVCheckBlock->moveAfter(EntryBB);
 
+  std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
+      OrigLoop->getLoopID(),
+      {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
+
   BestVPlan.execute(&State);
 
   // 2.5 When vectorizing the epilogue, fix reduction resume values from the
@@ -7347,21 +7357,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // replace the vectorizer-specific hints below).
   VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
   if (HeaderVPBB) {
-    MDNode *OrigLoopID = OrigLoop->getLoopID();
-
-    std::optional<MDNode *> VectorizedLoopID =
-        makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
-                                        LLVMLoopVectorizeFollowupVectorized});
-
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
     if (VectorizedLoopID) {
       L->setLoopID(*VectorizedLoopID);
     } else {
       // Keep all loop hints from the original loop on the vector loop (we'll
       // replace the vectorizer-specific hints below).
-      if (BestVPlan.getScalarPreheader()->getNumPredecessors() > 0)
+      if (BestVPlan.getScalarPreheader()->hasPredecessors()) {
         if (MDNode *LID = OrigLoop->getLoopID())
           L->setLoopID(LID);
+      }
 
       LoopVectorizeHints Hints(L, true, *ORE);
       Hints.setAlreadyVectorized();
@@ -7390,16 +7395,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
     if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
       addRuntimeUnrollDisableMetaData(L);
-  }
-
-  if (BestVPlan.getScalarPreheader()->getNumPredecessors() == 0) {
-    // If the original loop became unreachable, we need to delete it.
-    auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(BestVPlan.getScalarPreheader())
-                         ->getIRBasicBlock());
-    for (auto *BB : Blocks)
-      LI->removeBlock(BB);
-    LI->erase(OrigLoop);
   }
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
@@ -10322,7 +10317,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
+  assert(!verifyFunction(*F, &dbgs()));
 
+  // The original loop has been removed, no need to update its metadata.
   if (LoopRemoved)
     return true;
 
@@ -10339,7 +10336,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     Hints.setAlreadyVectorized();
   }
 
-  assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
   return true;
 }
 
