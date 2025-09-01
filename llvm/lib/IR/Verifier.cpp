@@ -5025,9 +5025,7 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
 
 void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
   Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
-  Check((isa<IntToPtrInst>(I)),
-        "nofree applies only to inttoptr instruction,"
-        " use attributes for calls or invokes",
+  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
         &I);
   Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
 }

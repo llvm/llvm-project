@@ -2,7 +2,7 @@
 
 declare ptr @dummy()
 
-; CHECK: nofree applies only to inttoptr instruction, use attributes for calls or invokes
+; CHECK: nofree applies only to inttoptr instruction
 define void @test_not_inttoptr() {
   call ptr @dummy(), !nofree !{}
   ret void

@@ -8485,8 +8485,7 @@ resolve to an object defined in one of the indicated address spaces.
 ^^^^^^^^^^^^^^^^^^^^^
 
 The ``nofree`` metadata indicates the memory pointed by the pointer will not be
-freed after the attached instruction. This is analogous to the ``nofree``
-function argument attribute.
+freed after the attached instruction.
 
 
 Module Flags Metadata
