@@ -1060,3 +1060,15 @@ xresldtrk
 // CHECK:  encoding: [0x66,0x8b,0x1e,A,A]
 // CHECK:  fixup A - offset: 3, value: nearer, kind: FK_Data_2
 movl    nearer, %ebx
+
+// CHECK: pushl $8
+// CHECK:  encoding: [0x66,0x6a,0x08]
+data32 push $8
+
+// CHECK: pushl $8
+// CHECK:  encoding: [0x66,0x6a,0x08]
+pushl $8
+
+// CHECK: pushw $8
+// CHECK:  encoding: [0x6a,0x08]
+push $8
