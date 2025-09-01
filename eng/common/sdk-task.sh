@@ -10,7 +10,7 @@ show_usage() {
 
     echo "Advanced settings:"
     echo "  --excludeCIBinarylog     Don't output binary log (short: -nobl)"
-    echo "  --noWarnAsError          Do not warn as error
+    echo "  --noWarnAsError          Do not warn as error"
     echo ""
     echo "Command line arguments not listed above are passed thru to msbuild."
 }
