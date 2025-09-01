@@ -1,6 +1,22 @@
-// The debug info of vtable is attached conditionally to whether
-// - Member functions are inlined or not
-// - Definition of destructor is visible or not
+// For CInlined (member functions are inlined), we check in case of:
+// - The definition of its destructor is visible:
+//   * The vtable is generated with comdat
+//   * Its '_vtable$' is generated
+// - Otherwise:
+//   * The vtable is declared
+//   * Its '_vtable$' is NOT generated
+//
+// For CNoInline (member functions are defined as non-inline), we check in case of:
+// - The definition of its destructor is visible:
+//   * The vtable is generated
+//   * Its '_vtable$' is generated
+// - Otherwise:
+//   * The vtable is generated
+//   * Its '_vtable$' is generated
+//
+// For CNoFnDef (member functions are declared only), we check in case of:
+//   * The vtable is NOT generated
+//   * Its '_vtable$' is generated only if optimized
 
 struct CInlined {
   virtual void f1() noexcept {}
