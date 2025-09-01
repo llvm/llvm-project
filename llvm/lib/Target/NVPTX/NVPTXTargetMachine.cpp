@@ -356,7 +356,7 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVPTXLowerArgsPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    // NVPTXLowerArgs emits alloca for byval parameters which can often
+    // NVPTXLowerArgs may emit alloca for byval parameters which can often
     // be eliminated by SROA.
     addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());

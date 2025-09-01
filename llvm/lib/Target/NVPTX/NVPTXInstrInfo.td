@@ -2257,8 +2257,8 @@ def SDTDynAllocaOp
     : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
 
 def getAllocaAlign : SDNodeXForm<imm, [{
-  if (N->getZExtValue() != 0)
-    return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), N->getValueType(0));
+  if (auto NV = N->getZExtValue())
+    return CurDAG->getTargetConstant(NV, SDLoc(N), N->getValueType(0));
   return CurDAG->getTargetConstant(CurDAG->getSubtarget().getFrameLowering()->getStackAlign().value(), SDLoc(N), N->getValueType(0));
 }]>;
 

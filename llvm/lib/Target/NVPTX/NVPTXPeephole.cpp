@@ -125,9 +125,12 @@ static void CombineCVTALocal(MachineInstr &CVTALocalInstr) {
   if (LeaInstr->getOpcode() == NVPTX::CVT_u64_u32) {
     CVTInstr = LeaInstr;
     LeaInstr = MRI.getUniqueVRegDef(LeaInstr->getOperand(1).getReg());
-    assert((LeaInstr->getOpcode() == NVPTX::LEA_ADDRi64 ||
-            LeaInstr->getOpcode() == NVPTX::LEA_ADDRi) &&
-           "Expected LEA_ADDRi64 or LEA_ADDRi");
+    if ((LeaInstr->getOpcode() != NVPTX::LEA_ADDRi64 &&
+         LeaInstr->getOpcode() != NVPTX::LEA_ADDRi)) {
+      LLVM_DEBUG(dbgs() << "NVPTXPeephole: Expected LEA_ADDRi64 or LEA_ADDRi");
+
+      return;
+    }
   }
 
   const NVPTXRegisterInfo *NRI =
