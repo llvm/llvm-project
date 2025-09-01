@@ -6198,10 +6198,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       assert(Op0->getType()->getScalarSizeInBits() == 1 &&
               Op1->getType()->getScalarSizeInBits() == 1);
 
-      SmallVector<const Value *, 2> Operands{Op0, Op1};
       return TTI.getArithmeticInstrCost(
-          match(I, m_LogicalOr()) ? Instruction::Or : Instruction::And, VectorTy,
-          CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, I);
+          match(I, m_LogicalOr()) ? Instruction::Or : Instruction::And,
+          VectorTy, CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, {Op0, Op1}, I);
     }
 
     Type *CondTy = SI->getCondition()->getType();
@@ -6431,7 +6430,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         }))
       continue;
     VecValuesToIgnore.insert(Op);
-    DeadInterleavePointerOps.append(Op->op_begin(), Op->op_end());
+    append_range(DeadInterleavePointerOps, Op->operands());
   }
 
   for (const auto &[_, Ops] : DeadInvariantStoreOps)
@@ -6491,7 +6490,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
       ValuesToIgnore.insert(Op);
 
     VecValuesToIgnore.insert(Op);
-    DeadOps.append(Op->op_begin(), Op->op_end());
+    append_range(DeadOps, Op->operands());
   }
 
   // Ignore type-promoting instructions we identified during reduction
@@ -8691,10 +8690,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
-      if (!Recipe) {
-        SmallVector<VPValue *, 4> Operands(R.operands());
-        Recipe = RecipeBuilder.handleReplication(Instr, Operands, Range);
-      }
+      if (!Recipe)
+        Recipe = RecipeBuilder.handleReplication(Instr, R.operands(), Range);
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
