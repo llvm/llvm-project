@@ -493,6 +493,9 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
+  // Move completely disconnected blocks to their final position.
+  if (IRBB->hasNPredecessors(0) && succ_begin(IRBB) == succ_end(IRBB))
+    IRBB->moveAfter(State->CFG.PrevBB);
   State->Builder.SetInsertPoint(IRBB->getTerminator());
   State->CFG.PrevBB = IRBB;
   State->CFG.VPBB2IRBB[this] = IRBB;
