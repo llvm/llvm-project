@@ -31,9 +31,23 @@ define <1 x i64> @test_mmx_ctselect_with_paddd(i32 %cond, i64 %a, i64 %b) {
 ; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    setne %bl
 ; I386-NOCMOV-NEXT:    testb %bl, %bl
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %ebp
+; I386-NOCMOV-NEXT:    negl %ebp
+; I386-NOCMOV-NEXT:    movl %esi, %edi
+; I386-NOCMOV-NEXT:    andl %ebp, %edi
+; I386-NOCMOV-NEXT:    notl %ebp
+; I386-NOCMOV-NEXT:    andl %ecx, %ebp
+; I386-NOCMOV-NEXT:    orl %ebp, %edi
 ; I386-NOCMOV-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %esi
+; I386-NOCMOV-NEXT:    negl %esi
+; I386-NOCMOV-NEXT:    movl %edx, %ecx
+; I386-NOCMOV-NEXT:    andl %esi, %ecx
+; I386-NOCMOV-NEXT:    notl %esi
+; I386-NOCMOV-NEXT:    andl %eax, %esi
+; I386-NOCMOV-NEXT:    orl %esi, %ecx
 ; I386-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; I386-NOCMOV-NEXT:    paddd %mm0, %mm0
@@ -106,9 +120,23 @@ define <1 x i64> @test_mmx_ctselect_with_psllw(i32 %cond, i64 %a, i64 %b) {
 ; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    setne %bl
 ; I386-NOCMOV-NEXT:    testb %bl, %bl
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %ebp
+; I386-NOCMOV-NEXT:    negl %ebp
+; I386-NOCMOV-NEXT:    movl %esi, %edi
+; I386-NOCMOV-NEXT:    andl %ebp, %edi
+; I386-NOCMOV-NEXT:    notl %ebp
+; I386-NOCMOV-NEXT:    andl %ecx, %ebp
+; I386-NOCMOV-NEXT:    orl %ebp, %edi
 ; I386-NOCMOV-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %esi
+; I386-NOCMOV-NEXT:    negl %esi
+; I386-NOCMOV-NEXT:    movl %edx, %ecx
+; I386-NOCMOV-NEXT:    andl %esi, %ecx
+; I386-NOCMOV-NEXT:    notl %esi
+; I386-NOCMOV-NEXT:    andl %eax, %esi
+; I386-NOCMOV-NEXT:    orl %esi, %ecx
 ; I386-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; I386-NOCMOV-NEXT:    psllw %mm0, %mm0
@@ -183,14 +211,42 @@ define <1 x i64> @test_mmx_nested_ctselect_with_pand(i32 %cond1, i32 %cond2, i64
 ; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    setne %ah
 ; I386-NOCMOV-NEXT:    testb %ah, %ah
-; I386-NOCMOV-NEXT:    BUNDLE
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %ch
+; I386-NOCMOV-NEXT:    movzbl %ch, %ebp
+; I386-NOCMOV-NEXT:    negl %ebp
+; I386-NOCMOV-NEXT:    movl %edi, %eax
+; I386-NOCMOV-NEXT:    andl %ebp, %eax
+; I386-NOCMOV-NEXT:    notl %ebp
+; I386-NOCMOV-NEXT:    andl %edx, %ebp
+; I386-NOCMOV-NEXT:    orl %ebp, %eax
+; I386-NOCMOV-NEXT:    sete %ch
+; I386-NOCMOV-NEXT:    movzbl %ch, %edi
+; I386-NOCMOV-NEXT:    negl %edi
+; I386-NOCMOV-NEXT:    movl %ebx, %edx
+; I386-NOCMOV-NEXT:    andl %edi, %edx
+; I386-NOCMOV-NEXT:    notl %edi
+; I386-NOCMOV-NEXT:    andl %esi, %edi
+; I386-NOCMOV-NEXT:    orl %edi, %edx
 ; I386-NOCMOV-NEXT:    testb %cl, %cl
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %esi
+; I386-NOCMOV-NEXT:    negl %esi
+; I386-NOCMOV-NEXT:    movl %edi, %ecx
+; I386-NOCMOV-NEXT:    andl %esi, %ecx
+; I386-NOCMOV-NEXT:    notl %esi
+; I386-NOCMOV-NEXT:    andl %edx, %esi
+; I386-NOCMOV-NEXT:    orl %esi, %ecx
 ; I386-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %dl
+; I386-NOCMOV-NEXT:    movzbl %dl, %esi
+; I386-NOCMOV-NEXT:    negl %esi
+; I386-NOCMOV-NEXT:    movl %edi, %ecx
+; I386-NOCMOV-NEXT:    andl %esi, %ecx
+; I386-NOCMOV-NEXT:    notl %esi
+; I386-NOCMOV-NEXT:    andl %eax, %esi
+; I386-NOCMOV-NEXT:    orl %esi, %ecx
 ; I386-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; I386-NOCMOV-NEXT:    pand %mm0, %mm0
@@ -283,9 +339,23 @@ define <1 x i64> @test_mmx_ctselect_with_por(i32 %cond, i64 %a, i64 %b) {
 ; I386-NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    setne %bl
 ; I386-NOCMOV-NEXT:    testb %bl, %bl
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %ebp
+; I386-NOCMOV-NEXT:    negl %ebp
+; I386-NOCMOV-NEXT:    movl %esi, %edi
+; I386-NOCMOV-NEXT:    andl %ebp, %edi
+; I386-NOCMOV-NEXT:    notl %ebp
+; I386-NOCMOV-NEXT:    andl %ecx, %ebp
+; I386-NOCMOV-NEXT:    orl %ebp, %edi
 ; I386-NOCMOV-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; I386-NOCMOV-NEXT:    BUNDLE
+; I386-NOCMOV-NEXT:    sete %bl
+; I386-NOCMOV-NEXT:    movzbl %bl, %esi
+; I386-NOCMOV-NEXT:    negl %esi
+; I386-NOCMOV-NEXT:    movl %edx, %ecx
+; I386-NOCMOV-NEXT:    andl %esi, %ecx
+; I386-NOCMOV-NEXT:    notl %esi
+; I386-NOCMOV-NEXT:    andl %eax, %esi
+; I386-NOCMOV-NEXT:    orl %esi, %ecx
 ; I386-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; I386-NOCMOV-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; I386-NOCMOV-NEXT:    por %mm0, %mm0
