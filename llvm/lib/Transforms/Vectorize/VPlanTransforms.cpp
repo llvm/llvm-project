@@ -1119,9 +1119,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // (x & y) & z -> x & (y & z)
+  // Reassociate (x & y) & z -> x & (y & z) if x has multiple users. With tail
+  // folding it is likely that x is a header mask and can be simplified further.
   if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_VPValue(Z))))
+                              m_VPValue(Z))) &&
+      X->hasMoreThanOneUniqueUser())
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createLogicalAnd(X, Y)));
 
@@ -2036,7 +2038,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           PH->appendRecipe(NewOp);
         }
       }
-
     }
   }
 }
