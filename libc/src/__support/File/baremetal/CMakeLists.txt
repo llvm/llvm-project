@@ -1,0 +1,32 @@
+add_object_library(
+  stdout
+  SRCS
+    stdout.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.File.cookie_file
+    libc.src.__support.File.file
+    libc.src.__support.OSUtil.osutil
+)
+
+add_object_library(
+  stdin
+  SRCS
+    stdin.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.File.cookie_file
+    libc.src.__support.File.file
+    libc.src.__support.OSUtil.osutil
+)
+
+add_object_library(
+  stderr
+  SRCS
+    stderr.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.src.__support.File.cookie_file
+    libc.src.__support.File.file
+    libc.src.__support.OSUtil.osutil
+)

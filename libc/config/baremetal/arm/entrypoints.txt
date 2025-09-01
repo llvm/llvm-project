@@ -124,6 +124,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.asprintf
+    libc.src.stdio.fopencookie
+    libc.src.stdio.fprintf
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
