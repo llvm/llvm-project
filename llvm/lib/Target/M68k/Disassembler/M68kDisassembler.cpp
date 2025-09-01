@@ -107,6 +107,16 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
 
+static void DecodeCCRCRegisterClass(MCInst &Inst,
+                                    const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::CCR));
+}
+
+static void DecodeSRCRegisterClass(MCInst &Inst,
+                                   const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::SR));
+}
+
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(M68k::swapWord<uint32_t>(Imm)));
