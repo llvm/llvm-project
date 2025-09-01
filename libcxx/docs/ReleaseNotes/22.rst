@@ -38,9 +38,9 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
-- P2321R2: ``zip`` (`Github <https://github.com/llvm/llvm-project/issues/105169>`__) (The paper is partially
-  implemented. ``zip_transform_view`` is implemented in this release)
-- P3168R2: Give ``std::optional`` Range Support (`Github <https://github.com/llvm/llvm-project/issues/105430>`__)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
+  is implemented in this release)
+- P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 
 Improvements and New Features
 -----------------------------

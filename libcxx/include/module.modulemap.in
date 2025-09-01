@@ -842,7 +842,7 @@ module std [system] {
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"
-      export std.memory.unique_temporary_buffer // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export std.memory.unique_temporary_buffer // TODO: Workaround for https://llvm.org/PR120108
     }
     module swap_ranges                            { header "__algorithm/swap_ranges.h" }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
@@ -1260,7 +1260,7 @@ module std [system] {
     module directory_entry                { header "__filesystem/directory_entry.h" }
     module directory_iterator             {
       header "__filesystem/directory_iterator.h"
-      // This is a workaround for https://github.com/llvm/llvm-project/issues/120108.
+      // This is a workaround for https://llvm.org/PR120108.
       export *
     }
     module directory_options              { header "__filesystem/directory_options.h" }
@@ -1637,7 +1637,7 @@ module std [system] {
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
       header "__memory/allocator.h"
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
@@ -1682,7 +1682,7 @@ module std [system] {
       header "__memory/unique_temporary_buffer.h"
       export std.memory.unique_ptr
       export std_core.type_traits.is_constant_evaluated
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
@@ -1721,7 +1721,7 @@ module std [system] {
     module allocate {
       header "__new/allocate.h"
       export std.utility.element_count // used as part of the API
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }

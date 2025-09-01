@@ -460,7 +460,7 @@ public:
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI basic_string_view substr(size_type __pos = 0, size_type __n = npos) const {
     // Use the `__assume_valid` form of the constructor to avoid an unnecessary check. Any substring of a view is a
     // valid view. In particular, `size()` is known to be smaller than `numeric_limits<difference_type>::max()`, so the
-    // new size is also smaller. See also https://github.com/llvm/llvm-project/issues/91634.
+    // new size is also smaller. See also https://llvm.org/PR91634.
     return __pos > size() ? (__throw_out_of_range("string_view::substr"), basic_string_view())
                           : basic_string_view(__assume_valid(), data() + __pos, std::min(__n, size() - __pos));
   }
