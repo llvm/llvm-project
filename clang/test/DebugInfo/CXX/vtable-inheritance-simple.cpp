@@ -31,8 +31,9 @@ int main() {
   return 0;
 }
 
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - | FileCheck %s --check-prefix=COFF
+// RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - | FileCheck %s --check-prefix=COFF
 
 // CHECK: $_ZTVN3NSP5CBaseE = comdat any
 // CHECK: $_ZTV8CDerived = comdat any

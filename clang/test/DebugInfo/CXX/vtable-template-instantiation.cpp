@@ -3,17 +3,18 @@
 //   * The vtable is generated with comdat
 //   * Its '_vtable$' is generated
 // - Implicitly instantiate member function only:
-//   * The vtable is NOT generated
-//   * Its '_vtable$' is generated
+//  # when optimized:
+//   * The vtable is vanished (no declaration)
+//   * Its '_vtable$' is generated without associating to vtable
+//  # when non-optimized:
+//   * The vtable is generated with comdat only if non-optimized
+//   * Its '_vtable$' is generated regardless optimized or not
 // - Define explicitly instantiation:
 //   * The vtable is generated with comdat
 //   * Its '_vtable$' is generated
 // - Declare explicitly instantiation as extern:
-//  # for COFF targets:
-//   * The vtable is declared but NOT associated with '_vtable$'
-//  # for non-COFF targets:
 //   * The vtable is declared
-//   * Its '_vtable$' is generated
+//   * Its '_vtable$' is generated only if optimized
 
 struct CBase {
   virtual void f() noexcept {}
@@ -49,10 +50,14 @@ int main() {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o -             | FileCheck %s -check-prefix IMPLICIT
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DNOCAST    | FileCheck %s -check-prefix NOCAST
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DEXPLICIT  | FileCheck %s -check-prefix EXPLICIT
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DEXTERN    | FileCheck %s -check-prefix EXTERN
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o -             | FileCheck %s -check-prefixes IMPLICIT
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o -             | FileCheck %s -check-prefixes IMPLICIT
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - -DNOCAST    | FileCheck %s -check-prefixes NOCAST,NOCAST-O0
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DNOCAST    | FileCheck %s -check-prefixes NOCAST,NOCAST-O1
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - -DEXPLICIT  | FileCheck %s -check-prefixes EXPLICIT
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DEXPLICIT  | FileCheck %s -check-prefixes EXPLICIT
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 %s -o - -DEXTERN    | FileCheck %s -check-prefixes EXTERN,EXTERN-O0
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - -DEXTERN    | FileCheck %s -check-prefixes EXTERN,EXTERN-O1
 
 // IMPLICIT: $_ZTV9CTemplateIvE = comdat any
 // IMPLICIT: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
@@ -62,8 +67,10 @@ int main() {
 // IMPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 // IMPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
-// NOCAST-NOT: $_ZTV9CTemplateIvE
-// NOCAST-NOT: @_ZTV9CTemplateIvE
+// NOCAST-O0: $_ZTV9CTemplateIvE = comdat any
+// NOCAST-O0: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
+// NOCAST-O1-NOT: $_ZTV9CTemplateIvE
+// NOCAST-O1-NOT: @_ZTV9CTemplateIvE
 // NOCAST-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
 // NOCAST-DAG: !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // NOCAST-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
@@ -79,9 +86,11 @@ int main() {
 // EXPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXTERN-NOT: $_ZTV9CTemplateIvE
-// EXTERN: @_ZTV9CTemplateIvE = external {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
-// EXTERN-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
-// EXTERN-DAG: [[VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
-// EXTERN-DAG: [[TYPE:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
-// EXTERN-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
-// EXTERN-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+// EXTERN-O0: @_ZTV9CTemplateIvE = external {{.*}}unnamed_addr constant {{.*}}, align 8{{$}}
+// EXTERN-O1: @_ZTV9CTemplateIvE = external {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
+// EXTERN-O0-NOT: linkageName: "_ZTV9CTemplateIvE"
+// EXTERN-O1-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
+// EXTERN-O1-DAG: [[VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
+// EXTERN-O1-DAG: [[TYPE:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
+// EXTERN-O1-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// EXTERN-O1-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
