@@ -6409,8 +6409,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
 // not doable there, we do it here.
 bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
-  // Enable this optimization only for aarch64.
-  if (!TLI->getTargetMachine().getTargetTriple().isAArch64())
+  if (!TLI->shouldOptimizeMulOverflowIntrinsic())
     return false;
   // If we have already seen this instruction, don't process it again.
   if (!SeenMulWithOverflowInstrs.insert(std::make_pair(I, true)).second)
@@ -6440,29 +6439,42 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   if (!I->getType()->isStructTy() || I->getType()->getStructNumElements() != 2)
     return false;
 
-  I->getParent()->setName("overflow.res");
-  BasicBlock *OverflowResBB = I->getParent();
-  BasicBlock *OverflowoEntryBB =
-      I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
-  BasicBlock *NoOverflowBB = BasicBlock::Create(
-      I->getContext(), "overflow.no", I->getFunction(), OverflowResBB);
-  BasicBlock *OverflowBB = BasicBlock::Create(I->getContext(), "overflow",
-                                              I->getFunction(), OverflowResBB);
-  // new blocks should be:
+  // ----------------------------
+
+  // For the simple case where IR just checks the overflow flag, new blocks
+  // should be:
   //  entry:
   //    if signed:
   //      (lhs_lo ^ lhs_hi) || (rhs_lo ^ rhs_hi) ? overflow, overflow_no
   //    else:
   //      (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
+  //  overflow_no:
+  //  overflow:
 
+  // otherwise, new blocks should be:
+  //  entry:
+  //    if signed:
+  //      (lhs_lo ^ lhs_hi) || (rhs_lo ^ rhs_hi) ? overflow, overflow_no
+  //    else:
+  //      (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
   //  overflow_no:
   //  overflow:
   //  overflow.res:
 
-  // ----------------------------
+  // New BBs:
+  BasicBlock *OverflowoEntryBB =
+      I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
+  // Remove the 'br' instruction that is generated as a result of the split:
+  OverflowoEntryBB->getTerminator()->eraseFromParent();
+  BasicBlock *NoOverflowBB =
+      BasicBlock::Create(I->getContext(), "overflow.no", I->getFunction());
+  NoOverflowBB->moveAfter(OverflowoEntryBB);
+  I->getParent()->setName("overflow");
+  BasicBlock *OverflowBB = I->getParent();
+
   // BB overflow.entry:
-  // get Lo and Hi of LHS & RHS:
-  IRBuilder<> Builder(OverflowoEntryBB->getTerminator());
+  // Get Lo and Hi of LHS & RHS:
+  IRBuilder<> Builder(OverflowoEntryBB);
   Value *LoLHS = Builder.CreateTrunc(LHS, LegalTy, "lo.lhs");
   Value *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
   HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
@@ -6479,8 +6491,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     Value *XorLHS = Builder.CreateXor(HiLHS, SignLoLHS);
     Value *XorRHS = Builder.CreateXor(HiRHS, SignLoRHS);
     Value *Or = Builder.CreateOr(XorLHS, XorRHS, "or.lhs.rhs");
-    IsAnyBitTrue = Builder.CreateCmp(ICmpInst::ICMP_EQ, Or,
-                                     ConstantInt::get(Or->getType(), 1));
+    IsAnyBitTrue = Builder.CreateCmp(ICmpInst::ICMP_NE, Or,
+                                     ConstantInt::getNullValue(Or->getType()));
   } else {
     Value *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS,
                                       ConstantInt::getNullValue(LegalTy));
@@ -6488,9 +6500,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                       ConstantInt::getNullValue(LegalTy));
     IsAnyBitTrue = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
   }
-
   Builder.CreateCondBr(IsAnyBitTrue, OverflowBB, NoOverflowBB);
-  OverflowoEntryBB->getTerminator()->eraseFromParent();
 
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
@@ -6503,24 +6513,95 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
   }
 
-  Value *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
+  Value *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.overflow.no");
+
+  // In overflow.no BB: we are sure that the overflow flag is false.
+  // So, if we found this pattern:
+  // br (extractvalue (%mul, 1)), label %if.then, label %if.end
+  // then we can jump directly to %if.end as we're sure that there is no
+  // overflow.
+  BasicBlock *DetectNoOverflowBrBB = nullptr;
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
+  // Look for the pattern in the users of I, and make sure that all the users
+  // are either part of the pattern or NOT in the same BB as I.
+  for (User *U : I->users()) {
+    if (auto *Instr = dyn_cast<Instruction>(U);
+        Instr && Instr->getParent() != I->getParent())
+      continue;
+
+    if (auto *ExtUser = dyn_cast<ExtractValueInst>(U)) {
+      if (ExtUser->hasOneUse() && ExtUser->getNumIndices() == 1 &&
+          ExtUser->getIndices()[0] == 1) {
+        if (auto *Br = dyn_cast<BranchInst>(*ExtUser->user_begin())) {
+          DetectNoOverflowBrBB = Br->getSuccessor(1) /*if.end*/;
+          continue;
+        }
+      }
+    }
+    // If we come here, it means that either the pattern doesn't exist or
+    // there are multiple users in the same BB
+    DetectNoOverflowBrBB = nullptr;
+    break;
+  }
+  if (DetectNoOverflowBrBB) {
+    // BB overflow.no: jump directly to if.end BB
+    Builder.CreateBr(DetectNoOverflowBrBB);
+    // BB if.end:
+    Builder.SetInsertPoint(DetectNoOverflowBrBB,
+                           DetectNoOverflowBrBB->getFirstInsertionPt());
+    // Create PHI node to get the results of multiplication from 'overflow.no'
+    // and 'overflow' BBs
+    PHINode *NoOverflowPHI = Builder.CreatePHI(Ty, 2);
+    NoOverflowPHI->addIncoming(Mul, NoOverflowBB);
+    // Create struct value to replace all uses of I
+    Value *StructValNoOverflow = PoisonValue::get(STy);
+    StructValNoOverflow =
+        Builder.CreateInsertValue(StructValNoOverflow, NoOverflowPHI, {0});
+    // Overflow flag is always false as we are sure it's not overflow.
+    StructValNoOverflow = Builder.CreateInsertValue(
+        StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
+    // Replace all uses of I, only uses dominated by the if.end BB
+    I->replaceUsesOutsideBlock(StructValNoOverflow, I->getParent());
+    // BB overflow:
+    Builder.SetInsertPoint(OverflowBB,
+                           I->getParent()->getTerminator()->getIterator());
+    // Extract the multiplication result to add it to the PHI node in the if.end
+    // BB
+    Value *IntrinsicMulRes = Builder.CreateExtractValue(I, {0}, "mul.extract");
+    NoOverflowPHI->addIncoming(IntrinsicMulRes, OverflowBB);
+    ModifiedDT = ModifyDT::ModifyBBDT;
+    return true;
+  }
+
+  // Otherwise, we need to create the 'overflow.res' BB to merge the results of
+  // the two paths.
+  I->getParent()->setName("overflow.res");
+  BasicBlock *OverflowResBB = I->getParent();
+  OverflowBB = BasicBlock::Create(I->getContext(), "overflow", I->getFunction(),
+                                  OverflowResBB);
+  // Initially I->getParent() was the overflow BB, now it becomes the
+  // overflow.res BB. So we need to keep the old reference to the overflow BB.
+  OverflowResBB->replaceAllUsesWith(OverflowBB);
+
+  // BB overflow.no: jump to overflow.res BB
   Builder.CreateBr(OverflowResBB);
 
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
-  PHINode *PHINode1 = Builder.CreatePHI(Ty, 2);
-  PHINode1->addIncoming(Mul, NoOverflowBB);
-  PHINode *PHINode2 =
-      Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
-  PHINode2->addIncoming(ConstantInt::getFalse(I->getContext()), NoOverflowBB);
+  PHINode *OverflowResPHI = Builder.CreatePHI(Ty, 2),
+          *OverflowFlagPHI =
+              Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
 
-  StructType *STy = StructType::get(
-      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
   Value *StructValOverflowRes = PoisonValue::get(STy);
   StructValOverflowRes =
-      Builder.CreateInsertValue(StructValOverflowRes, PHINode1, {0});
+      Builder.CreateInsertValue(StructValOverflowRes, OverflowResPHI, {0});
   StructValOverflowRes =
-      Builder.CreateInsertValue(StructValOverflowRes, PHINode2, {1});
+      Builder.CreateInsertValue(StructValOverflowRes, OverflowFlagPHI, {1});
+  OverflowResPHI->addIncoming(Mul, NoOverflowBB);
+  OverflowFlagPHI->addIncoming(ConstantInt::getFalse(I->getContext()),
+                               NoOverflowBB);
+
   // Before moving the mul.overflow intrinsic to the overflowBB, replace all its
   // uses by StructValOverflowRes.
   I->replaceAllUsesWith(StructValOverflowRes);
@@ -6534,9 +6615,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Builder.CreateBr(OverflowResBB);
 
   // Add The Extracted values to the PHINodes in the overflow.res block.
-  PHINode1->addIncoming(MulOverflow, OverflowBB);
-  PHINode2->addIncoming(OverflowFlag, OverflowBB);
-
+  OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
+  OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
 }
