@@ -178,10 +178,10 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
 
   // Match predicate with or without a SimpleRecurrence (the corresponding data
   // is LHSAux).
-  auto MatchPred =
-      m_CombineOr(m_Specific(ConditionalRecurrence.Phi),
-                  m_c_Xor(m_CastOrSelf(m_Specific(ConditionalRecurrence.Phi)),
-                          m_CastOrSelf(m_Specific(SimpleRecurrence.Phi))));
+  auto MatchPred = m_CombineOr(
+      m_Specific(ConditionalRecurrence.Phi),
+      m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
+              m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
   bool LWellFormed = ByteOrderSwapped ? match(L, MatchPred)
                                       : match(L, m_c_And(MatchPred, m_One()));
   if (!LWellFormed)
@@ -401,8 +401,8 @@ static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
       continue;
 
     // If we match an XOR of the two PHIs ignoring casts, we're done.
-    if (match(I, m_c_Xor(m_CastOrSelf(m_Specific(P1)),
-                         m_CastOrSelf(m_Specific(P2)))))
+    if (match(I, m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(P1)),
+                         m_ZExtOrTruncOrSelf(m_Specific(P2)))))
       return true;
 
     // Continue along the use-def chain.

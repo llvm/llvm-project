@@ -427,6 +427,53 @@ exit:                                              ; preds = %loop
   ret i32 %crc.next
 }
 
+define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'crc16.be.tc8.zext.data'
+; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: i16 %checksum
+; CHECK-NEXT:    Generating polynomial: 258
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i8 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 258 516 774 1032 1290 1548 1806 2064 2322 2580 2838 3096 3354 3612 3870
+; CHECK-NEXT:  4128 4386 4644 4902 5160 5418 5676 5934 6192 6450 6708 6966 7224 7482 7740 7998
+; CHECK-NEXT:  8256 8514 8772 9030 9288 9546 9804 10062 10320 10578 10836 11094 11352 11610 11868 12126
+; CHECK-NEXT:  12384 12642 12900 13158 13416 13674 13932 14190 14448 14706 14964 15222 15480 15738 15996 16254
+; CHECK-NEXT:  16512 16770 17028 17286 17544 17802 18060 18318 18576 18834 19092 19350 19608 19866 20124 20382
+; CHECK-NEXT:  20640 20898 21156 21414 21672 21930 22188 22446 22704 22962 23220 23478 23736 23994 24252 24510
+; CHECK-NEXT:  24768 25026 25284 25542 25800 26058 26316 26574 26832 27090 27348 27606 27864 28122 28380 28638
+; CHECK-NEXT:  28896 29154 29412 29670 29928 30186 30444 30702 30960 31218 31476 31734 31992 32250 32508 32766
+; CHECK-NEXT:  33024 32770 33540 33286 34056 33802 34572 34318 35088 34834 35604 35350 36120 35866 36636 36382
+; CHECK-NEXT:  37152 36898 37668 37414 38184 37930 38700 38446 39216 38962 39732 39478 40248 39994 40764 40510
+; CHECK-NEXT:  41280 41026 41796 41542 42312 42058 42828 42574 43344 43090 43860 43606 44376 44122 44892 44638
+; CHECK-NEXT:  45408 45154 45924 45670 46440 46186 46956 46702 47472 47218 47988 47734 48504 48250 49020 48766
+; CHECK-NEXT:  49536 49282 50052 49798 50568 50314 51084 50830 51600 51346 52116 51862 52632 52378 53148 52894
+; CHECK-NEXT:  53664 53410 54180 53926 54696 54442 55212 54958 55728 55474 56244 55990 56760 56506 57276 57022
+; CHECK-NEXT:  57792 57538 58308 58054 58824 58570 59340 59086 59856 59602 60372 60118 60888 60634 61404 61150
+; CHECK-NEXT:  61920 61666 62436 62182 62952 62698 63468 63214 63984 63730 64500 64246 65016 64762 65532 65278
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data.ext = zext i8 %data to i16
+  %xor.crc.data = xor i16 %crc, %data.ext
+  %check.sb = icmp sge i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 258
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %data.next = shl i8 %data, 1
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 ; Negative tests
 
 define i16 @not.crc.non.const.tc(i16 %crc.init, i32 %loop.limit) {
@@ -1319,6 +1366,34 @@ loop:                                              ; preds = %loop, %entry
 exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
+
+define i16 @not.crc.bad.cast.sext(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.bad.cast.sext'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data.ext = sext i8 %data to i16
+  %xor.crc.data = xor i16 %crc, %data.ext
+  %check.sb = icmp sge i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 258
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %data.next = shl i8 %data, 1
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 
 define i16 @not.crc.sb.check.patternmatch.fail(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.sb.check.patternmatch.fail'
