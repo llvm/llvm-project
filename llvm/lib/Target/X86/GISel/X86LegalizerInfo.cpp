@@ -580,7 +580,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+  getActionDefinitionsBuilder(
+      {G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC, G_FCEIL, G_FFLOOR})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
