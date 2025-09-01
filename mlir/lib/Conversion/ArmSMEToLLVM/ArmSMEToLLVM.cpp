@@ -822,7 +822,7 @@ struct OuterProductWideningOpConversion
   }
 };
 
-/// Lower `arm_sme.streaming_vl` to SME CNTS intrinsics.
+/// Lower `arm_sme.streaming_vl` to SME CNTSD intrinsic.
 ///
 /// Example:
 ///
@@ -830,8 +830,10 @@ struct OuterProductWideningOpConversion
 ///
 /// is converted to:
 ///
-///   %cnt = "arm_sme.intr.cntsh"() : () -> i64
-///   %0 = arith.index_cast %cnt : i64 to index
+///   %cnt = "arm_sme.intr.cntsd"() : () -> i64
+///   %0 = arith.constant 4 : i64
+///   %1 = arith.muli %cnt, %0 : i64
+///   %2 = arith.index_cast %1 : i64 to index
 ///
 struct StreamingVLOpConversion
     : public ConvertArmSMEOpToLLVMPattern<arm_sme::StreamingVLOp,
@@ -845,15 +847,25 @@ struct StreamingVLOpConversion
     auto loc = streamingVlOp.getLoc();
     auto i64Type = rewriter.getI64Type();
     auto *intrOp = [&]() -> Operation * {
+      auto cntsd = arm_sme::aarch64_sme_cntsd::create(rewriter, loc, i64Type);
       switch (streamingVlOp.getTypeSize()) {
-      case arm_sme::TypeSize::Byte:
-        return arm_sme::aarch64_sme_cntsb::create(rewriter, loc, i64Type);
-      case arm_sme::TypeSize::Half:
-        return arm_sme::aarch64_sme_cntsh::create(rewriter, loc, i64Type);
-      case arm_sme::TypeSize::Word:
-        return arm_sme::aarch64_sme_cntsw::create(rewriter, loc, i64Type);
+      case arm_sme::TypeSize::Byte: {
+        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 8);
+        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
+        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
+      }
+      case arm_sme::TypeSize::Half: {
+        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 4);
+        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
+        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
+      }
+      case arm_sme::TypeSize::Word: {
+        auto mul = arith::ConstantIndexOp::create(rewriter, loc, 2);
+        auto mul64 = arith::IndexCastOp::create(rewriter, loc, i64Type, mul);
+        return arith::MulIOp::create(rewriter, loc, cntsd, mul64);
+      }
       case arm_sme::TypeSize::Double:
-        return arm_sme::aarch64_sme_cntsd::create(rewriter, loc, i64Type);
+        return cntsd;
       }
       llvm_unreachable("unknown type size in StreamingVLOpConversion");
     }();
@@ -964,9 +976,7 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
       arm_sme::aarch64_sme_smops_za32, arm_sme::aarch64_sme_umopa_za32,
       arm_sme::aarch64_sme_umops_za32, arm_sme::aarch64_sme_sumopa_wide,
       arm_sme::aarch64_sme_sumops_wide, arm_sme::aarch64_sme_usmopa_wide,
-      arm_sme::aarch64_sme_usmops_wide, arm_sme::aarch64_sme_cntsb,
-      arm_sme::aarch64_sme_cntsh, arm_sme::aarch64_sme_cntsw,
-      arm_sme::aarch64_sme_cntsd>();
+      arm_sme::aarch64_sme_usmops_wide, arm_sme::aarch64_sme_cntsd>();
   target.addLegalDialect<arith::ArithDialect,
                          /* The following are used to lower tile spills/fills */
                          vector::VectorDialect, scf::SCFDialect,
