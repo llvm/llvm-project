@@ -168,8 +168,7 @@ public:
 
   template <class _Alloc, class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __hash_node(__next_pointer __next, size_t __hash, _Alloc& __na, _Args&&... __args)
-  : _Base(__next), __hash_(__hash)
-  {
+      : _Base(__next), __hash_(__hash) {
     allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
   }
 
@@ -1880,8 +1879,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
 
-  // Begin the lifetime of the node itself and the value_type contained within. 
-  // 
+  // Begin the lifetime of the node itself and the value_type contained within.
+  //
   // We don't use the allocator's construct() method to construct the node itself since the
   // Cpp17FooInsertable named requirements don't require the allocator's construct() method
   // to work on anything other than the value_type.
@@ -1900,7 +1899,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(size_t __hash, _
   static_assert(!__is_hash_value_type<_Args...>::value, "Construct cannot be called with a hash value type");
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  std::__construct_at(std::addressof(*__h), /* next = */ nullptr, /* hash = */ __hash, __na, std::forward<_Args>(__args)...);
+  std::__construct_at(
+      std::addressof(*__h), /* next = */ nullptr, /* hash = */ __hash, __na, std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
