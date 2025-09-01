@@ -44976,7 +44976,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                                         : KnownBits::mulhu(KnownOp0, KnownOp1);
     KnownMul = KnownMul.zext(64);
 
-    // lo/hi(X * Y) + Z --> C3 + Z
+    // lo/hi(X * Y) + Z --> C + Z
     if (KnownMul.isConstant()) {
       SDLoc DL(Op);
       SDValue C = TLO.DAG.getConstant(KnownMul.getConstant(), DL, VT);
