@@ -2516,11 +2516,14 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   }
 
   // make sure that this load is valid and only has one user.
-  if (!IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
+  if (!IsIdeneity || !IdentitySrc || !BVOp->isOnlyUserOf(IdentitySrc.getNode()))
     return SDValue();
 
-  if (IsIdeneity) {
-    auto *LN = cast<LoadSDNode>(IdentitySrc);
+  auto *LN = cast<LoadSDNode>(IdentitySrc);
+  auto ExtType = LN->getExtensionType();
+
+  if ((ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) &&
+      VT.getScalarSizeInBits() == LN->getMemoryVT().getScalarSizeInBits()) {
     SDVTList Tys =
         LN->isIndexed()
             ? DAG.getVTList(VT, LN->getBasePtr().getValueType(), MVT::Other)

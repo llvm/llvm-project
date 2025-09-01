@@ -4088,6 +4088,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenIntOrFpInductionSC:
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
+      case VPDef::VPInterleaveEVLSC:
       case VPDef::VPInterleaveSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
@@ -4116,8 +4117,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
 
       // If no def nor is a store, e.g., branches, continue - no value to check.
       if (R.getNumDefinedValues() == 0 &&
-          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
-              &R))
+          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveBase>(&R))
         continue;
       // For multi-def recipes, currently only interleaved loads, suffice to
       // check first def only.
@@ -4220,9 +4220,16 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
                 }
               }
             }
-            [[fallthrough]];
+            C += VPI->cost(VF, CostCtx);
+            break;
           }
-          case VPInstruction::ActiveLaneMask:
+          case VPInstruction::ActiveLaneMask: {
+            unsigned Multiplier =
+                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                    ->getZExtValue();
+            C += VPI->cost(VF * Multiplier, CostCtx);
+            break;
+          }
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
             break;
@@ -7276,7 +7283,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // looked through single-entry phis.
   ScalarEvolution &SE = *PSE.getSE();
   for (VPIRBasicBlock *Exit : BestVPlan.getExitBlocks()) {
-    if (Exit->getNumPredecessors() == 0)
+    if (!Exit->hasPredecessors())
       continue;
     for (VPRecipeBase &PhiR : Exit->phis())
       SE.forgetLcssaPhiWithNewPredecessor(
@@ -7320,7 +7327,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       }
     }
     VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader();
-    if (ScalarPH->getNumPredecessors() > 0) {
+    if (ScalarPH->hasPredecessors()) {
       // If ScalarPH has predecessors, we may need to update its reduction
       // resume values.
       for (VPRecipeBase &R : ScalarPH->phis()) {
@@ -8778,41 +8785,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                            InterleaveGroups, RecipeBuilder,
                            CM.isScalarEpilogueAllowed());
 
-  // Replace VPValues for known constant strides guaranteed by predicate scalar
-  // evolution.
-  auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
-    auto *R = cast<VPRecipeBase>(&U);
-    return R->getParent()->getParent() ||
-           R->getParent() ==
-               Plan->getVectorLoopRegion()->getSinglePredecessor();
-  };
-  for (auto [_, Stride] : Legal->getLAI()->getSymbolicStrides()) {
-    auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
-    auto *ScevStride = dyn_cast<SCEVConstant>(PSE.getSCEV(StrideV));
-    // Only handle constant strides for now.
-    if (!ScevStride)
-      continue;
-
-    auto *CI = Plan->getOrAddLiveIn(
-        ConstantInt::get(Stride->getType(), ScevStride->getAPInt()));
-    if (VPValue *StrideVPV = Plan->getLiveIn(StrideV))
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
-
-    // The versioned value may not be used in the loop directly but through a
-    // sext/zext. Add new live-ins in those cases.
-    for (Value *U : StrideV->users()) {
-      if (!isa<SExtInst, ZExtInst>(U))
-        continue;
-      VPValue *StrideVPV = Plan->getLiveIn(U);
-      if (!StrideVPV)
-        continue;
-      unsigned BW = U->getType()->getScalarSizeInBits();
-      APInt C = isa<SExtInst>(U) ? ScevStride->getAPInt().sext(BW)
-                                 : ScevStride->getAPInt().zext(BW);
-      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(U->getType(), C));
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
-    }
-  }
+  // Replace VPValues for known constant strides.
+  VPlanTransforms::runPass(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
+                           Legal->getLAI()->getSymbolicStrides());
 
   auto BlockNeedsPredication = [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
