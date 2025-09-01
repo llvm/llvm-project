@@ -8973,6 +8973,8 @@ __m512d test_mm512_cvtps_pd(__m256 __A) {
   return _mm512_cvtps_pd(__A); 
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_cvtps_pd((__m256){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f}), 0.0, 1.0, 2.0, 4.0, -8.0, -16.0, -32.0, -64.0));
+
 __m512d test_mm512_cvtpslo_pd(__m512 __A) {
   // CHECK-LABEL: test_mm512_cvtpslo_pd
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -8980,12 +8982,16 @@ __m512d test_mm512_cvtpslo_pd(__m512 __A) {
   return _mm512_cvtpslo_pd(__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_cvtpslo_pd((__m512){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f, -128.0f, -256.0f, -512.0f, -1024.0f, -2048.0f, -4096.0f, -8192.0f, -16384.0f}), 0.0, 1.0, 2.0, 4.0, -8.0, -16.0, -32.0, -64.0));
+
 __m512d test_mm512_mask_cvtps_pd(__m512d __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm512_mask_cvtps_pd
   // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_cvtps_pd(__W, __U, __A); 
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtps_pd(_mm512_set1_pd(-777.0), /*1010 1101=*/0xad, (__m256){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f}), 0.0, -777.0, 2.0, 4.0, -777.0, -16.0, -777.0, -64.0));
 
 __m512d test_mm512_mask_cvtpslo_pd(__m512d __W, __mmask8 __U, __m512 __A) {
   // CHECK-LABEL: test_mm512_mask_cvtpslo_pd
@@ -8995,12 +9001,17 @@ __m512d test_mm512_mask_cvtpslo_pd(__m512d __W, __mmask8 __U, __m512 __A) {
   return _mm512_mask_cvtpslo_pd(__W, __U, __A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtpslo_pd(_mm512_set1_pd(-777.0), /*1010 1101=*/0xad, (__m512){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f, -128.0f, -256.0f, -512.0f, -1024.0f, -2048.0f, -4096.0f, -8192.0f, -16384.0f}), 0.0, -777.0, 2.0, 4.0, -777.0, -16.0, -777.0, -64.0));
+
+
 __m512d test_mm512_maskz_cvtps_pd(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm512_maskz_cvtps_pd
   // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_cvtps_pd(__U, __A); 
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_cvtps_pd(/*1010 1101=*/0xad, (__m256){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f}), 0.0, 0.0, 2.0, 4.0, 0.0, -16.0, 0.0, -64.0));
 
 __m512d test_mm512_mask_mov_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: test_mm512_mask_mov_pd
@@ -9277,6 +9288,8 @@ __m256 test_mm512_castps512_ps256 (__m512 __A)
   return _mm512_castps512_ps256 (__A);
 }
 
+TEST_CONSTEXPR(match_m256(_mm512_castps512_ps256((__m512){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f, -128.0f, -256.0f, -512.0f, -1024.0f, -2048.0f, -4096.0f, -8192.0f, -16384.0f}), 0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f));
+
 __m512i test_mm512_castps_si512 (__m512 __A)
 {
   // CHECK-LABEL: test_mm512_castps_si512 
@@ -9328,6 +9341,8 @@ __m256i test_mm512_castsi512_si256 (__m512i __A)
   // CHECK: shufflevector <8 x i64> %{{.}}, <8 x i64> %{{.}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm512_castsi512_si256 (__A);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm512_castsi512_si256((__m512i)(__v16si){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0, 1, 2, 4, 8, 16, 32, 64));
 
 __m128 test_mm_cvt_roundsd_ss(__m128 __A, __m128d __B) {
   // CHECK-LABEL: test_mm_cvt_roundsd_ss
@@ -9476,6 +9491,8 @@ __m512 test_mm512_cvtepu32_ps (__m512i __A)
   return _mm512_cvtepu32_ps (__A);
 }
 
+TEST_CONSTEXPR(match_m512(_mm512_cvtepu32_ps((__m512i)(__v16su){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0.0f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f, 256.0f, 512.0f, 1024.0f, 2048.0f, 4096.0f, 8192.0f, 16384.0f));
+
 __m512 test_mm512_mask_cvtepu32_ps (__m512 __W, __mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: test_mm512_mask_cvtepu32_ps 
@@ -9483,6 +9500,8 @@ __m512 test_mm512_mask_cvtepu32_ps (__m512 __W, __mmask16 __U, __m512i __A)
   // CHECK: select <16 x i1> {{.*}}, <16 x float> {{.*}}, <16 x float> {{.*}}
   return _mm512_mask_cvtepu32_ps (__W,__U,__A);
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_mask_cvtepu32_ps(_mm512_set1_ps(-777.0f), /*1010 1100 1010 1101=*/0xacad, (__m512i)(__v16su){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0.0f, -777.0f, 2.0f, 4.0f, -777.0f, 16.0f, -777.0f, 64.0f, -777.0f, -777.0f, 512.0f, 1024.0f, -777.0f, 4096.0f, -777.0f, 16384.0f));
 
 __m512 test_mm512_maskz_cvtepu32_ps (__mmask16 __U, __m512i __A)
 {
@@ -9492,12 +9511,16 @@ __m512 test_mm512_maskz_cvtepu32_ps (__mmask16 __U, __m512i __A)
   return _mm512_maskz_cvtepu32_ps (__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512(_mm512_maskz_cvtepu32_ps(/*1010 1100 1010 1101=*/0xacad, (__m512i)(__v16su){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0.0f, 0.0f, 2.0f, 4.0f, 0.0f, 16.0f, 0.0f, 64.0f, 0.0f, 0.0f, 512.0f, 1024.0f, 0.0f, 4096.0f, 0.0f, 16384.0f));
+
 __m512d test_mm512_cvtepi32_pd (__m256i __A)
 {
   // CHECK-LABEL: test_mm512_cvtepi32_pd
   // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
   return _mm512_cvtepi32_pd (__A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_cvtepi32_pd((__m256i)(__v8si){-8, -4, -2, -1, 0, 1, 2, 4}), -8.0, -4.0, -2.0, -1.0, 0.0, 1.0, 2.0, 4.0));
 
 __m512d test_mm512_mask_cvtepi32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
@@ -9507,6 +9530,8 @@ __m512d test_mm512_mask_cvtepi32_pd (__m512d __W, __mmask8 __U, __m256i __A)
   return _mm512_mask_cvtepi32_pd (__W,__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtepi32_pd(_mm512_set1_pd(-777.0), /*0101 1100=*/0x5c, (__m256i)(__v8si){-8, -4, -2, -1, 0, 1, 2, 4}), -777.0, -777.0, -2.0, -1.0, 0.0, -777.0, 2.0, -777.0));
+
 __m512d test_mm512_maskz_cvtepi32_pd (__mmask8 __U, __m256i __A)
 {
   // CHECK-LABEL: test_mm512_maskz_cvtepi32_pd
@@ -9515,6 +9540,8 @@ __m512d test_mm512_maskz_cvtepi32_pd (__mmask8 __U, __m256i __A)
   return _mm512_maskz_cvtepi32_pd (__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_cvtepi32_pd(/*0101 1100=*/0x5c, (__m256i)(__v8si){-8, -4, -2, -1, 0, 1, 2, 4}), 0.0, 0.0, -2.0, -1.0, 0.0, 0.0, 2.0, 0.0));
+
 __m512d test_mm512_cvtepi32lo_pd (__m512i __A)
 {
   // CHECK-LABEL: test_mm512_cvtepi32lo_pd
@@ -9522,6 +9549,8 @@ __m512d test_mm512_cvtepi32lo_pd (__m512i __A)
   // CHECK: sitofp <8 x i32> %{{.*}} to <8 x double>
   return _mm512_cvtepi32lo_pd (__A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_cvtepi32lo_pd((__m512i)(__v16si){-128, -64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64}), -128.0, -64.0, -32.0, -16.0, -8.0, -4.0, -2.0, -1.0));
 
 __m512d test_mm512_mask_cvtepi32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
 {
@@ -9532,12 +9561,16 @@ __m512d test_mm512_mask_cvtepi32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
   return _mm512_mask_cvtepi32lo_pd (__W, __U, __A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtepi32lo_pd(_mm512_set1_pd(-777.0), /*1010 1101=*/0xad, (__m512i)(__v16si){-128, -64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64}), -128.0, -777.0, -32.0, -16.0, -777.0, -4.0, -777.0, -1.0));
+
 __m512 test_mm512_cvtepi32_ps (__m512i __A)
 {
   // CHECK-LABEL: test_mm512_cvtepi32_ps 
   // CHECK: sitofp <16 x i32> %{{.*}} to <16 x float>
   return _mm512_cvtepi32_ps (__A);
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_cvtepi32_ps((__m512i)(__v16si){-128, -64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64}), -128.0f, -64.0f, -32.0f, -16.0f, -8.0f, -4.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f));
 
 __m512 test_mm512_mask_cvtepi32_ps (__m512 __W, __mmask16 __U, __m512i __A)
 {
@@ -9547,6 +9580,8 @@ __m512 test_mm512_mask_cvtepi32_ps (__m512 __W, __mmask16 __U, __m512i __A)
   return _mm512_mask_cvtepi32_ps (__W,__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512(_mm512_mask_cvtepi32_ps(_mm512_set1_ps(-777.0f), /*1010 1100 1010 1101=*/0xacad, (__m512i)(__v16si){-128, -64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64}), -128.0f, -777.0f, -32.0f, -16.0f, -777.0f, -4.0f, -777.0f, -1.0f, -777.0f, -777.0f, 2.0f, 4.0f, -777.0f, 16.0f, -777.0f, 64.0f));
+
 __m512 test_mm512_maskz_cvtepi32_ps (__mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: test_mm512_maskz_cvtepi32_ps 
@@ -9555,12 +9590,16 @@ __m512 test_mm512_maskz_cvtepi32_ps (__mmask16 __U, __m512i __A)
   return _mm512_maskz_cvtepi32_ps (__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512(_mm512_maskz_cvtepi32_ps(/*1010 1100 1010 1101=*/0xacad, (__m512i)(__v16si){-128, -64, -32, -16, -8, -4, -2, -1, 0, 1, 2, 4, 8, 16, 32, 64}), -128.0f, 0.0f, -32.0f, -16.0f, 0.0f, -4.0f, 0.0f, -1.0f, 0.0f, 0.0f, 2.0f, 4.0f, 0.0f, 16.0f, 0.0f, 64.0f));
+
 __m512d test_mm512_cvtepu32_pd(__m256i __A)
 {
   // CHECK-LABEL: test_mm512_cvtepu32_pd
   // CHECK: uitofp <8 x i32> %{{.*}} to <8 x double>
   return _mm512_cvtepu32_pd(__A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_cvtepu32_pd((__m256i)(__v8su){0, 1, 2, 4, 8, 16, 32, 64}), 0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0));
 
 __m512d test_mm512_mask_cvtepu32_pd (__m512d __W, __mmask8 __U, __m256i __A)
 {
@@ -9570,6 +9609,8 @@ __m512d test_mm512_mask_cvtepu32_pd (__m512d __W, __mmask8 __U, __m256i __A)
   return _mm512_mask_cvtepu32_pd (__W,__U,__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtepu32_pd(_mm512_set1_pd(-777.0), /*0101 1100=*/0x5c, (__m256i)(__v8su){0, 1, 2, 4, 8, 16, 32, 64}), -777.0, -777.0, 2.0, 4.0, 8.0, -777.0, 32.0, -777.0));
+
 __m512d test_mm512_maskz_cvtepu32_pd (__mmask8 __U, __m256i __A)
 {
   // CHECK-LABEL: test_mm512_maskz_cvtepu32_pd
@@ -9577,6 +9618,8 @@ __m512d test_mm512_maskz_cvtepu32_pd (__mmask8 __U, __m256i __A)
   // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_maskz_cvtepu32_pd (__U,__A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_cvtepu32_pd(/*0101 1100=*/0x5c, (__m256i)(__v8su){0, 1, 2, 4, 8, 16, 32, 64}), 0.0, 0.0, 2.0, 4.0, 8.0, 0.0, 32.0, 0.0));
 
 __m512d test_mm512_cvtepu32lo_pd (__m512i __A)
 {
@@ -9586,6 +9629,9 @@ __m512d test_mm512_cvtepu32lo_pd (__m512i __A)
   return _mm512_cvtepu32lo_pd (__A);
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_cvtepu32lo_pd((__m512i)(__v16su){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0));
+
+
 __m512d test_mm512_mask_cvtepu32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
 {
   // CHECK-LABEL: test_mm512_mask_cvtepu32lo_pd
@@ -9594,6 +9640,8 @@ __m512d test_mm512_mask_cvtepu32lo_pd (__m512d __W, __mmask8 __U, __m512i __A)
   // CHECK: select <8 x i1> {{.*}}, <8 x double> {{.*}}, <8 x double> {{.*}}
   return _mm512_mask_cvtepu32lo_pd (__W, __U, __A);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_mask_cvtepu32lo_pd(_mm512_set1_pd(-777.0), /*1010 1101=*/0xad, (__m512i)(__v16su){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0.0, -777.0, 2.0, 4.0, -777.0, 16.0, -777.0, 64.0));
 
 __m256 test_mm512_cvtpd_ps (__m512d __A)
 {
