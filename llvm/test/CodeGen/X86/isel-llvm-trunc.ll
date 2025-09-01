@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X64
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X86,GISEL-X86
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X86
 
 define float @trunc_f32(float %a) nounwind readnone {
 ; DAG-X64-LABEL: trunc_f32:
@@ -18,21 +18,18 @@ define float @trunc_f32(float %a) nounwind readnone {
 ; FASTISEL-X64-NEXT:    popq %rax
 ; FASTISEL-X64-NEXT:    retq
 ;
+; X86-LABEL: trunc_f32:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    calll truncf
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
 ; GISEL-X64-LABEL: trunc_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    pushq %rax
-; GISEL-X64-NEXT:    callq truncf
-; GISEL-X64-NEXT:    popq %rax
-; GISEL-X64-NEXT:    retq
-;
-; GISEL-X86-LABEL: trunc_f32:
-; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    calll truncf
-; GISEL-X86-NEXT:    addl $12, %esp
-; GISEL-X86-NEXT:    retl
+; GISEL-X64-NEXT:    jmp truncf@PLT # TAILCALL
   %c = call float @llvm.trunc.f32(float %a)
   ret float %c
 }
@@ -49,26 +46,18 @@ define double @trunc_f64(double %a) nounwind readnone {
 ; FASTISEL-X64-NEXT:    popq %rax
 ; FASTISEL-X64-NEXT:    retq
 ;
+; X86-LABEL: trunc_f64:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    calll trunc
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
 ; GISEL-X64-LABEL: trunc_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    pushq %rax
-; GISEL-X64-NEXT:    callq trunc
-; GISEL-X64-NEXT:    popq %rax
-; GISEL-X64-NEXT:    retq
-;
-; GISEL-X86-LABEL: trunc_f64:
-; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl 4(%eax), %eax
-; GISEL-X86-NEXT:    xorl %edx, %edx
-; GISEL-X86-NEXT:    addl %esp, %edx
-; GISEL-X86-NEXT:    movl %ecx, (%esp)
-; GISEL-X86-NEXT:    movl %eax, 4(%edx)
-; GISEL-X86-NEXT:    calll trunc
-; GISEL-X86-NEXT:    addl $12, %esp
-; GISEL-X86-NEXT:    retl
+; GISEL-X64-NEXT:    jmp trunc@PLT # TAILCALL
   %c = call double @llvm.trunc.f64(double %a)
   ret double %c
 }
@@ -97,9 +86,10 @@ define x86_fp80 @trunc_f80(x86_fp80   %a) nounwind readnone {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq truncl
+; GISEL-X64-NEXT:    callq truncl@PLT
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %c = call x86_fp80   @llvm.trunc.f80(x86_fp80   %a)
   ret x86_fp80   %c
 }
+
