@@ -4,9 +4,9 @@
 define void @ptrtoint_based_trip_count_known_via_guards_applied_to_add_subexpr(ptr %start, ptr %end) {
 ; CHECK-LABEL: 'ptrtoint_based_trip_count_known_via_guards_applied_to_add_subexpr'
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_based_trip_count_known_via_guards_applied_to_add_subexpr
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
