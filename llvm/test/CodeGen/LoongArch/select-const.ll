@@ -305,12 +305,9 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 define i32 @select_slt_zero_constant1_constant2(i32 signext %x) {
 ; LA32-LABEL: select_slt_zero_constant1_constant2:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    move $a1, $a0
-; LA32-NEXT:    ori $a0, $zero, 7
-; LA32-NEXT:    bltz $a1, .LBB16_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a0, $zero, -3
-; LA32-NEXT:  .LBB16_2:
+; LA32-NEXT:    srai.w $a0, $a0, 31
+; LA32-NEXT:    andi $a0, $a0, 10
+; LA32-NEXT:    addi.w $a0, $a0, -3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: select_slt_zero_constant1_constant2:

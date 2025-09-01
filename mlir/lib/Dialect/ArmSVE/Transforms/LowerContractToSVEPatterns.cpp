@@ -183,9 +183,9 @@ protected:
   Value acc;
 
   // Conventional names for matrix dimensions.
-  int64_t M = 0;
-  int64_t N = 0;
-  int64_t K = 0;
+  int64_t m = 0;
+  int64_t n = 0;
+  int64_t k = 0;
 
   // Create the matrix mulitply and accumulate operation according to
   // `mmlaOp`.
@@ -286,41 +286,41 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
 
   // Single-dimension vector type for the entire RHS tile.
 
-  auto flatRhsTileType = VectorType::get(/*shape=*/K * N, operandEltType,
+  auto flatRhsTileType = VectorType::get(/*shape=*/k * n, operandEltType,
                                          /*scalableDims=*/{true});
 
   // Vector type having the same number of elements as a row in the
   // accumulator/output tile and the same element type.
-  auto accRowTy = VectorType::get(/*shape=*/N, resultEltType,
+  auto accRowTy = VectorType::get(/*shape=*/n, resultEltType,
                                   /*scalableDims=*/{true});
 
   // Vector type having twice the number of elements as a row in the
   // accumulator/output tile the same element type.
-  auto accRowX2Ty = VectorType::get(/*shape=*/2 * N, resultEltType,
+  auto accRowX2Ty = VectorType::get(/*shape=*/2 * n, resultEltType,
                                     /*scalableDims=*/{true});
   // Vector type having half the number of elements as a row in the
   // accumulator/output tile and an integer element type with twice the bit
   // width.
-  auto accRow64Ty = VectorType::get(/*shape=*/N / 2, rewriter.getI64Type(),
+  auto accRow64Ty = VectorType::get(/*shape=*/n / 2, rewriter.getI64Type(),
                                     /*scalableDims=*/{true});
   // Vector type having the same the number of elements as a row in the
   // accumulator/output tile and an integer element type with twice the bit
   // width.
-  auto accRowX264Ty = VectorType::get(/*shape=*/N, rewriter.getI64Type(),
+  auto accRowX264Ty = VectorType::get(/*shape=*/n, rewriter.getI64Type(),
                                       /*scalableDims=*/{true});
 
   Location loc = op.getLoc();
 
   // Extract LHS sub-tiles with logical shape <2xK>.
   SmallVector<Value> lhsTile;
-  for (int64_t i = 0; i < M; i += 2) {
+  for (int64_t i = 0; i < m; i += 2) {
     // Extract two consecutive rows of the LHS tile.
     auto r0 =
         vector::ExtractOp::create(rewriter, loc, lhs, ArrayRef<int64_t>{i});
     auto r1 =
         vector::ExtractOp::create(rewriter, loc, lhs, ArrayRef<int64_t>{i + 1});
     // Concatenate to obtain a 2 x K x <input-type> flattened sub-tile.
-    SmallVector<int64_t> shuffleIdx(2 * K);
+    SmallVector<int64_t> shuffleIdx(2 * k);
     std::iota(shuffleIdx.begin(), shuffleIdx.end(), 0);
     auto t = vector::ShuffleOp::create(rewriter, loc, r0, r1, shuffleIdx);
     // Turn it into a scalable vector.
@@ -337,13 +337,13 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
 
   // Extract the RHS sub-tiles with logical shape <Kx[2]>.
   SmallVector<Value> rhsTile;
-  for (int64_t j = 0; j < N; j += 2)
+  for (int64_t j = 0; j < n; j += 2)
     rhsTile.push_back(vector::ScalableExtractOp::create(
-        rewriter, loc, flatRhsType, rhs, j * K));
+        rewriter, loc, flatRhsType, rhs, j * k));
 
   // Extract and pack the ACC sub-tiles.
   SmallVector<Value> accTile;
-  for (int64_t i = 0; i < M; i += 2) {
+  for (int64_t i = 0; i < m; i += 2) {
     // Extract two consecutive rows of the accumulator tile.
     auto r0 = vector::ExtractOp::create(rewriter, loc, op.getAcc(),
                                         ArrayRef<int64_t>{i});
@@ -370,28 +370,28 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
           vector::BitCastOp::create(rewriter, loc, accRowX2Ty, intrI64);
     }
     // Extract ACC sub-tiles.
-    for (int64_t j = 0; j < N; j += 2)
+    for (int64_t j = 0; j < n; j += 2)
       accTile.push_back(vector::ScalableExtractOp::create(
           rewriter, loc, flatAccType, accTileVec, j * 2));
   }
 
   // Emit sub-tile matrix multiplications.
   SmallVector<Value> outTile;
-  for (int64_t i = 0; i < M / 2; ++i)
-    for (int64_t j = 0; j < N / 2; ++j) {
-      Value mmla = createMMLA(rewriter, loc, accTile[i * N / 2 + j], lhsTile[i],
+  for (int64_t i = 0; i < m / 2; ++i)
+    for (int64_t j = 0; j < n / 2; ++j) {
+      Value mmla = createMMLA(rewriter, loc, accTile[i * n / 2 + j], lhsTile[i],
                               rhsTile[j]);
       outTile.push_back(mmla);
     }
 
   // Unpack the OUT sub-tiles and insert into the result.
   Value result = ub::PoisonOp::create(rewriter, loc, op.getResultType());
-  for (int64_t i = 0; i < M / 2; ++i) {
+  for (int64_t i = 0; i < m / 2; ++i) {
     // Collect a number of sub-tiles in a row.
     Value row = ub::PoisonOp::create(rewriter, loc, accRowX2Ty);
-    for (int64_t j = 0; j < N / 2; ++j)
+    for (int64_t j = 0; j < n / 2; ++j)
       row = vector::ScalableInsertOp::create(
-          rewriter, loc, outTile[i * N / 2 + j], row, j * 4);
+          rewriter, loc, outTile[i * n / 2 + j], row, j * 4);
 
     // Unpack the row to obtain two rows of the output. If we have the out
     // sub-tiles transposed we obtain two consecutive output rows by
@@ -432,9 +432,9 @@ public:
     VectorType lhsType = op.getLhsType();
     VectorType rhsType = op.getRhsType();
 
-    M = lhsType.getDimSize(0);
-    N = rhsType.getDimSize(0);
-    K = rhsType.getDimSize(1);
+    m = lhsType.getDimSize(0);
+    n = rhsType.getDimSize(0);
+    k = rhsType.getDimSize(1);
 
     // Check the operands have the expected shape:
     //  * for LHS: fixed vector MxK
@@ -442,8 +442,8 @@ public:
     //  * K == 8
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
-        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != K || K != 8 ||
-        M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
+        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 8 ||
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
         !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
@@ -504,9 +504,9 @@ public:
     VectorType lhsType = op.getLhsType();
     VectorType rhsType = op.getRhsType();
 
-    M = lhsType.getDimSize(0);
-    N = rhsType.getDimSize(0);
-    K = rhsType.getDimSize(1);
+    m = lhsType.getDimSize(0);
+    n = rhsType.getDimSize(0);
+    k = rhsType.getDimSize(1);
 
     // Check the operands have the expected shape:
     //  * for LHS: fixed vector MxK
@@ -514,8 +514,8 @@ public:
     //  * K == 4
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
-        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != K || K != 4 ||
-        M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
+        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 4 ||
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
         !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 

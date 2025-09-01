@@ -22,7 +22,7 @@ def SDT_LoongArchVShuf : SDTypeProfile<1, 3, [SDTCisVec<0>,
 def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                      SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                        SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+                                        SDTCisSameAs<0,1>, SDTCisVT<2, GRLenVT>]>;
 def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
