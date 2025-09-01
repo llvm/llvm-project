@@ -548,7 +548,6 @@ public:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPWidenSelectSC:
-    case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
@@ -2376,72 +2375,6 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
-  }
-};
-
-/// A recipe for vectorizing a phi-node as a sequence of mask-based select
-/// instructions.
-class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPSingleDefRecipe {
-public:
-  /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
-  /// be omitted (implied by passing an odd number of operands) in which case
-  /// all other incoming values are merged into it.
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
-      : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
-    assert(Operands.size() > 0 && "Expected at least one operand!");
-  }
-
-  VPBlendRecipe *clone() override {
-    return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()),
-                             operands(), getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPBlendSC)
-
-  /// A normalized blend is one that has an odd number of operands, whereby the
-  /// first operand does not have an associated mask.
-  bool isNormalized() const { return getNumOperands() % 2; }
-
-  /// Return the number of incoming values, taking into account when normalized
-  /// the first incoming value will have no mask.
-  unsigned getNumIncomingValues() const {
-    return (getNumOperands() + isNormalized()) / 2;
-  }
-
-  /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - isNormalized());
-  }
-
-  /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const {
-    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
-    return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
-  }
-
-  void execute(VPTransformState &State) override {
-    llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
-  }
-
-  /// Return the cost of this VPWidenMemoryRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // Recursing through Blend recipes only, must terminate at header phi's the
-    // latest.
-    return all_of(users(),
-                  [this](VPUser *U) { return U->onlyFirstLaneUsed(this); });
   }
 };
 

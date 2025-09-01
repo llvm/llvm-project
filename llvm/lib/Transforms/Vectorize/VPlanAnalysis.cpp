@@ -40,17 +40,6 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
-  Type *ResTy = inferScalarType(R->getIncomingValue(0));
-  for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
-    VPValue *Inc = R->getIncomingValue(I);
-    assert(inferScalarType(Inc) == ResTy &&
-           "different types inferred for different incoming values");
-    CachedTypes[Inc] = ResTy;
-  }
-  return ResTy;
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   // Set the result type from the first operand, check if the types for all
   // other operands match and cache them.
@@ -293,7 +282,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
                 VPWidenCastRecipe>(
               [](const auto *R) { return R->getResultType(); })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+          .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {

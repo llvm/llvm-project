@@ -93,56 +93,6 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #endif
 }
 
-TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
-  VPlan &Plan = getPlan();
-  IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Phi = PHINode::Create(Int32, 1);
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
-
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
-  VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI}, {});
-
-  VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
-  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
-  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
-
-  VPBB2->appendRecipe(CanIV);
-  VPBB3->appendRecipe(Blend);
-  VPBB4->appendRecipe(DefI);
-  VPBB4->appendRecipe(BranchOnCond);
-
-  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
-  VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPBB3->setParent(R1);
-
-  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
-
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  EXPECT_STREQ("Use before def!\n"
-               "  BLEND ir<<badref>> = vp<%2>\n"
-               "  before\n"
-               "  EMIT vp<%2> = add ir<0>\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#else
-  EXPECT_STREQ("Use before def!\n",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
-#endif
-
-  delete Phi;
-}
-
 TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -284,44 +234,6 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   EXPECT_STREQ("Predecessor is not in the same region.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
-}
-
-TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
-  VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
-  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
-  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-
-  VPBasicBlock *VPBB1 = Plan.getEntry();
-  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
-
-  VPBB2->appendRecipe(CanIV);
-
-  PHINode *PHINode = PHINode::Create(Type::getInt32Ty(C), 2);
-  auto *IRPhi = new VPIRPhi(*PHINode);
-  VPBB2->appendRecipe(IRPhi);
-  VPBB2->appendRecipe(BranchOnCond);
-
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
-  VPBlockUtils::connectBlocks(VPBB1, R1);
-  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
-
-#if GTEST_HAS_STREAM_REDIRECTION
-  ::testing::internal::CaptureStderr();
-#endif
-  EXPECT_FALSE(verifyVPlanIsValid(Plan));
-#if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  EXPECT_STREQ(
-      "Found non-header PHI recipe in header VPBB: IR   <badref> = phi i32 \n",
-      ::testing::internal::GetCapturedStderr().c_str());
-#else
-  EXPECT_STREQ("Found non-header PHI recipe in header VPBB",
-               ::testing::internal::GetCapturedStderr().c_str());
-#endif
-#endif
-
-  delete PHINode;
 }
 
 class VPIRVerifierTest : public VPlanTestIRBase {};

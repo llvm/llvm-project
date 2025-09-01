@@ -73,7 +73,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
-  case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
@@ -123,7 +122,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return false;
-  case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
@@ -163,7 +161,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
-  case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
@@ -2582,44 +2579,6 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = vector-pointer ";
 
   printOperands(O, SlotTracker);
-}
-#endif
-
-InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
-                                           VPCostContext &Ctx) const {
-  // Handle cases where only the first lane is used the same way as the legacy
-  // cost model.
-  if (vputils::onlyFirstLaneUsed(this))
-    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-
-  Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-  Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
-  return (getNumIncomingValues() - 1) *
-         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
-                          VPSlotTracker &SlotTracker) const {
-  O << Indent << "BLEND ";
-  printAsOperand(O, SlotTracker);
-  O << " =";
-  if (getNumIncomingValues() == 1) {
-    // Not a User of any mask: not really blending, this is a
-    // single-predecessor phi.
-    O << " ";
-    getIncomingValue(0)->printAsOperand(O, SlotTracker);
-  } else {
-    for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
-      O << " ";
-      getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0)
-        continue;
-      O << "/";
-      getMask(I)->printAsOperand(O, SlotTracker);
-    }
-  }
 }
 #endif
 

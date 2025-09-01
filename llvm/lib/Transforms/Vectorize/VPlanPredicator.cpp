@@ -84,8 +84,8 @@ public:
   /// block of the loop is set to True, or to the loop mask when tail folding.
   VPValue *createBlockInMask(VPBasicBlock *VPBB);
 
-  /// Convert phi recipes in \p VPBB to VPBlendRecipes.
-  void convertPhisToBlends(VPBasicBlock *VPBB);
+  /// Convert phi recipes in \p VPBB to selects.
+  void convertPhisToSelects(VPBasicBlock *VPBB);
 
   const BlockMaskCacheTy getBlockMaskCache() const { return BlockMaskCache; }
 };
@@ -247,7 +247,7 @@ VPValue *VPPredicator::findCommonEdgeMask(const VPPhi *PhiR) const {
   return CommonEdgeMask;
 }
 
-void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
+void VPPredicator::convertPhisToSelects(VPBasicBlock *VPBB) {
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPPhi>(&R));
@@ -259,8 +259,10 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // optimizations will clean it up.
 
     VPValue *CommonEdgeMask = findCommonEdgeMask(PhiR);
+    VPValue *Select = PhiR->getIncomingValue(0);
     SmallVector<VPValue *, 2> OperandsWithMask;
-    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+    for (const auto &[InVPV, InVPBB] :
+         drop_begin(PhiR->incoming_values_and_blocks())) {
       OperandsWithMask.push_back(InVPV);
       VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
       if (!EdgeMask) {
@@ -277,13 +279,11 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
           EdgeMask = X;
       }
 
-      OperandsWithMask.push_back(EdgeMask);
+      Select =
+          Builder.createSelect(EdgeMask, InVPV, Select, PhiR->getDebugLoc());
+      Select->setUnderlyingValue(PhiR->getUnderlyingValue());
     }
-    PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
-    auto *Blend =
-        new VPBlendRecipe(IRPhi, OperandsWithMask, PhiR->getDebugLoc());
-    Builder.insert(Blend);
-    PhiR->replaceAllUsesWith(Blend);
+    PhiR->replaceAllUsesWith(Select);
     PhiR->eraseFromParent();
   }
 }
@@ -309,7 +309,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     }
 
     Predicator.createBlockInMask(VPBB);
-    Predicator.convertPhisToBlends(VPBB);
+    Predicator.convertPhisToSelects(VPBB);
   }
 
   // Linearize the blocks of the loop into one serial chain.
