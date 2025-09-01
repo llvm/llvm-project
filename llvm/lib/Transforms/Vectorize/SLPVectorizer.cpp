@@ -17846,6 +17846,17 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
+  Value *getVectorizedValue(const TreeEntry &E) {
+    Value *Vec = E.VectorizedValue;
+    if (!Vec->getType()->isIntOrIntVectorTy())
+      return Vec;
+    return castToScalarTyElem(Vec, any_of(E.Scalars, [&](Value *V) {
+                                return !isa<PoisonValue>(V) &&
+                                       !isKnownNonNegative(
+                                           V, SimplifyQuery(*R.DL));
+                              }));
+  }
+
 public:
   ShuffleInstructionBuilder(Type *ScalarTy, IRBuilderBase &Builder, BoUpSLP &R)
       : BaseShuffleAnalysis(ScalarTy), Builder(Builder), R(R) {}
@@ -18012,35 +18023,14 @@ public:
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
-    Value *V2 = E2.VectorizedValue;
-    if (V2->getType()->isIntOrIntVectorTy())
-      V2 = castToScalarTyElem(V2, any_of(E2.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
+    Value *V2 = getVectorizedValue(E2);
     add(V1, V2, Mask);
   }
   /// Adds single input vector (in form of tree entry) and the mask for its
   /// shuffling.
   void add(const TreeEntry &E1, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
     add(V1, Mask);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
@@ -18189,14 +18179,7 @@ public:
       auto CreateSubVectors = [&](Value *Vec,
                                   SmallVectorImpl<int> &CommonMask) {
         for (auto [E, Idx] : SubVectors) {
-          Value *V = E->VectorizedValue;
-          if (V->getType()->isIntOrIntVectorTy())
-            V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
-                                     if (isa<PoisonValue>(V))
-                                       return false;
-                                     return !isKnownNonNegative(
-                                         V, SimplifyQuery(*R.DL));
-                                   }));
+          Value *V = getVectorizedValue(*E);
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
           // Use scalar version of the SCalarType to correctly handle shuffles
           // for revectorization. The revectorization mode operates by the
