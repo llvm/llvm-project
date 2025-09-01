@@ -291,7 +291,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLanaiTargetCodeGenInfo(CGM);
   case llvm::Triple::r600:
     return createAMDGPUTargetCodeGenInfo(CGM);
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return createAMDGPUTargetCodeGenInfo(CGM);
   case llvm::Triple::sparc:
     return createSparcV8TargetCodeGenInfo(CGM);
@@ -629,7 +629,7 @@ void CodeGenModule::createOpenMPRuntime() {
   switch (getTriple().getArch()) {
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::spirv64:
     assert(
         getLangOpts().OpenMPIsTargetDevice &&
@@ -6211,7 +6211,7 @@ LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
 }
 
 // In address space agnostic languages, string literals are in default address
-// space in AST. However, certain targets (e.g. amdgcn) request them to be
+// space in AST. However, certain targets (e.g. amdgpu) request them to be
 // emitted in constant address space in LLVM IR. To be consistent with other
 // parts of AST, string literal global variables in constant address space
 // need to be casted to default address space before being put into address

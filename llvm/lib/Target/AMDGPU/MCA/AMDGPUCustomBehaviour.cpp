@@ -366,4 +366,9 @@ LLVMInitializeAMDGPUTargetMCA() {
                                           createAMDGPUCustomBehaviour);
   TargetRegistry::RegisterInstrPostProcess(getTheGCNTarget(),
                                            createAMDGPUInstrPostProcess);
+
+  TargetRegistry::RegisterCustomBehaviour(getTheGCNLegacyTarget(),
+                                          createAMDGPUCustomBehaviour);
+  TargetRegistry::RegisterInstrPostProcess(getTheGCNLegacyTarget(),
+                                           createAMDGPUInstrPostProcess);
 }

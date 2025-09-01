@@ -48,7 +48,7 @@ createTargetLoweringInfo(LowerModule &lm) {
   const llvm::Triple &triple = lm.getTarget().getTriple();
 
   switch (triple.getArch()) {
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
     return createAMDGPUTargetLoweringInfo();
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:

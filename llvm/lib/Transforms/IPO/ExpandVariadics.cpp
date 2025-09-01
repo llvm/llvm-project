@@ -1121,8 +1121,8 @@ struct Wasm final : public VariadicABIInfo {
 
 std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   switch (T.getArch()) {
-  case Triple::r600:
-  case Triple::amdgcn: {
+  case Triple::amdgpu:
+  case Triple::r600: {
     return std::make_unique<Amdgpu>();
   }
 
