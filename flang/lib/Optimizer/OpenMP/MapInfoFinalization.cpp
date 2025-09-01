@@ -251,9 +251,7 @@ public:
         mlir::TypeAttr::get(underlyingVarType),
         builder.getIntegerAttr(
             builder.getIntegerType(64, false),
-            llvm::to_underlying(llvm::omp::OpenMPOffloadMappingFlags(mapType) |
-                                llvm::omp::OpenMPOffloadMappingFlags::
-                                    OMP_MAP_DESCRIPTOR_BASE_ADDR)),
+            llvm::to_underlying(llvm::omp::OpenMPOffloadMappingFlags(mapType))),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},

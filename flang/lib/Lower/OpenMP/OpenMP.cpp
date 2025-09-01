@@ -16,13 +16,13 @@
 #include "ClauseProcessor.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
-#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -38,6 +38,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
 #include "flang/Support/OpenMP-utils.h"
+#include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Support/StateStack.h"
@@ -47,6 +48,7 @@
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
+using namespace Fortran::utils::openmp;
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -407,7 +409,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
         common::visitors{
-            [&](const parser::OpenMPBlockConstruct &ompConstruct) {
+            [&](const parser::OmpBlockConstruct &ompConstruct) {
               beginClauseList = &ompConstruct.BeginDir().Clauses();
               if (auto &endSpec = ompConstruct.EndDir())
                 endClauseList = &endSpec->Clauses();
@@ -532,6 +534,13 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_loop:
       cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      break;
+
+    case OMPD_teams_workdistribute:
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
+      [[fallthrough]];
+    case OMPD_target_teams_workdistribute:
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       break;
 
     // Standalone 'target' case.
@@ -1425,7 +1434,7 @@ static void genBodyOfTargetOp(
   // If so, then either clone them as well if they are MemoryEffectFree, or else
   // copy them to a new temporary and add them to the map and block_argument
   // lists and replace their uses with the new temporary.
-  Fortran::common::openmp::cloneOrMapRegionOutsiders(firOpBuilder, targetOp);
+  cloneOrMapRegionOutsiders(firOpBuilder, targetOp);
 
   // Insert dummy instruction to remember the insertion position. The
   // marker will be deleted since there are not uses.
@@ -2732,6 +2741,17 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static mlir::omp::WorkdistributeOp genWorkdistributeOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item) {
+  return genOpWithBody<mlir::omp::WorkdistributeOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_workdistribute),
+      queue, item);
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation functions for the standalone version of constructs that can
 // also be a leaf of a composite construct
@@ -3163,7 +3183,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
                                    /*shouldCollectPreDeterminedSymbols=*/true,
                                    /*useDelayedPrivatization=*/true, symTable);
   simdItemDSP.processStep1();
-  simdItemDSP.processStep2(&simdClauseOps);
+  simdItemDSP.processStep2(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3385,7 +3405,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
-  // case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+    newOp = genWorkdistributeOp(converter, symTable, semaCtx, eval, loc, queue,
+                                item);
+    break;
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
                            queue, item);
@@ -3692,7 +3715,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPBlockConstruct &blockConstruct) {
+                   const parser::OmpBlockConstruct &blockConstruct) {
   const parser::OmpDirectiveSpecification &beginSpec =
       blockConstruct.BeginDir();
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
@@ -3884,9 +3907,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
   const auto &endSectionsDirective =
-      std::get<parser::OmpEndSectionsDirective>(sectionsConstruct.t);
+      std::get<std::optional<parser::OmpEndSectionsDirective>>(
+          sectionsConstruct.t);
+  assert(endSectionsDirective &&
+         "Missing end section directive should have been handled in semantics");
   clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endSectionsDirective.t), semaCtx));
+      std::get<parser::OmpClauseList>(endSectionsDirective->t), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
 
   llvm::omp::Directive directive =
@@ -4050,7 +4076,7 @@ void Fortran::lower::genDeclareTargetIntGlobal(
 bool Fortran::lower::isOpenMPTargetConstruct(
     const parser::OpenMPConstruct &omp) {
   llvm::omp::Directive dir = llvm::omp::Directive::OMPD_unknown;
-  if (const auto *block = std::get_if<parser::OpenMPBlockConstruct>(&omp.u)) {
+  if (const auto *block = std::get_if<parser::OmpBlockConstruct>(&omp.u)) {
     dir = block->BeginDir().DirId();
   } else if (const auto *loop =
                  std::get_if<parser::OpenMPLoopConstruct>(&omp.u)) {

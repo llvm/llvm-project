@@ -183,6 +183,9 @@ TARGET_BUILTIN(__builtin_amdgcn_struct_ptr_buffer_load_lds, "vQbv*3IUiiiiIiIi", 
 TARGET_BUILTIN(__builtin_amdgcn_ballot_w32, "ZUib", "nc", "wavefrontsize32")
 BUILTIN(__builtin_amdgcn_ballot_w64, "WUib", "nc")
 
+TARGET_BUILTIN(__builtin_amdgcn_inverse_ballot_w32, "bZUi", "nc", "wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_inverse_ballot_w64, "bWUi", "nc", "wavefrontsize64")
+
 // Deprecated intrinsics in favor of __builtin_amdgn_ballot_{w32|w64}
 BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")
 BUILTIN(__builtin_amdgcn_uicmpl, "WUiWUiWUiIi", "nc")

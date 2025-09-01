@@ -21,7 +21,6 @@ define hidden void @widget() {
   ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[V_MOV_B]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, align 16, addrspace 1)
   ; GFX90A-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORD]], implicit $exec
   ; GFX90A-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 21
-  ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 [[GLOBAL_LOAD_DWORD]], killed [[S_MOV_B32_]], implicit $exec
   ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.2, killed [[V_CMP_LT_I32_e64_]]
   ; GFX90A-NEXT:   S_BRANCH %bb.1
@@ -119,7 +118,6 @@ define hidden void @widget() {
   ; GFX1200-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[V_MOV_B]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, align 16, addrspace 1)
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORD]], implicit $exec
   ; GFX1200-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 21
-  ; GFX1200-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX1200-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_LT_I32_e64 [[GLOBAL_LOAD_DWORD]], killed [[S_MOV_B32_]], implicit $exec
   ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.2, killed [[V_CMP_LT_I32_e64_]]
   ; GFX1200-NEXT:   S_BRANCH %bb.1
@@ -248,7 +246,6 @@ define hidden void @blam() {
   ; GFX90A-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX90A-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
   ; GFX90A-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
@@ -366,7 +363,6 @@ define hidden void @blam() {
   ; GFX1200-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX1200-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
   ; GFX1200-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX1200-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX1200-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX1200-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]

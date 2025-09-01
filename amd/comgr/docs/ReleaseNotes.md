@@ -59,6 +59,9 @@ Deprecated Comgr Actions and Data Types
 
 Removed Comgr Actions and Data Types
 ------------------------------------
+- AMD\_COMGR\_ACTION\_DISASSEMBLE\_RELOCATABLE\_TO\_SOURCE
+- AMD\_COMGR\_ACTION\_DISASSEMBLE\_EXECUTABLE\_TO\_SOURCE
+- AMD\_COMGR\_ACTION\_DISASSEMBLE\_BYTES\_TO\_SOURCE
 
 Comgr Testing, Debugging, and Logging Updates
 ---------------------------------------------

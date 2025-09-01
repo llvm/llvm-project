@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
+
 #file = #llvm.di_file<"target.f90" in "">
 #cu = #llvm.di_compile_unit<id = distinct[0]<>,
  sourceLanguage = DW_LANG_Fortran95, file = #file, isOptimized = false,
@@ -23,11 +23,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 #loc3 = loc(fused<#sp>[#loc1])
 
 // CHECK: define{{.*}}@add(ptr %[[ARG:[0-9]+]]){{.*}}!dbg ![[SP:[0-9]+]] {
-// CHECK:   %[[AL:[0-9]+]] = alloca{{.*}}
-// CHECK:   %[[CAST:[0-9]+]] = addrspacecast ptr addrspace(5) %[[AL]]
-// CHECK:   store ptr %[[ARG]], ptr %[[CAST]]{{.*}}
-// CHECK:   load ptr, ptr %[[CAST]]{{.*}}
-// CHECK: #dbg_declare(ptr addrspace(5) %[[AL]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
+// CHECK: #dbg_declare(ptr %[[ARG]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)), !{{.*}})
 // CHECK: }
 // CHECK: ![[SP]] = {{.*}}!DISubprogram(name: "add"{{.*}})
 // CHECK: ![[A]] = !DILocalVariable(name: "a", arg: 1, scope: ![[SP]]{{.*}})

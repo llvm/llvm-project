@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -3549,6 +3550,49 @@ class TypePromotionTransaction {
       LLVM_DEBUG(dbgs() << "Do: MutateType: " << *Inst << " with " << *NewTy
                         << "\n");
       Inst->mutateType(NewTy);
+      // Handle debug Info
+      mutateDgbInfo(Inst, NewTy);
+    }
+
+    void mutateDgbInfo(Instruction *I, Type *Ty) {
+      SmallVector<DbgVariableRecord *> Dbgs;
+      findDbgUsers(I, Dbgs);
+      for (DbgVariableRecord *Dbg : Dbgs) {
+        DIExpression *Expr = Dbg->getExpression();
+        if (!Expr)
+          continue;
+        std::optional<DIExpression::NewElementsRef> Elems =
+            Expr->getNewElementsRef();
+        if (!Elems.has_value())
+          continue;
+        // Collect arg of Inst
+        uint32_t Idx = 0;
+        SmallBitVector Idxs(Dbg->getNumVariableLocationOps());
+        for (auto *VMD : Dbg->location_ops()) {
+          if (VMD == I) {
+            Idxs.set(Idx);
+          }
+          Idx++;
+        }
+        // Replace types
+        DIExprBuilder Builder(Expr->getContext());
+        unsigned long ArgI = 0;
+        for (auto [I, Op] : enumerate(*Elems)) {
+          const DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
+          const DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
+          if (AsArg && Idxs[AsArg->getIndex()]) {
+            ArgI = I;
+            Builder.append<DIOp::Arg>(AsArg->getIndex(), Ty);
+            if (Ty != OrigTy)
+              Builder.append<DIOp::Convert>(OrigTy);
+          } else if (!(CvtArg && I == ArgI + 1 &&
+                       CvtArg->getResultType() == Ty)) {
+            Builder.append(Op);
+          }
+          I++;
+        }
+        Dbg->setExpression(Builder.intoExpression());
+      }
     }
 
     /// Mutate the instruction back to its original type.
@@ -3556,6 +3600,8 @@ class TypePromotionTransaction {
       LLVM_DEBUG(dbgs() << "Undo: MutateType: " << *Inst << " with " << *OrigTy
                         << "\n");
       Inst->mutateType(OrigTy);
+      // Handle debug Info
+      mutateDgbInfo(Inst, OrigTy);
     }
   };
 

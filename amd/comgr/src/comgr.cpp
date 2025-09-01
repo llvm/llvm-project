@@ -18,7 +18,6 @@
 #include "comgr-disassembly.h"
 #include "comgr-env.h"
 #include "comgr-metadata.h"
-#include "comgr-objdump.h"
 #include "comgr-signal.h"
 #include "comgr-symbol.h"
 #include "comgr-symbolizer.h"
@@ -68,73 +67,6 @@ bool isSymbolInfoValid(amd_comgr_symbol_info_t SymbolInfo) {
          SymbolInfo <= AMD_COMGR_SYMBOL_INFO_LAST;
 }
 
-amd_comgr_status_t dispatchDisassembleAction(amd_comgr_action_kind_t ActionKind,
-                                             DataAction *ActionInfo,
-                                             DataSet *InputSet,
-                                             DataSet *ResultSet,
-                                             raw_ostream &LogS) {
-  amd_comgr_data_set_t ResultSetT = DataSet::convert(ResultSet);
-
-  std::string Out;
-  raw_string_ostream OutS(Out);
-  DisassemHelper Helper(OutS, LogS);
-
-  TargetIdentifier Ident;
-  if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident)) {
-    return Status;
-  }
-
-  // Handle the data object in set relevant to the action only
-  auto Objects =
-      make_filter_range(InputSet->DataObjects, [&](const DataObject *DO) {
-        if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE) {
-          return true;
-        }
-        if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
-          return true;
-        }
-        if (ActionKind == AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE &&
-            DO->DataKind == AMD_COMGR_DATA_KIND_BYTES) {
-          return true;
-        }
-        return false;
-      });
-  std::vector<std::string> Options;
-  Options.emplace_back("-disassemble");
-  Options.push_back((Twine("-mcpu=") + Ident.Processor).str());
-  auto ActionOptions = ActionInfo->getOptions();
-  Options.insert(Options.end(), ActionOptions.begin(), ActionOptions.end());
-  // Loop through the input data set, perform actions and add result
-  // to output data set.
-  for (auto *Input : Objects) {
-    if (auto Status = Helper.disassembleAction(
-            StringRef(Input->Data, Input->Size), Options)) {
-      return Status;
-    }
-
-    amd_comgr_data_t ResultT;
-    if (auto Status =
-            amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &ResultT)) {
-      return Status;
-    }
-    ScopedDataObjectReleaser ResultSDOR(ResultT);
-    DataObject *Result = DataObject::convert(ResultT);
-    if (auto Status = Result->setName(std::string(Input->Name) + ".s")) {
-      return Status;
-    }
-    if (auto Status = Result->setData(OutS.str())) {
-      return Status;
-    }
-    Out.clear();
-    if (auto Status = amd_comgr_data_set_add(ResultSetT, ResultT)) {
-      return Status;
-    }
-  }
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
 
 amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
                                           DataAction *ActionInfo,
@@ -243,14 +175,14 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE";
   case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
     return "AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
     return "AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE";
   case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
     return "AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE";
   case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
     return "AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE";
-  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
-    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
@@ -1355,12 +1287,6 @@ amd_comgr_status_t AMD_COMGR_API
 
     ProfilePoint ProfileAction(getActionKindName(ActionKind));
     switch (ActionKind) {
-    case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
-    case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
-    case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
-      ActionStatus = dispatchDisassembleAction(ActionKind, ActionInfoP,
-                                               InputSetP, ResultSetP, *LogP);
-      break;
     case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
     case AMD_COMGR_ACTION_UNBUNDLE:

@@ -71,11 +71,6 @@ struct __tgt_device_binary {
 
 // clang-format on
 
-// OMPT: Forward declare for function pointer type
-namespace llvm::omp::target::ompt {
-struct OmptEventInfoTy;
-} // namespace llvm::omp::target::ompt
-
 /// This struct contains information exchanged between different asynchronous
 /// operations for device-dependent optimization and potential synchronization
 struct __tgt_async_info {
@@ -98,8 +93,11 @@ struct __tgt_async_info {
 
   /// Use for sync interface. When false => synchronous execution
   bool ExecAsync = true;
-  /// Maintain the actal data for the OMPT stuff
-  llvm::omp::target::ompt::OmptEventInfoTy *OmptEventInfo = nullptr;
+  /// Maintain the actal data for OMPT.
+  /// TODO: Moving forward, this should become a void* to not expose OMPT data
+  /// type in general types
+  // llvm::omp::target::ompt::OmptEventInfoTy *OmptEventInfo = nullptr;
+  void *ProfilerData = nullptr;
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.

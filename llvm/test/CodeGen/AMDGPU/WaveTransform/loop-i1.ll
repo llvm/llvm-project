@@ -45,7 +45,6 @@ define amdgpu_kernel void @loop_i1(ptr addrspace(1) %filter.coerce, ptr addrspac
   ; GFX90A-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX90A-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
   ; GFX90A-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[COPY4]].sub0
@@ -157,7 +156,6 @@ define amdgpu_kernel void @loop_i1(ptr addrspace(1) %filter.coerce, ptr addrspac
   ; GFX1200-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX1200-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_2]], [[V_AND_B32_e64_]], implicit $exec
   ; GFX1200-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX1200-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX1200-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX1200-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX1200-NEXT:   [[COPY5:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[COPY4]].sub0

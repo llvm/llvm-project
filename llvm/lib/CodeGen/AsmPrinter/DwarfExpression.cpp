@@ -758,7 +758,7 @@ void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
   IsFragment = false;
   ASTRoot.reset();
   this->TRI = nullptr;
-  this->ArgLocEntries = std::nullopt;
+  this->ArgLocEntries = {};
 }
 
 /// add masking operations to stencil out a subregister.

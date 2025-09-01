@@ -19,7 +19,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/OpenMP-utils.h"
+#include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
@@ -648,10 +648,8 @@ addAlignedClause(lower::AbstractConverter &converter,
 
   // The default alignment for some targets is equal to 0.
   // Do not generate alignment assumption if alignment is less than or equal to
-  // 0.
-  if (alignment > 0) {
-    // alignment value must be power of 2
-    assert((alignment & (alignment - 1)) == 0 && "alignment is not power of 2");
+  // 0 or not a power of two
+  if (alignment > 0 && ((alignment & (alignment - 1)) == 0)) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
     if (!objects.empty())
       genObjectList(objects, converter, alignedVars);
@@ -1248,7 +1246,7 @@ void ClauseProcessor::processMapObjects(
     auto location = mlir::NameLoc::get(
         mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
         baseOp.getLoc());
-    mlir::omp::MapInfoOp mapOp = Fortran::common::openmp::createMapInfoOp(
+    mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
         firOpBuilder, location, baseOp,
         /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
         /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},

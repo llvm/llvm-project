@@ -1713,45 +1713,23 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE = 0x8,
   /**
-   * Disassemble each relocatable data object in @p input in
-   * order. For each successful disassembly add a source data object to
-   * @p result.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR if any disassembly
-   * fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name is not set in @p info and does not match the isa name
-   * of all relocatable data objects in @p input.
+   * @ deprecated
+   * Return @p AMD_COMGR_STATUS_ERROR_ERROR_INVALID_ARGUMENT
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE = 0x9,
+  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE AMD_COMGR_DEPRECATED("This\
+      action will return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT") = 0x9,
   /**
-   * Disassemble each executable data object in @p input in order. For
-   * each successful disassembly add a source data object to @p result.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR if any disassembly
-   * fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name is not set in @p info and does not match the isa name
-   * of all relocatable data objects in @p input.
+   * @ deprecated
+   * Return @p AMD_COMGR_STATUS_ERROR_ERROR_INVALID_ARGUMENT
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE = 0xA,
+  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE AMD_COMGR_DEPRECATED("This\
+      action will return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT") = 0xA,
   /**
-   * Disassemble each bytes data object in @p input in order. For each
-   * successful disassembly add a source data object to @p
-   * result. Only simple assembly language commands are generate that
-   * corresponf to raw bytes are supported, not any directives that
-   * control the code object layout, or symbolic branch targets or
-   * names.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR if any disassembly
-   * fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name is not set in @p info
+   * @ deprecated
+   * Return @p AMD_COMGR_STATUS_ERROR_ERROR_INVALID_ARGUMENT
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE = 0xB,
+  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE AMD_COMGR_DEPRECATED("This\
+      action will return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT") = 0xB,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve

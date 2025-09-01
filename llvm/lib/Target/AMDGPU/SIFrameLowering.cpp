@@ -48,6 +48,15 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
+static bool needsFrameMoves(const MachineFunction &MF) {
+  // FIXME: There are some places in the compiler which are sensitive to the CFI
+  // pseudos and so using MachineFunction::needsFrameMoves has the unintended
+  // effect of making enabling debug info affect codegen. Once we have
+  // identified and fixed those cases this should be replaced with
+  // MF.needsFrameMoves()
+  return true;
+}
+
 static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   assert(DwarfReg >= 0);
   if (DwarfReg < 32) {
@@ -485,8 +494,7 @@ public:
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
     NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
-    // FIXME: Switch to using MF.needsFrameMoves() later.
-    NeedsFrameMoves = true;
+    NeedsFrameMoves = needsFrameMoves(MF);
 
     assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
   }
@@ -769,8 +777,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   DebugLoc DL;
   MachineBasicBlock::iterator I = MBB.begin();
 
-  // FIXME: Switch to using MF.needsFrameMoves() later
-  const bool NeedsFrameMoves = true;
+  const bool NeedsFrameMoves = needsFrameMoves(MF);
 
   if (NeedsFrameMoves) {
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
@@ -1448,8 +1455,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = NumBytes;
 
-  // FIXME: Switch to using MF.needsFrameMoves() later
-  const bool NeedsFrameMoves = true;
+  const bool NeedsFrameMoves = needsFrameMoves(MF);
 
   if (NeedsFrameMoves)
     emitPrologueEntryCFI(MBB, MBBI, DL);
@@ -1637,8 +1643,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                          FramePtrRegScratchCopy);
   }
 
-  // FIXME: Switch to using MF.needsFrameMoves() later
-  const bool NeedsFrameMoves = true;
+  const bool NeedsFrameMoves = needsFrameMoves(MF);
   if (hasFP(MF)) {
     if (NeedsFrameMoves)
       emitDefCFA(MBB, MBBI, DL, StackPtrReg, /*AspaceAlreadyDefined=*/false,

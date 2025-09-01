@@ -456,7 +456,7 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
       AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
-  LocalAsyncInfo.OmptEventInfo = nullptr;
+  LocalAsyncInfo.ProfilerData = nullptr;
 }
 
 void AsyncInfoWrapperTy::finalize(Error &Err) {
@@ -525,7 +525,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   } else {
     // Check that the retrieved execution mode is valid.
     if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-      return Plugin::error(ErrorCode::UNKNOWN, 
+      return Plugin::error(ErrorCode::UNKNOWN,
                            "Invalid execution mode %d for '%s'",
                            ExecModeGlobal.getValue(), getName());
     ExecutionMode = ExecModeGlobal.getValue();
@@ -613,22 +613,22 @@ GenericKernelTy::getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
-  // The OmptEventInfo at this point will have a callback for a kernel launch,
+  // The ProfilerData at this point will have a callback for a kernel launch,
   // not a data-op. This is due to the "external" operation being a kernel
   // launch and the data submit here being an implementation detail. We
-  // temporarily set the OmptEventInfo to nullptr, such that we disable the
+  // temporarily set the ProfilerData to nullptr, such that we disable the
   // timing etc further down to not trigger assertions or report implementation
   // detail.
   __tgt_async_info *AI = AsyncInfoWrapper;
-  if (AI && AI->OmptEventInfo) {
-    auto LocalOEI = AI->OmptEventInfo;
-    AI->OmptEventInfo = nullptr;
+  if (AI && AI->ProfilerData) {
+    auto LocalOEI = AI->ProfilerData;
+    AI->ProfilerData = nullptr;
     auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                         sizeof(KernelLaunchEnvironmentTy),
                                         AsyncInfoWrapper);
     if (Err)
       return Err;
-    AI->OmptEventInfo = LocalOEI;
+    AI->ProfilerData = LocalOEI;
     return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
   }
 
@@ -783,10 +783,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   OMPT_IF_TRACING_ENABLED(if (llvm::omp::target::ompt::isTracedDevice(
                                   getDeviceId(&GenericDevice))) {
     __tgt_async_info *AI = AsyncInfoWrapper;
-    if (AI->OmptEventInfo != nullptr) {
+    if (AI->ProfilerData != nullptr) {
       // Set number of granted teams for OMPT
       setOmptGrantedNumTeams(NumBlocks[0]);
-      AI->OmptEventInfo->NumTeams = NumBlocks[0];
+      reinterpret_cast<OmptEventInfoTy *>(AI->ProfilerData)->NumTeams =
+          NumBlocks[0];
     }
   });
 
@@ -856,6 +857,10 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
     // blocks start again until the requested number has been started.
     return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
   }
+
+  // Return the number of teams required to cover the loop iterations.
+  if (isNoLoopMode())
+    return LoopTripCount > 0 ? (((LoopTripCount - 1) / NumThreads) + 1) : 1;
 
   uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
@@ -1573,16 +1578,19 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
                                    bool ReleaseQueue) {
+  if (!AsyncInfo)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
   SmallVector<void *> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
-    if (!AsyncInfo || !AsyncInfo->Queue)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "invalid async info queue");
-
-    if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
-      return Err;
+    // This can be false when no work has been added to the AsyncInfo. In which
+    // case, the device has nothing to synchronize.
+    if (AsyncInfo->Queue)
+      if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
+        return Err;
 
     std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
   }

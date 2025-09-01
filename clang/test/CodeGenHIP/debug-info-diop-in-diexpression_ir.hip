@@ -125,7 +125,7 @@ __device__ void func1(pair p) {}
 // DIEXPRESSION-IR: [[META24]] = !DILocalVariable(name: "KernelVarA", scope: [[META19]], file: [[META7]], line: 50, type: [[META8]])
 // DIEXPRESSION-IR: [[META25]] = !DILocalVariable(name: "KernelVarB", scope: [[META19]], file: [[META7]], line: 51, type: [[META8]])
 // DIEXPRESSION-IR: [[META26]] = !DILocalVariable(name: "KernelVarSharedAPointer", scope: [[META19]], file: [[META7]], line: 53, type: [[META27:![0-9]+]])
-// DIEXPRESSION-IR: [[META27]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META8]], size: 64)
+// DIEXPRESSION-IR: [[META27]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META8]], size: 64, addressSpace: 1)
 // DIEXPRESSION-IR: [[META28]] = !DILocalVariable(name: "KernelVarSharedBPointer", scope: [[META19]], file: [[META7]], line: 54, type: [[META27]])
 // DIEXPRESSION-IR: [[META29]] = !DILocalVariable(name: "KernelVarAPointer", scope: [[META19]], file: [[META7]], line: 55, type: [[META27]])
 // DIEXPRESSION-IR: [[META30]] = !DILocalVariable(name: "KernelVarBPointer", scope: [[META19]], file: [[META7]], line: 56, type: [[META27]])
