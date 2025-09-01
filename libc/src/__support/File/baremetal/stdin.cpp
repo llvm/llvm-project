@@ -14,10 +14,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-cookie_io_functions_t io_func = {.read = __llvm_libc_stdio_read,
-                                 .write = nullptr,
-                                 .seek = nullptr,
-                                 .close = nullptr};
+static cookie_io_functions_t io_func = {.read = __llvm_libc_stdio_read,
+                                        .write = nullptr,
+                                        .seek = nullptr,
+                                        .close = nullptr};
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
 // Buffering is implementation defined. Therefore to save RAM, we use no
