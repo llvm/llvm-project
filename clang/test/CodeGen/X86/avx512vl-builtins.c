@@ -3686,6 +3686,9 @@ __m128d test_mm_mask_cvtepi32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   // CHECK: select <2 x i1> {{.*}}, <2 x double> {{.*}}, <2 x double> {{.*}}
   return _mm_mask_cvtepi32_pd(__W,__U,__A);
 }
+
+TEST_CONSTEXPR(match_m128d(_mm_mask_cvtepi32_pd((__m128d){-777.0, -777.0}, /*10=*/0x2, (__m128i)(__v4si){-1, 1, -2, 2}), -777.0, 1.0));
+
 __m128d test_mm_maskz_cvtepi32_pd(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_cvtepi32_pd
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>

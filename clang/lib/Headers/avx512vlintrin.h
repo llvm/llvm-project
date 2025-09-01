@@ -1863,8 +1863,8 @@ _mm256_mask_compressstoreu_epi32 (void *__P, __mmask8 __U, __m256i __A) {
             (__mmask8) __U);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_mask_cvtepi32_pd (__m128d __W, __mmask8 __U, __m128i __A) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_cvtepi32_pd(__m128d __W, __mmask8 __U, __m128i __A) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8) __U,
                                               (__v2df)_mm_cvtepi32_pd(__A),
                                               (__v2df)__W);
