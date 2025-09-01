@@ -184,8 +184,8 @@ define <2 x i64> @test_vpmadd52l_mul_zero_scalar(<2 x i64> %x0, <2 x i64> %x1) {
   ret <2 x i64> %1
 }
 
+; (1 << 51) * (1 << 1) -> 1 << 52 -> low 52 bits are zeroes
 define <2 x i64> @test_vpmadd52l_mul_lo52_zero(<2 x i64> %x0) {
-  ; (1 << 51) * (1 << 1) -> 1 << 52 -> low 52 bits are zeroes
 ; CHECK-LABEL: test_vpmadd52l_mul_lo52_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
@@ -193,8 +193,8 @@ define <2 x i64> @test_vpmadd52l_mul_lo52_zero(<2 x i64> %x0) {
   ret <2 x i64> %1
 }
 
+; (1 << 25) * (1 << 26) = 1 << 51 -> high 52 bits are zeroes
 define <2 x i64> @test_vpmadd52h_mul_hi52_zero(<2 x i64> %x0) {
-  ; (1 << 25) * (1 << 26) = 1 << 51 -> high 52 bits are zeroes
 ; CHECK-LABEL: test_vpmadd52h_mul_hi52_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
@@ -216,8 +216,8 @@ define <2 x i64> @test_vpmadd52l_mul_lo52_const(<2 x i64> %x0) {
   ret <2 x i64> %1
 }
 
+; (1 << 51) * (1 << 51) -> 1 << 102 -> the high 52 bits is 1 << 50
 define <2 x i64> @test_vpmadd52h_mul_hi52_const(<2 x i64> %x0) {
-  ; (1 << 51) * (1 << 51) -> 1 << 102 -> the high 52 bits is 1 << 50
 ; AVX512-LABEL: test_vpmadd52h_mul_hi52_const:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
