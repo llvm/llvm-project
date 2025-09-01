@@ -363,6 +363,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.rintbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
+  libc.src.math.scalblnbf16
+  libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.truncbf16
