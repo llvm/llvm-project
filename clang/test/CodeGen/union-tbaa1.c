@@ -17,17 +17,17 @@ void bar(vect32 p[][2]);
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARR]], i32 [[TMP0]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP1]], [[NUM]]
-// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x [2 x %union.vect32]], ptr [[TMP]], i32 0, i32 [[TMP0]]
+// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x %union.vect32], ptr [[TMP]], i32 [[TMP0]]
 // CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARR]], i32 [[TMP0]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[MUL6:%.*]] = mul i32 [[TMP2]], [[NUM]]
-// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [4 x [2 x %union.vect32]], ptr [[TMP]], i32 0, i32 [[TMP0]], i32 1
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x %union.vect32], ptr [[TMP]], i32 [[TMP0]], i32 1
 // CHECK-NEXT:    store i32 [[MUL6]], ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[MUL]], 16
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[VEC]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [4 x [2 x %union.vect32]], ptr [[TMP]], i32 0, i32 [[TMP4]], i32 1
+// CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [2 x %union.vect32], ptr [[TMP]], i32 [[TMP4]], i32 1
 // CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX14]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CONV16:%.*]] = zext i16 [[TMP5]] to i32

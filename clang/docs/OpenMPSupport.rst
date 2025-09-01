@@ -364,7 +364,7 @@ implementation.
 +=============================================================+===========================+===========================+==========================================================================+
 | free-agent threads                                          | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| threadset clause                                            | :part:`partial`           | :none:`unclaimed`         | Parse/Sema/Codegen: https://github.com/llvm/llvm-project/pull/135807     |
+| threadset clause                                            | :part:`partial`           | :none:`unclaimed`         | Parse/Sema/Codegen: https://github.com/llvm/llvm-project/pull/135807     |                                                                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Recording of task graphs                                    | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
@@ -482,6 +482,28 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Changes to omp_target_is_accessible                         | :part:`In Progress`       | :part:`In Progress`       |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+
+
+.. _OpenMP 6.1 implementation details:
+
+OpenMP 6.1 Implementation Details (Experimental)
+================================================
+
+The following table provides a quick overview over various OpenMP 6.1 features
+and their implementation status. Since OpenMP 6.1 has not yet been released, the
+following features are experimental and are subject to change at any time.
+Please post on the `Discourse forums (Runtimes - OpenMP category)`_ for more
+information or if you want to help with the
+implementation.
+
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+|Feature                                                      | C/C++ Status              | Fortran Status            | Reviews                                                                  |
++=============================================================+===========================+===========================+==========================================================================+
+| dyn_groupprivate clause                                     | :part:`In Progress`       | :part:`In Progress`       | C/C++: kevinsala (https://github.com/llvm/llvm-project/pull/152651       |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/152830                         |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/152831)                        |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+
 
 OpenMP Extensions
 =================
