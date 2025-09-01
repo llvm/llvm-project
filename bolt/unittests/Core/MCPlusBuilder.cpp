@@ -156,6 +156,8 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_EQ(II->getOpcode(), AArch64::HINT);
   ASSERT_EQ(II->getOperand(0).getImm(), 38);
   ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
+  BC->MIB->updateBTIVariant(*II, true, false);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
 
   MCInst BTIj;
   BC->MIB->createBTI(BTIj, false, true);
@@ -163,6 +165,8 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_EQ(II->getOpcode(), AArch64::HINT);
   ASSERT_EQ(II->getOperand(0).getImm(), 36);
   ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
+  BC->MIB->updateBTIVariant(*II, true, true);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, true));
 
   MCInst BTIc;
   BC->MIB->createBTI(BTIc, true, false);
@@ -170,6 +174,8 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_EQ(II->getOpcode(), AArch64::HINT);
   ASSERT_EQ(II->getOperand(0).getImm(), 34);
   ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
+  BC->MIB->updateBTIVariant(*II, false, true);
+  ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, false, true));
 
   MCInst BTIinvalid;
   ASSERT_DEATH(BC->MIB->createBTI(BTIinvalid, false, false),
