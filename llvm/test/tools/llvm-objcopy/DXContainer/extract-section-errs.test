@@ -1,7 +1,7 @@
 ## Check that llvm-objcopy reports a suitable error when it
 ## can't find the section to extract
 
-## We can't have multiple DXIL parts.
+## We can't extract a part that doesn't exist
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: not llvm-objcopy %t1 --extract-section=UNKNOWN=%t.unknown.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
 
