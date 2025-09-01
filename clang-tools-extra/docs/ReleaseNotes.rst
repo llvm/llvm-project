@@ -248,6 +248,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting `NullableValue::makeValue` and `NullableValue::makeValueInplace` to prevent false-positives for `BloombergLP::bdlb::NullableValue` type.
 
+- Improved :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
+  literal suffixes added in C++23 and C23.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
