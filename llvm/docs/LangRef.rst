@@ -24187,17 +24187,16 @@ Overview:
 Given a vector store to %ptrA followed by a vector load from %ptrB, this
 instruction generates a mask where an active lane indicates that the
 read-after-write sequence can be performed safely for that lane, without a
-read-after-write hazard occurring or a a new store-to-load forwarding hazard
-being introduced.
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
 
 A read-after-write hazard occurs when a read-after-write sequence for a given
 lane in a vector ends up being executed as a write-after-read sequence due to
 the aliasing of pointers.
 
 A store-to-load forwarding hazard occurs when a vector store writes to an
-address that partially overlaps with the address of a subsequent vector load.
-Only the overlapping addresses can be forwarded to the load if the data hasn't
-been written to memory yet.
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
 
 Arguments:
 """"""""""
@@ -24217,7 +24216,8 @@ The element of the result mask is active when storing to %ptrA then loading from
 
 * abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
   occurs before loading from this address), or
-* ptrA == ptrB, doesn't introduce any new hazards
+* ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
 
 Examples:
 """""""""
