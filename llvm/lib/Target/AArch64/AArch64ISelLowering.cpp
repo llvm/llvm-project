@@ -9300,21 +9300,17 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+
+  std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
-  bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
-  auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
-    if (!UseNewSMEABILowering)
-      return std::nullopt;
-    if (IsAgnosticZAFunction) {
-      if (CallAttrs.requiresPreservingAllZAState())
-        return AArch64ISD::REQUIRES_ZA_SAVE;
-      return std::nullopt;
-    }
-    if (!CallAttrs.caller().hasZAState() && !CallAttrs.caller().hasZT0State())
-      return std::nullopt;
-    return CallAttrs.requiresLazySave() ? AArch64ISD::REQUIRES_ZA_SAVE
-                                        : AArch64ISD::INOUT_ZA_USE;
-  }();
+  if (UseNewSMEABILowering) {
+    if (CallAttrs.requiresLazySave() ||
+        CallAttrs.requiresPreservingAllZAState())
+      ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
+    else if (CallAttrs.caller().hasZAState() ||
+             CallAttrs.caller().hasZT0State())
+      ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
+  }
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.

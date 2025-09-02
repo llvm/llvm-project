@@ -200,7 +200,7 @@ struct MachineSMEABI : public MachineFunctionPass {
 
   /// Inserts code to handle changes between ZA states within the function.
   /// E.g., ACTIVE -> LOCAL_SAVED will insert code required to save ZA.
-  void insertStateChanges(bool IsAgnosticZA);
+  void insertStateChanges();
 
   // Emission routines for private and shared ZA functions (using lazy saves).
   void emitNewZAPrologue(MachineBasicBlock &MBB,
@@ -227,26 +227,25 @@ struct MachineSMEABI : public MachineFunctionPass {
                                     LiveRegs PhysLiveRegs);
 
   void emitStateChange(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                       ZAState From, ZAState To, LiveRegs PhysLiveRegs,
-                       bool IsAgnosticZA);
+                       ZAState From, ZAState To, LiveRegs PhysLiveRegs);
 
   // Helpers for switching between lazy/full ZA save/restore routines.
   void emitZASave(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  LiveRegs PhysLiveRegs, bool IsAgnosticZA) {
-    if (IsAgnosticZA)
+                  LiveRegs PhysLiveRegs) {
+    if (AFI->getSMEFnAttrs().hasAgnosticZAInterface())
       return emitFullZASaveRestore(MBB, MBBI, PhysLiveRegs, /*IsSave=*/true);
     return emitSetupLazySave(MBB, MBBI);
   }
   void emitZARestore(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     LiveRegs PhysLiveRegs, bool IsAgnosticZA) {
-    if (IsAgnosticZA)
+                     LiveRegs PhysLiveRegs) {
+    if (AFI->getSMEFnAttrs().hasAgnosticZAInterface())
       return emitFullZASaveRestore(MBB, MBBI, PhysLiveRegs, /*IsSave=*/false);
     return emitRestoreLazySave(MBB, MBBI, PhysLiveRegs);
   }
   void emitAllocateZASaveBuffer(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI,
-                                LiveRegs PhysLiveRegs, bool IsAgnosticZA) {
-    if (IsAgnosticZA)
+                                LiveRegs PhysLiveRegs) {
+    if (AFI->getSMEFnAttrs().hasAgnosticZAInterface())
       return emitAllocateFullZASaveBuffer(MBB, MBBI, PhysLiveRegs);
     return emitAllocateLazySaveBuffer(MBB, MBBI);
   }
@@ -288,13 +287,13 @@ private:
     std::optional<MachineBasicBlock::iterator> AfterSMEProloguePt;
     Register AgnosticZABufferPtr = AArch64::NoRegister;
     LiveRegs PhysLiveRegsAfterSMEPrologue = LiveRegs::None;
-    bool HasFullZASaveRestore = false;
   } State;
 
   MachineFunction *MF = nullptr;
   EdgeBundles *Bundles = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
+  const AArch64FunctionInfo *AFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 };
@@ -425,7 +424,7 @@ void MachineSMEABI::assignBundleZAStates() {
   }
 }
 
-void MachineSMEABI::insertStateChanges(bool IsAgnosticZA) {
+void MachineSMEABI::insertStateChanges() {
   for (MachineBasicBlock &MBB : *MF) {
     const BlockInfo &Block = State.Blocks[MBB.getNumber()];
     ZAState InState = State.BundleStates[Bundles->getBundle(MBB.getNumber(),
@@ -438,7 +437,7 @@ void MachineSMEABI::insertStateChanges(bool IsAgnosticZA) {
     for (auto &Inst : Block.Insts) {
       if (CurrentState != Inst.NeededState)
         emitStateChange(MBB, Inst.InsertPt, CurrentState, Inst.NeededState,
-                        Inst.PhysLiveRegs, IsAgnosticZA);
+                        Inst.PhysLiveRegs);
       CurrentState = Inst.NeededState;
     }
 
@@ -449,7 +448,7 @@ void MachineSMEABI::insertStateChanges(bool IsAgnosticZA) {
         State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/true)];
     if (CurrentState != OutState)
       emitStateChange(MBB, MBB.getFirstTerminator(), CurrentState, OutState,
-                      Block.PhysLiveRegsAtExit, IsAgnosticZA);
+                      Block.PhysLiveRegsAtExit);
   }
 }
 
@@ -582,8 +581,6 @@ void MachineSMEABI::emitZAOff(MachineBasicBlock &MBB,
 void MachineSMEABI::emitAllocateLazySaveBuffer(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   MachineFrameInfo &MFI = MF->getFrameInfo();
-  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
-
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register SP = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register SVL = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
@@ -680,7 +677,6 @@ void MachineSMEABI::emitFullZASaveRestore(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           LiveRegs PhysLiveRegs, bool IsSave) {
   auto *TLI = Subtarget->getTargetLowering();
-  State.HasFullZASaveRestore = true;
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register BufferPtr = AArch64::X0;
 
@@ -705,8 +701,6 @@ void MachineSMEABI::emitFullZASaveRestore(MachineBasicBlock &MBB,
 void MachineSMEABI::emitAllocateFullZASaveBuffer(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     LiveRegs PhysLiveRegs) {
-  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
-
   // Buffer already allocated in SelectionDAG.
   if (AFI->getEarlyAllocSMESaveBuffer())
     return;
@@ -751,7 +745,7 @@ void MachineSMEABI::emitAllocateFullZASaveBuffer(
 void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertPt,
                                     ZAState From, ZAState To,
-                                    LiveRegs PhysLiveRegs, bool IsAgnosticZA) {
+                                    LiveRegs PhysLiveRegs) {
 
   // ZA not used.
   if (From == ZAState::ANY || To == ZAState::ANY)
@@ -783,13 +777,14 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
   }
 
   if (From == ZAState::ACTIVE && To == ZAState::LOCAL_SAVED)
-    emitZASave(MBB, InsertPt, PhysLiveRegs, IsAgnosticZA);
+    emitZASave(MBB, InsertPt, PhysLiveRegs);
   else if (From == ZAState::LOCAL_SAVED && To == ZAState::ACTIVE)
-    emitZARestore(MBB, InsertPt, PhysLiveRegs, IsAgnosticZA);
+    emitZARestore(MBB, InsertPt, PhysLiveRegs);
   else if (To == ZAState::OFF) {
     assert(From != ZAState::CALLER_DORMANT &&
            "CALLER_DORMANT to OFF should have already been handled");
-    assert(!IsAgnosticZA && "Should not turn ZA off in agnostic ZA function");
+    assert(!AFI->getSMEFnAttrs().hasAgnosticZAInterface() &&
+           "Should not turn ZA off in agnostic ZA function");
     emitZAOff(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED);
   } else {
     dbgs() << "Error: Transition from " << getZAStateString(From) << " to "
@@ -807,7 +802,7 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getSubtarget<AArch64Subtarget>().hasSME())
     return false;
 
-  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  AFI = MF.getInfo<AArch64FunctionInfo>();
   SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
   if (!SMEFnAttrs.hasZAState() && !SMEFnAttrs.hasZT0State() &&
       !SMEFnAttrs.hasAgnosticZAInterface())
@@ -824,27 +819,23 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  bool IsAgnosticZA = SMEFnAttrs.hasAgnosticZAInterface();
-
   collectNeededZAStates(SMEFnAttrs);
   assignBundleZAStates();
-  insertStateChanges(/*IsAgnosticZA=*/IsAgnosticZA);
+  insertStateChanges();
 
   // Allocate save buffer (if needed).
-  if (State.HasFullZASaveRestore || State.TPIDR2Block) {
+  if (State.AgnosticZABufferPtr != AArch64::NoRegister || State.TPIDR2Block) {
     if (State.AfterSMEProloguePt) {
       // Note: With inline stack probes the AfterSMEProloguePt may not be in the
       // entry block (due to the probing loop).
       emitAllocateZASaveBuffer(*(*State.AfterSMEProloguePt)->getParent(),
                                *State.AfterSMEProloguePt,
-                               State.PhysLiveRegsAfterSMEPrologue,
-                               /*IsAgnosticZA=*/IsAgnosticZA);
+                               State.PhysLiveRegsAfterSMEPrologue);
     } else {
       MachineBasicBlock &EntryBlock = MF.front();
       emitAllocateZASaveBuffer(
           EntryBlock, EntryBlock.getFirstNonPHI(),
-          State.Blocks[EntryBlock.getNumber()].PhysLiveRegsAtEntry,
-          /*IsAgnosticZA=*/IsAgnosticZA);
+          State.Blocks[EntryBlock.getNumber()].PhysLiveRegsAtEntry);
     }
   }
 
