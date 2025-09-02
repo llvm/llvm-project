@@ -99,7 +99,18 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
-function(generate_type_stubs module_name depends_target mlir_depends_target output_dir)
+# Function: generate_type_stubs
+# Turns on automatic type stub generation (via nanobind's stubgen) for extension modules.
+# Arguments:
+#   MODULE_NAME: The name of the extension module as specified in declare_mlir_python_extension.
+#   DEPENDS_TARGET: The dso target corresponding to the extension module
+#     (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
+#   MLIR_DEPENDS_TARGET: The dso target corresponding to the main/core extension module
+#     (e.g., something like StandalonePythonModules.extension._mlir.dso)
+#   OUTPUT_DIR: The root output directory to emit the type stubs into.
+# Outputs:
+#   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
+function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTPUT_DIR)
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
@@ -109,9 +120,8 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
   endif()
   file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
 
-  set(_module "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${module_name}")
+  set(_module "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${MODULE_NAME}")
   file(REAL_PATH "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." _import_path)
-  # file(TO_NATIVE_PATH ${_import_path} _import_path)
 
   set(NB_STUBGEN_CMD
       "${Python_EXECUTABLE}"
@@ -123,17 +133,17 @@ function(generate_type_stubs module_name depends_target mlir_depends_target outp
       --recursive
       --include-private
       --output-dir
-      "${output_dir}")
+      "${OUTPUT_DIR}")
 
-  set(NB_STUBGEN_OUTPUT "${output_dir}/${module_name}.pyi")
+  set(NB_STUBGEN_OUTPUT "${OUTPUT_DIR}/${MODULE_NAME}.pyi")
   add_custom_command(
     OUTPUT ${NB_STUBGEN_OUTPUT}
     COMMAND ${NB_STUBGEN_CMD}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
     DEPENDS
-      "${mlir_depends_target}.extension._mlir.dso"
-      "${mlir_depends_target}.sources.MLIRPythonSources.Core.Python"
-      "${depends_target}"
+      "${MLIR_DEPENDS_TARGET}.extension._mlir.dso"
+      "${MLIR_DEPENDS_TARGET}.sources.MLIRPythonSources.Core.Python"
+      "${DEPENDS_TARGET}"
   )
   set(_name "MLIRPythonModuleStubs_${_module}")
   add_custom_target("${_name}" ALL DEPENDS ${NB_STUBGEN_OUTPUT})
