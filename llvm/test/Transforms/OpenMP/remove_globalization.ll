@@ -82,7 +82,8 @@ define internal void @foo() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@foo
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
+; CHECK-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTH2S]] to ptr
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -103,8 +104,9 @@ define internal void @bar() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@bar
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
-; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[DOTH2S]]) #[[ATTR5:[0-9]+]], !dbg [[DBG7:![0-9]+]]
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
+; CHECK-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTH2S]] to ptr
+; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[MALLOC_CAST]]) #[[ATTR5:[0-9]+]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -180,7 +182,7 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@convert_and_move_alloca
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
 ; CHECK-DISABLED-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    [[UB_PTR:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[UB_PTR]] to ptr addrspace(5)
@@ -190,6 +192,7 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-DISABLED-NEXT:    store i32 0, ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-DISABLED-NEXT:    br label [[LOOPBODY:%.*]]
 ; CHECK-DISABLED:       loopbody:
+; CHECK-DISABLED-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTH2S]] to ptr
 ; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[IV_PTR]] to ptr addrspace(5)
 ; CHECK-DISABLED-NEXT:    [[IV:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
 ; CHECK-DISABLED-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[IV]], 10

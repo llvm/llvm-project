@@ -133,7 +133,7 @@ static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
 
   Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
 
-  return Ret;
+  return Ret + "-A" + std::to_string(ADDRESS_SPACE_LOCAL);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -496,22 +496,6 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
 
   addPass(&PeepholeOptimizerLegacyID);
   printAndVerify("After codegen peephole optimization pass");
-}
-
-bool NVPTXTargetMachine::isCompatibleDataLayout(
-    const DataLayout &Candidate) const {
-  // XXX: Should we enforce that the Candidate DataLayout has the same address
-  // space for allocas?
-  if (DL == Candidate)
-    return true;
-
-  auto DLStr = DL.getStringRepresentation();
-  if (!StringRef(DLStr).contains("A"))
-    DLStr = DLStr.empty() ? "A" + std::to_string(ADDRESS_SPACE_LOCAL)
-                          : DLStr + "-A" + std::to_string(ADDRESS_SPACE_LOCAL);
-  auto NewDL = DataLayout(DLStr);
-
-  return NewDL == Candidate;
 }
 
 unsigned
