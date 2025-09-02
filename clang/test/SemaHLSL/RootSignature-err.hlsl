@@ -179,7 +179,7 @@ void basic_validation_3() {}
 
 // expected-error@+2 {{value must be in the range [1, 4294967294]}}
 // expected-error@+1 {{value must be in the range [1, 4294967294]}}
-[RootSignature("DescriptorTable(UAV(u0, numDescriptors = 0), Sampler(s0, numDescriptors = 0))")]
+[RootSignature("DescriptorTable(UAV(u0, numDescriptors = 0)), DescriptorTable(Sampler(s0, numDescriptors = 0))")]
 void basic_validation_4() {}
 
 // expected-error@+2 {{value must be in the range [0, 16]}}
