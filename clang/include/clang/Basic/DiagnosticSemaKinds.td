@@ -10692,7 +10692,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_loan_expires_permissive : Warning<
-   "object whose reference is captured does not live long enough">, 
+   "object whose reference is captured does not live long enough">,
    InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
@@ -13603,4 +13603,6 @@ def warn_acc_var_referenced_lacks_op
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 } // end of sema component.

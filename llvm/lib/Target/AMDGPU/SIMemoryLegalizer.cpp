@@ -103,6 +103,7 @@ private:
   bool IsVolatile = false;
   bool IsNonTemporal = false;
   bool IsLastUse = false;
+  bool IsCooperative = false;
 
   SIMemOpInfo(
       AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
@@ -112,14 +113,15 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false)
+      bool IsLastUse = false, bool IsCooperative = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
-        IsLastUse(IsLastUse) {
+        IsLastUse(IsLastUse), IsCooperative(IsCooperative) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
+      assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
       assert(Scope == SIAtomicScope::NONE &&
              OrderingAddrSpace == SIAtomicAddrSpace::NONE &&
              !IsCrossAddressSpaceOrdering &&
@@ -208,6 +210,9 @@ public:
   /// \returns True if memory access of the machine instruction used to
   /// create this SIMemOpInfo is last use, false otherwise.
   bool isLastUse() const { return IsLastUse; }
+
+  /// \returns True if this is a cooperative load or store atomic.
+  bool isCooperative() const { return IsCooperative; }
 
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
@@ -324,6 +329,12 @@ public:
   virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
     return false;
   };
+
+  /// Handle cooperative load/store atomics.
+  virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
+    llvm_unreachable(
+        "cooperative atomics are not available on this architecture");
+  }
 
   /// Inserts any necessary instructions at position \p Pos relative
   /// to instruction \p MI to ensure memory instructions before \p Pos of kind
@@ -612,6 +623,8 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
+  virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
+
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
@@ -812,6 +825,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   bool IsNonTemporal = true;
   bool IsVolatile = false;
   bool IsLastUse = false;
+  bool IsCooperative = false;
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
@@ -819,6 +833,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsNonTemporal &= MMO->isNonTemporal();
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
+    IsCooperative |= MMO->getFlags() & MOCooperative;
     InstrAddrSpace |=
       toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
@@ -860,7 +875,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   }
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
-                     IsNonTemporal, IsLastUse);
+                     IsNonTemporal, IsLastUse, IsCooperative);
 }
 
 std::optional<SIMemOpInfo>
@@ -2615,6 +2630,19 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   return false;
 }
 
+bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
+  if (!ST.hasGFX1250Insts())
+    return false;
+
+  // Cooperative atomics need to be SCOPE_DEV or higher.
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  assert(CPol && "No CPol operand?");
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+  if (Scope < CPol::SCOPE_DEV)
+    return setScope(MI, CPol::SCOPE_DEV);
+  return false;
+}
+
 bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
                                          SIAtomicScope Scope,
                                          SIAtomicAddrSpace AddrSpace) const {
@@ -2679,6 +2707,11 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                            MOI.getOrderingAddrSpace());
     }
 
+    // Handle cooperative atomics after cache bypass step, as it may override
+    // the scope of the instruction to a greater scope.
+    if (MOI.isCooperative())
+      Changed |= CC->handleCooperativeAtomic(*MI);
+
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -2723,6 +2756,11 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       Changed |= CC->enableStoreCacheBypass(MI, MOI.getScope(),
                                             MOI.getOrderingAddrSpace());
     }
+
+    // Handle cooperative atomics after cache bypass step, as it may override
+    // the scope of the instruction to a greater scope.
+    if (MOI.isCooperative())
+      Changed |= CC->handleCooperativeAtomic(*MI);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
