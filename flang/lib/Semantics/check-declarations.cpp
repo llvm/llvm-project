@@ -2998,7 +2998,8 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
           (!(IsExternalProcedureDefinition(symbol) || GetMainEntry(&symbol)) ||
-              !(IsExternalProcedureDefinition(other) || GetMainEntry(&other)))) {
+              !(IsExternalProcedureDefinition(other) ||
+                  GetMainEntry(&other)))) {
         // Both are procedures/BLOCK DATA, not both definitions.
         // Note: GetMainEntry() above returns non-null in case symbol
         // is an alternate entry.
