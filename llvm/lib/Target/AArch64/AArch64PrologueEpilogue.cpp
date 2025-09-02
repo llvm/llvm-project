@@ -1360,14 +1360,24 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   }
 
   bool CombineSPBump = shouldCombineCSRLocalStackBump(NumBytes);
-  // Assume we can't combine the last pop with the sp restore.
-  bool CombineAfterCSRBump = false;
+
+  unsigned ProloguePopSize = PrologueSaveSize;
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+    // With CalleeSavesAboveFrameRecord ProloguePopSize is the amount of stack
+    // that needs to be popped until we reach the start of the SVE save area.
+    // The "FixedObject" stack occurs after the SVE area and must be popped
+    // later.
+    ProloguePopSize -= FixedObject;
     AfterCSRPopSize += FixedObject;
-  } else if (!CombineSPBump && PrologueSaveSize != 0) {
+  }
+
+  // Assume we can't combine the last pop with the sp restore.
+  if (!CombineSPBump && ProloguePopSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
     while (Pop->getOpcode() == TargetOpcode::CFI_INSTRUCTION ||
-           AArch64InstrInfo::isSEHInstruction(*Pop))
+           AArch64InstrInfo::isSEHInstruction(*Pop) ||
+           (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord &&
+            isPartOfSVECalleeSaves(Pop)))
       Pop = std::prev(Pop);
     // Converting the last ldp to a post-index ldp is valid only if the last
     // ldp's offset is 0.
@@ -1377,18 +1387,24 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     // may clobber), convert it to a post-index ldp.
     if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0) {
       convertCalleeSaveRestoreToSPPrePostIncDec(
-          Pop, DL, PrologueSaveSize, EmitCFI, MachineInstr::FrameDestroy,
-          PrologueSaveSize);
+          Pop, DL, ProloguePopSize, EmitCFI, MachineInstr::FrameDestroy,
+          ProloguePopSize);
+    } else if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+      // If not, and CalleeSavesAboveFrameRecord is enabled, deallocate
+      // callee-save non-SVE registers to move the stack pointer to the start of
+      // the SVE area.
+      emitFrameOffset(MBB, std::next(Pop), DL, AArch64::SP, AArch64::SP,
+                      StackOffset::getFixed(ProloguePopSize), TII,
+                      MachineInstr::FrameDestroy, false, NeedsWinCFI,
+                      &HasWinCFI);
     } else {
-      // If not, make sure to emit an add after the last ldp.
+      // Otherwise, make sure to emit an add after the last ldp.
       // We're doing this by transferring the size to be restored from the
       // adjustment *before* the CSR pops to the adjustment *after* the CSR
       // pops.
-      AfterCSRPopSize += PrologueSaveSize;
-      CombineAfterCSRBump = true;
+      AfterCSRPopSize += ProloguePopSize;
     }
   }
-
   // Move past the restores of the callee-saved registers.
   // If we plan on combining the sp bump of the local stack size and the callee
   // save stack size, we might need to adjust the CSR save and restore offsets.
@@ -1466,16 +1482,6 @@ void AArch64EpilogueEmitter::emitEpilogue() {
                       SVELocalsSize, TII, MachineInstr::FrameDestroy, false,
                       NeedsWinCFI, &HasWinCFI);
     }
-
-    // Deallocate callee-save non-SVE registers.
-    emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(AFI->getCalleeSavedStackSize()), TII,
-                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
-
-    // Deallocate fixed objects.
-    emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(FixedObject), TII,
-                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
 
     // Deallocate callee-save SVE registers.
     emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
@@ -1619,7 +1625,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
         MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
         StackOffset::getFixed(AfterCSRPopSize), TII, MachineInstr::FrameDestroy,
         false, NeedsWinCFI, &HasWinCFI, EmitCFI,
-        StackOffset::getFixed(CombineAfterCSRBump ? PrologueSaveSize : 0));
+        StackOffset::getFixed(AfterCSRPopSize - ArgumentStackToRestore));
   }
 }
 
