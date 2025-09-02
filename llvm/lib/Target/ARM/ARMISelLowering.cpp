@@ -529,56 +529,56 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
         const RTLIB::LibcallImpl Impl;
       } LibraryCalls[] = {
         // Single-precision floating-point arithmetic.
-        { RTLIB::ADD_F32, RTLIB::__addsf3vfp },
-        { RTLIB::SUB_F32, RTLIB::__subsf3vfp },
-        { RTLIB::MUL_F32, RTLIB::__mulsf3vfp },
-        { RTLIB::DIV_F32, RTLIB::__divsf3vfp },
+        { RTLIB::ADD_F32, RTLIB::impl___addsf3vfp },
+        { RTLIB::SUB_F32, RTLIB::impl___subsf3vfp },
+        { RTLIB::MUL_F32, RTLIB::impl___mulsf3vfp },
+        { RTLIB::DIV_F32, RTLIB::impl___divsf3vfp },
 
         // Double-precision floating-point arithmetic.
-        { RTLIB::ADD_F64, RTLIB::__adddf3vfp },
-        { RTLIB::SUB_F64, RTLIB::__subdf3vfp },
-        { RTLIB::MUL_F64, RTLIB::__muldf3vfp },
-        { RTLIB::DIV_F64, RTLIB::__divdf3vfp },
+        { RTLIB::ADD_F64, RTLIB::impl___adddf3vfp },
+        { RTLIB::SUB_F64, RTLIB::impl___subdf3vfp },
+        { RTLIB::MUL_F64, RTLIB::impl___muldf3vfp },
+        { RTLIB::DIV_F64, RTLIB::impl___divdf3vfp },
 
         // Single-precision comparisons.
-        { RTLIB::OEQ_F32, RTLIB::__eqsf2vfp },
-        { RTLIB::UNE_F32, RTLIB::__nesf2vfp },
-        { RTLIB::OLT_F32, RTLIB::__ltsf2vfp },
-        { RTLIB::OLE_F32, RTLIB::__lesf2vfp },
-        { RTLIB::OGE_F32, RTLIB::__gesf2vfp },
-        { RTLIB::OGT_F32, RTLIB::__gtsf2vfp },
-        { RTLIB::UO_F32,  RTLIB::__unordsf2vfp },
+        { RTLIB::OEQ_F32, RTLIB::impl___eqsf2vfp },
+        { RTLIB::UNE_F32, RTLIB::impl___nesf2vfp },
+        { RTLIB::OLT_F32, RTLIB::impl___ltsf2vfp },
+        { RTLIB::OLE_F32, RTLIB::impl___lesf2vfp },
+        { RTLIB::OGE_F32, RTLIB::impl___gesf2vfp },
+        { RTLIB::OGT_F32, RTLIB::impl___gtsf2vfp },
+        { RTLIB::UO_F32,  RTLIB::impl___unordsf2vfp },
 
         // Double-precision comparisons.
-        { RTLIB::OEQ_F64, RTLIB::__eqdf2vfp },
-        { RTLIB::UNE_F64, RTLIB::__nedf2vfp },
-        { RTLIB::OLT_F64, RTLIB::__ltdf2vfp },
-        { RTLIB::OLE_F64, RTLIB::__ledf2vfp },
-        { RTLIB::OGE_F64, RTLIB::__gedf2vfp },
-        { RTLIB::OGT_F64, RTLIB::__gtdf2vfp },
-        { RTLIB::UO_F64,  RTLIB::__unorddf2vfp },
+        { RTLIB::OEQ_F64, RTLIB::impl___eqdf2vfp },
+        { RTLIB::UNE_F64, RTLIB::impl___nedf2vfp },
+        { RTLIB::OLT_F64, RTLIB::impl___ltdf2vfp },
+        { RTLIB::OLE_F64, RTLIB::impl___ledf2vfp },
+        { RTLIB::OGE_F64, RTLIB::impl___gedf2vfp },
+        { RTLIB::OGT_F64, RTLIB::impl___gtdf2vfp },
+        { RTLIB::UO_F64,  RTLIB::impl___unorddf2vfp },
 
         // Floating-point to integer conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
-        { RTLIB::FPTOSINT_F64_I32, RTLIB::__fixdfsivfp },
-        { RTLIB::FPTOUINT_F64_I32, RTLIB::__fixunsdfsivfp },
-        { RTLIB::FPTOSINT_F32_I32, RTLIB::__fixsfsivfp },
-        { RTLIB::FPTOUINT_F32_I32, RTLIB::__fixunssfsivfp },
+        { RTLIB::FPTOSINT_F64_I32, RTLIB::impl___fixdfsivfp },
+        { RTLIB::FPTOUINT_F64_I32, RTLIB::impl___fixunsdfsivfp },
+        { RTLIB::FPTOSINT_F32_I32, RTLIB::impl___fixsfsivfp },
+        { RTLIB::FPTOUINT_F32_I32, RTLIB::impl___fixunssfsivfp },
 
         // Conversions between floating types.
-        { RTLIB::FPROUND_F64_F32, RTLIB::__truncdfsf2vfp },
-        { RTLIB::FPEXT_F32_F64,   RTLIB::__extendsfdf2vfp },
+        { RTLIB::FPROUND_F64_F32, RTLIB::impl___truncdfsf2vfp },
+        { RTLIB::FPEXT_F32_F64,   RTLIB::impl___extendsfdf2vfp },
 
         // Integer to floating-point conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
         // FIXME: There appears to be some naming inconsistency in ARM libgcc:
         // e.g., __floatunsidf vs. __floatunssidfvfp.
-        { RTLIB::SINTTOFP_I32_F64, RTLIB::__floatsidfvfp },
-        { RTLIB::UINTTOFP_I32_F64, RTLIB::__floatunssidfvfp },
-        { RTLIB::SINTTOFP_I32_F32, RTLIB::__floatsisfvfp },
-        { RTLIB::UINTTOFP_I32_F32, RTLIB::__floatunssisfvfp },
+        { RTLIB::SINTTOFP_I32_F64, RTLIB::impl___floatsidfvfp },
+        { RTLIB::UINTTOFP_I32_F64, RTLIB::impl___floatunssidfvfp },
+        { RTLIB::SINTTOFP_I32_F32, RTLIB::impl___floatsisfvfp },
+        { RTLIB::UINTTOFP_I32_F32, RTLIB::impl___floatunssisfvfp },
       };
       // clang-format on
 
