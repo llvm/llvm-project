@@ -4164,8 +4164,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always &&
-          ShouldBreakBeforeBrace(Style, InitialToken, *Tokens->peekNextToken(),
+      if (ShouldBreakBeforeBrace(Style, InitialToken, *Tokens->peekNextToken(),
                                  IsJavaRecord)) {
         addUnwrappedLine();
       }

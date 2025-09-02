@@ -266,6 +266,14 @@ private:
       }
     }
 
+    // Try merging record blocks that have had their left brace wrapped.
+    if (TheLine->First->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union) &&
+        NextLine.First->is(tok::l_brace) && NextLine.First == NextLine.Last &&
+        I + 2 != E && !I[2]->First->is(tok::r_brace)) {
+      if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
+        return MergedLines;
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
     // Handle empty record blocks where the brace has already been wrapped.
     if (PreviousLine && TheLine->Last->is(tok::l_brace) &&
@@ -492,17 +500,17 @@ private:
                  : 0;
     }
 
-    const bool MergeShortRecord = [this, &NextLine]() {
+    const bool TryMergeShortRecord = [this, &NextLine]() {
       switch (Style.AllowShortRecordOnASingleLine) {
-      case FormatStyle::SRS_Always:
-        return true;
+      case FormatStyle::SRS_Never:
+        return false;
       case FormatStyle::SRS_EmptyIfAttached:
       case FormatStyle::SRS_Empty:
         return NextLine.First->is(tok::r_brace);
-      case FormatStyle::SRS_Never:
-        return false;
+      case FormatStyle::SRS_Always:
+        return true;
       }
-    }();
+    }() && !Style.BraceWrapping.SplitEmptyRecord;
 
     if (TheLine->Last->is(tok::l_brace)) {
       bool ShouldMerge = false;
@@ -517,9 +525,7 @@ private:
           // NOTE: We use AfterClass (whereas AfterStruct exists) for both
           // classes and structs, but it seems that wrapping is still handled
           // correctly elsewhere.
-          ShouldMerge =
-              !Style.BraceWrapping.AfterClass ||
-              (MergeShortRecord && !Style.BraceWrapping.SplitEmptyRecord);
+          ShouldMerge = !Style.BraceWrapping.AfterClass || TryMergeShortRecord;
         }
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
@@ -954,9 +960,15 @@ private:
         return 0;
       Limit -= 2;
       unsigned MergedLines = 0;
-      if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never ||
-          (I[1]->First == I[1]->Last && I + 2 != E &&
-           I[2]->First->is(tok::r_brace))) {
+
+      bool TryMergeBlock =
+          Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never;
+      bool TryMergeRecord =
+          Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always;
+      bool NextIsEmptyBlock = I[1]->First == I[1]->Last && I + 2 != E &&
+                              I[2]->First->is(tok::r_brace);
+
+      if (TryMergeBlock || TryMergeRecord || NextIsEmptyBlock) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the statement header, which
         // is on a separate line.
