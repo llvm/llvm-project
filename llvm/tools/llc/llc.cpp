@@ -213,6 +213,11 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
+static cl::opt<bool>
+    NoDiagHandler("no-diag-handler",
+                  cl::desc("Do not load the llc-specific diagnostic handler."),
+                  cl::init(false), cl::Hidden);
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -384,8 +389,10 @@ int main(int argc, char **argv) {
   LLVMContext Context;
   Context.setDiscardValueNames(DiscardValueNames);
 
-  // Set a diagnostic handler that doesn't exit on the first error
-  Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
+  if (!NoDiagHandler) {
+    // Set a diagnostic handler that doesn't exit on the first error
+    Context.setDiagnosticHandler(std::make_unique<LLCDiagnosticHandler>());
+  }
 
   Expected<std::unique_ptr<ToolOutputFile>> RemarksFileOrErr =
       setupLLVMOptimizationRemarks(Context, RemarksFilename, RemarksPasses,
