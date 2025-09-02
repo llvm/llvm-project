@@ -4230,12 +4230,10 @@ public:
   /// variable length type, this is not possible.
   ///
   LValue EmitLValue(const Expr *E,
-                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull,
-                    bool SuppressLocation = false);
+                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
 private:
-  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull,
-                          bool SuppressLocation);
+  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull);
 
 public:
   /// Same as EmitLValue but additionally we generate checking code to
