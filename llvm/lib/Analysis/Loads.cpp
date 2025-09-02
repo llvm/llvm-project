@@ -26,10 +26,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    UseSymbolicMaxBTCForDerefInLoop("use-symbolic-maxbtc-deref-loop",
-                                    cl::init(false));
-
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -335,18 +331,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
-
-  if (isa<SCEVCouldNotCompute>(BECount) && !UseSymbolicMaxBTCForDerefInLoop) {
-    // TODO: Support symbolic max backedge taken counts for loops without
-    // computable backedge taken counts.
-    MaxBECount =
-        Predicates
-            ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
-            : SE.getConstantMaxBackedgeTakenCount(L);
-  }
-
-  const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  const auto &[AccessStart, AccessEnd] =
+      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
+                              &SE, nullptr, &DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -355,10 +343,13 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
-  ScalarEvolution::LoopGuards LoopGuards =
-      ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE);
+
+  if (!LoopGuards)
+    LoopGuards.emplace(
+        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
+
   APInt MaxPtrDiff =
-      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, LoopGuards));
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
