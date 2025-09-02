@@ -219,7 +219,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
          OM.map("linesStartAt1", IRA.linesStartAt1) &&
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
@@ -606,6 +606,21 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
 
   if (WMR.bytesWritten != 0)
     result.insert({"bytesWritten", WMR.bytesWritten});
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.map("moduleName", Args.moduleName) &&
+         O.mapOptional("startIndex", Args.startIndex) &&
+         O.mapOptional("count", Args.count);
+}
+
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
+  json::Object result;
+  result.insert({"symbols", DGMSR.symbols});
   return result;
 }
 

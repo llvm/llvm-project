@@ -3403,7 +3403,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
   // position-independent addressing modes.
   if (Subtarget->genExecuteOnly()) {
     auto AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
-    auto T = const_cast<Type*>(CP->getType());
+    auto *T = CP->getType();
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
@@ -10539,19 +10539,11 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Generate the operation with flags
-  SDValue OpWithFlags;
-  if (Opcode == ARMISD::ADDC) {
-    // Use ADDC: LHS + RHS (where RHS was 0 - X, now X)
-    OpWithFlags = DAG.getNode(ARMISD::ADDC, dl,
-                              DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
-  } else {
-    // Use ARMISD::SUBC to generate SUBS instruction (subtract with flags)
-    OpWithFlags = DAG.getNode(ARMISD::SUBC, dl,
-                              DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
-  }
+  SDValue OpWithFlags =
+      DAG.getNode(Opcode, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
 
-  SDValue OpResult = OpWithFlags.getValue(0); // The operation result
-  SDValue Flags = OpWithFlags.getValue(1);    // The flags
+  SDValue OpResult = OpWithFlags.getValue(0);
+  SDValue Flags = OpWithFlags.getValue(1);
 
   // Constants for conditional moves
   SDValue One = DAG.getConstant(1, dl, MVT::i32);
@@ -21341,20 +21333,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
-Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
-    // MSVC CRT has a global variable holding security cookie.
-    //
-    // FIXME: We have a libcall entry for the correlated check function, but not
-    // the global name.
-    return M.getGlobalVariable("__security_cookie");
-  }
-
-  return TargetLowering::getSDagStackGuard(M);
-}
-
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
   RTLIB::LibcallImpl SecurityCheckCookie =
@@ -21394,11 +21372,11 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget->hasV6T2Ops();
+  return Subtarget->hasV5TOps() && !Subtarget->isThumb1Only();
 }
 
 bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -21720,13 +21698,15 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
                                               Value *LaneMask,
                                               ShuffleVectorInst *SVI,
-                                              unsigned Factor) const {
+                                              unsigned Factor,
+                                              const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   auto *VecTy = cast<FixedVectorType>(SVI->getType());
   assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");

@@ -62,11 +62,12 @@ void ProgramPoint::print(raw_ostream &os) const {
     return;
   }
   if (!isBlockStart()) {
-    os << "<after operation>:";
-    return getPrevOp()->print(os, OpPrintingFlags().skipRegions());
+    os << "<after operation>:"
+       << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
+    return;
   }
-  os << "<before operation>:";
-  return getNextOp()->print(os, OpPrintingFlags().skipRegions());
+  os << "<before operation>:"
+     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
 }
 
 //===----------------------------------------------------------------------===//
