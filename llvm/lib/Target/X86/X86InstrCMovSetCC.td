@@ -164,11 +164,16 @@ class CTSELECT_VEC512  : CTSELECT_VEC<VR512,  GR32>;
 //===----------------------------------------------------------------------===//
 // 128-bit pseudos (SSE2 baseline; we use PXOR/PAND/MOVD/PSHUFD in the expander)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasSSE2] in {
+
+let Predicates = [HasSSE1] in {
 
   def CTSELECT_V4F32 : CTSELECT_VEC128 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
+}
+
+let Predicates = [HasSSE2] in {
+
   def CTSELECT_V2F64 : CTSELECT_VEC128 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
@@ -182,10 +187,6 @@ let Predicates = [HasSSE2] in {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
   def CTSELECT_V16I8 : CTSELECT_VEC128 {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-  // If your build has v8f16, keep this; otherwise comment it out.
-  def CTSELECT_V8F16 : CTSELECT_VEC128 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
 }
@@ -208,10 +209,6 @@ let Predicates = [HasAVX] in {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
   def CTSELECT_V16I8X : CTSELECT_VEC128X {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-  // If your build has v8f16, keep this; otherwise comment it out.
-  def CTSELECT_V8F16X : CTSELECT_VEC128X {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
 }
@@ -239,30 +236,6 @@ let Predicates = [HasAVX] in {
   def CTSELECT_V32I8  : CTSELECT_VEC256 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
-  // If your build has v16f16, keep this; otherwise comment it out.
-  def CTSELECT_V16F16 : CTSELECT_VEC256 {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-}
-
-//===----------------------------------------------------------------------===//
-// 512-bit pseudos
-//===----------------------------------------------------------------------===//
-
-// Core AVX-512F types
-let Predicates = [HasAVX512] in {
-  def CTSELECT_V16F32 : CTSELECT_VEC512 {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-  def CTSELECT_V8F64  : CTSELECT_VEC512 {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-  def CTSELECT_V16I32 : CTSELECT_VEC512 {
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
-  def CTSELECT_V8I64  : CTSELECT_VEC512{
-    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,6 +246,13 @@ let Predicates = [HasAVX512] in {
 //  * We list EFLAGS explicitly in the pattern (X86 style) to model the arch read.
 //  * Temps (tmpx/tmpy,tmpg) are not in the pattern; they’re outs allocated by RA.
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasSSE1] in {
+
+  // 128-bit float (bitwise-equivalent ops in expander)
+  def : Pat<(v4f32 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CTSELECT_V4F32 VR128:$t, VR128:$f, timm:$cc)>;
+}
 
 let Predicates = [HasSSE2] in {
 
@@ -285,16 +265,8 @@ let Predicates = [HasSSE2] in {
             (CTSELECT_V8I16 VR128:$t, VR128:$f, timm:$cc)>;
   def : Pat<(v16i8 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
             (CTSELECT_V16I8 VR128:$t, VR128:$f, timm:$cc)>;
-
-  // 128-bit float (bitwise-equivalent ops in expander)
-  def : Pat<(v4f32 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V4F32 VR128:$t, VR128:$f, timm:$cc)>;
   def : Pat<(v2f64 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
             (CTSELECT_V2F64 VR128:$t, VR128:$f, timm:$cc)>;
-
-  // 128-bit f16 (optional)
-  def : Pat<(v8f16 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V8F16 VR128:$t, VR128:$f, timm:$cc)>;
 }
 
 let Predicates = [HasAVX] in {
@@ -314,28 +286,6 @@ let Predicates = [HasAVX] in {
             (CTSELECT_V8F32 VR256:$t, VR256:$f, timm:$cc)>;
   def : Pat<(v4f64 (X86ctselect VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
             (CTSELECT_V4F64 VR256:$t, VR256:$f, timm:$cc)>;
-
-  // 256-bit f16 (optional)
-  def : Pat<(v16f16 (X86ctselect VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V16F16 VR256:$t, VR256:$f, timm:$cc)>;
-}
-
-//===----------------------------------------------------------------------===//
-// 512-bit selection patterns
-//  Note: SDNode is X86ctselect with SDNPInGlue; pattern names EFLAGS explicitly.
-//  Temps ($tmpx,$tmpg) are outs allocated by RA; not mentioned in patterns.
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasAVX512] in {
-  def : Pat<(v16f32 (X86ctselect VR512:$t, VR512:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V16F32 VR512:$t, VR512:$f, timm:$cc)>;
-  def : Pat<(v8f64 (X86ctselect VR512:$t, VR512:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V8F64  VR512:$t, VR512:$f, timm:$cc)>;
-
-  def : Pat<(v16i32 (X86ctselect VR512:$t, VR512:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V16I32 VR512:$t, VR512:$f, timm:$cc)>;
-  def : Pat<(v8i64 (X86ctselect VR512:$t, VR512:$f, (i8 timm:$cc), EFLAGS)),
-            (CTSELECT_V8I64  VR512:$t, VR512:$f, timm:$cc)>;
 }
 
 let Predicates = [HasCMOV, HasCF] in {
