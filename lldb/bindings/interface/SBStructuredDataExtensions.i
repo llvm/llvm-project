@@ -69,9 +69,6 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         if data_type in (
             eStructuredDataTypeInteger,
             eStructuredDataTypeSignedInteger,
-            eStructuredDataTypeFloat,
-            eStructuredDataTypeString,
-            eStructuredDataTypeBoolean,
         ):
             return int(self.dynamic)
         else:
@@ -83,7 +80,6 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
             eStructuredDataTypeFloat,
             eStructuredDataTypeInteger,
             eStructuredDataTypeSignedInteger,
-            eStructuredDataTypeString,
         ):
             return float(self.dynamic)
         else:
