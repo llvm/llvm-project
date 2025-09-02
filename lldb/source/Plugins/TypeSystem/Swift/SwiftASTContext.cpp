@@ -4232,11 +4232,14 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       if (!matching_module_list.IsEmpty()) {
         matching_module_list.ForEach(
             [&module_already_loaded, &module_spec,
-             &framework_name](const ModuleSP &module_sp) -> bool {
+             &framework_name](const ModuleSP &module_sp) -> IterationAction {
               module_already_loaded = module_spec.GetFileSpec().GetPath().find(
                                           framework_name) != std::string::npos;
-              return module_already_loaded ==
-                     false; // Keep iterating if we didn't find the right module
+              // Keep iterating if we didn't find the right module
+              if (!module_already_loaded)
+                return IterationAction::Continue;
+
+              return IterationAction::Stop;
             });
       }
       // If we already have this library loaded, don't try and load it again.
