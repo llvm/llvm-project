@@ -2807,8 +2807,7 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     // The original desired i8/i16 element is now replicated in each
     // i32 lane of the splatted vector.
     SDValue NewIdx = DAG.getNode(
-        LoongArchISD::BSTRPICK, DL, GRLenVT, Idx,
-        DAG.getConstant(31, DL, GRLenVT),
+        ISD::SRA, DL, GRLenVT, Idx,
         DAG.getConstant(((VecTy == MVT::v32i8) ? 2 : 1), DL, GRLenVT));
     SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, NewIdx);
     SDValue SplatValue =

@@ -77,7 +77,7 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_32xi8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 2
+; CHECK-NEXT:    srai.d $a0, $a2, 2
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    andi $a0, $a2, 3
@@ -94,7 +94,7 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_16xi16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 1
+; CHECK-NEXT:    srai.d $a0, $a2, 1
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    andi $a0, $a2, 1
