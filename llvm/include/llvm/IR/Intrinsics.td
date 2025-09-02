@@ -2420,6 +2420,16 @@ let IntrProperties = [IntrNoMem, ImmArg<ArgIndex<1>>] in {
                                     llvm_i32_ty]>;
 }
 
+def int_loop_dependence_raw_mask:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+
+def int_loop_dependence_war_mask:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+
 def int_get_active_lane_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [llvm_anyint_ty, LLVMMatchType<1>],
