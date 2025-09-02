@@ -21161,10 +21161,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // vector, we can use that vector as the passthru in a normal slideup of 1.
     // This saves us an extract_element instruction (i.e. vfmv.f.s, vmv.x.s).
     if (N->getOperand(0).isUndef() &&
-        sd_match(
-            N->getOperand(2),
-            m_OneUse(m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
-                             m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec)))))) {
+        sd_match(N->getOperand(2),
+                 m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
+                         m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec))))) {
       MVT SrcVecVT = SrcVec.getSimpleValueType();
       // Adapt the value type of source vector.
       if (SrcVecVT.isFixedLengthVector()) {
