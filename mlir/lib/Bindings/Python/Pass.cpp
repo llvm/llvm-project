@@ -10,9 +10,10 @@
 
 #include "IRModule.h"
 #include "mlir-c/Pass.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
-
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "nanobind/trampoline.h"
 
 namespace nb = nanobind;
