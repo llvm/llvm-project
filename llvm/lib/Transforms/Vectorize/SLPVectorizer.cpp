@@ -23842,7 +23842,8 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC,
+                     DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -24241,7 +24242,7 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost =
-            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V);
+            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V, DT, DL, TLI);
         InstructionCost Cost = V.getTreeCost(VL, ReductionCost);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
@@ -24546,7 +24547,9 @@ private:
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
                                    ArrayRef<Value *> ReducedVals,
                                    bool IsCmpSelMinMax, FastMathFlags FMF,
-                                   const BoUpSLP &R) {
+                                   const BoUpSLP &R, DominatorTree &DT,
+                                   const DataLayout &DL,
+                                   const TargetLibraryInfo &TLI) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -24571,6 +24574,22 @@ private:
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
+            if (RdxKind == RecurKind::FAdd) {
+              InstructionCost FMACost = canConvertToFMA(
+                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+              if (FMACost.isValid()) {
+                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
+                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
+                  // Also, exclude scalar fmul cost.
+                  InstructionCost FMulCost =
+                      TTI->getInstructionCost(I, CostKind);
+                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
+                  FMACost -= FMulCost;
+                }
+                ScalarCost += FMACost;
+                continue;
+              }
+            }
             ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
             continue;
           }
@@ -24635,8 +24654,43 @@ private:
           auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
               std::make_pair(RedTy, true));
           VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
-          VectorCost +=
-              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          InstructionCost FMACost = InstructionCost::getInvalid();
+          if (RdxKind == RecurKind::FAdd) {
+            // Check if the reduction operands can be converted to FMA.
+            SmallVector<Value *> Ops;
+            FastMathFlags FMF;
+            FMF.set();
+            for (Value *RdxVal : ReducedVals) {
+              if (!RdxVal->hasOneUse()) {
+                Ops.clear();
+                break;
+              }
+              if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
+                FMF &= FPCI->getFastMathFlags();
+              Ops.push_back(RdxVal->user_back());
+            }
+            FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
+                                      *TTI, TLI);
+            if (FMACost.isValid()) {
+              // Calculate actual FMAD cost.
+              IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
+                                          {RVecTy, RVecTy, RVecTy}, FMF);
+              FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+
+              LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
+              // Also, exclude vector fmul cost.
+              InstructionCost FMulCost = TTI->getArithmeticInstrCost(
+                  Instruction::FMul, RVecTy, CostKind);
+              LLVM_DEBUG(dbgs()
+                         << "Minus vector FMul cost: " << FMulCost << "\n");
+              FMACost -= FMulCost;
+            }
+          }
+          if (FMACost.isValid())
+            VectorCost += FMACost;
+          else
+            VectorCost +=
+                TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
           if (RType != RedTy) {
             unsigned Opcode = Instruction::Trunc;
             if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
@@ -25304,7 +25358,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -25449,7 +25503,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
@@ -25533,7 +25587,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
 template <typename T>
 static bool tryToVectorizeSequence(
     SmallVectorImpl<T *> &Incoming, function_ref<bool(T *, T *)> Comparator,
-    function_ref<bool(T *, T *)> AreCompatible,
+    function_ref<bool(ArrayRef<T *>, T *)> AreCompatible,
     function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
     bool MaxVFOnly, BoUpSLP &R) {
   bool Changed = false;
@@ -25555,7 +25609,7 @@ static bool tryToVectorizeSequence(
     auto *SameTypeIt = IncIt;
     while (SameTypeIt != E && (!isa<Instruction>(*SameTypeIt) ||
                                R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
-                               AreCompatible(*SameTypeIt, *IncIt))) {
+                               AreCompatible(VL, *SameTypeIt))) {
       auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
       if (I && !R.isDeleted(I))
@@ -25753,10 +25807,10 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
     return compareCmp<false>(V, V2, *TLI, *DT);
   };
 
-  auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatibleCompares = [&](ArrayRef<Value *> VL, Value *V1) {
+    if (VL.empty() || VL.back() == V1)
       return true;
-    return compareCmp<true>(V1, V2, *TLI, *DT);
+    return compareCmp<true>(V1, VL.back(), *TLI, *DT);
   };
 
   SmallVector<Value *> Vals;
@@ -25962,9 +26016,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return false;
   };
-  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](ArrayRef<Value *> VL,
+                                                     Value *V1) {
+    if (VL.empty() || V1 == VL.back())
       return true;
+    Value *V2 = VL.back();
     if (V1->getType() != V2->getType())
       return false;
     ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
@@ -26335,7 +26391,13 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
            V2->getValueOperand()->getValueID();
   };
 
-  auto &&AreCompatibleStores = [this](StoreInst *V1, StoreInst *V2) {
+  bool SameParent = true;
+  auto AreCompatibleStores = [&](ArrayRef<StoreInst *> VL, StoreInst *V1) {
+    if (VL.empty()) {
+      SameParent = true;
+      return true;
+    }
+    StoreInst *V2 = VL.back();
     if (V1 == V2)
       return true;
     if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
@@ -26346,15 +26408,34 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (isa<UndefValue>(V1->getValueOperand()) ||
         isa<UndefValue>(V2->getValueOperand()))
       return true;
-    if (auto *I1 = dyn_cast<Instruction>(V1->getValueOperand()))
-      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
-        if (I1->getParent() != I2->getParent())
-          return false;
-        return getSameOpcode({I1, I2}, *TLI).valid();
-      }
     if (isa<Constant>(V1->getValueOperand()) &&
         isa<Constant>(V2->getValueOperand()))
       return true;
+    // Check if the operands of the stores can be vectorized. They can be
+    // vectorized, if they have compatible operands or have operands, which can
+    // be vectorized as copyables.
+    auto *I1 = dyn_cast<Instruction>(V1->getValueOperand());
+    auto *I2 = dyn_cast<Instruction>(V2->getValueOperand());
+    if (I1 || I2) {
+      // Accept only tail-following non-compatible values for now.
+      // TODO: investigate if it is possible to vectorize incompatible values,
+      // if the copyables are first in the list.
+      if (I1 && !I2)
+        return false;
+      SameParent &= I1 && I2 && I1->getParent() == I2->getParent();
+      SmallVector<Value *> NewVL(VL.size() + 1);
+      for (auto [SI, V] : zip(VL, NewVL))
+        V = SI->getValueOperand();
+      NewVL.back() = V1->getValueOperand();
+      InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+      InstructionsState S = Analysis.buildInstructionsState(
+          NewVL, R, VectorizeCopyableElements, /*WithProfitabilityCheck=*/true,
+          /*SkipSameCodeCheck=*/!SameParent);
+      if (S)
+        return true;
+      if (!SameParent)
+        return false;
+    }
     return V1->getValueOperand()->getValueID() ==
            V2->getValueOperand()->getValueID();
   };
