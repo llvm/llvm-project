@@ -558,7 +558,7 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
+static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint16_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
   uint32_t Rs1 = fieldFromInstruction(Insn, 7, 5);
@@ -656,6 +656,13 @@ static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecflushdlone,
 };
 
+static constexpr FeatureBitset XMIPSGroup = {
+    RISCV::FeatureVendorXMIPSLSP,
+    RISCV::FeatureVendorXMIPSCMov,
+    RISCV::FeatureVendorXMIPSCBOP,
+    RISCV::FeatureVendorXMIPSEXECTL,
+};
+
 static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadBa,      RISCV::FeatureVendorXTHeadBb,
     RISCV::FeatureVendorXTHeadBs,      RISCV::FeatureVendorXTHeadCondMov,
@@ -684,13 +691,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
-    {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},
-    {DecoderTableXmipscmov32,
-     {RISCV::FeatureVendorXMIPSCMov},
-     "MIPS mips.ccmov"},
-    {DecoderTableXmipscbop32,
-     {RISCV::FeatureVendorXMIPSCBOP},
-     "MIPS mips.pref"},
+    {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     // Standard Extensions
@@ -699,6 +700,12 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
+
+// Define bitwidths for various types used to instantiate the decoder.
+template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint16_t> = 16;
+template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint32_t> = 32;
+// Use uint64_t to represent 48 bit instructions.
+template <> inline constexpr uint32_t llvm::MCD::InsnBitWidth<uint64_t> = 48;
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
@@ -710,9 +717,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   }
   Size = 4;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read32le(Bytes.data());
+  uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -758,9 +763,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   }
   Size = 2;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read16le(Bytes.data());
+  uint16_t Insn = support::endian::read16le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList16) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))

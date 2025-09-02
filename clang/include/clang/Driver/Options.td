@@ -1851,7 +1851,7 @@ defm pseudo_probe_for_profiling
                   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
                   PosFlag<SetTrue, [], [ClangOption], "Emit">,
                   NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
-                  BothFlags<[], [ClangOption, CC1Option],
+                  BothFlags<[], [ClangOption, CC1Option, CLOption],
                             " pseudo probes for sample profiling">>;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -9524,6 +9524,16 @@ def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
 def fvk_use_scalar_layout
     : DXCFlag<"fvk-use-scalar-layout">,
       HelpText<"Use scalar memory layout for Vulkan resources.">;
+
+def fhlsl_spv_use_unknown_image_format
+    : Flag<["-"], "fspv-use-unknown-image-format">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"For storage images and texel buffers, sets the default format "
+               "to 'Unknown' when not specified via the `vk::image_format` "
+               "attribute. If this option is not used, the format is inferred "
+               "from the resource's data type.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
