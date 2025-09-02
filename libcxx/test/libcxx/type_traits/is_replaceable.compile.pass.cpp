@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__type_traits/is_replaceable.h>
 #include <array>
 #include <deque>

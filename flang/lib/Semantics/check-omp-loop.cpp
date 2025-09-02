@@ -196,7 +196,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   common::visit(
       common::visitors{
           // Allow `!$OMP ORDERED SIMD`
-          [&](const parser::OpenMPBlockConstruct &c) {
+          [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
             if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
               for (const auto &clause : beginSpec.Clauses().v) {
