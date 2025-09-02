@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c2y -ast-dump=json -ast-dump-filter Test %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c2y -ast-dump=json -ast-dump-filter Test %s | FileCheck %s
 
 void TestLabeledBreakContinue() {
   a: while (true) {
