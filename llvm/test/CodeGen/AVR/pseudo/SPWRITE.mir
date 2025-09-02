@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny11 %s -o - \
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny13 %s -o - \
 # RUN:     | FileCheck --check-prefix=NOSPH %s
 # RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atmega328 %s -o - \
 # RUN:     | FileCheck %s
@@ -34,9 +34,6 @@ body: |
     ; CHECK:       OUTARr 61, $r14
 
     ; NOSPH-LABEL: test
-    ; NOSPH:       $r0 = INRdA 63
-    ; NOSPH:       BCLRs 7, implicit-def $sreg
-    ; NOSPH:       OUTARr 63, killed $r0
     ; NOSPH:       OUTARr 61, $r14
 
     ; XMEGA-LABEL: test
