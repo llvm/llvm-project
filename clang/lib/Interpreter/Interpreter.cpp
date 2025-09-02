@@ -302,6 +302,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
         return;
       }
   }
+
+  ValMgr = ValueResultManager::Create(IncrExecutor->GetExecutionEngine(),
+                                      getASTContext());
 }
 
 Interpreter::~Interpreter() {
@@ -324,6 +327,7 @@ Interpreter::~Interpreter() {
 // code them.
 const char *const Runtimes = R"(
     #define __CLANG_REPL__ 1
+
 #ifdef __cplusplus
     #define EXTERN_C extern "C"
     struct __clang_Interpreter_NewTag{} __ci_newtag;
@@ -344,6 +348,8 @@ const char *const Runtimes = R"(
       memcpy(Placement, Src, Size);
     }
 #endif // __cplusplus
+  EXTERN_C void __clang_Interpreter_SendResultValue(void *Ctx, unsigned long long, void*);
+  EXTERN_C void __orc_rt_SendResultValue(unsigned long long, void*);
   EXTERN_C void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
@@ -699,7 +705,7 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   return llvm::Error::success();
 }
 
-llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
+llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code) {
 
   auto PTU = Parse(Code);
   if (!PTU)
@@ -708,12 +714,8 @@ llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
     if (llvm::Error Err = Execute(*PTU))
       return Err;
 
-  if (LastValue.isValid()) {
-    if (!V) {
-      LastValue.dump();
-      LastValue.clear();
-    } else
-      *V = std::move(LastValue);
+  if (ValMgr) {
+    ValMgr->resetAndDump();
   }
   return llvm::Error::success();
 }

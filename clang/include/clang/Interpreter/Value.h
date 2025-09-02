@@ -32,8 +32,11 @@
 
 #ifndef LLVM_CLANG_INTERPRETER_VALUE_H
 #define LLVM_CLANG_INTERPRETER_VALUE_H
-
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_BUILD_LLVM_DYLIB, LLVM_BUILD_SHARED_LIBS
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
@@ -107,7 +110,7 @@ public:
     REPL_BUILTIN_TYPES
 #undef X
 
-    K_Void,
+        K_Void,
     K_PtrOrObj,
     K_Unspecified
   };
@@ -206,5 +209,48 @@ template <> inline void *Value::as() const {
     return Data.m_Ptr;
   return (void *)as<uintptr_t>();
 }
+
+class ValueBuffer {
+public:
+  QualType Ty;
+  virtual ~ValueBuffer() = default;
+  virtual std::string toString() const = 0;
+  virtual bool isValid() const = 0;
+};
+
+class ValueResultManager {
+public:
+  using ValueId = uint64_t;
+  using SendResultFn = llvm::unique_function<void(llvm::Error)>;
+
+  explicit ValueResultManager(ASTContext &Ctx, llvm::orc::MemoryAccess &MemAcc);
+
+  static std::unique_ptr<ValueResultManager>
+  Create(llvm::orc::LLJIT &EE, ASTContext &Ctx, bool IsOutOfProcess = true);
+
+  ValueId registerPendingResult(QualType QT) {
+    ValueId NewID = NextID.fetch_add(1, std::memory_order_relaxed);
+    IdToType.insert({NewID, QT});
+    return NewID;
+  }
+
+  void resetAndDump();
+
+  void deliverResult(SendResultFn SendResult, ValueId ID,
+                     llvm::orc::ExecutorAddr VAddr);
+
+private:
+  std::atomic<ValueId> NextID{1};
+  void Initialize(llvm::orc::LLJIT &EE);
+
+  std::string ValueTypeToString(QualType QT) const;
+
+  mutable std::mutex Mutex;
+  ASTContext &Ctx;
+  llvm::orc::MemoryAccess &MemAcc;
+  std::unique_ptr<ValueBuffer> ValBuf = nullptr;
+  llvm::DenseMap<ValueId, clang::QualType> IdToType;
+};
+
 } // namespace clang
 #endif
