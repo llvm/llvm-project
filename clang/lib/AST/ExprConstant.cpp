@@ -11627,12 +11627,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
   case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllv16si:
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrav16si:
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
   case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlv16si:
 
   case clang::X86::BI__builtin_ia32_psllwi128:
   case clang::X86::BI__builtin_ia32_pslldi128:
@@ -11763,6 +11766,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case clang::X86::BI__builtin_ia32_psllv4di:
       case clang::X86::BI__builtin_ia32_psllv4si:
       case clang::X86::BI__builtin_ia32_psllv8si:
+      case clang::X86::BI__builtin_ia32_psllv16si:
         if (RHS.uge(RHS.getBitWidth())) {
           ResultElements.push_back(
               APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
@@ -11773,6 +11777,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         break;
       case clang::X86::BI__builtin_ia32_psrav4si:
       case clang::X86::BI__builtin_ia32_psrav8si:
+      case clang::X86::BI__builtin_ia32_psrav16si:
         if (RHS.uge(RHS.getBitWidth())) {
           ResultElements.push_back(
               APValue(APSInt(LHS.ashr(RHS.getBitWidth() - 1), DestUnsigned)));
@@ -11785,6 +11790,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       case clang::X86::BI__builtin_ia32_psrlv4di:
       case clang::X86::BI__builtin_ia32_psrlv4si:
       case clang::X86::BI__builtin_ia32_psrlv8si:
+      case clang::X86::BI__builtin_ia32_psrlv16si:
         if (RHS.uge(RHS.getBitWidth())) {
           ResultElements.push_back(
               APValue(APSInt(APInt::getZero(RHS.getBitWidth()), DestUnsigned)));
