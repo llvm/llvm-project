@@ -9577,22 +9577,12 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
 }
 
 void TypeSystemClang::RequireCompleteType(CompilerType type) {
-  if (!type)
-    return;
-
-  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-  if (qual_type.isNull())
-    return;
-
   // Technically, enums can be incomplete too, but we don't handle those as they
   // are emitted even under -flimit-debug-info.
-  bool is_constant_array = qual_type->isConstantArrayType();
-  bool is_cxx_record = qual_type->getAsCXXRecordDecl() != nullptr;
-  if (is_constant_array || is_cxx_record)
-    if (type.GetCompleteType())
-      return;
+  if (!TypeSystemClang::IsCXXClassType(type))
+    return;
 
-  if (!is_cxx_record)
+  if (type.GetCompleteType())
     return;
 
   // No complete definition in this module.  Mark the class as complete to
