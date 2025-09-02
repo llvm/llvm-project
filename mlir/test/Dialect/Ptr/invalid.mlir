@@ -38,3 +38,19 @@ func.func @store_const(%arg0: !ptr.ptr<#test.const_memory_space>, %arg1: i64) {
   ptr.store %arg1, %arg0 atomic monotonic alignment = 8 : i64, !ptr.ptr<#test.const_memory_space>
   return
 }
+
+// -----
+
+func.func @llvm_load(%arg0: !ptr.ptr<#llvm.address_space<1>>) -> (memref<f32>) {
+  // expected-error@+1 {{type must be LLVM type with size, but got 'memref<f32>'}}
+  %0 = ptr.load %arg0 : !ptr.ptr<#llvm.address_space<1>> -> memref<f32>
+  return %0 : memref<f32>
+}
+
+// -----
+
+func.func @llvm_store(%arg0: !ptr.ptr<#llvm.address_space<1>>, %arg1: memref<f32>) {
+  // expected-error@+1 {{type must be LLVM type with size, but got 'memref<f32>'}}
+  ptr.store %arg1, %arg0 : memref<f32>, !ptr.ptr<#llvm.address_space<1>>
+  return
+}
