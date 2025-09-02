@@ -1955,6 +1955,25 @@ let TargetPrefix = "riscv" in {
   defm paaddu_b    : RVPBinaryIntrinsics;
   defm paaddu_h    : RVPBinaryIntrinsics;
   defm paaddu_w    : RVPBinaryIntrinsics;
+  defm psub_b      : RVPBinaryIntrinsics;
+  defm psub_h      : RVPBinaryIntrinsics;
+  defm psub_w      : RVPBinaryIntrinsics;
+  defm ssub        : RVPBinaryIntrinsics;
+  defm pssub_b     : RVPBinaryIntrinsics;
+  defm pssub_h     : RVPBinaryIntrinsics;
+  defm pssub_w     : RVPBinaryIntrinsics;
+  defm asub        : RVPBinaryIntrinsics;
+  defm pasub_b     : RVPBinaryIntrinsics;
+  defm pasub_h     : RVPBinaryIntrinsics;
+  defm pasub_w     : RVPBinaryIntrinsics;
+  defm ssubu       : RVPBinaryIntrinsics;
+  defm pssubu_b    : RVPBinaryIntrinsics;
+  defm pssubu_h    : RVPBinaryIntrinsics;
+  defm pssubu_w    : RVPBinaryIntrinsics;
+  defm asubu       : RVPBinaryIntrinsics;
+  defm pasubu_b    : RVPBinaryIntrinsics;
+  defm pasubu_h    : RVPBinaryIntrinsics;
+  defm pasubu_w    : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],

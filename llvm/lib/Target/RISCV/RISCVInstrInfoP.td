@@ -929,6 +929,16 @@ def : PatGprGpr<int_riscv_psaddu_b,    PSADDU_B>;
 def : PatGprGpr<int_riscv_psaddu_h,    PSADDU_H>;
 def : PatGprGpr<int_riscv_paaddu_b,    PAADDU_B>;
 def : PatGprGpr<int_riscv_paaddu_h,    PAADDU_H>;
+def : PatGprGpr<int_riscv_psub_b,      PSUB_B>;
+def : PatGprGpr<int_riscv_psub_h,      PSUB_H>;
+def : PatGprGpr<int_riscv_pssub_b,     PSSUB_B>;
+def : PatGprGpr<int_riscv_pssub_h,     PSSUB_H>;
+def : PatGprGpr<int_riscv_pasub_b,     PASUB_B>;
+def : PatGprGpr<int_riscv_pasub_h,     PASUB_H>;
+def : PatGprGpr<int_riscv_pssubu_b,    PSSUBU_B>;
+def : PatGprGpr<int_riscv_pssubu_h,    PSSUBU_H>;
+def : PatGprGpr<int_riscv_pasubu_b,    PASUBU_B>;
+def : PatGprGpr<int_riscv_pasubu_h,    PASUBU_H>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -942,6 +952,10 @@ def : PatGprGpr<int_riscv_sadd,  SADD>;
 def : PatGprGpr<int_riscv_aadd,  AADD>;
 def : PatGprGpr<int_riscv_saddu, SADDU>;
 def : PatGprGpr<int_riscv_aaddu, AADDU>;
+def : PatGprGpr<int_riscv_ssub,  SSUB>;
+def : PatGprGpr<int_riscv_asub,  ASUB>;
+def : PatGprGpr<int_riscv_ssubu, SSUBU>;
+def : PatGprGpr<int_riscv_asubu, ASUBU>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -970,4 +984,9 @@ def : PatGprGpr<int_riscv_psadd_w,     PSADD_W>;
 def : PatGprGpr<int_riscv_paadd_w,     PAADD_W>;
 def : PatGprGpr<int_riscv_psaddu_w,    PSADDU_W>;
 def : PatGprGpr<int_riscv_paaddu_w,    PAADDU_W>;
+def : PatGprGpr<int_riscv_psub_w,      PSUB_W>;
+def : PatGprGpr<int_riscv_pssub_w,     PSSUB_W>;
+def : PatGprGpr<int_riscv_pasub_w,     PASUB_W>;
+def : PatGprGpr<int_riscv_pssubu_w,    PSSUBU_W>;
+def : PatGprGpr<int_riscv_pasubu_w,    PASUBU_W>;
 } // Predicates = [HasStdExtP, IsRV64]
