@@ -977,7 +977,15 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     } else {
       // For backward compatibility.
-      BracketAlignmentStyle local;
+      BracketAlignmentStyle local = BAS_Align;
+      if (IsGoogleOrChromium) {
+        if (Style.Language == FormatStyle::LK_JavaScript)
+          local = BAS_AlwaysBreak;
+        else if (Style.Language == FormatStyle::LK_Java)
+          local = BAS_DontAlign;
+      } else if (BasedOnStyle.equals_insensitive("webkit")) {
+        local = BAS_DontAlign;
+      }
       IO.mapOptional("AlignAfterOpenBracket", local);
       Style.BreakAfterOpenBracketBracedList = false;
       Style.BreakAfterOpenBracketFunction = false;
@@ -990,11 +998,11 @@ template <> struct MappingTraits<FormatStyle> {
       Style.BreakBeforeCloseBracketLoop = false;
       Style.BreakBeforeCloseBracketSwitch = false;
 
-      if (local == BAS_Align)
+      if (local == BAS_Align) {
         Style.AlignAfterOpenBracket = true;
-      else if (local == BAS_DontAlign)
+      } else if (local == BAS_DontAlign) {
         Style.AlignAfterOpenBracket = false;
-      else if (local == BAS_AlwaysBreak) {
+      } else if (local == BAS_AlwaysBreak) {
         Style.BreakAfterOpenBracketBracedList = true;
         Style.BreakAfterOpenBracketFunction = true;
         Style.BreakAfterOpenBracketIf = true;
@@ -1948,8 +1956,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.BreakAfterOpenBracketBracedList = true;
     GoogleStyle.BreakAfterOpenBracketFunction = true;
     GoogleStyle.BreakAfterOpenBracketIf = true;
-    GoogleStyle.BreakAfterOpenBracketLoop = false;
-    GoogleStyle.BreakAfterOpenBracketSwitch = false;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     // TODO: still under discussion whether to switch to SLS_All.
