@@ -995,6 +995,8 @@ R"(All available -march extensions for RISC-V
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
+    zicfilp              1.0
+    zicfiss              1.0
     zicntr               2.0
     zicond               1.0
     zicsr                2.0
@@ -1183,9 +1185,7 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     p                    0.15
-    zicfilp              1.0       This is a long dummy description
-    zicfiss              1.0
-    zalasr               0.1
+    zalasr               0.1       This is a long dummy description
     zvbc32e              0.7
     zvfbfa               0.1
     zvkgs                0.7
@@ -1236,7 +1236,7 @@ For example, clang -march=rv32i_v1p0)";
 
   StringMap<StringRef> DummyMap;
   DummyMap["i"] = "This is a long dummy description";
-  DummyMap["experimental-zicfilp"] = "This is a long dummy description";
+  DummyMap["experimental-zalasr"] = "This is a long dummy description";
 
   outs().flush();
   testing::internal::CaptureStdout();
@@ -1258,16 +1258,16 @@ R"(Extensions enabled for the given RISC-V target
     i                    2.1       'I' (Base Integer Instruction Set)
 
 Experimental extensions
-    zicfilp              1.0       'Zicfilp' (Landing pad)
+    zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 
-ISA String: rv64i2p1_zicfilp1p0_zicsr2p0
+ISA String: rv64i2p1_zalasr0p1
 )";
   // clang-format on
 
   StringMap<StringRef> DescMap;
   DescMap["i"] = "'I' (Base Integer Instruction Set)";
-  DescMap["experimental-zicfilp"] = "'Zicfilp' (Landing pad)";
-  std::set<StringRef> EnabledExtensions = {"i", "experimental-zicfilp"};
+  DescMap["experimental-zalasr"] = "'Zalasr' (Load-Acquire and Store-Release Instructions)";
+  std::set<StringRef> EnabledExtensions = {"i", "experimental-zalasr"};
 
   outs().flush();
   testing::internal::CaptureStdout();

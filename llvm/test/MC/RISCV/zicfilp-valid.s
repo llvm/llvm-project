@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zicfilp -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zicfilp -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zicfilp -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zicfilp -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zicfilp < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zicfilp --no-print-imm-hex -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zicfilp < %s \
+# RUN:     | llvm-objdump --mattr=+zicfilp --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zicfilp < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zicfilp --no-print-imm-hex -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zicfilp < %s \
+# RUN:     | llvm-objdump --mattr=+zicfilp --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
 # RUN: not llvm-mc -triple riscv32 -M no-aliases -show-encoding < %s 2>&1 \

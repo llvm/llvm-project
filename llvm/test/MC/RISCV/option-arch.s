@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple riscv32 -mattr=+experimental -show-encoding < %s \
 # RUN:   | FileCheck -check-prefixes=CHECK %s
 # RUN: llvm-mc -triple riscv32 -mattr=+experimental -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba,+experimental-zicfiss -d -M no-aliases - \
+# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba,+zicfiss -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST %s
 
 # Test '.option arch, +' and '.option arch, -' directive

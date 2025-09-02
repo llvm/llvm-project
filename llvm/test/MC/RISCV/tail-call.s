@@ -8,14 +8,14 @@
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:   | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zicfilp < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zicfilp < %s \
 # RUN:   | llvm-objdump -d - | FileCheck --check-prefix=INSTR-ZICFILP %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zicfilp < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zicfilp < %s \
 # RUN:   | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zicfilp < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zicfilp < %s \
 # RUN:   | llvm-objdump -d - | FileCheck --check-prefix=INSTR-ZICFILP %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+experimental-zicfilp < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zicfilp < %s \
 # RUN:   | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
 .long foo
