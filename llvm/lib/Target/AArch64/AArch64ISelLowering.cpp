@@ -20001,7 +20001,7 @@ static bool isPredicateCCSettingOp(SDValue N) {
       (N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
-       (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege_x2 ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehi ||
@@ -20015,7 +20015,7 @@ static bool isPredicateCCSettingOp(SDValue N) {
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt ||
-        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt_x2))))
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt_x2)))
     return true;
 
   return false;
