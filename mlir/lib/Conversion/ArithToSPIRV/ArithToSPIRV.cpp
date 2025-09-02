@@ -619,12 +619,11 @@ struct IndexCastIndexI1Pattern final
   LogicalResult
   matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = adaptor.getIn().getType();
-    if (!op.getType().isInteger(1))
+    if (!isBoolScalarOrVector(op.getType()))
       return failure();
 
     Location loc = op.getLoc();
-    Value zeroIdx = spirv::ConstantOp::getZero(srcType, loc, rewriter);
+    Value zeroIdx = spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, op.getType(), zeroIdx,
                                                     adaptor.getIn());
     return success();
