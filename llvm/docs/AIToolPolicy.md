@@ -1,4 +1,4 @@
-# Extractive Contribution Policy
+# LLVM AI Tool Use Policy
 
 LLVM's policy on AI-assisted tooling is fundamentally liberal -- We want to
 enable contributors to use the latest and greatest tools available. Our policy
@@ -65,14 +65,14 @@ contributions and explain why they believe a contribution is overly burdensome
 or not aligned with the project goals.
 
 If a maintainer judges that a contribution is extractive (i.e. it is generated
-with tool-assistance and is not valuable), they should copy-paste the following
-response, add the `extractive` label if applicable, and refrain from further
-engagement:
+with tool-assistance or isn't valuable for other reasons), they should
+copy-paste the following response, add the `extractive` label if applicable,
+and refrain from further engagement:
 
     This PR appears to be extractive, and requires additional justification for
     why it is valuable enough to the project for us to review it. Please see
-    our developer policy on extractive contributions:
-    http://llvm.org/docs/ExtractiveContributions.html
+    our developer policy on AI-generated contributions:
+    http://llvm.org/docs/AIToolPolicy.html
 
 Other reviewers should use the label prioritize their review time.
 
