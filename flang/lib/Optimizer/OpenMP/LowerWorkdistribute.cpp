@@ -1023,17 +1023,17 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
         }
       }
     }
-      if (isa<fir::AllocMemOp>(clonedOp) || isa<fir::FreeMemOp>(clonedOp))
+    if (isa<fir::AllocMemOp>(clonedOp) || isa<fir::FreeMemOp>(clonedOp))
+      opsToReplace.push_back(clonedOp);
+    if (isRuntimeCall(clonedOp)) {
+      fir::CallOp runtimeCall = cast<fir::CallOp>(op);
+      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
+          "_FortranAAssign") {
         opsToReplace.push_back(clonedOp);
-      if (isRuntimeCall(clonedOp)) {
-        fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-        if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
-            "_FortranAAssign") {
-          opsToReplace.push_back(clonedOp);
-        } else {
-          llvm_unreachable("Unhandled runtime call hoisting.");
-        }
+      } else {
+        llvm_unreachable("Unhandled runtime call hoisting.");
       }
+    }
   }
 
   for (Operation *op : opsToReplace) {
