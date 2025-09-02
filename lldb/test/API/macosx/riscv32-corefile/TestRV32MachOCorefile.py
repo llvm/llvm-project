@@ -17,7 +17,6 @@ class TestRV32MachOCorefile(TestBase):
     def test_riscv32_gpr_corefile_registers(self):
         corefile = self.getBuildArtifact("core")
         self.yaml2macho_core("riscv32-registers.yaml", corefile)
-        # call(create_corefile + " " + corefile, shell=True)
 
         target = self.dbg.CreateTarget("")
         process = target.LoadCore(corefile)
