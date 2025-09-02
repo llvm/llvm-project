@@ -144,7 +144,7 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
 
     ValueTypeRange<OperandRange> graphOutputOperandTypes =
         op.getValue().getType();
-    for (const auto [index, type] : llvm::enumerate(graphOutputOperandTypes)) {
+    for (auto [index, type] : llvm::enumerate(graphOutputOperandTypes)) {
       if (type != grType.getResult(index))
         return op.emitError("type of return operand ")
                << index << " (" << type << ") doesn't match graph result type ("
@@ -194,7 +194,7 @@ LogicalResult spirv::GraphOutputsARMOp::verify() {
            << getNumOperands() << " operands, but enclosing  spirv.ARM.Graph (@"
            << graph.getName() << ") returns " << results.size();
 
-  for (const auto &[index, result] : llvm::enumerate(results))
+  for (auto [index, result] : llvm::enumerate(results))
     if (getOperand(index).getType() != result)
       return emitError() << "type of return operand " << index << " ("
                          << getOperand(index).getType()
