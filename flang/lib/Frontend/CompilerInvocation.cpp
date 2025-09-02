@@ -325,6 +325,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  opts.PrepareForFatLTO =
+      args.hasFlag(clang::driver::options::OPT_ffat_lto_objects,
+                   clang::driver::options::OPT_fno_fat_lto_objects, false);
+
   // -flto=full/thin option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
