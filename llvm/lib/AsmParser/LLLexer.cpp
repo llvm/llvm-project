@@ -180,11 +180,6 @@ int LLLexer::getNextChar() {
   if (CurPtr == CurBuf.end())
     return EOF;
   // Increment line number if this is the first character after a newline
-  if (CurPtr > CurBuf.begin() && *(CurPtr - 1) == '\n') {
-    CurLineNum++;
-    CurColNum = 0;
-  } else
-    CurColNum++;
   return *CurPtr++;
 }
 
@@ -195,44 +190,28 @@ const char *LLLexer::skipNChars(unsigned N) {
 }
 
 void LLLexer::advancePositionTo(const char *Ptr) {
-  bool RecalculateColumn = false;
-  while (CurPtr != Ptr) {
-    if (CurPtr > Ptr) {
-      --CurPtr;
-      --CurColNum;
-      // Since CurPtr is one char ahead of the stored position, check if the
-      // previous char is not a newline
-      if (CurPtr != CurBuf.begin() && *(CurPtr - 1) == '\n') {
-        --CurLineNum;
-        RecalculateColumn = true;
-      }
-    } else
-      getNextChar();
+  if (CurBuf.begin() > Ptr) {
+    CurPtr = CurBuf.begin();
+    return;
   }
-  if (RecalculateColumn) {
-    CurColNum = 0;
-    // Count the number of chars to the previous newline or start of buffer
-    for (const char *Ptr = CurPtr; Ptr != CurBuf.begin() && *(Ptr - 1) != '\n';
-         --Ptr, ++CurColNum)
-      ;
+  if (CurBuf.end() < Ptr) {
+    CurPtr = CurBuf.end();
+    return;
   }
+
+  CurPtr = Ptr;
 }
 
 lltok::Kind LLLexer::LexToken() {
   // Set token end to next location, since the end is
   // exclusive
-  if (CurPtr != CurBuf.begin() && *(CurPtr - 1) == '\n') {
-    PrevTokEndLineNum = CurLineNum + 1;
-    PrevTokEndColNum = 0;
-  } else {
-    PrevTokEndLineNum = CurLineNum;
-    PrevTokEndColNum = CurColNum + 1;
-  }
+  std::tie(PrevTokEndLineNum, PrevTokEndColNum) =
+      SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
   while (true) {
     TokStart = CurPtr;
+    std::tie(CurTokLineNum, CurTokColNum) =
+        SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
     int CurChar = getNextChar();
-    CurTokColNum = CurColNum;
-    CurTokLineNum = CurLineNum;
 
     switch (CurChar) {
     default:

@@ -29,10 +29,6 @@ namespace llvm {
     const char *CurPtr;
     StringRef CurBuf;
 
-    // The line number at `CurPtr-1`, zero-indexed
-    unsigned CurLineNum = 0;
-    // The column number at `CurPtr-1`, zero-indexed
-    unsigned CurColNum = -1;
     // The line number of the start of the current token, zero-indexed
     unsigned CurTokLineNum = 0;
     // The column number of the start of the current token, zero-indexed
@@ -91,10 +87,6 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
-    // Get the current line number, zero-indexed
-    unsigned getLineNum() { return CurLineNum; }
-    // Get the current column number, zero-indexed
-    unsigned getColNum() { return CurColNum; }
     // Get the line number of the start of the current token, zero-indexed
     unsigned getTokLineNum() { return CurTokLineNum; }
     // Get the column number of the start of the current token, zero-indexed
