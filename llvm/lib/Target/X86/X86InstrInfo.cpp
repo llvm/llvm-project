@@ -483,7 +483,6 @@ struct CtSelectInstructions {
   unsigned IntMoveOpc;
   unsigned MoveOpc;
   bool Use256;
-  bool UseVEX;
   bool UseBlendInstr;
 };
 
@@ -500,6 +499,7 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.BroadcastOpc = X86::PSHUFDri;
       Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
       Instructions.MoveOpc = X86::MOVAPDrr;
+      Instructions.UseBlendInstr = true;
     } else {
       llvm_unreachable("Double precision vectors require SSE2");
     }
@@ -521,6 +521,8 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
       Instructions.MoveOpc = X86::MOVAPSrr;
     } else {
+      // fallback to SSE1, only support four 32-bit single precision
+      // floating-point values
       Instructions.PAndOpc = X86::ANDPSrr;
       Instructions.PAndnOpc = X86::ANDNPSrr;
       Instructions.POrOpc = X86::ORPSrr;
@@ -544,25 +546,12 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       llvm_unreachable("Integer vector operations require SSE2");
     }
     break;
-  case X86::CTSELECT_V8F16:
-    if (Subtarget.hasSSE2()) {
-      Instructions.PAndOpc = X86::PANDrr;
-      Instructions.PAndnOpc = X86::PANDNrr;
-      Instructions.POrOpc = X86::PORrr;
-      Instructions.BroadcastOpc = X86::PSHUFDri;
-      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
-      Instructions.MoveOpc = X86::MOVDQArr;
-    } else {
-      llvm_unreachable("FP16 vector operations require SSE2");
-    }
-    break;
   case X86::CTSELECT_V4F32X:
   case X86::CTSELECT_V4I32X:
   case X86::CTSELECT_V2F64X:
   case X86::CTSELECT_V2I64X:
   case X86::CTSELECT_V8I16X:
   case X86::CTSELECT_V16I8X:
-  case X86::CTSELECT_V8F16X:
     if (Subtarget.hasAVX()) {
       Instructions.PAndOpc = X86::VPANDrr;
       Instructions.PAndnOpc = X86::VPANDNrr;
@@ -573,7 +562,6 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
                              : (Opcode == X86::CTSELECT_V2F64X)
                                  ? X86::VMOVAPDrr
                                  : X86::VMOVDQArr;
-      Instructions.UseVEX = true;
     } else {
       llvm_unreachable("AVX variants require AVX support");
     }
@@ -589,7 +577,6 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.MoveOpc =
           (Opcode == X86::CTSELECT_V8F32) ? X86::VMOVAPSYrr : X86::VMOVDQAYrr;
       Instructions.Use256 = true;
-      Instructions.UseVEX = true;
     } else {
       llvm_unreachable("256-bit vectors require AVX");
     }
@@ -605,14 +592,12 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.MoveOpc =
           (Opcode == X86::CTSELECT_V4F64) ? X86::VMOVAPDYrr : X86::VMOVDQAYrr;
       Instructions.Use256 = true;
-      Instructions.UseVEX = true;
     } else {
       llvm_unreachable("256-bit vectors require AVX");
     }
     break;
   case X86::CTSELECT_V16I16:
   case X86::CTSELECT_V32I8:
-  case X86::CTSELECT_V16F16:
     if (Subtarget.hasAVX2()) {
       Instructions.PAndOpc = X86::VPANDYrr;
       Instructions.PAndnOpc = X86::VPANDNYrr;
@@ -621,7 +606,6 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
       Instructions.MoveOpc = X86::VMOVDQAYrr;
       Instructions.Use256 = true;
-      Instructions.UseVEX = true;
     } else if (Subtarget.hasAVX()) {
       Instructions.PAndOpc = X86::VPANDYrr;
       Instructions.PAndnOpc = X86::VPANDNYrr;
@@ -630,7 +614,6 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       Instructions.IntMoveOpc = X86::VMOVDI2PDIrr;
       Instructions.MoveOpc = X86::VMOVDQAYrr;
       Instructions.Use256 = true;
-      Instructions.UseVEX = true;
     } else {
       llvm_unreachable("256-bit integer vectors require AVX");
     }
@@ -678,6 +661,15 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       .addReg(SubReg)
       .setMIFlags(MachineInstr::MIFlag::NoMerge);
 
+  if (Instruction.UseBlendInstr && Subtarget.hasSSE41()) {
+    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
+    // %eax)
+    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
+  } else {
+    // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
+    BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+  }
+
   // Broadcast to TmpX (vector mask)
   BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
       .addReg(MaskReg)
@@ -696,7 +688,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
         .addImm(0)
         .setMIFlags(MachineInstr::MIFlag::NoMerge);
   } else {
-    if (Subtarget.hasSSE2() || Instruction.UseVEX) {
+    if (Subtarget.hasSSE2() || Subtarget.hasAVX()) {
       BuildMI(*MBB, MI, DL, get(Instruction.BroadcastOpc), MaskReg)
           .addReg(MaskReg)
           .addImm(0x00)
@@ -710,8 +702,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
     }
   }
 
-  if (Instruction.UseBlendInstr && Subtarget.hasSSE41() &&
-      !Instruction.Use256) {
+  if (Instruction.UseBlendInstr && Subtarget.hasSSE41()) {
     // Use dedicated blend instructions for SSE4.1+
     unsigned BlendOpc;
     switch (Opcode) {
@@ -722,13 +713,10 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       BlendOpc = X86::BLENDVPDrr0;
       break;
     default:
+      // alias for pblendvb that takes xmm0 as implicit mask register
       BlendOpc = X86::PBLENDVBrr0;
       break;
     }
-
-    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
-    // %eax)
-    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
 
     // Check if XMM0 is used as one of source registers, if yes then save it
     // in Dst register and update FalseVal and TrueVal to Dst register
@@ -739,7 +727,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
       // if XMM0 is one of the source registers, it will not match with Dst
       // registers, so we need to move it to Dst register
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
           .addReg(SrcXMM0)
           .setMIFlags(MachineInstr::MIFlag::NoMerge);
 
@@ -759,7 +747,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
       // if XMM0 is not allocated for any of the register, we stil need to save
       // and restore it after using as mask register
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
           .addReg(X86::XMM0)
           .setMIFlags(MachineInstr::MIFlag::NoMerge);
       SavedXMM0 = Dst;
@@ -769,7 +757,7 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
     if (MaskReg != X86::XMM0) {
       // BLENDV uses XMM0 as implicit mask register
       // https://www.felixcloutier.com/x86/pblendvb
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
+      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
           .addReg(MaskReg)
           .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
@@ -788,20 +776,17 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
       // restore XMM0 from SavedXMM0 if we saved it into Dst
       if (DidSaveXMM0) {
-        BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), X86::XMM0)
+        BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), X86::XMM0)
             .addReg(SavedXMM0)
             .setMIFlags(MachineInstr::MIFlag::NoMerge);
       }
       // dst = result (now in MaskReg)
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
           .addReg(MaskReg)
           .setMIFlags(MachineInstr::MIFlag::NoMerge);
     } else {
-      // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-      BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
-
       // move FalseVal to Dst register since MaskReg is XMM0 and Dst is not
-      BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
+      BuildMI(*MBB, MI, DL, get(Instruction.MoveOpc), Dst)
           .addReg(FalseVal)
           .setMIFlags(MachineInstr::MIFlag::NoMerge);
 
@@ -6855,14 +6840,12 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case X86::CTSELECT_V2F64:
   case X86::CTSELECT_V4F32:
-  case X86::CTSELECT_V8F16:
   case X86::CTSELECT_V2I64:
   case X86::CTSELECT_V4I32:
   case X86::CTSELECT_V8I16:
   case X86::CTSELECT_V16I8:
   case X86::CTSELECT_V2F64X:
   case X86::CTSELECT_V4F32X:
-  case X86::CTSELECT_V8F16X:
   case X86::CTSELECT_V2I64X:
   case X86::CTSELECT_V4I32X:
   case X86::CTSELECT_V8I16X:
@@ -6873,11 +6856,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::CTSELECT_V32I8:
   case X86::CTSELECT_V4F64:
   case X86::CTSELECT_V8F32:
-  case X86::CTSELECT_V16F16:
-  case X86::CTSELECT_V8I64:
-  case X86::CTSELECT_V16I32:
-  case X86::CTSELECT_V8F64:
-  case X86::CTSELECT_V16F32:
     return expandCtSelectVector(MI);
   }
   return false;
