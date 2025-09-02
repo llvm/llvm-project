@@ -4746,7 +4746,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerAbsToAddXor(MI);
   case G_ABDS:
   case G_ABDU:
-    return lowerAbsDiffToMinMax(MI);
+    return lowerAbsDiffToSelect(MI);
   case G_FABS:
     return lowerFAbs(MI);
   case G_SELECT:
@@ -9549,6 +9549,33 @@ LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
+          MI.getOpcode() == TargetOpcode::G_ABDU) &&
+         "Expected G_ABDS or G_ABDU instruction");
+
+  // lhs_frz = freeze(lhs)
+  // rhs_frz = freeze(rhs)
+  Register DstReg = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(LHS);
+
+  // abds(lhs, rhs) -> select(icmp sgt lhs, rhs, sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(icmp ugt lhs, rhs, sub(lhs,rhs), sub(rhs,lhs))
+  Register LHSSub = MIRBuilder.buildSub(Ty, LHS, RHS).getReg(0);
+  Register RHSSub = MIRBuilder.buildSub(Ty, RHS, LHS).getReg(0);
+  CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
+                                ? CmpInst::ICMP_SGT
+                                : CmpInst::ICMP_UGT;
+  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
+  MIRBuilder.buildSelect(DstReg, ICmp, LHSSub, RHSSub);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
   assert((MI.getOpcode() == TargetOpcode::G_ABDS ||
           MI.getOpcode() == TargetOpcode::G_ABDU) &&
@@ -9564,9 +9591,9 @@ LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
   auto RHSFrz = MIRBuilder.buildFreeze(Ty, RHS);
 
   // abds(lhs_frz, rhs_frz)
-  //   → sub(smax(lhs_frz, rhs_frz), smin(lhs_frz, rhs_frz))
+  //   -→ sub(smax(lhs_frz, rhs_frz), smin(lhs_frz, rhs_frz))
   // abdu(lhs_frz, rhs_frz)
-  //   → sub(umax(lhs_frz, rhs_frz), umin(lhs_frz, rhs_frz))
+  //   -→ sub(umax(lhs_frz, rhs_frz), umin(lhs_frz, rhs_frz))
   Register MaxReg, MinReg;
   if (MI.getOpcode() == TargetOpcode::G_ABDS) {
     MaxReg = MIRBuilder.buildSMax(Ty, LHSFrz, RHSFrz).getReg(0);
