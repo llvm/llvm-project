@@ -36,8 +36,10 @@ SUPPORTED_ANALYSES = {
     "Branch Probability Analysis",
     "Cost Model Analysis",
     "Dependence Analysis",
+    "Delinearization",
     "Loop Access Analysis",
     "Scalar Evolution Analysis",
+    "Scalar Evolution Division",
 }
 
 

@@ -92,6 +92,10 @@ public:
                                             mlir::Value value, CastKind kind,
                                             QualType destTy);
 
+  mlir::Value emitNullValue(QualType ty, mlir::Location loc) {
+    return cgf.cgm.emitNullConstant(ty, loc);
+  }
+
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     return builder.createFloatingCast(result, cgf.convertType(promotionType));
   }
@@ -182,8 +186,30 @@ public:
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
+  mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *e) {
+    if (e->getType()->isVoidType())
+      return {};
+
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
+  }
+
   mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+
+  mlir::Value VisitStmtExpr(StmtExpr *e) {
+    CIRGenFunction::StmtExprEvaluation eval(cgf);
+    if (e->getType()->isVoidType()) {
+      (void)cgf.emitCompoundStmt(*e->getSubStmt());
+      return {};
+    }
+
+    Address retAlloca =
+        cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
+    (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca);
+
+    return cgf.emitLoadOfScalar(cgf.makeAddrLValue(retAlloca, e->getType()),
+                                e->getExprLoc());
+  }
 
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
     if (e->getBase()->getType()->isVectorType()) {
@@ -382,6 +408,17 @@ public:
   mlir::Value
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     return Visit(e->getReplacement());
+  }
+
+  mlir::Value VisitVAArgExpr(VAArgExpr *ve) {
+    QualType ty = ve->getType();
+
+    if (ty->isVariablyModifiedType()) {
+      cgf.cgm.errorNYI(ve->getSourceRange(),
+                       "variably modified types in varargs");
+    }
+
+    return cgf.emitVAArg(ve);
   }
 
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
@@ -629,6 +666,11 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+
+  mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
+    cgf.emitCXXThrowExpr(e);
+    return {};
   }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1879,6 +1921,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
         cgf.getLoc(subExpr->getSourceRange()), cgf.convertType(destTy),
         Visit(subExpr));
   }
+  case CK_FunctionToPointerDecay:
+    return cgf.emitLValue(subExpr).getPointer();
 
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -1938,11 +1982,9 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         cgf.getLoc(e->getSourceRange()), vectorType, elements);
   }
 
-  if (numInitElements == 0) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "InitListExpr Non VectorType with 0 init elements");
-    return {};
-  }
+  // C++11 value-initialization for the scalar.
+  if (numInitElements == 0)
+    return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
 
   return Visit(e->getInit(0));
 }

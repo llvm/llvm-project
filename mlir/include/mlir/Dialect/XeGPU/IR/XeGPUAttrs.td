@@ -175,22 +175,51 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def LayoutTrait: AttrInterface<"LayoutTrait"> {
+def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
   let cppNamespace = "::mlir::xegpu";
   let description = [{
     Common trait for all XeGPU layouts.
   }];
 
   let methods = [
+    InterfaceMethod<"Check the availability of workgroup level layouts",
+                    "bool",
+                    "isForWorkgroup">,
+    InterfaceMethod<"Check the availability of subgroup level layouts",
+                    "bool",
+                    "isForSubgroup">,
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
+    InterfaceMethod<"Get the num of effective subgroups",
+                    "int64_t",
+                    "getNumSubgroups", (ins), [{
+                        std::optional<SmallVector<int64_t>> sgLayout = llvm::cast<ConcreteAttr>(tablegen_opaque_val).getSgLayoutAsInt();
+                        if (sgLayout.has_value())
+                          return computeProduct(*sgLayout);
+                        return 0;
+                    }], [{}]>,
     InterfaceMethod<"Get the SgLayout field of the attribute as integer array",
-                    "std::optional<SmallVector<int64_t>>",
+                    "SmallVector<int64_t>",
                     "getSgLayoutAsInt">,
     InterfaceMethod<"Get the SgData field of the attribute as integer array",
-                    "std::optional<SmallVector<int64_t>>",
+                    "SmallVector<int64_t>",
                     "getSgDataAsInt">,
+    InterfaceMethod<"Get the InstData field of the attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getInstDataAsInt">,
+    InterfaceMethod<"Get the LaneLayout field of the attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getLaneLayoutAsInt">,
+    InterfaceMethod<"Get the LaneData field of the attribute as integer array",
+                    "SmallVector<int64_t>",
+                    "getLaneDataAsInt">,
+    InterfaceMethod<"Derive a new layout by dropping sgLayout and sgData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropSgLayoutAndData">,
+    InterfaceMethod<"Derive a new layout by dropping InstData",
+                    "xegpu::DistributeLayoutAttr",
+                    "dropInstData">,
     InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
                       indices based on the effective subgroup layout.}],
                     "FailureOr<SmallVector<Value>>",
@@ -206,7 +235,7 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
   ];
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -328,12 +357,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
   ];
 
   let extraClassDeclaration = [{
-    bool isWgLayout() {
+    bool isForWorkgroup() {
       return getSgLayout() != nullptr;
     }
 
-    bool isSgLayout() {
-      return !isWgLayout();
+    bool isForSubgroup() {
+      return !isForWorkgroup();
     }
 
     int64_t getRank() {
@@ -362,16 +391,34 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
-    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+    SmallVector<int64_t> getSgLayoutAsInt() const {
       if (DenseI32ArrayAttr layout = getSgLayout())
         return llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      return std::nullopt;
+      return {};
     }
 
-    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+    SmallVector<int64_t> getSgDataAsInt() const {
       if (DenseI32ArrayAttr data = getSgData())
         return llvm::to_vector_of<int64_t>(data.asArrayRef());
-      return std::nullopt;
+      return {};
+    }
+
+    SmallVector<int64_t> getInstDataAsInt() const {
+      if (DenseI32ArrayAttr inst = getInstData())
+        return llvm::to_vector_of<int64_t>(inst.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getLaneLayoutAsInt() const {
+      if (DenseI32ArrayAttr layout = getLaneLayout())
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      return {};
+    }
+
+    SmallVector<int64_t> getLaneDataAsInt() const {
+      if (DenseI32ArrayAttr data = getLaneData())
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
+      return {};
     }
 
     /// Delinearizes a linear subgroup ID into its multidimensional indices
@@ -393,7 +440,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
 }
 
 
-def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
   let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
 
   let description = [{
@@ -420,7 +467,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   }];
 
   let parameters = (ins
-    "xegpu::LayoutTrait": $parent,
+    "xegpu::DistributeLayoutAttr": $parent,
     "DenseI64ArrayAttr": $dims
   );
 
@@ -438,40 +485,95 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
       return parent.getOrder();
     }
 
-    bool isWgLayout() const {
+    bool isForWorkgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isWgLayout();
+      return parent.isForWorkgroup();
     }
 
-    bool isSgLayout() const {
+    bool isForSubgroup() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.isSgLayout();
+      return parent.isForSubgroup();
     }
 
     /// Returns the SgLayout of the attribute, computed by applying
     /// the slice dimensions to the underlying LayoutAttr.
-    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+    SmallVector<int64_t> getSgLayoutAsInt() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      if (auto layout = parent.getSgLayoutAsInt()) {
+      auto layout = parent.getSgLayoutAsInt();
+      if (layout.size()) {
         ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
-        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
+        return XeGPUDialect::slice(ArrayRef<int64_t>(layout), dims);
       }
-      return std::nullopt;
+      return {};
     }
 
     /// Returns the SgData of the attribute, computed by applying
     /// the slice dimensions to the underlying LayoutAttr.
-    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+    SmallVector<int64_t> getSgDataAsInt() const {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      if (auto data = parent.getSgDataAsInt()) {
+      auto data = parent.getSgDataAsInt();
+      if (data.size()) {
         ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
-        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
+        return XeGPUDialect::slice(ArrayRef<int64_t>(data), dims);
       }
-      return std::nullopt;
+      return {};
+    }
+
+    /// Returns the InstData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getInstDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto inst = parent.getInstDataAsInt();
+      if (inst.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(inst), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneLayout of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getLaneLayoutAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto layout = parent.getLaneLayoutAsInt();
+      if (layout.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(layout), dims);
+      }
+      return {};
+    }
+
+    /// Returns the LaneData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    SmallVector<int64_t> getLaneDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      auto data = parent.getLaneDataAsInt();
+      if (data.size()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(data), dims);
+      }
+      return {};
+    }
+
+    SliceAttr dropSgLayoutAndData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropSgLayoutAndData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
+    }
+
+    SliceAttr dropInstData() {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      parent = parent.dropInstData();
+      return SliceAttr::get(getContext(), parent, attr.getDims());
     }
 
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr

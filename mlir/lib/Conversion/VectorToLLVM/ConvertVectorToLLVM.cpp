@@ -306,11 +306,11 @@ public:
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value base = adaptor.getBase();
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       base, ptr, adaptor.getIndexVec(), vType);
+                       base, ptr, adaptor.getIndices(), vType);
 
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
@@ -362,10 +362,10 @@ public:
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       adaptor.getBase(), ptr, adaptor.getIndexVec(), vType);
+                       adaptor.getBase(), ptr, adaptor.getIndices(), vType);
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
@@ -1891,15 +1891,21 @@ struct VectorFromElementsLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = fromElementsOp.getLoc();
     VectorType vectorType = fromElementsOp.getType();
-    // TODO: Multi-dimensional vectors lower to !llvm.array<... x vector<>>.
-    // Such ops should be handled in the same way as vector.insert.
+    // Only support 1-D vectors. Multi-dimensional vectors should have been
+    // transformed to 1-D vectors by the vector-to-vector transformations before
+    // this.
     if (vectorType.getRank() > 1)
       return rewriter.notifyMatchFailure(fromElementsOp,
                                          "rank > 1 vectors are not supported");
     Type llvmType = typeConverter->convertType(vectorType);
+    Type llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
     Value result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
-    for (auto [idx, val] : llvm::enumerate(adaptor.getElements()))
-      result = vector::InsertOp::create(rewriter, loc, val, result, idx);
+    for (auto [idx, val] : llvm::enumerate(adaptor.getElements())) {
+      auto constIdx =
+          LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, idx);
+      result = LLVM::InsertElementOp::create(rewriter, loc, llvmType, result,
+                                             val, constIdx);
+    }
     rewriter.replaceOp(fromElementsOp, result);
     return success();
   }
