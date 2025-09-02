@@ -2848,8 +2848,6 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_ABS:
-  case TargetOpcode::G_ABDS:
-  case TargetOpcode::G_ABDU:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarDst(MI, WideTy);
@@ -4744,9 +4742,18 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShlSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
-  case G_ABDS:
-  case G_ABDU:
+  case G_ABDS: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (LI.isLegal({G_SMIN, Ty}) && LI.isLegal({G_SMAX, Ty}))
+      return lowerAbsDiffToMinMax(MI);
+  }
     return lowerAbsDiffToSelect(MI);
+  case G_ABDU: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (LI.isLegal({G_UMIN, Ty}) && LI.isLegal({G_UMAX, Ty}))
+      return lowerAbsDiffToMinMax(MI);
+    return lowerAbsDiffToSelect(MI);
+  }
   case G_FABS:
     return lowerFAbs(MI);
   case G_SELECT:
@@ -9579,26 +9586,20 @@ LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
           MI.getOpcode() == TargetOpcode::G_ABDU) &&
          "Expected G_ABDS or G_ABDU instruction");
 
-  // lhs_frz = freeze(lhs)
-  // rhs_frz = freeze(rhs)
   Register DstReg = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   LLT Ty = MRI.getType(LHS);
-  auto LHSFrz = MIRBuilder.buildFreeze(Ty, LHS);
-  auto RHSFrz = MIRBuilder.buildFreeze(Ty, RHS);
 
-  // abds(lhs_frz, rhs_frz)
-  //   -→ sub(smax(lhs_frz, rhs_frz), smin(lhs_frz, rhs_frz))
-  // abdu(lhs_frz, rhs_frz)
-  //   -→ sub(umax(lhs_frz, rhs_frz), umin(lhs_frz, rhs_frz))
+  // abds(lhs, rhs) -→ sub(smax(lhs, rhs), smin(lhs, rhs))
+  // abdu(lhs, rhs) -→ sub(umax(lhs, rhs), umin(lhs, rhs))
   Register MaxReg, MinReg;
   if (MI.getOpcode() == TargetOpcode::G_ABDS) {
-    MaxReg = MIRBuilder.buildSMax(Ty, LHSFrz, RHSFrz).getReg(0);
-    MinReg = MIRBuilder.buildSMin(Ty, LHSFrz, RHSFrz).getReg(0);
+    MaxReg = MIRBuilder.buildSMax(Ty, LHS, RHS).getReg(0);
+    MinReg = MIRBuilder.buildSMin(Ty, LHS, RHS).getReg(0);
   } else {
-    MaxReg = MIRBuilder.buildUMax(Ty, LHSFrz, RHSFrz).getReg(0);
-    MinReg = MIRBuilder.buildUMin(Ty, LHSFrz, RHSFrz).getReg(0);
+    MaxReg = MIRBuilder.buildUMax(Ty, LHS, RHS).getReg(0);
+    MinReg = MIRBuilder.buildUMin(Ty, LHS, RHS).getReg(0);
   }
   MIRBuilder.buildSub(DstReg, MaxReg, MinReg);
 
