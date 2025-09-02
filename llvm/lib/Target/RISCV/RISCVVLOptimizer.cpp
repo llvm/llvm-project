@@ -1453,6 +1453,34 @@ static bool isTupleInsertInstr(const MachineInstr &MI,
   }
 }
 
+static bool isSegmentedStoreInstr(const MachineInstr &MI) {
+  const RISCVVPseudosTable::PseudoInfo *RVV =
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+  if (!RVV)
+    return false;
+  switch (RVV->BaseInstr) {
+  case VSSEG_CASES(8):
+  case VSSSEG_CASES(8):
+  case VSUXSEG_CASES(8):
+  case VSOXSEG_CASES(8):
+  case VSSEG_CASES(16):
+  case VSSSEG_CASES(16):
+  case VSUXSEG_CASES(16):
+  case VSOXSEG_CASES(16):
+  case VSSEG_CASES(32):
+  case VSSSEG_CASES(32):
+  case VSUXSEG_CASES(32):
+  case VSOXSEG_CASES(32):
+  case VSSEG_CASES(64):
+  case VSSSEG_CASES(64):
+  case VSUXSEG_CASES(64):
+  case VSOXSEG_CASES(64):
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::optional<MachineOperand>
 RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   std::optional<MachineOperand> CommonVL;
@@ -1475,8 +1503,13 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 
     if (isTupleInsertInstr(UserMI, *MRI)) {
       LLVM_DEBUG(dbgs().indent(4) << "Peeking through uses of INSERT_SUBREG\n");
-      Worklist.insert_range(llvm::make_pointer_range(
-          MRI->use_operands(UserMI.getOperand(0).getReg())));
+      for (MachineOperand &UseOp :
+           MRI->use_operands(UserMI.getOperand(0).getReg())) {
+        const MachineInstr &CandidateMI = *UseOp.getParent();
+        if (CandidateMI.getOpcode() == RISCV::INSERT_SUBREG ||
+            isSegmentedStoreInstr(CandidateMI))
+          Worklist.insert(&UseOp);
+      }
       continue;
     }
 
