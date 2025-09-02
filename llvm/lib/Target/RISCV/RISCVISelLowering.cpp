@@ -4521,8 +4521,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // vslideup of 1 later and eliminate the vector to scalar movement, which is
   // something we cannot do with vslide1down/vslidedown.
   // Of course, using vslide1up/vslideup might increase the register pressure,
-  // and that's why we conservatively limit to cases where every operands is an
-  // extraction from first element.
+  // and that's why we conservatively limit to cases where every operand is an
+  // extraction from the first element.
   SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
   SDValue EVec;
   bool SlideUp = false;
