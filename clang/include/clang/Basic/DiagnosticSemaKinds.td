@@ -13594,6 +13594,9 @@ def warn_acc_var_referenced_lacks_op
               "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
+def warn_out_of_scope_var_usage
+    : Warning<"variable %0 declared in 'if' block is always false or null here">,
+      InGroup<DiagGroup<"conditional-scope">>;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

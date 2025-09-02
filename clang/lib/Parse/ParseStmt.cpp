@@ -1526,6 +1526,10 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation ElseStmtLoc;
   StmtResult ElseStmt;
 
+  if (VarDecl *VD = dyn_cast_or_null<VarDecl>(Cond.get().first); 
+      !Cond.isInvalid() && VD)
+    getCurScope()->setConditionVar(VD->getCanonicalDecl());
+
   if (Tok.is(tok::kw_else)) {
     if (TrailingElseLoc)
       *TrailingElseLoc = Tok.getLocation();

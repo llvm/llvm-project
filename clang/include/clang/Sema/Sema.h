@@ -7171,6 +7171,10 @@ public:
   /// return a reason explaining why. Otherwise, return NOUR_None.
   NonOdrUseReason getNonOdrUseReasonInCurrentContext(ValueDecl *D);
 
+  /// Checks if the given DeclRefExpr refers to a variable declared in an 
+  /// enclosing 'if' condition.
+  bool isConditionVarReference(const DeclRefExpr *DRE);
+
   DeclRefExpr *BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                                 SourceLocation Loc,
                                 const CXXScopeSpec *SS = nullptr);

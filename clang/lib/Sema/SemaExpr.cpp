@@ -2371,6 +2371,24 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
   return NOUR_None;
 }
 
+bool Sema::isConditionVarReference(const DeclRefExpr *DRE) {
+  if (!DRE)
+    return false;
+
+  const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+
+  if (!VD)
+    return false;
+
+  for (Scope *S = getCurScope(); S; S = S->getParent()) {
+    if (VarDecl *CV = S->getConditionVar())
+      if (VD == CV)
+        return true;
+  }
+
+  return false;
+}
+
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const DeclarationNameInfo &NameInfo,
@@ -2424,6 +2442,10 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   if (const auto *BD = dyn_cast<BindingDecl>(D))
     if (const auto *BE = BD->getBinding())
       E->setObjectKind(BE->getObjectKind());
+
+  if (isConditionVarReference(E))
+    Diag(E->getBeginLoc(), diag::warn_out_of_scope_var_usage)
+      << D->getDeclName();
 
   return E;
 }

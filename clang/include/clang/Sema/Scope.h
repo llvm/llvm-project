@@ -255,6 +255,9 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
+  // Condition variable for if
+  VarDecl *ConditionVar = nullptr;
+
   void setFlags(Scope *Parent, unsigned F);
 
 public:
@@ -262,6 +265,12 @@ public:
       : ErrorTrap(Diag) {
     Init(Parent, ScopeFlags);
   }
+
+  // getConditionVar - Gets the condition variable of the scope.
+  VarDecl *getConditionVar() const { return ConditionVar; }
+
+  // setConditionVar - Setter for condition variable of this scope.
+  void setConditionVar(VarDecl *D) { ConditionVar = D; }
 
   /// getFlags - Return the flags for this scope.
   unsigned getFlags() const { return Flags; }
