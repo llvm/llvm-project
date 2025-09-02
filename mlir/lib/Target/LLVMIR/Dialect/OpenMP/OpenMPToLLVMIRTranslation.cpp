@@ -4089,10 +4089,6 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
   // runtime information on the dynamically allocated data).
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
-  auto parentMapFlags =
-      llvm::omp::OpenMPOffloadMappingFlags(parentClause.getMapType());
-  combinedInfo.Types[parentIndex] |=
-      parentMapFlags & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
 
   llvm::Value *lowAddr, *highAddr;
   if (!parentClause.getPartialMap()) {
@@ -4142,14 +4138,9 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
     bool hasMapClose = (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE) ==
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
-    bool hasMapDescriptor =
-        (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
-    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose ||
-        hasMapDescriptor) {
+    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose) {
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
