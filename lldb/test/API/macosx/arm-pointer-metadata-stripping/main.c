@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-
 int myglobal = 41;
 
 uint64_t get_high_bits(void *ptr) {
@@ -13,8 +12,8 @@ uint64_t get_high_bits(void *ptr) {
   return high_bits;
 }
 
-int main (){
+int main() {
   int x = 42;
   assert(0 == get_high_bits(&x));
-  return 0; //break here
+  return 0; // break here
 }
