@@ -2407,8 +2407,12 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
               ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
               ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
+              ModRefInfo Fpmr = ModRefInfo((EncodedME >> 6) & 3);
+              ModRefInfo Za = ModRefInfo((EncodedME >> 8) & 3);
               auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
                         MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::argMemOnly(Fpmr) |
+                        MemoryEffects::argMemOnly(Za) |
                         MemoryEffects::errnoMemOnly(OtherMem) |
                         MemoryEffects::otherMemOnly(OtherMem);
               B.addMemoryAttr(ME);
