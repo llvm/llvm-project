@@ -9559,8 +9559,8 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
   Register RHS = MI.getOperand(2).getReg();
   LLT Ty = MRI.getType(LHS);
 
-  // abds(lhs, rhs) -> select(icmp sgt lhs, rhs, sub(lhs,rhs), sub(rhs,lhs))
-  // abdu(lhs, rhs) -> select(icmp ugt lhs, rhs, sub(lhs,rhs), sub(rhs,lhs))
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   Register LHSSub = MIRBuilder.buildSub(Ty, LHS, RHS).getReg(0);
   Register RHSSub = MIRBuilder.buildSub(Ty, RHS, LHS).getReg(0);
   CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
