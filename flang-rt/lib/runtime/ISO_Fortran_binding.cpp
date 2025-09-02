@@ -297,11 +297,9 @@ RT_API_ATTRS int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
-RT_API_ATTRS void CFI_show(void *buf, const CFI_cdesc_t *descr) {
-  FILE *f{stderr};
-  std::fprintf(f, "%p CFI_desc_t: %p\n", buf, descr);
+RT_API_ATTRS void CFI_show(const CFI_cdesc_t *descr) {
   if (descr) {
-    reinterpret_cast<const Fortran::runtime::Descriptor *>(descr)->Dump(f);
+    reinterpret_cast<const Fortran::runtime::Descriptor *>(descr)->Dump(stderr);
   }
 }
 
