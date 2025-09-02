@@ -15,13 +15,17 @@
 
 // REQUIRES: linux
 
+// UNSUPPORTED: target={{aarch64-.+linux.*}}
+// aarch64-unknown-linux-gnu has a cross toolchain build(llvm-clang-win-x-aarch64)
+// where objdump is not available.
+
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
 // RUN: %{build}
-// RUN: llvm-objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
+// RUN: objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: echo -ne '\xFF' | dd of=%t_ehf_hdr.bin bs=1 seek=2 count=2 conv=notrunc status=none 
-// RUN: llvm-objcopy --update-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
+// RUN: objcopy --update-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: %{exec} %t.exe
 
 // clang-format on
