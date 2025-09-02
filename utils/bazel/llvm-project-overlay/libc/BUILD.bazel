@@ -524,6 +524,7 @@ libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
     ],
 )
