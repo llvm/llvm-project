@@ -16479,9 +16479,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
 
   Stmt *HelperValStmt = nullptr;
 
+  // Depending on whether this clause appears in an executable context or not,
+  // we may or may not build a capture.
   OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
-  OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
-      DKind, OMPC_message, getLangOpts().OpenMP);
+  OpenMPDirectiveKind CaptureRegion =
+      DKind == OMPD_unknown ? OMPD_unknown
+                            : getOpenMPCaptureRegionForClause(
+                                  DKind, OMPC_message, getLangOpts().OpenMP);
   if (CaptureRegion != OMPD_unknown &&
       !SemaRef.CurContext->isDependentContext()) {
     ME = SemaRef.MakeFullExpr(ME).get();
