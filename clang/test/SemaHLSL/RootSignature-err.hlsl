@@ -190,3 +190,7 @@ void basic_validation_5() {}
 // expected-error@+1 {{value must be in the range [-16.00, 15.99]}}
 [RootSignature("StaticSampler(s0, mipLODBias = 15.990001)")]
 void basic_validation_6() {}
+
+// expected-error@+1 {{sampler and non-sampler resource mixed in descriptor table}}
+[RootSignature("DescriptorTable(Sampler(s0), CBV(b0))")]
+void mixed_resource_table() {}

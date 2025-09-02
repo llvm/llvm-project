@@ -1241,6 +1241,8 @@ bool SemaHLSL::handleRootSignatureElements(
         << /*version minor*/ VersionEnum;
   };
 
+  bool HasSampler = false;
+  bool HasNonSampler = false;
   // Iterate through the elements and do basic validations
   for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
     SourceLocation Loc = RootSigElem.getLocation();
@@ -1287,6 +1289,18 @@ bool SemaHLSL::handleRootSignatureElements(
               Version, llvm::to_underlying(Clause->Type),
               llvm::to_underlying(Clause->Flags)))
         ReportFlagError(Loc);
+
+      if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
+        HasSampler = true;
+      else
+        HasNonSampler = true;
+
+      if (HasSampler && HasNonSampler)
+        Diag(Loc, diag::err_hlsl_invalid_mixed_resources);
+    } else if (std::holds_alternative<llvm::hlsl::rootsig::DescriptorTable>(
+                   Elem)) {
+      HasSampler = false;
+      HasNonSampler = false;
     }
   }
 

@@ -13184,6 +13184,7 @@ def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Litera
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
 def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+def err_hlsl_invalid_mixed_resources: Error< "sampler and non-sampler resource mixed in descriptor table">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
