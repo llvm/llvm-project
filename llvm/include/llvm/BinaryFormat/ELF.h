@@ -973,7 +973,10 @@ enum : unsigned {
 
   // SM based processor values.
   EF_CUDA_SM100 = 0x6400,
+  EF_CUDA_SM101 = 0x6500,
+  EF_CUDA_SM103 = 0x6700,
   EF_CUDA_SM120 = 0x7800,
+  EF_CUDA_SM121 = 0x7900,
 
   // Set when using an accelerator variant like sm_100a.
   EF_CUDA_ACCELERATORS = 0x8,

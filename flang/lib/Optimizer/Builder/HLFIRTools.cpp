@@ -416,7 +416,10 @@ hlfir::Entity hlfir::loadTrivialScalar(mlir::Location loc,
   entity = derefPointersAndAllocatables(loc, builder, entity);
   if (entity.isVariable() && entity.isScalar() &&
       fir::isa_trivial(entity.getFortranElementType())) {
-    return Entity{fir::LoadOp::create(builder, loc, entity)};
+    // Optional entities may be represented with !fir.box<i32/f32/...>.
+    // We need to take the data pointer before loading the scalar.
+    mlir::Value base = genVariableRawAddress(loc, builder, entity);
+    return Entity{fir::LoadOp::create(builder, loc, base)};
   }
   return entity;
 }
@@ -1222,7 +1225,7 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
         loc, builder, entity, entity.getType(), "", byRefAttr);
     auto *bldr = &builder;
     hlfir::CleanupFunction cleanup = [bldr, loc, associate]() -> void {
-      bldr->create<hlfir::EndAssociateOp>(loc, associate);
+      hlfir::EndAssociateOp::create(*bldr, loc, associate);
     };
     hlfir::Entity temp{associate.getBase()};
     return {translateToExtendedValue(loc, builder, temp).first, cleanup};
@@ -1502,15 +1505,15 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
         mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
     fir::FirOpBuilder *bldr = &builder;
     auto cleanup = [loc, bldr, convertedRhs, associate]() {
-      bldr->create<hlfir::EndAssociateOp>(loc, associate);
-      bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
+      hlfir::EndAssociateOp::create(*bldr, loc, associate);
+      hlfir::DestroyOp::create(*bldr, loc, convertedRhs);
     };
     return {castWithLbounds, cleanup};
   }
 
   fir::FirOpBuilder *bldr = &builder;
   auto cleanup = [loc, bldr, convertedRhs]() {
-    bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
+    hlfir::DestroyOp::create(*bldr, loc, convertedRhs);
   };
   return {hlfir::Entity{convertedRhs}, cleanup};
 }

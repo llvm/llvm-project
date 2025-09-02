@@ -32,15 +32,9 @@ struct ExpansionView {
   std::unique_ptr<SourceCoverageView> View;
 
   ExpansionView(const CounterMappingRegion &Region,
-                std::unique_ptr<SourceCoverageView> View)
-      : Region(Region), View(std::move(View)) {}
-  ExpansionView(ExpansionView &&RHS)
-      : Region(std::move(RHS.Region)), View(std::move(RHS.View)) {}
-  ExpansionView &operator=(ExpansionView &&RHS) {
-    Region = std::move(RHS.Region);
-    View = std::move(RHS.View);
-    return *this;
-  }
+                std::unique_ptr<SourceCoverageView> View);
+  ExpansionView(ExpansionView &&RHS);
+  ExpansionView &operator=(ExpansionView &&RHS);
 
   unsigned getLine() const { return Region.LineStart; }
   unsigned getStartCol() const { return Region.ColumnStart; }
@@ -58,8 +52,7 @@ struct InstantiationView {
   std::unique_ptr<SourceCoverageView> View;
 
   InstantiationView(StringRef FunctionName, unsigned Line,
-                    std::unique_ptr<SourceCoverageView> View)
-      : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+                    std::unique_ptr<SourceCoverageView> View);
 
   friend bool operator<(const InstantiationView &LHS,
                         const InstantiationView &RHS) {

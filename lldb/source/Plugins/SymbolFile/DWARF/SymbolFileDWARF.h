@@ -220,8 +220,9 @@ public:
 
   CompileUnit *GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
-  virtual void GetObjCMethods(ConstString class_name,
-                              llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
@@ -372,6 +373,13 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+private:
+  /// Find the definition DIE for the specified \c label in this
+  /// SymbolFile.
+  ///
+  /// \returns A valid definition DIE on success.
+  DWARFDIE FindFunctionDefinition(const FunctionCallLabel &label);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
@@ -435,6 +443,9 @@ protected:
 
   DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
                                         DIEArray &&variable_dies);
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,

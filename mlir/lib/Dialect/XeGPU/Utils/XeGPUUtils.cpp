@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -38,7 +41,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
   // It only works for subgroup level layout, which only has lane_layout
   // and lane_data, and is to distribute a SIMD code into SIMT code.
-  if (!layout || !layout.isSgLayout())
+  if (!layout || !layout.isForSubgroup())
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
@@ -111,7 +114,7 @@ std::string xegpu::getLayoutName(const OpResult result) {
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
+xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
@@ -129,11 +132,11 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
 
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
-      return getLayoutAttr(loadNd.getTensorDesc());
+      return getDistributeLayoutAttr(loadNd.getTensorDesc());
 
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
-      return defOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+      return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -141,49 +144,51 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getLayoutAttr(tiedInit->get());
+        return getDistributeLayoutAttr(tiedInit->get());
     }
   }
 
   return nullptr;
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
+xegpu::DistributeLayoutAttr
+xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
-    return op->getAttrOfType<xegpu::LayoutAttr>(layoutName);
-  return getLayoutAttr(opr.get());
+    return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  return getDistributeLayoutAttr(opr.get());
 }
 
 template <typename T, typename>
-void xegpu::setLayoutAttr(const T &operandOrResult, const LayoutAttr layout) {
+void xegpu::setDistributeLayoutAttr(const T &operandOrResult,
+                                    const DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
-  if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
+  if (layout && !owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->setAttr(name, layout);
 }
 
 // Explicit instantiation for OpResult
-template void
-xegpu::setLayoutAttr<mlir::OpResult>(const mlir::OpResult &result,
-                                     const mlir::xegpu::LayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpResult>(
+    const mlir::OpResult &result,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
 // Explicit instantiation for OpOperand
-template void
-xegpu::setLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand,
-                                      const mlir::xegpu::LayoutAttr layout);
+template void xegpu::setDistributeLayoutAttr<mlir::OpOperand>(
+    const mlir::OpOperand &operand,
+    const mlir::xegpu::DistributeLayoutAttr layout);
 
-void xegpu::setLayoutAttrs(Operation *op,
-                           function_ref<LayoutAttr(Value)> getLayoutImpl) {
+void xegpu::setDistributeLayoutAttrs(
+    Operation *op, function_ref<DistributeLayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
     for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
-      setLayoutAttr(opr, layout);
+      setDistributeLayoutAttr(opr, layout);
     }
     for (OpResult result : nestOp->getOpResults()) {
       auto layout = getLayoutImpl(result);
-      setLayoutAttr(result, layout);
+      setDistributeLayoutAttr(result, layout);
     }
   });
 }
@@ -192,7 +197,7 @@ template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<LayoutAttr>(name))
+  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
 }
 
@@ -303,7 +308,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
       if (!inputTy || !resultTy)
         return WalkResult::skip();
 
-      xegpu::LayoutAttr layout = xegpu::getLayoutAttr(input);
+      xegpu::DistributeLayoutAttr layout =
+          xegpu::getDistributeLayoutAttr(input);
       if (!layout)
         return WalkResult::skip();
 
@@ -341,7 +347,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
   }
 
   { // perform the conversion from RankedTensorType to VectorType based on the
-    // LayoutAttr
+    // DistributeLayoutAttr
 
     // Handle the UnrealizedConversionCastOp introduced by the first step.
     // For vector->RankedTensorType, it will simply forward the inputs.
@@ -403,4 +409,50 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
+}
+
+std::optional<std::string> xegpu::getChipStr(Operation *op) {
+  auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
+
+  if (!gpuModuleOp)
+    return std::nullopt;
+
+  auto targetAttrs = gpuModuleOp.getTargets();
+  if (targetAttrs) {
+    for (auto &attr : *targetAttrs) {
+      auto xevmAttr = llvm::dyn_cast<xevm::XeVMTargetAttr>(attr);
+      if (xevmAttr)
+        return xevmAttr.getChip().str();
+    }
+  }
+
+  return std::nullopt;
+}
+
+/// Generates element-wise addition ops of two arrays with automatic alignment.
+/// When the input arrays have different sizes, the shorter array is
+/// right-aligned with the longer array, and the unmatched leading elements from
+/// the longer array are preserved unchanged. This is commonly used for offset
+/// computation where higher-dimensional offsets need to be added to
+/// lower-dimensional adjustments.
+///
+/// Example:
+///   lhs = [l1, l2, l3], rhs = [r1, r2]
+///   Result: [11, l2+r1, l3+r2]
+SmallVector<OpFoldResult>
+xegpu::addWithRightAligned(OpBuilder &builder, Location loc,
+                           ArrayRef<OpFoldResult> lhs,
+                           ArrayRef<OpFoldResult> rhs) {
+  // ensure a is longer than b
+  ArrayRef<OpFoldResult> a = lhs.size() >= rhs.size() ? lhs : rhs;
+  ArrayRef<OpFoldResult> b = lhs.size() >= rhs.size() ? rhs : lhs;
+  SmallVector<OpFoldResult> results(a.take_front(a.size() - b.size()));
+  a = a.slice(a.size() - b.size());
+  for (auto [l, r] : llvm::zip(a, b)) {
+    auto lval = getValueOrCreateConstantIndexOp(builder, loc, l);
+    auto rval = getValueOrCreateConstantIndexOp(builder, loc, r);
+    results.push_back(builder.createOrFold<index::AddOp>(loc, lval, rval));
+  }
+  return results;
+  return {};
 }

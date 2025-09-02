@@ -118,15 +118,15 @@ static cl::opt<bool> PrintPassNumbers(
     "print-pass-numbers", cl::init(false), cl::Hidden,
     cl::desc("Print pass names and their ordinals"));
 
-static cl::opt<unsigned> PrintBeforePassNumber(
-    "print-before-pass-number", cl::init(0), cl::Hidden,
-    cl::desc("Print IR before the pass with this number as "
+static cl::list<unsigned> PrintBeforePassNumber(
+    "print-before-pass-number", cl::CommaSeparated, cl::Hidden,
+    cl::desc("Print IR before the passes with specified numbers as "
              "reported by print-pass-numbers"));
 
-static cl::opt<unsigned>
-    PrintAfterPassNumber("print-after-pass-number", cl::init(0), cl::Hidden,
-                         cl::desc("Print IR after the pass with this number as "
-                                  "reported by print-pass-numbers"));
+static cl::list<unsigned> PrintAfterPassNumber(
+    "print-after-pass-number", cl::CommaSeparated, cl::Hidden,
+    cl::desc("Print IR after the passes with specified numbers as "
+             "reported by print-pass-numbers"));
 
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
@@ -984,12 +984,12 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
 
 bool PrintIRInstrumentation::shouldPrintBeforeCurrentPassNumber() {
   return shouldPrintBeforeSomePassNumber() &&
-         (CurrentPassNumber == PrintBeforePassNumber);
+         (is_contained(PrintBeforePassNumber, CurrentPassNumber));
 }
 
 bool PrintIRInstrumentation::shouldPrintAfterCurrentPassNumber() {
   return shouldPrintAfterSomePassNumber() &&
-         (CurrentPassNumber == PrintAfterPassNumber);
+         (is_contained(PrintAfterPassNumber, CurrentPassNumber));
 }
 
 bool PrintIRInstrumentation::shouldPrintPassNumbers() {
@@ -997,11 +997,11 @@ bool PrintIRInstrumentation::shouldPrintPassNumbers() {
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforeSomePassNumber() {
-  return PrintBeforePassNumber > 0;
+  return !PrintBeforePassNumber.empty();
 }
 
 bool PrintIRInstrumentation::shouldPrintAfterSomePassNumber() {
-  return PrintAfterPassNumber > 0;
+  return !PrintAfterPassNumber.empty();
 }
 
 void PrintIRInstrumentation::registerCallbacks(

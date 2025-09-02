@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import threading
 import typing
+import traceback
 from typing import Optional, Tuple
 
 import io
@@ -41,6 +42,16 @@ class ScriptFatal(Exception):
     A script had a fatal error such that there's no point in retrying.  The
     message has not been emitted on stdout or stderr but is instead included in
     this exception.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class TestUpdaterException(Exception):
+    """
+    There was an error not during test execution, but while invoking a function
+    in test_updaters on a failing RUN line.
     """
 
     def __init__(self, message):
@@ -87,9 +98,10 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env):
+    def __init__(self, cwd, env, umask=-1):
         self.cwd = cwd
         self.env = dict(env)
+        self.umask = umask
         self.dirStack = []
 
     def change_dir(self, newdir):
@@ -571,6 +583,20 @@ def executeBuiltinRm(cmd, cmd_shenv):
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
 
+def executeBuiltinUmask(cmd, shenv):
+    """executeBuiltinUmask - Change the current umask."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'umask' not supported on this system")
+    if len(cmd.args) != 2:
+        raise InternalShellError(cmd, "'umask' supports only one argument")
+    try:
+        # Update the umask in the parent environment.
+        shenv.umask = int(cmd.args[1], 8)
+    except ValueError as err:
+        raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+
 def executeBuiltinColon(cmd, cmd_shenv):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)
@@ -725,6 +751,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
+        "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
     # To avoid deadlock, we use a single stderr stream for piped
@@ -746,7 +773,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
                 #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
                 if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
+                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
                     # Return the environment variables if no argument is provided.
@@ -891,6 +918,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             args = quote_windows_command(args)
 
         try:
+            # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
+            # os.umask as the umask argument in subprocess.Popen is not
+            # available before Python 3.9. Once LLVM requires at least Python
+            # 3.9, this code should be updated to use umask argument.
+            old_umask = -1
+            if cmd_shenv.umask != -1:
+                old_umask = os.umask(cmd_shenv.umask)
             procs.append(
                 subprocess.Popen(
                     args,
@@ -905,6 +939,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     errors="replace",
                 )
             )
+            if old_umask != -1:
+                os.umask(old_umask)
             proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
@@ -1191,6 +1227,28 @@ def executeScriptInternal(
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
+
+        if (
+            litConfig.update_tests
+            and result.exitCode != 0
+            and not timeoutInfo
+            # In theory tests marked XFAIL can fail in the form of XPASS, but the
+            # test updaters are not expected to be able to fix that, so always skip for XFAIL
+            and not test.isExpectedToFail()
+        ):
+            for test_updater in litConfig.test_updaters:
+                try:
+                    update_output = test_updater(result, test)
+                except Exception as e:
+                    output = out
+                    output += err
+                    output += "Exception occurred in test updater:\n"
+                    output += traceback.format_exc()
+                    raise TestUpdaterException(output)
+                if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
+                    break
 
     return out, err, exitCode, timeoutInfo
 
@@ -2175,6 +2233,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:

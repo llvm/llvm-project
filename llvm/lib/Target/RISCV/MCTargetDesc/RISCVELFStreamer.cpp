@@ -36,6 +36,12 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setFlagsFromFeatures(STI);
 }
 
+RISCVELFStreamer::RISCVELFStreamer(MCContext &C,
+                                   std::unique_ptr<MCAsmBackend> MAB,
+                                   std::unique_ptr<MCObjectWriter> MOW,
+                                   std::unique_ptr<MCCodeEmitter> MCE)
+    : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
@@ -117,7 +123,7 @@ void RISCVTargetELFStreamer::reset() {
 
 void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
   getStreamer().getAssembler().registerSymbol(Symbol);
-  cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
+  static_cast<MCSymbolELF &>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
 }
 
 void RISCVELFStreamer::reset() {
@@ -142,7 +148,8 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+  auto *Symbol =
+      static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);

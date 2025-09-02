@@ -109,6 +109,7 @@ static bool isODRAttribute(uint16_t Attr) {
   case dwarf::DW_AT_specification:
   case dwarf::DW_AT_abstract_origin:
   case dwarf::DW_AT_import:
+  case dwarf::DW_AT_LLVM_alloc_type:
     return true;
   }
   llvm_unreachable("Improper attribute.");
@@ -415,7 +416,7 @@ static bool isTlsAddressCode(uint8_t DW_OP_Code) {
 
 static void constructSeqOffsettoOrigRowMapping(
     CompileUnit &Unit, const DWARFDebugLine::LineTable &LT,
-    DenseMap<size_t, unsigned> &SeqOffToOrigRow) {
+    DenseMap<uint64_t, unsigned> &SeqOffToOrigRow) {
 
   // Use std::map for ordered iteration.
   std::map<uint64_t, unsigned> LineTableMapping;
@@ -431,7 +432,7 @@ static void constructSeqOffsettoOrigRowMapping(
     return A.get() < B.get();
   });
 
-  std::vector<size_t> SeqStartRows;
+  std::vector<unsigned> SeqStartRows;
   SeqStartRows.push_back(0);
   for (auto [I, Row] : llvm::enumerate(ArrayRef(LT.Rows).drop_back()))
     if (Row.EndSequence)
@@ -471,18 +472,19 @@ static void constructSeqOffsettoOrigRowMapping(
 
   // Dummy last element to make sure StmtAttrsRef and SeqStartRowsRef always
   // run out first.
-  constexpr size_t DummyKey = UINT64_MAX;
+  constexpr uint64_t DummyKey = UINT64_MAX;
   constexpr unsigned DummyVal = UINT32_MAX;
   LineTableMapping[DummyKey] = DummyVal;
 
   for (auto [NextSeqOff, NextRow] : LineTableMapping) {
-    auto StmtAttrSmallerThanNext = [NextSeqOff](const PatchLocation &SA) {
-      return SA.get() < NextSeqOff;
+    // Explict capture to avoid capturing structured bindings and make C++17
+    // happy.
+    auto StmtAttrSmallerThanNext = [N = NextSeqOff](const PatchLocation &SA) {
+      return SA.get() < N;
     };
-    auto SeqStartSmallerThanNext = [NextRow](const size_t &Row) {
-      return Row < NextRow;
+    auto SeqStartSmallerThanNext = [N = NextRow](const unsigned &Row) {
+      return Row < N;
     };
-
     // If both StmtAttrs and SeqStartRows points to value not in
     // the LineTableMapping yet, we do a dummy one to one mapping and
     // move the pointer.

@@ -13,7 +13,6 @@
 class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
         : Instruction {
   field bits<32> Inst;
-  field bits<32> SoftFail = 0;
   let Size = 4;
 
   bit PPC64 = 0;  // Default value, override with isPPC64
@@ -95,7 +94,6 @@ class I2<bits<6> opcode1, bits<6> opcode2, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin>
         : Instruction {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   let Size = 8;
 
   bit PPC64 = 0;  // Default value, override with isPPC64

@@ -2190,13 +2190,13 @@ define amdgpu_kernel void @shuffle_scalar_load_v8i32_0123(ptr addrspace(4) %in, 
 ; GFX942-LABEL: shuffle_scalar_load_v8i32_0123:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[6:7]
+; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: shuffle_scalar_load_v8i32_0123:

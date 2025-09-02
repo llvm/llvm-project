@@ -74,9 +74,7 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (DerivedType->isDependentType())
     return nullptr;
 
-  const RecordType *Ty = DerivedType->castAs<RecordType>();
-  Decl *D = Ty->getDecl();
-  return cast<CXXRecordDecl>(D);
+  return DerivedType->castAsCXXRecordDecl();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -91,8 +89,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
            CE->getCastKind() == CK_UncheckedDerivedToBase) &&
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
-        const auto *Derived =
-            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
+        const auto *Derived = E->getType()->castAsCXXRecordDecl();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -268,7 +265,7 @@ QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
   if (const auto *ECD = getEnumConstantDecl()) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     if (ED->isCompleteDefinition())
-      return Ctx.getTypeDeclType(ED);
+      return Ctx.getCanonicalTagType(ED);
   }
   return getType();
 }
@@ -2031,8 +2028,7 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD = unionType->castAs<RecordType>()->getDecl();
-  return getTargetFieldForToUnionCast(RD, opType);
+  return getTargetFieldForToUnionCast(unionType->castAsRecordDecl(), opType);
 }
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
@@ -2399,6 +2395,7 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+  assert(getType()->isSignedIntegerType() && "IntTy should be signed");
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -2774,23 +2771,22 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case UserDefinedLiteralClass: {
     // If this is a direct call, get the callee.
     const CallExpr *CE = cast<CallExpr>(this);
-    if (const Decl *FD = CE->getCalleeDecl()) {
-      // If the callee has attribute pure, const, or warn_unused_result, warn
-      // about it. void foo() { strlen("bar"); } should warn.
-      //
-      // Note: If new cases are added here, DiagnoseUnusedExprResult should be
-      // updated to match for QoI.
-      if (CE->hasUnusedResultAttr(Ctx) ||
-          FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
-        WarnE = this;
-        Loc = CE->getCallee()->getBeginLoc();
-        R1 = CE->getCallee()->getSourceRange();
+    // If the callee has attribute pure, const, or warn_unused_result, warn
+    // about it. void foo() { strlen("bar"); } should warn.
+    // Note: If new cases are added here, DiagnoseUnusedExprResult should be
+    // updated to match for QoI.
+    const Decl *FD = CE->getCalleeDecl();
+    bool PureOrConst =
+        FD && (FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>());
+    if (CE->hasUnusedResultAttr(Ctx) || PureOrConst) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
     return false;
   }
@@ -2803,32 +2799,20 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
 
   case CXXTemporaryObjectExprClass:
   case CXXConstructExprClass: {
-    if (const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl()) {
-      const auto *WarnURAttr = Type->getAttr<WarnUnusedResultAttr>();
-      if (Type->hasAttr<WarnUnusedAttr>() ||
-          (WarnURAttr && WarnURAttr->IsCXX11NoDiscard())) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
-        return true;
-      }
-    }
-
     const auto *CE = cast<CXXConstructExpr>(this);
-    if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
-      const auto *WarnURAttr = Ctor->getAttr<WarnUnusedResultAttr>();
-      if (WarnURAttr && WarnURAttr->IsCXX11NoDiscard()) {
-        WarnE = this;
-        Loc = getBeginLoc();
-        R1 = getSourceRange();
+    const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl();
 
-        if (unsigned NumArgs = CE->getNumArgs())
-          R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
-                           CE->getArg(NumArgs - 1)->getEndLoc());
-        return true;
-      }
+    if ((Type && Type->hasAttr<WarnUnusedAttr>()) ||
+        CE->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getBeginLoc();
+      R1 = getSourceRange();
+
+      if (unsigned NumArgs = CE->getNumArgs())
+        R2 = SourceRange(CE->getArg(0)->getBeginLoc(),
+                         CE->getArg(NumArgs - 1)->getEndLoc());
+      return true;
     }
-
     return false;
   }
 
@@ -3221,7 +3205,7 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
 /// isTemporaryObject - Determines if this expression produces a
 /// temporary of the given class type.
 bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
-  if (!C.hasSameUnqualifiedType(getType(), C.getTypeDeclType(TempTy)))
+  if (!C.hasSameUnqualifiedType(getType(), C.getCanonicalTagType(TempTy)))
     return false;
 
   const Expr *E = skipTemporaryBindingsNoOpCastsAndParens(this);
@@ -3407,7 +3391,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+      auto *RD = ILE->getType()->castAsRecordDecl();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -3539,6 +3523,56 @@ bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
   bool ArgVal;
   return !Arg->isValueDependent() &&
          Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
+}
+
+const AllocSizeAttr *CallExpr::getCalleeAllocSizeAttr() const {
+  if (const FunctionDecl *DirectCallee = getDirectCallee())
+    return DirectCallee->getAttr<AllocSizeAttr>();
+  if (const Decl *IndirectCallee = getCalleeDecl())
+    return IndirectCallee->getAttr<AllocSizeAttr>();
+  return nullptr;
+}
+
+std::optional<llvm::APInt>
+CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
+  const AllocSizeAttr *AllocSize = getCalleeAllocSizeAttr();
+
+  assert(AllocSize && AllocSize->getElemSizeParam().isValid());
+  unsigned SizeArgNo = AllocSize->getElemSizeParam().getASTIndex();
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (getNumArgs() <= SizeArgNo)
+    return std::nullopt;
+
+  auto EvaluateAsSizeT = [&](const Expr *E, llvm::APSInt &Into) {
+    Expr::EvalResult ExprResult;
+    if (E->isValueDependent() ||
+        !E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    Into = ExprResult.Val.getInt();
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zext(BitsInSizeT);
+    return true;
+  };
+
+  llvm::APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(getArg(SizeArgNo), SizeOfElem))
+    return std::nullopt;
+
+  if (!AllocSize->getNumElemsParam().isValid())
+    return SizeOfElem;
+
+  llvm::APSInt NumberOfElems;
+  unsigned NumArgNo = AllocSize->getNumElemsParam().getASTIndex();
+  if (!EvaluateAsSizeT(getArg(NumArgNo), NumberOfElems))
+    return std::nullopt;
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return std::nullopt;
+
+  return BytesAvailable;
 }
 
 bool CallExpr::isCallToStdMove() const {
@@ -4050,8 +4084,10 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_CXX11_nullptr;
 
   if (const RecordType *UT = getType()->getAsUnionType())
-    if (!Ctx.getLangOpts().CPlusPlus11 &&
-        UT && UT->getDecl()->hasAttr<TransparentUnionAttr>())
+    if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
+        UT->getOriginalDecl()
+            ->getMostRecentDecl()
+            ->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))
@@ -4233,8 +4269,15 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
       // template parameters.
       const auto *DRE1 = cast<DeclRefExpr>(E1);
       const auto *DRE2 = cast<DeclRefExpr>(E2);
-      return DRE1->isPRValue() && DRE2->isPRValue() &&
-             DRE1->getDecl() == DRE2->getDecl();
+
+      if (DRE1->getDecl() != DRE2->getDecl())
+        return false;
+
+      if ((DRE1->isPRValue() && DRE2->isPRValue()) ||
+          (DRE1->isLValue() && DRE2->isLValue()))
+        return true;
+
+      return false;
     }
     case ImplicitCastExprClass: {
       // Peel off implicit casts.
@@ -4244,7 +4287,8 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
         if (!ICE1 || !ICE2)
           return false;
         if (ICE1->getCastKind() != ICE2->getCastKind())
-          return false;
+          return isSameComparisonOperand(ICE1->IgnoreParenImpCasts(),
+                                         ICE2->IgnoreParenImpCasts());
         E1 = ICE1->getSubExpr()->IgnoreParens();
         E2 = ICE2->getSubExpr()->IgnoreParens();
         // The final cast must be one of these types.

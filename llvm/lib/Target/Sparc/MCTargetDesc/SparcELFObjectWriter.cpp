@@ -58,8 +58,8 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_SPARC_TLS_IE_ADD:
   case ELF::R_SPARC_TLS_LE_HIX22:
   case ELF::R_SPARC_TLS_LE_LOX10:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

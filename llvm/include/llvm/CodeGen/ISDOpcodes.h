@@ -1558,6 +1558,12 @@ enum NodeType {
   // bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
+  // Operands: Load pointer, Store pointer, Element size
+  // Output: Mask
+  LOOP_DEPENDENCE_WAR_MASK,
+  LOOP_DEPENDENCE_RAW_MASK,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain

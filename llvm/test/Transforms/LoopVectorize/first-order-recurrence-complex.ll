@@ -1024,11 +1024,10 @@ define void @test_for_sink_instruction_after_same_incoming_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -1090,11 +1089,10 @@ define void @test_for_sink_instruction_after_same_incoming_2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 2.000000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi double [ [[VECTOR_RECUR_EXTRACT2]], [[MIDDLE_BLOCK]] ], [ 1.000000e+01, [[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

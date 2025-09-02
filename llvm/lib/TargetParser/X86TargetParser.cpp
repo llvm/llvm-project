@@ -143,8 +143,8 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
-    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
+    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
     FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.

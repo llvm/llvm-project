@@ -598,6 +598,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_LIMIT);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_LO);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_FLAT_SCRATCH_BASE_HI);
 
   // Reserve async counters pseudo registers
   reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
@@ -3942,6 +3944,8 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
     return RC.hasSuperClassEq(
         getVectorSuperClassForBitWidth(getRegSizeInBits(RC)));
 
+  assert(&RC != &AMDGPU::VS_64RegClass);
+
   return true;
 }
 
@@ -3953,6 +3957,9 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
   if (Size <= 32)
     return RC;
+
+  if (RC == &AMDGPU::VS_64RegClass)
+    return &AMDGPU::VS_64_Align2RegClass;
 
   if (isVGPRClass(RC))
     return getAlignedVGPRClassForBitWidth(Size);

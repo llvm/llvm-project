@@ -67,24 +67,8 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_load_b64 v[4:5], v[0:1], off
-; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:  .LBB6_1: ; %atomicrmw.start
-; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_add_f64_e32 v[2:3], lit64(0x4063233333333333), v[4:5]
-; GCN-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
-; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GCN-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GCN-NEXT:    s_cbranch_execnz .LBB6_1
-; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GCN-NEXT:    v_mov_b64_e32 v[2:3], lit64(0x4063233333333333)
+; GCN-NEXT:    global_atomic_add_f64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double 153.1 monotonic
   ret void

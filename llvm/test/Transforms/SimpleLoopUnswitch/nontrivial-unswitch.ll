@@ -2626,44 +2626,65 @@ loop_a:
 ; The second unswitched condition.
 ;
 ; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label %loop_begin.us
+; CHECK-NEXT:    br i1 %cond2, label %entry.split.us.split.us, label %entry.split.us.split
 
 loop_a_a:
   call i32 @a()
   br label %latch
 ; The 'loop_a_a' unswitched loop.
 ;
-; CHECK:       loop_begin.us:
-; CHECK-NEXT:    br label %loop_a.us
+; CHECK:       entry.split.us.split.us:
+; CHECK-NEXT:    br label %loop_begin.us.us
 ;
-; CHECK:       loop_a.us:
-; CHECK-NEXT:    br i1 %cond2, label %loop_a_a.us, label %loop_a_c.us
+; CHECK:       loop_begin.us.us:
+; CHECK-NEXT:    br label %loop_a.us.us
 ;
-; The 'loop_a_c' unswitched loop.
+; CHECK:       loop_a.us.us:
+; CHECK-NEXT:    br label %loop_a_a.us.us
 ;
-; CHECK:       loop_a_c.us:
-; CHECK-NEXT:    call i32 @c()
-; CHECK-NEXT:    br label %latch.us
-;
-; CHECK:       loop_a_a.us:
+; CHECK:       loop_a_a.us.us:
 ; CHECK-NEXT:    call i32 @a()
-; CHECK-NEXT:    br label %latch.us
+; CHECK-NEXT:    br label %latch.us.us
 ;
-; CHECK:       latch.us:
+; CHECK:       latch.us.us:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
-; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.us, label %loop_exit.split.us, !llvm.loop !22
+; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.us.us, label %loop_exit.split.us.split.us
 ;
-; CHECK:       loop_exit.split.us
-; CHECK-NEXT:    br label %loop_exit
+; CHECK:       loop_exit.split.us.split.us:
+; CHECK-NEXT:    br label %loop_exit.split
 
 loop_a_c:
   call i32 @c()
   br label %latch
+; The 'loop_a_c' unswitched loop.
+;
+; CHECK:       entry.split.us.split:
+; CHECK-NEXT:    br label %loop_begin.us
+;
+; CHECK:       loop_begin.us:
+; CHECK-NEXT:    br label %loop_a.us
+;
+; CHECK:       loop_a.us:
+; CHECK-NEXT:    br label %loop_a_c.us
+;
+; CHECK:       loop_a_c.us:
+; CHECK-NEXT:    call i32 @c()
+; CHECK-NEXT:    br label %latch
+;
+; CHECK:       latch.us:
+; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
+; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.us, label %loop_exit.split.us.split
+;
+; CHECK:       loop_exit.split.us.split:
+; CHECK-NEXT:    br label %loop_exit.split
 
 loop_b:
   call i32 @b()
   br label %latch
 ; The 'loop_b' unswitched loop.
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
 ;
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    br label %loop_b
@@ -2964,9 +2985,9 @@ loop_a:
 ;
 ; CHECK:       [[LOOP_LATCH_A]]:
 ; CHECK-NEXT:    %[[V_A:.*]] = load i1, ptr %ptr
-; CHECK:         br i1 %[[V_A]], label %loop_begin.us, label %loop_exit.split.us, !llvm.loop !26
+; CHECK:         br i1 %[[V_A]], label %[[LOOP_BEGIN_A]], label %[[LOOP_EXIT_A:.*]]
 ;
-; CHECK:       loop_exit.split.us:
+; CHECK:       [[LOOP_EXIT_A]]:
 ; CHECK-NEXT:    br label %loop_exit
 
 loop_b:
@@ -2986,10 +3007,10 @@ loop_b:
 ;
 ; CHECK:       [[LOOP_LATCH_B]]:
 ; CHECK-NEXT:    %[[V_B:.*]] = load i1, ptr %ptr
-; CHECK:         br i1 %[[V_B]], label %loop_begin.us2, label %loop_exit.split.split.us, !llvm.loop !27
+; CHECK:         br i1 %[[V_B]], label %[[LOOP_BEGIN_B]], label %[[LOOP_EXIT_B:.*]]
 ;
-; CHECK:       loop_exit.split.split.us:
-; CHECK-NEXT:    br label %loop_exit.split
+; CHECK:       [[LOOP_EXIT_B]]:
+; CHECK-NEXT:    br label %loop_exit
 
 loop_c:
   call i32 @c()
@@ -3008,10 +3029,10 @@ loop_c:
 ;
 ; CHECK:       [[LOOP_LATCH_C]]:
 ; CHECK-NEXT:    %[[V_C:.*]] = load i1, ptr %ptr
-; CHECK:         br i1 %[[V_C]], label %loop_begin.us6, label %loop_exit.split.split.split.us, !llvm.loop !28
+; CHECK:         br i1 %[[V_C]], label %[[LOOP_BEGIN_C]], label %[[LOOP_EXIT_C:.*]]
 ;
-; CHECK:       loop_exit.split.split.split.us:
-; CHECK-NEXT:    br label %loop_exit.split.split
+; CHECK:       [[LOOP_EXIT_C]]:
+; CHECK-NEXT:    br label %loop_exit
 
 latch:
   %v = load i1, ptr %ptr
@@ -3111,9 +3132,9 @@ body.a:
 ;
 ; CHECK:       [[LATCH_A]]:
 ; CHECK-NEXT:    %[[CMP2_A:.*]] = icmp slt i32 %[[TMP_C_SUM_A]], 42
-; CHECK:         br i1 %[[CMP2_A]], label %header.us, label %exit.split.us, !llvm.loop !29
+; CHECK:         br i1 %[[CMP2_A]], label %[[HEADER_A]], label %[[LOOP_EXIT_A:.*]]
 ;
-; CHECK:       exit.split.us:
+; CHECK:       [[LOOP_EXIT_A]]:
 ; CHECK-NEXT:    %[[LCSSA_A:.*]] = phi i32 [ %[[TMP_C_SUM_A]], %[[LATCH_A]] ]
 ; CHECK-NEXT:    br label %exit
 
@@ -3155,9 +3176,9 @@ body.b:
 ;
 ; CHECK:       [[LATCH_B]]:
 ; CHECK-NEXT:    %[[CMP2_B:.*]] = icmp slt i32 %[[TMP_C_SUM_B]], 42
-; CHECK:         br i1 %[[CMP2_B]], label %header.us2, label %exit.split.split.us, !llvm.loop !30
+; CHECK:         br i1 %[[CMP2_B]], label %[[HEADER_B]], label %[[LOOP_EXIT_B:.*]]
 ;
-; CHECK:       exit.split.split.us:
+; CHECK:       [[LOOP_EXIT_B]]:
 ; CHECK-NEXT:    %[[LCSSA_B:.*]] = phi i32 [ %[[TMP_C_SUM_B]], %[[LATCH_B]] ]
 ; CHECK-NEXT:    br label %[[EXIT_SPLIT:.*]]
 
@@ -3213,11 +3234,11 @@ exit:
   %lcssa.phi = phi i32 [ %tmp.c.sum, %latch ]
   ret i32 %lcssa.phi
 ; CHECK:       [[EXIT_SPLIT]]:
-; CHECK-NEXT:    %[[EXIT_PHI1:.*]] = phi i32 [ %[[LCSSA_C]], %[[LOOP_EXIT_C]] ], [ %[[LCSSA_B]], %exit.split.split.us ]
+; CHECK-NEXT:    %[[EXIT_PHI1:.*]] = phi i32 [ %[[LCSSA_C]], %[[LOOP_EXIT_C]] ], [ %[[LCSSA_B]], %[[LOOP_EXIT_B]] ]
 ; CHECK-NEXT:    br label %exit
 
 ; CHECK:       exit:
-; CHECK-NEXT:    %[[EXIT_PHI2:.*]] = phi i32 [ %[[EXIT_PHI1]], %[[EXIT_SPLIT]] ], [ %[[LCSSA_A]], %exit.split.us ]
+; CHECK-NEXT:    %[[EXIT_PHI2:.*]] = phi i32 [ %[[EXIT_PHI1]], %[[EXIT_SPLIT]] ], [ %[[LCSSA_A]], %[[LOOP_EXIT_A]] ]
 ; CHECK-NEXT:    ret i32 %[[EXIT_PHI2]]
 }
 
@@ -3283,9 +3304,9 @@ body.a:
 ;
 ; CHECK:       [[LATCH_A]]:
 ; CHECK-NEXT:    %[[CMP2_A:.*]] = icmp slt i32 %[[TMP_B_SUM_A]], 42
-; CHECK:         br i1 %[[CMP2_A]], label %header.us, label %loop.exit2.split.us, !llvm.loop !31
+; CHECK:         br i1 %[[CMP2_A]], label %[[HEADER_A]], label %[[LOOP_EXIT_A:.*]]
 ;
-; CHECK:       loop.exit2.split.us:
+; CHECK:       [[LOOP_EXIT_A]]:
 ; CHECK-NEXT:    %[[LCSSA_A:.*]] = phi i32 [ %[[TMP_B_SUM_A]], %[[LATCH_A]] ]
 ; CHECK-NEXT:    br label %loop.exit2
 
@@ -3321,9 +3342,9 @@ body.b:
 ;
 ; CHECK:       [[LATCH_B]]:
 ; CHECK-NEXT:    %[[CMP2_B:.*]] = icmp slt i32 %[[TMP_B_SUM_B]], 42
-; CHECK:         br i1 %[[CMP2_B]], label %header.us2, label %loop.exit2.split.split.us, !llvm.loop !32
+; CHECK:         br i1 %[[CMP2_B]], label %[[HEADER_B]], label %[[LOOP_EXIT_B:.*]]
 ;
-; CHECK:       loop.exit2.split.split.us:
+; CHECK:       [[LOOP_EXIT_B]]:
 ; CHECK-NEXT:    %[[LCSSA_B:.*]] = phi i32 [ %[[TMP_B_SUM_B]], %[[LATCH_B]] ]
 ; CHECK-NEXT:    br label %[[LOOP_EXIT2_SPLIT:.*]]
 
@@ -3376,11 +3397,11 @@ loop.exit2:
   %l2.phi = phi i32 [ %tmp.b.sum, %latch ]
   br label %exit
 ; CHECK:       [[LOOP_EXIT2_SPLIT]]:
-; CHECK-NEXT:    %[[LOOP_EXIT_PHI1:.*]] = phi i32 [ %[[L2_PHI]], %[[LOOP_EXIT_EXIT]] ], [ %[[LCSSA_B]], %loop.exit2.split.split.us ]
+; CHECK-NEXT:    %[[LOOP_EXIT_PHI1:.*]] = phi i32 [ %[[L2_PHI]], %[[LOOP_EXIT_EXIT]] ], [ %[[LCSSA_B]], %[[LOOP_EXIT_B]] ]
 ; CHECK-NEXT:    br label %loop.exit2
 ;
 ; CHECK:       loop.exit2:
-; CHECK-NEXT:    %[[LOOP_EXIT_PHI2:.*]] = phi i32 [ %[[LOOP_EXIT_PHI1]], %[[LOOP_EXIT2_SPLIT]] ], [ %[[LCSSA_A]], %loop.exit2.split.us ]
+; CHECK-NEXT:    %[[LOOP_EXIT_PHI2:.*]] = phi i32 [ %[[LOOP_EXIT_PHI1]], %[[LOOP_EXIT2_SPLIT]] ], [ %[[LCSSA_A]], %[[LOOP_EXIT_A]] ]
 ; CHECK-NEXT:    br label %exit
 
 exit:
@@ -4037,7 +4058,9 @@ entry:
 ; CHECK-NEXT:    ]
 ;
 ; CHECK:       [[ENTRY_SPLIT_US]]:
-; CHECK-NEXT:    br label %outer.header.us
+; CHECK-NEXT:    switch i32 %arg, label %[[ENTRY_SPLIT_US_SPLIT:.*]] [
+; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_US_SPLIT_US:.*]]
+; CHECK-NEXT:    ]
 
 outer.header:
   br label %inner.header
@@ -4051,13 +4074,66 @@ inner.header:
 inner.body1:
   %a = call i32 @a()
   br label %inner.latch
+; The (super convoluted) fully unswitched loop around `@a`.
+;
+; CHECK:       [[ENTRY_SPLIT_US_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_US_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_US_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US_US:.*]]
+;
+; CHECK:       [[OUTER_LATCH_US_US:.*]]:
+; CHECK-NEXT:    %[[OUTER_COND_US_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[OUTER_COND_US_US]], label %[[OUTER_HEADER_US_US]], label %[[EXIT_SPLIT_US_SPLIT_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_US_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_US_US:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_US_US]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER_US_US_US:.*]]
+;
+; CHECK:       [[INNER_HEADER_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_BODY1_US_US_US:.*]]
+;
+; CHECK:       [[INNER_BODY1_US_US_US]]:
+; CHECK-NEXT:    %[[A:.*]] = call i32 @a()
+; CHECK-NEXT:    br label %[[INNER_LATCH_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LATCH_US_US_US]]:
+; CHECK-NEXT:    %[[PHI_A:.*]] = phi i32 [ %[[A]], %[[INNER_BODY1_US_US_US]] ]
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 %[[PHI_A]])
+; CHECK-NEXT:    %[[INNER_COND_US_US_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[INNER_COND_US_US_US]], label %[[INNER_HEADER_US_US_US]], label %[[INNER_LOOPEXIT2_SPLIT_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US_US]]
+;
+; CHECK:       [[EXIT_SPLIT_US_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[EXIT_SPLIT_US:.*]]
+
 
 inner.body2:
   %b = call i32 @b()
   br label %inner.latch
 ; The fully unswitched loop around `@b`.
 ;
-; CHECK:       outer.header.us:
+; CHECK:       [[ENTRY_SPLIT_US_SPLIT]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US:.*]]
 ;
 ; CHECK:       [[INNER_HEADER_US:.*]]:
@@ -4087,51 +4163,18 @@ inner.body2:
 ;
 ; CHECK:       [[OUTER_LATCH_US:.*]]:
 ; CHECK-NEXT:    %[[OUTER_COND_US:.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 %[[OUTER_COND_US]], label %outer.header.us, label %exit.split.us, !llvm.loop !33
+; CHECK-NEXT:    br i1 %[[OUTER_COND_US]], label %[[OUTER_HEADER_US]], label %[[EXIT_SPLIT_US_SPLIT:.*]]
 ;
 ; CHECK:       [[OUTER_HEADER_SPLIT_US]]:
-; CHECK-NEXT:    switch i32 %arg, label %outer.header.split.split.us5 [
-; CHECK-NEXT:      i32 1, label %outer.header.split.split.us.us
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US:.*]]
 ;
-; CHECK:       outer.header.split.split.us5:
+; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER_US]]
 ;
 ; CHECK:       [[INNER_LOOPEXIT2_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH_US]]
-
-; The (super convoluted) fully unswitched loop around `@a`.
 ;
-; CHECK:       outer.header.split.split.us.us:
-; CHECK-NEXT:    br label %[[INNER_HEADER_US_US:.*]]
-;
-; CHECK:       [[INNER_HEADER_US_US]]:
-; CHECK-NEXT:    br label %[[INNER_BODY1_US_US:.*]]
-;
-; CHECK:       [[INNER_BODY1_US_US]]:
-; CHECK-NEXT:    %[[A:.*]] = call i32 @a()
-; CHECK-NEXT:    br label %[[INNER_LATCH_US_US:.*]]
-;
-; CHECK:       [[INNER_LATCH_US_US]]:
-; CHECK-NEXT:    %[[PHI_A:.*]] = phi i32 [ %[[A]], %[[INNER_BODY1_US_US]] ]
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 0)
-; CHECK-NEXT:    call void @sink1(i32 %[[PHI_A]])
-; CHECK-NEXT:    %[[INNER_COND_US_US:.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 %[[INNER_COND_US_US]], label %[[INNER_HEADER_US_US]], label %[[INNER_LOOPEXIT2_SPLIT_US_US:.*]], !llvm.loop !34
-;
-; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US_US]]:
-; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US]]
-;
-; CHECK:       exit.split.us:
+; CHECK:       [[EXIT_SPLIT_US]]:
 ; CHECK-NEXT:    br label %exit
 
 inner.latch:

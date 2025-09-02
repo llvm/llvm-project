@@ -157,6 +157,7 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svinval"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svnapot"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svpbmt"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
@@ -402,6 +403,11 @@
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
 // MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
+
+// -march=unset erases previous march
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=unset -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-UNSET %s
+// MARCH-UNSET: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+c"
+// MARCH-UNSET-SAME: "-target-abi" "ilp32"
 
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.

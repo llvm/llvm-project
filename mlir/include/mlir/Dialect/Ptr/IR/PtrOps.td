@@ -119,6 +119,133 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
 }
 
 //===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+def AlignmentProp : OptionalProp<I64Prop>;
+
+def Ptr_LoadOp : Pointer_Op<"load", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  ]> {
+  let description = [{
+    The `load` operation is used to read from memory. A load may be marked as
+    atomic, volatile, and/or nontemporal.
+
+    An atomic load only supports a limited set of value types, and requires
+    an explicit alignment.
+
+    Examples:
+    ```mlir
+    // A volatile load of a float variable.
+    %0 = ptr.load volatile %ptr : !ptr.ptr -> f32
+
+    // A nontemporal load of a float variable.
+    %0 = ptr.load %ptr nontemporal : !ptr.ptr -> f32
+
+    // An atomic load of an integer variable.
+    %0 = ptr.load %ptr atomic monotonic alignment = 8 : !ptr.ptr -> i64
+    ```
+
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `nontemporal`, `invariant`, `invariant_group`, `ordering`,
+    and `syncscope`:
+    https://llvm.org/docs/LangRef.html#load-instruction
+  }];
+  let arguments = (ins Ptr_PtrType:$ptr,
+                       AlignmentProp:$alignment,
+                       UnitProp:$volatile_,
+                       UnitProp:$nontemporal,
+                       UnitProp:$invariant,
+                       UnitProp:$invariantGroup,
+                       DefaultValuedProp<
+                         AtomicOrderingProp,
+                         "AtomicOrdering::not_atomic">:$ordering,
+                       OptionalAttr<StrAttr>:$syncscope);
+  let results = (outs AnyType:$value);
+  let assemblyFormat = [{
+    (`volatile` $volatile_^)? $ptr
+    (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    oilist(
+      `nontemporal` $nontemporal |
+      `invariant` $invariant |
+      `invariant_group` $invariantGroup |
+      `alignment` `=` $alignment
+    )
+    attr-dict `:` qualified(type($ptr)) `->` type($value)
+  }];
+  let builders = [
+    OpBuilder<(ins "Type":$type, "Value":$ptr,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
+      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
+      CArg<"StringRef", "StringRef()">:$syncscope)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_StoreOp : Pointer_Op<"store", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+  ]> {
+  let description = [{
+    The `store` operation is used to write to memory. A store may be marked as
+    atomic, volatile, and/or nontemporal.
+
+    An atomic store only supports a limited set of value types, and requires
+    an explicit alignment.
+
+    Examples:
+    ```mlir
+    // A volatile store of a float variable.
+    ptr.store volatile %val, %ptr : f32, !ptr.ptr
+
+    // A nontemporal store of a float variable.
+    ptr.store %val, %ptr nontemporal : f32, !ptr.ptr
+
+    // An atomic store of an integer variable.
+    ptr.store %val, %ptr atomic monotonic alignment = 8: i64, !ptr.ptr
+    ```
+
+    See the following link for more details on the meaning of `alignment`,
+    `volatile_`, `nontemporal`, `invariant_group`, `ordering`, and `syncscope`:
+    https://llvm.org/docs/LangRef.html#store-instruction
+  }];
+  let arguments = (ins AnyType:$value,
+                       Ptr_PtrType:$ptr,
+                       AlignmentProp:$alignment,
+                       UnitProp:$volatile_,
+                       UnitProp:$nontemporal,
+                       UnitProp:$invariantGroup,
+                       DefaultValuedProp<
+                         AtomicOrderingProp,
+                         "AtomicOrdering::not_atomic">:$ordering,
+                       OptionalAttr<StrAttr>:$syncscope);
+  let assemblyFormat = [{
+    (`volatile` $volatile_^)? $value `,` $ptr
+    (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
+    oilist(
+      `nontemporal` $nontemporal |
+      `invariant_group` $invariantGroup |
+      `alignment` `=` $alignment
+    )
+    attr-dict `:` type($value) `,` qualified(type($ptr))
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$ptr,
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$isNonTemporal,
+      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
+      CArg<"StringRef", "StringRef()">:$syncscope)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ToPtrOp
 //===----------------------------------------------------------------------===//
 

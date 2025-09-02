@@ -214,10 +214,10 @@ define i64 @test_nuw_two_gep_missing_nuw_on_one_gep(ptr %base, i64 %idx, i64 %id
 
 define i64 @test_inbounds_nuw_multi_index(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_multi_index(
-; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 3
-; CHECK-NEXT:    [[P2_IDX1:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
-; CHECK-NEXT:    [[P2_OFFS:%.*]] = add nsw i64 [[P2_IDX]], [[P2_IDX1]]
-; CHECK-NEXT:    ret i64 [[P2_OFFS]]
+; CHECK-NEXT:    [[P2_SPLIT_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = add nsw i64 [[P2_SPLIT_IDX]], [[P2_IDX]]
+; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p2 = getelementptr inbounds [0 x [2 x i32]], ptr %base, i64 0, i64 %idx, i64 %idx2
   %i1 = ptrtoint ptr %base to i64
@@ -394,7 +394,7 @@ define i64 @negative_ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 
 define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i16 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i16 [[GEPDIFF]]

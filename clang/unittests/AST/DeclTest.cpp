@@ -74,7 +74,6 @@ TEST(Decl, AsmLabelAttr) {
   StringRef Code = R"(
     struct S {
       void f() {}
-      void g() {}
     };
   )";
   auto AST =
@@ -87,26 +86,20 @@ TEST(Decl, AsmLabelAttr) {
   const auto *DeclS =
       selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
-  NamedDecl *DeclG = *(++DeclS->method_begin());
 
-  // Attach asm labels to the decls: one literal, and one not.
-  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo", /*LiteralLabel=*/true));
-  DeclG->addAttr(AsmLabelAttr::Create(Ctx, "goo", /*LiteralLabel=*/false));
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo"));
 
   // Mangle the decl names.
-  std::string MangleF, MangleG;
+  std::string MangleF;
   std::unique_ptr<ItaniumMangleContext> MC(
       ItaniumMangleContext::create(Ctx, Diags));
   {
     llvm::raw_string_ostream OS_F(MangleF);
-    llvm::raw_string_ostream OS_G(MangleG);
     MC->mangleName(DeclF, OS_F);
-    MC->mangleName(DeclG, OS_G);
   }
 
   ASSERT_EQ(MangleF, "\x01"
                      "foo");
-  ASSERT_EQ(MangleG, "goo");
 }
 
 TEST(Decl, MangleDependentSizedArray) {
@@ -576,4 +569,20 @@ void instantiate_template() {
   EXPECT_EQ(GetNameInfoRange(Matches[0]), "<input.cc:3:3, col:4>");
   EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
   EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
+}
+
+TEST(Decl, getQualifiedNameAsString) {
+  llvm::Annotations Code(R"cpp(
+namespace x::y {
+  template <class T> class Foo { Foo() {} };
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto const *FD = selectFirst<CXXConstructorDecl>(
+      "ctor", match(cxxConstructorDecl().bind("ctor"), Ctx));
+  ASSERT_NE(FD, nullptr);
+  ASSERT_EQ(FD->getQualifiedNameAsString(), "x::y::Foo::Foo<T>");
 }

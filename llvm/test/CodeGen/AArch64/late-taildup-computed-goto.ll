@@ -25,77 +25,58 @@ define void @test_interp(ptr %frame, ptr %dst) {
 ; CHECK-NEXT:    adrp x21, _opcode.targets@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    add x21, x21, _opcode.targets@PAGEOFF
-; CHECK-NEXT:    mov x22, xzr
+; CHECK-NEXT:    mov x24, xzr
 ; CHECK-NEXT:    add x8, x21, xzr, lsl #3
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    add x23, x22, #1
+; CHECK-NEXT:    mov x23, xzr
+; CHECK-NEXT:    mov w22, #1 ; =0x1
+; CHECK-NEXT:    add x24, x24, #1
 ; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  Ltmp0: ; Block address taken
 ; CHECK-NEXT:  LBB0_1: ; %loop.header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x8, x21, x23, lsl #3
+; CHECK-NEXT:    add x8, x21, x24, lsl #3
 ; CHECK-NEXT:    mov x20, xzr
-; CHECK-NEXT:    mov x22, xzr
-; CHECK-NEXT:    add x23, x23, #1
+; CHECK-NEXT:    mov x23, xzr
+; CHECK-NEXT:    add x24, x24, #1
 ; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  Ltmp1: ; Block address taken
 ; CHECK-NEXT:  LBB0_2: ; %op1.bb
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str xzr, [x19]
-; CHECK-NEXT:    mov w8, #1 ; =0x1
-; CHECK-NEXT:    ldr x0, [x20, #-8]!
-; CHECK-NEXT:    ldr x9, [x0, #8]
-; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    ldr x8, [x9, #48]
-; CHECK-NEXT:    blr x8
-; CHECK-NEXT:    add x8, x21, x23, lsl #3
-; CHECK-NEXT:    add x23, x23, #1
-; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  Ltmp2: ; Block address taken
-; CHECK-NEXT:  LBB0_3: ; %op2.bb
+; CHECK-NEXT:  LBB0_3: ; %op6.bb
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x8, x21, x23, lsl #3
-; CHECK-NEXT:    mov x20, xzr
-; CHECK-NEXT:    add x23, x23, #1
-; CHECK-NEXT:    str x22, [x19]
-; CHECK-NEXT:    mov x22, xzr
+; CHECK-NEXT:    ldr x0, [x20, #-8]!
+; CHECK-NEXT:    ldr x8, [x0, #8]
+; CHECK-NEXT:    str x22, [x0]
+; CHECK-NEXT:    ldr x8, [x8, #48]
+; CHECK-NEXT:    blr x8
+; CHECK-NEXT:    add x8, x21, x24, lsl #3
+; CHECK-NEXT:    add x24, x24, #1
 ; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  Ltmp3: ; Block address taken
-; CHECK-NEXT:  LBB0_4: ; %op4.bb
+; CHECK-NEXT:  LBB0_4: ; %op2.bb
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str x22, [x19]
-; CHECK-NEXT:    add x10, x21, x23, lsl #3
-; CHECK-NEXT:    add x23, x23, #1
-; CHECK-NEXT:    ldur x8, [x22, #12]
-; CHECK-NEXT:    ldur x9, [x20, #-8]
-; CHECK-NEXT:    add x22, x22, #20
-; CHECK-NEXT:    stp x8, x9, [x20, #-8]
-; CHECK-NEXT:    add x20, x20, #8
-; CHECK-NEXT:    br x10
+; CHECK-NEXT:    add x8, x21, x24, lsl #3
+; CHECK-NEXT:    mov x20, xzr
+; CHECK-NEXT:    str x23, [x19]
+; CHECK-NEXT:    mov x23, xzr
+; CHECK-NEXT:    add x24, x24, #1
+; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  Ltmp4: ; Block address taken
-; CHECK-NEXT:  LBB0_5: ; %op5.bb
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str x22, [x19]
-; CHECK-NEXT:    add x10, x21, x23, lsl #3
-; CHECK-NEXT:    add x23, x23, #1
-; CHECK-NEXT:    ldur x8, [x22, #12]
-; CHECK-NEXT:    ldur x9, [x20, #-8]
-; CHECK-NEXT:    add x22, x22, #20
-; CHECK-NEXT:    stp x8, x9, [x20, #-8]
-; CHECK-NEXT:    add x20, x20, #8
-; CHECK-NEXT:    br x10
+; CHECK-NEXT:  LBB0_5: ; %op4.bb
 ; CHECK-NEXT:  Ltmp5: ; Block address taken
-; CHECK-NEXT:  LBB0_6: ; %op6.bb
+; CHECK-NEXT:  LBB0_6: ; %op5.bb
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x0, [x20, #-8]!
-; CHECK-NEXT:    mov w8, #1 ; =0x1
-; CHECK-NEXT:    ldr x9, [x0, #8]
-; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    ldr x8, [x9, #48]
-; CHECK-NEXT:    blr x8
-; CHECK-NEXT:    add x8, x21, x23, lsl #3
-; CHECK-NEXT:    add x23, x23, #1
+; CHECK-NEXT:    str x23, [x19]
+; CHECK-NEXT:    ldur x8, [x23, #12]
+; CHECK-NEXT:    ldur x9, [x20, #-8]
+; CHECK-NEXT:    add x23, x23, #20
+; CHECK-NEXT:    stp x8, x9, [x20, #-8]
+; CHECK-NEXT:    add x8, x21, x24, lsl #3
+; CHECK-NEXT:    add x20, x20, #8
+; CHECK-NEXT:    add x24, x24, #1
 ; CHECK-NEXT:    br x8
 ; CHECK-NEXT:    .loh AdrpAdd Lloh0, Lloh1
 entry:

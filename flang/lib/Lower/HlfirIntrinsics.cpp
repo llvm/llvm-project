@@ -170,6 +170,17 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+class HlfirEOShiftLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
 public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
@@ -430,6 +441,46 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
   return createOp<hlfir::CShiftOp>(resultType, operands);
 }
 
+mlir::Value HlfirEOShiftLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Value array = operands[0];
+  mlir::Value shift = operands[1];
+  mlir::Value boundary = operands[2];
+  mlir::Value dim = operands[3];
+  // If DIM is present, then dereference it if it is a ref.
+  if (dim)
+    dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+
+  mlir::Type resultType = computeResultType(array, stmtResultType);
+
+  if (boundary && fir::isa_trivial(boundary.getType())) {
+    mlir::Type elementType = hlfir::getFortranElementType(resultType);
+    if (auto logicalTy = mlir::dyn_cast<fir::LogicalType>(elementType)) {
+      // Scalar logical constant boundary might be represented using i1, i2, ...
+      // type. We need to cast it to fir.logical type of the ARRAY/result.
+      if (boundary.getType() != logicalTy)
+        boundary = builder.createConvert(loc, logicalTy, boundary);
+    } else {
+      // When the boundary is a constant like '1u', the lowering converts
+      // it into a signless arith.constant value (which is a requirement
+      // of the Arith dialect). If the ARRAY/RESULT is also UNSIGNED,
+      // we have to cast the boundary to the same unsigned type.
+      auto resultIntTy = mlir::dyn_cast<mlir::IntegerType>(elementType);
+      auto boundaryIntTy =
+          mlir::dyn_cast<mlir::IntegerType>(boundary.getType());
+      if (resultIntTy && boundaryIntTy &&
+          resultIntTy.getSignedness() != boundaryIntTy.getSignedness())
+        boundary = builder.createConvert(loc, resultIntTy, boundary);
+    }
+  }
+
+  return createOp<hlfir::EOShiftOp>(resultType, array, shift, boundary, dim);
+}
+
 mlir::Value HlfirReshapeLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
@@ -489,6 +540,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "cshift")
     return HlfirCShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
+  if (name == "eoshift")
+    return HlfirEOShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                    stmtResultType);
   if (name == "reshape")
     return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                     stmtResultType);

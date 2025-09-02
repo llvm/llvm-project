@@ -43,7 +43,7 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(ptr nocapture) #4
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #5
@@ -54,7 +54,7 @@ declare i64 @llvm.coro.size.i64() #1
 declare ptr @llvm.coro.begin(token, ptr writeonly) #7
 declare token @llvm.coro.save(ptr) #7
 declare i8 @llvm.coro.suspend(token, i1) #7
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
 declare void @free(ptr nocapture) local_unnamed_addr #6
 declare i1 @llvm.coro.end(ptr, i1, token) #7
@@ -77,7 +77,7 @@ attributes #9 = { noduplicate }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "coro.c", directory: "/home/gor/build/bin")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

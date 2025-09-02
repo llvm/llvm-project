@@ -486,7 +486,7 @@ Success values are very cheap to construct and return - they have minimal
 impact on program performance.
 
 Failure values are constructed using ``make_error<T>``, where ``T`` is any class
-that inherits from the ErrorInfo utility, E.g.:
+that inherits from the ``ErrorInfo`` utility, E.g.:
 
 .. code-block:: c++
 
@@ -1143,8 +1143,8 @@ be passed by value.
 
 .. _DEBUG:
 
-The ``LLVM_DEBUG()`` macro and ``-debug`` option
-------------------------------------------------
+The ``LDBG`` and ``LLVM_DEBUG()`` macros and ``-debug`` option
+--------------------------------------------------------------
 
 Often when working on your pass you will put a bunch of debugging printouts and
 other code into your pass.  After you get it working, you want to remove it, but
@@ -1154,36 +1154,65 @@ Naturally, because of this, you don't want to delete the debug printouts, but
 you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
-The ``llvm/Support/Debug.h`` (`doxygen
-<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
-``LLVM_DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
-put arbitrary code into the argument of the ``LLVM_DEBUG`` macro, and it is only
-executed if '``opt``' (or any other tool) is run with the '``-debug``' command
-line argument:
+The ``llvm/Support/DebugLog.h`` file provides a macro named ``LDBG`` that is a
+more convenient way to add debug output to your code. It is a macro that
+provides a raw_ostream that is used to write the debug output.
 
 .. code-block:: c++
 
-  LLVM_DEBUG(dbgs() << "I am here!\n");
+  LDBG() << "I am here!";
 
-Then you can run your pass like this:
+It'll only print the output if the debug output is enabled.
+It also supports a `level` argument to control the verbosity of the output.
+
+.. code-block:: c++
+
+  LDBG(2) << "I am here!";
+
+A ``DEBUG_TYPE`` macro should be defined in the file before using ``LDBG()``.
+The file name and line number are automatically added to the output, as well as
+a terminating newline.
+
+The debug output can be enabled by passing the ``-debug`` command line argument.
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  I am here!
+  [my-pass:2] MyPass.cpp:123 I am here!
 
-Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command-line option for the debug output for your
-pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
-do not cause a performance impact at all (for the same reason, they should also
-not contain side-effects!).
+While `LDBG()` is useful to add debug output to your code, there are cases
+where you may need to guard a block of code with a debug check. The
+``llvm/Support/Debug.h`` (`doxygen
+<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
+``LLVM_DEBUG()`` that offers a solution to this problem.  You can put arbitrary
+code into the argument of the ``LLVM_DEBUG`` macro, and it is only executed if
+'``opt``' (or any other tool) is run with the '``-debug``' command
+line argument.
 
-One additional nice thing about the ``LLVM_DEBUG()`` macro is that you can enable or
-disable it directly in gdb.  Just use "``set DebugFlag=0``" or "``set
-DebugFlag=1``" from the gdb if the program is running.  If the program hasn't
-been started yet, you can always just run it with ``-debug``.
+.. code-block:: c++
+
+  LLVM_DEBUG({
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
+
+
+Using these macros instead of a home-brewed solution allows you to not have to
+create "yet another" command-line option for the debug output for your pass.
+Note that ``LDBG()`` and ``LLVM_DEBUG()`` macros are disabled for non-asserts
+builds, so they do not cause a performance impact at all (for the same reason,
+they should also not contain side-effects!).
+
+One additional nice thing about the ``LDBG()`` and ``LLVM_DEBUG()`` macros is
+that you can enable or disable it directly in gdb.  Just use
+"``set DebugFlag=0``" or "``set DebugFlag=1``" from the gdb if the program is
+running.  If the program hasn't been started yet, you can always just run it
+with ``-debug``.
 
 .. _DEBUG_TYPE:
 
@@ -1199,52 +1228,74 @@ follows:
 .. code-block:: c++
 
   #define DEBUG_TYPE "foo"
-  LLVM_DEBUG(dbgs() << "'foo' debug type\n");
-  #undef  DEBUG_TYPE
-  #define DEBUG_TYPE "bar"
-  LLVM_DEBUG(dbgs() << "'bar' debug type\n");
-  #undef  DEBUG_TYPE
+  LDBG(2) << "Hello,";
+  // DEBUG_TYPE can be overridden locally, here with "bar"
+  LDBG("bar", 3) << "'bar' debug type";
 
-Then you can run your pass like this:
+
+A more fine-grained control can be achieved by passing the ``-debug-only``
+command line argument:
 
 .. code-block:: none
 
-  $ opt < a.bc > /dev/null -mypass
-  <no output>
-  $ opt < a.bc > /dev/null -mypass -debug
-  'foo' debug type
-  'bar' debug type
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  'foo' debug type
-  $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  'bar' debug type
+  [foo:2] MyPass.cpp:123 Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  'foo' debug type
-  'bar' debug type
+  [foo:2] MyPass.cpp:123 Hello,
+  [bar:3] MyPass.cpp:124 World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar
+  [bar:3] MyPass.cpp:124 World!
 
-Of course, in practice, you should only set ``DEBUG_TYPE`` at the top of a file,
-to specify the debug type for the entire module. Be careful that you only do
-this after including ``Debug.h`` and not around any #include of headers. Also, you
-should use names more meaningful than "foo" and "bar", because there is no
-system in place to ensure that names do not conflict. If two different modules
-use the same string, they will all be turned on when the name is specified.
+The debug-only argument is a comma separated list of debug types and levels.
+The level is an optional integer setting the maximum debug level to enable:
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
+  [foo:2] MyPass.cpp:123 Hello,
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
+  [bar:3] MyPass.cpp:124 World!
+
+Instead of opting in specific debug types, the ``-debug-only`` option also
+works to filter out debug output for specific debug types, by omitting the
+level (or setting it to 0):
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:
+  [bar:3] MyPass.cpp:124 World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
+
+
+In practice, you should only set ``DEBUG_TYPE`` at the top of a file, to
+specify the debug type for the entire module. Be careful that you only do
+this after you're done including headers (in particular ``Debug.h``/``DebugLog.h``).
+Also, you should use names more meaningful than "foo" and "bar", because there
+is no system in place to ensure that names do not conflict. If two different
+modules use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
 files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
-For performance reasons, -debug-only is not available in optimized build
-(``--enable-optimized``) of LLVM.
+For performance reasons, -debug-only is not available in non-asserts build
+of LLVM.
 
-The ``DEBUG_WITH_TYPE`` macro is also available for situations where you would
-like to set ``DEBUG_TYPE``, but only for one specific ``DEBUG`` statement.  It
-takes an additional first parameter, which is the type to use.  For example, the
-preceding example could be written as:
+The ``DEBUG_WITH_TYPE`` macro is an alternative to the ``LLVM_DEBUG()`` macro
+for situations where you would like to set ``DEBUG_TYPE``, but only for one
+specific ``LLVM_DEBUG`` statement.  It takes an additional first parameter,
+which is the type to use. The example from the previous section could be
+written as:
 
 .. code-block:: c++
 
-  DEBUG_WITH_TYPE("foo", dbgs() << "'foo' debug type\n");
-  DEBUG_WITH_TYPE("bar", dbgs() << "'bar' debug type\n");
+  DEBUG_WITH_TYPE("special-type", {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG("special-type") << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
 
 .. _Statistic:
 
@@ -1351,7 +1402,7 @@ The ``llvm/Support/DebugCounter.h`` (`doxygen
 provides a class named ``DebugCounter`` that can be used to create
 command-line counter options that control execution of parts of your code.
 
-Define your DebugCounter like this:
+Define your ``DebugCounter`` like this:
 
 .. code-block:: c++
 
@@ -1677,7 +1728,7 @@ page and one extra indirection when accessing elements with their positional
 index.
 
 In order to minimise the memory footprint of this container, it's important to
-balance the PageSize so that it's not too small (otherwise the overhead of the
+balance the ``PageSize`` so that it's not too small (otherwise the overhead of the
 pointer per page might become too high) and not too big (otherwise the memory
 is wasted if the page is not fully used).
 
@@ -2203,17 +2254,17 @@ inserting elements into both a set-like container and the sequential container,
 using the set-like container for uniquing and the sequential container for
 iteration.
 
-The difference between SetVector and other sets is that the order of iteration
-is guaranteed to match the order of insertion into the SetVector.  This property
+The difference between ``SetVector`` and other sets is that the order of iteration
+is guaranteed to match the order of insertion into the ``SetVector``.  This property
 is really important for things like sets of pointers.  Because pointer values
 are non-deterministic (e.g. vary across runs of the program on different
 machines), iterating over the pointers in the set will not be in a well-defined
 order.
 
-The drawback of SetVector is that it requires twice as much space as a normal
+The drawback of ``SetVector`` is that it requires twice as much space as a normal
 set and has the sum of constant factors from the set-like container and the
 sequential container that it uses.  Use it **only** if you need to iterate over
-the elements in a deterministic order.  SetVector is also expensive to delete
+the elements in a deterministic order.  ``SetVector`` is also expensive to delete
 elements out of (linear time), unless you use its "pop_back" method, which is
 faster.
 
@@ -2369,22 +2420,22 @@ llvm/IR/ValueMap.h
 
 ValueMap is a wrapper around a :ref:`DenseMap <dss_densemap>` mapping
 ``Value*``\ s (or subclasses) to another type.  When a Value is deleted or
-RAUW'ed, ValueMap will update itself so the new version of the key is mapped to
+RAUW'ed, ``ValueMap`` will update itself so the new version of the key is mapped to
 the same value, just as if the key were a WeakVH.  You can configure exactly how
 this happens, and what else happens on these two events, by passing a ``Config``
-parameter to the ValueMap template.
+parameter to the ``ValueMap`` template.
 
 .. _dss_intervalmap:
 
 llvm/ADT/IntervalMap.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
-IntervalMap is a compact map for small keys and values.  It maps key intervals
+``IntervalMap`` is a compact map for small keys and values.  It maps key intervals
 instead of single keys, and it will automatically coalesce adjacent intervals.
 When the map only contains a few intervals, they are stored in the map object
 itself to avoid allocations.
 
-The IntervalMap iterators are quite big, so they should not be passed around as
+The ``IntervalMap`` iterators are quite big, so they should not be passed around as
 STL iterators.  The heavyweight iterators allow a smaller data structure.
 
 .. _dss_intervaltree:
@@ -2396,7 +2447,7 @@ llvm/ADT/IntervalTree.h
 allows finding all intervals that overlap with any given point. At this time,
 it does not support any deletion or rebalancing operations.
 
-The IntervalTree is designed to be set up once, and then queried without any
+The ``IntervalTree`` is designed to be set up once, and then queried without any
 further additions.
 
 .. _dss_map:
@@ -2435,10 +2486,10 @@ necessary to remove elements, it's best to remove them in bulk using
 llvm/ADT/IntEqClasses.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-IntEqClasses provides a compact representation of equivalence classes of small
+``IntEqClasses`` provides a compact representation of equivalence classes of small
 integers.  Initially, each integer in the range 0..n-1 has its own equivalence
 class.  Classes can be joined by passing two class representatives to the
-join(a, b) method.  Two integers are in the same class when findLeader() returns
+``join(a, b)`` method.  Two integers are in the same class when ``findLeader()`` returns
 the same representative.
 
 Once all equivalence classes are formed, the map can be compressed so each
@@ -2451,11 +2502,11 @@ it can be edited again.
 llvm/ADT/ImmutableMap.h
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-ImmutableMap is an immutable (functional) map implementation based on an AVL
+``ImmutableMap`` is an immutable (functional) map implementation based on an AVL
 tree.  Adding or removing elements is done through a Factory object and results
-in the creation of a new ImmutableMap object.  If an ImmutableMap already exists
+in the creation of a new ``ImmutableMap`` object.  If an ``ImmutableMap`` already exists
 with the given key set, then the existing one is returned; equality is compared
-with a FoldingSetNodeID.  The time and space complexity of add or remove
+with a ``FoldingSetNodeID``.  The time and space complexity of add or remove
 operations is logarithmic in the size of the original map.
 
 .. _dss_othermap:
@@ -2490,11 +2541,11 @@ somehow.  In any case, please don't use it.
 BitVector
 ^^^^^^^^^
 
-The BitVector container provides a dynamic size set of bits for manipulation.
+The ``BitVector`` container provides a dynamic size set of bits for manipulation.
 It supports individual bit setting/testing, as well as set operations.  The set
 operations take time O(size of bitvector), but operations are performed one word
-at a time, instead of one bit at a time.  This makes the BitVector very fast for
-set operations compared to other containers.  Use the BitVector when you expect
+at a time, instead of one bit at a time.  This makes the ``BitVector`` very fast for
+set operations compared to other containers.  Use the ``BitVector`` when you expect
 the number of set bits to be high (i.e. a dense set).
 
 .. _dss_smallbitvector:
@@ -2516,29 +2567,29 @@ its operator[] does not provide an assignable lvalue.
 SparseBitVector
 ^^^^^^^^^^^^^^^
 
-The SparseBitVector container is much like BitVector, with one major difference:
-Only the bits that are set, are stored.  This makes the SparseBitVector much
-more space efficient than BitVector when the set is sparse, as well as making
+The ``SparseBitVector`` container is much like ``BitVector``, with one major difference:
+Only the bits that are set, are stored.  This makes the ``SparseBitVector`` much
+more space efficient than ``BitVector`` when the set is sparse, as well as making
 set operations O(number of set bits) instead of O(size of universe).  The
-downside to the SparseBitVector is that setting and testing of random bits is
-O(N), and on large SparseBitVectors, this can be slower than BitVector.  In our
+downside to the ``SparseBitVector`` is that setting and testing of random bits is
+O(N), and on large ``SparseBitVectors``, this can be slower than ``BitVector``.  In our
 implementation, setting or testing bits in sorted order (either forwards or
 reverse) is O(1) worst case.  Testing and setting bits within 128 bits (depends
 on size) of the current bit is also O(1).  As a general statement,
-testing/setting bits in a SparseBitVector is O(distance away from last set bit).
+testing/setting bits in a ``SparseBitVector`` is O(distance away from last set bit).
 
 .. _dss_coalescingbitvector:
 
 CoalescingBitVector
 ^^^^^^^^^^^^^^^^^^^
 
-The CoalescingBitVector container is similar in principle to a SparseBitVector,
+The ``CoalescingBitVector`` container is similar in principle to a ``SparseBitVector``,
 but is optimized to represent large contiguous ranges of set bits compactly. It
 does this by coalescing contiguous ranges of set bits into intervals. Searching
-for a bit in a CoalescingBitVector is O(log(gaps between contiguous ranges)).
+for a bit in a ``CoalescingBitVector`` is O(log(gaps between contiguous ranges)).
 
-CoalescingBitVector is a better choice than BitVector when gaps between ranges
-of set bits are large. It's a better choice than SparseBitVector when find()
+``CoalescingBitVector`` is a better choice than ``BitVector`` when gaps between ranges
+of set bits are large. It's a better choice than ``SparseBitVector`` when find()
 operations must have fast, predictable performance. However, it's not a good
 choice for representing sets which have lots of very short ranges. E.g. the set
 `{2*x : x \in [0, n)}` would be a pathological input.
@@ -2773,7 +2824,7 @@ Turning an iterator into a class pointer (and vice-versa)
 
 Sometimes, it'll be useful to grab a reference (or pointer) to a class instance
 when all you've got at hand is an iterator.  Well, extracting a reference or a
-pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
+pointer from an iterator is very straightforward.  Assuming that ``i`` is a
 ``BasicBlock::iterator`` and ``j`` is a ``BasicBlock::const_iterator``:
 
 .. code-block:: c++
@@ -2805,7 +2856,7 @@ Say that you're writing a FunctionPass and would like to count all the locations
 in the entire module (that is, across every ``Function``) where a certain
 function (i.e., some ``Function *``) is already in scope.  As you'll learn
 later, you may want to use an ``InstVisitor`` to accomplish this in a much more
-straight-forward manner, but this example will allow us to explore how you'd do
+straightforward manner, but this example will allow us to explore how you'd do
 it if you didn't have ``InstVisitor`` around.  In pseudo-code, this is what we
 want to do:
 
@@ -2932,7 +2983,7 @@ Creating and inserting new ``Instruction``\ s
 
 *Instantiating Instructions*
 
-Creation of ``Instruction``\ s is straight-forward: simply call the constructor
+Creation of ``Instruction``\ s is straightforward: simply call the constructor
 for the kind of instruction to instantiate and provide the necessary parameters.
 For example, an ``AllocaInst`` only *requires* a (const-ptr-to) ``Type``.  Thus:
 
@@ -3050,7 +3101,7 @@ Deleting Instructions
 ^^^^^^^^^^^^^^^^^^^^^
 
 Deleting an instruction from an existing sequence of instructions that form a
-BasicBlock_ is very straight-forward: just call the instruction's
+``BasicBlock`` is very straightforward: just call the instruction's
 ``eraseFromParent()`` method.  For example:
 
 .. code-block:: c++
@@ -3850,16 +3901,16 @@ Important Subclasses of Constant
   any width.
 
   * ``const APInt& getValue() const``: Returns the underlying
-    value of this constant, an APInt value.
+    value of this constant, an ``APInt`` value.
 
   * ``int64_t getSExtValue() const``: Converts the underlying APInt value to an
-    int64_t via sign extension.  If the value (not the bit width) of the APInt
-    is too large to fit in an int64_t, an assertion will result.  For this
+    ``int64_t`` via sign extension.  If the value (not the bit width) of the APInt
+    is too large to fit in an ``int64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
 
-  * ``uint64_t getZExtValue() const``: Converts the underlying APInt value
-    to a uint64_t via zero extension.  IF the value (not the bit width) of the
-    APInt is too large to fit in a uint64_t, an assertion will result.  For this
+  * ``uint64_t getZExtValue() const``: Converts the underlying ``APInt`` value
+    to a ``uint64_t`` via zero extension.  If the value (not the bit width) of the
+    APInt is too large to fit in a ``uint64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
 
   * ``static ConstantInt* get(const APInt& Val)``: Returns the ConstantInt
@@ -4148,7 +4199,7 @@ Important Public Members of the ``BasicBlock`` class
   new block, and a :ref:`Function <c_Function>` to insert it into.  If the
   ``Parent`` parameter is specified, the new ``BasicBlock`` is automatically
   inserted at the end of the specified :ref:`Function <c_Function>`, if not
-  specified, the BasicBlock must be manually inserted into the :ref:`Function
+  specified, the ``BasicBlock`` must be manually inserted into the :ref:`Function
   <c_Function>`.
 
 * | ``BasicBlock::iterator`` - Typedef for instruction list iterator

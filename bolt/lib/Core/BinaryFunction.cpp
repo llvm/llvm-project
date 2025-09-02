@@ -1915,13 +1915,9 @@ void BinaryFunction::postProcessEntryPoints() {
       continue;
 
     // If we have grabbed a wrong code label which actually points to some
-    // constant island inside the function, ignore this label and remove it
-    // from the secondary entry point map.
-    if (isStartOfConstantIsland(Offset)) {
-      BC.SymbolToFunctionMap.erase(Label);
-      removeSymbolFromSecondaryEntryPointMap(Label);
+    // constant island inside the function, ignore this label.
+    if (isStartOfConstantIsland(Offset))
       continue;
-    }
 
     BC.errs() << "BOLT-WARNING: reference in the middle of instruction "
                  "detected in function "
@@ -1963,7 +1959,9 @@ void BinaryFunction::postProcessJumpTables() {
             return EntryAddress == Parent->getAddress() + Parent->getSize();
           });
       if (IsBuiltinUnreachable) {
-        MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
+        BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
+        MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
+                                   : getOrCreateLocalLabel(EntryAddress, true);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -3775,6 +3773,8 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   assert(Offset && "cannot add primary entry point");
 
   const uint64_t EntryPointAddress = getAddress() + Offset;
+  assert(!isInConstantIsland(EntryPointAddress) &&
+         "cannot add entry point that points to constant data");
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);

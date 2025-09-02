@@ -42,21 +42,41 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
-cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
-  mlir::Type resultType = convertType(fi.getReturnType());
-  SmallVector<mlir::Type, 8> argTypes;
-  argTypes.reserve(fi.getNumRequiredArgs());
+cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
+  const CIRGenFunctionInfo &fi = arrangeGlobalDeclaration(gd);
+  return getFunctionType(fi);
+}
 
-  for (const CanQualType &argType : fi.requiredArguments())
+cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
+  mlir::Type resultType = convertType(info.getReturnType());
+  SmallVector<mlir::Type, 8> argTypes;
+  argTypes.reserve(info.getNumRequiredArgs());
+
+  for (const CanQualType &argType : info.requiredArguments())
     argTypes.push_back(convertType(argType));
 
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
-                            fi.isVariadic());
+                            info.isVariadic());
+}
+
+cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
+
+  if (!isFuncTypeConvertible(fpt))
+    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
+
+  return getFunctionType(gd);
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
-  assert(!cir::MissingFeatures::opCallVirtual());
+  if (isVirtual()) {
+    const CallExpr *ce = getVirtualCallExpr();
+    return cgf.cgm.getCXXABI().getVirtualFunctionPointer(
+        cgf, getVirtualMethodDecl(), getThisAddress(), getVirtualFunctionType(),
+        ce ? ce->getBeginLoc() : SourceLocation());
+  }
   return *this;
 }
 
@@ -203,9 +223,9 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
 /// when calling a method pointer.
 CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
                                         const CXXMethodDecl *md) {
-  QualType recTy;
+  CanQualType recTy;
   if (rd) {
-    recTy = getASTContext().getTagDeclType(rd)->getCanonicalTypeInternal();
+    recTy = getASTContext().getCanonicalTagType(rd);
   } else {
     // This can happen with the MS ABI. It shouldn't need anything more than
     // setting recTy to VoidTy here, but we're flagging it for now because we
@@ -215,9 +235,9 @@ CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
   }
 
   if (md)
-    recTy = getASTContext().getAddrSpaceQualType(
-        recTy, md->getMethodQualifiers().getAddressSpace());
-  return getASTContext().getPointerType(CanQualType::CreateUnsafe(recTy));
+    recTy = CanQualType::CreateUnsafe(getASTContext().getAddrSpaceQualType(
+        recTy, md->getMethodQualifiers().getAddressSpace()));
+  return getASTContext().getPointerType(recTy);
 }
 
 /// Arrange the CIR function layout for a value of the given function type, on
@@ -267,7 +287,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   assert(!cir::MissingFeatures::thunks());
   if (type->isRecordType() &&
-      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     cgm.errorNYI(param->getSourceRange(),
                  "emitDelegateCallArg: callee-destructed param");
@@ -668,7 +688,7 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
   if (argType->isRecordType() &&
-      argType->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
+      argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
     cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
   }

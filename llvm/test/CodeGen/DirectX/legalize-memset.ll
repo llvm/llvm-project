@@ -5,18 +5,14 @@ define void @replace_float_memset_test() #0 {
 ; CHECK-LABEL: define void @replace_float_memset_test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x float], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x float], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [2 x float], ptr [[ACCUM_I_FLAT]], i32 0, i32 1
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %accum.i.flat)
   call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(8) %accum.i.flat, i8 0, i32 8, i1 false)
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %accum.i.flat)
   ret void
 }
 
@@ -24,18 +20,14 @@ define void @replace_half_memset_test() #0 {
 ; CHECK-LABEL: define void @replace_half_memset_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x half], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x half], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
 ; CHECK-NEXT:    store half 0xH0000, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [2 x half], ptr [[ACCUM_I_FLAT]], i32 0, i32 1
 ; CHECK-NEXT:    store half 0xH0000, ptr [[GEP1]], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x half], align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %accum.i.flat)
   call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(8) %accum.i.flat, i8 0, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %accum.i.flat)
   ret void
 }
 
@@ -43,18 +35,14 @@ define void @replace_double_memset_test() #0 {
 ; CHECK-LABEL: define void @replace_double_memset_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x double], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x double], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [2 x double], ptr [[ACCUM_I_FLAT]], i32 0, i32 1
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP1]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x double], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %accum.i.flat)
   call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(8) %accum.i.flat, i8 0, i32 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %accum.i.flat)
   ret void
 }
 
@@ -62,18 +50,14 @@ define void @replace_int16_memset_test() #0 {
 ; CHECK-LABEL: define void @replace_int16_memset_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CACHE_I:%.*]] = alloca [2 x i16], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[CACHE_I]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i16], ptr [[CACHE_I]], i32 0, i32 0
 ; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [2 x i16], ptr [[CACHE_I]], i32 0, i32 1
 ; CHECK-NEXT:    store i16 0, ptr [[GEP1]], align 2
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[CACHE_I]])
 ; CHECK-NEXT:    ret void
 ;
   %cache.i = alloca [2 x i16], align 2
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %cache.i)
   call void @llvm.memset.p0.i32(ptr nonnull align 2 dereferenceable(4) %cache.i, i8 0, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %cache.i)
   ret void
 }
 
@@ -81,16 +65,12 @@ define void @replace_int_memset_test() #0 {
 ; CHECK-LABEL: define void @replace_int_memset_test(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [1 x i32], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %accum.i.flat)
   call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(8) %accum.i.flat, i8 0, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %accum.i.flat)
   ret void
 }
 
@@ -101,25 +81,19 @@ define void @replace_int_memset_to_var_test() #0 {
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 1, ptr [[I]], align 4
 ; CHECK-NEXT:    [[I8_LOAD:%.*]] = load i32, ptr [[I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [1 x i32], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 [[I8_LOAD]], ptr [[GEP]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
   %i = alloca i8, align 4
   store i8 1, ptr %i
   %i8.load = load i8, ptr %i
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %accum.i.flat)
   call void @llvm.memset.p0.i32(ptr nonnull align 4 dereferenceable(8) %accum.i.flat, i8 %i8.load, i32 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %accum.i.flat)
   ret void
 }
 
 attributes #0 = {"hlsl.export"}
 
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none))
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none))
 declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)

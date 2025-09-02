@@ -496,6 +496,8 @@ def EXTW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let hasSideEffects = 1;
 }
 
+def : Pat<(atomic_fence timm, timm), (MEMW)>;
+
 //===----------------------------------------------------------------------===//
 // Illegal instructions
 //===----------------------------------------------------------------------===//
@@ -1496,6 +1498,46 @@ def RFI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
   let r = 0x3;
   let s = imm{3-0};
   let t = 0x1;
+}
+
+//===----------------------------------------------------------------------===//
+// S32C1I
+//===----------------------------------------------------------------------===//
+
+let mayStore = 1, mayLoad = 1, Predicates = [HasS32C1I] in {
+  def S32C1I : RRI8_Inst<0x02, (outs AR:$a), (ins AR:$t, mem32:$addr),
+                        "s32c1i\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x0e;
+    let Uses = [SCOMPARE1];
+    let Constraints = "$a = $t";
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic patterns
+//===----------------------------------------------------------------------===//
+
+// Atomic load/store are available under both +s32c1i and +force-atomics.
+// Fences will be inserted for atomic load/stores according to the logic in
+// XtensaTargetLowering.
+let Predicates = [HasAtomicLdSt] in {
+  def : Pat<(i32 (atomic_load_8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+  def : Pat<(i32 (atomic_load_16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+  def : Pat<(i32 (atomic_load_32 addr_ish4:$addr)), (L32I addr_ish4:$addr)>;
+
+  def : Pat<(atomic_store_8  AR:$t, addr_ish1:$addr), (S8I AR:$t, addr_ish1:$addr)>;
+  def : Pat<(atomic_store_16 AR:$t, addr_ish2:$addr), (S16I AR:$t, addr_ish2:$addr)>;
+  def : Pat<(atomic_store_32 AR:$t, addr_ish4:$addr), (S32I AR:$t, addr_ish4:$addr)>;
+}
+
+let usesCustomInserter = 1, Predicates = [HasS32C1I] in {
+  def ATOMIC_CMP_SWAP_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                   "!atomic_cmp_swap_32_p, $dst, $ptr, $cmp, $swap",
+                                   [(set AR:$dst, (atomic_cmp_swap_i32 AR:$ptr, AR:$cmp, AR:$swap))]>;
 }
 
 //===----------------------------------------------------------------------===//

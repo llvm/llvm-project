@@ -114,11 +114,8 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
-    case 16: {
-      if (llvm::isa<Float16Type, BFloat16Type>(type))
-        return true;
-      return false;
-    }
+    case 16:
+      return llvm::isa<Float16Type, BFloat16Type>(type);
     case 32:
     case 64:
       return true;
@@ -132,6 +129,12 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
 bool mlir::emitc::isPointerWideType(Type type) {
   return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
       type);
+}
+
+bool mlir::emitc::isFundamentalType(Type type) {
+  return llvm::isa<IndexType>(type) || isPointerWideType(type) ||
+         isSupportedIntegerType(type) || isSupportedFloatType(type) ||
+         isa<emitc::PointerType>(type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -377,6 +380,52 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 //===----------------------------------------------------------------------===//
 // ExpressionOp
 //===----------------------------------------------------------------------===//
+
+ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  if (parser.parseOperandList(operands))
+    return parser.emitError(parser.getCurrentLocation()) << "expected operands";
+  if (succeeded(parser.parseOptionalKeyword("noinline")))
+    result.addAttribute(ExpressionOp::getDoNotInlineAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+  Type type;
+  if (parser.parseColonType(type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  auto fnType = llvm::dyn_cast<FunctionType>(type);
+  if (!fnType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  if (parser.resolveOperands(operands, fnType.getInputs(),
+                             parser.getCurrentLocation(), result.operands))
+    return failure();
+  if (fnType.getNumResults() != 1)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected single return type");
+  result.addTypes(fnType.getResults());
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::Argument> argsInfo;
+  for (auto [unresolvedOperand, operandType] :
+       llvm::zip(operands, fnType.getInputs())) {
+    OpAsmParser::Argument argInfo;
+    argInfo.ssaName = unresolvedOperand;
+    argInfo.type = operandType;
+    argsInfo.push_back(argInfo);
+  }
+  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+    return failure();
+  return success();
+}
+
+void emitc::ExpressionOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printOperands(getDefs());
+  p << " : ";
+  p.printFunctionalType(getOperation());
+  p.shadowRegionArgs(getRegion(), getDefs());
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
 
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
@@ -1398,6 +1447,46 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 //===----------------------------------------------------------------------===//
 // FieldOp
 //===----------------------------------------------------------------------===//
+
+static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
+                                                 TypeAttr type,
+                                                 Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForField(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCFieldOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                     Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForField(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
 LogicalResult FieldOp::verify() {
   if (!isSupportedEmitCType(getType()))
     return emitOpError("expected valid emitc type");
@@ -1410,15 +1499,21 @@ LogicalResult FieldOp::verify() {
   if (!symName || symName.getValue().empty())
     return emitOpError("field must have a non-empty symbol name");
 
-  if (!getAttrs())
-    return success();
-
   return success();
 }
 
 //===----------------------------------------------------------------------===//
 // GetFieldOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult GetFieldOp::verify() {
+  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
+  if (!parentClassOp.getOperation())
+    return emitOpError(" must be nested within an emitc.class operation");
+
+  return success();
+}
+
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();
   FieldOp fieldOp =

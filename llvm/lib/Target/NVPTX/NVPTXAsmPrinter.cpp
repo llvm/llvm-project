@@ -436,9 +436,13 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
 
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
+    const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
     if (!ClusterDim.empty()) {
-      O << ".explicitcluster\n";
+
+      if (!BlocksAreClusters)
+        O << ".explicitcluster\n";
+
       if (ClusterDim[0] != 0) {
         assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
@@ -452,6 +456,21 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
                "should be 0 as well");
       }
     }
+
+    if (BlocksAreClusters) {
+      LLVMContext &Ctx = F.getContext();
+      if (ReqNTID.empty() || ClusterDim.empty())
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires reqntid and cluster_dim attributes",
+            F.getSubprogram()));
+      else if (STI->getPTXVersion() < 90)
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires PTX version >= 9.0",
+            F.getSubprogram()));
+      else
+        O << ".blocksareclusters\n";
+    }
+
     if (const auto Maxclusterrank = getMaxClusterRank(F))
       O << ".maxclusterrank " << *Maxclusterrank << "\n";
   }
@@ -1458,7 +1477,6 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // Map the global virtual register number to a register class specific
   // virtual register number starting from 1 with that class.
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  //unsigned numRegClasses = TRI->getNumRegClasses();
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1479,13 +1497,12 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // global virtual
   // register number and the per class virtual register number.
   // We use the per class virtual register number in the ptx output.
-  unsigned int numVRs = MRI->getNumVirtRegs();
-  for (unsigned i = 0; i < numVRs; i++) {
-    Register vr = Register::index2VirtReg(i);
-    const TargetRegisterClass *RC = MRI->getRegClass(vr);
-    DenseMap<unsigned, unsigned> &regmap = VRegMapping[RC];
-    int n = regmap.size();
-    regmap.insert(std::make_pair(vr, n + 1));
+  for (unsigned I : llvm::seq(MRI->getNumVirtRegs())) {
+    Register VR = Register::index2VirtReg(I);
+    if (MRI->use_empty(VR) && MRI->def_empty(VR))
+      continue;
+    auto &RCRegMap = VRegMapping[MRI->getRegClass(VR)];
+    RCRegMap[VR] = RCRegMap.size() + 1;
   }
 
   // Emit declaration of the virtual registers or 'physical' registers for

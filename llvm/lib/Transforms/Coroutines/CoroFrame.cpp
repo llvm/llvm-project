@@ -700,9 +700,6 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
 
-  assert(Shape.getPromiseAlloca() &&
-         "Coroutine with switch ABI should own Promise alloca");
-
   DIFile *DFile = DIS->getFile();
   unsigned LineNum = DIS->getLine();
 
@@ -1821,7 +1818,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       // only used outside the region.
       if (Valid && Lifetimes.size() != 0) {
         auto *NewLifetime = Lifetimes[0]->clone();
-        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), AI);
+        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(0), AI);
         NewLifetime->insertBefore(DomBB->getTerminator()->getIterator());
 
         // All the outsided lifetime.start markers are no longer necessary.

@@ -52,6 +52,8 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
                "Test conversion patterns of only the specified dialects">,
     Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
   ];
 }
 
@@ -968,7 +970,10 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
   }];
 
   let dependentDialects = [
-    "NVVM::NVVMDialect",
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "NVVM::NVVMDialect"
   ];
 }
 
@@ -1532,12 +1537,37 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorToAMX
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
+  let summary = "Lower the operations from the vector dialect into the AMX "
+                "dialect";
+  let dependentDialects = [
+    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // XeVMToLLVM
 //===----------------------------------------------------------------------===//
 
 def ConvertXeVMToLLVMPass : Pass<"convert-xevm-to-llvm"> {
   let summary = "Convert XeVM to LLVM dialect";
   let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPUToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
+  let summary = "Convert XeGPU to XeVM dialect";
+  let dependentDialects = ["xevm::XeVMDialect", "vector::VectorDialect",
+                           "memref::MemRefDialect", "arith::ArithDialect",
+                           "LLVM::LLVMDialect", "index::IndexDialect",
+                           "gpu::GPUDialect", "scf::SCFDialect"];
 }
 
 #endif // MLIR_CONVERSION_PASSES

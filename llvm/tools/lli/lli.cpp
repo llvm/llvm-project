@@ -1084,11 +1084,15 @@ int runOrcJIT(const char *ProgName) {
 
   // If this is a Mingw or Cygwin executor then we need to alias __main to
   // orc_rt_int_void_return_0.
-  if (J->getTargetTriple().isOSCygMing())
-    ExitOnErr(J->getProcessSymbolsJITDylib()->define(
+  if (J->getTargetTriple().isOSCygMing()) {
+    auto &WorkaroundJD = J->getProcessSymbolsJITDylib()
+                             ? *J->getProcessSymbolsJITDylib()
+                             : J->getMainJITDylib();
+    ExitOnErr(WorkaroundJD.define(
         orc::absoluteSymbols({{J->mangleAndIntern("__main"),
                                {orc::ExecutorAddr::fromPtr(mingw_noop_main),
                                 JITSymbolFlags::Exported}}})));
+  }
 
   // Regular modules are greedy: They materialize as a whole and trigger
   // materialization for all required symbols recursively. Lazy modules go
