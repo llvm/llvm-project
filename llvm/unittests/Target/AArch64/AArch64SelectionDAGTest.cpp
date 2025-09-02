@@ -172,6 +172,9 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
   auto VecA = DAG->getConstant(0xaa, Loc, VecVT);
   auto Op2 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, VecA, Shift);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op2), 5u);
+  // VASHR can't create undef/poison - FREEZE(VASHR(C1,C2)) -> VASHR(C1,C2).
+  auto Fr2 = DAG->getFreeze(Op2);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Fr2), 5u);
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
