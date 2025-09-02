@@ -936,3 +936,135 @@ define i64 @mulu_w01(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.mulu.w01.i64(i64 %a, i64 %b)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psh1add.h.i64(i64, i64)
+
+define i64 @psh1add_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psh1add_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psh1add.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psh1add.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psh1add.w.i64(i64, i64)
+
+define i64 @psh1add_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psh1add_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psh1add.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psh1add.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pssh1sadd.h.i64(i64, i64)
+
+define i64 @pssh1sadd_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pssh1sadd_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pssh1sadd.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pssh1sadd.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pssh1sadd.w.i64(i64, i64)
+
+define i64 @pssh1sadd_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pssh1sadd_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pssh1sadd.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pssh1sadd.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.unzip8p.i64(i64, i64)
+
+define i64 @unzip8p(i64 %a, i64 %b) {
+; RV64P-LABEL: unzip8p:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    unzip8p a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.unzip8p.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.unzip16p.i64(i64, i64)
+
+define i64 @unzip16p(i64 %a, i64 %b) {
+; RV64P-LABEL: unzip16p:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    unzip16p a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.unzip16p.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.unzip8hp.i64(i64, i64)
+
+define i64 @unzip8hp(i64 %a, i64 %b) {
+; RV64P-LABEL: unzip8hp:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    unzip8hp a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.unzip8hp.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.unzip16hp.i64(i64, i64)
+
+define i64 @unzip16hp(i64 %a, i64 %b) {
+; RV64P-LABEL: unzip16hp:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    unzip16hp a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.unzip16hp.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.zip8p.i64(i64, i64)
+
+define i64 @zip8p(i64 %a, i64 %b) {
+; RV64P-LABEL: zip8p:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    zip8p a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.zip8p.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.zip16p.i64(i64, i64)
+
+define i64 @zip16p(i64 %a, i64 %b) {
+; RV64P-LABEL: zip16p:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    zip16p a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.zip16p.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.zip8hp.i64(i64, i64)
+
+define i64 @zip8hp(i64 %a, i64 %b) {
+; RV64P-LABEL: zip8hp:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    zip8hp a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.zip8hp.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.zip16hp.i64(i64, i64)
+
+define i64 @zip16hp(i64 %a, i64 %b) {
+; RV64P-LABEL: zip16hp:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    zip16hp a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.zip16hp.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}

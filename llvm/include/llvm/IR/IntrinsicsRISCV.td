@@ -1983,6 +1983,19 @@ let TargetPrefix = "riscv" in {
   defm mul_w01     : RVPBinaryIntrinsics;
   defm mulu_h01    : RVPBinaryIntrinsics;
   defm mulu_w01    : RVPBinaryIntrinsics;
+  defm psh1add_h   : RVPBinaryIntrinsics;
+  defm psh1add_w   : RVPBinaryIntrinsics;
+  defm ssh1sadd    : RVPBinaryIntrinsics;
+  defm pssh1sadd_h : RVPBinaryIntrinsics;
+  defm pssh1sadd_w : RVPBinaryIntrinsics;
+  defm unzip8p     : RVPBinaryIntrinsics;
+  defm unzip16p    : RVPBinaryIntrinsics;
+  defm unzip8hp    : RVPBinaryIntrinsics;
+  defm unzip16hp   : RVPBinaryIntrinsics;
+  defm zip8p       : RVPBinaryIntrinsics;
+  defm zip16p      : RVPBinaryIntrinsics;
+  defm zip8hp      : RVPBinaryIntrinsics;
+  defm zip16hp     : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],

@@ -946,6 +946,8 @@ def : PatGprGpr<int_riscv_pdifu_h,     PDIFU_H>;
 def : PatGprGpr<int_riscv_slx,         SLX>;
 def : PatGprGpr<int_riscv_pmul_h_b01,  PMUL_H_B01>;
 def : PatGprGpr<int_riscv_pmulu_h_b01, PMULU_H_B01>;
+def : PatGprGpr<int_riscv_psh1add_h,   PSH1ADD_H>;
+def : PatGprGpr<int_riscv_pssh1sadd_h, PSSH1SADD_H>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -965,6 +967,7 @@ def : PatGprGpr<int_riscv_ssubu,    SSUBU>;
 def : PatGprGpr<int_riscv_asubu,    ASUBU>;
 def : PatGprGpr<int_riscv_mul_h01,  MUL_H01>;
 def : PatGprGpr<int_riscv_mulu_h01, MULU_H01>;
+def : PatGprGpr<int_riscv_ssh1sadd, SSH1SADD>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -1002,4 +1005,14 @@ def : PatGprGpr<int_riscv_pmul_w_h01,  PMUL_W_H01>;
 def : PatGprGpr<int_riscv_pmulu_w_h01, PMULU_W_H01>;
 def : PatGprGpr<int_riscv_mul_w01,     MUL_W01>;
 def : PatGprGpr<int_riscv_mulu_w01,    MULU_W01>;
+def : PatGprGpr<int_riscv_psh1add_w,   PSH1ADD_W>;
+def : PatGprGpr<int_riscv_pssh1sadd_w, PSSH1SADD_W>;
+def : PatGprGpr<int_riscv_unzip8p,     UNZIP8P>;
+def : PatGprGpr<int_riscv_unzip16p,    UNZIP16P>;
+def : PatGprGpr<int_riscv_unzip8hp,    UNZIP8HP>;
+def : PatGprGpr<int_riscv_unzip16hp,   UNZIP16HP>;
+def : PatGprGpr<int_riscv_zip8p,       ZIP8P>;
+def : PatGprGpr<int_riscv_zip16p,      ZIP16P>;
+def : PatGprGpr<int_riscv_zip8hp,      ZIP8HP>;
+def : PatGprGpr<int_riscv_zip16hp,     ZIP16HP>;
 } // Predicates = [HasStdExtP, IsRV64]

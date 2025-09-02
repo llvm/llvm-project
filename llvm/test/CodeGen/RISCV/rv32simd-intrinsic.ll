@@ -739,3 +739,35 @@ define i32 @mulu_h01(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.psh1add.h.i32(i32, i32)
+
+define i32 @psh1add_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psh1add_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psh1add.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psh1add.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define i32 @ssh1sadd(i32 %a, i32 %b) {
+; RV32P-LABEL: ssh1sadd:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ssh1sadd a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.pssh1sadd.h.i32(i32, i32)
+
+define i32 @pssh1sadd_h(i32 %a, i32 %b) {
+; RV32P-LABEL: pssh1sadd_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    pssh1sadd.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.pssh1sadd.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
