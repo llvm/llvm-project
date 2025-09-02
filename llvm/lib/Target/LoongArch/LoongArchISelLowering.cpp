@@ -2814,14 +2814,11 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
         DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdx);
     SDValue SplatVec = DAG.getBitcast(VecTy, SplatValue);
 
-    // Compute the local index of the original i8/i16 element within the
-    // i32 element and then use it to broadcast the vector. Each elements
-    // of the vector will be the desired element.
-    SDValue LocalIdx = DAG.getNode(
-        ISD::AND, DL, GRLenVT, Idx,
-        DAG.getConstant(((VecTy == MVT::v32i8) ? 3 : 1), DL, GRLenVT));
+    // The original i8/i16 elements in each i32 lane all share the same i32
+    // intra-element offset, use the original Idx to broadcast the vector.
+    // Each elements of the vector will be the desired element.
     SDValue ExtractVec =
-        DAG.getNode(LoongArchISD::VREPLVE, DL, VecTy, SplatVec, LocalIdx);
+        DAG.getNode(LoongArchISD::VREPLVE, DL, VecTy, SplatVec, Idx);
 
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
                        DAG.getConstant(0, DL, GRLenVT));

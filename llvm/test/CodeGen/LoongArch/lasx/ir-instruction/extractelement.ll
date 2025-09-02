@@ -80,8 +80,7 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    srai.d $a0, $a2, 2
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    andi $a0, $a2, 3
-; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a0
+; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a2
 ; CHECK-NEXT:    xvstelm.b $xr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -97,8 +96,7 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-NEXT:    srai.d $a0, $a2, 1
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    andi $a0, $a2, 1
-; CHECK-NEXT:    xvreplve.h $xr0, $xr0, $a0
+; CHECK-NEXT:    xvreplve.h $xr0, $xr0, $a2
 ; CHECK-NEXT:    xvstelm.h $xr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
