@@ -197,6 +197,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+
+  if (F.hasFnAttribute("amdgpu-disable-tbuffer-combine"))
+    setDisableTBufferCombine(true);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
