@@ -2974,7 +2974,8 @@ bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
   return true;
 }
 
-// To prevent SelectAddrRegImm from folding offsets that conflicts with the
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
 // fusion of PseudoMovAddr, check if the offset of every use of a given address
 // is within the alignment.
 bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
