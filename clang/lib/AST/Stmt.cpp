@@ -1490,6 +1490,6 @@ const Stmt *LabelStmt::getInnermostLabeledStmt() const {
   return S;
 }
 
-Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
+const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
   return getLabelDecl()->getStmt()->getInnermostLabeledStmt();
 }
