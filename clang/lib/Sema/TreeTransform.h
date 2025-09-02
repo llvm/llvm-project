@@ -8548,13 +8548,31 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  return S;
+  if (!S->hasLabelTarget())
+    return S;
+
+  Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
+                                        S->getLabelDecl());
+  if (!LD)
+    return StmtError();
+
+  return new (SemaRef.Context)
+      ContinueStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  return S;
+  if (!S->hasLabelTarget())
+    return S;
+
+  Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
+                                        S->getLabelDecl());
+  if (!LD)
+    return StmtError();
+
+  return new (SemaRef.Context)
+      BreakStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>
@@ -10953,8 +10971,7 @@ TreeTransform<Derived>::TransformOMPMessageClause(OMPMessageClause *C) {
   if (E.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPMessageClause(
-      C->getMessageString(), C->getBeginLoc(), C->getLParenLoc(),
-      C->getEndLoc());
+      E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -12431,11 +12448,11 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
       if (OrigRecipes.RecipeDecl)
         InitRecipe = OrigRecipes.RecipeDecl;
        else
-         InitRecipe =
-             Self.getSema()
-                 .OpenACC()
-                 .CreateInitRecipe(OpenACCClauseKind::Reduction, Res.get())
-                 .first;
+         InitRecipe = Self.getSema()
+                          .OpenACC()
+                          .CreateInitRecipe(OpenACCClauseKind::Reduction,
+                                            C.getReductionOp(), Res.get())
+                          .first;
 
       Recipes.push_back({InitRecipe});
     }

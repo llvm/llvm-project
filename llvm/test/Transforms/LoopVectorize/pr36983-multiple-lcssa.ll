@@ -18,7 +18,6 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 65536
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -30,7 +29,7 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i16 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[LCSSA_1:%.*]] = phi i16 [ [[RES]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[LCSSA_1:%.*]] = phi i16 [ [[RES]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI1]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[LCSSA_2:%.*]] = phi i16 [ [[RES]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI1]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i16 [[LCSSA_2]]
 ;

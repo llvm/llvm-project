@@ -623,7 +623,7 @@ static std::error_code collectModuleHeaderIncludes(
     llvm::sys::path::native(UmbrellaDir->Entry.getName(), DirNative);
 
     llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-    SmallVector<std::pair<std::string, FileEntryRef>, 8> Headers;
+    SmallVector<std::pair<std::string, std::string>, 8> HeaderPaths;
     for (llvm::vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
@@ -631,17 +631,6 @@ static std::error_code collectModuleHeaderIncludes(
       if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
                .Cases(".h", ".H", ".hh", ".hpp", true)
                .Default(false))
-        continue;
-
-      auto Header = FileMgr.getOptionalFileRef(Dir->path());
-      // FIXME: This shouldn't happen unless there is a file system race. Is
-      // that worth diagnosing?
-      if (!Header)
-        continue;
-
-      // If this header is marked 'unavailable' in this module, don't include
-      // it.
-      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
         continue;
 
       // Compute the relative path from the directory to this file.
@@ -655,20 +644,33 @@ static std::error_code collectModuleHeaderIncludes(
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
 
-      std::string RelName = RelativeHeader.c_str();
-      Headers.push_back(std::make_pair(RelName, *Header));
+      HeaderPaths.push_back(
+          std::make_pair(Dir->path().str(), RelativeHeader.c_str()));
     }
 
     if (EC)
       return EC;
 
     // Sort header paths and make the header inclusion order deterministic
-    // across different OSs and filesystems.
-    llvm::sort(Headers, llvm::less_first());
-    for (auto &H : Headers) {
+    // across different OSs and filesystems. As the header search table
+    // serialization order depends on the file reference UID, we need to create
+    // file references in deterministic order too.
+    llvm::sort(HeaderPaths, llvm::less_first());
+    for (auto &[Path, RelPath] : HeaderPaths) {
+      auto Header = FileMgr.getOptionalFileRef(Path);
+      // FIXME: This shouldn't happen unless there is a file system race. Is
+      // that worth diagnosing?
+      if (!Header)
+        continue;
+
+      // If this header is marked 'unavailable' in this module, don't include
+      // it.
+      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
+        continue;
+
       // Include this header as part of the umbrella directory.
-      Module->addTopHeader(H.second);
-      addHeaderInclude(H.first, Includes, LangOpts, Module->IsExternC);
+      Module->addTopHeader(*Header);
+      addHeaderInclude(RelPath, Includes, LangOpts, Module->IsExternC);
     }
   }
 
