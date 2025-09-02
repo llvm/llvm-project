@@ -3411,7 +3411,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         RetainedKnowledge RK = getKnowledgeFromBundle(
             *cast<AssumeInst>(II), II->bundle_op_info_begin()[Idx]);
         if (!RK || RK.AttrKind != Attribute::Alignment ||
-            !isPowerOf2_64(RK.ArgValue))
+            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
           continue;
 
         // Don't try to remove align assumptions for pointers derived from
@@ -3426,7 +3426,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // for reasoning.
         KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
         unsigned TZ = std::min(Known.countMinTrailingZeros(), 63u);
-        if ((1ULL << TZ) < RK.ArgValue)
+        if ((1ULL << std::min(TZ, Value::MaxAlignmentExponent)) < RK.ArgValue)
           continue;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
