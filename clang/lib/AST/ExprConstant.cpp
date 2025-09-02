@@ -5410,7 +5410,7 @@ static bool ShouldPropagateBreakContinue(EvalInfo &Info,
 
   // Are we breaking out of or continuing this statement?
   bool CanBreakOrContinue = !IsSwitch || ESR == ESR_Break;
-  Stmt *StackTop = Info.BreakContinueStack.back();
+  const Stmt *StackTop = Info.BreakContinueStack.back();
   if (CanBreakOrContinue && (StackTop == nullptr || StackTop == LoopOrSwitch)) {
     Info.BreakContinueStack.pop_back();
     if (ESR == ESR_Break)
