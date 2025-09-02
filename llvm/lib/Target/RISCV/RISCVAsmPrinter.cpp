@@ -126,7 +126,7 @@ private:
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI);
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
-  bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+  void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
 }
 
@@ -329,12 +329,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::STATEPOINT:
     return LowerSTATEPOINT(*OutStreamer, SM, *MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
-    // patchable-function-entry is handled in lowerToMCInst
-    // Therefore, we break out of the switch statement if we encounter it here.
     const Function &F = MI->getParent()->getParent()->getFunction();
-    if (F.hasFnAttribute("patchable-function-entry"))
-      break;
-
+    if (F.hasFnAttribute("patchable-function-entry")) {
+      unsigned Num;
+      [[maybe_unused]] bool Result =
+          F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num);
+      assert(!Result && "Enforced by the verifier");
+      emitNops(Num);
+      return;
+    }
     LowerPATCHABLE_FUNCTION_ENTER(MI);
     return;
   }
@@ -347,8 +352,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   MCInst OutInst;
-  if (!lowerToMCInst(MI, OutInst))
-    EmitToStreamer(*OutStreamer, OutInst);
+  lowerToMCInst(MI, OutInst);
+  EmitToStreamer(*OutStreamer, OutInst);
 }
 
 bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -1174,9 +1179,9 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   return true;
 }
 
-bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
+void RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   if (lowerRISCVVMachineInstrToMCInst(MI, OutMI, STI))
-    return false;
+    return;
 
   OutMI.setOpcode(MI->getOpcode());
 
@@ -1185,23 +1190,6 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     if (lowerOperand(MO, MCOp))
       OutMI.addOperand(MCOp);
   }
-
-  switch (OutMI.getOpcode()) {
-  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
-    const Function &F = MI->getParent()->getParent()->getFunction();
-    if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return false;
-      emitNops(Num);
-      return true;
-    }
-    break;
-  }
-  }
-  return false;
 }
 
 void RISCVAsmPrinter::emitMachineConstantPoolValue(
