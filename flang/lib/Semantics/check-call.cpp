@@ -1985,8 +1985,9 @@ static void CheckReduce(
       }
     }
   }
-  const auto *result{
-      procChars ? procChars->functionResult->GetTypeAndShape() : nullptr};
+  const auto *result{procChars && procChars->functionResult
+          ? procChars->functionResult->GetTypeAndShape()
+          : nullptr};
   if (!procChars || !procChars->IsPure() ||
       procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
     messages.Say(
