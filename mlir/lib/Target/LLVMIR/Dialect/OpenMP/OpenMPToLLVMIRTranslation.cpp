@@ -6384,9 +6384,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   if (ompBuilder->Config.isTargetDevice()) {
     if (isTargetDeviceOp(op)) {
       return convertTargetDeviceOp(op, builder, moduleTranslation);
-    } else {
-      return convertTargetOpsInNest(op, builder, moduleTranslation);
     }
+    return convertTargetOpsInNest(op, builder, moduleTranslation);
   }
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
