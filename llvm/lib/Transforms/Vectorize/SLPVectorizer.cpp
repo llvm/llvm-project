@@ -967,9 +967,7 @@ class BinOpSameOpcodeHelper {
       return false;
     }
     bool equal(unsigned Opcode) {
-      if (Opcode == I->getOpcode())
-        return trySet(MainOpBIT, MainOpBIT);
-      return false;
+      return Opcode == I->getOpcode() && trySet(MainOpBIT, MainOpBIT);
     }
     unsigned getOpcode() const {
       MaskType Candidate = Mask & SeenBefore;
@@ -8030,11 +8028,11 @@ void BoUpSLP::reorderTopToBottom() {
         // it is an attempt to reorder node with reused scalars but with
         // external uses.
         if (OpTE->getVectorFactor() != OpTE->Scalars.size()) {
-          OrdersUses.insert(std::make_pair(OrdersType(), 0)).first->second +=
+          OrdersUses.try_emplace(OrdersType(), 0).first->second +=
               ExternalUserReorderIndices.size();
         } else {
           for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
-            ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+            ++OrdersUses.try_emplace(ExtOrder, 0).first->second;
         }
         // No other useful reorder data in this entry.
         if (Order.empty())
@@ -8054,9 +8052,9 @@ void BoUpSLP::reorderTopToBottom() {
           return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
         });
         fixupOrderingIndices(CurrentOrder);
-        ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
+        ++OrdersUses.try_emplace(CurrentOrder, 0).first->second;
       } else {
-        ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
+        ++OrdersUses.try_emplace(Order, 0).first->second;
       }
     }
     if (OrdersUses.empty())
@@ -8480,12 +8478,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
           });
           fixupOrderingIndices(CurrentOrder);
-          OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second +=
-              NumOps;
+          OrdersUses.try_emplace(CurrentOrder, 0).first->second += NumOps;
         } else {
-          OrdersUses.insert(std::make_pair(Order, 0)).first->second += NumOps;
+          OrdersUses.try_emplace(Order, 0).first->second += NumOps;
         }
-        auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
+        auto Res = OrdersUses.try_emplace(OrdersType(), 0);
         const auto AllowsReordering = [&](const TreeEntry *TE) {
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
@@ -10639,8 +10636,19 @@ class InstructionsCompatibilityAnalysis {
         }
       }
     }
-    if (MainOp)
+    if (MainOp) {
+      // Do not match, if any copyable is a terminator from the same block as
+      // the main operation.
+      if (any_of(VL, [&](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && I->getParent() == MainOp->getParent() &&
+                   I->isTerminator();
+          })) {
+        MainOp = nullptr;
+        return;
+      }
       MainOpcode = MainOp->getOpcode();
+    }
   }
 
   /// Returns the idempotent value for the \p MainOp with the detected \p
@@ -11013,7 +11021,10 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
       }
       SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
-            return isa<PoisonValue>(V) || Values.contains(V);
+            return isa<PoisonValue>(V) || Values.contains(V) ||
+                   (S.getOpcode() == Instruction::PHI && isa<PHINode>(V) &&
+                    LI->getLoopFor(S.getMainOp()->getParent()) &&
+                    isVectorized(V));
           })) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
         return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
@@ -17835,6 +17846,17 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
+  Value *getVectorizedValue(const TreeEntry &E) {
+    Value *Vec = E.VectorizedValue;
+    if (!Vec->getType()->isIntOrIntVectorTy())
+      return Vec;
+    return castToScalarTyElem(Vec, any_of(E.Scalars, [&](Value *V) {
+                                return !isa<PoisonValue>(V) &&
+                                       !isKnownNonNegative(
+                                           V, SimplifyQuery(*R.DL));
+                              }));
+  }
+
 public:
   ShuffleInstructionBuilder(Type *ScalarTy, IRBuilderBase &Builder, BoUpSLP &R)
       : BaseShuffleAnalysis(ScalarTy), Builder(Builder), R(R) {}
@@ -18001,35 +18023,14 @@ public:
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
-    Value *V2 = E2.VectorizedValue;
-    if (V2->getType()->isIntOrIntVectorTy())
-      V2 = castToScalarTyElem(V2, any_of(E2.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
+    Value *V2 = getVectorizedValue(E2);
     add(V1, V2, Mask);
   }
   /// Adds single input vector (in form of tree entry) and the mask for its
   /// shuffling.
   void add(const TreeEntry &E1, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
     add(V1, Mask);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
@@ -18178,14 +18179,7 @@ public:
       auto CreateSubVectors = [&](Value *Vec,
                                   SmallVectorImpl<int> &CommonMask) {
         for (auto [E, Idx] : SubVectors) {
-          Value *V = E->VectorizedValue;
-          if (V->getType()->isIntOrIntVectorTy())
-            V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
-                                     if (isa<PoisonValue>(V))
-                                       return false;
-                                     return !isKnownNonNegative(
-                                         V, SimplifyQuery(*R.DL));
-                                   }));
+          Value *V = getVectorizedValue(*E);
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
           // Use scalar version of the SCalarType to correctly handle shuffles
           // for revectorization. The revectorization mode operates by the
@@ -20519,7 +20513,9 @@ Value *BoUpSLP::vectorizeTree(
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
-            is_contained(VectorizableTree.front()->Scalars, I)))
+            is_contained(VectorizableTree.front()->Scalars, I)) &&
+          !(!VectorizableTree.front()->isGather() &&
+            VectorizableTree.front()->isCopyableElement(I)))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
@@ -20791,7 +20787,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (auto *Op = dyn_cast<Instruction>(U.get());
               Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
                                                          *SLP, NumOps)) {
-            if (ScheduleData *OpSD = getScheduleData(Op)) {
+            if (ScheduleData *OpSD = getScheduleData(Op);
+                OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
               if (RegionHasStackSave ||
                   !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
@@ -20977,7 +20974,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I)) {
+        if (ScheduleData *OpSD = getScheduleData(I);
+            OpSD && OpSD->hasValidDependencies()) {
           OpSD->clearDirectDependencies();
           if (RegionHasStackSave ||
               !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
@@ -23797,9 +23795,7 @@ public:
         size_t Key, Idx;
         std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                                /*AllowAlternate=*/false);
-        ++PossibleReducedVals[Key][Idx]
-              .insert(std::make_pair(V, 0))
-              .first->second;
+        ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
       }
       for (Instruction *I : reverse(PossibleReductionOps))
         Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
@@ -23820,21 +23816,20 @@ public:
       stable_sort(PossibleRedValsVect, [](const auto &P1, const auto &P2) {
         return P1.size() > P2.size();
       });
-      int NewIdx = -1;
+      bool First = true;
       for (ArrayRef<Value *> Data : PossibleRedValsVect) {
-        if (NewIdx < 0 ||
-            (!isGoodForReduction(Data) &&
-             (!isa<LoadInst>(Data.front()) ||
-              !isa<LoadInst>(ReducedVals[NewIdx].front()) ||
-              getUnderlyingObject(
-                  cast<LoadInst>(Data.front())->getPointerOperand()) !=
-                  getUnderlyingObject(
-                      cast<LoadInst>(ReducedVals[NewIdx].front())
-                          ->getPointerOperand())))) {
-          NewIdx = ReducedVals.size();
+        if (First) {
+          First = false;
           ReducedVals.emplace_back();
+        } else if (!isGoodForReduction(Data)) {
+          auto *LI = dyn_cast<LoadInst>(Data.front());
+          auto *LastLI = dyn_cast<LoadInst>(ReducedVals.back().front());
+          if (!LI || !LastLI ||
+              getUnderlyingObject(LI->getPointerOperand()) !=
+                  getUnderlyingObject(LastLI->getPointerOperand()))
+            ReducedVals.emplace_back();
         }
-        ReducedVals[NewIdx].append(Data.rbegin(), Data.rend());
+        ReducedVals.back().append(Data.rbegin(), Data.rend());
       }
     }
     // Sort the reduced values by number of same/alternate opcode and/or pointer
@@ -24164,9 +24159,7 @@ public:
         // previous vectorization attempts.
         if (any_of(VL, [&V](Value *RedVal) {
               auto *RedValI = dyn_cast<Instruction>(RedVal);
-              if (!RedValI)
-                return false;
-              return V.isDeleted(RedValI);
+              return RedValI && V.isDeleted(RedValI);
             }))
           break;
         V.buildTree(VL, IgnoreList);
@@ -26061,7 +26054,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
-  // Vectorizes Inserts in `PostProcessInserts` and if `VecctorizeCmps` is true
+  // Vectorizes Inserts in `PostProcessInserts` and if `VectorizeCmps` is true
   // also vectorizes `PostProcessCmps`.
   auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R);

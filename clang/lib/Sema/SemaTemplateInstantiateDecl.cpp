@@ -6973,19 +6973,15 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // If our context used to be dependent, we may need to instantiate
     // it before performing lookup into that context.
     bool IsBeingInstantiated = false;
-    if (CXXRecordDecl *Spec = dyn_cast<CXXRecordDecl>(ParentDC)) {
+    if (auto *Spec = dyn_cast<CXXRecordDecl>(ParentDC)) {
       if (!Spec->isDependentContext()) {
-        CanQualType T = Context.getCanonicalTagType(Spec);
-        const RecordType *Tag = T->getAs<RecordType>();
-        assert(Tag && "type of non-dependent record is not a RecordType");
-        auto *TagDecl =
-            cast<CXXRecordDecl>(Tag->getOriginalDecl())->getDefinitionOrSelf();
-        if (TagDecl->isBeingDefined())
+        if (Spec->isEntityBeingDefined())
           IsBeingInstantiated = true;
-        else if (RequireCompleteType(Loc, T, diag::err_incomplete_type))
+        else if (RequireCompleteType(Loc, Context.getCanonicalTagType(Spec),
+                                     diag::err_incomplete_type))
           return nullptr;
 
-        ParentDC = TagDecl;
+        ParentDC = Spec->getDefinitionOrSelf();
       }
     }
 
