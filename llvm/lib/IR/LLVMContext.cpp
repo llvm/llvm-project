@@ -31,6 +31,30 @@
 
 using namespace llvm;
 
+namespace opts {
+
+enum class HaltOnFirstDiagErrorAction {
+  Exit,
+  Abort,
+  None,
+};
+
+static cl::opt<HaltOnFirstDiagErrorAction> HaltOnFirstDiagErrorOpt(
+    "halt-on-first-diag-error",
+    cl::desc(
+        "Halt action to take on the first unhandled diagnostic error reported"),
+    cl::values(
+        clEnumValN(
+            HaltOnFirstDiagErrorAction::Exit, "exit",
+            "Exit with error code 1 on first diagnostic with error severity"),
+        clEnumValN(HaltOnFirstDiagErrorAction::Abort, "abort",
+                   "Abort with a stacktrace immediately on first diagnostic "
+                   "with error severity"),
+        clEnumValN(HaltOnFirstDiagErrorAction::None, "none",
+                   "Do not halt on first diagnostic with error severity")),
+    cl::init(HaltOnFirstDiagErrorAction::Exit), cl::Hidden);
+} // namespace opts
+
 static StringRef knownBundleName(unsigned BundleTagID) {
   switch (BundleTagID) {
   case LLVMContext::OB_deopt:
@@ -242,6 +266,19 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
   llvm_unreachable("Unknown DiagnosticSeverity");
 }
 
+static void handleHaltOnFirstDiagError() {
+  switch (opts::HaltOnFirstDiagErrorOpt) {
+  case opts::HaltOnFirstDiagErrorAction::Exit:
+    std::exit(1);
+    break;
+  case opts::HaltOnFirstDiagErrorAction::Abort:
+    std::abort();
+    break;
+  default:
+    break;
+  }
+}
+
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
     if (LLVMRemarkStreamer *RS = getLLVMRemarkStreamer())
@@ -264,8 +301,10 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   errs() << getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
   DI.print(DP);
   errs() << "\n";
-  if (DI.getSeverity() == DS_Error)
-    exit(1);
+
+  if (DI.getSeverity() == DS_Error) {
+    handleHaltOnFirstDiagError();
+  }
 }
 
 //===----------------------------------------------------------------------===//
