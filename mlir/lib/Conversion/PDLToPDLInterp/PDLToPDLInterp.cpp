@@ -641,9 +641,8 @@ SymbolRefAttr PatternLowering::generateRewriter(
   builder.setInsertionPointToEnd(rewriterModule.getBody());
   // Get the pattern name if available, otherwise use default
   StringRef rewriterName = "pdl_generated_rewriter";
-  if (auto symName = pattern.getSymName()) {
+  if (auto symName = pattern.getSymName())
     rewriterName = symName.value();
-  }
   auto rewriterFunc = pdl_interp::FuncOp::create(
       builder, pattern.getLoc(), rewriterName,
       builder.getFunctionType({}, {}));
