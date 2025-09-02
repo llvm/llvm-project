@@ -972,8 +972,7 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF4-NEXT:    [[TMP5:%.*]] = sub <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
-; VF4-NEXT:    [[TMP8:%.*]] = sub <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4

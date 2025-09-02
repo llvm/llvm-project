@@ -19,7 +19,6 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -29,7 +28,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP2]], <16 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP8]], align 1
@@ -58,7 +57,6 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
@@ -75,7 +73,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP23]], <vscale x 2 x i32> [[TMP29]])
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
 ; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
@@ -154,7 +152,6 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -164,7 +161,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP2]], <16 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP26]], align 1
@@ -193,7 +190,6 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <vscale x 2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <vscale x 2 x i32> @llvm.abs.nxv2i32(<vscale x 2 x i32> [[BROADCAST_SPLAT2]], i1 false)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
@@ -210,7 +206,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP23]], <vscale x 2 x i32> [[TMP29]])
+; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX7]]
 ; CHECK-NEXT:    store <vscale x 2 x i8> zeroinitializer, ptr [[TMP32]], align 1
