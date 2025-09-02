@@ -545,8 +545,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   Style.AlignAfterOpenBracket = false;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket, true);
-  CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket,
-              false);
+  CHECK_PARSE("AlignAfterOpenBracket: DontAlign", AlignAfterOpenBracket, false);
   // For backward compatibility:
   CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
               true);
