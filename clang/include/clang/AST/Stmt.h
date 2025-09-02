@@ -3061,15 +3061,15 @@ class LoopControlStmt : public Stmt {
   ///
   ///   a: // <-- TargetLabel
   ///   for (;;)
-  ///     break a; // <-- Label
+  ///     break a; // <-- LabelLoc
   ///
   LabelDecl *TargetLabel = nullptr;
-  SourceLocation Label;
+  SourceLocation LabelLoc;
 
 protected:
   LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
                   LabelDecl *Target)
-      : Stmt(Class), TargetLabel(Target), Label(LabelLoc) {
+      : Stmt(Class), TargetLabel(Target), LabelLoc(LabelLoc) {
     setKwLoc(Loc);
   }
 
@@ -3089,8 +3089,8 @@ public:
 
   bool hasLabelTarget() const { return TargetLabel != nullptr; }
 
-  SourceLocation getLabelLoc() const { return Label; }
-  void setLabelLoc(SourceLocation L) { Label = L; }
+  SourceLocation getLabelLoc() const { return LabelLoc; }
+  void setLabelLoc(SourceLocation L) { LabelLoc = L; }
 
   LabelDecl *getLabelDecl() { return TargetLabel; }
   const LabelDecl *getLabelDecl() const { return TargetLabel; }
