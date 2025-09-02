@@ -784,145 +784,157 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, ptr %divdst) nounwind {
 ; X86-LABEL: vector_i128_i16:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pextrw $7, %xmm0, %eax
-; X86-NEXT:    pextrw $7, %xmm1, %esi
+; X86-NEXT:    pextrw $7, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm2
+; X86-NEXT:    divw %cx
+; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    pextrw $6, %xmm0, %eax
-; X86-NEXT:    pextrw $6, %xmm1, %esi
+; X86-NEXT:    pextrw $6, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
+; X86-NEXT:    divw %cx
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm3
-; X86-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    pextrw $5, %xmm0, %eax
-; X86-NEXT:    pextrw $5, %xmm1, %esi
+; X86-NEXT:    pextrw $5, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm4
+; X86-NEXT:    divw %cx
+; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    pextrw $4, %xmm0, %eax
-; X86-NEXT:    pextrw $4, %xmm1, %esi
+; X86-NEXT:    pextrw $4, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm2
-; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X86-NEXT:    divw %cx
+; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    pextrw $3, %xmm0, %eax
-; X86-NEXT:    pextrw $3, %xmm1, %esi
+; X86-NEXT:    pextrw $3, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm4
+; X86-NEXT:    divw %cx
+; X86-NEXT:    movl %eax, %ebp
 ; X86-NEXT:    pextrw $2, %xmm0, %eax
-; X86-NEXT:    pextrw $2, %xmm1, %esi
+; X86-NEXT:    pextrw $2, %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    movd %eax, %xmm3
-; X86-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
+; X86-NEXT:    divw %cx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movd %esi, %xmm3
 ; X86-NEXT:    pextrw $1, %xmm0, %eax
 ; X86-NEXT:    pextrw $1, %xmm1, %esi
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw %si
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-NEXT:    movd (%esp), %xmm4 # 4-byte Folded Reload
+; X86-NEXT:    # xmm4 = mem[0],zero,zero,zero
+; X86-NEXT:    movd %edi, %xmm5
+; X86-NEXT:    movd %ebx, %xmm2
+; X86-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; X86-NEXT:    movd %ebp, %xmm6
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
+; X86-NEXT:    movd %ecx, %xmm3
+; X86-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm6[0],xmm3[1],xmm6[1],xmm3[2],xmm6[2],xmm3[3],xmm6[3]
 ; X86-NEXT:    movd %eax, %xmm4
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    movd %xmm1, %esi
+; X86-NEXT:    movd %xmm1, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    divw %si
+; X86-NEXT:    divw %cx
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    movd %eax, %xmm5
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; X86-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm2[0]
-; X86-NEXT:    movdqa %xmm5, (%ecx)
+; X86-NEXT:    movdqa %xmm5, (%esi)
 ; X86-NEXT:    pmullw %xmm1, %xmm5
 ; X86-NEXT:    psubw %xmm5, %xmm0
+; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vector_i128_i16:
 ; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    pextrw $7, %xmm0, %eax
 ; X64-NEXT:    pextrw $7, %xmm1, %ecx
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm2
+; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    pextrw $6, %xmm0, %eax
-; X64-NEXT:    pextrw $6, %xmm1, %ecx
+; X64-NEXT:    pextrw $6, %xmm1, %esi
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm3
-; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NEXT:    divw %si
+; X64-NEXT:    movl %eax, %esi
 ; X64-NEXT:    pextrw $5, %xmm0, %eax
-; X64-NEXT:    pextrw $5, %xmm1, %ecx
+; X64-NEXT:    pextrw $5, %xmm1, %r8d
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm4
+; X64-NEXT:    divw %r8w
+; X64-NEXT:    movl %eax, %r8d
 ; X64-NEXT:    pextrw $4, %xmm0, %eax
-; X64-NEXT:    pextrw $4, %xmm1, %ecx
+; X64-NEXT:    pextrw $4, %xmm1, %r9d
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm2
-; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X64-NEXT:    divw %r9w
+; X64-NEXT:    movl %eax, %r9d
 ; X64-NEXT:    pextrw $3, %xmm0, %eax
-; X64-NEXT:    pextrw $3, %xmm1, %ecx
+; X64-NEXT:    pextrw $3, %xmm1, %r10d
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm3
+; X64-NEXT:    divw %r10w
+; X64-NEXT:    movl %eax, %r10d
 ; X64-NEXT:    pextrw $2, %xmm0, %eax
-; X64-NEXT:    pextrw $2, %xmm1, %ecx
+; X64-NEXT:    pextrw $2, %xmm1, %r11d
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm4
-; X64-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; X64-NEXT:    divw %r11w
+; X64-NEXT:    movl %eax, %r11d
 ; X64-NEXT:    pextrw $1, %xmm0, %eax
-; X64-NEXT:    pextrw $1, %xmm1, %ecx
+; X64-NEXT:    pextrw $1, %xmm1, %ebx
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %cx
+; X64-NEXT:    divw %bx
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm3
+; X64-NEXT:    movd %ecx, %xmm2
+; X64-NEXT:    movd %esi, %xmm3
+; X64-NEXT:    movd %r8d, %xmm4
+; X64-NEXT:    movd %r9d, %xmm5
+; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NEXT:    movd %r10d, %xmm2
+; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; X64-NEXT:    movd %r11d, %xmm3
+; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NEXT:    movd %eax, %xmm2
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    movd %xmm1, %ecx
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %cx
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    movd %eax, %xmm5
-; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm2[0]
-; X64-NEXT:    movdqa %xmm5, (%rdi)
-; X64-NEXT:    pmullw %xmm1, %xmm5
-; X64-NEXT:    psubw %xmm5, %xmm0
+; X64-NEXT:    movd %eax, %xmm4
+; X64-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X64-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm5[0]
+; X64-NEXT:    movdqa %xmm4, (%rdi)
+; X64-NEXT:    pmullw %xmm1, %xmm4
+; X64-NEXT:    psubw %xmm4, %xmm0
+; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
   %div = udiv <8 x i16> %x, %y
   store <8 x i16> %div, ptr %divdst, align 16
