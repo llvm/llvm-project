@@ -126,10 +126,12 @@ class PointerUnion
   using First = TypeAtIndex<0, PTs...>;
   using Base = typename PointerUnion::PointerUnionMembers;
 
-  /// This is needed to give the CastInfo implementation below access
-  /// to protected members.
-  /// Refer to its definition for further details.
-  friend struct CastInfoPointerUnionImpl<PTs...>;
+  // Give the CastInfo specialization below access to protected members.
+  //
+  // This makes all of CastInfo a friend, which is more than strictly
+  // necessary. It's a workaround for C++'s inability to friend a
+  // partial template specialization.
+  template <typename To, typename From, typename Enable> friend struct CastInfo;
 
 public:
   PointerUnion() = default;
@@ -219,42 +221,21 @@ bool operator<(PointerUnion<PTs...> lhs, PointerUnion<PTs...> rhs) {
   return lhs.getOpaqueValue() < rhs.getOpaqueValue();
 }
 
-/// We can't (at least, at this moment with C++14) declare CastInfo
-/// as a friend of PointerUnion like this:
-/// ```
-///   template<typename To>
-///   friend struct CastInfo<To, PointerUnion<PTs...>>;
-/// ```
-/// The compiler complains 'Partial specialization cannot be declared as a
-/// friend'.
-/// So we define this struct to be a bridge between CastInfo and
-/// PointerUnion.
-template <typename... PTs> struct CastInfoPointerUnionImpl {
-  using From = PointerUnion<PTs...>;
-
-  template <typename To> static inline bool isPossible(From &F) {
-    return F.Val.getInt() == FirstIndexOfType<To, PTs...>::value;
-  }
-
-  template <typename To> static To doCast(From &F) {
-    assert(isPossible<To>(F) && "cast to an incompatible type!");
-    return PointerLikeTypeTraits<To>::getFromVoidPointer(F.Val.getPointer());
-  }
-};
-
 // Specialization of CastInfo for PointerUnion
 template <typename To, typename... PTs>
 struct CastInfo<To, PointerUnion<PTs...>>
     : public DefaultDoCastIfPossible<To, PointerUnion<PTs...>,
                                      CastInfo<To, PointerUnion<PTs...>>> {
   using From = PointerUnion<PTs...>;
-  using Impl = CastInfoPointerUnionImpl<PTs...>;
 
   static inline bool isPossible(From &f) {
-    return Impl::template isPossible<To>(f);
+    return f.Val.getInt() == FirstIndexOfType<To, PTs...>::value;
   }
 
-  static To doCast(From &f) { return Impl::template doCast<To>(f); }
+  static To doCast(From &f) {
+    assert(isPossible(f) && "cast to an incompatible type!");
+    return PointerLikeTypeTraits<To>::getFromVoidPointer(f.Val.getPointer());
+  }
 
   static inline To castFailed() { return To(); }
 };
