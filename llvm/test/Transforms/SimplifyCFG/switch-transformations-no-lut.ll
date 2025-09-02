@@ -340,34 +340,16 @@ end:
 define i32 @single_value_no_jump_tables(i32 %x) "no-jump-tables"="true" {
 ; OPTNOLUT-LABEL: define i32 @single_value_no_jump_tables(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
-; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; OPTNOLUT-NEXT:      i32 0, label %[[END:.*]]
-; OPTNOLUT-NEXT:      i32 1, label %[[END]]
-; OPTNOLUT-NEXT:      i32 2, label %[[END]]
-; OPTNOLUT-NEXT:      i32 3, label %[[END]]
-; OPTNOLUT-NEXT:      i32 4, label %[[END]]
-; OPTNOLUT-NEXT:    ]
-; OPTNOLUT:       [[DEFAULT]]:
-; OPTNOLUT-NEXT:    br label %[[END]]
-; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 3, %[[DEFAULT]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
+; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 5
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i32 2, i32 3
 ; OPTNOLUT-NEXT:    ret i32 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i32 @single_value_no_jump_tables(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[END:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[END]]
-; TTINOLUT-NEXT:      i32 2, label %[[END]]
-; TTINOLUT-NEXT:      i32 3, label %[[END]]
-; TTINOLUT-NEXT:      i32 4, label %[[END]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[DEFAULT]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 3, %[[DEFAULT]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ]
+; TTINOLUT-NEXT:  [[ENTRY:.*:]]
+; TTINOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 5
+; TTINOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i32 2, i32 3
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:

@@ -6929,9 +6929,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   BasicBlock *BB = SI->getParent();
   Function *Fn = BB->getParent();
-  // Only build lookup table when the attribute is not set.
-  if (Fn->getFnAttribute("no-jump-tables").getValueAsBool())
-    return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
   // split off a dense part and build a lookup table for that.
@@ -7101,11 +7098,13 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   //        This is a problem if the switch expression itself can be restricted
   //        by inlining or CVP.
   //     2. The target does not support lookup tables.
+  //     3. The "no-jump-tables" function attribute is set.
   // However, these objections do not apply to other switch replacements, like
   // the bitmap, so we only stop here if any of these conditions are met and we
   // want to create a LUT. Otherwise, continue with the switch replacement.
   if (AnyLookupTables &&
-      (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables()))
+      (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables() ||
+       Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
     return false;
 
   Builder.SetInsertPoint(SI);
