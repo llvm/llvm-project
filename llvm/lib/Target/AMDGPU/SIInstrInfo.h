@@ -533,13 +533,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP2;
   }
 
-  static bool isVOP3(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOP3;
+  static bool isVOP3(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::VOP3;
   }
 
-  bool isVOP3(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOP3;
-  }
+  static bool isVOP3(const MachineInstr &MI) { return isVOP3(MI.getDesc()); }
+
+  bool isVOP3(uint16_t Opcode) const { return isVOP3(get(Opcode)); }
 
   static bool isSDWA(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SDWA;
@@ -841,13 +841,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
   }
 
-  static bool isMAI(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsMAI;
+  static bool isMAI(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::IsMAI;
   }
 
-  bool isMAI(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsMAI;
-  }
+  static bool isMAI(const MachineInstr &MI) { return isMAI(MI.getDesc()); }
+
+  bool isMAI(uint16_t Opcode) const { return isMAI(get(Opcode)); }
 
   static bool isMFMA(const MachineInstr &MI) {
     return isMAI(MI) && MI.getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
@@ -1180,8 +1180,13 @@ public:
     return isInlineConstant(*MO.getParent(), MO.getOperandNo());
   }
 
-  bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
+  bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
+
+  bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
+                         const MachineOperand &MO) const {
+    return isImmOperandLegal(MI.getDesc(), OpNo, MO);
+  }
 
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
