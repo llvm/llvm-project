@@ -129,9 +129,9 @@ MPFRNumber MPFRNumber::atanpi() const {
   mpfr_atanpi(result.value, value, mpfr_rounding);
   return result;
 #else
-  MPFRNumber value_atan(0.0, 1280);
+  MPFRNumber value_atan(0.0, mpfr_precision * 3);
   mpfr_atan(value_atan.value, value, MPFR_RNDN);
-  MPFRNumber value_pi(0.0, 1280);
+  MPFRNumber value_pi(0.0, mpfr_precision * 3);
   mpfr_const_pi(value_pi.value, MPFR_RNDN);
   mpfr_div(result.value, value_atan.value, value_pi.value, mpfr_rounding);
   return result;
