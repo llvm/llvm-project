@@ -3,10 +3,10 @@
 # REQUIRES: amdgpu-registered-target
 
 # RUN: yaml2obj %s -o %t.elf
-# RUN: not llvm-readobj --offloading %t.elf 2>&1 | \ 
-# RUN:   FileCheck %s --check-prefix=ERR -DFILE_NAME=%t.elf 
+# RUN: llvm-readobj --offloading %t.elf 2>&1 | \ 
+# RUN:   FileCheck %s --check-prefix=WARN -DFILE_NAME=%t.elf 
 
-# ERR: error: '{{.*}}': Stream Error: The stream is too short to perform the requested operation.
+# WARN: warning: '{{.*}}': Stream Error: The stream is too short to perform the requested operation.
 
 --- !ELF
 FileHeader:
