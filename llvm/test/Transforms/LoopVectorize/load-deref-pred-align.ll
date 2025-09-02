@@ -739,3 +739,116 @@ exit:
   call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %local_dest, i64 1024, i1 false)
   ret void
 }
+
+; FIXME: Currently %l.idx is incorrectly executed unconditionally in the vector
+; loop.
+define void @adding_offset_overflows(i32 %n, ptr %A) {
+; CHECK-LABEL: @adding_offset_overflows(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = alloca [62 x i32], align 4
+; CHECK-NEXT:    [[C:%.*]] = alloca [144 x i32], align 4
+; CHECK-NEXT:    call void @init(ptr [[B]])
+; CHECK-NEXT:    call void @init(ptr [[C]])
+; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i32 [[N:%.*]], 1
+; CHECK-NEXT:    br i1 [[PRE]], label [[EXIT:%.*]], label [[PH:%.*]]
+; CHECK:       ph:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 1, [[N_VEC]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[WIDE_LOAD1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[C]], i64 [[TMP7]]
+; CHECK-NEXT:    store i32 0, ptr [[TMP8]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
+; CHECK:       pred.store.if2:
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[C]], i64 [[TMP10]]
+; CHECK-NEXT:    store i32 0, ptr [[TMP11]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
+; CHECK:       pred.store.continue3:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 1, [[PH]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[L_A]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_LATCH]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[L_IDX]] to i64
+; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr i32, ptr [[C]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_C]], align 4
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %B = alloca [62 x i32], align 4
+  %C = alloca [144 x i32], align 4
+  call void @init(ptr %B)
+  call void @init(ptr %C)
+  %pre = icmp slt i32 %n, 1
+  br i1 %pre, label %exit, label %ph
+
+ph:
+  %wide.trip.count = zext i32 %n to i64
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 1, %ph ], [ %iv.next, %loop.latch ]
+  %gep.A = getelementptr i32, ptr %A, i64 %iv
+  %l.A = load i32, ptr %gep.A, align 4
+  %c.1 = icmp eq i32 %l.A, 0
+  br i1 %c.1, label %loop.latch, label %if.then
+
+if.then:
+  %gep.B = getelementptr i32, ptr %B, i64 %iv
+  %l.idx = load i32, ptr %gep.B, align 4
+  %idx.ext = sext i32 %l.idx to i64
+  %gep.C = getelementptr i32, ptr %C, i64 %idx.ext
+  store i32 0, ptr %gep.C, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
