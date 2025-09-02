@@ -76,9 +76,6 @@ static cl::opt<unsigned> DMBLookaheadThreshold(
     "dmb-lookahead-threshold", cl::init(10), cl::Hidden,
     cl::desc("The number of instructions to search for a redundant dmb"));
 
-static cl::opt<bool> EnableSVEMaximizeVecBW("enable-sve-maximize-vec-bw",
-                                            cl::init(false), cl::Hidden);
-
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -373,9 +370,7 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
   return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable()) ||
-         (EnableSVEMaximizeVecBW &&
-          K == TargetTransformInfo::RGK_ScalableVector && ST->isSVEAvailable());
+          ST->isNeonAvailable());
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
