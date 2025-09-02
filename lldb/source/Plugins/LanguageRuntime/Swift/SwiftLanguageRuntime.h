@@ -944,6 +944,10 @@ private:
 llvm::Expected<std::optional<std::string>> GetTaskName(lldb::addr_t task,
                                                        Process &process);
 
+/// Finds the function for which `load_address` belongs, and returns its
+/// prologue size.
+llvm::Expected<uint64_t> FindPrologueSize(Process &process,
+                                          uint64_t load_address);
 } // namespace lldb_private
 
 #endif // liblldb_SwiftLanguageRuntime_h_
