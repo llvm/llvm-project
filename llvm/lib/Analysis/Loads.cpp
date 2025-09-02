@@ -355,7 +355,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
-  APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
+  ScalarEvolution::LoopGuards LoopGuards =
+      ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE);
+  APInt MaxPtrDiff =
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
