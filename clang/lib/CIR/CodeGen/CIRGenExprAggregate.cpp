@@ -101,7 +101,11 @@ public:
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
     case CK_LValueToRValue:
-      assert(!cir::MissingFeatures::aggValueSlotVolatile());
+      // If we're loading from a volatile type, force the destination
+      // into existence.
+      if (e->getSubExpr()->getType().isVolatileQualified())
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "AggExprEmitter: volatile lvalue-to-rvalue cast");
       [[fallthrough]];
     case CK_NoOp:
     case CK_UserDefinedConversion:

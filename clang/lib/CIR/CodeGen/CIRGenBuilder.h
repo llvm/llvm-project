@@ -375,7 +375,7 @@ public:
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
-                               /*alignment=*/align,
+                               isVolatile, /*alignment=*/align,
                                /*mem_order=*/cir::MemOrderAttr{});
   }
 
