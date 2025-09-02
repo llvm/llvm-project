@@ -392,9 +392,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
-             [&SE, AccessSizeSCEV](const RetainedKnowledge &RK) {
-               return SE.isKnownPredicate(CmpInst::ICMP_ULE, AccessSizeSCEV,
-                                          SE.getSCEV(RK.IRArgValue));
+             [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               return SE.isKnownPredicate(
+                   CmpInst::ICMP_ULE, AccessSizeSCEV,
+                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
              DL, HeaderFirstNonPHI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
