@@ -2109,7 +2109,6 @@ module std [system] {
   module tuple {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
-    module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
     module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
