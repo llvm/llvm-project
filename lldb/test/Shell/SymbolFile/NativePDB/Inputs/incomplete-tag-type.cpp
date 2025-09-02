@@ -13,8 +13,3 @@ struct E {
   E();
 };
 E::E() = default;
-
-struct I {
-  I();
-};
-I::I() = default;
