@@ -903,8 +903,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   case APValue::Struct: {
     Out << '{';
     bool First = true;
-    const RecordDecl *RD =
-        Ty->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *RD = Ty->castAsRecordDecl();
     if (unsigned N = getStructNumBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
       CXXRecordDecl::base_class_const_iterator BI = CD->bases_begin();

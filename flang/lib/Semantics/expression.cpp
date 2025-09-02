@@ -2198,7 +2198,8 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     }
     if (symbol) {
       const semantics::Scope &innermost{context_.FindScope(exprSource)};
-      if (auto msg{CheckAccessibleSymbol(innermost, *symbol)}) {
+      if (auto msg{CheckAccessibleSymbol(
+              innermost, *symbol, /*inStructureConstructor=*/true)}) {
         Say(exprSource, std::move(*msg));
       }
       if (checkConflicts) {
@@ -3783,10 +3784,9 @@ MaybeExpr NumericBinaryHelper(
       analyzer.CheckForNullPointer();
       analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
-      constexpr bool canBeUnsigned{opr != NumericOperator::Power};
-      return NumericOperation<OPR, canBeUnsigned>(
-          context.GetContextualMessages(), analyzer.MoveExpr(0),
-          analyzer.MoveExpr(1), context.GetDefaultKind(TypeCategory::Real));
+      return NumericOperation<OPR>(context.GetContextualMessages(),
+          analyzer.MoveExpr(0), analyzer.MoveExpr(1),
+          context.GetDefaultKind(TypeCategory::Real));
     } else {
       return analyzer.TryDefinedOp(AsFortran(opr),
           "Operands of %s must be numeric; have %s and %s"_err_en_US);
@@ -4632,7 +4632,7 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
 
 bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
   for (const std::optional<ActualArgument> &arg : actuals_) {
-    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+    if (arg && semantics::IsAssumedRank(arg->UnwrapExpr())) {
       context_.Say(source_,
           "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
       fatalErrors_ = true;
