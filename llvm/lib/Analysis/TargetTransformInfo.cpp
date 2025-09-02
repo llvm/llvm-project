@@ -1424,6 +1424,10 @@ bool TargetTransformInfo::preferEpilogueVectorization() const {
   return TTIImpl->preferEpilogueVectorization();
 }
 
+bool TargetTransformInfo::supportsPredicatedDivRem() const {
+  return TTIImpl->supportsPredicatedDivRem();
+}
+
 TargetTransformInfo::VPLegalization
 TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return TTIImpl->getVPLegalizationStrategy(VPI);

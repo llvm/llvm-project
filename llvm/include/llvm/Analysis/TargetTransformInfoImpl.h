@@ -1103,6 +1103,8 @@ public:
 
   virtual bool preferEpilogueVectorization() const { return true; }
 
+  virtual bool supportsPredicatedDivRem() const { return false; }
+
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
   }

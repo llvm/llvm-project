@@ -7847,18 +7847,20 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem: {
-    // If not provably safe use a VP intrinsic to mask off trapping lanes if
-    // supported, or use a select to form a safe divisor before widening the
-    // div/rem operation itself.
-    // Otherwise fall through to general handling below.
+    // If not provably safe use a predicated intrinsic to mask off trapping
+    // lanes if supported, or use a select to form a safe divisor before
+    // widening the div/rem operation itself.  Otherwise fall through to general
+    // handling below.
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
 
-      if (CM.foldTailWithEVL()) {
+      if (TTI->supportsPredicatedDivRem()) {
         Ops.push_back(Mask);
-        Ops.push_back(Plan.getOrAddLiveIn(ConstantInt::getAllOnesValue(
-            IntegerType::getInt32Ty(I->getContext()))));
+        Ops.push_back(Builder.createScalarZExtOrTrunc(
+            &Plan.getVF(), IntegerType::getInt32Ty(I->getContext()),
+            VPTypeAnalysis(Plan).inferScalarType(&Plan.getVF()),
+            I->getDebugLoc()));
         return new VPWidenIntrinsicRecipe(
             VPIntrinsic::getForOpcode(I->getOpcode()), Ops, I->getType(),
             I->getDebugLoc());

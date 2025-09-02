@@ -1842,6 +1842,10 @@ public:
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
 
+  /// \returns True if the target supports lowering the @llvm.vp.udiv,
+  /// @llvm.vp.sdiv, @llvm.vp.urem and @llvm.vp.srem intrinsics.
+  LLVM_ABI bool supportsPredicatedDivRem() const;
+
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   LLVM_ABI bool shouldExpandReduction(const IntrinsicInst *II) const;

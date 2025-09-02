@@ -2464,7 +2464,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             default:
               return nullptr;
             }
-            if (!match(VPI->getOperand(3), m_AllOnes()))
+            VPValue *VF = &VPI->getParent()->getPlan()->getVF();
+            if (!match(VPI->getOperand(3), m_TruncOrSelf(m_Specific(VF))))
               return nullptr;
             VPValue *NewMask = GetNewMask(VPI->getOperand(2));
             if (NewMask == HeaderMask)
@@ -2486,10 +2487,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
-         "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
