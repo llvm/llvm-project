@@ -120,7 +120,6 @@ class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21 -31} = xo;
 }
 
-
 let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L),
@@ -157,7 +156,6 @@ let Predicates = [HasVSX, IsISAFuture] in {
                                    (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                                    "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
-
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
                                 "vupkhsntob $VRT, $VRB", []>;
