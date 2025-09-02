@@ -660,18 +660,6 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
 
   MachineBasicBlock *MBB = MI.getParent();
 
-  bool IsFloatVector = (
-      // SSE float moves
-      Instruction.MoveOpc == X86::MOVAPSrr || // 128-bit single precision
-      Instruction.MoveOpc == X86::MOVAPDrr || // 128-bit double precision
-      // AVX float moves
-      Instruction.MoveOpc == X86::VMOVAPSrr || // VEX 128-bit single
-      Instruction.MoveOpc == X86::VMOVAPDrr || // VEX 128-bit double
-      // AVX 256-bit float moves
-      Instruction.MoveOpc == X86::VMOVAPSYrr || // VEX 256-bit single
-      Instruction.MoveOpc == X86::VMOVAPDYrr    // VEX 256-bit double
-  );
-
   // Operand layout matches the TableGen definition:
   // (outs VR128:$dst, VR128:$tmpx, GR32:$tmpg),
   // (ins  VR128:$t, VR128:$f, i8imm:$cond)
@@ -700,15 +688,6 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   BuildMI(*MBB, MI, DL, get(X86::MOVZX32rr8), TmpGPR)
       .addReg(SubReg)
       .setMIFlags(MachineInstr::MIFlag::NoMerge);
-
-  if (IsFloatVector) {
-    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
-    // %eax)
-    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
-  } else {
-    // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
-    BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
-  }
 
   // Broadcast to TmpX (vector mask)
   BuildMI(*MBB, MI, DL, get(X86::PXORrr), MaskReg)
@@ -757,6 +736,10 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
       BlendOpc = X86::PBLENDVBrr0;
       break;
     }
+
+    // Shift left 31 bits to convert 1 -> 0x80000000, 0 -> 0x00000000 (shll $31,
+    // %eax)
+    BuildMI(*MBB, MI, DL, get(X86::SHL32ri), TmpGPR).addReg(TmpGPR).addImm(31);
 
     // Check if XMM0 is used as one of source registers, if yes then save it
     // in Dst register and update FalseVal and TrueVal to Dst register
@@ -825,6 +808,9 @@ bool X86InstrInfo::expandCtSelectVector(MachineInstr &MI) const {
           .addReg(MaskReg)
           .setMIFlags(MachineInstr::MIFlag::NoMerge);
     } else {
+      // Negate to convert 1 -> 0xFFFFFFFF, 0 -> 0x00000000 (negl %eax)
+      BuildMI(*MBB, MI, DL, get(X86::NEG32r), TmpGPR).addReg(TmpGPR);
+
       // move FalseVal to Dst register since MaskReg is XMM0 and Dst is not
       BuildMI(*MBB, MI, DL, get(X86::MOVAPSrr), Dst)
           .addReg(FalseVal)
