@@ -405,7 +405,7 @@ void ProcessMinidump::BuildMemoryRegions() {
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }
-    return true;
+    return IterationAction::Continue;
   });
   m_memory_regions->insert(m_memory_regions->end(), to_add.begin(),
                            to_add.end());
