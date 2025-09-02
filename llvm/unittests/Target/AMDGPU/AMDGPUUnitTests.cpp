@@ -335,7 +335,7 @@ TEST(AMDGPU, TestGetNamedOperandIdx) {
       if (OpName == AMDGPU::OpName::NUM_OPERAND_NAMES)
         continue;
       int16_t RetrievedIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
-      EXPECT_EQ(Idx, RetrievedIdx)
+      EXPECT_EQ(Idx, static_cast<unsigned>(RetrievedIdx))
           << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
