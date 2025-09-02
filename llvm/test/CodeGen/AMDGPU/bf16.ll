@@ -30434,15 +30434,15 @@ define bfloat @v_exp_bf16(bfloat %a) {
 ; GFX950-NEXT:    v_sub_f32_e32 v3, v1, v2
 ; GFX950-NEXT:    v_fma_f32 v1, v0, s0, -v1
 ; GFX950-NEXT:    v_fmamk_f32 v1, v0, 0x32a5705f, v1
+; GFX950-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX950-NEXT:    v_add_f32_e32 v1, v3, v1
 ; GFX950-NEXT:    v_exp_f32_e32 v1, v1
-; GFX950-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX950-NEXT:    s_mov_b32 s0, 0xc2ce8ed0
+; GFX950-NEXT:    v_ldexp_f32 v1, v1, v2
 ; GFX950-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; GFX950-NEXT:    s_mov_b32 s0, 0x42b17218
-; GFX950-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_mov_b32_e32 v2, 0x7f800000
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v0
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -30834,15 +30834,15 @@ define bfloat @v_exp10_bf16(bfloat %a) {
 ; GFX950-NEXT:    v_sub_f32_e32 v3, v1, v2
 ; GFX950-NEXT:    v_fma_f32 v1, v0, s0, -v1
 ; GFX950-NEXT:    v_fmamk_f32 v1, v0, 0x33979a37, v1
+; GFX950-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX950-NEXT:    v_add_f32_e32 v1, v3, v1
 ; GFX950-NEXT:    v_exp_f32_e32 v1, v1
-; GFX950-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX950-NEXT:    s_mov_b32 s0, 0xc23369f4
+; GFX950-NEXT:    v_ldexp_f32 v1, v1, v2
 ; GFX950-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; GFX950-NEXT:    s_mov_b32 s0, 0x421a209b
-; GFX950-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_mov_b32_e32 v2, 0x7f800000
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX950-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v0
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
