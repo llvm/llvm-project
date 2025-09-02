@@ -29,7 +29,6 @@ class TestShLexer(unittest.TestCase):
         self.assertEqual(self.lex(""" "" "" """), ["", ""])
         self.assertEqual(self.lex(""" a\\ b """, win32Escapes=True), ["a\\", "b"])
 
-
 class TestShParse(unittest.TestCase):
     def parse(self, str):
         return ShParser(str).parse()
