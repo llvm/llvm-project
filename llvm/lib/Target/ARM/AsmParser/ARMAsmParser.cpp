@@ -3373,12 +3373,12 @@ public:
 
   void addMSRMaskOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getMSRMask())));
+    Inst.addOperand(MCOperand::createImm(getMSRMask()));
   }
 
   void addBankedRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getBankedReg())));
+    Inst.addOperand(MCOperand::createImm(getBankedReg()));
   }
 
   void addProcIFlagsOperands(MCInst &Inst, unsigned N) const {
@@ -6436,7 +6436,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     const auto *ExprVal =
-        MCSpecifierExpr::create(SubExprVal, Spec, getContext());
+        MCSpecifierExpr::create(SubExprVal, Spec, getContext(), S);
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Operands.push_back(ARMOperand::CreateImm(ExprVal, S, E, *this));
     return false;
@@ -12327,7 +12327,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo()->useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12525,7 +12525,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign())
+    if (getContext().getAsmInfo()->useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

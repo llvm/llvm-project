@@ -10,10 +10,8 @@
 #include <iomanip>
 #include <optional>
 
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -219,20 +217,19 @@ private:
   const char *GetHistoryFilePath() {
     // Compute the history path lazily.
     if (m_path.empty() && m_history && !m_prefix.empty()) {
-      llvm::SmallString<128> lldb_history_file;
-      FileSystem::Instance().GetHomeDirectory(lldb_history_file);
-      llvm::sys::path::append(lldb_history_file, ".lldb");
+      FileSpec lldb_dir = HostInfo::GetUserLLDBDir();
 
       // LLDB stores its history in ~/.lldb/. If for some reason this directory
       // isn't writable or cannot be created, history won't be available.
-      if (!llvm::sys::fs::create_directory(lldb_history_file)) {
+      if (!llvm::sys::fs::create_directory(lldb_dir.GetPath())) {
 #if LLDB_EDITLINE_USE_WCHAR
         std::string filename = m_prefix + "-widehistory";
 #else
         std::string filename = m_prefix + "-history";
 #endif
-        llvm::sys::path::append(lldb_history_file, filename);
-        m_path = std::string(lldb_history_file.str());
+        FileSpec lldb_history_file =
+            lldb_dir.CopyByAppendingPathComponent(filename);
+        m_path = lldb_history_file.GetPath();
       }
     }
 

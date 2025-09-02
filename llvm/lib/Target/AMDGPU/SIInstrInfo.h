@@ -33,6 +33,7 @@ class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
+class SIMachineFunctionInfo;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
@@ -196,8 +197,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -214,16 +214,20 @@ public:
     MO_GOTPCREL32_LO = 2,
     // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
     MO_GOTPCREL32_HI = 3,
+    // MO_GOTPCREL64 -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
+    MO_GOTPCREL64 = 4,
     // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
-    MO_REL32 = 4,
-    MO_REL32_LO = 4,
+    MO_REL32 = 5,
+    MO_REL32_LO = 5,
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
-    MO_REL32_HI = 5,
+    MO_REL32_HI = 6,
+    MO_REL64 = 7,
 
-    MO_FAR_BRANCH_OFFSET = 6,
+    MO_FAR_BRANCH_OFFSET = 8,
 
-    MO_ABS32_LO = 8,
-    MO_ABS32_HI = 9,
+    MO_ABS32_LO = 9,
+    MO_ABS32_HI = 10,
+    MO_ABS64 = 11,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
@@ -282,6 +286,15 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned Size,
+                                       const SIMachineFunctionInfo &MFI) const;
+  unsigned
+  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
+                                 unsigned Size,
+                                 const SIMachineFunctionInfo &MFI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -520,13 +533,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP2;
   }
 
-  static bool isVOP3(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::VOP3;
+  static bool isVOP3(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::VOP3;
   }
 
-  bool isVOP3(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::VOP3;
-  }
+  static bool isVOP3(const MachineInstr &MI) { return isVOP3(MI.getDesc()); }
+
+  bool isVOP3(uint16_t Opcode) const { return isVOP3(get(Opcode)); }
 
   static bool isSDWA(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SDWA;
@@ -664,6 +677,12 @@ public:
   bool isFLAT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
+
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
@@ -822,13 +841,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
   }
 
-  static bool isMAI(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::IsMAI;
+  static bool isMAI(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::IsMAI;
   }
 
-  bool isMAI(uint16_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::IsMAI;
-  }
+  static bool isMAI(const MachineInstr &MI) { return isMAI(MI.getDesc()); }
+
+  bool isMAI(uint16_t Opcode) const { return isMAI(get(Opcode)); }
 
   static bool isMFMA(const MachineInstr &MI) {
     return isMAI(MI) && MI.getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
@@ -862,6 +881,8 @@ public:
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
+
+  bool isXDLWMMA(const MachineInstr &MI) const;
 
   bool isXDL(const MachineInstr &MI) const;
 
@@ -975,6 +996,11 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
+           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
+           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -1030,7 +1056,7 @@ public:
     }
   }
 
-  bool isWaitcnt(unsigned Opcode) const {
+  static bool isWaitcnt(unsigned Opcode) {
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:
@@ -1097,7 +1123,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1155,12 +1180,24 @@ public:
     return isInlineConstant(*MO.getParent(), MO.getOperandNo());
   }
 
-  bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
+  bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
+
+  bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
+                         const MachineOperand &MO) const {
+    return isImmOperandLegal(MI.getDesc(), OpNo, MO);
+  }
+
+  /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
+  bool isLegalAV64PseudoImm(uint64_t Imm) const;
 
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
+
+  bool physRegUsesConstantBus(const MachineOperand &Reg) const;
+  bool regUsesConstantBus(const MachineOperand &Reg,
+                          const MachineRegisterInfo &MRI) const;
 
   /// Returns true if this operand uses the constant bus.
   bool usesConstantBus(const MachineRegisterInfo &MRI,
@@ -1199,6 +1236,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
@@ -1265,6 +1304,19 @@ public:
                          const MachineOperand &MO) const;
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
+
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
+  /// instructions. Packed math FP32 instructions typically accept SGPRs or
+  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
+  /// HW can only read the first SGPR and use it for both the low and high
+  /// operations.
+  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
+  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
+  /// be used.
+  bool isLegalGFX12PlusPackedMathFP32Operand(
+      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+      const MachineOperand *MO = nullptr) const;
+
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1367,8 +1419,8 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
-  unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -1448,8 +1500,7 @@ public:
                         Align Alignment = Align(4)) const;
 
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
-  /// encoded instruction. If \p Signed, this is for an instruction that
-  /// interprets the offset as signed.
+  /// encoded instruction with the given \p FlatVariant.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
                          uint64_t FlatVariant) const;
 

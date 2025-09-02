@@ -13,7 +13,7 @@ export void fn(int8 A) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 4> *' <ArrayToPointerDecay>
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'int8':'vector<int, 4>[2]' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int8':'vector<int, 4>[2]' lvalue Var {{.*}} 'a' 'int8':'vector<int, 4>[2]'
-// CHECK-NEXT: ArrayInitIndexExpr {{.*}} 'unsigned long'
+// CHECK-NEXT: ArrayInitIndexExpr {{.*}} '__size_t':'unsigned long'
   int8 b = a;
 
 // CHECK-LABEL: VarDecl {{.*}} c 'int8':'vector<int, 4>[2]' cinit
@@ -25,7 +25,7 @@ export void fn(int8 A) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 4> *' <ArrayToPointerDecay>
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'vector<int, 4>[2]' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, 4>[2]' lvalue ParmVar {{.*}} 'A' 'vector<int, 4>[2]'
-// CHECK-NEXT: ArrayInitIndexExpr {{.*}} 'unsigned long'
+// CHECK-NEXT: ArrayInitIndexExpr {{.*}} '__size_t':'unsigned long'
   int8 c = A;
 }
 

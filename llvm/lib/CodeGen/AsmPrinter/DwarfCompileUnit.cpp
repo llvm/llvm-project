@@ -429,7 +429,7 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
   addString(NDie, dwarf::DW_AT_name, Name);
   addGlobalName(Name, NDie, CB->getScope());
   if (CB->getFile())
-    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+    addSourceLine(NDie, CB->getLineNo(), /*Column*/ 0, CB->getFile());
   if (DIGlobalVariable *V = CB->getDecl())
     getCU().addLocationAttribute(&NDie, V, GlobalExprs);
   return &NDie;
@@ -508,7 +508,8 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
   // don't want to depend on target specific headers in this code?
   const unsigned TI_GLOBAL_RELOC = 3;
   unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-  auto *Sym = cast<MCSymbolWasm>(Asm->GetExternalSymbolSymbol(GlobalName));
+  auto *Sym =
+      static_cast<MCSymbolWasm *>(Asm->GetExternalSymbolSymbol(GlobalName));
   // FIXME: this repeats what WebAssemblyMCInstLower::
   // GetExternalSymbolSymbol does, since if there's no code that
   // refers to this symbol, we have to set it here.
@@ -1291,12 +1292,10 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
   }
 }
 
-DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
-                                                 const DISubprogram *CalleeSP,
-                                                 bool IsTail,
-                                                 const MCSymbol *PCAddr,
-                                                 const MCSymbol *CallAddr,
-                                                 unsigned CallReg) {
+DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
+    DIE &ScopeDIE, const DISubprogram *CalleeSP, bool IsTail,
+    const MCSymbol *PCAddr, const MCSymbol *CallAddr, unsigned CallReg,
+    DIType *AllocSiteTy) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
@@ -1305,7 +1304,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     // Indirect call.
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
-  } else {
+  } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
     if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
@@ -1350,6 +1349,9 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
                     getDwarf5OrGNUAttr(dwarf::DW_AT_call_return_pc), PCAddr);
   }
 
+  if (AllocSiteTy)
+    addType(CallSiteDIE, AllocSiteTy, dwarf::DW_AT_LLVM_alloc_type);
+
   return CallSiteDIE;
 }
 
@@ -1379,7 +1381,7 @@ void DwarfCompileUnit::constructCallSiteParmEntryDIEs(
 
 DIE *DwarfCompileUnit::constructImportedEntityDIE(
     const DIImportedEntity *Module) {
-  DIE *IMDie = DIE::get(DIEValueAllocator, (dwarf::Tag)Module->getTag());
+  DIE *IMDie = DIE::get(DIEValueAllocator, Module->getTag());
   insertDIE(Module, IMDie);
   DIE *EntityDie;
   auto *Entity = Module->getEntity();
@@ -1404,7 +1406,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-  addSourceLine(*IMDie, Module->getLine(), Module->getFile());
+  addSourceLine(*IMDie, Module->getLine(), /*Column*/ 0, Module->getFile());
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
   StringRef Name = Module->getName();
   if (!Name.empty()) {
@@ -1701,6 +1703,11 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
     addString(LabelDie, dwarf::DW_AT_name, Name);
   const auto *DILabel = Label.getLabel();
   addSourceLine(LabelDie, DILabel);
+  if (DILabel->isArtificial())
+    addFlag(LabelDie, dwarf::DW_AT_artificial);
+  if (DILabel->getCoroSuspendIdx())
+    addUInt(LabelDie, dwarf::DW_AT_LLVM_coro_suspend_idx, std::nullopt,
+            *DILabel->getCoroSuspendIdx());
 }
 
 /// Add a Dwarf expression attribute data and value.

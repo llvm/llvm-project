@@ -13,7 +13,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -78,7 +77,7 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
                       clonedOp->result_end());
   }
   // Add return operation
-  builder.create<func::ReturnOp>(loc, clonedVals);
+  func::ReturnOp::create(builder, loc, clonedVals);
 
   // Remove unused function arguments
   size_t currentIndex = 0;
@@ -142,7 +141,7 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   os << "\n";
   for (auto &results : matches) {
     os << "Match #" << ++matchCount << ":\n\n";
-    for (auto op : results.matchedOps) {
+    for (Operation *op : results.matchedOps) {
       if (op == results.rootOp) {
         finder.printMatch(os, qs, op, "root");
       } else {

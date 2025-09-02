@@ -103,7 +103,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   dxbc::ShaderHash HashData = {0, {0}};
   // The Hash's IncludesSource flag gets set whenever the hashed shader includes
   // debug information.
-  if (M.debug_compile_units_begin() != M.debug_compile_units_end())
+  if (!M.debug_compile_units().empty())
     HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
@@ -160,18 +160,17 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   assert(MMI.EntryPropertyVec.size() == 1);
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const auto &FuncRs = RSA.find(EntryFunction);
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
 
-  if (FuncRs == RSA.end())
+  if (!RS)
     return;
 
-  const RootSignatureDesc &RS = FuncRs->second;
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
-  RS.write(OS);
+  RS->write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);

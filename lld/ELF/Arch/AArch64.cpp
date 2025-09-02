@@ -154,6 +154,12 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
     return R_ABS;
+  case R_AARCH64_PATCHINST:
+    if (!isAbsolute(s))
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "R_AARCH64_PATCHINST relocation against non-absolute symbol "
+               << &s;
+    return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
@@ -505,6 +511,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_PREL32:
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
+    break;
+  case R_AARCH64_PATCHINST:
+    if (!rel.sym->isUndefined()) {
+      checkUInt(ctx, loc, val, 32, rel);
+      write32le(loc, val);
+    }
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:

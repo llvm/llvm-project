@@ -401,7 +401,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
   ]> {
-  let summary = "create a buffer-like type from a tensor-like type";
+  let summary = "create a tensor-like type from a buffer-like type";
   let description = [{
     An operation that creates a tensor from a buffer. The result value is a
     tensor-like type that must match the corresponding buffer-like operand as

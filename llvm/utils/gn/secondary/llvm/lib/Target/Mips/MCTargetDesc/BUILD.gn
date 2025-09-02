@@ -68,7 +68,6 @@ static_library("MCTargetDesc") {
     "MipsMCAsmInfo.cpp",
     "MipsMCCodeEmitter.cpp",
     "MipsMCTargetDesc.cpp",
-    "MipsNaClELFStreamer.cpp",
     "MipsOptionRecord.cpp",
     "MipsTargetStreamer.cpp",
     "MipsWinCOFFObjectWriter.cpp",

@@ -238,11 +238,9 @@ public:
 // compiler instance before the super `ExecuteAction` triggers parsing
 void IncrementalSyntaxOnlyAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  ExternalSource *myExternalSource =
-      new ExternalSource(CI.getASTContext(), CI.getFileManager(),
-                         ParentCI->getASTContext(), ParentCI->getFileManager());
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> astContextExternalSource(
-      myExternalSource);
+  auto astContextExternalSource = llvm::makeIntrusiveRefCnt<ExternalSource>(
+      CI.getASTContext(), CI.getFileManager(), ParentCI->getASTContext(),
+      ParentCI->getFileManager());
   CI.getASTContext().setExternalSource(astContextExternalSource);
   CI.getASTContext().getTranslationUnitDecl()->setHasExternalVisibleStorage(
       true);
@@ -380,9 +378,9 @@ void ReplCodeCompleter::codeComplete(CompilerInstance *InterpCI,
   AU->setOwnsRemappedFileBuffers(false);
   AU->CodeComplete(CodeCompletionFileName, 1, Col, RemappedFiles, false, false,
                    false, consumer,
-                   std::make_shared<clang::PCHContainerOperations>(), *diag,
-                   InterpCI->getLangOpts(), AU->getSourceManager(),
-                   AU->getFileManager(), sd, tb, std::move(Act));
+                   std::make_shared<clang::PCHContainerOperations>(), diag,
+                   InterpCI->getLangOpts(), AU->getSourceManagerPtr(),
+                   AU->getFileManagerPtr(), sd, tb, std::move(Act));
 }
 
 } // namespace clang

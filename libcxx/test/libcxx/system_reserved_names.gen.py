@@ -29,8 +29,6 @@ for header in public_headers:
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // This is required to detect the platform we're building for below.
 #include <__config>
 

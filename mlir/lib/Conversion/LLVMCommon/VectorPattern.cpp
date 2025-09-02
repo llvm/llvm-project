@@ -87,17 +87,17 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
   auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
-  Value desc = rewriter.create<LLVM::PoisonOp>(loc, resultNDVectoryTy);
+  Value desc = LLVM::PoisonOp::create(rewriter, loc, resultNDVectoryTy);
   nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
     for (const auto &operand : llvm::enumerate(operands)) {
-      extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          loc, operand.value(), position));
+      extractedOperands.push_back(LLVM::ExtractValueOp::create(
+          rewriter, loc, operand.value(), position));
     }
     Value newVal = createOperand(result1DVectorTy, extractedOperands);
-    desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, newVal, position);
+    desc = LLVM::InsertValueOp::create(rewriter, loc, desc, newVal, position);
   });
   rewriter.replaceOp(op, desc);
   return success();

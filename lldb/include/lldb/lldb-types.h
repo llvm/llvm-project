@@ -48,9 +48,6 @@ typedef unsigned thread_result_t;                 // Host thread result type
 typedef thread_result_t (*thread_func_t)(void *); // Host thread function type
 typedef void *pipe_t;                             // Host pipe type is HANDLE
 
-// printf macro for file_t
-#define PRIuFT PRIuPTR
-
 #else
 
 #include <pthread.h>
@@ -65,9 +62,6 @@ typedef void *thread_arg_t;             // Host thread argument type
 typedef void *thread_result_t;          // Host thread result type
 typedef void *(*thread_func_t)(void *); // Host thread function type
 typedef int pipe_t;                     // Host pipe type
-
-// printf macro for file_t
-#define PRIuFT PRIi32
 
 #endif // _WIN32
 

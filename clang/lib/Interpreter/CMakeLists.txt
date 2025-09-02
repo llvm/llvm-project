@@ -22,6 +22,7 @@ endif()
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
+  IncrementalAction.cpp
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
@@ -29,6 +30,7 @@ add_clang_library(clangInterpreter
   InterpreterUtils.cpp
   RemoteJITUtils.cpp
   Value.cpp
+  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 

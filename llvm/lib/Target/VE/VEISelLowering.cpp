@@ -1649,14 +1649,11 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
 
   // Prepare arguments
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Size;
-  Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Size, Size.getValueType().getTypeForEVT(*DAG.getContext()));
   if (NeedsAlign) {
-    Entry.Node = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Args.push_back(Entry);
+    SDValue Align = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
+    Args.emplace_back(Align,
+                      Align.getValueType().getTypeForEVT(*DAG.getContext()));
   }
   Type *RetTy = Type::getVoidTy(*DAG.getContext());
 
@@ -1738,9 +1735,6 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   SDValue FrameAddr = lowerFRAMEADDR(Op, DAG, TLI, Subtarget);
 

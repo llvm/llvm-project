@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
@@ -148,8 +147,9 @@ private:
     std::string docStr;
     {
       llvm::raw_string_ostream docOS(docStr);
+      std::string tmpDocStr = doc.str();
       raw_indented_ostream(docOS).printReindented(
-          StringRef(docStr).rtrim(" \t"));
+          StringRef(tmpDocStr).rtrim(" \t"));
     }
     return docStr;
   }

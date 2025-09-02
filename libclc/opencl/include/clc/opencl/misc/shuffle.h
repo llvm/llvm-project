@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MISC_SHUFFLE_H__
+#define __CLC_OPENCL_MISC_SHUFFLE_H__
+
 #define __CLC_FUNCTION shuffle
 
 // Integer-type decls
@@ -17,3 +20,5 @@
 #include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_MISC_SHUFFLE_H__

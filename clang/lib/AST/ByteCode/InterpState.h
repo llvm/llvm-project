@@ -57,14 +57,11 @@ public:
   bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
-  Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override {
-    return Parent.getBottomFrame();
-  }
+  const Frame *getBottomFrame() const override { return &BottomFrame; }
 
   // Access objects from the walker context.
   Expr::EvalStatus &getEvalStatus() const override {
@@ -118,7 +115,13 @@ public:
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      Alloc = std::make_unique<DynamicAllocator>();
+    }
+
+    return *Alloc.get();
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
@@ -164,7 +167,7 @@ private:
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
+  std::unique_ptr<DynamicAllocator> Alloc;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -189,6 +192,10 @@ public:
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<const Block *> InitializingBlocks;
 
   mutable llvm::BumpPtrAllocator Allocator;
 };

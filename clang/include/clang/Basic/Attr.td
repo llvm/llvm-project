@@ -492,9 +492,22 @@ def TargetHasDLLImportExport : TargetSpec {
 def TargetItaniumCXXABI : TargetSpec {
   let CustomCode = [{ Target.getCXXABI().isItaniumFamily() }];
 }
+
 def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let CustomCode = [{ Target.getCXXABI().isMicrosoft() }];
 }
+
+// The target follows Microsoft record layout. Usually this happens in two
+// cases: 1. the target itself has Microsoft C++ ABI, e.g. x86_64 in MSVC
+// environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
+// a host target in MSVC environment on Windows.
+def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
+                                              "aarch64", "amdgcn", "nvptx",
+                                              "nvptx64", "spirv", "spirv32",
+                                              "spirv64"]> {
+  let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -1046,22 +1059,13 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 def AsmLabel : InheritableAttr {
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
-    // Label specifies the mangled name for the decl.
-    StringArgument<"Label">,
-
-    // IsLiteralLabel specifies whether the label is literal (i.e. suppresses
-    // the global C symbol prefix) or not. If not, the mangle-suppression prefix
-    // ('\01') is omitted from the decl name at the LLVM IR level.
-    //
-    // Non-literal labels are used by some external AST sources like LLDB.
-    BoolArgument<"IsLiteralLabel", /*optional=*/0, /*fake=*/1>
-  ];
+      // Label specifies the mangled name for the decl.
+      StringArgument<"Label">, ];
   let SemaHandler = 0;
   let Documentation = [AsmLabelDocs];
-  let AdditionalMembers =
-[{
+  let AdditionalMembers = [{
 bool isEquivalent(AsmLabelAttr *Other) const {
-  return getLabel() == Other->getLabel() && getIsLiteralLabel() == Other->getIsLiteralLabel();
+  return getLabel() == Other->getLabel();
 }
 }];
 }
@@ -1628,8 +1632,15 @@ def DeviceKernel : DeclOrTypeAttr {
 }];
 }
 
+def SYCLExternal : InheritableAttr {
+  let Spellings = [CXX11<"clang", "sycl_external">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLExternalDocs];
+}
+
 def SYCLKernelEntryPoint : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Spellings = [CXX11<"clang", "sycl_kernel_entry_point">];
   let Args = [
     // KernelName is required and specifies the kernel name type.
     TypeArgument<"KernelName">,
@@ -1789,7 +1800,7 @@ def Destructor : InheritableAttr {
   let Documentation = [CtorDtorDocs];
 }
 
-def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"empty_bases">];
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [EmptyBasesDocs];
@@ -2021,7 +2032,7 @@ def Restrict : InheritableAttr {
   let Documentation = [RestrictDocs];
 }
 
-def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"layout_version">];
   let Args = [UnsignedArgument<"Version">];
   let Subjects = SubjectList<[CXXRecord]>;
@@ -2239,7 +2250,7 @@ def NoUniqueAddress : InheritableAttr {
   let Spellings = [CXX11<"", "no_unique_address", 201803>, CXX11<"msvc", "no_unique_address", 201803>];
   let TargetSpecificSpellings = [
     TargetSpecificSpelling<TargetItaniumCXXABI, [CXX11<"", "no_unique_address", 201803>]>,
-    TargetSpecificSpelling<TargetMicrosoftCXXABI, [CXX11<"msvc", "no_unique_address", 201803>]>,
+    TargetSpecificSpelling<TargetMicrosoftRecordLayout, [CXX11<"msvc", "no_unique_address", 201803>]>,
   ];
   let Documentation = [NoUniqueAddressDocs];
 }
@@ -2348,6 +2359,7 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                    [
                                      "supervisor",
                                      "machine",
+                                     "rnmi",
                                      "qci-nest",
                                      "qci-nonest",
                                      "SiFive-CLIC-preemptible",
@@ -2356,6 +2368,7 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                    [
                                      "supervisor",
                                      "machine",
+                                     "rnmi",
                                      "qcinest",
                                      "qcinonest",
                                      "SiFiveCLICPreemptible",
@@ -3053,6 +3066,26 @@ def Regparm : TypeAttr {
   let Documentation = [RegparmDocs];
   // Represented as part of the enclosing function type.
   let ASTNode = 0;
+}
+
+def SwiftType : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [StringArgument<"TypeString">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftNullability : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [EnumArgument<"Kind", "Kind", /*is_string=*/false,
+                           ["non_null", "nullable", "unspecified", "nullable_result"],
+                           ["NonNull", "Nullable", "Unspecified", "NullableResult"]>];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def SwiftAsyncName : InheritableAttr {
@@ -3894,6 +3927,14 @@ def CFICanonicalJumpTable : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CFICanonicalJumpTableDocs];
   let SimpleHandler = 1;
+}
+
+def CFISalt : TypeAttr {
+  let Spellings = [Clang<"cfi_salt">];
+  let Args = [StringArgument<"Salt">];
+  let Subjects = SubjectList<[FunctionLike], ErrorDiag>;
+  let Documentation = [CFISaltDocs];
+  let LangOpts = [COnly];
 }
 
 // C/C++ Thread safety attributes (e.g. for deadlock, data race checking)
@@ -4861,6 +4902,14 @@ def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Documentation = [HLSLSV_GroupIndexDocs];
 }
 
+def HLSLVkBinding : InheritableAttr {
+  let Spellings = [CXX11<"vk", "binding">];
+  let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
+  let Args = [IntArgument<"Binding">, IntArgument<"Set", 1>];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBindingDocs];
+}
+
 def HLSLResourceBinding: InheritableAttr {
   let Spellings = [HLSLAnnotation<"register">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
@@ -4898,6 +4947,7 @@ def HLSLResourceBinding: InheritableAttr {
         return SpaceNumber;
       }
       void setImplicitBindingOrderID(uint32_t Value) {
+        assert(!hasImplicitBindingOrderID() && "attribute already has implicit binding order id");
         ImplicitBindingOrderID = Value;
       }
       bool hasImplicitBindingOrderID() const {

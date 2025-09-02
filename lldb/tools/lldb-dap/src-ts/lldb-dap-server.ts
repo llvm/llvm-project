@@ -11,6 +11,14 @@ import * as vscode from "vscode";
 export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
+  private serverSpawnInfo?: string[];
+
+  constructor() {
+    vscode.commands.registerCommand(
+      "lldb-dap.getServerProcess",
+      () => this.serverProcess,
+    );
+  }
 
   /**
    * Starts the server with the provided options. The server will be restarted or reused as
@@ -26,8 +34,8 @@ export class LLDBDapServer implements vscode.Disposable {
     args: string[],
     options?: child_process.SpawnOptionsWithoutStdio,
   ): Promise<{ host: string; port: number } | undefined> {
-    const dapArgs = [...args, "--connection", "listen://localhost:0" ];
-    if (!(await this.shouldContinueStartup(dapPath, dapArgs))) {
+    const dapArgs = [...args, "--connection", "listen://localhost:0"];
+    if (!(await this.shouldContinueStartup(dapPath, dapArgs, options?.env))) {
       return undefined;
     }
 
@@ -39,8 +47,7 @@ export class LLDBDapServer implements vscode.Disposable {
       const process = child_process.spawn(dapPath, dapArgs, options);
       process.on("error", (error) => {
         reject(error);
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.cleanUp(process);
       });
       process.on("exit", (code, signal) => {
         let errorMessage = "Server process exited early";
@@ -50,8 +57,7 @@ export class LLDBDapServer implements vscode.Disposable {
           errorMessage += ` due to signal ${signal}`;
         }
         reject(new Error(errorMessage));
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.cleanUp(process);
       });
       process.stdout.setEncoding("utf8").on("data", (data) => {
         const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(
@@ -65,6 +71,7 @@ export class LLDBDapServer implements vscode.Disposable {
         }
       });
       this.serverProcess = process;
+      this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
     });
     return this.serverInfo;
   }
@@ -80,12 +87,14 @@ export class LLDBDapServer implements vscode.Disposable {
   private async shouldContinueStartup(
     dapPath: string,
     args: string[],
+    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
   ): Promise<boolean> {
-    if (!this.serverProcess || !this.serverInfo) {
+    if (!this.serverProcess || !this.serverInfo || !this.serverSpawnInfo) {
       return true;
     }
 
-    if (isDeepStrictEqual(this.serverProcess.spawnargs, [dapPath, ...args])) {
+    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
+    if (isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
       return true;
     }
 
@@ -97,11 +106,11 @@ export class LLDBDapServer implements vscode.Disposable {
 
 The previous lldb-dap server was started with:
 
-${this.serverProcess.spawnargs.join(" ")}
+${this.serverSpawnInfo.join(" ")}
 
 The new lldb-dap server will be started with:
 
-${dapPath} ${args.join(" ")}
+${newSpawnInfo.join(" ")}
 
 Restarting the server will interrupt any existing debug sessions and start a new server.`,
       },
@@ -126,7 +135,30 @@ Restarting the server will interrupt any existing debug sessions and start a new
       return;
     }
     this.serverProcess.kill();
-    this.serverProcess = undefined;
-    this.serverInfo = undefined;
+    this.cleanUp(this.serverProcess);
+  }
+
+  cleanUp(process: child_process.ChildProcessWithoutNullStreams) {
+    // If the following don't equal, then the fields have already been updated
+    // (either a new process has started, or the fields were already cleaned
+    // up), and so the cleanup should be skipped.
+    if (this.serverProcess === process) {
+      this.serverProcess = undefined;
+      this.serverInfo = undefined;
+    }
+  }
+
+  getSpawnInfo(
+    path: string,
+    args: string[],
+    env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
+  ): string[] {
+    return [
+      path,
+      ...args,
+      ...Object.entries(env ?? {}).map(
+        (entry) => String(entry[0]) + "=" + String(entry[1]),
+      ),
+    ];
   }
 }

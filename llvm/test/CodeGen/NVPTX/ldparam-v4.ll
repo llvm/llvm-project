@@ -7,7 +7,7 @@ declare <4 x float> @bar()
 define void @foo(ptr %ptr) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

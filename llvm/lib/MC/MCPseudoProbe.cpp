@@ -81,8 +81,9 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
-          AddrDelta));
+      auto *F = MCOS->getCurrentFragment();
+      F->makeLEB(true, AddrDelta);
+      MCOS->newFragment();
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.

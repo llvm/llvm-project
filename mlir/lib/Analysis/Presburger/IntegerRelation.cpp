@@ -1500,12 +1500,13 @@ void IntegerRelation::addBound(BoundType type, ArrayRef<DynamicAPInt> expr,
 /// respect to a positive constant 'divisor'. Two constraints are added to the
 /// system to capture equivalence with the floordiv.
 ///      q = expr floordiv c    <=>   c*q <= expr <= c*q + c - 1.
-void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                                       const DynamicAPInt &divisor) {
+/// Returns the column position of the new local variable.
+unsigned IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                                           const DynamicAPInt &divisor) {
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendVar(VarKind::Local);
+  unsigned newVar = appendVar(VarKind::Local);
 
   SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
@@ -1513,6 +1514,28 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
   addInequality(
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
+  return newVar;
+}
+
+unsigned IntegerRelation::addLocalModulo(ArrayRef<DynamicAPInt> exprs,
+                                         const DynamicAPInt &modulus) {
+  assert(exprs.size() == getNumCols() && "incorrect exprs size");
+  assert(modulus > 0 && "positive modulus expected");
+
+  /// Add a local variable for q = expr floordiv modulus
+  addLocalFloorDiv(exprs, modulus);
+
+  /// Add a local var to represent the result
+  auto resultIndex = appendVar(VarKind::Local);
+
+  SmallVector<DynamicAPInt, 8> exprsCopy(exprs);
+  /// Insert the two new locals before the constant
+  /// Add locals that correspond to `q` and `result` to compute
+  /// 0 = (expr - modulus * q) - result
+  exprsCopy.insert(exprsCopy.end() - 1,
+                   {DynamicAPInt(-modulus), DynamicAPInt(-1)});
+  addEquality(exprsCopy);
+  return resultIndex;
 }
 
 int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {
@@ -2214,7 +2237,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
-      std::fill(minLb.begin(), minLb.end(), 0);
+      llvm::fill(minLb, 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
 
@@ -2230,12 +2253,12 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
-      std::fill(maxUb.begin(), maxUb.end(), 0);
+      llvm::fill(maxUb, 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
 
-    std::fill(newLb.begin(), newLb.end(), 0);
-    std::fill(newUb.begin(), newUb.end(), 0);
+    llvm::fill(newLb, 0);
+    llvm::fill(newUb, 0);
 
     // The divisor for lb, ub, otherLb, otherUb at this point is lbDivisor,
     // and so it's the divisor for newLb and newUb as well.
@@ -2480,6 +2503,44 @@ void IntegerRelation::applyDomain(const IntegerRelation &rel) {
 }
 
 void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
+
+IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  assert(getNumDomainVars() == rel.getNumDomainVars() &&
+         "Range product is only defined for relations with equal domains");
+
+  // explicit copy of `this`
+  IntegerRelation result = *this;
+  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
+  unsigned numThisRangeVars = getNumRangeVars();
+  unsigned numNewSymbolVars = result.getNumSymbolVars() - getNumSymbolVars();
+
+  result.appendVar(VarKind::Range, rel.getNumRangeVars());
+
+  // Copy each equality from `rel` and update the copy to account for range
+  // variables from `this`. The `rel` equality is a list of coefficients of the
+  // variables from `rel`, and so the range variables need to be shifted right
+  // by the number of `this` range variables and symbols.
+  for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getEquality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addEquality(copy);
+  }
+
+  for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getInequality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addInequality(copy);
+  }
+
+  return result;
+}
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);

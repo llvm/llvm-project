@@ -21,6 +21,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule STATIC
   OwningMemoryCheck.cpp
   PreferMemberInitializerCheck.cpp
   ProBoundsArrayToPointerDecayCheck.cpp
+  ProBoundsAvoidUncheckedContainerAccess.cpp
   ProBoundsConstantArrayIndexCheck.cpp
   ProBoundsPointerArithmeticCheck.cpp
   ProTypeConstCastCheck.cpp

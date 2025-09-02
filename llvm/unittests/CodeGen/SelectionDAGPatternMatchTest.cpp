@@ -6,97 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "SelectionDAGTestBase.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
 
 using namespace llvm;
 
-class SelectionDAGPatternMatchTest : public testing::Test {
-protected:
-  static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-  }
-
-  void SetUp() override {
-    StringRef Assembly = "@g = global i32 0\n"
-                         "@g_alias = alias i32, i32* @g\n"
-                         "define i32 @f() {\n"
-                         "  %1 = load i32, i32* @g\n"
-                         "  ret i32 %1\n"
-                         "}";
-
-    Triple TargetTriple("riscv64--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    // FIXME: These tests do not depend on RISCV specifically, but we have to
-    // initialize a target. A skeleton Target for unittests would allow us to
-    // always run these tests.
-    if (!T)
-      GTEST_SKIP();
-
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TargetTriple, "", "+m,+f,+d,+v", Options, std::nullopt, std::nullopt,
-        CodeGenOptLevel::Aggressive));
-    if (!TM)
-      GTEST_SKIP();
-
-    SMDiagnostic SMError;
-    M = parseAssemblyString(Assembly, SMError, Context);
-    if (!M)
-      report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
-
-    F = M->getFunction("f");
-    if (!F)
-      report_fatal_error("F?");
-    G = M->getGlobalVariable("g");
-    if (!G)
-      report_fatal_error("G?");
-    AliasedG = M->getNamedAlias("g_alias");
-    if (!AliasedG)
-      report_fatal_error("AliasedG?");
-
-    MachineModuleInfo MMI(TM.get());
-
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
-
-    DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
-    if (!DAG)
-      report_fatal_error("DAG?");
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
-  }
-
-  TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeAction(Context, VT);
-  }
-
-  EVT getTypeToTransformTo(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeToTransformTo(Context, VT);
-  }
-
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  Function *F;
-  GlobalVariable *G;
-  GlobalAlias *AliasedG;
-  std::unique_ptr<MachineFunction> MF;
-  std::unique_ptr<SelectionDAG> DAG;
-};
+class SelectionDAGPatternMatchTest : public SelectionDAGTestBase {};
 
 TEST_F(SelectionDAGPatternMatchTest, matchValueType) {
   SDLoc DL;
@@ -307,6 +222,23 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue UMinLikeULT = DAG->getSelect(DL, MVT::i32, ICMP_ULT, Op0, Op1);
   SDValue UMinLikeULE = DAG->getSelect(DL, MVT::i32, ICMP_ULE, Op0, Op1);
 
+  SDValue CCSMaxLikeGT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETGT);
+  SDValue CCSMaxLikeGE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETGE);
+  SDValue CCSMaxLikeLT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETLT);
+  SDValue CCSMaxLikeLE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETLE);
+  SDValue CCUMaxLikeUGT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETUGT);
+  SDValue CCUMaxLikeUGE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETUGE);
+  SDValue CCUMaxLikeULT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETULT);
+  SDValue CCUMaxLikeULE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETULE);
+  SDValue CCSMinLikeLT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETLT);
+  SDValue CCSMinLikeGT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETGT);
+  SDValue CCSMinLikeLE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETLE);
+  SDValue CCSMinLikeGE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETGE);
+  SDValue CCUMinLikeULT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETULT);
+  SDValue CCUMinLikeUGT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETUGT);
+  SDValue CCUMinLikeULE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETULE);
+  SDValue CCUMinLikeUGE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETUGE);
+
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
 
@@ -357,21 +289,37 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(SMax, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLT, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLE, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMinLikeLT, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMinLikeLE, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGT, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGE, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLT, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLE, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULT, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULE, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGT, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGE, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(m_Value(), m_Value())));
 
   // By default, it matches any of the results.
   EXPECT_TRUE(
@@ -824,4 +772,122 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
                                            m_Sub(m_Value(), m_Value()))));
   EXPECT_FALSE(sd_match(
       ORS0123, m_ReassociatableOr(m_Value(), m_Value(), m_Value(), m_Value())));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
+  using namespace SDPatternMatch;
+
+  SDLoc DL;
+  EVT VT = EVT::getIntegerVT(Context, 32);
+
+  // Scalar constant 0
+  SDValue Zero = DAG->getConstant(0, DL, VT);
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_Zero()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_One()));
+  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_AllOnes()));
+
+  // Scalar constant 1
+  SDValue One = DAG->getConstant(1, DL, VT);
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_Zero()));
+  EXPECT_TRUE(sd_match(One, DAG.get(), m_One()));
+  EXPECT_FALSE(sd_match(One, DAG.get(), m_AllOnes()));
+
+  // Scalar constant -1
+  SDValue AllOnes =
+      DAG->getConstant(APInt::getAllOnes(VT.getSizeInBits()), DL, VT);
+  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_Zero()));
+  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_One()));
+  EXPECT_TRUE(sd_match(AllOnes, DAG.get(), m_AllOnes()));
+
+  EVT VecF32 = EVT::getVectorVT(Context, MVT::f32, 4);
+  EVT VecVT = EVT::getVectorVT(Context, MVT::i32, 4);
+
+  // m_Zero: splat vector of 0 → bitcast
+  {
+    SDValue SplatVal = DAG->getConstant(0, DL, MVT::i32);
+    SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
+    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero()));
+  }
+
+  // m_One: splat vector of 1 → bitcast
+  {
+    SDValue SplatVal = DAG->getConstant(1, DL, MVT::i32);
+    SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
+    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
+  }
+
+  // m_AllOnes: splat vector of -1 → bitcast
+  {
+    SDValue SplatVal = DAG->getConstant(APInt::getAllOnes(32), DL, MVT::i32);
+    SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
+    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
+    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
+  }
+
+  // splat vector with one undef → default should NOT match
+  SDValue Undef = DAG->getUNDEF(MVT::i32);
+
+  {
+    // m_Zero: Undef + constant 0
+    SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
+    SmallVector<SDValue, 4> Ops(4, Zero);
+    Ops[2] = Undef;
+    SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_Zero()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_Zero(true)));
+  }
+
+  {
+    // m_One: Undef + constant 1
+    SDValue One = DAG->getConstant(1, DL, MVT::i32);
+    SmallVector<SDValue, 4> Ops(4, One);
+    Ops[1] = Undef;
+    SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_One()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_One(true)));
+  }
+
+  {
+    // m_AllOnes: Undef + constant -1
+    SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, MVT::i32);
+    SmallVector<SDValue, 4> Ops(4, AllOnes);
+    Ops[0] = Undef;
+    SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_AllOnes()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_AllOnes(true)));
+  }
+}
+
+TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
+  using namespace SDPatternMatch;
+
+  SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
+  SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
+
+  ISD::CondCode CC = ISD::SETLT;
+  EXPECT_TRUE(sd_match(
+      Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
+                             m_Specific(FVal), m_CondCode(CC))));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
+  using namespace SDPatternMatch;
+
+  SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
+  SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
+
+  ISD::CondCode CC = ISD::SETLT;
+  EXPECT_TRUE(sd_match(Select, m_SelectCC(m_Specific(LHS), m_Specific(RHS),
+                                          m_Specific(TVal), m_Specific(FVal),
+                                          m_CondCode(CC))));
 }

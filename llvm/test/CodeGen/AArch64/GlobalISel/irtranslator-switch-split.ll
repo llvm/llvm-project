@@ -9,7 +9,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
 
 declare i32 @logg(...)
 
-define i32 @scanfile(i32 %call148) {
+define i32 @scanfile(i32 %call148, ptr %p) {
 ; CHECK-LABEL: scanfile:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -26,7 +26,7 @@ define i32 @scanfile(i32 %call148) {
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_3: ; %entry
-; CHECK-NEXT:    b.eq LBB0_2
+; CHECK-NEXT:    b.eq LBB0_10
 ; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.eq LBB0_6
@@ -46,6 +46,10 @@ define i32 @scanfile(i32 %call148) {
 ; CHECK-NEXT:  LBB0_9: ; %sw.bb150
 ; CHECK-NEXT:    bl _logg
 ; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  LBB0_10: ; %sw.bb178
+; CHECK-NEXT:    str wzr, [x1]
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:    ret
 entry:
   switch i32 %call148, label %common.ret [
     i32 -1, label %sw.bb
@@ -80,7 +84,7 @@ sw.bb152:                                         ; preds = %entry
   br label %common.ret
 
 sw.bb178:                                         ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 0, ptr null)
+  store i32 0, ptr %p
   br label %common.ret
 }
 

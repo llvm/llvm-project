@@ -17,6 +17,18 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL:func @launch_with_module_func_attr(%{{.*}}: index)
+  func.func @launch_with_module_func_attr(%sz : index) {
+    // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) module(@test_module) function(@test_kernel_func)
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz)
+               module(@test_module) function(@test_kernel_func) {
+      // CHECK: gpu.terminator
+      gpu.terminator
+    }
+    return
+  }
+
   // CHECK-LABEL:func @args(%{{.*}}: index, %{{.*}}: index, %{{.*}}: f32, %{{.*}}: memref<?xf32, 1>) {
   func.func @args(%blk : index, %thrd : index, %float : f32, %data : memref<?xf32,1>) {
     // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
@@ -114,7 +126,7 @@ module attributes {gpu.container_module} {
       // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
       // CHECK-NEXT: gpu.yield %{{.*}} : f32
       // CHECK-NEXT: } : (f32) -> f32
-      %sum2 = gpu.all_reduce %one { 
+      %sum2 = gpu.all_reduce %one {
       ^bb(%lhs : f32, %rhs : f32):
         %tmp = arith.addf %lhs, %rhs : f32
         gpu.yield %tmp : f32
@@ -140,9 +152,8 @@ module attributes {gpu.container_module} {
       // CHECK: gpu.shuffle idx %{{.*}}, %{{.*}}, %{{.*}} : f32
       %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
 
-      // CHECK: gpu.rotate %{{.*}}, %{{.*}}, %{{.*}} : f32
-      %rotate_width = arith.constant 16 : i32
-      %rotate, %pred4 = gpu.rotate %arg0, %offset, %rotate_width : f32
+      // CHECK: gpu.rotate %{{.*}}, 3, 16 : f32
+      %rotate, %pred4 = gpu.rotate %arg0, 3, 16 : f32
 
       "gpu.barrier"() : () -> ()
 
@@ -248,7 +259,7 @@ module attributes {gpu.container_module} {
       %1 = arith.cmpi slt, %arg0, %arg0 : i32
       scf.if %1 {
         gpu.printf ", "
-      } 
+      }
       gpu.return
     }
 
@@ -530,4 +541,16 @@ func.func @warp_operand_result(%laneid: index, %v0 : vector<4xi32>) -> (vector<4
 //  CHECK-NEXT:     }
   }
   return %2 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @subgroup_broadcast
+//  CHECK-SAME: (%[[ARG:.*]]: f32, %[[IDX:.*]]: i32)
+func.func @subgroup_broadcast(%arg0 : f32, %arg1 : i32) -> (f32, f32, f32) {
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], first_active_lane : f32
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : f32
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], any_lane : f32
+  %1 = gpu.subgroup_broadcast %arg0, any_lane : f32
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], specific_lane %[[IDX]] : f32
+  %2 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : f32
+  func.return %0, %1, %2 : f32, f32, f32
 }

@@ -384,12 +384,14 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     This interface provides weight information for branching terminator
     operations, i.e. terminator operations with successors.
 
-    This interface provides methods for getting/setting integer non-negative
-    weight of each branch. The probability of executing a branch
-    is computed as the ratio between the branch's weight and the total
-    sum of the weights (which cannot be zero).
-    The weights are optional. If they are provided, then their number
+    This interface provides methods for getting/setting integer weights of each
+    branch. The probability of executing a branch is computed as the ratio
+    between the branch's weight and the total sum of the weights (which cannot
+    be zero). The weights are optional. If they are provided, then their number
     must match the number of successors of the operation.
+
+    Note that the branch weight use an i32 representation but they are to be
+    interpreted as unsigned integers.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
@@ -440,18 +442,20 @@ def WeightedRegionBranchOpInterface
     This interface provides weight information for region operations
     that exhibit branching behavior between held regions.
 
-    This interface provides methods for getting/setting integer non-negative
-    weight of each branch. The probability of executing a region is computed
-    as the ratio between the region branch's weight and the total sum
-    of the weights (which cannot be zero).
-    The weights are optional. If they are provided, then their number
-    must match the number of regions held by the operation
-    (including empty regions).
+    This interface provides methods for getting/setting integer weights of each
+    branch. The probability of executing a region is computed as the ratio
+    between the region branch's weight and the total sum of the weights (which
+    cannot be zero). The weights are optional. If they are provided, then their
+    number must match the number of regions held by the operation (including
+    empty regions).
 
     The weights specify the probability of branching to a particular
     region when first executing the operation.
     For example, for loop-like operations with a single region
     the weight specifies the probability of entering the loop.
+
+    Note that the branch weight use an i32 representation but they are to be
+    interpreted as unsigned integers.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.

@@ -92,7 +92,22 @@ qc.e.j same_section
 # OBJ-NEXT: R_RISCV_RELAX
 qc.e.jal same_section
 
-.option norelax
+## Enable compression/relaxation to check how symbols are handled.
+.option noexact
+
+qc.e.j undef
+# ASM: j undef
+# OBJ: qc.e.j 0x44 <same_section_extern+0x10>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+
+qc.e.jal undef
+# ASM: jal undef
+# OBJ: qc.e.jal 0x4a <same_section_extern+0x16>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
 
 .section .text.other, "ax", @progbits
 

@@ -26,10 +26,8 @@
 namespace llvm {
 // Typedefs that are convenient but only used by the stack-trace-collection code
 // added if DebugLoc origin-tracking is enabled.
-using AddressSet = DenseSet<void *, DenseMapInfo<void *, void>>;
-using SymbolizedAddressMap =
-    DenseMap<void *, SmallVector<std::string, 0>, DenseMapInfo<void *, void>,
-             detail::DenseMapPair<void *, SmallVector<std::string, 0>>>;
+using AddressSet = DenseSet<void *>;
+using SymbolizedAddressMap = DenseMap<void *, SmallVector<std::string, 0>>;
 } // namespace llvm
 #endif
 
