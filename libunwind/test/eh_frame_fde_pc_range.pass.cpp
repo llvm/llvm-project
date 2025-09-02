@@ -15,7 +15,7 @@
 
 // REQUIRES: linux
 
-// UNSUPPORTED: target={{aarch64-.+linux.*}}
+// UNSUPPORTED: target={{(aarch64|arm.*)-.+linux.*}}
 // aarch64-unknown-linux-gnu has a cross toolchain build(llvm-clang-win-x-aarch64)
 // where objdump is not available.
 
