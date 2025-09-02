@@ -282,3 +282,27 @@
             dmxxsha224256pad 0, 1
 #CHECK-BE:  dmxxsha224256pad 0, 1          # encoding: [0xf0,0x18,0x0e,0x94]
 #CHECK-LE:  dmxxsha224256pad 0, 1          # encoding: [0x94,0x0e,0x18,0xf0]
+
+           vupkhsntob 2, 4
+#CHECK-BE: vupkhsntob 2, 4                 # encoding: [0x10,0x40,0x21,0x83]
+#CHECK-LE: vupkhsntob 2, 4                 # encoding: [0x83,0x21,0x40,0x10]
+
+           vupklsntob 2, 4
+#CHECK-BE: vupklsntob 2, 4                 # encoding: [0x10,0x41,0x21,0x83]
+#CHECK-LE: vupklsntob 2, 4                 # encoding: [0x83,0x21,0x41,0x10]
+
+        vupkint4tobf16  2, 4, 3
+#CHECK-BE: vupkint4tobf16  2, 4, 3         # encoding: [0x10,0x4b,0x21,0x83]
+#CHECK-LE: vupkint4tobf16  2, 4, 3         # encoding: [0x83,0x21,0x4b,0x10]
+
+           vupkint8tobf16  1, 3, 1
+#CHECK-BE: vupkint8tobf16  1, 3, 1         # encoding: [0x10,0x23,0x19,0x83]
+#CHECK-LE: vupkint8tobf16  1, 3, 1         # encoding: [0x83,0x19,0x23,0x10]
+
+           vupkint4tofp32 3, 5, 2
+#CHECK-BE: vupkint4tofp32 3, 5, 2         # encoding: [0x10,0x72,0x29,0x83]
+#CHECK-LE: vupkint4tofp32 3, 5, 2         # encoding: [0x83,0x29,0x72,0x10]
+
+           vupkint8tofp32 3, 5, 2
+#CHECK-BE: vupkint8tofp32 3, 5, 2         # encoding: [0x10,0x6e,0x29,0x83]
+#CHECK-LE: vupkint8tofp32 3, 5, 2         # encoding: [0x83,0x29,0x6e,0x10]
