@@ -561,17 +561,23 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Check if R is a dead VPPhi <-> update cycle and remove it.
+      // Remove dead VPPhi <-> update cycles.
       auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1)
+      if (!PhiR)
         continue;
-      VPValue *Incoming = PhiR->getOperand(1);
-      if (*PhiR->user_begin() != Incoming->getDefiningRecipe() ||
-          Incoming->getNumUsers() != 1)
-        continue;
-      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
-      PhiR->eraseFromParent();
-      Incoming->getDefiningRecipe()->eraseFromParent();
+      if (PhiR->getNumOperands() == 1) {
+        PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+        PhiR->eraseFromParent();
+      }
+      if (PhiR->getNumOperands() == 2) {
+        VPValue *Incoming = PhiR->getOperand(1);
+        VPUser *U = PhiR->getUniqueUser();
+        if (U && U == Incoming->getDefiningRecipe() && Incoming->hasOneUser()) {
+          PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+          PhiR->eraseFromParent();
+          Incoming->getDefiningRecipe()->eraseFromParent();
+        }
+      }
     }
   }
 }
@@ -1218,12 +1224,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
     Def->replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 2));
-    return;
-  }
-
-  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
-    if (Phi->getNumOperands() == 1)
-      Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
 

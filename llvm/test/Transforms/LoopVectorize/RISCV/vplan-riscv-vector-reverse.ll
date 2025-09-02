@@ -54,8 +54,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<%n>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ ir<%n>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ;
 entry:

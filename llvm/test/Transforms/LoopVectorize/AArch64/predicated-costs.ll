@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux"
 define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8 %n, i64 %off) #0 {
 ; CHECK-LABEL: define void @test_predicated_load_cast_hint(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]], i8 [[N:%.*]], i64 [[OFF:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = sext i8 [[N]] to i32
 ; CHECK-NEXT:    [[N_SUB:%.*]] = add i32 [[N_EXT]], -15
 ; CHECK-NEXT:    [[SMAX16:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
@@ -269,10 +269,9 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[L_EXT:%.*]] = zext i8 [[L]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = or i64 [[L_EXT]], 1

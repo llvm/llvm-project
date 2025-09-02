@@ -238,10 +238,9 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED:       middle.block:
 ; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; PRED-NEXT:    [[X_EXT:%.*]] = zext i16 [[X]] to i64
 ; PRED-NEXT:    [[L:%.*]] = load i64, ptr [[SRC]], align 8
 ; PRED-NEXT:    [[AND:%.*]] = and i64 [[L]], [[X_EXT]]

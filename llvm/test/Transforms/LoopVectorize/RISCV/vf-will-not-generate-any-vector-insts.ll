@@ -7,7 +7,7 @@ target triple = "riscv64-unknown-unknown-elf"
 define void @vf_will_not_generate_any_vector_insts(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @vf_will_not_generate_any_vector_insts(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
@@ -34,10 +34,9 @@ define void @vf_will_not_generate_any_vector_insts(ptr %src, ptr %dst) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[DOTPRE]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[TMP3]] = add nuw i64 [[TMP2]], 1
