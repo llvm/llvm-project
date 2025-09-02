@@ -299,17 +299,7 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
   if (!Reg->isReg())
     return nullptr;
 
-  MachineInstr *DefInstr = MRI->getUniqueVRegDef(Reg->getReg());
-  if (!DefInstr)
-    return nullptr;
-
-  for (auto &DefMO : DefInstr->defs()) {
-    if (DefMO.isReg() && DefMO.getReg() == Reg->getReg())
-      return &DefMO;
-  }
-
-  // Ignore implicit defs.
-  return nullptr;
+  return MRI->getOneDef(Reg->getReg());
 }
 
 /// Combine an SDWA instruction's existing SDWA selection \p Sel with
