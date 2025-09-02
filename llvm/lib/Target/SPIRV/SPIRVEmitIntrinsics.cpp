@@ -2439,9 +2439,9 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
       if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
           !((Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
             (Flags & SPIRV::FPFastMathMode::AllowContract))) {
-          report_fatal_error("Conflicting FPFastMathFlags: "
-                             "AllowTransform requires AllowReassoc and "
-                             "AllowContract to be set.");
+        report_fatal_error("Conflicting FPFastMathFlags: "
+                           "AllowTransform requires AllowReassoc and "
+                           "AllowContract to be set.");
       }
 
       auto it = GlobalVars.find(Flags);
@@ -3035,7 +3035,7 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
   parseFunDeclarations(M);
-  insertFPFastMathDefault(M);
+  insertConstantsForFPFastMathDefault(M);
 
   TodoType.clear();
   for (auto &F : M)
