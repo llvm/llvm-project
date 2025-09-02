@@ -15,7 +15,9 @@
 #define MLIR_DIALECT_LLVMIR_LLVMATTRS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
@@ -89,8 +91,8 @@ public:
 // TODO: this shouldn't be needed after we unify the attribute generation, i.e.
 // --gen-attr-* and --gen-attrdef-*.
 using cconv::CConv;
-using tailcallkind::TailCallKind;
 using linkage::Linkage;
+using tailcallkind::TailCallKind;
 } // namespace LLVM
 } // namespace mlir
 

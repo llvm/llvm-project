@@ -562,14 +562,7 @@ def AtomWrite0_1_7_4 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let ReleaseAtCycles = [8,8];
   let NumMicroOps = 4;
 }
-def : InstRW<[AtomWrite0_1_7_4], (instregex "CVTSI642SSrr(_Int)?")>;
-
-def AtomWrite0_1_8_4 : SchedWriteRes<[AtomPort0,AtomPort1]> {
-  let Latency = 8;
-  let ReleaseAtCycles = [8,8];
-  let NumMicroOps = 4;
-}
-def : InstRW<[AtomWrite0_1_7_4], (instregex "CVTSI642SSrm(_Int)?")>;
+def : InstRW<[AtomWrite0_1_7_4], (instregex "CVTSI642SSr(r|m)(_Int)?")>;
 
 def AtomWrite0_1_9 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 9;
