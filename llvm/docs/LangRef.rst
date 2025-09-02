@@ -24148,7 +24148,7 @@ The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
 The element of the result mask is active when loading from %ptrA then storing to
-%ptrB is safe and doesn't result in a write-after-read hazard:
+%ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
 * (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
