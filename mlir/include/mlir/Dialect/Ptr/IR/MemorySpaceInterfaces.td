@@ -42,7 +42,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*methodName=*/  "isValidLoad",
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -57,7 +57,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*methodName=*/  "isValidStore",
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -73,7 +73,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::ptr::AtomicBinOp":$op,
                             "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -90,7 +90,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$successOrdering,
                             "::mlir::ptr::AtomicOrdering":$failureOrdering,
-                            "::mlir::IntegerAttr":$alignment,
+                            "std::optional<int64_t>":$alignment,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
