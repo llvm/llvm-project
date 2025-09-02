@@ -3461,7 +3461,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   VPValue *VecOp = Red->getVecOp();
   VPValue *A, *B;
-  // Try to match reduce.add(mul(...)).
+  // Try to match reduce.add/sub(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
@@ -3469,27 +3469,16 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
-    // Match reduce.add(mul(ext, ext)).
+    // Match reduce.add/sub(mul(ext, ext)).
     if (RecipeA && RecipeB &&
         (RecipeA->getOpcode() == RecipeB->getOpcode() || IsPartialReduction) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
-<<<<<<< HEAD
-        IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
-                                       Instruction::CastOps::ZExt,
-                                   Mul, RecipeA, RecipeB, nullptr)) {
-      return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
-=======
         (IsPartialReduction ||
          IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                         Instruction::CastOps::ZExt,
-                                    MulR, RecipeA, RecipeB, nullptr, Sub))) {
-      if (Sub)
-        return new VPExpressionRecipe(
-            RecipeA, RecipeB, MulR,
-            cast<VPWidenRecipe>(Sub->getDefiningRecipe()), Red);
-      return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
->>>>>>> e0a59862bff8 ([LV] Bundle partial reductions inside VPExpressionRecipe)
+                                    Mul, RecipeA, RecipeB, nullptr))) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
     // Match reduce.add(mul).
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
