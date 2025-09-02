@@ -207,10 +207,14 @@ lltok::Kind LLLexer::LexToken() {
   // exclusive
   std::tie(PrevTokEndLineNum, PrevTokEndColNum) =
       SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
+  --PrevTokEndLineNum;
+  --PrevTokEndColNum;
   while (true) {
     TokStart = CurPtr;
     std::tie(CurTokLineNum, CurTokColNum) =
         SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
+    --CurTokLineNum;
+    --CurTokColNum;
     int CurChar = getNextChar();
 
     switch (CurChar) {
