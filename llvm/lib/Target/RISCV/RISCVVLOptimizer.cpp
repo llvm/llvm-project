@@ -1506,6 +1506,10 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       for (MachineOperand &UseOp :
            MRI->use_operands(UserMI.getOperand(0).getReg())) {
         const MachineInstr &CandidateMI = *UseOp.getParent();
+        // We should not propagate the VL if the user is not a segmented store
+        // or another INSERT_SUBREG, since VL just works differently
+        // between segmented operations (per-field) v.s. other RVV ops (on the
+        // whole register group).
         if (CandidateMI.getOpcode() == RISCV::INSERT_SUBREG ||
             isSegmentedStoreInstr(CandidateMI))
           Worklist.insert(&UseOp);
