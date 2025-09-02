@@ -68,8 +68,8 @@ enum OnStack { Yes, No };
 /// Helper class to enable testing StackID::IsYounger.
 struct MockStackID : StackID {
   MockStackID(addr_t cfa, OnStack on_stack) : StackID() {
-    SetPC(0);
-    SetCFA(cfa);
+    SetPC(0, nullptr);
+    SetCFA(cfa, nullptr);
     m_cfa_on_stack = on_stack == OnStack::Yes ? LazyBool::eLazyBoolYes
                                               : LazyBool::eLazyBoolNo;
   }
