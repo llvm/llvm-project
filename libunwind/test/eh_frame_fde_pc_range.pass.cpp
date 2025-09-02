@@ -19,9 +19,9 @@
 // XFAIL: msan
 
 // RUN: %{build}
-// RUN: objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
+// RUN: llvm-objcopy --dump-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: echo -ne '\xFF' | dd of=%t_ehf_hdr.bin bs=1 seek=2 count=2 conv=notrunc status=none 
-// RUN: objcopy --update-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
+// RUN: llvm-objcopy --update-section .eh_frame_hdr=%t_ehf_hdr.bin %t.exe
 // RUN: %{exec} %t.exe
 
 // clang-format on
