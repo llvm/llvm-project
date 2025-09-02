@@ -963,8 +963,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
     SrcLocStr = Builder.CreateGlobalString(
-        LocStr, /*Name=*/ "",
-        M.getDataLayout().getDefaultGlobalsAddressSpace(), &M);
+        LocStr, /*Name=*/"", M.getDataLayout().getDefaultGlobalsAddressSpace(),
+        &M);
   }
   return SrcLocStr;
 }
