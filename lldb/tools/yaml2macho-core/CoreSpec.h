@@ -41,6 +41,18 @@ struct MemoryRegion {
   std::vector<uint64_t> doublewords;
 };
 
+struct AddressableBits {
+  std::optional<int> lowmem_bits;
+  std::optional<int> highmem_bits;
+};
+
+struct Binary {
+  std::string name;
+  std::string uuid;
+  bool value_is_slide;
+  uint64_t value;
+};
+
 struct CoreSpec {
   uint32_t cputype;
   uint32_t cpusubtype;
@@ -48,6 +60,9 @@ struct CoreSpec {
 
   std::vector<Thread> threads;
   std::vector<MemoryRegion> memory_regions;
+
+  std::optional<AddressableBits> addressable_bits;
+  std::vector<Binary> binaries;
 
   CoreSpec() : cputype(0), cpusubtype(0), wordsize(0) {}
 };

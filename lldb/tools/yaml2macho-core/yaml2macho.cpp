@@ -125,6 +125,35 @@ int main(int argc, char **argv) {
   CoreSpec spec = from_yaml(file_corespec.get(), sb.st_size);
   fclose(input);
 
+  if (uuids)
+    for (const std::string &uuid : *uuids) {
+      Binary binary;
+      binary.uuid = uuid;
+      binary.value = 0;
+      binary.value_is_slide = true;
+      spec.binaries.push_back(binary);
+    }
+
+  if (uuids_with_load_addrs) {
+    int count = uuids_with_load_addrs->size() / 2;
+    for (int i = 0; i < count; i++) {
+      std::string uuid = uuids_with_load_addrs->at(i * 2);
+      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
+      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
+      Binary binary;
+      binary.uuid = uuid;
+      binary.value = va;
+      binary.value_is_slide = false;
+      spec.binaries.push_back(binary);
+    }
+  }
+
+  if (address_bits) {
+    AddressableBits bits;
+    bits.lowmem_bits = bits.highmem_bits = std::stoi(*address_bits);
+    spec.addressable_bits = bits;
+  }
+
   // An array of load commands
   std::vector<std::vector<uint8_t>> load_commands;
 
@@ -142,32 +171,19 @@ int main(int argc, char **argv) {
     load_commands.push_back(segment_command_bytes);
   }
 
-  if (uuids)
-    for (const std::string &uuid : *uuids) {
+  if (spec.binaries.size() > 0)
+    for (const Binary &binary : spec.binaries) {
       std::vector<uint8_t> segment_command_bytes;
       std::vector<uint8_t> payload_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, true, 0,
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, binary,
                                      payload_bytes, 0);
       load_commands.push_back(segment_command_bytes);
     }
-  if (uuids_with_load_addrs) {
-    int count = uuids_with_load_addrs->size() / 2;
-    for (int i = 0; i < count; i++) {
-      std::string uuid = uuids_with_load_addrs->at(i * 2);
-      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
-      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
-      std::vector<uint8_t> segment_command_bytes;
-      std::vector<uint8_t> payload_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, false,
-                                     va, payload_bytes, 0);
-      load_commands.push_back(segment_command_bytes);
-    }
-  }
-  if (address_bits) {
+  if (spec.addressable_bits) {
     std::vector<uint8_t> segment_command_bytes;
     std::vector<uint8_t> payload_bytes;
     create_lc_note_addressable_bits(spec, segment_command_bytes,
-                                    std::stoi(*address_bits), payload_bytes, 0);
+                                    *spec.addressable_bits, payload_bytes, 0);
     load_commands.push_back(segment_command_bytes);
   }
 
@@ -198,35 +214,21 @@ int main(int argc, char **argv) {
 
   off_t payload_fileoff_before_lcnotes = payload_fileoff;
   std::vector<uint8_t> lc_note_payload_bytes;
-  if (uuids) {
-    for (const std::string &uuid : *uuids) {
+  if (spec.binaries.size() > 0)
+    for (const Binary &binary : spec.binaries) {
       std::vector<uint8_t> segment_command_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, true, 0,
+      std::vector<uint8_t> payload_bytes;
+      create_lc_note_binary_load_cmd(spec, segment_command_bytes, binary,
                                      lc_note_payload_bytes, payload_fileoff);
       payload_fileoff =
           payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();
       load_commands.push_back(segment_command_bytes);
     }
-  }
-  if (uuids_with_load_addrs) {
-    int count = uuids_with_load_addrs->size() / 2;
-    for (int i = 0; i < count; i++) {
-      std::string uuid = uuids_with_load_addrs->at(i * 2);
-      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
-      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
-      std::vector<uint8_t> segment_command_bytes;
-      create_lc_note_binary_load_cmd(spec, segment_command_bytes, uuid, false,
-                                     va, lc_note_payload_bytes,
-                                     payload_fileoff);
-      payload_fileoff =
-          payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();
-      load_commands.push_back(segment_command_bytes);
-    }
-  }
-  if (address_bits) {
+  if (spec.addressable_bits) {
     std::vector<uint8_t> segment_command_bytes;
+    std::vector<uint8_t> payload_bytes;
     create_lc_note_addressable_bits(spec, segment_command_bytes,
-                                    std::stoi(*address_bits),
+                                    *spec.addressable_bits,
                                     lc_note_payload_bytes, payload_fileoff);
     payload_fileoff =
         payload_fileoff_before_lcnotes + lc_note_payload_bytes.size();

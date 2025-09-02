@@ -36,7 +36,6 @@ template <> struct llvm::yaml::ScalarEnumerationTraits<RegisterFlavor> {
 
 template <> struct MappingTraits<RegisterSet> {
   static void mapping(IO &io, RegisterSet &regset) {
-    std::string flavor;
     io.mapRequired("flavor", regset.flavor);
     io.mapRequired("registers", regset.registers);
   }
@@ -71,6 +70,43 @@ template <> struct MappingTraits<MemoryRegion> {
 };
 LLVM_YAML_IS_SEQUENCE_VECTOR(MemoryRegion)
 
+template <> struct MappingTraits<Binary> {
+  static void mapping(IO &io, Binary &binary) {
+    io.mapOptional("name", binary.name);
+    io.mapRequired("uuid", binary.uuid);
+    std::optional<uint64_t> va, slide;
+    io.mapOptional("virtual-address", va);
+    io.mapOptional("slide", slide);
+    if (va && *va != UINT64_MAX) {
+      binary.value_is_slide = false;
+      binary.value = *va;
+    } else if (slide && *slide != UINT64_MAX) {
+      binary.value_is_slide = true;
+      binary.value = *slide;
+    } else {
+      fprintf(stderr,
+              "No virtual-address or slide specified for binary %s, aborting\n",
+              binary.uuid.c_str());
+      exit(1);
+    }
+  }
+};
+LLVM_YAML_IS_SEQUENCE_VECTOR(Binary)
+
+template <> struct llvm::yaml::MappingTraits<AddressableBits> {
+  static void mapping(IO &io, AddressableBits &addr_bits) {
+    std::optional<int> addressable_bits;
+    io.mapOptional("num-bits", addressable_bits);
+    if (addressable_bits) {
+      addr_bits.lowmem_bits = *addressable_bits;
+      addr_bits.highmem_bits = *addressable_bits;
+    } else {
+      io.mapOptional("lowmem-num-bits", addr_bits.lowmem_bits);
+      io.mapOptional("highmem-num-bits", addr_bits.highmem_bits);
+    }
+  }
+};
+
 template <> struct MappingTraits<CoreSpec> {
   static void mapping(IO &io, CoreSpec &corespec) {
     std::string cpuname;
@@ -102,6 +138,14 @@ template <> struct MappingTraits<CoreSpec> {
       fprintf(stderr,
               "Unrecognized cputype, could not set wordsize, exiting.\n");
       exit(1);
+    }
+    io.mapOptional("addressable-bits", corespec.addressable_bits);
+    io.mapOptional("binaries", corespec.binaries);
+    if (corespec.addressable_bits) {
+      if (!corespec.addressable_bits->lowmem_bits)
+        corespec.addressable_bits->lowmem_bits = corespec.wordsize * 8;
+      if (!corespec.addressable_bits->highmem_bits)
+        corespec.addressable_bits->highmem_bits = corespec.wordsize * 8;
     }
   }
 };
