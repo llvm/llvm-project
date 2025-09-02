@@ -4063,6 +4063,9 @@ __m256d test_mm256_maskz_cvtepu32_pd(__mmask8 __U, __m128i __A) {
   // CHECK: select <4 x i1> {{.*}}, <4 x double> {{.*}}, <4 x double> {{.*}}
   return _mm256_maskz_cvtepu32_pd(__U,__A);
 }
+
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_cvtepu32_pd(/*1010=*/0xa, (__m128i)(__v4su){1, 1, 2, 2}), 0.0, 1.0, 0.0, 2.0));
+
 __m128 test_mm_cvtepu32_ps(__m128i __A) {
   // CHECK-LABEL: test_mm_cvtepu32_ps
   // CHECK: uitofp <4 x i32> %{{.*}} to <4 x float>
