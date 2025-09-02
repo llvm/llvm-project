@@ -26,6 +26,10 @@
 
 namespace llvm {
 
+/// Reports a diagnostic message to indicate an invalid size request has been
+/// done on a scalable vector. This function may not return.
+LLVM_ABI void reportInvalidSizeRequest(const char *Msg);
+
 /// StackOffset holds a fixed and a scalable offset in bytes.
 class StackOffset {
   int64_t Fixed = 0;

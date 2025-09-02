@@ -1,4 +1,4 @@
-# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -mcpu=a64fx -aarch64-enable-pipeliner -pipeliner-max-mii=100 -pipeliner-enable-copytophi=0 -debug-only=pipeliner -run-pass=pipeliner 2>&1 | FileCheck %s
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -mcpu=a64fx -aarch64-enable-pipeliner -pipeliner-max-mii=100 -pipeliner-enable-copytophi=0 -debug-only=pipeliner -run-pass=pipeliner -treat-scalable-fixed-error-as-warning 2>&1 | FileCheck %s
 
 # REQUIRES: asserts
 

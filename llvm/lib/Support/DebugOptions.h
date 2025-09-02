@@ -24,6 +24,7 @@ void initGraphWriterOptions();
 void initSignalsOptions();
 void initStatisticOptions();
 void initTimerOptions();
+void initTypeSizeOptions();
 void initWithColorOptions();
 void initDebugOptions();
 void initRandomSeedOptions();
