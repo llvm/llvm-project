@@ -289,7 +289,7 @@ loop.end:
 
 define ptr @same_exit_block_strided_unknown_ptr(ptr %first, ptr %last, i32 %value) {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_strided_unknown_ptr'
-; CHECK:       LV: Not vectorizing: Loop contains strided unbound access.
+; CHECK:       LV: Not vectorizing: Loop contains potentially faulting strided load.
 entry:
   %cond = icmp eq ptr %first, %last
   br i1 %cond, label %return, label %for.body
