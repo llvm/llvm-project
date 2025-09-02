@@ -4518,41 +4518,104 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
 
+  // General case: splat the first operand and slide other operands down one
+  // by one to form a vector. Alternatively, if every operand is an
+  // extraction from element 0 of a vector, we use that vector from the last
+  // extraction as the start value and slide up instead of slide down. Such that
+  // (1) we can avoid the initial splat (2) we can turn those vslide1up into
+  // vslideup of 1 later and eliminate the vector to scalar movement, which is
+  // something we cannot do with vslide1down/vslidedown.
+  // Of course, using vslide1up/vslideup might increase the register pressure,
+  // and that's why we conservatively limit to cases where every operand is an
+  // extraction from the first element.
+  SmallVector<SDValue> Operands(Op->op_begin(), Op->op_end());
+  SDValue EVec;
+  bool SlideUp = false;
+  auto getVSlide = [&](EVT ContainerVT, SDValue Passthru, SDValue Vec,
+                       SDValue Offset, SDValue Mask, SDValue VL) -> SDValue {
+    if (SlideUp)
+      return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+    return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, Vec, Offset,
+                         Mask, VL, Policy);
+  };
+
+  // The reason we don't use all_of here is because we're also capturing EVec
+  // from the last non-undef operand. If the std::execution_policy of the
+  // underlying std::all_of is anything but std::sequenced_policy we might
+  // capture the wrong EVec.
+  for (SDValue V : Operands) {
+    using namespace SDPatternMatch;
+    SlideUp = V.isUndef() || sd_match(V, m_ExtractElt(m_Value(EVec), m_Zero()));
+    if (!SlideUp)
+      break;
+  }
+
+  if (SlideUp) {
+    MVT EVecContainerVT = EVec.getSimpleValueType();
+    // Make sure the original vector has scalable vector type.
+    if (EVecContainerVT.isFixedLengthVector()) {
+      EVecContainerVT =
+          getContainerForFixedLengthVector(DAG, EVecContainerVT, Subtarget);
+      EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
+    }
+
+    // Adapt EVec's type into ContainerVT.
+    if (EVecContainerVT.getVectorMinNumElements() <
+        ContainerVT.getVectorMinNumElements())
+      EVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), EVec, 0);
+    else
+      EVec = DAG.getExtractSubvector(DL, ContainerVT, EVec, 0);
+
+    // Reverse the elements as we're going to slide up from the last element.
+    std::reverse(Operands.begin(), Operands.end());
+  }
+
   SDValue Vec;
   UndefCount = 0;
-  for (SDValue V : Op->ops()) {
+  for (SDValue V : Operands) {
     if (V.isUndef()) {
       UndefCount++;
       continue;
     }
 
-    // Start our sequence with a TA splat in the hopes that hardware is able to
-    // recognize there's no dependency on the prior value of our temporary
-    // register.
+    // Start our sequence with either a TA splat or extract source in the
+    // hopes that hardware is able to recognize there's no dependency on the
+    // prior value of our temporary register.
     if (!Vec) {
-      Vec = DAG.getSplatVector(VT, DL, V);
-      Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+      if (SlideUp) {
+        Vec = EVec;
+      } else {
+        Vec = DAG.getSplatVector(VT, DL, V);
+        Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+      }
+
       UndefCount = 0;
       continue;
     }
 
     if (UndefCount) {
       const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-      Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                          Vec, Offset, Mask, VL, Policy);
+      Vec = getVSlide(ContainerVT, DAG.getUNDEF(ContainerVT), Vec, Offset, Mask,
+                      VL);
       UndefCount = 0;
     }
-    auto OpCode =
-      VT.isFloatingPoint() ? RISCVISD::VFSLIDE1DOWN_VL : RISCVISD::VSLIDE1DOWN_VL;
+
+    unsigned Opcode;
+    if (VT.isFloatingPoint())
+      Opcode = SlideUp ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VFSLIDE1DOWN_VL;
+    else
+      Opcode = SlideUp ? RISCVISD::VSLIDE1UP_VL : RISCVISD::VSLIDE1DOWN_VL;
+
     if (!VT.isFloatingPoint())
       V = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), V);
-    Vec = DAG.getNode(OpCode, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
+    Vec = DAG.getNode(Opcode, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Vec,
                       V, Mask, VL);
   }
   if (UndefCount) {
     const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
-    Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                        Vec, Offset, Mask, VL, Policy);
+    Vec = getVSlide(ContainerVT, DAG.getUNDEF(ContainerVT), Vec, Offset, Mask,
+                    VL);
   }
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
