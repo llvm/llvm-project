@@ -24,6 +24,7 @@ class Type;
 class IntegerType;
 class FloatType;
 class FunctionType;
+class GraphType;
 class IndexType;
 class MemRefType;
 class VectorType;
@@ -81,6 +82,7 @@ public:
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(TypeRange inputs, TypeRange results);
+  GraphType getGraphType(TypeRange inputs, TypeRange results);
   TupleType getTupleType(TypeRange elementTypes);
   NoneType getNoneType();
 
