@@ -145,6 +145,8 @@ enum NodeType : unsigned {
   VREPLVEI,
   VREPLGR2VR,
   XVPERMI,
+  XVREPLVE0,
+  XVREPLVE0Q,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
