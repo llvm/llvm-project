@@ -141,6 +141,13 @@ functions:
     arguments:
       - type: float
   - name: atanhf16
+    standatds:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atanpif16
     standards:
       - stdc
     return_type: _Float16
