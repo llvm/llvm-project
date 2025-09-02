@@ -234,8 +234,26 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.One))
       return I->getOperand(1);
 
+    // If the 'and' has only one use and that use is a return instruction,
+    // and the constant mask is a simple low-bit zero-extension (like 0xFF,
+    // 0xFFFF, etc.), then skip constant RHS shrinkage. This is because the
+    // backend is capable of optimizing this pattern into a single instruction
+    // zero-extension during codegen anyways. For example, by utilizing the eax
+    // register in x86. Performing the constant operand shrinkage transformation
+    // here may block the backend's optimization especially with assumes which
+    // the backend is unable to take advantage of.
+    bool IsReturnOnlyUse = I->hasOneUse() && isa<ReturnInst>(I->user_back());
+
+    const APInt *C;
+    bool IsZextBitmask = match(I->getOperand(1), m_APInt(C)) &&
+                         ((C->getBitWidth() >= 8 && C->isMask(8)) ||
+                          (C->getBitWidth() >= 16 && C->isMask(16)) ||
+                          (C->getBitWidth() >= 32 && C->isMask(32)) ||
+                          (C->getBitWidth() >= 64 && C->isMask(64)));
+
     // If the RHS is a constant, see if we can simplify it.
-    if (ShrinkDemandedConstant(I, 1, DemandedMask & ~LHSKnown.Zero))
+    if (!(IsReturnOnlyUse && IsZextBitmask) &&
+        ShrinkDemandedConstant(I, 1, DemandedMask & ~LHSKnown.Zero))
       return I;
 
     break;
