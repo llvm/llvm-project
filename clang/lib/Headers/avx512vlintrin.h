@@ -2318,8 +2318,8 @@ _mm_cvtepu32_ps(__m128i __A) {
   return (__m128)__builtin_convertvector((__v4su)__A, __v4sf);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_mask_cvtepu32_ps (__m128 __W, __mmask8 __U, __m128i __A) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_cvtepu32_ps(__m128 __W, __mmask8 __U, __m128i __A) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm_cvtepu32_ps(__A),
                                              (__v4sf)__W);
