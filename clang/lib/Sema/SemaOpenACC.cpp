@@ -2590,16 +2590,18 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
 }
 
 namespace {
-enum class InitKind { One, AllOnes, Least, Largest };
+enum class InitKind { Zero, One, AllOnes, Least, Largest };
 llvm::APFloat getInitFloatValue(ASTContext &Context, InitKind IK, QualType Ty) {
   switch (IK) {
+  case InitKind::Zero:
+    return llvm::APFloat::getZero(Context.getFloatTypeSemantics(Ty));
   case InitKind::One:
     return llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty));
   case InitKind::AllOnes:
     return llvm::APFloat::getAllOnesValue(Context.getFloatTypeSemantics(Ty));
   case InitKind::Least:
-    return llvm::APFloat::getSmallestNormalized(
-        Context.getFloatTypeSemantics(Ty), /*Negative=*/true);
+    return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty),
+                                     /*Negative=*/true);
   case InitKind::Largest:
     return llvm::APFloat::getLargest(Context.getFloatTypeSemantics(Ty));
     break;
@@ -2609,6 +2611,8 @@ llvm::APFloat getInitFloatValue(ASTContext &Context, InitKind IK, QualType Ty) {
 
 llvm::APInt getInitIntValue(ASTContext &Context, InitKind IK, QualType Ty) {
   switch (IK) {
+  case InitKind::Zero:
+    return llvm::APInt(Context.getIntWidth(Ty), 0);
   case InitKind::One:
     return llvm::APInt(Context.getIntWidth(Ty), 1);
   case InitKind::AllOnes:
@@ -2666,23 +2670,24 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
 
     if (const auto *Cplx = Ty->getAs<ComplexType>()) {
       // we can get here in error cases, so make sure we generate something that
-      // will work if we find ourselves wanting to enable this.
+      // will work if we find ourselves wanting to enable this, so emit '0,0'
+      // for both ints and floats.
 
       QualType EltTy = Cplx->getElementType();
       if (EltTy->isFloatingType()) {
         Exprs.push_back(FloatingLiteral::Create(
-            Context, getInitFloatValue(Context, IK, EltTy),
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
             /*isExact=*/true, EltTy, ExprRange.getBegin()));
         Exprs.push_back(FloatingLiteral::Create(
-            Context, getInitFloatValue(Context, IK, EltTy),
+            Context, getInitFloatValue(Context, InitKind::Zero, EltTy),
             /*isExact=*/true, EltTy, ExprRange.getBegin()));
       } else {
-        Exprs.push_back(
-            IntegerLiteral::Create(Context, getInitIntValue(Context, IK, EltTy),
-                                   EltTy, ExprRange.getBegin()));
-        Exprs.push_back(
-            IntegerLiteral::Create(Context, getInitIntValue(Context, IK, EltTy),
-                                   EltTy, ExprRange.getBegin()));
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
+        Exprs.push_back(IntegerLiteral::Create(
+            Context, getInitIntValue(Context, InitKind::Zero, EltTy), EltTy,
+            ExprRange.getBegin()));
       }
 
     } else if (Ty->isFloatingType()) {

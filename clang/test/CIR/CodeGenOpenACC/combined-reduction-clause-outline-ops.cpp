@@ -464,7 +464,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[DECAY]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[DECAY]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -482,7 +482,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -500,7 +500,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -519,7 +519,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -537,7 +537,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -582,10 +582,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[DECAY]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[DECAY]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[DECAY]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
@@ -600,10 +600,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
@@ -618,10 +618,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
@@ -637,10 +637,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
@@ -655,10 +655,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[NEXT_ELT]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[NEXT_ELT]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[NEXT_ELT]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
@@ -1039,7 +1039,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}> : !cir.double
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LARGEST:.*]] = cir.const #true
@@ -1066,10 +1066,10 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<0> : !u32i
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.1{{.*}}E+38> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-2.2{{.*}}E+38> : !cir.double
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1.7{{.*}}E+308> : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsOutline> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[LEAST:.*]] = cir.const #false
