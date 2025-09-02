@@ -1727,13 +1727,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
     // No need to customize this.
     return false;
   case Language::FunctionNameRepresentation::eNameWithNoArgs: {
-    if (!sc.function)
-      return false;
-    if (sc.function->GetLanguage() != eLanguageTypeSwift)
-      return false;
-    std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
-        sc.function->GetMangled().GetMangledName().GetStringRef(),
-        SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
+    std::string display_name = GetDemangledFunctionName(sc, exe_ctx);
     if (display_name.empty())
       return false;
     s << display_name;
@@ -1768,6 +1762,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
       variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
                                                  args);
 
+    s << GetFunctionTemplateArguments(sc, exe_ctx);
     s << GetFunctionDisplayArgs(sc, args, exe_ctx);
     return true;
     }
@@ -1775,23 +1770,57 @@ bool SwiftLanguage::GetFunctionDisplayName(
     return false;
 }
 
-std::string SwiftLanguage::GetFunctionName(const SymbolContext &sc,
-                                           const ExecutionContext *exe_ctx) {
+std::string
+SwiftLanguage::GetDemangledFunctionName(const SymbolContext &sc,
+                                        const ExecutionContext *exe_ctx) {
   if (!sc.function)
     return {};
   if (sc.function->GetLanguage() != eLanguageTypeSwift)
     return {};
-  std::string name = SwiftLanguageRuntime::DemangleSymbolAsString(
+  return SwiftLanguageRuntime::DemangleSymbolAsString(
       sc.GetPossiblyInlinedFunctionName().GetMangledName(),
       SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
-  if (name.empty())
+}
+
+std::string SwiftLanguage::GetFunctionName(const SymbolContext &sc,
+                                           const ExecutionContext *exe_ctx) {
+  std::string demangled_name = GetDemangledFunctionName(sc, exe_ctx);
+  if (demangled_name.empty())
     return {};
-  size_t open_paren = name.find('(');
-  size_t generic = name.find('<');
+  size_t open_paren = demangled_name.find('(');
+  size_t generic = demangled_name.find('<');
   size_t name_end = std::min(open_paren, generic);
   if (name_end == std::string::npos)
-    return name;
-  return name.substr(0, name_end);
+    return demangled_name;
+  return demangled_name.substr(0, name_end);
+}
+
+std::string
+SwiftLanguage::GetFunctionTemplateArguments(const SymbolContext &sc,
+                                            const ExecutionContext *exe_ctx) {
+  std::string demangled_name = GetDemangledFunctionName(sc, exe_ctx);
+  if (demangled_name.empty())
+    return {};
+  size_t open_paren = demangled_name.find('(');
+  size_t generic_start = demangled_name.find('<');
+  if (generic_start == std::string::npos || generic_start > open_paren)
+    return {};
+
+  int generic_depth = 1;
+  size_t generic_end = generic_start + 1;
+
+  while (generic_end < demangled_name.size() && generic_depth > 0) {
+    if (demangled_name[generic_end] == '<')
+      generic_depth++;
+    else if (demangled_name[generic_end] == '>')
+      generic_depth--;
+    generic_end++;
+  }
+
+  if (generic_depth != 0)
+    return {};
+
+  return demangled_name.substr(generic_start, generic_end - generic_start);
 }
 
 std::string SwiftLanguage::GetFunctionDisplayArgs(
@@ -1799,38 +1828,15 @@ std::string SwiftLanguage::GetFunctionDisplayArgs(
     const lldb_private::ExecutionContext *exe_ctx) {
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-  std::string name = SwiftLanguageRuntime::DemangleSymbolAsString(
-      sc.function->GetMangled().GetMangledName().GetStringRef(),
-      SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
+  std::string name = GetDemangledFunctionName(sc, exe_ctx);
   lldb_private::StreamString s;
   const char *cstr = name.data();
   const char *open_paren = strchr(cstr, '(');
   const char *close_paren = nullptr;
-  const char *generic = strchr(cstr, '<');
-  // If before the arguments list begins there is a template sign
-  // then scan to the end of the generic args before you try to find
-  // the arguments list.
-  const char *generic_start = generic;
-  if (generic && open_paren && generic < open_paren) {
-    int generic_depth = 1;
-    ++generic;
-    for (; *generic && generic_depth > 0; generic++) {
-      if (*generic == '<')
-        generic_depth++;
-      if (*generic == '>')
-        generic_depth--;
-    }
-    if (*generic)
-      open_paren = strchr(generic, '(');
-    else
-      open_paren = nullptr;
-  }
   if (open_paren) {
     close_paren = strchr(open_paren, ')');
   }
 
-  if (generic_start && generic_start < open_paren)
-    s.Write(generic_start, open_paren - generic_start);
   s.PutChar('(');
 
   const size_t num_args = args.GetSize();
@@ -1936,7 +1942,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
   // Function without a basename is nonsense.
   if (!info->hasBasename())
     return llvm::createStringError(
-        "DemangledInfo for '%s does not have basename range.",
+        "The demangled name for '%s does not have basename range.",
         demangled_name.data());
 
   return std::make_pair(demangled_name, *info);
@@ -1955,6 +1961,23 @@ GetDemangledBasename(const SymbolContext &sc) {
 }
 
 static llvm::Expected<llvm::StringRef>
+GetDemangledNameQualifiers(const SymbolContext &sc) {
+  auto info_or_err = GetAndValidateInfo(sc);
+  if (!info_or_err)
+    return info_or_err.takeError();
+
+  auto [demangled_name, info] = *info_or_err;
+
+  if (!info.hasPrefix())
+    return llvm::createStringError(
+        "The demangled name for '%s does not have a name qualifiers range.",
+        demangled_name.data());
+
+  return demangled_name.slice(info.NameQualifiersRange.first,
+                              info.NameQualifiersRange.second);
+}
+
+static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionPrefix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err)
@@ -1964,7 +1987,7 @@ GetDemangledFunctionPrefix(const SymbolContext &sc) {
 
   if (!info.hasPrefix())
     return llvm::createStringError(
-        "DemangledInfo for '%s does not have suffix range.",
+        "The demangled name for '%s does not have a prefix range.",
         demangled_name.data());
 
   return demangled_name.slice(info.PrefixRange.first, info.PrefixRange.second);
@@ -1980,7 +2003,7 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
 
   if (!info.hasSuffix())
     return llvm::createStringError(
-        "DemangledInfo for '%s does not have suffix range.",
+        "The demangled name for '%s does not have a suffix range.",
         demangled_name.data());
 
   return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
@@ -2035,6 +2058,24 @@ bool SwiftLanguage::HandleFrameFormatVariable(const SymbolContext &sc,
 
     return true;
   }
+  case FormatEntity::Entry::Type::FunctionNameQualifiers: {
+    auto qualifiers_or_err = GetDemangledNameQualifiers(sc);
+    if (!qualifiers_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Language), qualifiers_or_err.takeError(),
+                     "Failed to handle ${{function.name-qualifiers}} "
+                     "frame-format variable: {0}");
+      return false;
+    }
+
+    s << *qualifiers_or_err;
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionTemplateArguments: {
+    s << GetFunctionTemplateArguments(sc, exe_ctx);
+
+    return true;
+  }
   case FormatEntity::Entry::Type::FunctionFormattedArguments: {
     // This ensures we print the arguments even when no debug-info is available.
     //
@@ -2043,9 +2084,7 @@ bool SwiftLanguage::HandleFrameFormatVariable(const SymbolContext &sc,
     // once we have a "fallback operator" in the frame-format language.
     if (!sc.function && sc.symbol)
       return PrintDemangledArgumentList(s, sc);
-    std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
-        sc.function->GetMangled().GetMangledName().GetStringRef(),
-        SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
+    std::string display_name = GetDemangledFunctionName(sc, exe_ctx);
     if (display_name.empty())
       return false;
 
@@ -2085,7 +2124,6 @@ bool SwiftLanguage::HandleFrameFormatVariable(const SymbolContext &sc,
   }
 
   case FormatEntity::Entry::Type::FunctionScope:
-  case FormatEntity::Entry::Type::FunctionTemplateArguments:
   case FormatEntity::Entry::Type::FunctionReturnRight:
   case FormatEntity::Entry::Type::FunctionReturnLeft:
   case FormatEntity::Entry::Type::FunctionQualifiers:
