@@ -2043,6 +2043,18 @@ let TargetPrefix = "riscv" in {
   defm pmaxu_b     : RVPBinaryIntrinsics;
   defm pmaxu_h     : RVPBinaryIntrinsics;
   defm pmaxu_w     : RVPBinaryIntrinsics;
+  defm pmulh_h     : RVPBinaryIntrinsics;
+  defm pmulh_w     : RVPBinaryIntrinsics;
+  defm pmulhu_h    : RVPBinaryIntrinsics;
+  defm pmulhu_w    : RVPBinaryIntrinsics;
+  defm pmulhr_h    : RVPBinaryIntrinsics;
+  defm pmulhr_w    : RVPBinaryIntrinsics;
+  defm pmulhru_h   : RVPBinaryIntrinsics;
+  defm pmulhru_w   : RVPBinaryIntrinsics;
+  defm mulh_h1     : RVPBinaryIntrinsics;
+  defm mulhr       : RVPBinaryIntrinsics;
+  defm mulhru      : RVPBinaryIntrinsics;
+  defm mulh_h0     : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],
@@ -2053,27 +2065,32 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
   }
 
-  defm pslli_b  : RVPBinaryAABIntrinsics;
-  defm pslli_h  : RVPBinaryAABIntrinsics;
-  defm pslli_w  : RVPBinaryAABIntrinsics;
-  defm psslai_h : RVPBinaryAABIntrinsics;
-  defm psslai_w : RVPBinaryAABIntrinsics;
-  defm sslai    : RVPBinaryAABIntrinsics;
-  defm psrli_b  : RVPBinaryAABIntrinsics;
-  defm psrli_h  : RVPBinaryAABIntrinsics;
-  defm psrli_w  : RVPBinaryAABIntrinsics;
-  defm pusati_h : RVPBinaryAABIntrinsics;
-  defm pusati_w : RVPBinaryAABIntrinsics;
-  defm usati    : RVPBinaryAABIntrinsics;
-  defm psrai_b  : RVPBinaryAABIntrinsics;
-  defm psrai_h  : RVPBinaryAABIntrinsics;
-  defm psrai_w  : RVPBinaryAABIntrinsics;
-  defm psrari_h : RVPBinaryAABIntrinsics;
-  defm psrari_w : RVPBinaryAABIntrinsics;
-  defm srari    : RVPBinaryAABIntrinsics;
-  defm psati_h  : RVPBinaryAABIntrinsics;
-  defm psati_w  : RVPBinaryAABIntrinsics;
-  defm sati     : RVPBinaryAABIntrinsics;
+  defm pslli_b    : RVPBinaryAABIntrinsics;
+  defm pslli_h    : RVPBinaryAABIntrinsics;
+  defm pslli_w    : RVPBinaryAABIntrinsics;
+  defm psslai_h   : RVPBinaryAABIntrinsics;
+  defm psslai_w   : RVPBinaryAABIntrinsics;
+  defm sslai      : RVPBinaryAABIntrinsics;
+  defm psrli_b    : RVPBinaryAABIntrinsics;
+  defm psrli_h    : RVPBinaryAABIntrinsics;
+  defm psrli_w    : RVPBinaryAABIntrinsics;
+  defm pusati_h   : RVPBinaryAABIntrinsics;
+  defm pusati_w   : RVPBinaryAABIntrinsics;
+  defm usati      : RVPBinaryAABIntrinsics;
+  defm psrai_b    : RVPBinaryAABIntrinsics;
+  defm psrai_h    : RVPBinaryAABIntrinsics;
+  defm psrai_w    : RVPBinaryAABIntrinsics;
+  defm psrari_h   : RVPBinaryAABIntrinsics;
+  defm psrari_w   : RVPBinaryAABIntrinsics;
+  defm srari      : RVPBinaryAABIntrinsics;
+  defm psati_h    : RVPBinaryAABIntrinsics;
+  defm psati_w    : RVPBinaryAABIntrinsics;
+  defm sati       : RVPBinaryAABIntrinsics;
+  defm pmulhrsu_h : RVPBinaryAABIntrinsics;
+  defm pmulhrsu_w : RVPBinaryAABIntrinsics;
+  defm mulhsu_h0  : RVPBinaryAABIntrinsics;
+  defm mulhsu_h1  : RVPBinaryAABIntrinsics;
+  defm mulhrsu    : RVPBinaryAABIntrinsics;
 
   class RVPBinaryABBIntrinsics
       : Intrinsic<[llvm_any_ty],
@@ -2104,6 +2121,10 @@ let TargetPrefix = "riscv" in {
   defm mulu_w00    : RVPBinaryABBIntrinsics;
   defm mulu_h11    : RVPBinaryABBIntrinsics;
   defm mulu_w11    : RVPBinaryABBIntrinsics;
+  defm pmulh_h_b0  : RVPBinaryABBIntrinsics;
+  defm pmulh_w_h0  : RVPBinaryABBIntrinsics;
+  defm pmulh_h_b1  : RVPBinaryABBIntrinsics;
+  defm pmulh_w_h1  : RVPBinaryABBIntrinsics;
 
   class RVPBinaryABCIntrinsics
       : Intrinsic<[llvm_any_ty],
@@ -2122,6 +2143,12 @@ let TargetPrefix = "riscv" in {
   defm mulsu_w00         : RVPBinaryABCIntrinsics;
   defm mulsu_h11         : RVPBinaryABCIntrinsics;
   defm mulsu_w11         : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h         : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w         : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b0      : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h0      : RVPBinaryABCIntrinsics;
+  defm pmulhsu_h_b1      : RVPBinaryABCIntrinsics;
+  defm pmulhsu_w_h1      : RVPBinaryABCIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions

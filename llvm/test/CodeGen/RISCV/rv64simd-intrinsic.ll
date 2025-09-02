@@ -1750,3 +1750,223 @@ define i64 @pmaxu_w(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.pmaxu.w.i64(i64 %a, i64 %b)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.pmulh.h.i64(i64, i64)
+
+define i64 @pmulh_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulh.w.i64(i64, i64)
+
+define i64 @pmulh_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulh.h.b0.i64.i64(i64, i64)
+
+define i64 @pmulh_h_b0(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_h_b0:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.h.b0 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.h.b0.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulh.w.h0.i64.i64(i64, i64)
+
+define i64 @pmulh_w_h0(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_w_h0:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.w.h0 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.w.h0.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulh.h.b1.i64.i64(i64, i64)
+
+define i64 @pmulh_h_b1(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_h_b1:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.h.b1 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.h.b1.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulh.w.h1.i64.i64(i64, i64)
+
+define i64 @pmulh_w_h1(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulh_w_h1:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulh.w.h1 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulh.w.h1.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhu.h.i64(i64, i64)
+
+define i64 @pmulhu_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhu_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhu.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhu.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhu.w.i64(i64, i64)
+
+define i64 @pmulhu_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhu_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhu.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhu.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhr.h.i64(i64, i64)
+
+define i64 @pmulhr_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhr_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhr.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhr.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhr.w.i64(i64, i64)
+
+define i64 @pmulhr_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhr_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhr.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhr.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhru.h.i64(i64, i64)
+
+define i64 @pmulhru_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhru_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhru.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhru.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhru.w.i64(i64, i64)
+
+define i64 @pmulhru_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhru_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhru.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhru.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.h.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.h.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.w.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.w.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.h.b0.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_h_b0(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_h_b0:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.h.b0 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.h.b0.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.w.h0.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_w_h0(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_w_h0:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.w.h0 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.w.h0.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.h.b1.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_h_b1(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_h_b1:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.h.b1 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.h.b1.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhsu.w.h1.i64.i64.i64(i64, i64)
+
+define i64 @pmulhsu_w_h1(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhsu_w_h1:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhsu.w.h1 a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhsu.w.h1.i64.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhrsu.h.i64.i64(i64, i64)
+
+define i64 @pmulhrsu_h(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhrsu_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhrsu.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhrsu.h.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.pmulhrsu.w.i64.i64(i64, i64)
+
+define i64 @pmulhrsu_w(i64 %a, i64 %b) {
+; RV64P-LABEL: pmulhrsu_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    pmulhrsu.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.pmulhrsu.w.i64.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}

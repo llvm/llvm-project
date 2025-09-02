@@ -978,6 +978,16 @@ def : PatGprGpr<int_riscv_pmax_b,       PMAX_B>;
 def : PatGprGpr<int_riscv_pmax_h,       PMAX_H>;
 def : PatGprGpr<int_riscv_pmaxu_b,      PMAXU_B>;
 def : PatGprGpr<int_riscv_pmaxu_h,      PMAXU_H>;
+def : PatGprGpr<int_riscv_pmulh_h,      PMULH_H>;
+def : PatGprGpr<int_riscv_pmulh_h_b0,   PMULH_H_B0>;
+def : PatGprGpr<int_riscv_pmulh_h_b1,   PMULH_H_B1>;
+def : PatGprGpr<int_riscv_pmulhu_h,     PMULHU_H>;
+def : PatGprGpr<int_riscv_pmulhr_h,     PMULHR_H>;
+def : PatGprGpr<int_riscv_pmulhru_h,    PMULHRU_H>;
+def : PatGprGpr<int_riscv_pmulhsu_h,    PMULHSU_H>;
+def : PatGprGpr<int_riscv_pmulhsu_h_b0, PMULHSU_H_B0>;
+def : PatGprGpr<int_riscv_pmulhsu_h_b1, PMULHSU_H_B1>;
+def : PatGprGpr<int_riscv_pmulhrsu_h,   PMULHRSU_H>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -1010,6 +1020,13 @@ def : PatGprGpr<int_riscv_packt,     PACKT_RV32>;
 def : PatGprGpr<int_riscv_mseq,      MSEQ>;
 def : PatGprGpr<int_riscv_mslt,      MSLT>;
 def : PatGprGpr<int_riscv_msltu,     MSLTU>;
+def : PatGprGpr<int_riscv_mulh_h1,   MULH_H1>;
+def : PatGprGpr<int_riscv_mulhr,     MULHR>;
+def : PatGprGpr<int_riscv_mulhru,    MULHRU>;
+def : PatGprGpr<int_riscv_mulh_h0,   MULH_H0>;
+def : PatGprGpr<int_riscv_mulhsu_h0, MULHSU_H0>;
+def : PatGprGpr<int_riscv_mulhsu_h1, MULHSU_H1>;
+def : PatGprGpr<int_riscv_mulhrsu,   MULHRSU>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -1089,4 +1106,14 @@ def : PatGprGpr<int_riscv_pmin_w,       PMIN_W>;
 def : PatGprGpr<int_riscv_pminu_w,      PMINU_W>;
 def : PatGprGpr<int_riscv_pmax_w,       PMAX_W>;
 def : PatGprGpr<int_riscv_pmaxu_w,      PMAXU_W>;
+def : PatGprGpr<int_riscv_pmulh_w,      PMULH_W>;
+def : PatGprGpr<int_riscv_pmulh_w_h0,   PMULH_W_H0>;
+def : PatGprGpr<int_riscv_pmulh_w_h1,   PMULH_W_H1>;
+def : PatGprGpr<int_riscv_pmulhu_w,     PMULHU_W>;
+def : PatGprGpr<int_riscv_pmulhr_w,     PMULHR_W>;
+def : PatGprGpr<int_riscv_pmulhru_w,    PMULHRU_W>;
+def : PatGprGpr<int_riscv_pmulhsu_w,    PMULHSU_W>;
+def : PatGprGpr<int_riscv_pmulhsu_w_h0, PMULHSU_W_H0>;
+def : PatGprGpr<int_riscv_pmulhsu_w_h1, PMULHSU_W_H1>;
+def : PatGprGpr<int_riscv_pmulhrsu_w,   PMULHRSU_W>;
 } // Predicates = [HasStdExtP, IsRV64]
