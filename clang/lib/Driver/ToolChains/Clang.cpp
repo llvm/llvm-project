@@ -2743,6 +2743,7 @@ static void EmitComplexRangeDiag(const Driver &D, StringRef LastOpt,
   // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
   // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
   // | -ffast-math           | -fno-fast-math        |
+  // | -ffp-model=           | -ffast-math           |
   // | -ffp-model=           | -fno-fast-math        |
   // | -ffp-model=           | -ffp-model=           |
   // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
@@ -2752,6 +2753,7 @@ static void EmitComplexRangeDiag(const Driver &D, StringRef LastOpt,
       (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
       (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
       (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
       (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
       (LastOpt.starts_with("-ffp-model=") &&
        NewOpt.starts_with("-ffp-model=")) ||

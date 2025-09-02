@@ -21,9 +21,10 @@
 //          `-fcomplex-arithmetic=full -fcomplex-arithmetic=improved`
 //          `-ffp-model=strict -ffp-model=aggressive`
 //
-// (b) When -ffp-model= is negated by -fno-fast-math. 
+// (b) When -ffp-model= is overridden by -f[no-]fast-math. 
 //       Example:
 //          `-ffp-model=fast -fno-fast-math`
+//          `-ffp-model=strict -ffast-math`
 
 
 // RUN: %clang -### -Werror -ffast-math -fno-fast-math -c %s 2>&1 \
@@ -417,7 +418,7 @@
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
 // RUN: %clang -### -ffp-model=strict -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=FAST-OVERRIDING,MODEL-STRICT-OVERRIDDEN %s
+// RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
 // RUN: %clang -### -Werror -ffp-model=strict -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
@@ -455,8 +456,8 @@
 // RUN: %clang -### -ffp-model=strict -ffp-model=aggressive -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
-// RUN: %clang -### -ffp-model=precise -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=FAST-OVERRIDING,MODEL-PRECISE-OVERRIDDEN %s
+// RUN: %clang -### -Werror -ffp-model=precise -ffast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
 // RUN: %clang -### -Werror -ffp-model=precise -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
@@ -494,8 +495,8 @@
 // RUN: %clang -### -ffp-model=precise -ffp-model=aggressive -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
-// RUN: %clang -### -ffp-model=fast -ffast-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefixes=FAST-OVERRIDING,MODEL-FAST-OVERRIDDEN %s
+// RUN: %clang -### -Werror -ffp-model=fast -ffast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
 
 // RUN: %clang -### -Werror -ffp-model=fast -fno-fast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=NO-OVR-WARN %s
