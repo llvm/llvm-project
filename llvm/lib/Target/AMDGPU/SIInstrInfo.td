@@ -12,7 +12,9 @@ def isWave64 : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
 
 class AMDGPUMnemonicAlias<string From, string To, string VariantName = "">
-    : MnemonicAlias<From, To, VariantName>, PredicateControl;
+    : MnemonicAlias<From, To, VariantName>, PredicateControl {
+  string DecoderNamespace = ?; // Dummy field
+}
 
 // Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the

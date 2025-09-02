@@ -1380,6 +1380,21 @@ multiclass DS_Real_gfx12_with_name<bits<8> op, string name> {
   defm "" : DS_Real_gfx12<op, !cast<DS_Pseudo>(NAME), name>;
 }
 
+multiclass DS_Real_gfx12_with_t16<bits<8> op,
+                                  string name = !tolower(NAME)> {
+  let DecoderNamespace = "GFX12_FAKE16" in {
+    defm "" : DS_Real_gfx12<op, !cast<DS_Pseudo>(NAME#"_gfx9"), name>;
+  }
+
+  let DecoderNamespace = "GFX12", AssemblerPredicate = isGFX12Plus in {
+    def _gfx12_t16 :
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+          !cast<DS_Pseudo>(NAME#"_t16"),
+          SIEncodingFamily.GFX12, name>,
+      True16D16Table<NAME#"_D16_HI", NAME>;
+  }
+}
+
 defm DS_MIN_F32           : DS_Real_gfx12_with_name<0x012, "ds_min_num_f32">;
 defm DS_MAX_F32           : DS_Real_gfx12_with_name<0x013, "ds_max_num_f32">;
 defm DS_MIN_RTN_F32       : DS_Real_gfx12_with_name<0x032, "ds_min_num_rtn_f32">;
@@ -1444,17 +1459,37 @@ multiclass DS_Real_gfx11<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
   } // End AssemblerPredicate
 }
 
+multiclass DS_Real_gfx11_with_t16<bits<8> op,
+                                  string name = !tolower(NAME)> {
+  let DecoderNamespace = "GFX11_FAKE16" in {
+    defm "" : DS_Real_gfx11<op, !cast<DS_Pseudo>(NAME#"_gfx9"), name>;
+  }
+
+  let DecoderNamespace = "GFX11", AssemblerPredicate = isGFX11Only in {
+    def _gfx11_t16 :
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+          !cast<DS_Pseudo>(NAME#"_t16"),
+          SIEncodingFamily.GFX11, name>,
+      True16D16Table<NAME#"_D16_HI", NAME#"_gfx9">;
+  }
+}
+
 multiclass DS_Real_gfx11_gfx12<bits<8> op,
                                string name = !tolower(NAME),
                                DS_Pseudo ps = !cast<DS_Pseudo>(NAME)>
   : DS_Real_gfx11<op, ps, name>,
     DS_Real_gfx12<op, ps, name>;
 
+multiclass DS_Real_gfx11_gfx12_with_t16<bits<8> op,
+                                        string name = !tolower(NAME)>
+  : DS_Real_gfx11_with_t16<op, name>,
+    DS_Real_gfx12_with_t16<op, name>;
+
 defm DS_WRITE_B32           : DS_Real_gfx11_gfx12<0x00d, "ds_store_b32">;
 defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;
 defm DS_WRITE2ST64_B32      : DS_Real_gfx11_gfx12<0x00f, "ds_store_2addr_stride64_b32">;
-defm DS_WRITE_B8            : DS_Real_gfx11_gfx12<0x01e, "ds_store_b8">;
-defm DS_WRITE_B16           : DS_Real_gfx11_gfx12<0x01f, "ds_store_b16">;
+defm DS_WRITE_B8            : DS_Real_gfx11_gfx12_with_t16<0x01e, "ds_store_b8">;
+defm DS_WRITE_B16           : DS_Real_gfx11_gfx12_with_t16<0x01f, "ds_store_b16">;
 defm DS_WRXCHG_RTN_B32      : DS_Real_gfx11_gfx12<0x02d, "ds_storexchg_rtn_b32">;
 defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx11_gfx12<0x02e, "ds_storexchg_2addr_rtn_b32">;
 defm DS_WRXCHG2ST64_RTN_B32 : DS_Real_gfx11_gfx12<0x02f, "ds_storexchg_2addr_stride64_rtn_b32">;
