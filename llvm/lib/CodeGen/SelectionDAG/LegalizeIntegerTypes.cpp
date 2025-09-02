@@ -324,6 +324,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_VP_REDUCE(N);
     break;
 
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+    Res = PromoteIntRes_LOOP_DEPENDENCE_MASK(N);
+    break;
+
   case ISD::FREEZE:
     Res = PromoteIntRes_FREEZE(N);
     break;
@@ -372,6 +377,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MERGE_VALUES(SDNode *N,
                                                      unsigned ResNo) {
   SDValue Op = DisintegrateMERGE_VALUES(N, ResNo);
   return GetPromotedInteger(Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getNode(N->getOpcode(), SDLoc(N), NewVT, N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_AssertSext(SDNode *N) {
@@ -5260,20 +5271,18 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
                    MachinePointerInfo());
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (const SDValue &Op : N->op_values()) {
     EVT ArgVT = Op.getValueType();
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-    Entry.Node = Op;
-    Entry.Ty = ArgTy;
+    TargetLowering::ArgListEntry Entry(Op, ArgTy);
     Entry.IsSExt = true;
     Entry.IsZExt = false;
     Args.push_back(Entry);
   }
 
   // Also pass the address of the overflow check.
-  Entry.Node = Temp;
-  Entry.Ty = PointerType::getUnqual(PtrTy->getContext());
+  TargetLowering::ArgListEntry Entry(
+      Temp, PointerType::getUnqual(PtrTy->getContext()));
   Entry.IsSExt = true;
   Entry.IsZExt = false;
   Args.push_back(Entry);

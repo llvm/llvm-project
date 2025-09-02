@@ -1568,14 +1568,20 @@ private:
         if (DebugLoc SuspendLoc = S->getDebugLoc()) {
           std::string LabelName =
               ("__coro_resume_" + Twine(SuspendIndex)).str();
-          DILocation &DILoc = *SuspendLoc;
+          // Take the "inlined at" location, if present. This is mandatory as
+          // the DILabel insertion checks that the scopes of label and the
+          // attached location match. This is not the case when the suspend
+          // location has been inlined due to pointing to the original scope.
+          DILocation *DILoc = SuspendLoc->getInlinedAt();
+          if (!DILoc)
+            DILoc = SuspendLoc;
           DILabel *ResumeLabel =
-              DBuilder.createLabel(DIS, LabelName, DILoc.getFile(),
+              DBuilder.createLabel(DIS, LabelName, DILoc->getFile(),
                                    SuspendLoc.getLine(), SuspendLoc.getCol(),
                                    /*IsArtificial=*/true,
                                    /*CoroSuspendIdx=*/SuspendIndex,
                                    /*AlwaysPreserve=*/false);
-          DBuilder.insertLabel(ResumeLabel, &DILoc, ResumeBB->begin());
+          DBuilder.insertLabel(ResumeLabel, DILoc, ResumeBB->begin());
         }
       }
 
@@ -2252,6 +2258,10 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       UR.CWorklist.insert(CurrentSCC);
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
+    } else if (Shape.ABI == coro::ABI::Async) {
+      // Reprocess the function to inline the tail called return function of
+      // coro.async.end.
+      UR.CWorklist.insert(&C);
     }
   }
 

@@ -97,15 +97,19 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
 
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-static void abort_with_message(const char *kind, uintptr_t caller) {
+static void abort_with_message(const char *kind, uintptr_t caller,
+                               const uintptr_t *address) {
   char msg_buf[128];
-  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+  format_msg(kind, caller, address, msg_buf, msg_buf + sizeof(msg_buf));
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
   abort();
 }
 #else
-static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
+static void abort_with_message(const char *kind, uintptr_t caller,
+                               const uintptr_t *address) {
+  abort();
+}
 #endif
 
 #if SANITIZER_DEBUG
@@ -121,18 +125,16 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 } // namespace __sanitizer
 #endif
 
-#define INTERFACE extern "C" __attribute__((visibility("default")))
-
 #define HANDLER_RECOVER(name, kind)                                            \
-  INTERFACE void __ubsan_handle_##name##_minimal() {                           \
+  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal) {        \
     __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
-  INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
+  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal_abort) {  \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, nullptr);                         \
-    abort_with_message(kind, caller);                                          \
+    abort_with_message(kind, caller, nullptr);                                 \
   }
 
 #define HANDLER(name, kind)                                                    \
@@ -140,16 +142,17 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   HANDLER_NORECOVER(name, kind)
 
 #define HANDLER_RECOVER_PTR(name, kind)                                        \
-  INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
+  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal,          \
+                               const uintptr_t address) {                      \
     __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
   }
 
 #define HANDLER_NORECOVER_PTR(name, kind)                                      \
-  INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
-      const uintptr_t address) {                                               \
+  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal_abort,    \
+                               const uintptr_t address) {                      \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, &address);                        \
-    abort_with_message(kind, caller);                                          \
+    abort_with_message(kind, caller, &address);                                \
   }
 
 // A version of a handler that takes a pointer to a value.

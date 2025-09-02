@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Host.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -434,22 +435,14 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
                                             ArrayRef<uint64_t> UniqueCpuInfos) {
   // On Windows, the registry provides cached copied of the MIDR_EL1 register.
-  union MIDR_EL1 {
-    uint64_t Raw;
-    struct _Components {
-      uint64_t Revision : 4;
-      uint64_t Partnum : 12;
-      uint64_t Architecture : 4;
-      uint64_t Variant : 4;
-      uint64_t Implementer : 8;
-      uint64_t Reserved : 32;
-    } Components;
-  };
+  using PartNum = Bitfield::Element<uint16_t, 4, 12>;
+  using Implementer = Bitfield::Element<uint16_t, 24, 8>;
+  using Variant = Bitfield::Element<uint16_t, 20, 4>;
 
   SmallVector<std::string> PartsHolder;
   PartsHolder.reserve(UniqueCpuInfos.size());
   for (auto Info : UniqueCpuInfos)
-    PartsHolder.push_back("0x" + utohexstr(MIDR_EL1{Info}.Components.Partnum,
+    PartsHolder.push_back("0x" + utohexstr(Bitfield::get<PartNum>(Info),
                                            /*LowerCase*/ true,
                                            /*Width*/ 3));
 
@@ -459,14 +452,14 @@ StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
     Parts.push_back(Part);
 
   return getHostCPUNameForARMFromComponents(
-      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Implementer,
+      "0x" + utohexstr(Bitfield::get<Implementer>(PrimaryCpuInfo),
                        /*LowerCase*/ true,
                        /*Width*/ 2),
       /*Hardware*/ "",
-      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Partnum,
+      "0x" + utohexstr(Bitfield::get<PartNum>(PrimaryCpuInfo),
                        /*LowerCase*/ true,
                        /*Width*/ 3),
-      Parts, [=]() { return MIDR_EL1{PrimaryCpuInfo}.Components.Variant; });
+      Parts, [=]() { return Bitfield::get<Variant>(PrimaryCpuInfo); });
 }
 
 namespace {
@@ -766,20 +759,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
   StringRef CPU;
 
   switch (Family) {
-  case 3:
+  case 0x3:
     CPU = "i386";
     break;
-  case 4:
+  case 0x4:
     CPU = "i486";
     break;
-  case 5:
+  case 0x5:
     if (testFeature(X86::FEATURE_MMX)) {
       CPU = "pentium-mmx";
       break;
     }
     CPU = "pentium";
     break;
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -1127,7 +1120,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 15: {
+  case 0xf: {
     if (testFeature(X86::FEATURE_64BIT)) {
       CPU = "nocona";
       break;
@@ -1139,7 +1132,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:

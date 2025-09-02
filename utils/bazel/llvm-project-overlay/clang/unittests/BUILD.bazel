@@ -336,6 +336,7 @@ cc_test(
         ":ast_matchers_tests_hdrs",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
@@ -682,12 +683,13 @@ cc_test(
     args = [
         # TODO: some tests fail with: "JIT session error: Symbols not found:
         # [ _ZnwmPv26__clang_Interpreter_NewTag, __clang_Interpreter_SetValueWithAlloc ]
-        "--gtest_filter=-InterpreterTest.*",
+        "--gtest_filter=-InterpreterTest.*:InterpreterTestBase.*",
     ],
     deps = [
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
+        "//clang:config",
         "//clang:frontend",
         "//clang:interpreter",
         "//clang:lex",

@@ -85,7 +85,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
                /*isLoad=*/true);
   for (ExplodedNode *N : Tmp)
-    evalBind(Dst, CallExpr, N, ThisVal, V, true);
+    evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {

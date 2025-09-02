@@ -31,6 +31,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgcn/SOURCES;
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/ptx-nvidiacl/SOURCES;
   clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
@@ -98,6 +99,7 @@ else()
 
   # Setup the paths where libclc runtimes should be stored. By default, in an
   # in-tree build we place the libraries in clang's resource driectory.
+  include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. )
 
   # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.

@@ -375,9 +375,17 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
-    else if (Op.isImm())
-      O << formatImm(Op.getImm());
-    else if (Op.isDFPImm())
+    else if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      // For OpVectorShuffle:
+      // A Component literal may also be FFFFFFFF, which means the corresponding
+      // result component has no source and is undefined.
+      // LLVM representation of poison/undef becomes -1 when lowered to MI.
+      if (MI->getOpcode() == SPIRV::OpVectorShuffle && Imm == -1)
+        O << "0xFFFFFFFF";
+      else
+        O << formatImm(Imm);
+    } else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
       MAI.printExpr(O, *Op.getExpr());

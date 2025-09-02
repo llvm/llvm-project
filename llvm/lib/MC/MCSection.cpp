@@ -20,7 +20,7 @@ using namespace llvm;
 
 MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsBss(IsBss), LinkerRelaxable(false), Name(Name) {
+      IsBss(IsBss), Name(Name) {
   DummyFragment.setParent(this);
 }
 
@@ -39,6 +39,8 @@ LLVM_DUMP_METHOD void MCSection::dump(
   raw_ostream &OS = errs();
 
   OS << "MCSection Name:" << getName();
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
     OS << '\n';
     F.dump();

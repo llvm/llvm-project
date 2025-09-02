@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olCreateProgram";
+def olCreateProgram : Function {
     let desc = "Create a program for the device from the binary image pointed to by `ProgData`.";
     let details = [
         "The provided `ProgData` will be copied and need not outlive the returned handle",
@@ -25,8 +24,7 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olDestroyProgram";
+def olDestroyProgram : Function {
     let desc = "Destroy the program and free all underlying resources.";
     let details = [];
     let params = [
