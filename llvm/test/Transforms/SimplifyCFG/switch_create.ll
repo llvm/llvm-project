@@ -1265,3 +1265,55 @@ if.then:
 if.end:
   ret void
 }
+
+define void @and_chain_trunc_nuw_not_i1_condition(i8 %x) {
+; CHECK-LABEL: @and_chain_trunc_nuw_not_i1_condition(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i8 [[ADD]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[SWITCH:%.*]] = select i1 [[ICMP]], i1 [[NOT]], i1 false
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[COMMON_RET:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[IF_THEN]]
+;
+  %add = add nsw i8 %x, -2
+  %icmp = icmp ugt i8 %add, 2
+  %trunc = trunc nuw i8 %x to i1
+  %not = xor i1 %trunc, true
+  %and = select i1 %icmp, i1 %not, i1 false
+  br i1 %and, label %if.then, label %if.end
+if.then:
+  tail call void @foo1()
+  ret void
+if.end:
+  ret void
+}
+
+define void @or_chain_trunc_nuw_not_i1_condition(i8 %x) {
+; CHECK-LABEL: @or_chain_trunc_nuw_not_i1_condition(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[ICMP]], i1 true, i1 [[NOT]]
+; CHECK-NEXT:    br i1 [[OR]], label [[IF_THEN:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %icmp = icmp eq i8 %x, 2
+  %trunc = trunc nuw i8 %x to i1
+  %not = xor i1 %trunc, true
+  %or = select i1 %icmp, i1 true, i1 %not
+  br i1 %or, label %if.then, label %if.end
+if.then:
+  tail call void @foo1()
+  ret void
+if.end:
+  ret void
+}
