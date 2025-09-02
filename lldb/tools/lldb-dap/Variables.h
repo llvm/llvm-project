@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/DenseMap.h"
@@ -20,6 +21,24 @@
 namespace lldb_dap {
 
 enum ScopeKind { Locals, Globals, Registers };
+/// Creates a `protocol::Scope` struct.
+///
+/// \param[in] kind
+///     The kind of scope to create
+///
+/// \param[in] variablesReference
+///     The value to place into the "variablesReference" key
+///
+/// \param[in] namedVariables
+///     The value to place into the "namedVariables" key
+///
+/// \param[in] expensive
+///     The value to place into the "expensive" key
+///
+/// \return
+///     A `protocol::Scope`
+protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
+                            int64_t namedVariables, bool expensive);
 
 struct ScopeData {
   ScopeKind kind;
@@ -55,14 +74,12 @@ struct Variables {
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
   /// Initialize a frame if it hasn't been already, otherwise do nothing
-  void ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame);
+  std::vector<protocol::Scope> ReadyFrame(uint32_t frame_id,
+                                          lldb::SBFrame &frame);
   std::optional<ScopeData> GetScopeKind(const int64_t variablesReference);
 
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
-
-  void AddScopeKind(int64_t variable_reference, ScopeKind kind,
-                    uint32_t frame_id);
 
 private:
   /// Variable_reference start index of permanent expandable variable.

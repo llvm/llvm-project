@@ -8,12 +8,48 @@
 
 #include "Variables.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValueList.h"
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 using namespace lldb_dap;
+
+namespace lldb_dap {
+
+protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
+                            int64_t namedVariables, bool expensive) {
+  protocol::Scope scope;
+
+  // TODO: Support "arguments" and "return value" scope.
+  // At the moment lldb-he arguments and return_value  into the
+  // "locals" scope.
+  // vscode only expands the first non-expensive scope, this causes friction
+  // if we add the arguments above the local scope as the locals scope will not
+  // be expanded if we enter a function with arguments. It becomes more
+  // annoying when the scope has arguments, return_value and locals.
+  switch (kind) {
+  case ScopeKind::Locals:
+    scope.presentationHint = protocol::Scope::eScopePresentationHintLocals;
+    scope.name = "Locals";
+    break;
+  case ScopeKind::Globals:
+    scope.name = "Globals";
+    break;
+  case ScopeKind::Registers:
+    scope.presentationHint = protocol::Scope::eScopePresentationHintRegisters;
+    scope.name = "Registers";
+    break;
+  }
+
+  scope.variablesReference = variablesReference;
+  scope.namedVariables = namedVariables;
+  scope.expensive = expensive;
+
+  return scope;
+}
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   auto iter = m_scope_kinds.find(variablesReference);
@@ -168,7 +204,9 @@ lldb::SBValueList *Variables::GetScope(const uint32_t frame_id,
   return nullptr;
 }
 
-void Variables::ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame) {
+std::vector<protocol::Scope> Variables::ReadyFrame(uint32_t frame_id,
+                                                   lldb::SBFrame &frame) {
+
   if (m_frames.find(frame_id) == m_frames.end()) {
 
     auto locals = frame.GetVariables(/*arguments=*/true,
@@ -186,10 +224,34 @@ void Variables::ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame) {
     m_frames.insert(
         std::make_pair(frame_id, std::make_tuple(locals, globals, registers)));
   }
+
+  std::vector<protocol::Scope> scopes = {};
+
+  int64_t variable_reference = GetNewVariableReference(false);
+
+  scopes.push_back(CreateScope(ScopeKind::Locals, variable_reference,
+                               GetScope(frame_id, ScopeKind::Locals)->GetSize(),
+                               false));
+
+  m_scope_kinds[variable_reference] =
+      std::make_pair(ScopeKind::Locals, frame_id);
+
+  variable_reference = GetNewVariableReference(false);
+  scopes.push_back(
+      CreateScope(ScopeKind::Globals, variable_reference,
+                  GetScope(frame_id, ScopeKind::Globals)->GetSize(), false));
+  m_scope_kinds[variable_reference] =
+      std::make_pair(ScopeKind::Globals, frame_id);
+
+  variable_reference = GetNewVariableReference(false);
+  scopes.push_back(
+      CreateScope(ScopeKind::Registers, variable_reference,
+                  GetScope(frame_id, ScopeKind::Registers)->GetSize(), false));
+
+  m_scope_kinds[variable_reference] =
+      std::make_pair(ScopeKind::Registers, frame_id);
+
+  return scopes;
 }
 
-void Variables::AddScopeKind(int64_t variable_reference, ScopeKind kind,
-                             uint32_t frame_id) {
-
-  m_scope_kinds[variable_reference] = std::make_pair(kind, frame_id);
-}
+} // namespace lldb_dap

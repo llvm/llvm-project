@@ -13,55 +13,6 @@
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
-/// Creates a `protocol::Scope` struct.
-///
-///
-/// \param[in] name
-///     The value to place into the "name" key
-///
-/// \param[in] variablesReference
-///     The value to place into the "variablesReference" key
-///
-/// \param[in] namedVariables
-///     The value to place into the "namedVariables" key
-///
-/// \param[in] expensive
-///     The value to place into the "expensive" key
-///
-/// \return
-///     A `protocol::Scope`
-static Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
-                         int64_t namedVariables, bool expensive) {
-  Scope scope;
-
-  // TODO: Support "arguments" and "return value" scope.
-  // At the moment lldb-dap includes the arguments and return_value  into the
-  // "locals" scope.
-  // vscode only expands the first non-expensive scope, this causes friction
-  // if we add the arguments above the local scope as the locals scope will not
-  // be expanded if we enter a function with arguments. It becomes more
-  // annoying when the scope has arguments, return_value and locals.
-  switch (kind) {
-  case ScopeKind::Locals:
-    scope.presentationHint = Scope::eScopePresentationHintLocals;
-    scope.name = "Locals";
-    break;
-  case ScopeKind::Globals:
-    scope.name = "Globals";
-    break;
-  case ScopeKind::Registers:
-    scope.presentationHint = Scope::eScopePresentationHintRegisters;
-    scope.name = "Registers";
-    break;
-  }
-
-  scope.variablesReference = variablesReference;
-  scope.namedVariables = namedVariables;
-  scope.expensive = expensive;
-
-  return scope;
-}
-
 llvm::Expected<ScopesResponseBody>
 ScopesRequestHandler::Run(const ScopesArguments &args) const {
   lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
@@ -86,32 +37,8 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
   }
 
   uint32_t frame_id = frame.GetFrameID();
-
-  dap.variables.ReadyFrame(frame_id, frame);
-
-  std::vector<protocol::Scope> scopes = {};
-
-  int64_t variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(
-      ScopeKind::Locals, variable_reference,
-      dap.variables.GetScope(frame_id, ScopeKind::Locals)->GetSize(), false));
-
-  dap.variables.AddScopeKind(variable_reference, ScopeKind::Locals, frame_id);
-
-  variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(
-      ScopeKind::Globals, variable_reference,
-      dap.variables.GetScope(frame_id, ScopeKind::Globals)->GetSize(), false));
-  dap.variables.AddScopeKind(variable_reference, ScopeKind::Globals, frame_id);
-
-  variable_reference = dap.variables.GetNewVariableReference(false);
-  scopes.push_back(CreateScope(
-      ScopeKind::Registers, variable_reference,
-      dap.variables.GetScope(frame_id, ScopeKind::Registers)->GetSize(),
-      false));
-
-  dap.variables.AddScopeKind(variable_reference, ScopeKind::Registers,
-                             frame_id);
+  std::vector<protocol::Scope> scopes =
+      dap.variables.ReadyFrame(frame_id, frame);
 
   return ScopesResponseBody{std::move(scopes)};
 }

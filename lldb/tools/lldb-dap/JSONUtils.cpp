@@ -11,7 +11,6 @@
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
 #include "ProtocolUtils.h"
-#include "Variables.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
