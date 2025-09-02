@@ -11,9 +11,7 @@
 
 // REQUIRES: libcpp-hardening-mode=none
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__assert>
+#include <__cxx03/__assert>
 #include <cassert>
 
 bool executed_condition = false;

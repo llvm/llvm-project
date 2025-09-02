@@ -13,9 +13,7 @@
 // void
 // __tree_left_rotate(_NodePtr __x);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__tree>
+#include <__cxx03/__tree>
 #include <cassert>
 
 #include "test_macros.h"

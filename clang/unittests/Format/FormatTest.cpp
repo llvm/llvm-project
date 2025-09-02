@@ -14996,6 +14996,18 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
                Style);
 }
 
+TEST_F(FormatTest, MergeShortFunctionBody) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+
+  verifyFormat("int foo()\n"
+               "{ return 1; }",
+               Style);
+}
+
 TEST_F(FormatTest, KeepShortFunctionAfterPPElse) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
@@ -25661,6 +25673,7 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                  " A  a",
                  Style);
   verifyNoChange("#define MY_MACRO  \\\n"
+                 " /*foo*//*bar*/  \\\n"
                  " /* comment */  \\\n"
                  "   1",
                  Style);

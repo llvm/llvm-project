@@ -25,6 +25,7 @@ include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerConst : LLVM_PointerInAddressSpace<4>;
 def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
@@ -2353,6 +2354,20 @@ def TMALoadModeAttr : EnumAttr<NVVM_Dialect, TMALoadMode, "tma_load_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+// List of modes supported for TMA Store and Reduction Ops
+def TMAStoreModeTile   : I32EnumAttrCase<"TILE", 0, "tile">;
+def TMAStoreModeIm2Col : I32EnumAttrCase<"IM2COL", 1, "im2col">;
+def TMAStoreModeTileScatter4 : I32EnumAttrCase<"TILE_SCATTER4", 2, "tile_scatter4">;
+
+def TMAStoreMode : I32EnumAttr<"TMAStoreMode", "NVVM TMA Store Mode",
+    [TMAStoreModeTile, TMAStoreModeIm2Col, TMAStoreModeTileScatter4]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def TMAStoreModeAttr : EnumAttr<NVVM_Dialect, TMAStoreMode, "tma_store_mode"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -2479,20 +2494,43 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
 }
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
-  NVVM_Op<"cp.async.bulk.tensor.global.shared.cta", 
-  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
+  NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
+  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
   AttrSizedOperandSegments]>,
-  Arguments<(ins  LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_PointerShared:$srcMem,
-                  Variadic<I32>:$coordinates,
-                  PtxPredicate:$predicate)> {
+  Arguments<(ins LLVM_PointerGeneric:$tmaDescriptor,
+                 LLVM_PointerShared:$srcMem,
+                 Variadic<I32>:$coordinates,
+                 Optional<I64>:$l2CacheHint,
+                 DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode,
+                 PtxPredicate:$predicate)> {
+  let description = [{
+    Initiates an asynchronous copy of the tensor data from shared::cta
+    memory to global memory. This Op supports all the store modes specified in
+    `TMAStoreMode`.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+  }];
+
   let assemblyFormat = [{ 
     $tmaDescriptor `,` 
     $srcMem `,` 
     `box` `[`$coordinates `]` 
-    (`,` `predicate` `=` $predicate^)?  
-    attr-dict  `:` type(operands)
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    (`,` `predicate` `=` $predicate^)?
+    attr-dict `:` type($tmaDescriptor) `,` type($srcMem)
   }];
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       int dim = getCoordinates().size();
@@ -2508,6 +2546,12 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
     }
   }];
   let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2527,15 +2571,25 @@ def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetc
   let assemblyFormat = "$value";
 }
 
-def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
+def NVVM_PrefetchOp : NVVM_Op<"prefetch",
+    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
   let summary = "Brings the cache line containing an address into the specified cache level";
   let description = [{
-    Operand `addr` can be a global, local or generic address pointer. No 
-    operation is performed if `addr` maps to a `shared` memory location.
+    Prefetches the cache line containing the address given by `addr`. The 
+    operand may be a global, local, or generic pointer. When `tensormap` is 
+    specified, the operand may instead be a constant or generic pointer. If the 
+    address maps to shared memory, the operation has no effect.
 
-    The `cacheLevel` attribute specifies the cache level to which the cache line
-    containing the specified address is brought.
-    
+    At most one of `cacheLevel` or `tensormap` may be present. The `cacheLevel` 
+    attribute selects the target cache level. When combined with `uniform`, the 
+    prefetch is performed to the uniform cache, in which case `addr` must be a 
+    generic pointer.
+
+    When `tensormap` is used, the line containing `addr` is brought from the 
+    constant or parameter state space for later use by `cp.async.bulk.tensor`. 
+    If `in_param_space` is specified, the generic pointer is interpreted as 
+    referring to the parameter state space.
+
     `uniform` can be specified after the `cacheLevel` to indicate that the 
     prefetch is performed to the specified uniform cache level. If `uniform` is 
     specified, `addr` must be a generic address pointer and no operation is 
@@ -2546,32 +2600,40 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
   }];
-  let arguments = (ins PrefetchCacheLevelAttr:$cacheLevel,
-                       UnitAttr:$uniform,
+  let arguments = (ins OptionalAttr<PrefetchCacheLevelAttr>:$cacheLevel,
+                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority,
                        AnyTypeOf<[LLVM_PointerGlobal,
                                   LLVM_PointerLocal,
-                                  LLVM_PointerGeneric]>:$addr,
-                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority);
-  let assemblyFormat = "`level` `=` $cacheLevel (`uniform` $uniform^)? `,` $addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
+                                  LLVM_PointerGeneric,
+                                  LLVM_PointerConst]>:$addr,
+                       PtxPredicate:$predicate,
+                       UnitAttr:$tensormap,
+                       UnitAttr:$uniform,
+                       UnitAttr:$in_param_space);
+  let assemblyFormat = "(`level` `=` $cacheLevel^ (`uniform` $uniform^)? `,`)? (`tensormap` $tensormap^ (`in_param_space` $in_param_space^)? `,`)? (`evict_priority` `=` $evictPriority^ `,`)? $addr (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::PrefetchOp &op);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+    bool hasIntrinsic() { return !getPredicate() || !getTensormap(); }
   }];
-  let llvmBuilder = [{
-    auto intId = NVVM::PrefetchOp::getIntrinsicID(op);
-    createIntrinsicCall(builder, intId, $addr);
-  }];
-}
-
-def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Arguments<(ins LLVM_AnyPointer:$tmaDescriptor, PtxPredicate:$predicate)> {
-  let assemblyFormat = "$tmaDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { 
+    std::string $cppClass::getPtx() {
+      // Inline PTX is only supported for prefetch tensormap
       return std::string("prefetch.tensormap [%0];");
     }
+  }];
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
+                                          moduleTranslation, builder);
+
+    if(op.getTensormap())
+      // Overloaded intrinsic
+      createIntrinsicCall(builder, id, args, {args[0]->getType()});
+    else
+      createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -2659,19 +2721,6 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
-}
-
-// List of modes supported for TMA Store and Reduction Ops
-def TMAStoreModeTile   : I32EnumAttrCase<"TILE", 0, "tile">;
-def TMAStoreModeIm2Col : I32EnumAttrCase<"IM2COL", 1, "im2col">;
-
-def TMAStoreMode : I32EnumAttr<"TMAStoreMode", "NVVM TMA Store Mode",
-    [TMAStoreModeTile, TMAStoreModeIm2Col]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def TMAStoreModeAttr : EnumAttr<NVVM_Dialect, TMAStoreMode, "tma_store_mode"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 // List of Reduction Ops supported with TMA Store

@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__utility/is_valid_range.h>
+#include <__cxx03/__utility/is_valid_range.h>
 #include <cassert>
 
 #include "test_macros.h"
