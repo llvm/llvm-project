@@ -2041,6 +2041,40 @@ let TargetPrefix = "riscv" in {
   defm pmul_w_h01  : RVPBinaryABBIntrinsics;
   defm pmulu_h_b01 : RVPBinaryABBIntrinsics;
   defm pmulu_w_h01 : RVPBinaryABBIntrinsics;
+  defm pmul_h_b00  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h00  : RVPBinaryABBIntrinsics;
+  defm pmul_h_b11  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h11  : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b00 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h00 : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b11 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h11 : RVPBinaryABBIntrinsics;
+  defm mul_h00     : RVPBinaryABBIntrinsics;
+  defm mul_w00     : RVPBinaryABBIntrinsics;
+  defm mul_h11     : RVPBinaryABBIntrinsics;
+  defm mul_w11     : RVPBinaryABBIntrinsics;
+  defm mulu_h00    : RVPBinaryABBIntrinsics;
+  defm mulu_w00    : RVPBinaryABBIntrinsics;
+  defm mulu_h11    : RVPBinaryABBIntrinsics;
+  defm mulu_w11    : RVPBinaryABBIntrinsics;
+
+  class RVPBinaryABCIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [llvm_any_ty, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryABCIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryABCIntrinsics;
+  }
+
+  defm pmulsu_h_b00      : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h00      : RVPBinaryABCIntrinsics;
+  defm pmulsu_h_b11      : RVPBinaryABCIntrinsics;
+  defm pmulsu_w_h11      : RVPBinaryABCIntrinsics;
+  defm mulsu_h00         : RVPBinaryABCIntrinsics;
+  defm mulsu_w00         : RVPBinaryABCIntrinsics;
+  defm mulsu_h11         : RVPBinaryABCIntrinsics;
+  defm mulsu_w11         : RVPBinaryABCIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions
