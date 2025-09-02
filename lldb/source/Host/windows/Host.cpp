@@ -310,20 +310,24 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
   if (message.empty())
     return;
 
-  std::string log_prefix;
+  std::string log_msg;
+  llvm::raw_string_ostream stream(log_msg);
+
   switch (severity) {
   case lldb::eSeverityWarning:
-    log_prefix = "[Warning] ";
+    stream << "[Warning] ";
     break;
   case lldb::eSeverityError:
-    log_prefix = "[Error] ";
+    stream << "[Error] ";
     break;
   case lldb::eSeverityInfo:
   default:
-    log_prefix = "[Info] ";
+    stream << "[Info] ";
     break;
   }
 
-  std::string final_message = log_prefix + message.str();
-  OutputDebugStringA(final_message.c_str());
+  stream << message;
+  stream.flush();
+
+  OutputDebugStringA(log_msg.c_str());
 }
