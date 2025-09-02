@@ -73,4 +73,10 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE)
 #endif
 
+#if __has_attribute(ext_vector_type) && __has_feature(ext_vector_type_boolean)
+#define LIBC_HAS_VECTOR_TYPE 1
+#else
+#define LIBC_HAS_VECTOR_TYPE 0
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
