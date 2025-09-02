@@ -26269,10 +26269,9 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
                                     SDValue PreservedSrc,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
-
-  if (auto *MaskConst = dyn_cast<ConstantSDNode>(Mask))
-    if (MaskConst->getZExtValue() & 0x1)
-      return Op;
+  auto *MaskConst = dyn_cast<ConstantSDNode>(Mask);
+  if (MaskConst && (MaskConst->getZExtValue() & 0x1))
+    return Op;
 
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
@@ -26288,6 +26287,17 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
 
   if (PreservedSrc.isUndef())
     PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
+
+  if (MaskConst) {
+    assert((MaskConst->getZExtValue() & 0x1) == 0 && "Expected false mask");
+    // Discard op and blend passthrough with scalar op src/dst.
+    SmallVector<int, 16> ShuffleMask(VT.getVectorNumElements());
+    std::iota(ShuffleMask.begin(), ShuffleMask.end(), 0);
+    ShuffleMask[0] = VT.getVectorNumElements();
+    return DAG.getVectorShuffle(VT, dl, Op.getOperand(0), PreservedSrc,
+                                ShuffleMask);
+  }
+
   return DAG.getNode(X86ISD::SELECTS, dl, VT, IMask, Op, PreservedSrc);
 }
 
@@ -44969,11 +44979,19 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    // X * 0 + Y --> Y
-    // TODO: Handle cases where lower/higher 52 of bits of Op0 * Op1 are known
-    // zeroes.
-    if (KnownOp0.trunc(52).isZero() || KnownOp1.trunc(52).isZero())
-      return TLO.CombineTo(Op, Op2);
+    KnownBits KnownMul;
+    KnownOp0 = KnownOp0.trunc(52);
+    KnownOp1 = KnownOp1.trunc(52);
+    KnownMul = Opc == X86ISD::VPMADD52L ? KnownBits::mul(KnownOp0, KnownOp1)
+                                        : KnownBits::mulhu(KnownOp0, KnownOp1);
+    KnownMul = KnownMul.zext(64);
+
+    // lo/hi(X * Y) + Z --> C + Z
+    if (KnownMul.isConstant()) {
+      SDLoc DL(Op);
+      SDValue C = TLO.DAG.getConstant(KnownMul.getConstant(), DL, VT);
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
+    }
 
     // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
     break;

@@ -667,7 +667,7 @@ representation; that is, the integral representation may be target dependent or
 unstable (not backed by a fixed integer).
 
 ``inttoptr`` and ``ptrtoint`` instructions have the same semantics as for
-integral (i.e. normal) pointers in that they convert integers to and from
+integral (i.e., normal) pointers in that they convert integers to and from
 corresponding pointer types, but there are additional implications to be
 aware of.  Because the bit-representation of a non-integral pointer may
 not be stable, two identical casts of the same operand may or may not
@@ -731,7 +731,7 @@ optimizations based on the 'constantness' are valid for the translation
 units that do not include the definition.
 
 As SSA values, global variables define pointer values that are in scope
-for (i.e. they dominate) all basic blocks in the program. Global variables
+for (i.e., they dominate) all basic blocks in the program. Global variables
 always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
@@ -934,7 +934,7 @@ would be used implicitly.
 
 The first basic block in a function is special in two ways: it is
 immediately executed on entrance to the function, and it is not allowed
-to have predecessor basic blocks (i.e. there can not be any branches to
+to have predecessor basic blocks (i.e., there can not be any branches to
 the entry block of a function). Because the block can have no
 predecessors, it also cannot have any :ref:`PHI nodes <i_phi>`.
 
@@ -1487,7 +1487,7 @@ Currently, only the following parameter attributes are defined:
     a pointer is exactly one of ``dereferenceable(<n>)`` or ``null``,
     and in other address spaces ``dereferenceable_or_null(<n>)``
     implies that a pointer is at least one of ``dereferenceable(<n>)``
-    or ``null`` (i.e. it may be both ``null`` and
+    or ``null`` (i.e., it may be both ``null`` and
     ``dereferenceable(<n>)``). This attribute may only be applied to
     pointer typed parameters.
 
@@ -2348,7 +2348,7 @@ For example:
        fully changed via an atomic compare-and-swap instruction.
        While the first requirement can be satisfied by inserting large
        enough NOP, LLVM can and will try to re-purpose an existing
-       instruction (i.e. one that would have to be emitted anyway) as
+       instruction (i.e., one that would have to be emitted anyway) as
        the patchable instruction larger than a short jump.
 
        ``"prologue-short-redirect"`` is currently only supported on
@@ -3261,7 +3261,7 @@ the preceding ``:`` should also be omitted and ``<pref>`` will be equal to
 
 Unless explicitly stated otherwise, every alignment specification is provided in
 bits and must be in the range [1,2^16). The value must be a power of two times
-the width of a byte (i.e. ``align = 8 * 2^N``).
+the width of a byte (i.e., ``align = 8 * 2^N``).
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -4480,7 +4480,7 @@ the type size is smaller than the type's store size.
       < vscale x <# elements> x <elementtype> > ; Scalable vector
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating-point, pointer type, or a sized  
+elementtype may be any integer, floating-point, pointer type, or a sized
 target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
@@ -4681,7 +4681,7 @@ Simple Constants
     '``s0x8000``' gives -32768.
 
     Note that hexadecimal integers are sign extended from the number
-    of active bits, i.e. the bit width minus the number of leading
+    of active bits, i.e., the bit width minus the number of leading
     zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
@@ -5553,9 +5553,9 @@ AArch64:
 
 - ``z``: An immediate integer 0. Outputs ``WZR`` or ``XZR``, as appropriate.
 - ``I``: An immediate integer valid for an ``ADD`` or ``SUB`` instruction,
-  i.e. 0 to 4095 with optional shift by 12.
+  i.e., 0 to 4095 with optional shift by 12.
 - ``J``: An immediate integer that, when negated, is valid for an ``ADD`` or
-  ``SUB`` instruction, i.e. -1 to -4095 with optional left shift by 12.
+  ``SUB`` instruction, i.e., -1 to -4095 with optional left shift by 12.
 - ``K``: An immediate integer that is valid for the 'bitmask immediate 32' of a
   logical instruction like ``AND``, ``EOR``, or ``ORR`` with a 32-bit register.
 - ``L``: An immediate integer that is valid for the 'bitmask immediate 64' of a
@@ -6892,7 +6892,7 @@ label identifier. The ``file:`` field is the :ref:`DIFile` the label is
 present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
 
-Furthermore, a label can be marked as artificial, i.e. compiler-generated,
+Furthermore, a label can be marked as artificial, i.e., compiler-generated,
 using ``isArtificial:``. Such artificial labels are generated, e.g., by
 the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
 ``coroSuspendIdx:`` field to identify the coroutine suspend points.
@@ -7806,7 +7806,7 @@ identification metadata.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata defines which attributes extracted loops with no cyclic
-dependencies will have (i.e. can be vectorized). See
+dependencies will have (i.e., can be vectorized). See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.loop.distribute.followup_sequential``' Metadata
@@ -7834,7 +7834,7 @@ loop distribution pass. See
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If a loop was successfully processed by the loop distribution pass,
-this metadata is added (i.e. has been distributed).  See
+this metadata is added (i.e., has been distributed).  See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.licm.disable``' Metadata
@@ -8351,6 +8351,44 @@ spaces. The interpretation of the address space values is target specific.
 The behavior is undefined if the runtime memory address does
 resolve to an object defined in one of the indicated address spaces.
 
+'``mmra``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``mmra`` metadata represents target-defined properties on instructions that
+can be used to selectively relax constraints placed by the memory model.
+
+Refer to :doc:`MemoryModelRelaxationAnnotations` for more information on how this metadata
+affects the memory model of a given target.
+
+It is attached to memory instructions such as:
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, :ref:`load <i_load>`,
+:ref:`store <i_store>`, :ref:`fence <i_fence>` and
+:ref:`call <i_call>` instructions that read or write memory.
+
+The metadata is structured as pairs of strings: a prefix, and suffix that form a MMRA "tag".
+The ``!mmra`` operand can either point to a pair of metadata strings, or a tuple containing
+multiple pairs of metadata strings.
+
+Example:
+
+.. code-block:: llvm
+
+    ; Simple pair of strings used directly:
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !mmra !0
+
+    ; Using multiple pairs of strings using a metadata tuple:
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !mmra !2
+
+    !0 = !{!"amdgpu-synchronize-as", !"global"}
+    !1 = !{!"amdgpu-synchronize-as", !"private"}
+    !2 = !{!0, !1}
+
+'``nofree``' Metadata
+^^^^^^^^^^^^^^^^^^^^^
+
+The ``nofree`` metadata indicates the memory pointed by the pointer will not be
+freed after the attached instruction.
+
 
 Module Flags Metadata
 =====================
@@ -8686,7 +8724,7 @@ input file).
 Eventually, the summary will be parsed into a ModuleSummaryIndex object under
 the same conditions where summary index is currently built from bitcode.
 Specifically, tools that test the Thin Link portion of a ThinLTO compile
-(i.e. llvm-lto and llvm-lto2), or when parsing a combined index
+(i.e., llvm-lto and llvm-lto2), or when parsing a combined index
 for a distributed ThinLTO backend via clang's "``-fthinlto-index=<>``" flag
 (this part is not yet implemented, use llvm-as to create a bitcode object
 before feeding into thin link tools for now).
@@ -9113,7 +9151,7 @@ The '``llvm.global_ctors``' Global Variable
 The ``@llvm.global_ctors`` array contains a list of constructor
 functions, priorities, and an associated global or function.
 The functions referenced by this array will be called in ascending order
-of priority (i.e. lowest first) when the module is loaded. The order of
+of priority (i.e., lowest first) when the module is loaded. The order of
 functions with the same priority is not defined.
 
 If the third field is non-null, and points to a global variable
@@ -9134,7 +9172,7 @@ The '``llvm.global_dtors``' Global Variable
 The ``@llvm.global_dtors`` array contains a list of destructor
 functions, priorities, and an associated global or function.
 The functions referenced by this array will be called in descending
-order of priority (i.e. highest first) when the module is unloaded. The
+order of priority (i.e., highest first) when the module is unloaded. The
 order of functions with the same priority is not defined.
 
 If the third field is non-null, and points to a global variable
@@ -11179,7 +11217,7 @@ Arguments:
 
 The argument to the ``load`` instruction specifies the memory address from which
 to load. The type specified must be a :ref:`first class <t_firstclass>` type of
-known size (i.e. not containing an :ref:`opaque structural type <t_opaque>`). If
+known size (i.e., not containing an :ref:`opaque structural type <t_opaque>`). If
 the ``load`` is marked as ``volatile``, then the optimizer is not allowed to
 modify the number or order of execution of this ``load`` with other
 :ref:`volatile operations <volatile>`.
@@ -11322,7 +11360,7 @@ pointer to the :ref:`first class <t_firstclass>` type of the ``<value>``
 operand. If the ``store`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this ``store`` with other
 :ref:`volatile operations <volatile>`.  Only values of :ref:`first class
-<t_firstclass>` types of known size (i.e. not containing an :ref:`opaque
+<t_firstclass>` types of known size (i.e., not containing an :ref:`opaque
 structural type <t_opaque>`) can be stored.
 
 If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
@@ -12463,7 +12501,7 @@ Syntax:
 
 ::
 
-      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]             ; yields ty2
+      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofree !<empty_node>]            ; yields ty2
 
 Overview:
 """""""""
@@ -12487,6 +12525,11 @@ The optional ``!dereferenceable_or_null`` metadata must reference a single
 metadata name ``<deref_bytes_node>`` corresponding to a metadata node with one
 ``i64`` entry.
 See ``dereferenceable_or_null`` metadata.
+
+The optional ``!nofree`` metadata must reference a single metadata name
+``<empty_node>`` corresponding to a metadata node with no entries.
+The existence of the ``!nofree`` metadata on the instruction tells the optimizer
+that the memory pointed by the pointer will not be freed after this point.
 
 Semantics:
 """"""""""
@@ -12611,7 +12654,7 @@ If the source is :ref:`poison <poisonvalues>`, the result is
 If the source is not :ref:`poison <poisonvalues>`, and both source and
 destination are :ref:`integral pointers <nointptrtype>`, and the
 result pointer is dereferenceable, the cast is assumed to be
-reversible (i.e. casting the result back to the original address space
+reversible (i.e., casting the result back to the original address space
 should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
@@ -12871,7 +12914,7 @@ the value arguments to the PHI node. Only labels may be used as the
 label arguments.
 
 There must be no non-phi instructions between the start of a basic block
-and the PHI instructions: i.e. PHI instructions must be first in a basic
+and the PHI instructions: i.e., PHI instructions must be first in a basic
 block.
 
 For the purposes of the SSA form, the use of each incoming value is
@@ -14877,7 +14920,7 @@ Semantics:
 
 This is lowered by contextual profiling. In contextual profiling, functions get,
 from compiler-rt, a pointer to a context object. The context object consists of
-a buffer LLVM can use to perform counter increments (i.e. the lowering of
+a buffer LLVM can use to perform counter increments (i.e., the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
@@ -17828,7 +17871,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic function. You can use bswap on any
-integer type that is an even number of bytes (i.e. BitWidth % 16 == 0).
+integer type that is an even number of bytes (i.e., BitWidth % 16 == 0).
 
 ::
 
@@ -20703,7 +20746,7 @@ Arguments:
 """"""""""
 
 The first argument is the search vector, the second argument the vector of
-elements we are searching for (i.e. for which we consider a match successful),
+elements we are searching for (i.e., for which we consider a match successful),
 and the third argument is a mask that controls which elements of the first
 argument are active. The first two arguments must be vectors of matching
 integer element types. The first and third arguments and the result type must
@@ -23033,7 +23076,7 @@ Semantics:
 The '``llvm.vp.reduce.add``' intrinsic performs the integer ``ADD`` reduction
 (:ref:`llvm.vector.reduce.add <int_vector_reduce_add>`) of the vector argument
 ``val`` on each enabled lane, adding it to the scalar ``start_value``. Disabled
-lanes are treated as containing the neutral value ``0`` (i.e. having no effect
+lanes are treated as containing the neutral value ``0`` (i.e., having no effect
 on the reduction operation). If the vector length is zero, the result is equal
 to ``start_value``.
 
@@ -23091,7 +23134,7 @@ The '``llvm.vp.reduce.fadd``' intrinsic performs the floating-point ``ADD``
 reduction (:ref:`llvm.vector.reduce.fadd <int_vector_reduce_fadd>`) of the
 vector argument ``val`` on each enabled lane, adding it to the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``-0.0`` (i.e. having no effect on the reduction operation). If no lanes are
+``-0.0`` (i.e., having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to ``start_value``.
 
 To ignore the start value, the neutral value can be used.
@@ -23149,7 +23192,7 @@ Semantics:
 The '``llvm.vp.reduce.mul``' intrinsic performs the integer ``MUL`` reduction
 (:ref:`llvm.vector.reduce.mul <int_vector_reduce_mul>`) of the vector argument ``val``
 on each enabled lane, multiplying it by the scalar ``start_value``. Disabled
-lanes are treated as containing the neutral value ``1`` (i.e. having no effect
+lanes are treated as containing the neutral value ``1`` (i.e., having no effect
 on the reduction operation). If the vector length is zero, the result is the
 start value.
 
@@ -23207,7 +23250,7 @@ The '``llvm.vp.reduce.fmul``' intrinsic performs the floating-point ``MUL``
 reduction (:ref:`llvm.vector.reduce.fmul <int_vector_reduce_fmul>`) of the
 vector argument ``val`` on each enabled lane, multiplying it by the scalar
 `start_value``. Disabled lanes are treated as containing the neutral value
-``1.0`` (i.e. having no effect on the reduction operation). If no lanes are
+``1.0`` (i.e., having no effect on the reduction operation). If no lanes are
 enabled, the resulting value will be equal to the starting value.
 
 To ignore the start value, the neutral value can be used.
@@ -23266,7 +23309,7 @@ The '``llvm.vp.reduce.and``' intrinsic performs the integer ``AND`` reduction
 (:ref:`llvm.vector.reduce.and <int_vector_reduce_and>`) of the vector argument
 ``val`` on each enabled lane, performing an '``and``' of that with with the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
+value ``UINT_MAX``, or ``-1`` (i.e., having no effect on the reduction
 operation). If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23323,7 +23366,7 @@ The '``llvm.vp.reduce.or``' intrinsic performs the integer ``OR`` reduction
 (:ref:`llvm.vector.reduce.or <int_vector_reduce_or>`) of the vector argument
 ``val`` on each enabled lane, performing an '``or``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``0`` (i.e. having no effect on the reduction operation). If the vector length
+``0`` (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23379,7 +23422,7 @@ The '``llvm.vp.reduce.xor``' intrinsic performs the integer ``XOR`` reduction
 (:ref:`llvm.vector.reduce.xor <int_vector_reduce_xor>`) of the vector argument
 ``val`` on each enabled lane, performing an '``xor``' of that with the scalar
 ``start_value``. Disabled lanes are treated as containing the neutral value
-``0`` (i.e. having no effect on the reduction operation). If the vector length
+``0`` (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23436,7 +23479,7 @@ The '``llvm.vp.reduce.smax``' intrinsic performs the signed-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.smax <int_vector_reduce_smax>`) of the
 vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``INT_MIN`` (i.e. having no effect on the reduction operation).
+neutral value ``INT_MIN`` (i.e., having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23493,7 +23536,7 @@ The '``llvm.vp.reduce.smin``' intrinsic performs the signed-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.smin <int_vector_reduce_smin>`) of the
 vector argument ``val`` on each enabled lane, and taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``INT_MAX`` (i.e. having no effect on the reduction operation).
+neutral value ``INT_MAX`` (i.e., having no effect on the reduction operation).
 If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23550,7 +23593,7 @@ The '``llvm.vp.reduce.umax``' intrinsic performs the unsigned-integer ``MAX``
 reduction (:ref:`llvm.vector.reduce.umax <int_vector_reduce_umax>`) of the
 vector argument ``val`` on each enabled lane, and taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value ``0`` (i.e. having no effect on the reduction operation). If the
+neutral value ``0`` (i.e., having no effect on the reduction operation). If the
 vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23607,7 +23650,7 @@ The '``llvm.vp.reduce.umin``' intrinsic performs the unsigned-integer ``MIN``
 reduction (:ref:`llvm.vector.reduce.umin <int_vector_reduce_umin>`) of the
 vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value ``UINT_MAX``, or ``-1`` (i.e. having no effect on the reduction
+value ``UINT_MAX``, or ``-1`` (i.e., having no effect on the reduction
 operation). If the vector length is zero, the result is the start value.
 
 To ignore the start value, the neutral value can be used.
@@ -23665,7 +23708,7 @@ The '``llvm.vp.reduce.fmax``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>`) of the
 vector argument ``val`` on each enabled lane, taking the maximum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23732,7 +23775,7 @@ The '``llvm.vp.reduce.fmin``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>`) of the
 vector argument ``val`` on each enabled lane, taking the minimum of that and the
 scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23799,7 +23842,7 @@ The '``llvm.vp.reduce.fmaximum``' intrinsic performs the floating-point ``MAX``
 reduction (:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>`) of
 the vector argument ``val`` on each enabled lane, taking the maximum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value (i.e. having no effect on the reduction operation). If the vector
+neutral value (i.e., having no effect on the reduction operation). If the vector
 length is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -23869,7 +23912,7 @@ The '``llvm.vp.reduce.fminimum``' intrinsic performs the floating-point ``MIN``
 reduction (:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>`) of
 the vector argument ``val`` on each enabled lane, taking the minimum of that and
 the scalar ``start_value``. Disabled lanes are treated as containing the neutral
-value (i.e. having no effect on the reduction operation). If the vector length
+value (i.e., having no effect on the reduction operation). If the vector length
 is zero, the result is the start value.
 
 The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
@@ -25978,7 +26021,7 @@ Semantics:
 The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
 significant / lowest-numbered) zero elements in the first argument on each
 enabled lane. If the first argument is all zero and the second argument is true,
-the result is poison. Otherwise, it returns the explicit vector length (i.e. the
+the result is poison. Otherwise, it returns the explicit vector length (i.e., the
 fourth argument).
 
 .. _int_vp_sadd_sat:
@@ -30002,7 +30045,7 @@ In words, ``@llvm.experimental.guard`` executes the attached
 ``"deopt"`` continuation if (but **not** only if) its first argument
 is ``false``.  Since the optimizer is allowed to replace the ``undef``
 with an arbitrary value, it can optimize guard to fail "spuriously",
-i.e. without the original condition being false (hence the "not only
+i.e., without the original condition being false (hence the "not only
 if"); and this allows for "check widening" type optimizations.
 
 ``@llvm.experimental.guard`` cannot be invoked.
