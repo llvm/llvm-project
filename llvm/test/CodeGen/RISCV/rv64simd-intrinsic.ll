@@ -485,3 +485,168 @@ define i64 @psra_ws(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.psra.ws.i64(i64 %a, i64 %b)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.padd.b.i64(i64, i64)
+
+define i64 @padd_b(i64 %a, i64 %b) {
+; RV64P-LABEL: padd_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    padd.b a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.padd.b.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.padd.h.i64(i64, i64)
+
+define i64 @padd_h(i64 %a, i64 %b) {
+; RV64P-LABEL: padd_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    padd.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.padd.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.padd.w.i64(i64, i64)
+
+define i64 @padd_w(i64 %a, i64 %b) {
+; RV64P-LABEL: padd_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    padd.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.padd.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psadd.b.i64(i64, i64)
+
+define i64 @psadd_b(i64 %a, i64 %b) {
+; RV64P-LABEL: psadd_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psadd.b a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psadd.b.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psadd.h.i64(i64, i64)
+
+define i64 @psadd_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psadd_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psadd.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psadd.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psadd.w.i64(i64, i64)
+
+define i64 @psadd_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psadd_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psadd.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psadd.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paadd.b.i64(i64, i64)
+
+define i64 @paadd_b(i64 %a, i64 %b) {
+; RV64P-LABEL: paadd_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paadd.b a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paadd.b.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paadd.h.i64(i64, i64)
+
+define i64 @paadd_h(i64 %a, i64 %b) {
+; RV64P-LABEL: paadd_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paadd.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paadd.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paadd.w.i64(i64, i64)
+
+define i64 @paadd_w(i64 %a, i64 %b) {
+; RV64P-LABEL: paadd_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paadd.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paadd.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psaddu.b.i64(i64, i64)
+
+define i64 @psaddu_b(i64 %a, i64 %b) {
+; RV64P-LABEL: psaddu_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psaddu.b a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psaddu.b.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psaddu.h.i64(i64, i64)
+
+define i64 @psaddu_h(i64 %a, i64 %b) {
+; RV64P-LABEL: psaddu_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psaddu.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psaddu.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psaddu.w.i64(i64, i64)
+
+define i64 @psaddu_w(i64 %a, i64 %b) {
+; RV64P-LABEL: psaddu_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psaddu.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psaddu.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paaddu.b.i64(i64, i64)
+
+define i64 @paaddu_b(i64 %a, i64 %b) {
+; RV64P-LABEL: paaddu_b:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paaddu.b a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paaddu.b.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paaddu.h.i64(i64, i64)
+
+define i64 @paaddu_h(i64 %a, i64 %b) {
+; RV64P-LABEL: paaddu_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paaddu.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paaddu.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.paaddu.w.i64(i64, i64)
+
+define i64 @paaddu_w(i64 %a, i64 %b) {
+; RV64P-LABEL: paaddu_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    paaddu.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.paaddu.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}

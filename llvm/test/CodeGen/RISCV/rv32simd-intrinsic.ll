@@ -332,6 +332,28 @@ define i32 @psra_hs(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.padd.b.i32(i32, i32)
+
+define i32 @padd_b(i32 %a, i32 %b) {
+; RV32P-LABEL: padd_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    padd.b a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.padd.b.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.padd.h.i32(i32, i32)
+
+define i32 @padd_h(i32 %a, i32 %b) {
+; RV32P-LABEL: padd_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    padd.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.padd.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {
@@ -339,6 +361,127 @@ define i32 @sadd(i32 %a, i32 %b) {
 ; RV32P:       # %bb.0:
 ; RV32P-NEXT:    sadd a0, a0, a1
 ; RV32P-NEXT:    ret
-  %tmp = call i32 @llvm.riscv.sadd.i32(i32 %a, i32 %b)
-  ret i32 %tmp
+    %tmp = call i32 @llvm.riscv.sadd.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psadd.b.i32(i32, i32)
+
+define i32 @psadd_b(i32 %a, i32 %b) {
+; RV32P-LABEL: psadd_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psadd.b a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psadd.b.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psadd.h.i32(i32, i32)
+
+define i32 @psadd_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psadd_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psadd.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psadd.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.aadd.i32(i32, i32)
+
+define i32 @aadd(i32 %a, i32 %b) {
+; RV32P-LABEL: aadd:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    aadd a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.aadd.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.paadd.b.i32(i32, i32)
+
+define i32 @paadd_b(i32 %a, i32 %b) {
+; RV32P-LABEL: paadd_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    paadd.b a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.paadd.b.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.paadd.h.i32(i32, i32)
+
+define i32 @paadd_h(i32 %a, i32 %b) {
+; RV32P-LABEL: paadd_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    paadd.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.paadd.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.saddu.i32(i32, i32)
+
+define i32 @saddu(i32 %a, i32 %b) {
+; RV32P-LABEL: saddu:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    saddu a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.saddu.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psaddu.b.i32(i32, i32)
+
+define i32 @psaddu_b(i32 %a, i32 %b) {
+; RV32P-LABEL: psaddu_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psaddu.b a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psaddu.b.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psaddu.h.i32(i32, i32)
+
+define i32 @psaddu_h(i32 %a, i32 %b) {
+; RV32P-LABEL: psaddu_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psaddu.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psaddu.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.aaddu.i32(i32, i32)
+
+define i32 @aaddu(i32 %a, i32 %b) {
+; RV32P-LABEL: aaddu:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    aaddu a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.aaddu.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.paaddu.b.i32(i32, i32)
+
+define i32 @paaddu_b(i32 %a, i32 %b) {
+; RV32P-LABEL: paaddu_b:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    paaddu.b a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.paaddu.b.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.paaddu.h.i32(i32, i32)
+
+define i32 @paaddu_h(i32 %a, i32 %b) {
+; RV32P-LABEL: paaddu_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    paaddu.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.paaddu.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
 }

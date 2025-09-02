@@ -1924,7 +1924,6 @@ let TargetPrefix = "riscv" in {
   defm psshar_ws   : RVPBinaryIntrinsics;
   defm shar        : RVPBinaryIntrinsics;
   defm sshar       : RVPBinaryIntrinsics;
-  defm sadd        : RVPBinaryIntrinsics;
   defm psrl_bs     : RVPBinaryIntrinsics;
   defm psrl_hs     : RVPBinaryIntrinsics;
   defm psrl_ws     : RVPBinaryIntrinsics;
@@ -1937,6 +1936,25 @@ let TargetPrefix = "riscv" in {
   defm psra_bs     : RVPBinaryIntrinsics;
   defm psra_hs     : RVPBinaryIntrinsics;
   defm psra_ws     : RVPBinaryIntrinsics;
+  defm padd_b      : RVPBinaryIntrinsics;
+  defm padd_h      : RVPBinaryIntrinsics;
+  defm padd_w      : RVPBinaryIntrinsics;
+  defm sadd        : RVPBinaryIntrinsics;
+  defm psadd_b     : RVPBinaryIntrinsics;
+  defm psadd_h     : RVPBinaryIntrinsics;
+  defm psadd_w     : RVPBinaryIntrinsics;
+  defm aadd        : RVPBinaryIntrinsics;
+  defm paadd_b     : RVPBinaryIntrinsics;
+  defm paadd_h     : RVPBinaryIntrinsics;
+  defm paadd_w     : RVPBinaryIntrinsics;
+  defm saddu       : RVPBinaryIntrinsics;
+  defm psaddu_b    : RVPBinaryIntrinsics;
+  defm psaddu_h    : RVPBinaryIntrinsics;
+  defm psaddu_w    : RVPBinaryIntrinsics;
+  defm aaddu       : RVPBinaryIntrinsics;
+  defm paaddu_b    : RVPBinaryIntrinsics;
+  defm paaddu_h    : RVPBinaryIntrinsics;
+  defm paaddu_w    : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],

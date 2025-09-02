@@ -919,6 +919,16 @@ def : PatGprGpr<int_riscv_predsumu_bs, PREDSUMU_BS>;
 def : PatGprGpr<int_riscv_predsumu_hs, PREDSUMU_HS>;
 def : PatGprGpr<int_riscv_psra_bs,     PSRA_BS>;
 def : PatGprGpr<int_riscv_psra_hs,     PSRA_HS>;
+def : PatGprGpr<int_riscv_padd_b,      PADD_B>;
+def : PatGprGpr<int_riscv_padd_h,      PADD_H>;
+def : PatGprGpr<int_riscv_psadd_b,     PSADD_B>;
+def : PatGprGpr<int_riscv_psadd_h,     PSADD_H>;
+def : PatGprGpr<int_riscv_paadd_b,     PAADD_B>;
+def : PatGprGpr<int_riscv_paadd_h,     PAADD_H>;
+def : PatGprGpr<int_riscv_psaddu_b,    PSADDU_B>;
+def : PatGprGpr<int_riscv_psaddu_h,    PSADDU_H>;
+def : PatGprGpr<int_riscv_paaddu_b,    PAADDU_B>;
+def : PatGprGpr<int_riscv_paaddu_h,    PAADDU_H>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -929,6 +939,9 @@ def : PatGprImm<int_riscv_usati, USATI_RV32, uimm5>;
 def : PatGprImm<int_riscv_srari, SRARI_RV32, uimm5>;
 def : PatGprImm<int_riscv_sati,  SATI_RV32,  uimm5>;
 def : PatGprGpr<int_riscv_sadd,  SADD>;
+def : PatGprGpr<int_riscv_aadd,  AADD>;
+def : PatGprGpr<int_riscv_saddu, SADDU>;
+def : PatGprGpr<int_riscv_aaddu, AADDU>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -952,4 +965,9 @@ def : PatGprGpr<int_riscv_psrl_ws,     PSRL_WS>;
 def : PatGprGpr<int_riscv_predsum_ws,  PREDSUM_WS>;
 def : PatGprGpr<int_riscv_predsumu_ws, PREDSUMU_WS>;
 def : PatGprGpr<int_riscv_psra_ws,     PSRA_WS>;
+def : PatGprGpr<int_riscv_padd_w,      PADD_W>;
+def : PatGprGpr<int_riscv_psadd_w,     PSADD_W>;
+def : PatGprGpr<int_riscv_paadd_w,     PAADD_W>;
+def : PatGprGpr<int_riscv_psaddu_w,    PSADDU_W>;
+def : PatGprGpr<int_riscv_paaddu_w,    PAADDU_W>;
 } // Predicates = [HasStdExtP, IsRV64]
