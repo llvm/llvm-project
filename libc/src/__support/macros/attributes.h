@@ -17,6 +17,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 
+#include "config.h"
 #include "properties/architectures.h"
 
 #ifndef __has_attribute
@@ -73,7 +74,8 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE)
 #endif
 
-#if __has_attribute(ext_vector_type) && __has_feature(ext_vector_type_boolean)
+#if __has_attribute(ext_vector_type) &&                                        \
+    LIBC_HAS_FEATURE(ext_vector_type_boolean)
 #define LIBC_HAS_VECTOR_TYPE 1
 #else
 #define LIBC_HAS_VECTOR_TYPE 0
