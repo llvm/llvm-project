@@ -31,24 +31,24 @@ namespace {
 class CallAndMessageChecker
     : public Checker<check::PreObjCMessage, check::ObjCMessageNil,
                      check::PreCall> {
-  const BugType BT_call_null{
+  const BugType CallNullBug{
       this, "Called function pointer is null (null dereference)"};
-  const BugType BT_call_undef{
+  const BugType CallUndefBug{
       this, "Called function pointer is an uninitialized pointer value"};
-  const BugType BT_cxx_call_null{this, "Called C++ object pointer is null"};
-  const BugType BT_cxx_call_undef{this,
-                                  "Called C++ object pointer is uninitialized"};
-  const BugType BT_call_arg{this, "Uninitialized argument value"};
-  const BugType BT_cxx_delete_undef{this, "Uninitialized argument value"};
-  const BugType BT_msg_undef{
+  const BugType CXXCallNullBug{this, "Called C++ object pointer is null"};
+  const BugType CXXCallUndefBug{this,
+                                "Called C++ object pointer is uninitialized"};
+  const BugType CallArgBug{this, "Uninitialized argument value"};
+  const BugType CXXDeleteUndefBug{this, "Uninitialized argument value"};
+  const BugType MsgUndefBug{
       this, "Receiver in message expression is an uninitialized value"};
-  const BugType BT_objc_prop_undef{
+  const BugType ObjCPropUndefBug{
       this, "Property access on an uninitialized object pointer"};
-  const BugType BT_objc_subscript_undef{
+  const BugType ObjCSubscriptUndefBug{
       this, "Subscript access on an uninitialized object pointer"};
-  const BugType BT_msg_arg{this, "Uninitialized argument value"};
-  const BugType BT_msg_ret{this, "Receiver in message expression is 'nil'"};
-  const BugType BT_call_few_args{this, "Function call with too few arguments"};
+  const BugType MsgArgBug{this, "Uninitialized argument value"};
+  const BugType MsgRetBug{this, "Receiver in message expression is 'nil'"};
+  const BugType CallFewArgsBug{this, "Function call with too few arguments"};
 
 public:
   // Like a checker family, CallAndMessageChecker can produce many kinds of
@@ -362,7 +362,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(State);
       return nullptr;
     }
-    emitBadCall(&BT_call_undef, C, Callee);
+    emitBadCall(&CallUndefBug, C, Callee);
     return nullptr;
   }
 
@@ -374,7 +374,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(StNull);
       return nullptr;
     }
-    emitBadCall(&BT_call_null, C, Callee);
+    emitBadCall(&CallNullBug, C, Callee);
     return nullptr;
   }
 
@@ -411,7 +411,7 @@ ProgramStateRef CallAndMessageChecker::checkParameterCount(
      << " is called with fewer (" << Call.getNumArgs() << ")";
 
   C.emitReport(
-      std::make_unique<PathSensitiveBugReport>(BT_call_few_args, os.str(), N));
+      std::make_unique<PathSensitiveBugReport>(CallFewArgsBug, os.str(), N));
   return nullptr;
 }
 
@@ -424,7 +424,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(State);
       return nullptr;
     }
-    emitBadCall(&BT_cxx_call_undef, C, CC->getCXXThisExpr());
+    emitBadCall(&CXXCallUndefBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
@@ -436,7 +436,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(StNull);
       return nullptr;
     }
-    emitBadCall(&BT_cxx_call_null, C, CC->getCXXThisExpr());
+    emitBadCall(&CXXCallNullBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
@@ -466,8 +466,7 @@ CallAndMessageChecker::checkCXXDeallocation(const CXXDeallocatorCall *DC,
     Desc = "Argument to 'delete[]' is uninitialized";
   else
     Desc = "Argument to 'delete' is uninitialized";
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(BT_cxx_delete_undef, Desc, N);
+  auto R = std::make_unique<PathSensitiveBugReport>(CXXDeleteUndefBug, Desc, N);
   bugreporter::trackExpressionValue(N, DE, *R);
   C.emitReport(std::move(R));
   return nullptr;
@@ -485,7 +484,7 @@ ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
   const bool checkUninitFields =
       !(C.getAnalysisManager().shouldInlineCall() && (D && D->getBody()));
 
-  const BugType &BT = isa<ObjCMethodCall>(Call) ? BT_msg_arg : BT_call_arg;
+  const BugType &BT = isa<ObjCMethodCall>(Call) ? MsgArgBug : CallArgBug;
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   for (unsigned i = 0, e = Call.getNumArgs(); i != e; ++i) {
@@ -546,13 +545,13 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       const BugType *BT = nullptr;
       switch (msg.getMessageKind()) {
       case OCM_Message:
-        BT = &BT_msg_undef;
+        BT = &MsgUndefBug;
         break;
       case OCM_PropertyAccess:
-        BT = &BT_objc_prop_undef;
+        BT = &ObjCPropUndefBug;
         break;
       case OCM_Subscript:
-        BT = &BT_objc_subscript_undef;
+        BT = &ObjCSubscriptUndefBug;
         break;
       }
       assert(BT && "Unknown message kind.");
@@ -601,7 +600,7 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
   }
 
   auto report =
-      std::make_unique<PathSensitiveBugReport>(BT_msg_ret, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(MsgRetBug, os.str(), N);
   report->addRange(ME->getReceiverRange());
   // FIXME: This won't track "self" in messages to super.
   if (const Expr *receiver = ME->getInstanceReceiver()) {
