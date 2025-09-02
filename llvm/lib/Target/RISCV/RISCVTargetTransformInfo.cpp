@@ -2522,9 +2522,13 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     Op = RISCV::VADD_VV;
     break;
   case ISD::SHL:
-  case ISD::SRL:
-  case ISD::SRA:
     Op = RISCV::VSLL_VV;
+    break;
+  case ISD::SRL:
+    Op = RISCV::VSRL_VV;
+    break;
+  case ISD::SRA:
+    Op = RISCV::VSRA_VV;
     break;
   case ISD::AND:
   case ISD::OR:
