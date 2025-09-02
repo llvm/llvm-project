@@ -38,7 +38,7 @@ struct FormExpressionsPass
     auto matchFun = [&](Operation *op) {
       if (isa<emitc::CExpressionInterface>(*op) &&
           !op->getParentOfType<emitc::ExpressionOp>() &&
-          op->getNumResults() == 1)
+          !isa<emitc::LiteralOp>(op) && op->getNumResults() == 1)
         createExpression(op, builder);
     };
     rootOp->walk(matchFun);
