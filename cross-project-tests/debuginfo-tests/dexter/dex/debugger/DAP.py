@@ -381,8 +381,6 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             else:
                 pass
         elif message["type"] == "response":
-            request_seq = message["request_seq"]
-            debugger_state.set_response(request_seq, message)
             # TODO: We also receive a "continued" event, but it seems reasonable to set state based on either the
             # response or the event, since the DAP does not specify an order in which they are sent. May need revisiting
             # if there turns out to be some odd ordering issues, e.g. if we can receive messages in the order
@@ -409,6 +407,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 body = message.get("body")
                 if body:
                     debugger_state.capabilities.update(logger, body)
+            # Now we've done whatever we need to do with the response, tell the
+            # receiver thread we've got it.
+            request_seq = message["request_seq"]
+            debugger_state.set_response(request_seq, message)
 
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
@@ -696,11 +698,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         # Breakpoints can only have been triggered if we've hit one.
         stop_reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
         if stop_reason != StopReason.BREAKPOINT:
-            return []
+            return set()
         breakpoint_ids = set(
             [
                 dex_id
                 for dap_id in self._debugger_state.stopped_bps
+                if dap_id in self.dap_id_to_dex_ids
                 for dex_id in self.dap_id_to_dex_ids[dap_id]
             ]
         )

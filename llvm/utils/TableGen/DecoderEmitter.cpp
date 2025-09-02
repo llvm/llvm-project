@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -91,6 +92,16 @@ static cl::opt<bool> UseFnTableInDecodeToMCInst(
         "Use a table of function pointers instead of a switch case in the\n"
         "generated `decodeToMCInst` function. Helps improve compile time\n"
         "of the generated code."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
+// Enabling this option requires use of different `InsnType` for different
+// bitwidths and defining `InsnBitWidth` template specialization for the
+// `InsnType` types used. Some common specializations are already defined in
+// MCDecoder.h.
+static cl::opt<bool> SpecializeDecodersPerBitwidth(
+    "specialize-decoders-per-bitwidth",
+    cl::desc("Specialize the generated `decodeToMCInst` function per bitwidth. "
+             "Helps reduce the code size."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
 STATISTIC(NumEncodings, "Number of encodings considered");
@@ -360,7 +371,8 @@ public:
   void emitPredicateFunction(formatted_raw_ostream &OS,
                              PredicateSet &Predicates) const;
   void emitDecoderFunction(formatted_raw_ostream &OS,
-                           DecoderSet &Decoders) const;
+                           const DecoderSet &Decoders,
+                           unsigned BucketBitWidth) const;
 
   // run - Output the code emitter
   void run(raw_ostream &o) const;
@@ -930,7 +942,8 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
 }
 
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
-                                         DecoderSet &Decoders) const {
+                                         const DecoderSet &Decoders,
+                                         unsigned BucketBitWidth) const {
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
 
@@ -944,12 +957,32 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
       "MCDisassembler *Decoder, bool &DecodeComplete";
 
+  // Print the name of the decode function to OS.
+  auto PrintDecodeFnName = [&OS, BucketBitWidth](unsigned DecodeIdx) {
+    OS << "decodeFn";
+    if (BucketBitWidth != 0) {
+      OS << '_' << BucketBitWidth << "bit";
+    }
+    OS << '_' << DecodeIdx;
+  };
+
+  // Print the template statement.
+  auto PrintTemplate = [&OS, BucketBitWidth]() {
+    OS << "template <typename InsnType>\n";
+    OS << "static ";
+    if (BucketBitWidth != 0)
+      OS << "std::enable_if_t<InsnBitWidth<InsnType> == " << BucketBitWidth
+         << ", DecodeStatus>\n";
+    else
+      OS << "DecodeStatus ";
+  };
+
   if (UseFnTableInDecodeToMCInst) {
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-      OS << "template <typename InsnType>\n";
-      OS << "static DecodeStatus decodeFn" << Index << "(" << DecodeParams
-         << ") {\n";
+      PrintTemplate();
+      PrintDecodeFnName(Index);
+      OS << "(" << DecodeParams << ") {\n";
       OS << "  using namespace llvm::MCD;\n";
       OS << "  " << TmpTypeDecl;
       OS << "  [[maybe_unused]] TmpType tmp;\n";
@@ -960,9 +993,8 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   }
 
   OS << "// Handling " << Decoders.size() << " cases.\n";
-  OS << "template <typename InsnType>\n";
-  OS << "static DecodeStatus decodeToMCInst(unsigned Idx, " << DecodeParams
-     << ") {\n";
+  PrintTemplate();
+  OS << "decodeToMCInst(unsigned Idx, " << DecodeParams << ") {\n";
   OS << "  using namespace llvm::MCD;\n";
   OS << "  DecodeComplete = true;\n";
 
@@ -970,12 +1002,14 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     // Build a table of function pointers
     OS << "  using DecodeFnTy = DecodeStatus (*)(" << DecodeParams << ");\n";
     OS << "  static constexpr DecodeFnTy decodeFnTable[] = {\n";
-    for (size_t Index : llvm::seq(Decoders.size()))
-      OS << "    decodeFn" << Index << ",\n";
+    for (size_t Index : llvm::seq(Decoders.size())) {
+      OS << "    ";
+      PrintDecodeFnName(Index);
+      OS << ",\n";
+    }
     OS << "  };\n";
     OS << "  if (Idx >= " << Decoders.size() << ")\n";
     OS << "    llvm_unreachable(\"Invalid decoder index!\");\n";
-
     OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
@@ -2448,57 +2482,89 @@ namespace {
 )";
 
   // Do extra bookkeeping for variable-length encodings.
-  std::vector<unsigned> InstrLen;
   bool IsVarLenInst = Target.hasVariableLengthEncodings();
   unsigned MaxInstLen = 0;
   if (IsVarLenInst) {
-    InstrLen.resize(Target.getInstructions().size(), 0);
+    std::vector<unsigned> InstrLen(Target.getInstructions().size(), 0);
     for (const InstructionEncoding &Encoding : Encodings) {
       MaxInstLen = std::max(MaxInstLen, Encoding.getBitWidth());
       InstrLen[Target.getInstrIntValue(Encoding.getInstruction()->TheDef)] =
           Encoding.getBitWidth();
     }
+
+    // For variable instruction, we emit an instruction length table to let the
+    // decoder know how long the instructions are. You can see example usage in
+    // M68k's disassembler.
+    emitInstrLenTable(OS, InstrLen);
   }
 
-  // Map of (namespace, hwmode, size) tuple to encoding IDs.
-  std::map<std::tuple<StringRef, unsigned, unsigned>, std::vector<unsigned>>
-      EncMap;
+  // Map of (bitwidth, namespace, hwmode) tuple to encoding IDs.
+  // Its organized as a nested map, with the (namespace, hwmode) as the key for
+  // the inner map and bitwidth as the key for the outer map. We use std::map
+  // for deterministic iteration order so that the code emitted is also
+  // deterministic.
+  using InnerKeyTy = std::pair<StringRef, unsigned>;
+  using InnerMapTy = std::map<InnerKeyTy, std::vector<unsigned>>;
+  std::map<unsigned, InnerMapTy> EncMap;
+
   for (const auto &[HwModeID, EncodingIDs] : EncodingIDsByHwMode) {
     for (unsigned EncodingID : EncodingIDs) {
       const InstructionEncoding &Encoding = Encodings[EncodingID];
-      const Record *EncodingDef = Encoding.getRecord();
-      unsigned Size = EncodingDef->getValueAsInt("Size");
+      const unsigned BitWidth =
+          IsVarLenInst ? MaxInstLen : Encoding.getBitWidth();
       StringRef DecoderNamespace = Encoding.getDecoderNamespace();
-      EncMap[{DecoderNamespace, HwModeID, Size}].push_back(EncodingID);
+      EncMap[BitWidth][{DecoderNamespace, HwModeID}].push_back(EncodingID);
     }
   }
 
+  // Variable length instructions use the same `APInt` type for all instructions
+  // so we cannot specialize decoders based on instruction bitwidths (which
+  // requires using different `InstType` for differet bitwidths for the correct
+  // template specialization to kick in).
+  if (IsVarLenInst && SpecializeDecodersPerBitwidth)
+    PrintFatalError(
+        "Cannot specialize decoders for variable length instuctions");
+
+  // Entries in `EncMap` are already sorted by bitwidth. So bucketing per
+  // bitwidth can be done on-the-fly as we iterate over the map.
   DecoderTableInfo TableInfo;
   DecoderTableBuilder TableBuilder(Target, Encodings, TableInfo);
   unsigned OpcodeMask = 0;
 
-  for (const auto &[Key, EncodingIDs] : EncMap) {
-    auto [DecoderNamespace, HwModeID, Size] = Key;
-    const unsigned BitWidth = IsVarLenInst ? MaxInstLen : 8 * Size;
-    // Emit the decoder for this (namespace, hwmode, width) combination.
-    FilterChooser FC(Encodings, EncodingIDs);
+  for (const auto &[BitWidth, BWMap] : EncMap) {
+    for (const auto &[Key, EncodingIDs] : BWMap) {
+      auto [DecoderNamespace, HwModeID] = Key;
 
-    // The decode table is cleared for each top level decoder function. The
-    // predicates and decoders themselves, however, are shared across all
-    // decoders to give more opportunities for uniqueing.
-    TableInfo.Table.clear();
-    TableBuilder.buildTable(FC);
+      // Emit the decoder for this (namespace, hwmode, width) combination.
+      FilterChooser FC(Encodings, EncodingIDs);
 
-    // Print the table to the output stream.
-    OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
-                            BitWidth, EncodingIDs);
+      // The decode table is cleared for each top level decoder function. The
+      // predicates and decoders themselves, however, are shared across
+      // different decoders to give more opportunities for uniqueing.
+      //  - If `SpecializeDecodersPerBitwidth` is enabled, decoders are shared
+      //    across all decoder tables for a given bitwidth, else they are shared
+      //    across all decoder tables.
+      //  - predicates are shared across all decoder tables.
+      TableInfo.Table.clear();
+      TableBuilder.buildTable(FC);
+
+      // Print the table to the output stream.
+      OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
+                              BitWidth, EncodingIDs);
+    }
+
+    // Each BitWidth get's its own decoders and decoder function if
+    // SpecializeDecodersPerBitwidth is enabled.
+    if (SpecializeDecodersPerBitwidth) {
+      emitDecoderFunction(OS, TableInfo.Decoders, BitWidth);
+      TableInfo.Decoders.clear();
+    }
   }
 
-  // For variable instruction, we emit a instruction length table
-  // to let the decoder know how long the instructions are.
-  // You can see example usage in M68k's disassembler.
-  if (IsVarLenInst)
-    emitInstrLenTable(OS, InstrLen);
+  // Emit the decoder function for the last bucket. This will also emit the
+  // single decoder function if SpecializeDecodersPerBitwidth = false.
+  if (!SpecializeDecodersPerBitwidth)
+    emitDecoderFunction(OS, TableInfo.Decoders, 0);
 
   const bool HasCheckPredicate =
       OpcodeMask &
@@ -2507,9 +2573,6 @@ namespace {
   // Emit the predicate function.
   if (HasCheckPredicate)
     emitPredicateFunction(OS, TableInfo.Predicates);
-
-  // Emit the decoder function.
-  emitDecoderFunction(OS, TableInfo.Decoders);
 
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);

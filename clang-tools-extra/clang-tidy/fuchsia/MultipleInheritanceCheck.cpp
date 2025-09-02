@@ -39,7 +39,7 @@ bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
                                                   bool &IsInterface) const {
   assert(Node->getIdentifier());
   StringRef Name = Node->getIdentifier()->getName();
-  llvm::StringMapConstIterator<bool> Pair = InterfaceMap.find(Name);
+  auto Pair = InterfaceMap.find(Name);
   if (Pair == InterfaceMap.end())
     return false;
   IsInterface = Pair->second;

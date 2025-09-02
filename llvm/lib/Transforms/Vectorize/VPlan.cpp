@@ -143,7 +143,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
 
   for (unsigned i = 0; i < WorkList.size(); i++) {
     T *Current = WorkList[i];
-    if (Current->getNumPredecessors() == 0)
+    if (!Current->hasPredecessors())
       return Current;
     auto &Predecessors = Current->getPredecessors();
     WorkList.insert_range(Predecessors);
@@ -216,7 +216,7 @@ bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
   // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
   // VPBB as its entry, i.e., free of predecessors.
   if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && VPBB->getNumPredecessors() == 0;
+    return !R->isReplicator() && !VPBB->hasPredecessors();
 
   // A header dominates its second predecessor (the latch), with the other
   // predecessor being the preheader
@@ -493,6 +493,9 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
 void VPIRBasicBlock::execute(VPTransformState *State) {
   assert(getHierarchicalSuccessors().size() <= 2 &&
          "VPIRBasicBlock can have at most two successors at the moment!");
+  // Move completely disconnected blocks to their final position.
+  if (IRBB->hasNPredecessors(0) && succ_begin(IRBB) == succ_end(IRBB))
+    IRBB->moveAfter(State->CFG.PrevBB);
   State->Builder.SetInsertPoint(IRBB->getTerminator());
   State->CFG.PrevBB = IRBB;
   State->CFG.VPBB2IRBB[this] = IRBB;
@@ -809,7 +812,7 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
 const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
   const VPBlockBase *Pred = nullptr;
-  if (getNumPredecessors() > 0) {
+  if (hasPredecessors()) {
     Pred = getPredecessors()[Idx];
   } else {
     auto *Region = getParent();
@@ -1183,14 +1186,14 @@ VPlan *VPlan::duplicate() {
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
   VPIRBasicBlock *NewScalarHeader = nullptr;
-  if (getScalarHeader()->getNumPredecessors() == 0) {
-    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
-  } else {
+  if (getScalarHeader()->hasPredecessors()) {
     NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
         vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
           auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
           return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
         }));
+  } else {
+    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);

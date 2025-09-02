@@ -103,12 +103,15 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
                                              const TargetLibraryInfo &TLI,
                                              bool NullIsValidLoc,
                                              bool RoundToAlign = false) {
-  uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
-  if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::getFixed(Size);
+  if (std::optional<TypeSize> Size = getBaseObjectSize(V, DL, &TLI, Opts)) {
+    // FIXME: Remove this check, only exists to preserve previous behavior.
+    if (Size->isScalable())
+      return std::nullopt;
+    return Size;
+  }
   return std::nullopt;
 }
 
