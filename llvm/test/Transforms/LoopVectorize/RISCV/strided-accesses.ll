@@ -1349,6 +1349,17 @@ exit:
   ret void
 }
 
+;
+; The %in pointer strides in 32-bit steps, but the load accesses in 64-bit.
+; This checks handling of mismatched stride and access size.
+;
+; void reinterpret(int32_t* in, int64_t* out) {
+;   for (unsigned i = 0; i < 1024; i++) {
+;     int64_t val = *reinterpret_cast<int64_t*>(&in[i]);
+;     out[i] = val;
+;   }
+; }
+;
 define void @constant_stride_reinterpret(ptr noalias %in, ptr noalias %out) {
 ; NOSTRIDED-LABEL: @constant_stride_reinterpret(
 ; NOSTRIDED-NEXT:  entry:
