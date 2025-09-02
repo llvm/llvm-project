@@ -22,7 +22,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/Redeclarable.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -2667,6 +2667,10 @@ public:
   /// Determines whether this function is known to be 'noreturn', through
   /// an attribute on its declaration or its type.
   bool isNoReturn() const;
+
+  /// Determines whether this function is known to be 'noreturn' for analyzer,
+  /// through an `analyzer_noreturn` attribute on its declaration.
+  bool isAnalyzerNoReturn() const;
 
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
