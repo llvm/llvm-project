@@ -185,7 +185,7 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
                           .moveInto(Alloc),
                       Succeeded());
 
-    ASSERT_TRUE(Alloc->capacity() == 4096);
+    ASSERT_TRUE(Alloc->capacity() == 2048);
     exit(0);
   }
 

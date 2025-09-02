@@ -483,6 +483,26 @@ implementation.
 | Changes to omp_target_is_accessible                         | :part:`In Progress`       | :part:`In Progress`       |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 
+
+.. _OpenMP 6.1 implementation details:
+
+OpenMP 6.1 Implementation Details (Experimental)
+================================================
+
+The following table provides a quick overview over various OpenMP 6.1 features
+and their implementation status. Since OpenMP 6.1 has not yet been released, the
+following features are experimental and are subject to change at any time.
+Please post on the `Discourse forums (Runtimes - OpenMP category)`_ for more
+information or if you want to help with the
+implementation.
+
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+|Feature                                                      | C/C++ Status              | Fortran Status            | Reviews                                                                  |
++=============================================================+===========================+===========================+==========================================================================+
+|                                                             |                           |                           |                                                                          |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+
+
 OpenMP Extensions
 =================
 

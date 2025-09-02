@@ -38,12 +38,9 @@
 /// is not in use.
 ///
 /// If different values of the capacity is used for concurrent users of the same
-/// mapping, the actual capacity will be the largest value requested at the time
-/// of the creation. As a result, the mapped region in one process can be
-/// smaller than the size of the file on disk and can run out of reserved space
-/// when the file has still space. It is highly recommanded to use the same
-/// capacity for all the concurrent users of the same instance of
-/// MappedFileRegionBumpPtr.
+/// mapping, the capacity is determined by the first value used to open the
+/// file. It is a requirement for the users to always open the file with the
+/// same \c HeaderOffset, otherwise the behavior is undefined.
 ///
 /// To support resizing, we use two separate file locks:
 /// 1. We use a shared reader lock on a ".shared" file until destruction.
@@ -85,6 +82,10 @@ struct FileLockRAII {
   ~FileLockRAII() { consumeError(unlock()); }
 
   Error lock(sys::fs::LockKind LK) {
+    // Try unlock first. If not locked, this is no-op.
+    if (auto E = unlock())
+      return E;
+
     if (std::error_code EC = lockFileThreadSafe(FD, LK))
       return createFileError(Path, EC);
     Locked = LK;
@@ -112,6 +113,12 @@ struct FileSizeInfo {
 Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
     function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor) {
+  uint64_t MinCapacity = HeaderOffset + sizeof(Header);
+  if (Capacity < MinCapacity)
+    return createStringError(
+        std::make_error_code(std::errc::no_space_on_device),
+        "capacity is too small to hold MappedFileRegionBumpPtr");
+
   MappedFileRegionBumpPtr Result;
   Result.Path = Path.str();
   // Open the main file.
@@ -147,10 +154,10 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   if (!FileSize)
     return createFileError(Result.Path, FileSize.getError());
 
+  // If the size is smaller than the capacity, we need to initialize the file.
+  // It maybe empty, or may have been shrunk during a previous close.
   if (FileSize->Size < Capacity) {
     // Lock the file exclusively so only one process will do the initialization.
-    if (Error E = InitLock.unlock())
-      return std::move(E);
     if (Error E = InitLock.lock(sys::fs::LockKind::Exclusive))
       return std::move(E);
     // Retrieve the current size now that we have exclusive access.
@@ -159,50 +166,61 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
       return createFileError(Result.Path, FileSize.getError());
   }
 
-  // At this point either the file is still under-sized, or we have the size for
-  // the completely initialized file.
-
-  if (FileSize->Size < Capacity) {
-    // We are initializing the file; it may be empty, or may have been shrunk
-    // during a previous close.
-    // TODO: Detect a case where someone opened it with a smaller capacity.
+  uint64_t MappingSize = FileSize->Size;
+  // If the size is still smaller than the minimal required size, we need to
+  // resize the file to the capacity.
+  if (FileSize->Size < MinCapacity) {
     assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
-  } else {
-    // Someone else initialized it.
-    Capacity = FileSize->Size;
+    MappingSize = Capacity;
   }
 
   // Create the mapped region.
   {
     std::error_code EC;
     sys::fs::mapped_file_region Map(
-        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+        File, sys::fs::mapped_file_region::readwrite, MappingSize, 0, EC);
     if (EC)
       return createFileError(Result.Path, EC);
     Result.Region = std::move(Map);
   }
 
-  if (FileSize->Size == 0) {
-    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
-    // We are creating a new file; run the constructor.
+  if (FileSize->Size < MinCapacity) {
+    // If we need to fully initialize the file, call NewFileConstructor.
     if (Error E = NewFileConstructor(Result))
-      return std::move(E);
-  } else {
+      return E;
+  } else
+    Result.initializeHeader(HeaderOffset);
+
+  if (Result.H->BumpPtr >= FileSize->Size && FileSize->Size < Capacity) {
+    // If the BumpPtr larger than or euqal to the size of the file (it can be
+    // larger if process is terminated when the out of memory allocation
+    // happens) and smaller than capacity, this is shrunked by a previous close,
+    // resize back to capacity and re-initialize the mapped_file_region.
+    Result.Region.unmap();
+    if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
+      return createFileError(Result.Path, EC);
+
+    std::error_code EC;
+    sys::fs::mapped_file_region Map(
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+    if (EC)
+      return createFileError(Result.Path, EC);
+    Result.Region = std::move(Map);
     Result.initializeHeader(HeaderOffset);
   }
 
-  if (FileSize->Size < Capacity && FileSize->AllocatedSize < Capacity) {
-    // We are initializing the file; sync the allocated size in case it
-    // changed when truncating or during construction.
+  if (InitLock.Locked == sys::fs::LockKind::Exclusive) {
+    // If holding an exclusive lock, we might have resize the file and perform
+    // some read/write to the file. Query the file size again to make sure
+    // everything is up-to-date. Otherwise, FileSize info is already up-to-date.
     FileSize = FileSizeInfo::get(File);
     if (!FileSize)
       return createFileError(Result.Path, FileSize.getError());
-    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
-    Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   }
 
+  Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   return Result;
 }
 
@@ -221,7 +239,6 @@ void MappedFileRegionBumpPtr::destroyImpl() {
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       size_t Size = size();
       size_t Capacity = capacity();
-      assert(Size < Capacity);
       // sync to file system to make sure all contents are up-to-date.
       (void)Region.sync();
       // unmap the file before resizing since that is the requirement for
@@ -257,7 +274,7 @@ void MappedFileRegionBumpPtr::initializeHeader(uint64_t HeaderOffset) {
   uint64_t ExistingValue = 0;
   if (!H->BumpPtr.compare_exchange_strong(ExistingValue, HeaderEndOffset))
     assert(ExistingValue >= HeaderEndOffset &&
-           "Expected 0, or past the end of the BumpPtr itself");
+           "Expected 0, or past the end of the header itself");
 }
 
 static Error createAllocatorOutOfSpaceError() {
