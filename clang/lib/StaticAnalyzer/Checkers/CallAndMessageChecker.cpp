@@ -54,7 +54,7 @@ public:
   // Like a checker family, CallAndMessageChecker can produce many kinds of
   // warnings which can be separately enabled or disabled. However, for
   // historical reasons these warning kinds are represented by checker options
-  // (and not separate checkcer frontends with their own names) because
+  // (and not separate checker frontends with their own names) because
   // CallAndMessage is among the oldest checkers out there, and can
   // be responsible for the majority of the reports on any given project. This
   // is obviously not ideal, but changing checker name has the consequence of
