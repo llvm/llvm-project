@@ -781,8 +781,8 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
         report_fatal_error("Expected constant instruction for FP Fast Math "
                            "Mode operand of FPFastMathDefault execution mode.");
       const MachineInstr *ConstMI = It->second;
-      MCRegister ConstReg =
-          MAI->getRegisterAlias(ConstMI->getMF(), ConstMI->getOperand(0).getReg());
+      MCRegister ConstReg = MAI->getRegisterAlias(
+          ConstMI->getMF(), ConstMI->getOperand(0).getReg());
       Inst.addOperand(MCOperand::createReg(ConstReg));
       outputMCInst(Inst);
     }
