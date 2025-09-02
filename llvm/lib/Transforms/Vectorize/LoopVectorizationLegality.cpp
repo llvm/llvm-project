@@ -1764,10 +1764,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   SmallVector<LoadInst *, 4> NonDerefLoads;
   if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, &NonDerefLoads,
                       &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize non-read-only early exit loop",
-        "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
+    reportVectorizationFailure("Loop may fault",
+                               "Cannot vectorize non-read-only early exit loop",
+                               "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
     return false;
   }
   // Check non-dereferenceable loads if any.
@@ -1775,11 +1774,11 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
-      reportVectorizationFailure("Loop contains potentially faulting strided load",
-                                 "Cannot vectorize early exit loop with "
-                                 "strided fault-only-first load",
-                                 "EarlyExitLoopWithStridedFaultOnlyFirstLoad",
-                                 ORE, TheLoop);
+      reportVectorizationFailure(
+          "Loop contains potentially faulting strided load",
+          "Cannot vectorize early exit loop with "
+          "strided fault-only-first load",
+          "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
       return false;
     }
     FaultOnlyFirstLoads.insert(LI);
