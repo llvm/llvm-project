@@ -152,23 +152,23 @@
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[DECAY]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[ONE_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[TWO_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[THREE_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 //
@@ -182,23 +182,23 @@
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!cir.float x 5>>), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[DECAY]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[ONE_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[TWO_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[THREE_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
 // CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!cir.float>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 //
@@ -334,7 +334,7 @@
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTSf : !cir.ptr<!cir.float> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.fp<3.4{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
@@ -346,7 +346,7 @@
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__ZTSf : !cir.ptr<!cir.float> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.reduction.init", init]
-// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-{{.*}}> : !cir.float
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.fp<-1{{.*}}E+38> : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
