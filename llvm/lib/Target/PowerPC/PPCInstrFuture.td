@@ -45,6 +45,67 @@ multiclass XOForm_RTAB5_L1r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
   }
 }
 
+class VXForm_VRTB5<bits<11> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
+                   list<dag> pattern> : I<4, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> VRT;
+  bits<5> VRB;
+
+  let Pattern = pattern;
+
+  let Inst{6 -10} = VRT;
+  let Inst{11 -15} = R;
+  let Inst{16 -20} = VRB;
+  let Inst{21 -31} = xo;
+}
+
+class VXForm_VRTB5_UIM2<bits<11> xo, bits<3> R, dag OOL, dag IOL, string asmstr,
+                        list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> VRT;
+  bits<5> VRB;
+  bits<2> UIM;
+
+  let Pattern = pattern;
+
+  let Inst{6 -10} = VRT;
+  let Inst{11 -13} = R;
+  let Inst{14 -15} = UIM;
+  let Inst{16 -20} = VRB;
+  let Inst{21 -31} = xo;
+}
+
+class VXForm_VRTB5_UIM1<bits<11> xo, bits<4> R, dag OOL, dag IOL, string asmstr,
+                        list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> VRT;
+  bits<5> VRB;
+  bits<1> UIM;
+
+  let Pattern = pattern;
+
+  let Inst{6 -10} = VRT;
+  let Inst{11 -14} = R;
+  let Inst{15} = UIM;
+  let Inst{16 -20} = VRB;
+  let Inst{21 -31} = xo;
+}
+
+class VXForm_VRTB5_UIM3<bits<11> xo, bits<2> R, dag OOL, dag IOL, string asmstr,
+                        list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> VRT;
+  bits<5> VRB;
+  bits<3> UIM;
+
+  let Pattern = pattern;
+
+  let Inst{6 -10} = VRT;
+  let Inst{11 -12} = R;
+  let Inst{13 -15} = UIM;
+  let Inst{16 -20} = VRB;
+  let Inst{21 -31} = xo;
+}
+
 let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L),
@@ -81,4 +142,21 @@ let Predicates = [HasVSX, IsISAFuture] in {
                                    (ins vsrprc:$XTp, (memr $RA):$addr, g8rc:$RB),
                                    "stxvprll $XTp, $addr, $RB", IIC_LdStLFD, []>;
   }
+
+  def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
+                                "vupkhsntob $VRT, $VRB", []>;
+  def VUPKLSNTOB : VXForm_VRTB5<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB),
+                                "vupklsntob $VRT, $VRB", []>;
+  def VUPKINT4TOBF16
+      : VXForm_VRTB5_UIM2<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
+                          "vupkint4tobf16 $VRT, $VRB, $UIM", []>;
+  def VUPKINT8TOBF16
+      : VXForm_VRTB5_UIM1<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB, u1imm:$UIM),
+                          "vupkint8tobf16 $VRT, $VRB, $UIM", []>;
+  def VUPKINT8TOFP32
+      : VXForm_VRTB5_UIM2<387, 3, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
+                          "vupkint8tofp32 $VRT, $VRB, $UIM", []>;
+  def VUPKINT4TOFP32
+      : VXForm_VRTB5_UIM3<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u3imm:$UIM),
+                          "vupkint4tofp32 $VRT, $VRB, $UIM", []>;
 }
