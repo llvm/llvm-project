@@ -2257,17 +2257,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::dbg_assign:
-    // A dbg.assign is a dbg.value with more information about stack locations,
-    // typically produced during optimisation of variables with leaked
-    // addresses. We can treat it like a normal dbg_value intrinsic here; to
-    // benefit from the full analysis of stack/SSA locations, GlobalISel would
-    // need to register for and use the AssignmentTrackingAnalysis pass.
-    [[fallthrough]];
   case Intrinsic::dbg_value: {
-    // This form of DBG_VALUE is target-independent.
-    const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
+    llvm_unreachable("Saw debug intrinsic, should no longer exist");
     return true;
   }
   case Intrinsic::uadd_with_overflow:
