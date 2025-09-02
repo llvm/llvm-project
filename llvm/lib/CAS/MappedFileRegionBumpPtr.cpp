@@ -116,7 +116,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   uint64_t MinCapacity = HeaderOffset + sizeof(Header);
   if (Capacity < MinCapacity)
     return createStringError(
-        std::make_error_code(std::errc::no_space_on_device),
+        std::make_error_code(std::errc::invalid_argument),
         "capacity is too small to hold MappedFileRegionBumpPtr");
 
   MappedFileRegionBumpPtr Result;
@@ -187,6 +187,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   }
 
   if (FileSize->Size < MinCapacity) {
+    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     // If we need to fully initialize the file, call NewFileConstructor.
     if (Error E = NewFileConstructor(Result))
       return E;
@@ -194,10 +195,11 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     Result.initializeHeader(HeaderOffset);
 
   if (Result.H->BumpPtr >= FileSize->Size && FileSize->Size < Capacity) {
-    // If the BumpPtr larger than or euqal to the size of the file (it can be
+    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
+    // If the BumpPtr larger than or equal to the size of the file (it can be
     // larger if process is terminated when the out of memory allocation
-    // happens) and smaller than capacity, this is shrunked by a previous close,
-    // resize back to capacity and re-initialize the mapped_file_region.
+    // happens) and smaller than capacity, this was shrunken by a previous
+    // close, resize back to capacity and re-initialize the mapped_file_region.
     Result.Region.unmap();
     if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
@@ -212,9 +214,10 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   }
 
   if (InitLock.Locked == sys::fs::LockKind::Exclusive) {
-    // If holding an exclusive lock, we might have resize the file and perform
-    // some read/write to the file. Query the file size again to make sure
-    // everything is up-to-date. Otherwise, FileSize info is already up-to-date.
+    // If holding an exclusive lock, we might have resized the file and
+    // performed some read/write to the file. Query the file size again to make
+    // sure everything is up-to-date. Otherwise, FileSize info is already
+    // up-to-date.
     FileSize = FileSizeInfo::get(File);
     if (!FileSize)
       return createFileError(Result.Path, FileSize.getError());
