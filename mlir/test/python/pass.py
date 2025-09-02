@@ -3,6 +3,7 @@
 import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
+from mlir.passes import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import pdl
 from mlir.rewrite import *
@@ -51,13 +52,13 @@ def make_pdl_module():
 def testCustomPass():
     with Context():
         pdl_module = make_pdl_module()
+        frozen = PDLModule(pdl_module).freeze()
 
         class CustomPass(Pass):
             def __init__(self):
                 super().__init__("CustomPass", op_name="builtin.module")
 
             def run(self, m):
-                frozen = PDLModule(pdl_module).freeze()
                 apply_patterns_and_fold_greedily_with_op(m, frozen)
 
         module = ModuleOp.parse(

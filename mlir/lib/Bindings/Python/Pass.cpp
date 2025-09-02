@@ -26,7 +26,7 @@ namespace {
 // A base class for defining passes in Python
 // Users are expected to subclass this and implement the `run` method, e.g.
 // ```
-// class MyPass(mlir.passmanager.Pass):
+// class MyPass(Pass):
 //   def __init__(self):
 //     super().__init__("MyPass", ..)
 //     # other init stuff..

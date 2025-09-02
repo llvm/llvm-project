@@ -136,8 +136,10 @@ NB_MODULE(_mlir, m) {
   populateRewriteSubmodule(rewriteModule);
 
   // Define and populate PassManager submodule.
-  auto passModule =
+  auto passManagerModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
-  populatePassManagerSubmodule(passModule);
-  populatePassSubmodule(passModule);
+  populatePassManagerSubmodule(passManagerModule);
+  auto passesModule =
+      m.def_submodule("passes", "MLIR Pass Infrastructure Bindings");
+  populatePassSubmodule(passesModule);
 }
