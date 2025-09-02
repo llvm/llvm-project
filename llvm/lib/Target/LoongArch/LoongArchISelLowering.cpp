@@ -1978,9 +1978,8 @@ lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if (fitsRegularPattern<int>(Begin, 1, End - HalfSize, SplatIndex, 0) &&
       fitsRegularPattern<int>(Begin + HalfSize, 1, End, SplatIndex + HalfSize,
                               0)) {
-    APInt Imm(64, SplatIndex);
     return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
-                       DAG.getConstant(Imm, DL, Subtarget.getGRLenVT()));
+                       DAG.getConstant(SplatIndex, DL, Subtarget.getGRLenVT()));
   }
 
   return SDValue();
