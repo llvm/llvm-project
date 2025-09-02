@@ -567,7 +567,7 @@ define i16 @urem16(i16 %a, i16 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    call __umoddi3

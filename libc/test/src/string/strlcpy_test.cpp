@@ -14,8 +14,8 @@ TEST(LlvmLibcStrlcpyTest, TooBig) {
   char buf[2];
   EXPECT_EQ(LIBC_NAMESPACE::strlcpy(buf, str, 2), size_t(3));
   EXPECT_STREQ(buf, "a");
-
-  EXPECT_EQ(LIBC_NAMESPACE::strlcpy(nullptr, str, 0), size_t(3));
+  char dst[] = "";
+  EXPECT_EQ(LIBC_NAMESPACE::strlcpy(dst, str, 0), size_t(3));
 }
 
 TEST(LlvmLibcStrlcpyTest, Smaller) {

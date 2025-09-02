@@ -18,12 +18,12 @@
 // RUN: ln -s %S/Inputs/basic_riscv32_nogcc_tree/riscv32-unknown-elf %t/riscv32-nogcc/riscv32-unknown-elf
 // RUN: %t/riscv32-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/riscv32-nogcc/invalid \
-// RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld=ld 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
 // RUN: %t/riscv32-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --sysroot=%t/riscv32-nogcc/bin/../riscv32-unknown-elf \
-// RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld= 2>&1 \
+// RUN:    --target=riscv32-unknown-elf --rtlib=platform -fuse-ld=ld 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32-NOGCC %s
 
 // C-RV32-BAREMETAL-ILP32-NOGCC: "-internal-isystem" "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/include"
@@ -31,6 +31,5 @@
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/lib/crt0.o"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/clang_rt.crtbegin.o"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/bin/../riscv32-unknown-elf/lib"
-// C-RV32-BAREMETAL-ILP32-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group"
-// C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/libclang_rt.builtins.a"
+// C-RV32-BAREMETAL-ILP32-NOGCC: "--start-group" "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
 // C-RV32-BAREMETAL-ILP32-NOGCC: "{{.*}}/riscv32-nogcc/{{.*}}/riscv32-unknown-unknown-elf/clang_rt.crtend.o"

@@ -125,7 +125,8 @@ TestClient::launchCustom(StringRef Log, bool disable_stdio,
           listen_socket.Accept(2 * GetDefaultTimeout(), accept_socket)
               .takeError())
     return E;
-  auto Conn = std::make_unique<ConnectionFileDescriptor>(accept_socket);
+  auto Conn = std::make_unique<ConnectionFileDescriptor>(
+      std::unique_ptr<Socket>(accept_socket));
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 
   if (Error E = Client->initializeConnection())

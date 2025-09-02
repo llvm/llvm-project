@@ -26,7 +26,11 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -41,6 +45,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -280,6 +286,127 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   return false;
 }
 
+// For each instruction, this block attempts to resolve in-scope variables
+// and determine if the current PC falls within their
+// DWARF location entry. If so, it prints a simplified annotation using the
+// variable name and its resolved location (e.g., "var = reg; " ).
+//
+// Annotations are only included if the variable has a valid DWARF location
+// entry, and the location string is non-empty after filtering. Decoding
+// errors and DWARF opcodes are intentionally omitted to keep the output
+// concise and user-friendly.
+//
+// The goal is to give users helpful live variable hints alongside the
+// disassembled instruction stream, similar to how debug information
+// enhances source-level debugging.
+std::vector<std::string>
+VariableAnnotator::annotate(Instruction &inst, Target &target,
+                            const lldb::ModuleSP &module_sp) {
+  std::vector<std::string> events;
+
+  // If we lost module context, everything becomes <undef>.
+  if (!module_sp) {
+    for (const auto &KV : Live_)
+      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    Live_.clear();
+    return events;
+  }
+
+  // Resolve function/block at this *file* address.
+  SymbolContext sc;
+  const Address &iaddr = inst.GetAddress();
+  const auto mask = eSymbolContextFunction | eSymbolContextBlock;
+  if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
+      !sc.function) {
+    // No function context: everything dies here.
+    for (const auto &KV : Live_)
+      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    Live_.clear();
+    return events;
+  }
+
+  // Collect in-scope variables for this instruction into Current.
+  VariableList var_list;
+  // Innermost block containing iaddr.
+  if (Block *B = sc.block) {
+    auto filter = [](Variable *v) -> bool { return v && !v->IsArtificial(); };
+    B->AppendVariables(/*can_create*/ true,
+                       /*get_parent_variables*/ true,
+                       /*stop_if_block_is_inlined_function*/ false,
+                       /*filter*/ filter,
+                       /*variable_list*/ &var_list);
+  }
+
+  const lldb::addr_t pc_file = iaddr.GetFileAddress();
+  const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
+
+  // ABI from Target (pretty reg names if plugin exists). Safe to be null.
+  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, target.GetArchitecture());
+  ABI *abi = abi_sp.get();
+
+  llvm::DIDumpOptions opts;
+  opts.ShowAddresses = false;
+  // Prefer "register-only" output when we have an ABI.
+  opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
+
+  llvm::DenseMap<lldb::user_id_t, VarState> Current;
+
+  for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
+    lldb::VariableSP v = var_list.GetVariableAtIndex(i);
+    if (!v || v->IsArtificial())
+      continue;
+
+    const char *nm = v->GetName().AsCString();
+    llvm::StringRef name = nm ? nm : "<anon>";
+
+    DWARFExpressionList &exprs = v->LocationExpressionList();
+    if (!exprs.IsValid())
+      continue;
+
+    auto entry_or_err = exprs.GetExpressionEntryAtAddress(func_file, pc_file);
+    if (!entry_or_err)
+      continue;
+
+    auto entry = *entry_or_err;
+
+    StreamString loc_ss;
+    entry.expr->DumpLocation(&loc_ss, eDescriptionLevelBrief, abi, opts);
+
+    llvm::StringRef loc = llvm::StringRef(loc_ss.GetString()).trim();
+    if (loc.empty())
+      continue;
+
+    Current.try_emplace(v->GetID(),
+                        VarState{std::string(name), std::string(loc)});
+  }
+
+  // Diff Live_ → Current.
+
+  // 1) Starts/changes: iterate Current and compare with Live_.
+  for (const auto &KV : Current) {
+    auto it = Live_.find(KV.first);
+    if (it == Live_.end()) {
+      // Newly live.
+      events.emplace_back(
+          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
+    } else if (it->second.last_loc != KV.second.last_loc) {
+      // Location changed.
+      events.emplace_back(
+          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
+    }
+  }
+
+  // 2) Ends: anything that was live but is not in Current becomes <undef>.
+  for (const auto &KV : Live_) {
+    if (!Current.count(KV.first))
+      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+  }
+
+  // Commit new state.
+  Live_ = std::move(Current);
+  return events;
+}
+
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      bool mixed_source_and_assembly,
@@ -310,8 +437,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx.HasTargetScope()) {
-    disassembly_format =
-        exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -376,6 +503,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
+  VariableAnnotator annot;
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -540,10 +668,26 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       const bool show_bytes = (options & eOptionShowBytes) != 0;
       const bool show_control_flow_kind =
           (options & eOptionShowControlFlowKind) != 0;
-      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
+
+      StreamString inst_line;
+
+      inst->Dump(&inst_line, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
+
+      if ((options & eOptionVariableAnnotations) && target_sp) {
+        auto annotations = annot.annotate(*inst, *target_sp, module_sp);
+        if (!annotations.empty()) {
+          const size_t annotation_column = 100;
+          inst_line.FillLastLineToColumn(annotation_column, ' ');
+          inst_line.PutCString("; ");
+          inst_line.PutCString(llvm::join(annotations, ", "));
+        }
+      }
+
+      strm.PutCString(inst_line.GetString());
       strm.EOL();
+
     } else {
       break;
     }
@@ -685,9 +829,11 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     }
   }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
-  const std::string &opcode_name =
-      show_color ? m_markup_opcode_name : m_opcode_name;
+  std::string &opcode_name = show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
@@ -722,9 +868,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -1014,6 +1158,16 @@ uint32_t InstructionList::GetMaxOpcocdeByteSize() const {
   return max_inst_size;
 }
 
+size_t InstructionList::GetTotalByteSize() const {
+  size_t total_byte_size = 0;
+  collection::const_iterator pos, end;
+  for (pos = m_instructions.begin(), end = m_instructions.end(); pos != end;
+       ++pos) {
+    total_byte_size += (*pos)->GetOpcode().GetByteSize();
+  }
+  return total_byte_size;
+}
+
 InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {
   InstructionSP inst_sp;
   if (idx < m_instructions.size())
@@ -1037,8 +1191,8 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx && exe_ctx->HasTargetScope()) {
-    disassembly_format =
-        exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -1061,10 +1215,8 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;

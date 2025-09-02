@@ -1,4 +1,4 @@
-; RUN:  opt -S -passes=globalopt --experimental-debuginfo-iterators=false <%s | FileCheck %s
+; RUN:  opt -S -passes=globalopt <%s | FileCheck %s
 ; CHECK: #dbg_value(ptr poison,
 ; CHECK-SAME:    [[VAR:![0-9]+]],
 ; CHECK-SAME:    !DIExpression()

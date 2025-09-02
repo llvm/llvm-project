@@ -337,3 +337,19 @@ define <4 x i32> @not_fold_identity2(<4 x i32> %x) {
   %revshuf = shufflevector <4 x i32> %shuf, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i32> %revshuf
 }
+
+define <vscale x 2 x i32> @scalable_splat_undef() {
+; CHECK-LABEL: @scalable_splat_undef(
+; CHECK-NEXT:    ret <vscale x 2 x i32> undef
+;
+  %shuf = shufflevector <vscale x 2 x i32> undef, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x i32> %shuf
+}
+
+define <vscale x 2 x i32> @scalable_splat_poison() {
+; CHECK-LABEL: @scalable_splat_poison(
+; CHECK-NEXT:    ret <vscale x 2 x i32> poison
+;
+  %shuf = shufflevector <vscale x 2 x i32> poison, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x i32> %shuf
+}

@@ -9,13 +9,11 @@
 
 include "APIDefs.td"
 
-def : Handle {
-    let name = "some_handle_t";
+def some_handle_t: Handle {
     let desc = "An example handle type";
 }
 
-def : Enum {
-  let name = "my_type_tagged_enum_t";
+def my_type_tagged_enum_t : Enum {
   let desc = "Example type tagged enum";
   let is_typed = 1;
   let etors = [
@@ -34,8 +32,7 @@ def : Enum {
 // CHECK-API-NEXT: [some_handle_t] Value three.
 // CHECK-API-NEXT: MY_TYPE_TAGGED_ENUM_VALUE_THREE = 2,
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
   let params = [
@@ -50,7 +47,7 @@ def : Function {
 }
 
 // Check that a tagged enum print function definition is generated
-// CHECK-PRINT: void printTagged(std::ostream &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
+// CHECK-PRINT: void printTagged(llvm::raw_ostream &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
 // CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_ONE: {
 // CHECK-PRINT:   const uint32_t * const tptr = (const uint32_t * const)ptr;
 // CHECK-PRINT:   os << (const void *)tptr << " (";
@@ -71,6 +68,6 @@ def : Function {
 // CHECK-PRINT: }
 
 // Check that the tagged type information is used when printing function parameters
-// CHECK-PRINT: std::ostream &operator<<(std::ostream &os, const struct function_a_params_t *params) {
+// CHECK-PRINT: llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params) {
 // CHECK-PRINT: os << ".PropValue = " 
 // CHECK-PRINT-NEXT: printTagged(os, *params->pPropValue, *params->pPropName, *params->pPropSize);

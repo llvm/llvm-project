@@ -79,16 +79,16 @@ subroutine pointers_in_atomic_capture()
 !CHECK: %[[VAL_A_BOX_ADDR:.*]] = fir.box_addr %[[VAL_A_LOADED]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK: %[[VAL_B_LOADED:.*]] = fir.load %[[VAL_B_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_B_BOX_ADDR:.*]] = fir.box_addr %[[VAL_B_LOADED]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK: %[[VAL_B:.*]] = fir.load %[[VAL_B_BOX_ADDR]] : !fir.ptr<i32>
 !CHECK: %[[VAL_B_LOADED_2:.*]] = fir.load %[[VAL_B_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK: %[[VAL_B_BOX_ADDR_2:.*]] = fir.box_addr %[[VAL_B_LOADED_2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-!CHECK: %[[VAL_B:.*]] = fir.load %[[VAL_B_BOX_ADDR_2]] : !fir.ptr<i32>
 !CHECK: omp.atomic.capture {
 !CHECK: omp.atomic.update %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.addi %[[ARG]], %[[VAL_B]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
+!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR_2]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
 !CHECK: }
 !CHECK: return
 !CHECK: }
@@ -97,3 +97,59 @@ subroutine pointers_in_atomic_capture()
         b = a
     !$omp end atomic
 end subroutine
+
+! Check that the clean-ups associated with the function call
+! are generated after the omp.atomic.capture operation:
+! CHECK-LABEL:   func.func @_QPfunc_call_cleanup(
+subroutine func_call_cleanup(x, v, vv)
+  interface
+     integer function func(x)
+       integer :: x
+     end function func
+  end interface
+  integer :: x, v, vv
+
+! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_8:.*]] = fir.call @_QPfunc(%[[VAL_7]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           omp.atomic.capture {
+! CHECK:             omp.atomic.read %[[VAL_1:.*]]#0 = %[[VAL_3:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:             omp.atomic.write %[[VAL_3]]#0 = %[[VAL_8]] : !fir.ref<i32>, i32
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
+  !$omp atomic capture
+  v = x
+  x = func(vv + 1)
+  !$omp end atomic
+
+! CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_13:.*]] = fir.call @_QPfunc(%[[VAL_12]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           omp.atomic.capture {
+! CHECK:             omp.atomic.read %[[VAL_1]]#0 = %[[VAL_3]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:             omp.atomic.update %[[VAL_3]]#0 : !fir.ref<i32> {
+! CHECK:             ^bb0(%[[VAL_14:.*]]: i32):
+! CHECK:               %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : i32
+! CHECK:               omp.yield(%[[VAL_15]] : i32)
+! CHECK:             }
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_12]]#1, %[[VAL_12]]#2 : !fir.ref<i32>, i1
+  !$omp atomic capture
+  v = x
+  x = func(vv + 1) + x
+  !$omp end atomic
+
+! CHECK:           %[[VAL_19:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_20:.*]] = fir.call @_QPfunc(%[[VAL_19]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK:           omp.atomic.capture {
+! CHECK:             omp.atomic.update %[[VAL_3]]#0 : !fir.ref<i32> {
+! CHECK:             ^bb0(%[[VAL_21:.*]]: i32):
+! CHECK:               %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : i32
+! CHECK:               omp.yield(%[[VAL_22]] : i32)
+! CHECK:             }
+! CHECK:             omp.atomic.read %[[VAL_1]]#0 = %[[VAL_3]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_19]]#1, %[[VAL_19]]#2 : !fir.ref<i32>, i1
+  !$omp atomic capture
+  x = func(vv + 1) + x
+  v = x
+  !$omp end atomic
+end subroutine func_call_cleanup

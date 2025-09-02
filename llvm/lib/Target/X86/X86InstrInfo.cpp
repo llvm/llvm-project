@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -1035,12 +1023,11 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
-static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
-                                   MachineInstr &CmpValDefInstr,
-                                   const MachineRegisterInfo *MRI,
-                                   MachineInstr **AndInstr,
-                                   const TargetRegisterInfo *TRI,
-                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
+static bool
+findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
+                       const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
+                       const TargetRegisterInfo *TRI, const X86Subtarget &ST,
+                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1103,7 +1090,8 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
   if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
     return false;
 
-  if (X86::isAND(VregDefInstr->getOpcode())) {
+  if (X86::isAND(VregDefInstr->getOpcode()) &&
+      (!ST.hasNF() || VregDefInstr->modifiesRegister(X86::EFLAGS, TRI))) {
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
@@ -2365,33 +2353,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     break;
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:
+  case X86::PBLENDWrri:
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
-    // If we're optimizing for size, try to use MOVSD/MOVSS.
-    if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
-      unsigned Mask = (Opc == X86::BLENDPDrri || Opc == X86::VBLENDPDrri) ? 0x03: 0x0F;
-      if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
-#define FROM_TO(FROM, TO)                                                      \
-  case X86::FROM:                                                              \
-    Opc = X86::TO;                                                             \
-    break;
-        switch (Opc) {
-        default:
-          llvm_unreachable("Unreachable!");
-        FROM_TO(BLENDPDrri, MOVSDrr)
-        FROM_TO(BLENDPSrri, MOVSSrr)
-        FROM_TO(VBLENDPDrri, VMOVSDrr)
-        FROM_TO(VBLENDPSrri, VMOVSSrr)
-        }
-        WorkingMI = CloneIfNew(MI);
-        WorkingMI->setDesc(get(Opc));
-        WorkingMI->removeOperand(3);
-        break;
-      }
-#undef FROM_TO
-    }
-    [[fallthrough]];
-  case X86::PBLENDWrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDPSYrri:
   case X86::VPBLENDDrri:
@@ -2499,6 +2463,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       break;
     }
 
+    assert(Opc == X86::MOVSDrr && "Only MOVSD can commute to SHUFPD");
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(X86::SHUFPDrri));
     WorkingMI->addOperand(MachineOperand::CreateImm(0x02));
@@ -3726,6 +3691,7 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
     return true;
   default:
@@ -4433,13 +4399,8 @@ static unsigned getLoadStoreOpcodeForFP16(bool Load, const X86Subtarget &STI) {
   if (STI.hasFP16())
     return Load ? X86::VMOVSHZrm_alt : X86::VMOVSHZmr;
   if (Load)
-    return STI.hasAVX512() ? X86::VMOVSSZrm
-           : STI.hasAVX()  ? X86::VMOVSSrm
-                           : X86::MOVSSrm;
-  else
-    return STI.hasAVX512() ? X86::VMOVSSZmr
-           : STI.hasAVX()  ? X86::VMOVSSmr
-                           : X86::MOVSSmr;
+    return X86::MOVSHPrm;
+  return X86::MOVSHPmr;
 }
 
 static unsigned getLoadStoreRegOpcode(Register Reg,
@@ -4748,8 +4709,8 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   // FIXME: Relying on memoperands() may not be right thing to do here. Check
   // with X86 maintainers, and fix it accordingly. For now, it is ok, since
   // there is no use of `Width` for X86 back-end at the moment.
-  Width =
-      !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize() : 0;
+  Width = !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize()
+                                     : LocationSize::precise(0);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -4875,10 +4836,6 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4941,6 +4898,16 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     CmpMask = ~0;
     CmpValue = 0;
     return true;
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = 0;
+    // Force identical compare.
+    CmpMask = 0;
+    CmpValue = 0;
+    return true;
   }
   return false;
 }
@@ -4976,22 +4943,14 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
     }
     return false;
   }
-  case X86::CCMP64ri32:
-  case X86::CCMP32ri:
-  case X86::CCMP16ri:
-  case X86::CCMP8ri: {
-    // The CCMP instruction should not be optimized if the scc/dfv in it is not
-    // same as the one in previous CCMP instruction.
-    if ((FlagI.getOpcode() != OI.getOpcode()) ||
-        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
-        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
-      return false;
-    [[fallthrough]];
-  }
   case X86::CMP64ri32:
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::TEST64ri32:
+  case X86::TEST32ri:
+  case X86::TEST16ri:
+  case X86::TEST8ri:
   CASE_ND(SUB64ri32)
   CASE_ND(SUB32ri)
   CASE_ND(SUB16ri)
@@ -5433,7 +5392,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   NoSignFlag, ClearsOverflowFlag)) {
+                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;
@@ -5480,8 +5439,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;
@@ -6173,6 +6140,25 @@ static bool expandSHXDROT(MachineInstrBuilder &MIB, const MCInstrDesc &Desc) {
   return true;
 }
 
+static bool expandMOVSHP(MachineInstrBuilder &MIB, MachineInstr &MI,
+                         const TargetInstrInfo &TII, bool HasAVX) {
+  unsigned NewOpc;
+  if (MI.getOpcode() == X86::MOVSHPrm) {
+    NewOpc = HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
+    Register Reg = MI.getOperand(0).getReg();
+    if (Reg > X86::XMM15)
+      NewOpc = X86::VMOVSSZrm;
+  } else {
+    NewOpc = HasAVX ? X86::VMOVSSmr : X86::MOVSSmr;
+    Register Reg = MI.getOperand(5).getReg();
+    if (Reg > X86::XMM15)
+      NewOpc = X86::VMOVSSZmr;
+  }
+
+  MIB->setDesc(TII.get(NewOpc));
+  return true;
+}
+
 bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   bool HasAVX = Subtarget.hasAVX();
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
@@ -6245,6 +6231,9 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
+  case X86::MOVSHPmr:
+  case X86::MOVSHPrm:
+    return expandMOVSHP(MIB, MI, *this, Subtarget.hasAVX());
   case X86::V_SETALLONES:
     return Expand2AddrUndef(MIB,
                             get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));
@@ -7478,7 +7467,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
+      (Opc == X86::CALL32r || Opc == X86::CALL64r ||
+       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
        Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
@@ -8140,6 +8130,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/ true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
+    return nullptr;
+
+  // Do not fold a NDD instruction and a memory instruction with relocation to
+  // avoid emit APX relocation when the flag is disabled for backward
+  // compatibility.
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!X86EnableAPXForRelocation && isMemInstrWithGOTPCREL(LoadMI) &&
+      X86II::hasNewDataDest(TSFlags))
     return nullptr;
 
   // Determine the alignment of the load.
@@ -8961,7 +8959,7 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
-  // Frame setup and destory can't be scheduled around.
+  // Frame setup and destroy can't be scheduled around.
   if (MI.getFlag(MachineInstr::FrameSetup) ||
       MI.getFlag(MachineInstr::FrameDestroy))
     return true;

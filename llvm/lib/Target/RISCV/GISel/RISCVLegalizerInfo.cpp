@@ -26,6 +26,8 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -152,7 +154,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+  getActionDefinitionsBuilder(
+      {G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -692,6 +695,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
+  getActionDefinitionsBuilder(G_ATOMICRMW_ADD)
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen);
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -729,6 +737,8 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::riscv_masked_atomicrmw_add:
+    return true;
   }
 }
 
@@ -1332,7 +1342,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
     // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
-    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    bool ShouldOptForSize = F.hasOptSize();
     const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
     if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
       return true;

@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+# Update operands like "1966090 /* regdef:VGPR_32 */" in MIR tests when register
+# class numbers change.
+
+if [ $# -eq 0 ] ; then
+    echo "usage: ${0##*/} /path/to/<Target>GenRegisterInfo.inc test/CodeGen/<Target>/testfile.mir..." >&2
+    exit 1
+fi
+
+reginfo="$1"
+shift
+
+files=$(grep -El ' [0-9]+ /\* [a-z-]+:\w+ \*/' "$@")
+[ "$files" ] || exit 0
+
+grep -Eho ' [0-9]+ /\* [a-z-]+:\w+ \*/' $files | sed -E 's/.*:(\w+).*/\1/' | sort -u | while read -r class ; do
+    id=$(grep -E "^  ${class}RegClassID = " "$reginfo" | sed -E 's/.* = ([0-9]+).*/\1/')
+    if [ "$id" ] ; then
+        echo "$class..."
+        sed -Ei -e 's| [0-9]+ (/\* reguse:'"$class"' \*/)| '"$(((id + 1) << 16 | 9))"' \1|g' \
+            -e 's| [0-9]+ (/\* regdef:'"$class"' \*/)| '"$(((id + 1) << 16 | 10))"' \1|g' \
+            -e 's| [0-9]+ (/\* regdef-ec:'"$class"' \*/)| '"$(((id + 1) << 16 | 11))"' \1|g' \
+            $files
+    fi
+done

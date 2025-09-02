@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
+#define LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -24,7 +27,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormattedStream.h"
 
-using namespace llvm;
+namespace llvm {
 
 class SystemZHLASMAsmStreamer final : public MCStreamer {
   constexpr static size_t InstLimit = 80;
@@ -46,11 +49,11 @@ class SystemZHLASMAsmStreamer final : public MCStreamer {
 public:
   SystemZHLASMAsmStreamer(MCContext &Context,
                           std::unique_ptr<formatted_raw_ostream> os,
-                          MCInstPrinter *printer,
+                          std::unique_ptr<MCInstPrinter> printer,
                           std::unique_ptr<MCCodeEmitter> emitter,
                           std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), FOSOwner(std::move(os)), FOS(*FOSOwner), OS(Str),
-        MAI(Context.getAsmInfo()), InstPrinter(printer),
+        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -83,9 +86,8 @@ public:
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
                        unsigned ValueSize, unsigned MaxBytesToEmit);
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
-                            unsigned MaxBytesToEmit = 0) override;
+  void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
+                            unsigned MaxBytesToEmit) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
@@ -119,4 +121,9 @@ public:
   void emitHLASMValueImpl(const MCExpr *Value, unsigned Size,
                           bool Parens = false);
   /// @}
+
+  void emitEnd();
 };
+} // namespace llvm
+
+#endif // LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZHLASMASMSTREAMER_H

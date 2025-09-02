@@ -1,6 +1,7 @@
-RUN: llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.bitstream -o - | FileCheck %s -strict-whitespace
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/two-remarks.yaml -o %t
-RUN: llvm-remarkutil bitstream2yaml %t -o - | FileCheck %s -strict-whitespace
+RUN: llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.bitstream -o %t.yaml
+RUN: FileCheck %s -strict-whitespace < %t.yaml
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/two-remarks.yaml -o %t.bitstream
+RUN: llvm-remarkutil bitstream2yaml %t.bitstream -o - | FileCheck %s -strict-whitespace
 
 ; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            prologepilog

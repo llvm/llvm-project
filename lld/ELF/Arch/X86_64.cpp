@@ -11,7 +11,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
@@ -50,6 +50,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -319,6 +320,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_ALLOC))
+      continue;
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
@@ -1160,6 +1163,72 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     applyJumpInstrMod(buf + sec.jumpInstrMod->offset,
                       sec.jumpInstrMod->original, sec.jumpInstrMod->size);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" usually means a CALL or JMP
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be PLT32. With a relocation type of PLT32
+  // the value may be assumed to be used for branching directly to the symbol
+  // and the addend is only used to produce the relocated value (hence the
+  // effective addend is always 0). This is because if a PLT is needed the
+  // addend will be added to the address of the PLT, and it doesn't make sense
+  // to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // STT_SECTION symbols are a special case on x86 because the LLVM assembler
+  // uses them for branches to local symbols which are assembled as referring to
+  // the section symbol with the addend equal to the symbol value - 4.
+  if (r.type == R_X86_64_PLT32) {
+    if (r.sym->isSection())
+      return r.addend + 4;
+    return 0;
+  }
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto content = is.contentMaybeDecompress();
+  if (content.size() > offset && content[offset] == 0xe9) { // JMP immediate
+    auto *i = llvm::partition_point(
+        is.relocations, [&](Relocation &r) { return r.offset < offset + 1; });
+    // Unlike with getControlTransferAddend() it is valid to accept a PC32
+    // relocation here because we know that this is actually a JMP and not some
+    // other reference, so the interpretation is that we add 4 to the addend and
+    // use that as the effective addend.
+    if (i != is.relocations.end() && i->offset == offset + 1 &&
+        (i->type == R_X86_64_PC32 || i->type == R_X86_64_PLT32)) {
+      return {i, i->addend + 4};
+    }
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  // The isSection() check handles the STT_SECTION case described above.
+  // In that case the original addend is irrelevant because it referred to an
+  // offset within the original target section so we overwrite it.
+  //
+  // The +4 is here to compensate for r2.addend which will likely be -4,
+  // but may also be addend-4 in case of a PC32 branch to symbol+addend.
+  if (r1.sym->isSection())
+    r1.addend = r2.addend;
+  else
+    r1.addend += r2.addend + 4;
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+}
+
+void X86_64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

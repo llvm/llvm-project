@@ -52,11 +52,11 @@ static unsigned getScalarOrVectorSizeInBytes(llvm::Type *Ty) {
 namespace clang {
 namespace CodeGen {
 
-// Creates a layout type for given struct with HLSL constant buffer layout
-// taking into account PackOffsets, if provided.
+// Creates a layout type for given struct or class with HLSL constant buffer
+// layout taking into account PackOffsets, if provided.
 // Previously created layout types are cached by CGHLSLRuntime.
 //
-// The function iterates over all fields of the StructType (including base
+// The function iterates over all fields of the record type (including base
 // classes) and calls layoutField to converts each field to its corresponding
 // LLVM type and to calculate its HLSL constant buffer layout. Any embedded
 // structs (or arrays of structs) are converted to target layout types as well.
@@ -67,12 +67,11 @@ namespace CodeGen {
 // -1 value instead. These elements must be placed at the end of the layout
 // after all of the elements with specific offset.
 llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
-    const RecordType *StructType,
-    const llvm::SmallVector<int32_t> *PackOffsets) {
+    const RecordType *RT, const llvm::SmallVector<int32_t> *PackOffsets) {
 
   // check if we already have the layout type for this struct
   if (llvm::TargetExtType *Ty =
-          CGM.getHLSLRuntime().getHLSLBufferLayoutType(StructType))
+          CGM.getHLSLRuntime().getHLSLBufferLayoutType(RT))
     return Ty;
 
   SmallVector<unsigned> Layout;
@@ -86,23 +85,22 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
   Layout.push_back(0);
 
   // iterate over all fields of the record, including fields on base classes
-  llvm::SmallVector<const RecordType *> RecordTypes;
-  RecordTypes.push_back(StructType);
-  while (RecordTypes.back()->getAsCXXRecordDecl()->getNumBases()) {
-    CXXRecordDecl *D = RecordTypes.back()->getAsCXXRecordDecl();
+  llvm::SmallVector<CXXRecordDecl *> RecordDecls;
+  RecordDecls.push_back(RT->castAsCXXRecordDecl());
+  while (RecordDecls.back()->getNumBases()) {
+    CXXRecordDecl *D = RecordDecls.back();
     assert(D->getNumBases() == 1 &&
            "HLSL doesn't support multiple inheritance");
-    RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
+    RecordDecls.push_back(D->bases_begin()->getType()->castAsCXXRecordDecl());
   }
 
   unsigned FieldOffset;
   llvm::Type *FieldType;
 
-  while (!RecordTypes.empty()) {
-    const RecordType *RT = RecordTypes.back();
-    RecordTypes.pop_back();
+  while (!RecordDecls.empty()) {
+    const CXXRecordDecl *RD = RecordDecls.pop_back_val();
 
-    for (const auto *FD : RT->getDecl()->fields()) {
+    for (const auto *FD : RD->fields()) {
       assert((!PackOffsets || Index < PackOffsets->size()) &&
              "number of elements in layout struct does not match number of "
              "packoffset annotations");
@@ -148,7 +146,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
 
   // create the layout struct type; anonymous struct have empty name but
   // non-empty qualified name
-  const CXXRecordDecl *Decl = StructType->getAsCXXRecordDecl();
+  const auto *Decl = RT->castAsCXXRecordDecl();
   std::string Name =
       Decl->getName().empty() ? "anon" : Decl->getQualifiedNameAsString();
   llvm::StructType *StructTy =
@@ -158,7 +156,7 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
   llvm::TargetExtType *NewLayoutTy = llvm::TargetExtType::get(
       CGM.getLLVMContext(), LayoutTypeName, {StructTy}, Layout);
   if (NewLayoutTy)
-    CGM.getHLSLRuntime().addHLSLBufferLayoutType(StructType, NewLayoutTy);
+    CGM.getHLSLRuntime().addHLSLBufferLayoutType(RT, NewLayoutTy);
   return NewLayoutTy;
 }
 
@@ -196,15 +194,15 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // Unwrap array to find the element type and get combined array size.
     QualType Ty = FieldTy;
     while (Ty->isConstantArrayType()) {
-      const ConstantArrayType *ArrayTy = cast<ConstantArrayType>(Ty);
+      auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Ty);
       ArrayCount *= ArrayTy->getSExtSize();
       Ty = ArrayTy->getElementType();
     }
     // For array of structures, create a new array with a layout type
     // instead of the structure type.
-    if (Ty->isStructureType()) {
-      llvm::Type *NewTy =
-          cast<llvm::TargetExtType>(createLayoutType(Ty->getAsStructureType()));
+    if (Ty->isStructureOrClassType()) {
+      llvm::Type *NewTy = cast<llvm::TargetExtType>(
+          createLayoutType(Ty->getAsCanonical<RecordType>()));
       if (!NewTy)
         return false;
       assert(isa<llvm::TargetExtType>(NewTy) && "expected target type");
@@ -220,9 +218,10 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     ArrayStride = llvm::alignTo(ElemSize, CBufferRowSizeInBytes);
     ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
 
-  } else if (FieldTy->isStructureType()) {
+  } else if (FieldTy->isStructureOrClassType()) {
     // Create a layout type for the structure
-    ElemLayoutTy = createLayoutType(FieldTy->getAsStructureType());
+    ElemLayoutTy = createLayoutType(
+        cast<RecordType>(FieldTy->getAsCanonical<RecordType>()));
     if (!ElemLayoutTy)
       return false;
     assert(isa<llvm::TargetExtType>(ElemLayoutTy) && "expected target type");

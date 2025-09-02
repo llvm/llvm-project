@@ -188,11 +188,11 @@ func.func @test_assign(%arg1: f32) {
 
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
   %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
-  %q = emitc.expression : i32 {
+  %q = emitc.expression %arg1, %c7 : (i32, i32) -> i32 {
     %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
     emitc.yield %a : i32
   }
-  %r = emitc.expression noinline : i32 {
+  %r = emitc.expression %arg0, %arg1, %arg2, %arg3, %arg4, %q noinline : (i32, i32, i32, f32, f32, i32) -> i32 {
     %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
     %b = emitc.call_opaque "bar" (%a, %arg2, %q) : (i32, i32, i32) -> (i32)
     %c = emitc.mul %arg3, %arg4 : (f32, f32) -> f32
@@ -246,12 +246,20 @@ emitc.verbatim "typedef float f32;"
 // The value is not interpreted as format string if there are no operands.
 emitc.verbatim "{} {  }"
 
-func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32, %arg2: !emitc.array<3x!emitc.ptr<i32>>) {
+  %a = "emitc.variable"() <{value = #emitc.opaque<"1">}> : () -> !emitc.lvalue<i32>
+
+  // Check that the lvalue type can be used by verbatim.
+  emitc.verbatim "++{};" args %a : !emitc.lvalue<i32>
+
+  // Check that the array type can be used by verbatim.
+  emitc.verbatim "*{}[0] = 1;" args %arg2 : !emitc.array<3x!emitc.ptr<i32>>
+
   emitc.verbatim "{} + {};" args %arg0, %arg1 : !emitc.ptr<i32>, i32
 
-  // Check there is no ambiguity whether %a is the argument to the emitc.verbatim op.
-  emitc.verbatim "a"
-  %a = "emitc.constant"(){value = 42 : i32} : () -> i32
+  // Check there is no ambiguity whether %b is the argument to the emitc.verbatim op.
+  emitc.verbatim "b"
+  %b = "emitc.constant"(){value = 42 : i32} : () -> i32
 
   return
 }
@@ -278,8 +286,11 @@ func.func @assign_global(%arg0 : i32) {
 
 func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: !emitc.lvalue<!emitc.opaque<"mystruct_ptr">>, %arg2: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) {
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
-  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %2 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
+  %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
+  %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   return
 }
 
@@ -301,4 +312,16 @@ func.func @switch() {
   }
 
   return 
+}
+
+emitc.class final @finalClass {
+  emitc.field @fieldName0 : !emitc.array<1xf32>
+  emitc.field @fieldName1 : !emitc.array<1xf32>
+  emitc.func @execute() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    %1 = get_field @fieldName0 : !emitc.array<1xf32>
+    %2 = get_field @fieldName1 : !emitc.array<1xf32>
+    %3 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
 }

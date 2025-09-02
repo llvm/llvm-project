@@ -80,6 +80,16 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
+  MachineInstr *Def = getVRegDef(MRI, Reg);
+  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+         "Expected G_GLOBAL_VALUE");
+  const GlobalValue *GV = Def->getOperand(1).getGlobal();
+  Value *V = GV->getOperand(0);
+  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
+  return CDA->getAsCString().str();
+}
+
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
@@ -142,6 +152,30 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  MachineBasicBlock &MBB = *I.getParent();
+  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
+                 .addUse(Reg)
+                 .addImm(Member)
                  .addImm(static_cast<uint32_t>(Dec));
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
@@ -236,6 +270,10 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::CodeSectionINTEL;
   case 10:
     return SPIRV::StorageClass::Private;
+  case 11:
+    return SPIRV::StorageClass::StorageBuffer;
+  case 12:
+    return SPIRV::StorageClass::Uniform;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -425,8 +463,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -718,7 +758,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }
@@ -955,6 +995,29 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
 }
 
 } // namespace llvm

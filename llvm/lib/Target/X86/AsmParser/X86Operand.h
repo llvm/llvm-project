@@ -107,8 +107,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   /// getOffsetOfLoc - Get the location of the offset operator.
   SMLoc getOffsetOfLoc() const override { return OffsetOfLoc; }
 
-  void print(raw_ostream &OS) const override {
-
+  void print(raw_ostream &OS, const MCAsmInfo &) const override {
     auto PrintImmValue = [&](const MCExpr *Val, const char *VName) {
       if (Val->getKind() == MCExpr::Constant) {
         if (auto Imm = cast<MCConstantExpr>(Val)->getValue())

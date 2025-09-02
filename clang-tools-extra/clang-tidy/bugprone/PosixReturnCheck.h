@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-class PosixReturnCheck: public ClangTidyCheck {
+class PosixReturnCheck : public ClangTidyCheck {
 public:
   PosixReturnCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}

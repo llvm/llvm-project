@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hurd.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Support/Path.h"
@@ -71,6 +71,13 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
+  GCCInstallation.TripleToDebianMultiarch = [](const llvm::Triple &T) {
+    StringRef TripleStr = T.str();
+    StringRef DebianMultiarch =
+        T.getArch() == llvm::Triple::x86 ? "i386-gnu" : TripleStr;
+    return DebianMultiarch;
+  };
+
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
@@ -207,12 +214,7 @@ void Hurd::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86 ? "i386-gnu"
-                                                                 : TripleStr;
-
-  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, DebianMultiarch);
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
 }
 
 void Hurd::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

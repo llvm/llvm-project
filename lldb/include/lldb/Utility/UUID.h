@@ -12,26 +12,27 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
 
 namespace lldb_private {
 
-  class Stream;
+class Stream;
 
+/// Represents UUID's of various sizes.  In all cases, a uuid of all zeros is
+/// treated as an "Invalid UUID" marker, and the UUID created from such data
+/// will return false for IsValid.
 class UUID {
-  // Represents UUID's of various sizes.  In all cases, a uuid of all zeros is
-  // treated as an "Invalid UUID" marker, and the UUID created from such data
-  // will return false for IsValid.
 public:
   UUID() = default;
-  
-  /// Creates a uuid from the data pointed to by the bytes argument.
+
+  /// Create a uuid from the data pointed to by the bytes argument.
   UUID(llvm::ArrayRef<uint8_t> bytes) : m_bytes(bytes) {
     if (llvm::all_of(m_bytes, [](uint8_t b) { return b == 0; })) {
       Clear();
-   }
+    }
   }
 
   // Reference:
@@ -50,13 +51,12 @@ public:
   /// Create a UUID from CvRecordPdb70.
   UUID(CvRecordPdb70 debug_info);
 
-  /// Creates a UUID from the data pointed to by the bytes argument. 
+  /// Create a UUID from the data pointed to by the bytes argument.
   UUID(const void *bytes, uint32_t num_bytes) {
     if (!bytes)
       return;
-    *this 
-        = UUID(llvm::ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(bytes), 
-               num_bytes));
+    *this = UUID(llvm::ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(bytes), num_bytes));
   }
 
   void Clear() { m_bytes.clear(); }
@@ -67,7 +67,7 @@ public:
 
   explicit operator bool() const { return IsValid(); }
   bool IsValid() const { return !m_bytes.empty(); }
-  
+
   std::string GetAsString(llvm::StringRef separator = "-") const;
 
   bool SetFromStringRef(llvm::StringRef str);
@@ -87,6 +87,9 @@ public:
   static llvm::StringRef
   DecodeUUIDBytesFromString(llvm::StringRef str,
                             llvm::SmallVectorImpl<uint8_t> &uuid_bytes);
+
+  /// Create a random UUID.
+  static UUID Generate(uint32_t num_bytes = 16);
 
 private:
   // GNU ld generates 20-byte build-ids. Size chosen to avoid heap allocations

@@ -1,4 +1,5 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler  -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-LARGE
 
 include "llvm/Target/Target.td"
 
@@ -34,11 +35,18 @@ def InstB : TestInstruction {
   let AsmString = "InstB";
 }
 
-// CHECK:      /* 0 */       MCD::OPC_ExtractField, 4, 4,  // Inst{7-4} ...
-// CHECK-NEXT: /* 3 */       MCD::OPC_FilterValue, 0, 18, 0, 0, // Skip to: 26
-// CHECK-NEXT: /* 8 */       MCD::OPC_CheckField, 2, 2, 0, 7, 0, 0, // Skip to: 22
-// CHECK-NEXT: /* 15 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, skip to: 22
-// CHECK-NEXT: /* 22 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA
-// CHECK-NEXT: /* 26 */      MCD::OPC_Fail,
+// CHECK:      /* 0 */       MCD::OPC_CheckFieldOrFail, 4, 4, 0,
+// CHECK-NEXT: /* 4 */       MCD::OPC_CheckField, 2, 2, 0, 6, 0, // Skip to: 16
+// CHECK-NEXT: /* 10 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 16
+// CHECK-NEXT: /* 16 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA
+// CHECK-NEXT: };
 
 // CHECK: if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+
+// CHECK-LARGE:      /* 0 */       MCD::OPC_CheckFieldOrFail, 4, 4, 0,
+// CHECK-LARGE-NEXT: /* 4 */       MCD::OPC_CheckField, 2, 2, 0, 7, 0, 0, // Skip to: 18
+// CHECK-LARGE-NEXT: /* 11 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 18
+// CHECK-LARGE-NEXT: /* 18 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: {{[0-9]+}}
+// CHECK-LARGE-NEXT: };
+
+// CHECK-LARGE: if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

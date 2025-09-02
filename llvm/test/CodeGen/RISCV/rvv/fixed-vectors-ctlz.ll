@@ -305,10 +305,10 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -696,10 +696,10 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -1068,10 +1068,10 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -1438,10 +1438,10 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32

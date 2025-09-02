@@ -52,6 +52,7 @@ namespace opts {
 extern cl::opt<bool> PrintAll;
 extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
+extern bool shouldDumpDot(const bolt::BinaryFunction &Function);
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
 extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -340,7 +341,7 @@ Error BinaryFunctionPassManager::runPasses() {
 
       Function.print(BC.outs(), Message);
 
-      if (opts::DumpDotAll)
+      if (opts::shouldDumpDot(Function))
         Function.dumpGraphForPass(PassIdName);
     }
   }
@@ -497,6 +498,10 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
+  // Patch original function entries
+  if (BC.HasRelocations)
+    Manager.registerPass(std::make_unique<PatchEntries>());
+
   if (BC.isAArch64()) {
     Manager.registerPass(
         std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
@@ -523,10 +528,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   // Assign each function an output section.
   Manager.registerPass(std::make_unique<AssignSections>());
-
-  // Patch original function entries
-  if (BC.HasRelocations)
-    Manager.registerPass(std::make_unique<PatchEntries>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

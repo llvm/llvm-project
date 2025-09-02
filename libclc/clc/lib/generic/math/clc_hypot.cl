@@ -20,4 +20,3 @@
 
 #define __CLC_BODY <clc_hypot.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY

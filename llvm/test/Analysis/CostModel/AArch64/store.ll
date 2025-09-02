@@ -3,10 +3,12 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64-unknown -mattr=slow-misaligned-128store | FileCheck %s --check-prefix=SLOW_MISALIGNED_128_STORE
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-v256:32:256-a0:0:32-n32-S32"
+
+; If FeatureSlowMisaligned128Store is set, we penalize 128-bit stores.
+; The unlegalized 256-bit stores are further penalized when legalized down
+; to 128-bit stores.
+
 define void @getMemoryOpCost() {
-    ; If FeatureSlowMisaligned128Store is set, we penalize 128-bit stores.
-    ; The unlegalized 256-bit stores are further penalized when legalized down
-    ; to 128-bit stores.
 ; CHECK-LABEL: 'getMemoryOpCost'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <4 x i64> undef, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store <8 x i32> undef, ptr undef, align 4

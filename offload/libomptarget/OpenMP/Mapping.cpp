@@ -326,6 +326,28 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   // data transfer.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
       (LR.TPR.Flags.IsNewEntry || HasFlagAlways) && Size != 0) {
+
+    // If we have something like:
+    //   #pragma omp target map(to: s.myarr[0:10]) map(to: s.myarr[0:10])
+    // then we see two "new" mappings of the struct member s.myarr here --
+    // and both have the "IsNewEntry" flag set, so trigger the copy to device
+    // below.  But, the shadow pointer is only initialised on the target for
+    // the first copy, and the second copy clobbers it.  So, this condition
+    // avoids the (second) copy here if we have already set shadow pointer info.
+    auto FailOnPtrFound = [HstPtrBegin, Size](ShadowPtrInfoTy &SP) {
+      if (SP.HstPtrAddr >= HstPtrBegin &&
+          SP.HstPtrAddr < (void *)((char *)HstPtrBegin + Size))
+        return OFFLOAD_FAIL;
+      return OFFLOAD_SUCCESS;
+    };
+    if (LR.TPR.getEntry()->foreachShadowPointerInfo(FailOnPtrFound) ==
+        OFFLOAD_FAIL) {
+      DP("Multiple new mappings of %" PRId64 " bytes detected (hst:" DPxMOD
+         ") -> (tgt:" DPxMOD ")\n",
+         Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
+      return std::move(LR.TPR);
+    }
+
     DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n", Size,
        DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
 

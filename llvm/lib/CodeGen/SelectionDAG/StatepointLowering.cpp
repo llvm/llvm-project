@@ -1258,7 +1258,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   if (Record.type == RecordType::Spill) {
     unsigned Index = Record.payload.FI;
-    SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
+    SDValue SpillSlot = DAG.getFrameIndex(Index, getFrameIndexTy());
 
     // All the reloads are independent and are reading memory only modified by
     // statepoints (i.e. no other aliasing stores); informing SelectionDAG of

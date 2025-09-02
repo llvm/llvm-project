@@ -96,11 +96,10 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   TypeSize Offset = TypeSize::getFixed(FixedOffset);
   ArrayRef<TypeSize> MemberOffsets = getMemberOffsets();
 
-  const auto *SI =
-      std::upper_bound(MemberOffsets.begin(), MemberOffsets.end(), Offset,
-                       [](TypeSize LHS, TypeSize RHS) -> bool {
-                         return TypeSize::isKnownLT(LHS, RHS);
-                       });
+  const auto *SI = llvm::upper_bound(MemberOffsets, Offset,
+                                     [](TypeSize LHS, TypeSize RHS) -> bool {
+                                       return TypeSize::isKnownLT(LHS, RHS);
+                                     });
   assert(SI != MemberOffsets.begin() && "Offset not in structure type!");
   --SI;
   assert(TypeSize::isKnownLE(*SI, Offset) && "upper_bound didn't work");
@@ -178,7 +177,7 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
     return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
-  if (T.isOSWindowsOrUEFI() && T.isOSBinFormatCOFF())
+  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
   if (T.isOSBinFormatXCOFF())
     return "-m:a";
@@ -927,12 +926,13 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
     return APInt::getZero(BitWidth);
   }
 
-  APInt Index = Offset.sdiv(ElemSize);
-  Offset -= Index * ElemSize;
+  uint64_t FixedElemSize = ElemSize.getFixedValue();
+  APInt Index = Offset.sdiv(FixedElemSize);
+  Offset -= Index * FixedElemSize;
   if (Offset.isNegative()) {
     // Prefer a positive remaining offset to allow struct indexing.
     --Index;
-    Offset += ElemSize;
+    Offset += FixedElemSize;
     assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
   }
   return Index;

@@ -71,9 +71,9 @@ struct VersionEntry {
   bool IsVerDef;
 };
 
-StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
-uint32_t getELFRelativeRelocationType(uint32_t Machine);
-StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
+LLVM_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
 // Subclasses of ELFFile may need this for template instantiation
 inline std::pair<unsigned char, unsigned char>
@@ -255,6 +255,11 @@ template <class ELFT>
 class ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  // Default ctor and copy assignment operator required to instantiate the
+  // template for DLL export.
+  ELFFile(const ELFFile &) = default;
+  ELFFile &operator=(const ELFFile &) = default;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is
@@ -926,7 +931,7 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
   if (SectionTableOffset == 0) {
     if (!FakeSections.empty())
-      return ArrayRef(FakeSections.data(), FakeSections.size());
+      return ArrayRef(FakeSections);
     return ArrayRef<Elf_Shdr>();
   }
 

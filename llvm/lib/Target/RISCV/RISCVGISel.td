@@ -109,15 +109,15 @@ def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
 def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_8,  LB, i16>;
-  def : LdPat<atomic_load_16, LH, i16>;
+  def : LdPat<atomic_load_aext_8,  LB, i16>;
+  def : LdPat<atomic_load_nonext_16, LH, i16>;
 
   def : StPat<atomic_store_8,  SB, GPR, i16>;
   def : StPat<atomic_store_16, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_32, LW, i32>;
+  def : LdPat<atomic_load_nonext_32, LW, i32>;
   def : StPat<atomic_store_32, SW, GPR, i32>;
 }
 
@@ -147,7 +147,7 @@ def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }
 
-let Predicates = [IsRV64, NotHasStdExtZba] in
+let Predicates = [IsRV64, NoStdExtZba] in
 def : Pat<(zext (i32 GPR:$src)), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 
 let Predicates = [IsRV32, NoStdExtZbb, NoStdExtZbkb] in 

@@ -95,8 +95,7 @@ void SuffixTree::setSuffixIndices() {
   unsigned CurrNodeLen = 0;
   ToVisit.push_back({CurrNode, CurrNodeLen});
   while (!ToVisit.empty()) {
-    std::tie(CurrNode, CurrNodeLen) = ToVisit.back();
-    ToVisit.pop_back();
+    std::tie(CurrNode, CurrNodeLen) = ToVisit.pop_back_val();
     // Length of the current node from the root down to here.
     CurrNode->setConcatLen(CurrNodeLen);
     if (auto *InternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode))
@@ -306,8 +305,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
   // Continue visiting nodes until we find one which repeats more than once.
   while (!InternalNodesToVisit.empty()) {
     RepeatedSubstringStarts.clear();
-    auto *Curr = InternalNodesToVisit.back();
-    InternalNodesToVisit.pop_back();
+    auto *Curr = InternalNodesToVisit.pop_back_val();
 
     // Keep track of the length of the string associated with the node. If
     // it's too short, we'll quit.
@@ -348,8 +346,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     // Yes. Update the state to reflect this, and then bail out.
     N = Curr;
     RS.Length = Length;
-    for (unsigned StartIdx : RepeatedSubstringStarts)
-      RS.StartIndices.push_back(StartIdx);
+    llvm::append_range(RS.StartIndices, RepeatedSubstringStarts);
     break;
   }
   // At this point, either NewRS is an empty RepeatedSubstring, or it was

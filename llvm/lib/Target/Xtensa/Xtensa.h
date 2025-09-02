@@ -19,10 +19,12 @@
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
-class XtensaTargetMachine;
 class FunctionPass;
+class PassRegistry;
+class XtensaTargetMachine;
 
 FunctionPass *createXtensaISelDag(XtensaTargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
+void initializeXtensaAsmPrinterPass(PassRegistry &);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_XTENSA_XTENSA_H

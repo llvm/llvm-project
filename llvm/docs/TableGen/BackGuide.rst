@@ -191,7 +191,7 @@ Some of these classes have additional members that
 are described in the following subsections.
 
 *All* of the classes derived from ``RecTy`` provide the ``get()`` function.
-It returns an instance of ``Recty`` corresponding to the derived class.
+It returns an instance of ``RecTy`` corresponding to the derived class.
 Some of the ``get()`` functions require an argument to
 specify which particular variant of the type is desired. These arguments are
 described in the following subsections.
@@ -354,12 +354,12 @@ The class provides many additional functions:
 * Functions to determine whether there are any operands and to get the
   number of operands.
 
-* Functions to the get the operands, both individually and together.
+* Functions to get the operands, both individually and together.
 
 * Functions to determine whether there are any names and to
   get the number of names
 
-* Functions to the get the names, both individually and together.
+* Functions to get the names, both individually and together.
 
 * Functions to get the operand iterator ``begin()`` and ``end()`` values.
 
@@ -605,34 +605,33 @@ null if the field does not exist.
 
 The field is assumed to have another record as its value. That record is returned
 as a pointer to a ``Record``. If the field does not exist or is unset, the
-functions returns null.
+function returns null.
 
 Getting Record Superclasses
 ===========================
 
-The ``Record`` class provides a function to obtain the superclasses of a
-record. It is named ``getSuperClasses`` and returns an ``ArrayRef`` of an
-array of ``std::pair`` pairs. The superclasses are in post-order: the order
-in which the superclasses were visited while copying their fields into the
-record. Each pair consists of a pointer to the ``Record`` instance for a
-superclass record and an instance of the ``SMRange`` class. The range
-indicates the source file locations of the beginning and end of the class
-definition.
+The ``Record`` class provides a function to obtain the direct superclasses
+of a record. It is named ``getDirectSuperClasses`` and returns an
+``ArrayRef`` of an array of ``std::pair`` pairs. Each pair consists of a
+pointer to the ``Record`` instance for a superclass record and an instance
+of the ``SMRange`` class. The range indicates the source file locations of
+the beginning and end of the class definition.
 
-This example obtains the superclasses of the ``Prototype`` record and then
-iterates over the pairs in the returned array.
+This example obtains the direct superclasses of the ``Prototype`` record and
+then iterates over the pairs in the returned array.
 
 .. code-block:: text
 
   ArrayRef<std::pair<const Record *, SMRange>>
-      Superclasses = Prototype->getSuperClasses();
-  for (const auto &SuperPair : Superclasses) {
+      Superclasses = Prototype->getDirectSuperClasses();
+  for (const auto &[Super, Range] : Superclasses) {
     ...
   }
 
-The ``Record`` class also provides a function, ``getDirectSuperClasses``, to
-append the *direct* superclasses of a record to a given vector of type
-``SmallVectorImpl<Record *>``.
+The ``Record`` class also provides a function, ``getSuperClasses``, to
+return a vector of *all* superclasses of a record. The superclasses are in
+post-order: the order in which the superclasses were visited while copying
+their fields into the record.
 
 Emitting Text to the Output Stream
 ==================================

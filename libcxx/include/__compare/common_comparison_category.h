@@ -72,7 +72,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
 
 // [cmp.common], common comparison category type
 template <class... _Ts>
-struct _LIBCPP_TEMPLATE_VIS common_comparison_category {
+struct common_comparison_category {
   using type _LIBCPP_NODEBUG = decltype(__comp_detail::__get_comp_type<_Ts...>());
 };
 

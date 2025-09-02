@@ -60,18 +60,16 @@ private:
 BreakpointLocationCollection::collection::iterator
 BreakpointLocationCollection::GetIDPairIterator(lldb::break_id_t break_id,
                                                 lldb::break_id_t break_loc_id) {
-  return std::find_if(
-      m_break_loc_collection.begin(),
-      m_break_loc_collection.end(),                     // Search full range
+  return llvm::find_if(
+      m_break_loc_collection,                           // Search full range
       BreakpointIDPairMatches(break_id, break_loc_id)); // Predicate
 }
 
 BreakpointLocationCollection::collection::const_iterator
 BreakpointLocationCollection::GetIDPairConstIterator(
     lldb::break_id_t break_id, lldb::break_id_t break_loc_id) const {
-  return std::find_if(
-      m_break_loc_collection.begin(),
-      m_break_loc_collection.end(),                     // Search full range
+  return llvm::find_if(
+      m_break_loc_collection,                           // Search full range
       BreakpointIDPairMatches(break_id, break_loc_id)); // Predicate
 }
 
@@ -123,7 +121,7 @@ bool BreakpointLocationCollection::ShouldStop(
   size_t prev_size = GetSize();
   while (i < prev_size) {
     // ShouldStop can remove the breakpoint from the list, or even delete
-    // it, so we should 
+    // it, so we should
     BreakpointLocationSP cur_loc_sp = GetByIndex(i);
     BreakpointSP keep_bkpt_alive_sp = cur_loc_sp->GetBreakpoint().shared_from_this();
     if (cur_loc_sp->ShouldStop(context))

@@ -3,6 +3,7 @@ static_library("Passes") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/Support",

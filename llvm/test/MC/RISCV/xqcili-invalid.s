@@ -25,7 +25,7 @@ qc.li x0, 114514
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.li x10
 
-# CHECK-IMM: :[[@LINE+1]]:12: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
 qc.li x10, 33554432
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension)

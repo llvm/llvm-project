@@ -736,7 +736,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_FCONSTANT: {
     // TODO: Use constant pool for complex constants.
-    // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
     Register DstReg = MI.getOperand(0).getReg();
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
@@ -753,8 +752,22 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;
     } else {
+      // s64 on rv32
       assert(Size == 64 && !Subtarget->is64Bit() &&
              "Unexpected size or subtarget");
+
+      if (Imm.isNonNegative() && Imm.isZero()) {
+        // Optimize +0.0 to use fcvt.d.w
+        MachineInstrBuilder FCVT =
+            MIB.buildInstr(RISCV::FCVT_D_W, {DstReg}, {Register(RISCV::X0)})
+                .addImm(RISCVFPRndMode::RNE);
+        if (!FCVT.constrainAllUses(TII, TRI, RBI))
+          return false;
+
+        MI.eraseFromParent();
+        return true;
+      }
+
       // Split into two pieces and build through the stack.
       Register GPRRegHigh = MRI->createVirtualRegister(&RISCV::GPRRegClass);
       Register GPRRegLow = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -789,7 +802,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     RISCVCC::CondCode CC;
     getOperandsForBranch(MI.getOperand(0).getReg(), CC, LHS, RHS, *MRI);
 
-    auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(STI, CC), {}, {LHS, RHS})
+    auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(CC), {}, {LHS, RHS})
                    .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);

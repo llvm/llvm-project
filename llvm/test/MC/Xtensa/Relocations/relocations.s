@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple xtensa --mattr=+density < %s -show-encoding \
+# RUN: llvm-mc -triple xtensa --mattr=+density,loop < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
-# RUN: llvm-mc -filetype=obj -triple xtensa --mattr=+density < %s \
+# RUN: llvm-mc -filetype=obj -triple xtensa --mattr=+density,loop < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
 # Check prefixes:
@@ -183,3 +183,12 @@ l32r a6, func
 # RELOC: R_XTENSA_SLOT0_OP
 # INSTR: l32r    a6, func
 # FIXUP: fixup A - offset: 0, value: func, kind: fixup_xtensa_l32r_16
+
+loop a3, LBL
+# RELOC: R_XTENSA_SLOT0_OP
+# INSTR: loop    a3, LBL
+# FIXUP: fixup A - offset: 0, value: LBL, kind: fixup_xtensa_loop_8
+
+.fill 200
+
+LBL:

@@ -29,9 +29,8 @@ define i32 @test_simple_rotr(i32 %x) {
 define i32 @test_rotl_var(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_rotl_var:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r2, r0, r1
 ; CHECK-NEXT:    rsb r1, r1, #32
-; CHECK-NEXT:    add r0, r2, r0, lsr r1
+; CHECK-NEXT:    ror r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %shl = shl i32 %x, %y
   %sub = sub i32 32, %y
@@ -43,9 +42,7 @@ define i32 @test_rotl_var(i32 %x, i32 %y) {
 define i32 @test_rotr_var(i32 %x, i32 %y) {
 ; CHECK-LABEL: test_rotr_var:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsr r2, r0, r1
-; CHECK-NEXT:    rsb r1, r1, #32
-; CHECK-NEXT:    add r0, r2, r0, lsl r1
+; CHECK-NEXT:    ror r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %shr = lshr i32 %x, %y
   %sub = sub i32 32, %y

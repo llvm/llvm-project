@@ -9,9 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestStopHooks(TestBase):
-    # If your test case doesn't stress debug info, then
-    # set this to true.  That way it won't be run once for
-    # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -42,17 +39,23 @@ class TestStopHooks(TestBase):
 
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
+        # Add two stop hooks here, one to auto-continue and one not.  Make sure
+        # that we still stop in that case.
+        interp.HandleCommand("target stop-hook add -G false -o 'expr g_var++'", result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")
+
+        interp.HandleCommand("target stop-hook add -G true -o 'expr g_var++'", result)
+        self.assertTrue(result.Succeeded(), "Set the second target stop hook")
+
         thread.StepOut()
         var = target.FindFirstGlobalVariable("g_var")
         self.assertTrue(var.IsValid())
-        self.assertEqual(var.GetValueAsUnsigned(), 1, "Updated g_var")
+        self.assertEqual(var.GetValueAsUnsigned(), 2, "Updated g_var")
 
     def after_expr_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
+        interp.HandleCommand("target stop-hook add -o 'expr g_var++' -I false", result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")
 
         (target, process, thread, first_bkpt) = lldbutil.run_to_source_breakpoint(

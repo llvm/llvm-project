@@ -12,14 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceArguments.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <set>
 #include <vector>
 
@@ -112,7 +112,7 @@ static bool allFuncUsersRewritable(const Function &F) {
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceArgumentsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
@@ -176,8 +176,4 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
     F->replaceAllUsesWith(ClonedFunc);
     F->eraseFromParent();
   }
-}
-
-void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractArgumentsFromModule, "Reducing Arguments");
 }

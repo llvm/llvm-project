@@ -65,10 +65,9 @@ bool checkIntegrityScopesTree(LVScope *Root) {
   TraverseScope(Root);
   bool PassIntegrity = true;
   if (Duplicate.size()) {
-    std::stable_sort(begin(Duplicate), end(Duplicate),
-                     [](const auto &l, const auto &r) {
-                       return std::get<0>(l)->getID() < std::get<0>(r)->getID();
-                     });
+    llvm::stable_sort(Duplicate, [](const auto &l, const auto &r) {
+      return std::get<0>(l)->getID() < std::get<0>(r)->getID();
+    });
 
     auto PrintIndex = [](unsigned Index) {
       if (Index)
@@ -193,6 +192,253 @@ StringRef LVReader::getFilename(LVObject *Object, size_t Index) const {
   }
 
   return CompileUnit ? CompileUnit->getFilename(Index) : StringRef();
+}
+
+void LVReader::addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope) {
+  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
+  ScopesWithRanges->addEntry(Scope);
+}
+
+void LVReader::addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope,
+                               LVAddress LowerAddress, LVAddress UpperAddress) {
+  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
+  ScopesWithRanges->addEntry(Scope, LowerAddress, UpperAddress);
+}
+
+LVRange *LVReader::getSectionRanges(LVSectionIndex SectionIndex) {
+  // Check if we already have a mapping for this section index.
+  LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
+  if (IterSection == SectionRanges.end())
+    IterSection =
+        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
+  LVRange *Range = IterSection->second.get();
+  assert(Range && "Range is null.");
+  return Range;
+}
+
+LVElement *LVReader::createElement(dwarf::Tag Tag) {
+  CurrentScope = nullptr;
+  CurrentSymbol = nullptr;
+  CurrentType = nullptr;
+  CurrentRanges.clear();
+
+  LLVM_DEBUG(
+      { dbgs() << "\n[createElement] " << dwarf::TagString(Tag) << "\n"; });
+
+  if (!options().getPrintSymbols()) {
+    switch (Tag) {
+    // As the command line options did not specify a request to print
+    // logical symbols (--print=symbols or --print=all or --print=elements),
+    // skip its creation.
+    case dwarf::DW_TAG_formal_parameter:
+    case dwarf::DW_TAG_unspecified_parameters:
+    case dwarf::DW_TAG_member:
+    case dwarf::DW_TAG_variable:
+    case dwarf::DW_TAG_inheritance:
+    case dwarf::DW_TAG_constant:
+    case dwarf::DW_TAG_call_site_parameter:
+    case dwarf::DW_TAG_GNU_call_site_parameter:
+      return nullptr;
+    default:
+      break;
+    }
+  }
+
+  switch (Tag) {
+  // Types.
+  case dwarf::DW_TAG_base_type:
+    CurrentType = createType();
+    CurrentType->setIsBase();
+    if (options().getAttributeBase())
+      CurrentType->setIncludeInPrint();
+    return CurrentType;
+  case dwarf::DW_TAG_const_type:
+    CurrentType = createType();
+    CurrentType->setIsConst();
+    CurrentType->setName("const");
+    return CurrentType;
+  case dwarf::DW_TAG_enumerator:
+    CurrentType = createTypeEnumerator();
+    return CurrentType;
+  case dwarf::DW_TAG_imported_declaration:
+    CurrentType = createTypeImport();
+    CurrentType->setIsImportDeclaration();
+    return CurrentType;
+  case dwarf::DW_TAG_imported_module:
+    CurrentType = createTypeImport();
+    CurrentType->setIsImportModule();
+    return CurrentType;
+  case dwarf::DW_TAG_pointer_type:
+    CurrentType = createType();
+    CurrentType->setIsPointer();
+    CurrentType->setName("*");
+    return CurrentType;
+  case dwarf::DW_TAG_ptr_to_member_type:
+    CurrentType = createType();
+    CurrentType->setIsPointerMember();
+    CurrentType->setName("*");
+    return CurrentType;
+  case dwarf::DW_TAG_reference_type:
+    CurrentType = createType();
+    CurrentType->setIsReference();
+    CurrentType->setName("&");
+    return CurrentType;
+  case dwarf::DW_TAG_restrict_type:
+    CurrentType = createType();
+    CurrentType->setIsRestrict();
+    CurrentType->setName("restrict");
+    return CurrentType;
+  case dwarf::DW_TAG_rvalue_reference_type:
+    CurrentType = createType();
+    CurrentType->setIsRvalueReference();
+    CurrentType->setName("&&");
+    return CurrentType;
+  case dwarf::DW_TAG_subrange_type:
+    CurrentType = createTypeSubrange();
+    return CurrentType;
+  case dwarf::DW_TAG_template_value_parameter:
+    CurrentType = createTypeParam();
+    CurrentType->setIsTemplateValueParam();
+    return CurrentType;
+  case dwarf::DW_TAG_template_type_parameter:
+    CurrentType = createTypeParam();
+    CurrentType->setIsTemplateTypeParam();
+    return CurrentType;
+  case dwarf::DW_TAG_GNU_template_template_param:
+    CurrentType = createTypeParam();
+    CurrentType->setIsTemplateTemplateParam();
+    return CurrentType;
+  case dwarf::DW_TAG_typedef:
+    CurrentType = createTypeDefinition();
+    return CurrentType;
+  case dwarf::DW_TAG_unspecified_type:
+    CurrentType = createType();
+    CurrentType->setIsUnspecified();
+    return CurrentType;
+  case dwarf::DW_TAG_volatile_type:
+    CurrentType = createType();
+    CurrentType->setIsVolatile();
+    CurrentType->setName("volatile");
+    return CurrentType;
+
+  // Symbols.
+  case dwarf::DW_TAG_formal_parameter:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsParameter();
+    return CurrentSymbol;
+  case dwarf::DW_TAG_unspecified_parameters:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsUnspecified();
+    CurrentSymbol->setName("...");
+    return CurrentSymbol;
+  case dwarf::DW_TAG_member:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsMember();
+    return CurrentSymbol;
+  case dwarf::DW_TAG_variable:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsVariable();
+    return CurrentSymbol;
+  case dwarf::DW_TAG_inheritance:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsInheritance();
+    return CurrentSymbol;
+  case dwarf::DW_TAG_call_site_parameter:
+  case dwarf::DW_TAG_GNU_call_site_parameter:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsCallSiteParameter();
+    return CurrentSymbol;
+  case dwarf::DW_TAG_constant:
+    CurrentSymbol = createSymbol();
+    CurrentSymbol->setIsConstant();
+    return CurrentSymbol;
+
+  // Scopes.
+  case dwarf::DW_TAG_catch_block:
+    CurrentScope = createScope();
+    CurrentScope->setIsCatchBlock();
+    return CurrentScope;
+  case dwarf::DW_TAG_lexical_block:
+    CurrentScope = createScope();
+    CurrentScope->setIsLexicalBlock();
+    return CurrentScope;
+  case dwarf::DW_TAG_try_block:
+    CurrentScope = createScope();
+    CurrentScope->setIsTryBlock();
+    return CurrentScope;
+  case dwarf::DW_TAG_compile_unit:
+  case dwarf::DW_TAG_skeleton_unit:
+    CurrentScope = createScopeCompileUnit();
+    CompileUnit = static_cast<LVScopeCompileUnit *>(CurrentScope);
+    return CurrentScope;
+  case dwarf::DW_TAG_inlined_subroutine:
+    CurrentScope = createScopeFunctionInlined();
+    return CurrentScope;
+  case dwarf::DW_TAG_namespace:
+    CurrentScope = createScopeNamespace();
+    return CurrentScope;
+  case dwarf::DW_TAG_template_alias:
+    CurrentScope = createScopeAlias();
+    return CurrentScope;
+  case dwarf::DW_TAG_array_type:
+    CurrentScope = createScopeArray();
+    return CurrentScope;
+  case dwarf::DW_TAG_call_site:
+  case dwarf::DW_TAG_GNU_call_site:
+    CurrentScope = createScopeFunction();
+    CurrentScope->setIsCallSite();
+    return CurrentScope;
+  case dwarf::DW_TAG_entry_point:
+    CurrentScope = createScopeFunction();
+    CurrentScope->setIsEntryPoint();
+    return CurrentScope;
+  case dwarf::DW_TAG_subprogram:
+    CurrentScope = createScopeFunction();
+    CurrentScope->setIsSubprogram();
+    return CurrentScope;
+  case dwarf::DW_TAG_subroutine_type:
+    CurrentScope = createScopeFunctionType();
+    return CurrentScope;
+  case dwarf::DW_TAG_label:
+    CurrentScope = createScopeFunction();
+    CurrentScope->setIsLabel();
+    return CurrentScope;
+  case dwarf::DW_TAG_class_type:
+    CurrentScope = createScopeAggregate();
+    CurrentScope->setIsClass();
+    return CurrentScope;
+  case dwarf::DW_TAG_structure_type:
+    CurrentScope = createScopeAggregate();
+    CurrentScope->setIsStructure();
+    return CurrentScope;
+  case dwarf::DW_TAG_union_type:
+    CurrentScope = createScopeAggregate();
+    CurrentScope->setIsUnion();
+    return CurrentScope;
+  case dwarf::DW_TAG_enumeration_type:
+    CurrentScope = createScopeEnumeration();
+    return CurrentScope;
+  case dwarf::DW_TAG_GNU_formal_parameter_pack:
+    CurrentScope = createScopeFormalPack();
+    return CurrentScope;
+  case dwarf::DW_TAG_GNU_template_parameter_pack:
+    CurrentScope = createScopeTemplatePack();
+    return CurrentScope;
+  case dwarf::DW_TAG_module:
+    CurrentScope = createScopeModule();
+    return CurrentScope;
+  default:
+    // Collect TAGs not implemented.
+    if (options().getInternalTag() && Tag)
+      CompileUnit->addDebugTag(Tag, CurrentOffset);
+    break;
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "DWARF Tag not implemented: " << dwarf::TagString(Tag) << "\n";
+  });
+
+  return nullptr;
 }
 
 // The Reader is the module that creates the logical view using the debug

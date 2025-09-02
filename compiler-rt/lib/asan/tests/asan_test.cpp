@@ -395,7 +395,8 @@ TEST(AddressSanitizer, ReallocTest) {
   }
   free(ptr);
   // Realloc pointer returned by malloc(0).
-  int *ptr2 = Ident((int*)malloc(0));
+  void *ptr0 = malloc(0);
+  int *ptr2 = Ident((int *)ptr0);
   ptr2 = Ident((int*)realloc(ptr2, sizeof(*ptr2)));
   *ptr2 = 42;
   EXPECT_EQ(42, *ptr2);
@@ -1163,7 +1164,7 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 }
 #endif
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__HAIKU__)
 TEST(AddressSanitizer, MlockTest) {
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
   EXPECT_EQ(0, mlock((void *)0x12345, 0x5678));

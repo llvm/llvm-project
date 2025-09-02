@@ -322,3 +322,12 @@ define <128 x half> @masked_load_v128f16(ptr %a, <128 x i1> %mask) {
   ret <128 x half> %load
 }
 
+define <7 x float> @masked_load_v7f32(ptr %a, <7 x i1> %mask) {
+; CHECK-LABEL: masked_load_v7f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %load = call <7 x float> @llvm.masked.load.v7f32(ptr %a, i32 8, <7 x i1> %mask, <7 x float> undef)
+  ret <7 x float> %load
+}

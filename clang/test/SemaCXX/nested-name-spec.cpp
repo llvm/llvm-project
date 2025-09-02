@@ -1,4 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s 
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify=expected,cxx98,cxx98-11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,since-cxx11,cxx98-11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify=expected,since-cxx11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,since-cxx11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+
 namespace A {
   struct C {
     static int cx;
@@ -8,7 +15,9 @@ namespace A {
     static int Ag1();
     static int Ag2();
   };
-  int ax; // expected-note {{'ax' declared here}}
+  int ax;
+  // expected-note@-1 {{'ax' declared here}}
+  // expected-note@-2 {{'::A::ax' declared here}}
   void Af();
 }
 
@@ -93,7 +102,7 @@ void f3() {
   N::x = 0; // expected-error {{'N' is not a class, namespace, or enumeration}}
   { int A;           A::ax = 0; }
   { typedef int A;   A::ax = 0; } // expected-error{{'A' (aka 'int') is not a class, namespace, or enumeration}}
-  { typedef A::C A;  A::ax = 0; } // expected-error {{no member named 'ax'}}
+  { typedef A::C A;  A::ax = 0; } // expected-error {{no member named 'ax' in 'A::C'; did you mean '::A::ax'?}}
   { typedef A::C A;  A::cx = 0; }
 }
 
@@ -111,14 +120,14 @@ void A2::CC::NC::m(); // expected-error{{out-of-line declaration of a member mus
 
 namespace E {
   int X = 5;
-  
+
   namespace Nested {
     enum E {
       X = 0
     };
 
     int f() {
-      return E::X; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+      return E::X; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
     }
   }
 }
@@ -146,7 +155,7 @@ Operators::operator bool() {
 
 namespace A {
   void g(int&); // expected-note{{type of 1st parameter of member declaration does not match definition ('int &' vs 'const int &')}}
-} 
+}
 
 void A::f() {} // expected-error-re{{out-of-line definition of 'f' does not match any declaration in namespace 'A'{{$}}}}
 
@@ -170,8 +179,9 @@ void ::global_func2(int) { } // expected-warning{{extra qualification on member 
 
 void N::f() { } // okay
 
-struct Y;  // expected-note{{forward declaration of 'Y'}}
-Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}}
+// FIXME (GH147000): duplicate diagnostics
+struct Y;  // expected-note{{forward declaration of 'Y'}} since-cxx20-note{{forward declaration of 'Y'}}
+Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}} since-cxx20-error{{incomplete type 'Y' named in nested name specifier}}
 
 namespace PR25156 {
 struct Y;  // expected-note{{forward declaration of 'PR25156::Y'}}
@@ -189,7 +199,9 @@ bool (foo_S::value);
 
 
 namespace somens {
-  struct a { }; // expected-note{{candidate constructor (the implicit copy constructor)}}
+  struct a { };
+  // expected-note@-1 {{candidate constructor (the implicit copy constructor)}}
+  // since-cxx11-note@-2 {{candidate constructor (the implicit move constructor)}}
 }
 
 template <typename T>
@@ -409,7 +421,8 @@ T1<C2::N1> var_1a;
 T1<C2:N1> var_1b;  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}}
 template<int N> int F() {}
 int (*X1)() = (B1::B2 ? F<1> : F<2>);
-int (*X2)() = (B1:B2 ? F<1> : F<2>);  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}}
+int (*X2)() = (B1:B2 ? F<1> : F<2>);  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}} \
+                                         expected-note{{'PR18587::X2' declared here}}
 
 // Bit fields + templates
 struct S7a {
@@ -431,21 +444,22 @@ namespace PR16951 {
     };
   }
 
-  int x1 = ns::an_enumeration::ENUMERATOR; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+  int x1 = ns::an_enumeration::ENUMERATOR; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
 
-  int x2 = ns::an_enumeration::ENUMERATOR::vvv; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+  int x2 = ns::an_enumeration::ENUMERATOR::vvv; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
                                                 // expected-error{{'ENUMERATOR' is not a class, namespace, or enumeration}} \
 
-  int x3 = ns::an_enumeration::X; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+  int x3 = ns::an_enumeration::X; // cxx98-warning {{use of enumeration in a nested name specifier is a C++11 extension}} \
                                   // expected-error{{no member named 'X'}}
 
   enum enumerator_2 {
     ENUMERATOR_2
   };
 
-  int x4 = enumerator_2::ENUMERATOR_2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
-  int x5 = enumerator_2::X2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
-                             // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}}
+  int x4 = enumerator_2::ENUMERATOR_2; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+  int x5 = enumerator_2::X2; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+                             // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}} \
+                             // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'int (*)()'}}
 
 }
 
@@ -462,7 +476,7 @@ namespace A {
 class B {
   typedef C D; // expected-error{{unknown type name 'C'}}
   A::D::F;
-  // expected-error@-1{{'PR30619::A::B::D' (aka 'int') is not a class, namespace, or enumeration}}
+  // expected-error@-1{{'A::D' (aka 'int') is not a class, namespace, or enumeration}}
 };
 }
 }
@@ -485,4 +499,20 @@ struct x; // expected-note {{template is declared here}}
 
 template <typename T>
 int issue55962 = x::a; // expected-error {{use of class template 'x' requires template arguments}} \
-                       // expected-warning {{variable templates are a C++14 extension}}
+                       // cxx98-11-warning {{variable templates are a C++14 extension}}
+
+namespace ForwardDeclared {
+  typedef class A B;
+  struct A {
+    enum C {};
+    void F(B::C);
+  };
+}
+
+namespace GH63254 {
+template <typename...> struct V {}; // cxx98-warning {{variadic templates are a C++11 extension}}
+struct S : V<> {
+  using S::V; // expected-error {{using declaration refers to its own class}}
+  V<> v; // no crash
+};
+}

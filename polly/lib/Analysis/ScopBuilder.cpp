@@ -689,7 +689,7 @@ isl::set ScopBuilder::getPredecessorDomainConstraints(BasicBlock *BB,
 
   // Set of regions of which the entry block domain has been propagated to BB.
   // all predecessors inside any of the regions can be skipped.
-  SmallSet<Region *, 8> PropagatedRegions;
+  SmallPtrSet<Region *, 8> PropagatedRegions;
 
   for (auto *PredBB : predecessors(BB)) {
     // Skip backedges.
@@ -1856,8 +1856,7 @@ static void joinOperandTree(EquivalenceClasses<Instruction *> &UnionFind,
         continue;
 
       // Check if OpInst is in the BB and is a modeled instruction.
-      auto OpVal = UnionFind.findValue(OpInst);
-      if (OpVal == UnionFind.end())
+      if (!UnionFind.contains(OpInst))
         continue;
 
       UnionFind.unionSets(Inst, OpInst);

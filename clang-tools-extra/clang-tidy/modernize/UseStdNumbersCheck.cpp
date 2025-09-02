@@ -319,7 +319,7 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
 
   Finder->addMatcher(
       expr(
-          anyOfExhaustive(std::move(ConstantMatchers)),
+          anyOfExhaustive(ConstantMatchers),
           unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
           hasType(qualType(hasCanonicalTypeUnqualified(
               anyOf(qualType(asString("float")).bind("float"),
@@ -415,9 +415,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::sort(MatchedLiterals, [](const auto &LHS, const auto &RHS) {
-    return std::get<1>(LHS) < std::get<1>(RHS);
-  });
+  llvm::sort(MatchedLiterals, llvm::less_second());
 
   const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 

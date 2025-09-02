@@ -14,10 +14,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// This qsort_r uses the glibc argument ordering instead of the BSD argument
-// ordering (which puts arg before the function pointer). Putting arg after the
-// function pointer more closely matches the ordering for qsort_s, which is the
-// standardized equivalent of qsort_r.
+// This qsort_r uses the POSIX 1003.1-2024 argument ordering instead of the
+// historical BSD argument ordering (which put arg before the function pointer).
+// https://www.austingroupbugs.net/view.php?id=900
 
 void qsort_r(void *array, size_t array_size, size_t elem_size,
              int (*compare)(const void *, const void *, void *), void *arg);

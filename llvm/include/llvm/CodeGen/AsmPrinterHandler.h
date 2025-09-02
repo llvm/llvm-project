@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_ASMPRINTERHANDLER_H
 #define LLVM_CODEGEN_ASMPRINTERHANDLER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -30,7 +31,7 @@ typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
 
 /// Collects and handles AsmPrinter objects required to build debug
 /// or EH information.
-class AsmPrinterHandler {
+class LLVM_ABI AsmPrinterHandler {
 public:
   virtual ~AsmPrinterHandler();
 

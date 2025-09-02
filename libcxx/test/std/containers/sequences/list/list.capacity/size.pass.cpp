@@ -10,7 +10,7 @@
 
 // class list
 
-// size_type size() const noexcept;
+// size_type size() const noexcept; // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::list<int> C;
     C c;
@@ -56,6 +56,15 @@ int main(int, char**) {
     c.erase(c.begin());
     assert(c.size() == 0);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

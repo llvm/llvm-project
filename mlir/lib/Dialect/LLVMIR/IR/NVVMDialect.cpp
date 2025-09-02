@@ -18,7 +18,7 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -30,13 +30,10 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
@@ -49,42 +46,13 @@ using namespace NVVM;
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for NVVM ops
-//===----------------------------------------------------------------------===//
-
-static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
-  p << " " << op->getOperands();
-  if (op->getNumResults() > 0)
-    p << " : " << op->getResultTypes();
-}
-
-// <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
-ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  return failure(parser.parseOperandList(ops) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.addTypeToList(type, result.types) ||
-                 parser.resolveOperands(ops, {int32Ty, int1Ty},
-                                        parser.getNameLoc(), result.operands));
-}
-
-void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
-
-//===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
 // This verifier is shared among the following Ops:
 // CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
-// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
 // CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
-static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
+static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
                                                      bool isIm2Col,
                                                      size_t numIm2ColOffsets,
                                                      Location loc) {
@@ -109,13 +77,32 @@ static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
   size_t numIm2ColOffsets = getIm2colOffsets().size();
   bool isIm2Col = numIm2ColOffsets > 0;
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
+  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
                                          numIm2ColOffsets, getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
-  if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported.");
+  TMAStoreMode mode = getMode();
+  // We lower through inline-ptx when getPredicate() is true.
+  // a) Only TILE mode is supported
+  // b) Cache-hint is not supported
+  if (getPredicate()) {
+    if (mode != TMAStoreMode::TILE)
+      return emitError("Inline-ptx lowering supported only for Tile mode.");
+    if (getL2CacheHint())
+      return emitError("Inline-ptx lowering unsupported with L2 cache-hint.");
+  }
+
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    if (dims != 5)
+      return emitError("Scatter4 mode expects 5 coordinates");
+  }
   return success();
 }
 
@@ -130,20 +117,62 @@ LogicalResult CpAsyncOp::verify() {
   return success();
 }
 
+// This verify params can be shared across TMA Load and Prefetch Ops.
+static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
+                                         TMALoadMode mode, Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
+
+  auto checkTMALoadParams = [&](TMALoadMode mode, bool isIm2col,
+                                size_t expectedIm2colOff) -> LogicalResult {
+    if (isIm2col && (tensorDims < 3))
+      return emitError(loc)
+             << "to use " << stringifyEnum(mode)
+             << " mode, the tensor has to be at least 3-dimensional";
+
+    if (numIm2colOff != expectedIm2colOff)
+      return emitError(loc) << " im2col offsets expected " << expectedIm2colOff
+                            << " (provided " << numIm2colOff << ")";
+
+    return success();
+  };
+
+  switch (mode) {
+  case TMALoadMode::TILE:
+    return checkTMALoadParams(mode, false, 0);
+  case TMALoadMode::IM2COL:
+    return checkTMALoadParams(mode, true, tensorDims - 2);
+  case TMALoadMode::IM2COL_W:
+  case TMALoadMode::IM2COL_W_128:
+    return checkTMALoadParams(mode, true, 2);
+  case TMALoadMode::TILE_GATHER4:
+    return (tensorDims == 5)
+               ? checkTMALoadParams(mode, false, 0)
+               : emitError(loc, "Gather4 mode expects 5 coordinates");
+  }
+  return success();
+}
+
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
+  return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
+                             getMode(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorReduceOp::verify() {
-  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
-                                         getLoc());
+  TMAStoreMode mode = getMode();
+  size_t dims = getCoordinates().size();
+  switch (mode) {
+  case TMAStoreMode::TILE:
+    return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
+  case TMAStoreMode::IM2COL:
+    return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
+  case TMAStoreMode::TILE_SCATTER4:
+    return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
+  }
+  return success();
 }
 
-LogicalResult CvtFloatToTF32Op::verify() {
+LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
   case RndMode::RNA:
@@ -155,8 +184,63 @@ LogicalResult CvtFloatToTF32Op::verify() {
     break;
   default:
     return emitError(
-        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+        "Only {rn,rz,rna} rounding modes supported for ConvertFloatToTF32Op.");
   }
+  return success();
+}
+
+LogicalResult ConvertF32x2ToF8x2Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  using SatMode = NVVM::SaturationMode;
+
+  bool isRoundingModeRN = getRnd() == RndMode::RN;
+  bool isRoundingModeRZ = getRnd() == RndMode::RZ;
+  bool isRoundingModeRP = getRnd() == RndMode::RP;
+  bool isSatFinite = getSat() == SatMode::SATFINITE;
+
+  bool hasRelu = getRelu();
+
+  switch (getType()) {
+  case ConvertFP8Type::E4M3:
+  case ConvertFP8Type::E5M2:
+    if (!isRoundingModeRN)
+      return emitOpError("Only RN rounding mode is supported for conversions "
+                         "from f32x2 to .e4m3x2 or .e5m2x2 types");
+    if (!isSatFinite)
+      return emitOpError("Only SATFINITE saturation mode is supported for "
+                         "conversions from f32x2 to .e4m3x2 or .e5m2x2 types");
+    break;
+  case ConvertFP8Type::UE8M0:
+    if (!(isRoundingModeRZ || isRoundingModeRP))
+      return emitOpError("Only RZ or RP rounding modes are supported for "
+                         "conversions from f32x2 to .ue8m0x2 type");
+    if (hasRelu)
+      return emitOpError("relu not supported for conversions to .ue8m0x2 type");
+    break;
+  }
+  return success();
+}
+
+LogicalResult ConvertF16x2ToF8x2Op::verify() {
+  if (getType() == ConvertFP8Type::UE8M0)
+    return emitOpError("Only .e4m3 or .e5m2 types are supported for "
+                       "conversions from f16x2 to f8x2.");
+
+  return success();
+}
+
+LogicalResult ConvertBF16x2ToF8x2Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+
+  if (getType() != ConvertFP8Type::UE8M0)
+    return emitOpError(
+        "Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.");
+
+  auto rnd = getRnd();
+  if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
+    return emitOpError("Only RZ and RP rounding modes are supported for "
+                       "conversions from bf16x2 to f8x2.");
+
   return success();
 }
 
@@ -166,13 +250,33 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
+LogicalResult PMEventOp::verify() {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (maskedEventId && eventId) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
 std::optional<mlir::NVVM::MMATypes>
 MmaOp::inferOperandMMAType(Type operandElType, bool isAccumulator) {
   auto half2Type =
-      LLVM::getFixedVectorType(Float16Type::get(operandElType.getContext()), 2);
+      VectorType::get(2, Float16Type::get(operandElType.getContext()));
   if (operandElType.isF64())
     return NVVM::MMATypes::f64;
   if (operandElType.isF16() || operandElType == half2Type)
@@ -211,14 +315,14 @@ static bool isIntegerPtxType(MMATypes type) {
 
 MMATypes MmaOp::accumPtxType() {
   std::optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
-      getODSOperands(2).getTypes().front(), /*isAccum=*/true);
+      getODSOperands(2).getTypes().front(), /*isAccumulator=*/true);
   assert(val.has_value() && "accumulator PTX type should always be inferrable");
   return val.value();
 }
 
 MMATypes MmaOp::resultPtxType() {
   std::optional<mlir::NVVM::MMATypes> val =
-      inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
+      inferOperandMMAType(getResult().getType(), /*isAccumulator=*/true);
   assert(val.has_value() && "result PTX type should always be inferrable");
   return val.value();
 }
@@ -252,7 +356,7 @@ void MmaOp::print(OpAsmPrinter &p) {
       }
     }
     std::optional<MMATypes> inferredType =
-        inferOperandMMAType(regTypes.back(), /*isAccum=*/fragIdx >= 2);
+        inferOperandMMAType(regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
     if (inferredType)
       ignoreAttrNames.push_back(frag.ptxTypeAttr);
   }
@@ -271,7 +375,8 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : " << "(";
+  p << " : "
+    << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -391,14 +496,14 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
     if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
                                       parser.getNameLoc(), result.operands)))
       return failure();
-    frag.elemtype =
-        inferOperandMMAType(frag.regTypes[0], /*isAccum=*/iter.index() < 2);
+    frag.elemtype = inferOperandMMAType(frag.regTypes[0],
+                                        /*isAccumulator*/ iter.index() < 2);
   }
 
   Type resultType;
   if (parser.parseArrow() || parser.parseType(resultType))
     return failure();
-  frags[3].elemtype = inferOperandMMAType(resultType, /*isAccum=*/true);
+  frags[3].elemtype = inferOperandMMAType(resultType, /*isAccumulator*/ true);
 
   std::array<StringRef, 2> names{"multiplicandAPtxType",
                                  "multiplicandBPtxType"};
@@ -432,7 +537,7 @@ LogicalResult MmaOp::verify() {
   MLIRContext *context = getContext();
   auto f16Ty = Float16Type::get(context);
   auto i32Ty = IntegerType::get(context, 32);
-  auto f16x2Ty = LLVM::getFixedVectorType(f16Ty, 2);
+  auto f16x2Ty = VectorType::get(2, f16Ty);
   auto f32Ty = Float32Type::get(context);
   auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
       context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
@@ -534,7 +639,6 @@ LogicalResult MmaOp::verify() {
       expectedA.emplace_back(1, f64Ty);
       expectedB.emplace_back(1, f64Ty);
       expectedC.emplace_back(2, f64Ty);
-      // expectedC.emplace_back(1, LLVM::getFixedVectorType(f64Ty, 2));
       expectedResult.emplace_back(LLVM::LLVMStructType::getLiteral(
           context, SmallVector<Type>(2, f64Ty)));
       allowedShapes.push_back({8, 8, 4});
@@ -768,36 +872,81 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
-  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
-    return emitOpError("expected num attribute to be 1, 2 or 4");
+  uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x8 "
+                         "matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be b16 for 8x8 matrix");
+    }
+  } else if (m == 8 && n == 16) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::row) {
+      return emitOpError("expected layout to be row for 8x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 8x16 matrix");
+    }
+  } else if (m == 16 && n == 16) {
+    if (num != 1 && num != 2) {
+      return emitOpError("expected num attribute to be 1 or 2 for 16x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8 &&
+        getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8, b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 16x16 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8, 8x16 or 16x16");
+  }
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t numElements = (m == 16 && n == 16 ? num * 2 : num);
+  if (numElements == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (numElements == 2 || numElements == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(numElements, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << numElements << " elements of type i32";
   }
+
   return success();
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }
@@ -1020,7 +1169,9 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
+  ss << " $" << (regCnt) << ","
+     << " $" << (regCnt + 1) << ","
+     << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -1033,7 +1184,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   return ptx;
 }
 
-void NVVM::WgmmaMmaAsyncOp::getAsmValues(
+bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {
@@ -1064,7 +1215,9 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, 1 - static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+  return true; // Has manual mapping
 }
+
 LogicalResult NVVM::FenceProxyOp::verify() {
   if (getKind() == NVVM::ProxyKind::TENSORMAP)
     return emitOpError() << "tensormap proxy is not a supported proxy kind";
@@ -1146,9 +1299,9 @@ LogicalResult NVVM::Tcgen05CpOp::verify() {
 
 LogicalResult NVVM::MatchSyncOp::verify() {
   if (getKind() == NVVM::MatchSyncKind::all) {
-    auto Type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
-    if (!Type || Type.getBody().size() != 2 ||
-        !Type.getBody()[0].isInteger(32) || !Type.getBody()[1].isInteger(1)) {
+    auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+    if (!type || type.getBody().size() != 2 ||
+        !type.getBody()[0].isInteger(32) || !type.getBody()[1].isInteger(1)) {
       return emitOpError("match.sync 'all' returns a two element struct with "
                          "first element as i32 and second element as i1");
     }
@@ -1158,6 +1311,139 @@ LogicalResult NVVM::MatchSyncOp::verify() {
     }
   }
   return success();
+}
+
+LogicalResult NVVM::VoteSyncOp::verify() {
+  if (getKind() == NVVM::VoteSyncKind::ballot) {
+    if (!getType().isInteger(32)) {
+      return emitOpError("vote.sync 'ballot' returns an i32");
+    }
+  } else {
+    if (!getType().isInteger(1)) {
+      return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
+    }
+  }
+  return success();
+}
+
+LogicalResult NVVM::PrefetchOp::verify() {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority = getEvictPriority();
+  std::optional<NVVM::PrefetchCacheLevel> cacheLevel = getCacheLevel();
+
+  if (getTensormap() && cacheLevel)
+    return emitOpError("cannot specify both tensormap and cache level");
+
+  if (getTensormap()) {
+    if (addressSpace != MemSpace::kGenericMemorySpace &&
+        addressSpace != MemSpace::kConstantMemorySpace) {
+      return emitOpError(
+          "prefetch tensormap requires a generic or constant pointer");
+    }
+
+    if (evictPriority) {
+      return emitOpError(
+          "prefetch tensormap does not support eviction priority");
+    }
+
+    if (getInParamSpace() && addressSpace != MemSpace::kGenericMemorySpace) {
+      return emitOpError(
+          "in_param_space can only be specified for a generic pointer");
+    }
+
+  } else if (cacheLevel) {
+    if (addressSpace != MemSpace::kGenericMemorySpace &&
+        addressSpace != MemSpace::kGlobalMemorySpace &&
+        addressSpace != MemSpace::kLocalMemorySpace) {
+      return emitOpError("prefetch to cache level requires a generic, global, "
+                         "or local pointer");
+    }
+
+    if (getUniform()) {
+      if (*cacheLevel != CacheLevel::L1) {
+        return emitOpError(
+            "unsupported cache level, the only supported uniform "
+            "cache level is L1");
+      }
+
+      if (addressSpace != MemSpace::kGenericMemorySpace) {
+        return emitOpError(
+            "prefetch to uniform cache requires a generic pointer");
+      }
+    }
+
+    if (evictPriority) {
+      if (*cacheLevel != CacheLevel::L2)
+        return emitOpError(
+            "cache eviction priority supported only for cache level L2");
+
+      if (addressSpace != MemSpace::kGlobalMemorySpace)
+        return emitOpError("cache eviction priority requires a global pointer");
+
+      if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+          *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+        return emitOpError(
+            "unsupported cache eviction priority, only evict_last and "
+            "evict_normal are supported");
+    }
+
+    if (getPredicate())
+      return emitOpError("predicate supported only on prefetch tensormap");
+
+  } else {
+    return emitOpError(
+        "requires specification of either cache level or tensormap");
+  }
+
+  return success();
+}
+
+/// Packs the given `field` into the `result`.
+/// The `result` is 64-bits and each `field` can be 32-bits or narrower.
+static llvm::Value *
+packValInto64Bits(llvm::IRBuilderBase &builder,
+                  llvm::Value *result, // the `result` (unset bits are zero)
+                  llvm::Value *field,  // `field` to pack into `result`
+                  unsigned sizeInBits, // Size of `field` in bits
+                  unsigned start) {    // Starting bit within `result`
+  field = builder.CreateZExtOrBitCast(field, builder.getInt32Ty());
+
+  unsigned mask = (sizeInBits < 32 ? ((1u << sizeInBits) - 1) : 0xffffffffu);
+  if (mask != 0xffffffffu)
+    field = builder.CreateAnd(field, builder.getInt32(mask));
+
+  field = builder.CreateZExtOrBitCast(field, builder.getInt64Ty());
+  field = builder.CreateShl(field, start);
+
+  return builder.CreateOr(result, field);
+}
+
+void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
+                                                LLVM::ModuleTranslation &mt,
+                                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05MmaSmemDescOp>(op);
+  llvm::Value *smemDesc = builder.getInt64(0);
+
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getStartAddr()), 14, 0);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimOffset()), 14, 16);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getStrideDimOffset()), 14, 32);
+
+  smemDesc = packValInto64Bits(builder, smemDesc, builder.getInt32(1), 3, 46);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getBaseOffset()), 3, 49);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimMode()), 1, 52);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getSwizzleMode()), 3, 61);
+
+  mt.mapValue(thisOp.getRes()) = smemDesc;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1176,7 +1462,7 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   llvm::Intrinsic::ID id;
 
   auto cpAsyncOp = cast<NVVM::CpAsyncOp>(op);
-  bool hasCpSize = cpAsyncOp.getCpSize() ? true : false;
+  bool hasCpSize = static_cast<bool>(cpAsyncOp.getCpSize());
   switch (cpAsyncOp.getSize()) {
   case 4:
     id = GET_CP_ASYNC_ID(ca, 4, hasCpSize);
@@ -1202,28 +1488,150 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return id;
 }
 
-llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
-                                                                bool isIm2Col) {
-  switch (tensorDims) {
-  case 1:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
-  case 2:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
-  case 3:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
-  case 4:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
-  case 5:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
-  default:
-    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
+mlir::NVVM::IDArgPair CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::nvvm_cp_async_bulk_prefetch_L2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id =
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  // Choose the bytemask variant
+  if (mlir::Value byteMask = thisOp.getByteMask()) {
+    args.push_back(mt.lookupValue(byteMask));
+    id = llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
   }
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+  for (auto v : thisOp.getIm2colOffsets())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d}};
+
+  static_assert(getMaxEnumValForTMALoadMode() == std::size(IDTable) - 1,
+                "TMALoadModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable("Invalid intrinsic for CpAsyncBulkTensorPrefetchOp.");
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair
+CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+
+  static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
+                "TMAStoreModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable(
+        "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
+
+  return {id, std::move(args)};
 }
 
 #define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
@@ -1275,6 +1683,8 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
   llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
 }
 
+#define _none
+
 #define CVT_F2TF32_ID_IMPL(rnd, relu, sf)                                      \
   hasRelu ? llvm::Intrinsic::nvvm_f2tf32_##rnd##relu##sf                       \
           : llvm::Intrinsic::nvvm_f2tf32_##rnd##sf
@@ -1283,9 +1693,9 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
   hasSatFinite ? CVT_F2TF32_ID_IMPL(rnd, relu, sf)                             \
                : CVT_F2TF32_ID_IMPL(rnd, relu, )
 
-llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                                     NVVM::SaturationMode sat,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
   using RndMode = NVVM::FPRoundingMode;
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   switch (rnd) {
@@ -1294,9 +1704,88 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   case RndMode::RZ:
     return GET_CVT_F2TF32_ID(rz, _relu, _satfinite);
   case RndMode::RNA:
-    return GET_CVT_F2TF32_ID(rna, , _satfinite);
+    return GET_CVT_F2TF32_ID(rna, _none, _satfinite);
   default:
     llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
+}
+
+#define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \
+  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
+           : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
+
+llvm::Intrinsic::ID
+ConvertF32x2ToF6x2Op::getIntrinsicID(NVVM::ConvertFP6Type type, bool hasRelu) {
+  switch (type) {
+  case NVVM::ConvertFP6Type::E2M3:
+    return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
+  case NVVM::ConvertFP6Type::E3M2:
+    return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
+  }
+  llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
+}
+
+#define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
+  has_satf ? llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd##_satfinite             \
+           : llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd
+
+#define GET_F32x2_TO_F8X2_S_ID(type, has_relu)                                 \
+  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu                      \
+           : llvm::Intrinsic::nvvm_ff_to_##type##_rn
+
+llvm::Intrinsic::ID
+ConvertF32x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type,
+                                     NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
+  bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
+  bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
+
+  switch (type) {
+  case NVVM::ConvertFP8Type::E4M3:
+    return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
+  case NVVM::ConvertFP8Type::E5M2:
+    return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
+  case NVVM::ConvertFP8Type::UE8M0:
+    if (hasRoundingModeRZ)
+      return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
+    else if (hasRoundingModeRP)
+      return GET_F32x2_TO_F8X2_US_ID(rp, hasSatFinite);
+  }
+  llvm_unreachable("Invalid conversion in CvtFloatToF8x2Op");
+}
+
+#define GET_F16x2_TO_F8X2_ID(type, has_relu)                                   \
+  has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
+           : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
+
+llvm::Intrinsic::ID
+ConvertF16x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type, bool hasRelu) {
+  switch (type) {
+  case NVVM::ConvertFP8Type::E4M3:
+    return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
+  case NVVM::ConvertFP8Type::E5M2:
+    return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
+  default:
+    llvm_unreachable("Invalid ConvertFP8Type for CvtF16x2ToF8x2Op");
+  }
+}
+
+#define GET_BF16X2_TO_F8X2_ID(rnd, has_satf)                                   \
+  has_satf ? llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd##_satfinite         \
+           : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
+
+llvm::Intrinsic::ID
+ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                      NVVM::SaturationMode sat) {
+  bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  switch (rnd) {
+  case NVVM::FPRoundingMode::RZ:
+    return GET_BF16X2_TO_F8X2_ID(rz, hasSatFinite);
+  case NVVM::FPRoundingMode::RP:
+    return GET_BF16X2_TO_F8X2_ID(rp, hasSatFinite);
+  default:
+    llvm_unreachable("Invalid rounding mode for CvtBF16x2ToF8x2Op");
   }
 }
 
@@ -1305,9 +1794,9 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
                                       LLVM::ModuleTranslation &mt,
                                       llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
-  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
   bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
 
   llvm::Intrinsic::ID id;
@@ -1354,14 +1843,15 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                                        LLVM::ModuleTranslation &mt,
                                        llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
-  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
-  bool hasMulticast = curOp.getMulticastMask() ? true : false;
+  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
+  bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
 
-  auto id = is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
-                       : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+  llvm::Intrinsic::ID id =
+      is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
+                 : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
 
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
@@ -1380,9 +1870,9 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
 
 #define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
   [&]() -> auto {                                                              \
-    if (src_fmt == Tcgen05CpSrcFormat::B6x16_P32)                              \
+    if ((src_fmt) == Tcgen05CpSrcFormat::B6x16_P32)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
-    if (src_fmt == Tcgen05CpSrcFormat::B4x16_P64)                              \
+    if ((src_fmt) == Tcgen05CpSrcFormat::B4x16_P64)                            \
       return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
@@ -1412,47 +1902,47 @@ llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
 
 // Returns the valid vector length for a given shape and vector length, the
 // function models the table mentioned in the tcgen05.{ld, st} Op description
-static unsigned isValidVectorLength(NVVM::Tcgen05LdStShape Shape,
-                                    unsigned VecLen) {
-  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X128B)
-    return VecLen >= 2;
-  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X256B)
-    return VecLen >= 4;
+static unsigned isValidVectorLength(NVVM::Tcgen05LdStShape shape,
+                                    unsigned vecLen) {
+  if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X128B)
+    return vecLen >= 2;
+  if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X256B)
+    return vecLen >= 4;
   return true;
 }
 
 LogicalResult Tcgen05LdOp::verify() {
-  LogicalResult Result = success();
+  LogicalResult result = success();
   if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
-    Result = emitError("shape 16x32bx2 requires offset argument");
+    result = emitError("shape 16x32bx2 requires offset argument");
 
-  auto ResTy = getRes().getType();
-  unsigned ResLen = isa<VectorType>(ResTy)
-                        ? llvm::cast<VectorType>(ResTy).getNumElements()
+  auto resTy = getRes().getType();
+  unsigned resLen = isa<VectorType>(resTy)
+                        ? llvm::cast<VectorType>(resTy).getNumElements()
                         : 1;
-  if (!isValidVectorLength(getShape(), ResLen))
-    Result = emitError(llvm::formatv("invalid result type length {0} for shape "
+  if (!isValidVectorLength(getShape(), resLen))
+    result = emitError(llvm::formatv("invalid result type length {0} for shape "
                                      "{1} in tcgen05.ld Op",
-                                     ResLen, stringifyEnum(getShape())));
+                                     resLen, stringifyEnum(getShape())));
 
-  return Result;
+  return result;
 }
 
 LogicalResult Tcgen05StOp::verify() {
-  LogicalResult Result = success();
+  LogicalResult result = success();
   if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
-    Result = emitError("shape 16x32bx2 requires offset argument");
+    result = emitError("shape 16x32bx2 requires offset argument");
 
-  auto ValTy = getVal().getType();
-  unsigned ValLen = isa<VectorType>(ValTy)
-                        ? llvm::cast<VectorType>(ValTy).getNumElements()
+  auto valTy = getVal().getType();
+  unsigned valLen = isa<VectorType>(valTy)
+                        ? llvm::cast<VectorType>(valTy).getNumElements()
                         : 1;
-  if (!isValidVectorLength(getShape(), ValLen))
-    Result = emitError(llvm::formatv("invalid input length {0} for shape "
+  if (!isValidVectorLength(getShape(), valLen))
+    result = emitError(llvm::formatv("invalid input length {0} for shape "
                                      "{1} in tcgen05.st Op",
-                                     ValLen, stringifyEnum(getShape())));
+                                     valLen, stringifyEnum(getShape())));
 
-  return Result;
+  return result;
 }
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
@@ -1464,6 +1954,138 @@ static void nvvmInferResultRanges(Operation *op, Value result,
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
   }
+}
+
+static llvm::Value *getAsPackedI32(llvm::Value *arg,
+                                   llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
+NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate4WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp4a_u_u,
+      llvm::Intrinsic::nvvm_idp4a_u_s,
+      llvm::Intrinsic::nvvm_idp4a_s_u,
+      llvm::Intrinsic::nvvm_idp4a_s_s,
+  };
+  return {ids[type], args};
+}
+
+NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(builder.getInt1(curOp.getBHi()));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp2a_u_u,
+      llvm::Intrinsic::nvvm_idp2a_u_s,
+      llvm::Intrinsic::nvvm_idp2a_s_u,
+      llvm::Intrinsic::nvvm_idp2a_s_s,
+  };
+  return {ids[type], args};
+}
+
+static llvm::Value *getParamCastedAddr(llvm::Value *addr,
+                                       llvm::IRBuilderBase &builder) {
+  return builder.CreateAddrSpaceCast(
+      addr,
+      llvm::PointerType::get(builder.getContext(),
+                             llvm::NVPTXAS::AddressSpace::ADDRESS_SPACE_PARAM));
+}
+
+NVVM::IDArgPair
+PrefetchOp::getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,
+                                  LLVM::ModuleTranslation &mt,
+                                  llvm::IRBuilderBase &builder) {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  std::optional<NVVM::PrefetchCacheLevel> cacheLevel = op.getCacheLevel();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority =
+      op.getEvictPriority();
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType())
+          .getAddressSpace();
+
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Value *addr = mt.lookupValue(op.getAddr());
+  args.push_back(op.getInParamSpace() ? getParamCastedAddr(addr, builder)
+                                      : addr);
+
+  if (op.getTensormap())
+    return {llvm::Intrinsic::nvvm_prefetch_tensormap, args};
+
+  assert(cacheLevel && "expected cache level for non-tensormap prefetch");
+
+  if (op.getUniform() && *cacheLevel == CacheLevel::L1)
+    return {llvm::Intrinsic::nvvm_prefetchu_L1, args};
+
+  if (evictPriority && *cacheLevel == CacheLevel::L2) {
+    switch (*evictPriority) {
+    case NVVM::CacheEvictionPriority::EvictLast:
+      return {llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last, args};
+    case NVVM::CacheEvictionPriority::EvictNormal:
+      return {llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal, args};
+    default:
+      llvm_unreachable("Invalid cache eviction priority");
+    }
+  }
+
+  switch (addressSpace) {
+  case MemSpace::kGenericMemorySpace:
+    return *cacheLevel == CacheLevel::L1
+               ? NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L1, args})
+               : NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L2, args});
+  case MemSpace::kGlobalMemorySpace:
+    return *cacheLevel == CacheLevel::L1
+               ? NVVM::IDArgPair(
+                     {llvm::Intrinsic::nvvm_prefetch_global_L1, args})
+               : NVVM::IDArgPair(
+                     {llvm::Intrinsic::nvvm_prefetch_global_L2, args});
+  case MemSpace::kLocalMemorySpace:
+    return *cacheLevel == CacheLevel::L1
+               ? NVVM::IDArgPair(
+                     {llvm::Intrinsic::nvvm_prefetch_local_L1, args})
+               : NVVM::IDArgPair(
+                     {llvm::Intrinsic::nvvm_prefetch_local_L2, args});
+  default:
+    llvm_unreachable("Invalid pointer address space");
+  }
+}
+
+bool NVVM::InlinePtxOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  for (auto arg : getReadWriteArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::ReadWrite});
+  for (auto arg : getResults())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Write});
+  for (auto arg : getReadOnlyArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Read});
+  if (getPredicate())
+    asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
+  return false; // No manual mapping needed
 }
 
 //===----------------------------------------------------------------------===//
@@ -1504,19 +2126,31 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
       attrName == NVVMDialect::getReqntidAttrName() ||
       attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
-    if (!values || values.empty() || values.size() > 3)
+    if (!values || values.empty() || values.size() > 3) {
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
+    }
   }
   // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
   // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName() ||
       attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
-    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+    }
+  }
+  // blocksareclusters must be used along with reqntid and cluster_dim
+  if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
+    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+      return op->emitError()
+             << "'" << attrName << "' attribute must be used along with "
+             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
+             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+    }
   }
 
   return success();
@@ -1558,7 +2192,7 @@ LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       ArrayAttr files, bool verifyTarget) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();
@@ -1572,11 +2206,42 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return failure();
   }
   if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {
-        return attr && mlir::isa<StringAttr>(attr);
+        return mlir::isa_and_nonnull<StringAttr>(attr);
       })) {
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();
   }
+  return success();
+}
+
+LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (!getVerifyTarget())
+    return success();
+
+  auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
+  if (!gpuModuleOp) {
+    return emitError(gpuModule->getLoc(),
+                     "NVVM target attribute must be attached to a GPU module");
+  }
+
+  const NVVMCheckSMVersion targetSMVersion =
+      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
+  if (!targetSMVersion.isMinimumSMVersion()) {
+    return emitError(gpuModule->getLoc(),
+                     "Minimum NVVM target SM version is sm_20");
+  }
+
+  gpuModuleOp->walk([&](Operation *op) {
+    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+      const NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
+      if (!requirement.isCompatibleWith(targetSMVersion)) {
+        op->emitOpError() << "is not supported on " << getChip();
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
   return success();
 }
 

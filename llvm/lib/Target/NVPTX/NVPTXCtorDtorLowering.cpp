@@ -256,7 +256,6 @@ PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
 }
 
 char NVPTXCtorDtorLoweringLegacy::ID = 0;
-char &llvm::NVPTXCtorDtorLoweringLegacyPassID = NVPTXCtorDtorLoweringLegacy::ID;
 INITIALIZE_PASS(NVPTXCtorDtorLoweringLegacy, DEBUG_TYPE,
                 "Lower ctors and dtors for NVPTX", false, false)
 

@@ -74,7 +74,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinUnwindCode(unsigned UnwindCode,
     return;
   auto Inst = WinEH::Instruction(UnwindCode, /*Label=*/nullptr, Reg, Offset);
   if (S.isInEpilogCFI())
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   else
     CurFrame->Instructions.push_back(Inst);
 }
@@ -195,7 +195,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   if (S.isInEpilogCFI()) {
     WinEH::Instruction Inst =
         WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   }
   S.emitWinCFIEndEpilogue();
 }
@@ -282,6 +282,20 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveAnyRegQX(unsigned Reg,
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveAnyRegQPX(unsigned Reg,
                                                                 int Offset) {
   emitARM64WinUnwindCode(Win64EH::UOP_SaveAnyRegQPX, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIAllocZ(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_AllocZ, 0, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveZReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveZReg, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISavePReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SavePReg, Reg, Offset);
 }
 
 MCStreamer *

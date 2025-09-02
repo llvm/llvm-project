@@ -1,4 +1,3 @@
-// XFAIL: target=aarch64-pc-windows-msvc
 // RUN: %clang_cc1 -Wno-return-type -Wno-unused-value -emit-llvm %s -w -o - | FileCheck %s
 
 // CHECK: @i = {{(dso_local )?}}global [[INT:i[0-9]+]] 0
@@ -27,44 +26,44 @@ int printf(const char *, ...);
 void test(void) {
   // CHECK: load volatile [[INT]], ptr @i
   i;
-  // CHECK-NEXT: load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: load volatile [[INT]], ptr @ci, align [[ALIGN:[0-9]+]]
+  // CHECK-NEXT: load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP:[0-9]+]]
   // CHECK-NEXT: sitofp [[INT]]
   (float)(ci);
-  // CHECK-NEXT: load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   (void)ci;
   // CHECK-NEXT: memcpy
   (void)a;
-  // CHECK-NEXT: [[R:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
-  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align 4
-  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: [[R:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
+  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   (void)(ci=ci);
   // CHECK-NEXT: [[T:%.*]] = load volatile [[INT]], ptr @j
   // CHECK-NEXT: store volatile [[INT]] [[T]], ptr @i
   (void)(i=j);
-  // CHECK-NEXT: [[R1:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I1:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
-  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: [[R1:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I1:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
+  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   // Not sure why they're ordered this way.
   // CHECK-NEXT: [[R:%.*]] = add [[INT]] [[R2]], [[R1]]
   // CHECK-NEXT: [[I:%.*]] = add [[INT]] [[I2]], [[I1]]
-  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align 4
-  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   ci+=ci;
 
-  // CHECK-NEXT: [[R1:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I1:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
-  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: [[R1:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I1:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
+  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   // CHECK-NEXT: [[R:%.*]] = add [[INT]] [[R2]], [[R1]]
   // CHECK-NEXT: [[I:%.*]] = add [[INT]] [[I2]], [[I1]]
-  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align 4
-  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
-  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align 4
-  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align 4
+  // CHECK-NEXT: store volatile [[INT]] [[R]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: store volatile [[INT]] [[I]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
+  // CHECK-NEXT: [[R2:%.*]] = load volatile [[INT]], ptr @ci, align [[ALIGN]]
+  // CHECK-NEXT: [[I2:%.*]] = load volatile [[INT]], ptr getelementptr inbounds nuw ([[CINT]], ptr @ci, i32 0, i32 1), align [[ALIGN_GEP]]
   // These additions can be elided
   // CHECK-NEXT: add [[INT]] [[R]], [[R2]]
   // CHECK-NEXT: add [[INT]] [[I]], [[I2]]

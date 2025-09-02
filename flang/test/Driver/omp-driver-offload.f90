@@ -181,6 +181,11 @@
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
 ! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
 
+! RUN: %flang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx900 \
+! RUN:      --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
+! RUN: FileCheck %s --check-prefix=ROCM-DEVICE-LIB
+! ROCM-DEVICE-LIB: "-fc1" {{.*}}ocml.bc"{{.*}}oclc_daz_opt_off.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_900.bc"
+
 ! Test -fopenmp-force-usm option without offload
 ! RUN: %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-force-usm \
@@ -220,8 +225,8 @@
 ! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
 
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"
 ! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "amdgcn-amd-amdhsa"
-! OFFLOAD-TARGETS-NOT: -fopenmp-targets
+! OFFLOAD-TARGETS-NOT: --offload-targets
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"

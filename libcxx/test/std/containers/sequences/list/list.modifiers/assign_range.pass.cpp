@@ -9,9 +9,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<container-compatible-range<T> R>
-//   constexpr void assign_range(R&& rg); // C++23
+//   constexpr void assign_range(R&& rg); // C++23; constexpr since C++26
 
 #include <list>
+#include <type_traits>
 
 #include "../../insert_range_sequence_containers.h"
 #include "test_macros.h"
@@ -21,7 +22,7 @@
 //   {empty/one-element/full} container);
 // - assigning move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   static_assert(test_constraints_assign_range<std::list, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
@@ -31,8 +32,19 @@ int main(int, char**) {
   });
   test_sequence_assign_range_move_only<std::list>();
 
-  test_assign_range_exception_safety_throwing_copy<std::list>();
-  test_assign_range_exception_safety_throwing_allocator<std::list, int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_assign_range_exception_safety_throwing_copy<std::list>();
+    test_assign_range_exception_safety_throwing_allocator<std::list, int>();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

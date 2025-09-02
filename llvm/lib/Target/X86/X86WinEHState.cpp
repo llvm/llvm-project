@@ -374,7 +374,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 }
 
 Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
-  return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, {}, F);
+  return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, F);
 }
 
 /// Generate a thunk that puts the LSDA of ParentFunc in EAX and then calls
@@ -649,13 +649,13 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   // that it can recover the original frame pointer.
   IRBuilder<> Builder(RegNode->getNextNode());
   Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getPtrTy());
-  Builder.CreateIntrinsic(Intrinsic::x86_seh_ehregnode, {}, {RegNodeI8});
+  Builder.CreateIntrinsic(Intrinsic::x86_seh_ehregnode, {RegNodeI8});
 
   if (EHGuardNode) {
     IRBuilder<> Builder(EHGuardNode->getNextNode());
     Value *EHGuardNodeI8 =
         Builder.CreateBitCast(EHGuardNode, Builder.getPtrTy());
-    Builder.CreateIntrinsic(Intrinsic::x86_seh_ehguard, {}, {EHGuardNodeI8});
+    Builder.CreateIntrinsic(Intrinsic::x86_seh_ehguard, {EHGuardNodeI8});
   }
 
   // Calculate state numbers.
@@ -721,7 +721,8 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     // enqueue it's successors to see if we can infer their states.
     InitialStates.insert({BB, PredState});
     FinalStates.insert({BB, PredState});
-    llvm::append_range(Worklist, successors(BB));
+    for (BasicBlock *SuccBB : successors(BB))
+       Worklist.push_back(SuccBB);
   }
 
   // Try to hoist stores from successors.
@@ -810,7 +811,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *Alloca = dyn_cast<AllocaInst>(&I)) {
         if (Alloca->isStaticAlloca())
           continue;
-        IRBuilder<> Builder(Alloca->getNextNonDebugInstruction());
+        IRBuilder<> Builder(Alloca->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
@@ -819,7 +820,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::stackrestore)
           continue;
-        IRBuilder<> Builder(II->getNextNonDebugInstruction());
+        IRBuilder<> Builder(II->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));

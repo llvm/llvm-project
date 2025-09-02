@@ -1759,6 +1759,12 @@ bool none_of(R &&Range, UnaryPredicate P) {
   return std::none_of(adl_begin(Range), adl_end(Range), P);
 }
 
+/// Provide wrappers to std::fill which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, typename T> void fill(R &&Range, T &&Value) {
+  std::fill(adl_begin(Range), adl_end(Range), std::forward<T>(Value));
+}
+
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename T> auto find(R &&Range, const T &Val) {
@@ -1804,8 +1810,9 @@ T *find_singleton(R &&Range, Predicate P, bool AllowRepeats = false) {
       if (RC) {
         if (!AllowRepeats || PRC != RC)
           return nullptr;
-      } else
+      } else {
         RC = PRC;
+      }
     }
   }
   return RC;
@@ -1835,8 +1842,9 @@ std::pair<T *, bool> find_singleton_nested(R &&Range, Predicate P,
       if (RC) {
         if (!AllowRepeats || PRC.first != RC)
           return {nullptr, true};
-      } else
+      } else {
         RC = PRC.first;
+      }
     }
   }
   return {RC, false};
@@ -1938,6 +1946,28 @@ template <typename R> bool is_sorted(R &&Range) {
   return std::is_sorted(adl_begin(Range), adl_end(Range));
 }
 
+/// Provide wrappers to std::includes which take ranges instead of having to
+/// pass begin/end explicitly.
+/// This function checks if the sorted range \p R2 is a subsequence of the
+/// sorted range \p R1. The ranges must be sorted in non-descending order.
+template <typename R1, typename R2> bool includes(R1 &&Range1, R2 &&Range2) {
+  assert(is_sorted(Range1) && "Range1 must be sorted in non-descending order");
+  assert(is_sorted(Range2) && "Range2 must be sorted in non-descending order");
+  return std::includes(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                       adl_end(Range2));
+}
+
+/// This function checks if the sorted range \p R2 is a subsequence of the
+/// sorted range \p R1. The ranges must be sorted with respect to a comparator
+/// \p C.
+template <typename R1, typename R2, typename Compare>
+bool includes(R1 &&Range1, R2 &&Range2, Compare &&C) {
+  assert(is_sorted(Range1, C) && "Range1 must be sorted with respect to C");
+  assert(is_sorted(Range2, C) && "Range2 must be sorted with respect to C");
+  return std::includes(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                       adl_end(Range2), std::forward<Compare>(C));
+}
+
 /// Wrapper function around std::count to count the number of times an element
 /// \p Element occurs in the given range \p Range.
 template <typename R, typename E> auto count(R &&Range, const E &Element) {
@@ -2036,6 +2066,11 @@ template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
 template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
   return std::mismatch(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                        adl_end(Range2));
+}
+
+template <typename R, typename IterTy>
+auto uninitialized_copy(R &&Src, IterTy Dst) {
+  return std::uninitialized_copy(adl_begin(Src), adl_end(Src), Dst);
 }
 
 template <typename R>

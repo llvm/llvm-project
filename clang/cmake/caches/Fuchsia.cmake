@@ -76,6 +76,9 @@ foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
     get_property(value CACHE ${variable} PROPERTY VALUE)
     get_property(type CACHE ${variable} PROPERTY TYPE)
     set(BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+    if(FUCHSIA_ENABLE_PGO)
+      set(BOOTSTRAP_BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+    endif()
   endif()
 endforeach()
 
@@ -126,6 +129,16 @@ else()
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
   set(LIBCXX_HARDENING_MODE "none" CACHE STRING "")
   set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
+  set(COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
+  set(COMPILER_RT_BUILD_PROFILE ON CACHE BOOL "")
+  set(COMPILER_RT_BUILD_SANITIZERS OFF CACHE BOOL "")
+  set(COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
+  set(COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
+  set(COMPILER_RT_DEFAULT_TARGET_ONLY ON CACHE BOOL "")
+  set(SANITIZER_CXX_ABI "libc++" CACHE STRING "")
+  set(SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
+  set(SANITIZER_TEST_CXX "libc++" CACHE STRING "")
+  set(SANITIZER_TEST_CXX_INTREE ON CACHE BOOL "")
   set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
@@ -165,33 +178,59 @@ endif()
 set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 
-set(_FUCHSIA_BOOTSTRAP_TARGETS
-  check-all
-  check-clang
-  check-lld
-  check-llvm
-  check-polly
-  llvm-config
-  clang-test-depends
-  lld-test-depends
-  llvm-test-depends
-  test-suite
-  test-depends
-  toolchain-distribution
-  install-toolchain-distribution
-  install-toolchain-distribution-stripped
-  install-toolchain-distribution-toolchain
-  clang)
+if(FUCHSIA_ENABLE_PGO)
+  set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED IR CACHE BOOL "")
 
-if(FUCHSIA_ENABLE_LLDB)
-  list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
-  list(APPEND _FUCHSIA_BOOTSTRAP_TARGETS
-    check-lldb
-    lldb-test-depends
-    debugger-distribution
-    install-debugger-distribution
-    install-debugger-distribution-stripped
-    install-debugger-distribution-toolchain)
+  set(_FUCHSIA_BOOTSTRAP_TARGETS
+    generate-profdata
+    stage2
+    stage2-toolchain-distribution
+    stage2-install-toolchain-distribution
+    stage2-install-toolchain-distribution-stripped
+    stage2-install-toolchain-distribution-toolchain
+    stage2-check-all
+    stage2-check-clang
+    stage2-check-lld
+    stage2-check-llvm
+    stage2-check-polly
+    stage2-test-suite)
+  if(FUCHSIA_ENABLE_LLDB)
+    list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
+    list(APPEND _FUCHSIA_BOOTSTRAP_TARGETS
+      stage2-check-lldb
+      stage2-debugger-distribution
+      stage2-install-debugger-distribution
+      stage2-install-debugger-distribution-stripped
+      stage2-install-debugger-distribution-toolchain)
+  endif()
+else()
+ set(_FUCHSIA_BOOTSTRAP_TARGETS
+   check-all
+   check-clang
+   check-lld
+   check-llvm
+   check-polly
+   llvm-config
+   clang
+   clang-test-depends
+   lld-test-depends
+   llvm-test-depends
+   test-suite
+   test-depends
+   toolchain-distribution
+   install-toolchain-distribution
+   install-toolchain-distribution-stripped
+   install-toolchain-distribution-toolchain)
+ if(FUCHSIA_ENABLE_LLDB)
+   list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
+   list(APPEND _FUCHSIA_BOOTSTRAP_TARGETS
+     check-lldb
+     lldb-test-depends
+     debugger-distribution
+     install-debugger-distribution
+     install-debugger-distribution-stripped
+     install-debugger-distribution-toolchain)
+ endif()
 endif()
 
 set(LLVM_ENABLE_PROJECTS ${_FUCHSIA_ENABLE_PROJECTS} CACHE STRING "")
@@ -200,6 +239,7 @@ set(CLANG_BOOTSTRAP_TARGETS ${_FUCHSIA_BOOTSTRAP_TARGETS} CACHE STRING "")
 get_cmake_property(variableNames VARIABLES)
 foreach(variableName ${variableNames})
   if(variableName MATCHES "^STAGE2_")
+    list(APPEND EXTRA_ARGS "-D${variableName}=${${variableName}}")
     string(REPLACE "STAGE2_" "" new_name ${variableName})
     string(REPLACE ";" "|" value "${${variableName}}")
     list(APPEND EXTRA_ARGS "-D${new_name}=${value}")
@@ -209,13 +249,23 @@ endforeach()
 # TODO: This is a temporary workaround until we figure out the right solution.
 set(BOOTSTRAP_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
+set(LLVM_BUILTIN_TARGETS "default" CACHE STRING "")
+set(LLVM_RUNTIME_TARGETS "default" CACHE STRING "")
+
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(CLANG_BOOTSTRAP_EXTRA_DEPS
   builtins
   runtimes
   CACHE STRING "")
-set(CLANG_BOOTSTRAP_CMAKE_ARGS
-  ${EXTRA_ARGS}
-  -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2.cmake
-  CACHE STRING "")
+if(FUCHSIA_ENABLE_PGO)
+  set(CLANG_BOOTSTRAP_CMAKE_ARGS
+    ${EXTRA_ARGS}
+    -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2-instrumented.cmake
+    CACHE STRING "")
+else()
+  set(CLANG_BOOTSTRAP_CMAKE_ARGS
+    ${EXTRA_ARGS}
+    -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2.cmake
+    CACHE STRING "")
+endif()
