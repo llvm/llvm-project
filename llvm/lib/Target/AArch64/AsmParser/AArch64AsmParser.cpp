@@ -3893,6 +3893,7 @@ static const struct Extension {
     {"f16mm", {AArch64::FeatureF16MM}},
     {"f16f32dot", {AArch64::FeatureF16F32DOT}},
     {"f16f32mm", {AArch64::FeatureF16F32MM}},
+    {"mops-go", {AArch64::FeatureMOPS_GO}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -5971,7 +5972,19 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGE:
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
-  case AArch64::MOPSSETGETN: {
+  case AArch64::MOPSSETGETN:
+  case AArch64::SETGOP:
+  case AArch64::SETGOPT:
+  case AArch64::SETGOPN:
+  case AArch64::SETGOPTN:
+  case AArch64::SETGOM:
+  case AArch64::SETGOMT:
+  case AArch64::SETGOMN:
+  case AArch64::SETGOMTN:
+  case AArch64::SETGOE:
+  case AArch64::SETGOET:
+  case AArch64::SETGOEN:
+  case AArch64::SETGOETN: {
     MCRegister Xd_wb = Inst.getOperand(0).getReg();
     MCRegister Xn_wb = Inst.getOperand(1).getReg();
     MCRegister Xd = Inst.getOperand(2).getReg();
