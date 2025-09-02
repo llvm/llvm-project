@@ -76,7 +76,7 @@ void create_lc_note_addressable_bits(const CoreSpec &spec,
 
   add_uint32(payload_bytes, *addr_bits.lowmem_bits);  // low memory
   add_uint32(payload_bytes, *addr_bits.highmem_bits); // high memory
-  add_uint32(payload_bytes, 0);            // reserved
+  add_uint32(payload_bytes, 0);                       // reserved
   size_t payload_size = payload_bytes.size() - starting_payload_size;
   // Pad out the entry to a 4-byte aligned size.
   if (payload_bytes.size() % 4 != 0) {
