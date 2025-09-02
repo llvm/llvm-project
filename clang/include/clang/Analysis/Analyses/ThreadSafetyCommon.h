@@ -35,6 +35,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include <functional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -386,6 +387,11 @@ public:
     SelfVar->setKind(til::Variable::VK_SFun);
   }
 
+  // Create placeholder for this: we don't know the VarDecl on construction yet.
+  til::LiteralPtr *createThisPlaceholder() {
+    return new (Arena) til::LiteralPtr(nullptr);
+  }
+
   // Translate a clang expression in an attribute to a til::SExpr.
   // Constructs the context from D, DeclExp, and SelfDecl.
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, const NamedDecl *D,
@@ -394,8 +400,8 @@ public:
 
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
 
-  // Translate a variable reference.
-  til::LiteralPtr *createVariable(const VarDecl *VD);
+  // Translate a VarDecl to its canonical TIL expression.
+  til::SExpr *translateVariable(const VarDecl *VD, CallingContext *Ctx);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
@@ -411,6 +417,10 @@ public:
 
   const til::SCFG *getCFG() const { return Scfg; }
   til::SCFG *getCFG() { return Scfg; }
+
+  void setLookupLocalVarExpr(std::function<const Expr *(const NamedDecl *)> F) {
+    LookupLocalVarExpr = std::move(F);
+  }
 
 private:
   // We implement the CFGVisitor API
@@ -445,6 +455,7 @@ private:
       const AbstractConditionalOperator *C, CallingContext *Ctx);
 
   til::SExpr *translateDeclStmt(const DeclStmt *S, CallingContext *Ctx);
+  til::SExpr *translateStmtExpr(const StmtExpr *SE, CallingContext *Ctx);
 
   // Map from statements in the clang CFG to SExprs in the til::SCFG.
   using StatementMap = llvm::DenseMap<const Stmt *, til::SExpr *>;
@@ -531,6 +542,11 @@ private:
   std::vector<til::Phi *> IncompleteArgs;
   til::BasicBlock *CurrentBB = nullptr;
   BlockInfo *CurrentBlockInfo = nullptr;
+
+  // Recursion guard.
+  llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
+  // Context-dependent lookup of currently valid definitions of local variables.
+  std::function<const Expr *(const NamedDecl *)> LookupLocalVarExpr;
 };
 
 #ifndef NDEBUG
