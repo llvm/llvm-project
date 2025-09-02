@@ -2013,8 +2013,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.ApproxFunc)
-      FuncAttrs.addAttribute("approx-func-fp-math", "true");
     if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
         (LangOpts.getDefaultFPContractMode() ==
@@ -4820,19 +4818,6 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
   }
 };
 
-struct DisableDebugLocationUpdates {
-  CodeGenFunction &CGF;
-  bool disabledDebugInfo;
-  DisableDebugLocationUpdates(CodeGenFunction &CGF, const Expr *E) : CGF(CGF) {
-    if ((disabledDebugInfo = isa<CXXDefaultArgExpr>(E) && CGF.getDebugInfo()))
-      CGF.disableDebugInfo();
-  }
-  ~DisableDebugLocationUpdates() {
-    if (disabledDebugInfo)
-      CGF.enableDebugInfo();
-  }
-};
-
 } // end anonymous namespace
 
 RValue CallArg::getRValue(CodeGenFunction &CGF) const {
@@ -4869,7 +4854,9 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
-  DisableDebugLocationUpdates Dis(*this, E);
+  std::optional<DisableDebugLocationUpdates> Dis;
+  if (isa<CXXDefaultArgExpr>(E))
+    Dis.emplace(*this);
   if (const ObjCIndirectCopyRestoreExpr *CRE =
           dyn_cast<ObjCIndirectCopyRestoreExpr>(E)) {
     assert(getLangOpts().ObjCAutoRefCount);
@@ -6283,4 +6270,13 @@ RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
+}
+
+DisableDebugLocationUpdates::DisableDebugLocationUpdates(CodeGenFunction &CGF)
+    : CGF(CGF) {
+  CGF.disableDebugInfo();
+}
+
+DisableDebugLocationUpdates::~DisableDebugLocationUpdates() {
+  CGF.enableDebugInfo();
 }

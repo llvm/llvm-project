@@ -19,6 +19,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   // Most instruction load and store data, so set this as the default.
   let mayLoad = 1;
   let mayStore = 1;
+  let FixedSize = true;
 
   let hasSideEffects = 0;
   let SchedRW = [WriteLDS];
@@ -76,7 +77,6 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // encoding fields
   bits<10> vdst;
@@ -276,7 +276,6 @@ class DS_BVH_STACK<string opName,
    data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
-  let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
   // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
@@ -293,7 +292,6 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
   let has_data1 = 0;
 }
@@ -471,6 +469,56 @@ class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity 
   let AddedComplexity = complexity;
 }
 
+multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+  }
+}
+
+multiclass DSAtomicRetNoRetPat_NoM0_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                       ValueType vt, string frag> {
+  def : DSAtomicRetPat<inst, vt,
+                       !cast<PatFrag>(frag#"_local_"#vt)>;
+  def : DSAtomicRetPat<noRetInst, vt,
+                       !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
+}
+
+multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                  ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    defm : DSAtomicRetNoRetPat_NoM0_mc<
+      !cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"),
+      !cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"),
+      vt, frag>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
+                         /* complexity */ 1, /* gds */ 1>;
+  }
+}
+
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
 defm DS_SUB_U32       : DS_1A1D_NORET_mc<"ds_sub_u32">;
 defm DS_RSUB_U32      : DS_1A1D_NORET_mc<"ds_rsub_u32">;
@@ -521,10 +569,10 @@ let SubtargetPredicate = HasLdsAtomicAddF64 in {
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
-  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc<"ds_pk_add_rtn_f16", VGPR_32>;
-  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc<"ds_pk_add_bf16">;
-  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc<"ds_pk_add_rtn_bf16", VGPR_32>;
+  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
+  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16", VGPR_32>;
+  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
+  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16", VGPR_32>;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
@@ -777,10 +825,10 @@ def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
 } // End OtherPredicates = [HasImageInsts].
 
-defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
-defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
-defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
-defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc_gfx9<"ds_cond_sub_u32">;
+defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc_gfx9<"ds_cond_sub_rtn_u32", VGPR_32>;
+defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc_gfx9<"ds_sub_clamp_u32">;
+defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPR_32>;
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 
@@ -1091,50 +1139,6 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 
 } // End AddedComplexity = 100
 
-multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-  }
-}
-
-multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
-                         /* complexity */ 1, /* gds */ 1>;
-  }
-}
-
-
-
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
 class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
@@ -1212,8 +1216,8 @@ defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax
 
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
@@ -1265,7 +1269,7 @@ class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in
@@ -1357,8 +1361,10 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 // GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<DS_Pseudo>(NAME);
+multiclass DS_Real_gfx12<bits<8> op,
+                         DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
+                         string name = !tolower(NAME)> {
+
   let AssemblerPredicate = isGFX12Plus in {
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
@@ -1369,14 +1375,20 @@ multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   } // End AssemblerPredicate
 }
 
-defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
-defm DS_MAX_F32           : DS_Real_gfx12<0x013, "ds_max_num_f32">;
-defm DS_MIN_RTN_F32       : DS_Real_gfx12<0x032, "ds_min_num_rtn_f32">;
-defm DS_MAX_RTN_F32       : DS_Real_gfx12<0x033, "ds_max_num_rtn_f32">;
-defm DS_MIN_F64           : DS_Real_gfx12<0x052, "ds_min_num_f64">;
-defm DS_MAX_F64           : DS_Real_gfx12<0x053, "ds_max_num_f64">;
-defm DS_MIN_RTN_F64       : DS_Real_gfx12<0x072, "ds_min_num_rtn_f64">;
-defm DS_MAX_RTN_F64       : DS_Real_gfx12<0x073, "ds_max_num_rtn_f64">;
+// Helper to avoid repeating the pseudo-name if we only need to set
+// the gfx12 name.
+multiclass DS_Real_gfx12_with_name<bits<8> op, string name> {
+  defm "" : DS_Real_gfx12<op, !cast<DS_Pseudo>(NAME), name>;
+}
+
+defm DS_MIN_F32           : DS_Real_gfx12_with_name<0x012, "ds_min_num_f32">;
+defm DS_MAX_F32           : DS_Real_gfx12_with_name<0x013, "ds_max_num_f32">;
+defm DS_MIN_RTN_F32       : DS_Real_gfx12_with_name<0x032, "ds_min_num_rtn_f32">;
+defm DS_MAX_RTN_F32       : DS_Real_gfx12_with_name<0x033, "ds_max_num_rtn_f32">;
+defm DS_MIN_F64           : DS_Real_gfx12_with_name<0x052, "ds_min_num_f64">;
+defm DS_MAX_F64           : DS_Real_gfx12_with_name<0x053, "ds_max_num_f64">;
+defm DS_MIN_RTN_F64       : DS_Real_gfx12_with_name<0x072, "ds_min_num_rtn_f64">;
+defm DS_MAX_RTN_F64       : DS_Real_gfx12_with_name<0x073, "ds_max_num_rtn_f64">;
 defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
 defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
 defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
@@ -1392,7 +1404,7 @@ defm DS_LOAD_TR6_B96      : DS_Real_gfx12<0x0fb>;
 defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fd>;
 
-defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12_with_name<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
@@ -1421,8 +1433,8 @@ def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250
 // GFX11.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<DS_Pseudo>(NAME);
+multiclass DS_Real_gfx11<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
+                                     string name = !tolower(NAME)> {
   let AssemblerPredicate = isGFX11Only in {
     let DecoderNamespace = "GFX11" in
       def _gfx11 :
@@ -1433,8 +1445,11 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   } // End AssemblerPredicate
 }
 
-multiclass DS_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)>
-  : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>;
+multiclass DS_Real_gfx11_gfx12<bits<8> op,
+                               string name = !tolower(NAME),
+                               DS_Pseudo ps = !cast<DS_Pseudo>(NAME)>
+  : DS_Real_gfx11<op, ps, name>,
+    DS_Real_gfx12<op, ps, name>;
 
 defm DS_WRITE_B32           : DS_Real_gfx11_gfx12<0x00d, "ds_store_b32">;
 defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;

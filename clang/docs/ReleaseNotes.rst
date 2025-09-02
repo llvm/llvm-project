@@ -109,6 +109,11 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- A new family of builtins ``__builtin_*_synthesises_from_spaceship`` has been added. These can be queried to know
+  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesised from a
+  ``<=>``. This makes it possible to optimize certain facilities by using the ``<=>`` operation directly instead of
+  doing multiple comparisons.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -129,6 +134,7 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -169,8 +175,10 @@ Non-comprehensive list of changes in this release
 - A vector of booleans is now a valid condition for the ternary ``?:`` operator.
   This binds to a simple vector select operation.
 
-- Added ``__builtin_masked_load`` and ``__builtin_masked_store`` for conditional
-  memory loads from vectors. Binds to the LLVM intrinsic of the same name.
+- Added ``__builtin_masked_load``, ``__builtin_masked_expand_load``,
+  ``__builtin_masked_store``, ``__builtin_masked_compress_store`` for
+  conditional memory loads from vectors. Binds to the LLVM intrinsics of the
+  same name.
 
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
@@ -239,10 +247,12 @@ Improvements to Clang's diagnostics
   "format specifies type 'unsigned int' but the argument has type 'int', which differs in signedness [-Wformat-signedness]"
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
-  
+
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
+
+- Clang now emits dignostic with correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
 - Fixed false positive in ``-Wmissing-noreturn`` diagnostic when it was requiring the usage of
   ``[[noreturn]]`` on lambdas before C++23 (#GH154493).
@@ -261,6 +271,10 @@ Improvements to Clang's diagnostics
   decorated with the ``alloc_size`` attribute don't allocate enough space for
   the target pointer type.
 
+- The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
+  ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
+  longer require ``-Wthread-safety-beta`` to be used.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -271,7 +285,7 @@ Bug Fixes in This Version
 -------------------------
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
-- Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type 
+- Fix a crash in variable length array (e.g. ``int a[*]``) function parameter type
   being used in ``_Countof`` expression. (#GH152826).
 - ``-Wunreachable-code`` now diagnoses tautological or contradictory
   comparisons such as ``x != 0 || x != 1.0`` and ``x == 0 && x == 1.0`` on
@@ -286,6 +300,9 @@ Bug Fixes in This Version
   calls another function that requires target features not enabled in the caller. This
   prevents a fatal error in the backend.
 - Fixed scope of typedefs present inside a template class. (#GH91451)
+- Builtin elementwise operators now accept vector arguments that have different
+  qualifiers on their elements. For example, vector of 4 ``const float`` values
+  and vector of 4 ``float`` values. (#GH155405)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -353,7 +370,7 @@ X86 Support
   arithmetic can now be used in C++ constant expressions.
 - Some SSE, AVX and AVX512 intrinsics have been converted to wrap
   generic __builtin intrinsics.
-- NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not 
+- NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not
   guaranteed to exist in future releases, or match behaviour with previous
   releases of clang or other compilers.
 

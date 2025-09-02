@@ -9,9 +9,8 @@ define void @licm_replicate_call(double %x, ptr %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.pow.f64(double [[X]], double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.pow.f64(double [[X]], double 3.000000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

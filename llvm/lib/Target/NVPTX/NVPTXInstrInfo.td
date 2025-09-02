@@ -295,7 +295,7 @@ multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node, bit commutative> {
 //
 // Also defines ftz (flush subnormal inputs and results to sign-preserving
 // zero) variants for fp32 functions.
-multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDNode OpNode> {
+multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDPatternOperator OpNode> {
   defvar nan_str = !if(NaN, ".NaN", "");
   if !not(NaN) then {
    def _f64_rr :
@@ -911,8 +911,15 @@ defm FADD : F3_fma_component<"add", fadd>;
 defm FSUB : F3_fma_component<"sub", fsub>;
 defm FMUL : F3_fma_component<"mul", fmul>;
 
-defm MIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum>;
-defm MAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum>;
+def fminnum_or_fminimumnum : PatFrags<(ops node:$a, node:$b),
+                                     [(fminnum node:$a, node:$b),
+                                      (fminimumnum node:$a, node:$b)]>;
+def fmaxnum_or_fmaximumnum : PatFrags<(ops node:$a, node:$b),
+                                     [(fmaxnum node:$a, node:$b),
+                                      (fmaximumnum node:$a, node:$b)]>;
+
+defm MIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum_or_fminimumnum>;
+defm MAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum_or_fmaximumnum>;
 defm MIN_NAN : FMINIMUMMAXIMUM<"min", /* NaN */ true, fminimum>;
 defm MAX_NAN : FMINIMUMMAXIMUM<"max", /* NaN */ true, fmaximum>;
 
