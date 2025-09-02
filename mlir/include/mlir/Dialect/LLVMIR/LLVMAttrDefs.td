@@ -554,7 +554,7 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -580,7 +580,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
