@@ -46,8 +46,9 @@ define void @set_f64_global(double %v) {
 }
 
 declare i32 @get_i32()
-define i32 @testFunc() {
-; CHECK-LABEL: testFunc:
+define i32 @stackifyAcrossGlobalSet() {
+; https://github.com/llvm/llvm-project/issues/156055
+; CHECK-LABEL: stackifyAcrossGlobalSet:
 ; CHECK-NEXT: .functype
 ; CHECK-NEXT: .local
 ; CHECK-NEXT: call get_i32
