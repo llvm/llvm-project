@@ -141,7 +141,7 @@ static void fillData(ObjectStore &CAS, ActionCache &AC, const Config &Conf) {
   for (size_t I = 0; I != Conf.NumShards; ++I) {
     ThreadPool.async([&] {
       CrashRecoveryContext CRC;
-      CRC.RunSafely([&]() {
+      auto Success = CRC.RunSafely([&]() {
         std::vector<ObjectRef> Refs;
         for (unsigned Depth = 0; Depth < Conf.TreeDepth; ++Depth) {
           unsigned NumNodes =
@@ -173,6 +173,9 @@ static void fillData(ObjectStore &CAS, ActionCache &AC, const Config &Conf) {
           Refs.swap(Created);
         }
       });
+      if (!Success) {
+        ExitOnErr(createStringError("fillData crashed"));
+      }
     });
   }
   ThreadPool.wait();
