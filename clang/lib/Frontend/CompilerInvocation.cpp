@@ -3919,9 +3919,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
 
-  if (!Opts.OMPHostIRFile.empty())
-    GenerateArg(Consumer, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile);
-
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
@@ -4386,15 +4383,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
