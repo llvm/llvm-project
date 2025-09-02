@@ -718,6 +718,7 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       return std::move(Err);
     break;
   case OFK_SYCL: {
+    // TODO: fill these options once the Driver supports them.
     offloading::SYCLWrappingOptions WrappingOptions;
     if (Error Err =
             offloading::wrapSYCLBinaries(M, BuffersToWrap, WrappingOptions))

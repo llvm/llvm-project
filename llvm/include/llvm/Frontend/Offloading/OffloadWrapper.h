@@ -56,10 +56,10 @@ LLVM_ABI llvm::Error wrapHIPBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
                                    bool EmitSurfacesAndTextures = true);
 
 struct SYCLWrappingOptions {
-  // target/compiler specific options what are suggested to use to "compile"
+  // Target/compiler specific options that are suggested to use to "compile"
   // program at runtime.
   std::string CompileOptions;
-  // Target/Compiler specific options that are suggested to use to "link"
+  // Target/compiler specific options that are suggested to use to "link"
   // program at runtime.
   std::string LinkOptions;
 };
