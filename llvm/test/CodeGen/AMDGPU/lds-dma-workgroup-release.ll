@@ -150,6 +150,7 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX10CU-NEXT:    buffer_load_dword v0, s[8:11], 0 offen lds
 ; GFX10CU-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10CU-NEXT:    s_barrier
 ; GFX10CU-NEXT:    ds_read_b32 v0, v0
 ; GFX10CU-NEXT:    s_waitcnt lgkmcnt(0)

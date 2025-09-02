@@ -21252,7 +21252,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // the truncation then we can use PACKSS by converting the srl to a sra.
   // SimplifyDemandedBits often relaxes sra to srl so we need to reverse it.
   if (In.getOpcode() == ISD::SRL && In->hasOneUse())
-    if (std::optional<uint64_t> ShAmt = DAG.getValidShiftAmount(In)) {
+    if (std::optional<unsigned> ShAmt = DAG.getValidShiftAmount(In)) {
       if (*ShAmt == MinSignBits) {
         PackOpcode = X86ISD::PACKSS;
         return DAG.getNode(ISD::SRA, DL, SrcVT, In->ops());
@@ -38686,13 +38686,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Opc == X86ISD::VSHLI) {
-      Known.Zero <<= ShAmt;
-      Known.One <<= ShAmt;
+      Known <<= ShAmt;
       // Low bits are known zero.
       Known.Zero.setLowBits(ShAmt);
     } else if (Opc == X86ISD::VSRLI) {
-      Known.Zero.lshrInPlace(ShAmt);
-      Known.One.lshrInPlace(ShAmt);
+      Known >>= ShAmt;
       // High bits are known zero.
       Known.Zero.setHighBits(ShAmt);
     } else {
@@ -44528,8 +44526,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero <<= ShAmt;
-    Known.One <<= ShAmt;
+    Known <<= ShAmt;
 
     // Low bits known zero.
     Known.Zero.setLowBits(ShAmt);
@@ -44559,8 +44556,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero.lshrInPlace(ShAmt);
-    Known.One.lshrInPlace(ShAmt);
+    Known >>= ShAmt;
 
     // High bits known zero.
     Known.Zero.setHighBits(ShAmt);
@@ -44608,8 +44604,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    Known.Zero.lshrInPlace(ShAmt);
-    Known.One.lshrInPlace(ShAmt);
+    Known >>= ShAmt;
 
     // If the input sign bit is known to be zero, or if none of the top bits
     // are demanded, turn this into an unsigned shift right.
@@ -44972,6 +44967,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     KnownBits KnownOp0, KnownOp1;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
     //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
     //  operand 2).
     APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
@@ -44982,6 +44978,21 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
                              TLO, Depth + 1))
       return true;
+
+    KnownBits KnownMul;
+    KnownOp0 = KnownOp0.trunc(52);
+    KnownOp1 = KnownOp1.trunc(52);
+    KnownMul = Opc == X86ISD::VPMADD52L ? KnownBits::mul(KnownOp0, KnownOp1)
+                                        : KnownBits::mulhu(KnownOp0, KnownOp1);
+    KnownMul = KnownMul.zext(64);
+
+    // lo/hi(X * Y) + Z --> C + Z
+    if (KnownMul.isConstant()) {
+      SDLoc DL(Op);
+      SDValue C = TLO.DAG.getConstant(KnownMul.getConstant(), DL, VT);
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
+    }
+
     // TODO: Compute the known bits for VPMADD52L/VPMADD52H.
     break;
   }
@@ -48390,7 +48401,7 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
   // If Src came from a SHL (probably from an expanded SIGN_EXTEND_INREG), then
   // peek through and adjust the TEST bit.
   if (Src.getOpcode() == ISD::SHL) {
-    if (std::optional<uint64_t> ShiftAmt = DAG.getValidShiftAmount(Src)) {
+    if (std::optional<unsigned> ShiftAmt = DAG.getValidShiftAmount(Src)) {
       Src = Src.getOperand(0);
       BitMask.lshrInPlace(*ShiftAmt);
     }
@@ -54176,10 +54187,10 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
 static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
                                           const SDLoc &DL) {
   assert(N.getOpcode() == ISD::SRL && "Unknown shift opcode");
-  std::optional<uint64_t> ValidSrlConst = DAG.getValidShiftAmount(N);
+  std::optional<unsigned> ValidSrlConst = DAG.getValidShiftAmount(N);
   if (!ValidSrlConst)
     return SDValue();
-  uint64_t SrlConstVal = *ValidSrlConst;
+  unsigned SrlConstVal = *ValidSrlConst;
 
   SDValue Op = N.getOperand(0);
   unsigned Opcode = Op.getOpcode();
@@ -56288,7 +56299,13 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
 
   SDValue Masked = BroadcastOp;
   if (N != 0) {
-    APInt Mask = APInt::getLowBitsSet(BroadcastOpVT.getSizeInBits(), Len);
+    unsigned BroadcastOpBitWidth = BroadcastOpVT.getSizeInBits();
+    unsigned NumDefinedElts = UndefElts.countTrailingZeros();
+
+    if (NumDefinedElts > BroadcastOpBitWidth)
+      return SDValue();
+
+    APInt Mask = APInt::getLowBitsSet(BroadcastOpBitWidth, NumDefinedElts);
     SDValue ShiftedValue = DAG.getNode(ISD::SRL, DL, BroadcastOpVT, BroadcastOp,
                                        DAG.getConstant(N, DL, BroadcastOpVT));
     Masked = DAG.getNode(ISD::AND, DL, BroadcastOpVT, ShiftedValue,

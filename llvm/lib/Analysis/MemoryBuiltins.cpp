@@ -589,6 +589,59 @@ bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
   return true;
 }
 
+std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
+                                                const DataLayout &DL,
+                                                const TargetLibraryInfo *TLI,
+                                                ObjectSizeOpts Opts) {
+  assert(Opts.EvalMode == ObjectSizeOpts::Mode::ExactSizeFromOffset &&
+         "Other modes are currently not supported");
+
+  auto Align = [&](TypeSize Size, MaybeAlign Alignment) {
+    if (Opts.RoundToAlign && Alignment && !Size.isScalable())
+      return TypeSize::getFixed(alignTo(Size.getFixedValue(), *Alignment));
+    return Size;
+  };
+
+  if (isa<UndefValue>(Ptr))
+    return TypeSize::getZero();
+
+  if (isa<ConstantPointerNull>(Ptr)) {
+    if (Opts.NullIsUnknownSize || Ptr->getType()->getPointerAddressSpace())
+      return std::nullopt;
+    return TypeSize::getZero();
+  }
+
+  if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+    if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
+        !GV->hasInitializer() || GV->isInterposable())
+      return std::nullopt;
+    return Align(DL.getTypeAllocSize(GV->getValueType()), GV->getAlign());
+  }
+
+  if (auto *A = dyn_cast<Argument>(Ptr)) {
+    Type *MemoryTy = A->getPointeeInMemoryValueType();
+    if (!MemoryTy || !MemoryTy->isSized())
+      return std::nullopt;
+    return Align(DL.getTypeAllocSize(MemoryTy), A->getParamAlign());
+  }
+
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL))
+      return Align(*Size, AI->getAlign());
+    return std::nullopt;
+  }
+
+  if (auto *CB = dyn_cast<CallBase>(Ptr)) {
+    if (std::optional<APInt> Size = getAllocSize(CB, TLI)) {
+      if (std::optional<uint64_t> ZExtSize = Size->tryZExtValue())
+        return TypeSize::getFixed(*ZExtSize);
+    }
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
 Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
