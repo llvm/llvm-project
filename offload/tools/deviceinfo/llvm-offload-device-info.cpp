@@ -129,7 +129,7 @@ ol_result_t printPlatformValue(std::ostream &S, ol_platform_handle_t Plat,
 template <typename T, PrintKind PK = PrintKind::NORMAL>
 ol_result_t printDeviceValue(std::ostream &S, ol_device_handle_t Dev,
                              ol_device_info_t Info, const char *Desc,
-                             const char *Units = "") {
+                             const char *Units = nullptr) {
   S << Desc << ": ";
 
   if constexpr (std::is_pointer_v<T>) {
@@ -144,7 +144,9 @@ ol_result_t printDeviceValue(std::ostream &S, ol_device_handle_t Dev,
     OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, sizeof(Val), &Val));
     doWrite<T, PK>(S, std::move(Val));
   }
-  S << Units << "\n";
+  if (Units)
+    S << " " << Units;
+  S << "\n";
   return OL_SUCCESS;
 }
 
