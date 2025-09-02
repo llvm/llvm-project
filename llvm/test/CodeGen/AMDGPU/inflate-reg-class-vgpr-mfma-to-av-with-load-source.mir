@@ -486,7 +486,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
   ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-  ; CHECK-NEXT:   INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -516,7 +516,7 @@ body:             |
     S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
     S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
-    INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %0:vreg_512_align2
+    INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, %0:vreg_512_align2
     S_ENDPGM 0
 
 ...
@@ -1368,7 +1368,7 @@ body:             |
   ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
   ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -1408,7 +1408,7 @@ body:             |
     undef %2.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     early-clobber %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
     early-clobber %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %4
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, %4
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc
     S_BRANCH %bb.2
 
@@ -1726,7 +1726,7 @@ body:             |
   ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
   ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -1763,7 +1763,7 @@ body:             |
     undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
     %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %4
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 28114953 /* reguse:VReg_512_Align2 */, %4
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc
     S_BRANCH %bb.2
 
