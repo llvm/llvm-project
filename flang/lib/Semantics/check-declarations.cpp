@@ -2950,7 +2950,7 @@ static bool IsSubprogramDefinition(const Symbol &symbol) {
 
 static bool IsExternalProcedureDefinition(const Symbol &symbol) {
   return IsBlockData(symbol) ||
-      (IsSubprogramDefinition(symbol) &&
+      ((IsSubprogramDefinition(symbol) || IsAlternateEntry(symbol)) &&
           (IsExternal(symbol) || symbol.GetBindName()));
 }
 
@@ -2997,12 +2997,9 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
         // they're not in the same scope.
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
-          (!(IsExternalProcedureDefinition(symbol) || GetMainEntry(&symbol)) ||
-              !(IsExternalProcedureDefinition(other) ||
-                  GetMainEntry(&other)))) {
-        // Both are procedures/BLOCK DATA, not both definitions.
-        // Note: GetMainEntry() above returns non-null in case symbol
-        // is an alternate entry.
+          (!IsExternalProcedureDefinition(symbol) ||
+              !IsExternalProcedureDefinition(other))) {
+        // both are procedures/BLOCK DATA, not both definitions
       } else if (IsSameSymbolFromHermeticModule(symbol, other)) {
         // Both symbols are the same thing.
       } else if (symbol.has<ModuleDetails>()) {
