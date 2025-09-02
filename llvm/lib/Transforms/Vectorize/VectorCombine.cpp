@@ -173,15 +173,16 @@ private:
     // further folds that were hindered by OneUse limits.
     SmallPtrSet<Value *, 4> Visited;
     for (Value *Op : Ops) {
-      if (Visited.insert(Op).second) {
+      if (!Visited.contains(Op)) {
         if (auto *OpI = dyn_cast<Instruction>(Op)) {
           if (RecursivelyDeleteTriviallyDeadInstructions(
-                  OpI, nullptr, nullptr, [this](Value *V) {
+                  OpI, nullptr, nullptr, [&](Value *V) {
                     if (auto *I = dyn_cast<Instruction>(V)) {
                       LLVM_DEBUG(dbgs() << "VC: Erased: " << *I << '\n');
                       Worklist.remove(I);
                       if (I == NextInst)
                         NextInst = NextInst->getNextNode();
+                      Visited.insert(I);
                     }
                   }))
             continue;
@@ -1467,8 +1468,8 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
                              TTI::CastContextHint::None, CostKind, RedOp);
 
     CostBeforeReduction = ExtCost * 2 + MulCost + Ext2Cost;
-    CostAfterReduction =
-        TTI.getMulAccReductionCost(IsUnsigned, II.getType(), ExtType, CostKind);
+    CostAfterReduction = TTI.getMulAccReductionCost(
+        IsUnsigned, ReductionOpc, II.getType(), ExtType, CostKind);
     return;
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,

@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: Capability FloatControls2
 ; CHECK: Extension "SPV_KHR_float_controls2"
@@ -9,18 +9,18 @@
 ; CHECK: OpEntryPoint Kernel %[[#KERNEL_ALL_V:]] "k_float_controls_all_v"
 
 ; We expect 130179 for float type.
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_FLOAT]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_FLOAT]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079:]]
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079]]
 ; We expect 0 for the rest of types because it's SignedZeroInfNanPreserve.
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE:]] 0
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 0
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE:]] %[[#CONST0:]]
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE:]] %[[#CONST0]]
 
 ; We expect 130179 for float type.
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_FLOAT_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_FLOAT_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079]]
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#FLOAT_TYPE:]] %[[#CONST131079]]
 ; We expect 0 for the rest of types because it's SignedZeroInfNanPreserve.
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#HALF_TYPE:]] 0
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 0
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#HALF_TYPE:]] %[[#CONST0]]
+; CHECK-DAG: OpExecutionModeId %[[#KERNEL_ALL_V]] FPFastMathDefault %[[#DOUBLE_TYPE:]] %[[#CONST0]]
 
 ; CHECK-DAG: OpDecorate %[[#addRes:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowReassoc
 ; CHECK-DAG: OpDecorate %[[#addResH:]] FPFastMathMode None
@@ -31,9 +31,12 @@
 ; CHECK-DAG: OpDecorate %[[#addResF_V:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowReassoc
 ; CHECK-DAG: OpDecorate %[[#addResD_V:]] FPFastMathMode None
 
+; CHECK-DAG: %[[#INT32_TYPE:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#HALF_TYPE]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#FLOAT_TYPE]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#DOUBLE_TYPE]] = OpTypeFloat 64
+; CHECK-DAG: %[[#CONST0]] = OpConstantNull %[[#INT32_TYPE]]
+; CHECK-DAG: %[[#CONST131079]] = OpConstant %[[#INT32_TYPE]] 131079
 
 ; CHECK-DAG: %[[#HALF_V_TYPE:]] = OpTypeVector %[[#HALF_TYPE]]
 ; CHECK-DAG: %[[#FLOAT_V_TYPE:]] = OpTypeVector %[[#FLOAT_TYPE]]

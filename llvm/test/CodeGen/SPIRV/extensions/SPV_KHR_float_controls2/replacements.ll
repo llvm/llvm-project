@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the OpenCL.std instructions fmin_common, fmax_common are replaced with fmin, fmax with NInf and NNaN instead.
 
@@ -37,6 +37,10 @@ declare dso_local spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fm
 declare dso_local spir_func noundef nofpclass(nan inf) float @_Z23__spirv_ocl_fmax_commonff(float noundef nofpclass(nan inf), float noundef nofpclass(nan inf)) local_unnamed_addr #1
 declare dso_local spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fminff(float noundef nofpclass(nan inf), float noundef nofpclass(nan inf)) local_unnamed_addr #1
 declare dso_local spir_func noundef nofpclass(nan inf) float @_Z23__spirv_ocl_fmin_commonff(float noundef nofpclass(nan inf), float noundef nofpclass(nan inf)) local_unnamed_addr #1
+declare dso_local spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fmaxDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf), <2 x float> noundef nofpclass(nan inf)) local_unnamed_addr #1
+declare dso_local spir_func noundef nofpclass(nan inf) <2 x float> @_Z23__spirv_ocl_fmax_commonDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf), <2 x float> noundef nofpclass(nan inf)) local_unnamed_addr #1
+declare dso_local spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fminDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf), <2 x float> noundef nofpclass(nan inf)) local_unnamed_addr #1
+declare dso_local spir_func noundef nofpclass(nan inf) <2 x float> @_Z23__spirv_ocl_fmin_commonDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf), <2 x float> noundef nofpclass(nan inf)) local_unnamed_addr #1
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
 define weak_odr dso_local spir_kernel void @foo(float %1, float %2) {
@@ -49,9 +53,9 @@ entry:
 }
 
 define weak_odr dso_local spir_kernel void @fooV(<2 x float> %v1, <2 x float> %v2) {
-  %maxResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fmaxff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
-   %maxCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmax_commonff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
-  %minResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fminff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
-   %minCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmin_commonff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
+  %maxResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fmaxDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
+   %maxCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmax_commonDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
+  %minResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fminDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
+   %minCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmin_commonDv2_fDv2_f(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
   ret void
 }
