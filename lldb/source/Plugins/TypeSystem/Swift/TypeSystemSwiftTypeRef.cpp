@@ -437,21 +437,24 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
   if (m_clang_type_cache.Lookup(key, result))
     return result;
 
-  auto lookup = [&](const ModuleSP &m) -> bool {
+  auto lookup = [&](const ModuleSP &m) -> IterationAction {
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
     result = ::LookupClangType(const_cast<Module &>(*m), decl_context,
                                ignore_modules);
     // Cache it in the expression context.
-    if (result)
+    if (result) {
       m_clang_type_cache.Insert(key, result);
-    return !result;
+      return IterationAction::Stop;
+    }
+
+    return IterationAction::Continue;
   };
 
   // Visit the current module first as a performance optimization heuristic.
   ModuleSP cur_module = sc.module_sp;
   if (cur_module)
-    if (!lookup(cur_module))
+    if (lookup(cur_module) == IterationAction::Stop)
       return result;
 
   if (TargetSP target_sp = GetTargetWP().lock())

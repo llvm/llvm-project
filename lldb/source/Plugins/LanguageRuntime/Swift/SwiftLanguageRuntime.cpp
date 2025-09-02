@@ -172,14 +172,14 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
     if (runtime_kind == RuntimeKind::Swift && image &&
         IsModuleSwiftRuntime(process, *image)) {
       runtime_image = image;
-      return false;
+      return IterationAction::Stop;
     }
     if (runtime_kind == RuntimeKind::ObjC &&
         objc_runtime->IsModuleObjCLibrary(image)) {
       runtime_image = image;
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
 
   if (!runtime_image && runtime_kind == RuntimeKind::Swift) {
@@ -187,9 +187,9 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
     process.GetTarget().GetImages().ForEach([&](const ModuleSP &image) {
       if (image && IsStaticSwiftRuntime(*image)) {
         runtime_image = image;
-        return false;
+        return IterationAction::Stop;
       }
-      return true;
+      return IterationAction::Continue;
     });
   }
   return runtime_image;
@@ -200,9 +200,9 @@ ModuleSP SwiftLanguageRuntime::FindConcurrencyModule(Process &process) {
   process.GetTarget().GetImages().ForEach([&](const ModuleSP &candidate) {
     if (candidate && IsModuleSwiftConcurrency(process, *candidate)) {
       concurrency_module = candidate;
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   if (concurrency_module)
     return concurrency_module;
@@ -211,9 +211,9 @@ ModuleSP SwiftLanguageRuntime::FindConcurrencyModule(Process &process) {
   process.GetTarget().GetImages().ForEach([&](const ModuleSP &candidate) {
     if (candidate && IsStaticSwiftConcurrency(*candidate)) {
       concurrency_module = candidate;
-      return false;
+      return IterationAction::Stop;
     }
-    return true;
+    return IterationAction::Continue;
   });
   return concurrency_module;
 }
@@ -361,14 +361,15 @@ void SwiftLanguageRuntime::ProcessModulesToAdd() {
 
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
-  modules_to_add_snapshot.ForEach([&](const ModuleSP &module_sp) -> bool {
-    if (module_sp) {
-      AddModuleToReflectionContext(module_sp);
-      progress.Increment(++completion,
-                         module_sp->GetFileSpec().GetFilename().GetString());
-    }
-    return true;
-  });
+  modules_to_add_snapshot.ForEach(
+      [&](const ModuleSP &module_sp) -> IterationAction {
+        if (module_sp) {
+          AddModuleToReflectionContext(module_sp);
+          progress.Increment(
+              ++completion, module_sp->GetFileSpec().GetFilename().GetString());
+        }
+        return IterationAction::Continue;
+      });
 }
 
 SwiftMetadataCache *SwiftLanguageRuntime::GetSwiftMetadataCache() {

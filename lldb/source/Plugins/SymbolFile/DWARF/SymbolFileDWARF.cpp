@@ -2684,13 +2684,16 @@ void SymbolFileDWARF::FindImportedDeclaration(
   llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
   m_index->GetNamespaces(name, [&](DWARFDIE die) {
     if (die.Tag() != llvm::dwarf::DW_TAG_imported_declaration)
-      return true;
+      return IterationAction::Continue;
 
     if (name != die.GetName())
-      return true;
+      return IterationAction::Continue;
 
     sc_list.emplace_back(die.GetID(), name, this);
-    return !find_one;
+    if (find_one)
+      return IterationAction::Stop;
+
+    return IterationAction::Continue;
   });
 }
 
