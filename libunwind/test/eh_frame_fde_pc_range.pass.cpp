@@ -13,10 +13,8 @@
 
 // clang-format off
 
-// REQUIRES: linux
-
-// UNSUPPORTED: target={{(aarch64|arm.*)-.+linux.*}}
-// aarch64-unknown-linux-gnu has a cross toolchain build(llvm-clang-win-x-aarch64)
+// REQUIRES: target={{x86_64-.+-linux-gnu}}
+// aarch64,arm have a cross toolchain build(llvm-clang-win-x-aarch64, etc)
 // where objdump is not available.
 
 // TODO: Figure out why this fails with Memory Sanitizer.
