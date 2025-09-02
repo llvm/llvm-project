@@ -2007,6 +2007,42 @@ let TargetPrefix = "riscv" in {
   defm ppackt_h    : RVPBinaryIntrinsics;
   defm ppackt_w    : RVPBinaryIntrinsics;
   defm packt       : RVPBinaryIntrinsics;
+  defm pas_hx      : RVPBinaryIntrinsics;
+  defm pas_wx      : RVPBinaryIntrinsics;
+  defm psa_hx      : RVPBinaryIntrinsics;
+  defm psa_wx      : RVPBinaryIntrinsics;
+  defm psas_hx     : RVPBinaryIntrinsics;
+  defm psas_wx     : RVPBinaryIntrinsics;
+  defm pssa_hx     : RVPBinaryIntrinsics;
+  defm pssa_wx     : RVPBinaryIntrinsics;
+  defm paas_hx     : RVPBinaryIntrinsics;
+  defm paas_wx     : RVPBinaryIntrinsics;
+  defm pasa_hx     : RVPBinaryIntrinsics;
+  defm pasa_wx     : RVPBinaryIntrinsics;
+  defm mseq        : RVPBinaryIntrinsics;
+  defm pmseq_b     : RVPBinaryIntrinsics;
+  defm pmseq_h     : RVPBinaryIntrinsics;
+  defm pmseq_w     : RVPBinaryIntrinsics;
+  defm mslt        : RVPBinaryIntrinsics;
+  defm pmslt_b     : RVPBinaryIntrinsics;
+  defm pmslt_h     : RVPBinaryIntrinsics;
+  defm pmslt_w     : RVPBinaryIntrinsics;
+  defm msltu       : RVPBinaryIntrinsics;
+  defm pmsltu_b    : RVPBinaryIntrinsics;
+  defm pmsltu_h    : RVPBinaryIntrinsics;
+  defm pmsltu_w    : RVPBinaryIntrinsics;
+  defm pmin_b      : RVPBinaryIntrinsics;
+  defm pmin_h      : RVPBinaryIntrinsics;
+  defm pmin_w      : RVPBinaryIntrinsics;
+  defm pminu_b     : RVPBinaryIntrinsics;
+  defm pminu_h     : RVPBinaryIntrinsics;
+  defm pminu_w     : RVPBinaryIntrinsics;
+  defm pmax_b      : RVPBinaryIntrinsics;
+  defm pmax_h      : RVPBinaryIntrinsics;
+  defm pmax_w      : RVPBinaryIntrinsics;
+  defm pmaxu_b     : RVPBinaryIntrinsics;
+  defm pmaxu_h     : RVPBinaryIntrinsics;
+  defm pmaxu_w     : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],
