@@ -74,12 +74,12 @@ void test_valid() {
 
   test_is_nothrow_applicable_from_function<int(long) noexcept, std::array<int, 1>, true>();
   test_is_nothrow_applicable_from_function<int&(int) noexcept, std::array<long, 1>&, true>();
-  test_is_nothrow_applicable_from_function<const int && (float) noexcept, const std::array<double, 1>, true>();
+  test_is_nothrow_applicable_from_function<const int&&(float) noexcept, const std::array<double, 1>, true>();
   test_is_nothrow_applicable_from_function<void(double) noexcept, const std::array<char, 1>&, true>();
 
   test_is_nothrow_applicable_from_function<int(long, int) noexcept, std::array<int, 2>, true>();
   test_is_nothrow_applicable_from_function<int&(long, int) noexcept, std::array<int, 2>&, true>();
-  test_is_nothrow_applicable_from_function<const int && (long, int) noexcept, const std::array<int, 2>, true>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int) noexcept, const std::array<int, 2>, true>();
   test_is_nothrow_applicable_from_function<void(long, int) noexcept, const std::array<int, 2>&, true>();
 
   test_is_nothrow_applicable<NoExceptCallable<bool>, std::array<int, 0>, true>();
@@ -167,12 +167,12 @@ void test_valid() {
   // test tuple
   test_is_nothrow_applicable_from_function<int() noexcept, std::tuple<>, true>();
   test_is_nothrow_applicable_from_function<char&() noexcept, std::tuple<>&, true>();
-  test_is_nothrow_applicable_from_function<long && () noexcept, const std::tuple<>, true>();
+  test_is_nothrow_applicable_from_function<long&&() noexcept, const std::tuple<>, true>();
   test_is_nothrow_applicable_from_function<void() noexcept, const std::tuple<>&, true>();
 
   test_is_nothrow_applicable_from_function<int(long, int) noexcept, std::tuple<int, long>, true>();
   test_is_nothrow_applicable_from_function<int&(long, int) noexcept, std::tuple<int, long>&, true>();
-  test_is_nothrow_applicable_from_function<const int && (long, int) noexcept, const std::tuple<int, long>, true>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int) noexcept, const std::tuple<int, long>, true>();
   test_is_nothrow_applicable_from_function<void(long, int) noexcept, const std::tuple<int, long>&, true>();
 
   test_is_nothrow_applicable<NoExceptCallable<bool>, std::tuple<>, true>();
@@ -183,7 +183,7 @@ void test_valid() {
   // test pair
   test_is_nothrow_applicable_from_function<int(long, int) noexcept, std::pair<int, long>, true>();
   test_is_nothrow_applicable_from_function<int&(long, int) noexcept, std::pair<int, long>&, true>();
-  test_is_nothrow_applicable_from_function<const int && (long, int) noexcept, const std::pair<int, long>, true>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int) noexcept, const std::pair<int, long>, true>();
   test_is_nothrow_applicable_from_function<void(long, int) noexcept, const std::pair<int, long>&, true>();
 
   test_is_nothrow_applicable<NoExceptCallable<bool>, std::pair<char, wchar_t>, true>();
@@ -201,12 +201,12 @@ void test_potentially_throwing() {
 
   test_is_nothrow_applicable_from_function<int(long), std::array<int, 1>, false>();
   test_is_nothrow_applicable_from_function<int&(int), std::array<long, 1>&, false>();
-  test_is_nothrow_applicable_from_function<const int && (float), const std::array<double, 1>, false>();
+  test_is_nothrow_applicable_from_function<const int&&(float), const std::array<double, 1>, false>();
   test_is_nothrow_applicable_from_function<void(double), const std::array<char, 1>&, false>();
 
   test_is_nothrow_applicable_from_function<int(long, int), std::array<int, 2>, false>();
   test_is_nothrow_applicable_from_function<int&(long, int), std::array<int, 2>&, false>();
-  test_is_nothrow_applicable_from_function<const int && (long, int), const std::array<int, 2>, false>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int), const std::array<int, 2>, false>();
   test_is_nothrow_applicable_from_function<void(long, int), const std::array<int, 2>&, false>();
 
   test_is_nothrow_applicable<ConstCallable<bool>, std::array<int, 0>, false>();
@@ -270,12 +270,12 @@ void test_potentially_throwing() {
   // test tuple
   test_is_nothrow_applicable_from_function<int(), std::tuple<>, false>();
   test_is_nothrow_applicable_from_function<char&(), std::tuple<>&, false>();
-  test_is_nothrow_applicable_from_function<long && (), const std::tuple<>, false>();
+  test_is_nothrow_applicable_from_function<long&&(), const std::tuple<>, false>();
   test_is_nothrow_applicable_from_function<void(), const std::tuple<>&, false>();
 
   test_is_nothrow_applicable_from_function<int(long, int), std::tuple<int, long>, false>();
   test_is_nothrow_applicable_from_function<int&(long, int), std::tuple<int, long>&, false>();
-  test_is_nothrow_applicable_from_function<const int && (long, int), const std::tuple<int, long>, false>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int), const std::tuple<int, long>, false>();
   test_is_nothrow_applicable_from_function<void(long, int), const std::tuple<int, long>&, false>();
 
   test_is_nothrow_applicable<ConstCallable<bool>, std::tuple<>, false>();
@@ -286,7 +286,7 @@ void test_potentially_throwing() {
   // test pair
   test_is_nothrow_applicable_from_function<int(long, int), std::pair<int, long>, false>();
   test_is_nothrow_applicable_from_function<int&(long, int), std::pair<int, long>&, false>();
-  test_is_nothrow_applicable_from_function<const int && (long, int), const std::pair<int, long>, false>();
+  test_is_nothrow_applicable_from_function<const int&&(long, int), const std::pair<int, long>, false>();
   test_is_nothrow_applicable_from_function<void(long, int), const std::pair<int, long>&, false>();
 
   test_is_nothrow_applicable<ConstCallable<bool>, std::pair<char, wchar_t>, false>();

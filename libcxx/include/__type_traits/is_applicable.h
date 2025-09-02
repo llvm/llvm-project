@@ -58,13 +58,13 @@ struct __applicability_traits<false, _Nothrow, _Tp> {
 
 template <class _Fn, class _Tuple, size_t... _Is>
 concept __tuple_applicable_impl = requires(_Tuple&& __tuple) {
-  [](auto&&...) {}(std::get<_Is>(static_cast<_Tuple &&>(__tuple))...);
+  [](auto&&...) {}(std::get<_Is>(static_cast<_Tuple&&>(__tuple))...);
 } && __is_invocable_v<_Fn, decltype(std::get<_Is>(std::declval<_Tuple>()))...>;
 
 template <class _Fn, class _Tuple, size_t... _Is>
 concept __tuple_nothrow_applicable_impl = requires(_Tuple&& __tuple) {
   {
-    [](auto&&...) noexcept {}(std::get<_Is>(static_cast<_Tuple &&>(__tuple))...)
+    [](auto&&...) noexcept {}(std::get<_Is>(static_cast<_Tuple&&>(__tuple))...)
   } noexcept;
 } && __is_nothrow_invocable_v<_Fn, decltype(std::get<_Is>(std::declval<_Tuple>()))...>;
 

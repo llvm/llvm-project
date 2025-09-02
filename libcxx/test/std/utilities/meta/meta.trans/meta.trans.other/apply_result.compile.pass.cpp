@@ -107,20 +107,20 @@ void test_valid() {
 
   test_valid_apply_result_from_function<int(long), std::array<int, 1>, int>();
   test_valid_apply_result_from_function<int&(int), std::array<long, 1>&, int&>();
-  test_valid_apply_result_from_function<const int && (float), const std::array<double, 1>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(float), const std::array<double, 1>, const int&&>();
   test_valid_apply_result_from_function<void(double), const std::array<char, 1>&, void>();
   test_valid_apply_result_from_function<int(long) noexcept, std::array<int, 1>, int>();
   test_valid_apply_result_from_function<int&(int) noexcept, std::array<long, 1>&, int&>();
-  test_valid_apply_result_from_function<const int && (float) noexcept, const std::array<double, 1>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(float) noexcept, const std::array<double, 1>, const int&&>();
   test_valid_apply_result_from_function<void(double) noexcept, const std::array<char, 1>&, void>();
 
   test_valid_apply_result_from_function<int(long, int), std::array<int, 2>, int>();
   test_valid_apply_result_from_function<int&(long, int), std::array<int, 2>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int), const std::array<int, 2>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int), const std::array<int, 2>, const int&&>();
   test_valid_apply_result_from_function<void(long, int), const std::array<int, 2>&, void>();
   test_valid_apply_result_from_function<int(long, int) noexcept, std::array<int, 2>, int>();
   test_valid_apply_result_from_function<int&(long, int) noexcept, std::array<int, 2>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int) noexcept, const std::array<int, 2>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int) noexcept, const std::array<int, 2>, const int&&>();
   test_valid_apply_result_from_function<void(long, int) noexcept, const std::array<int, 2>&, void>();
 
   test_valid_apply_result<ConstCallable<bool>, std::array<int, 0>, bool>();
@@ -242,20 +242,20 @@ void test_valid() {
   // test tuple
   test_valid_apply_result_from_function<int(), std::tuple<>, int>();
   test_valid_apply_result_from_function<char&(), std::tuple<>&, char&>();
-  test_valid_apply_result_from_function<long && (), const std::tuple<>, long&&>();
+  test_valid_apply_result_from_function<long&&(), const std::tuple<>, long&&>();
   test_valid_apply_result_from_function<void(), const std::tuple<>&, void>();
   test_valid_apply_result_from_function<int() noexcept, std::tuple<>, int>();
   test_valid_apply_result_from_function<char&() noexcept, std::tuple<>&, char&>();
-  test_valid_apply_result_from_function<long && () noexcept, const std::tuple<>, long&&>();
+  test_valid_apply_result_from_function<long&&() noexcept, const std::tuple<>, long&&>();
   test_valid_apply_result_from_function<void() noexcept, const std::tuple<>&, void>();
 
   test_valid_apply_result_from_function<int(long, int), std::tuple<int, long>, int>();
   test_valid_apply_result_from_function<int&(long, int), std::tuple<int, long>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int), const std::tuple<int, long>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int), const std::tuple<int, long>, const int&&>();
   test_valid_apply_result_from_function<void(long, int), const std::tuple<int, long>&, void>();
   test_valid_apply_result_from_function<int(long, int) noexcept, std::tuple<int, long>, int>();
   test_valid_apply_result_from_function<int&(long, int) noexcept, std::tuple<int, long>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int) noexcept, const std::tuple<int, long>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int) noexcept, const std::tuple<int, long>, const int&&>();
   test_valid_apply_result_from_function<void(long, int) noexcept, const std::tuple<int, long>&, void>();
 
   test_valid_apply_result<ConstCallable<unsigned long long>, std::tuple<>, unsigned long long>();
@@ -271,11 +271,11 @@ void test_valid() {
   // test pair
   test_valid_apply_result_from_function<int(long, int), std::pair<int, long>, int>();
   test_valid_apply_result_from_function<int&(long, int), std::pair<int, long>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int), const std::pair<int, long>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int), const std::pair<int, long>, const int&&>();
   test_valid_apply_result_from_function<void(long, int), const std::pair<int, long>&, void>();
   test_valid_apply_result_from_function<int(long, int) noexcept, std::pair<int, long>, int>();
   test_valid_apply_result_from_function<int&(long, int) noexcept, std::pair<int, long>&, int&>();
-  test_valid_apply_result_from_function<const int && (long, int) noexcept, const std::pair<int, long>, const int&&>();
+  test_valid_apply_result_from_function<const int&&(long, int) noexcept, const std::pair<int, long>, const int&&>();
   test_valid_apply_result_from_function<void(long, int) noexcept, const std::pair<int, long>&, void>();
 
   test_valid_apply_result<ConstCallable<bool>, std::pair<char, wchar_t>, bool>();
