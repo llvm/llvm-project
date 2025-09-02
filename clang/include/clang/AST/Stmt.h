@@ -3067,16 +3067,14 @@ class LoopControlStmt : public Stmt {
   SourceLocation Label;
 
 protected:
-  LoopControlStmt(StmtClass Class, SourceLocation Loc) : Stmt(Class) {
+  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
+                  LabelDecl *Target)
+      : Stmt(Class), TargetLabel(Target), Label(LabelLoc) {
     setKwLoc(Loc);
   }
 
-  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
-                  LabelDecl *Target)
-      : LoopControlStmt(Class, Loc) {
-    setLabelLoc(LabelLoc);
-    setLabelDecl(Target);
-  }
+  LoopControlStmt(StmtClass Class, SourceLocation Loc)
+      : LoopControlStmt(Class, Loc, SourceLocation(), nullptr) {}
 
   LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
 
