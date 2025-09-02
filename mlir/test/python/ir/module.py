@@ -127,7 +127,7 @@ def testModuleOperation():
 
     # Ensure that operations are the same on multiple calls.
     op2 = module.operation
-    assert not op1 is op2
+    assert op1 is not op2
     assert op1 == op2
 
     # Test live operation clearing.
@@ -156,10 +156,10 @@ def testModuleCapsule():
     module_capsule = module._CAPIPtr
     print(module_capsule)
     module_dup = Module._CAPICreate(module_capsule)
-    assert not module is module_dup
+    assert module is not module_dup
     assert module == module_dup
     module._clear_mlir_module()
-    assert not module == module_dup
+    assert module != module_dup
     assert module_dup.context is ctx
     # Gc and verify destructed.
     module = None

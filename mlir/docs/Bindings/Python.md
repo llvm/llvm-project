@@ -231,11 +231,13 @@ become "undefined" in a sense; manipulating them in any way is "formally forbidd
 purposes of the discussion here. Metaphorically, one can think of this similarly to how STL container iterators are invalidated once the container itself is changed. The "best practices" recommendation is to structure your code such that 
 
 1. First, query/manipulate various Python wrapper objects `py_op1`, `py_op2`, `py_op3`, etc.;
-2. Second, Transform the AST/erase operations/etc. via a single root object;
-3. End.
+2. Second, transform the AST/erase operations/etc. via a single root object;
+3. Invalidate all queried nodes (e.g., using `op._set_invalid()`).
 
-Ideally this should be done in a function body so that "End" corresponds to the end of the function and there are no 
-risks of Python wrapper objects leaking/living longer than necessary.
+Ideally this should be done in a function body so that step (3) corresponds to the end of the function and there are no 
+risks of Python wrapper objects leaking/living longer than necessary. In summary, you should scope your changes based on 
+nesting i.e., change leaf nodes first before going up in hierarchy, and only in very rare cases query nested ops post
+modifying a parent op.
 
 The C/C++ API allows for Region/Block to also be detached, but it simplifies the
 ownership model a lot to eliminate that possibility in this API, allowing the
