@@ -192,6 +192,7 @@ func.func @opaque_type_expression(%arg0: i32,  %arg1: !emitc.opaque<"T0">, %arg2
   %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
   return %c : i1
 }
+<<<<<<< HEAD
 
 // CHECK-LABEL:   func.func @expression_with_constant(
 // CHECK-SAME:                                        %[[VAL_0:.*]]: i32) -> i32 {
@@ -228,3 +229,5 @@ func.func @expression_with_literal(%arg0: i32) -> i1 {
   %c = emitc.cmp lt, %b, %arg0 :(i32, i32) -> i1
   return %c : i1
 }
+=======
+>>>>>>> 6a27d24c62dd ([mlir][emitc] Ignore literal in form-expression)

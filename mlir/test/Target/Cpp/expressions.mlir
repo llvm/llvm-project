@@ -472,7 +472,7 @@ emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
 // CPP-DECLTOP-NEXT: }
 
 func.func @expression_with_literal(%arg0 : i32) -> i1 {
-  %ret = emitc.expression noinline : i1 {
+  %ret = emitc.expression %arg0 noinline : (i32) -> i1 {
     %literal1 = emitc.literal "1" : i32
     %literal2 = emitc.literal "2" : i32
     %add = add %literal1, %arg0 : (i32, i32) -> i32
@@ -495,9 +495,9 @@ func.func @expression_with_literal(%arg0 : i32) -> i1 {
 // CPP-DECLTOP-NEXT: }
 
 func.func @single_literal_in_expression() -> i32 {
-  %result = emitc.expression : i32 {
-    %lit = emitc.literal "42" : i32
-    emitc.yield %lit : i32
+  %ret = emitc.expression : () -> i32 {
+    %literal = emitc.literal "42" : i32
+    emitc.yield %literal : i32
   }
-  return %result : i32
+  return %ret : i32
 }
