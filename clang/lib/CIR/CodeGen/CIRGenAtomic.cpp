@@ -159,9 +159,9 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
   case cir::TEK_Scalar:
     return !isFullSizeType(cgf.cgm, ty, atomicSizeInBits);
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI(loc, "AtomicInfo::requiresMemSetZero: complex type");
-    return false;
-
+    return !isFullSizeType(cgf.cgm,
+                           mlir::cast<cir::ComplexType>(ty).getElementType(),
+                           atomicSizeInBits / 2);
   // Padding in structs has an undefined bit pattern.  User beware.
   case cir::TEK_Aggregate:
     return false;
@@ -556,9 +556,11 @@ void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
     return;
   }
 
-  case cir::TEK_Complex:
-    cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: complex type");
+  case cir::TEK_Complex: {
+    mlir::Value value = emitComplexExpr(init);
+    atomics.emitCopyIntoMemory(RValue::get(value));
     return;
+  }
 
   case cir::TEK_Aggregate:
     cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: aggregate type");
