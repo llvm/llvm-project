@@ -115,6 +115,7 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
   return CurrentSize + FAlloc.fst_bytesalloc;
 #else
+  (void)CreateError; // Silence unused variable.
   return NewSize; // Pretend it worked.
 #endif
 }

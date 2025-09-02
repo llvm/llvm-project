@@ -241,7 +241,6 @@ void MappedFileRegionBumpPtr::destroyImpl() {
     assert(SharedLockFD && "Must have shared lock file open");
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       size_t Size = size();
-      size_t Capacity = capacity();
       // sync to file system to make sure all contents are up-to-date.
       (void)Region.sync();
       // unmap the file before resizing since that is the requirement for
