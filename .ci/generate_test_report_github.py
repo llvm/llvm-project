@@ -8,11 +8,6 @@ import platform
 
 import generate_test_report_lib
 
-PLATFORM_TITLES = {
-    "Windows": ":window: Windows x64 Test Results",
-    "Linux": ":penguin: Linux x64 Test Results",
-}
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("return_code", help="The build's return code.", type=int)
@@ -21,8 +16,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
+    platform_title = f"{logo} {platform.system()} {platform.architecture()} Test Results"
     report = generate_test_report_lib.generate_report_from_files(
-        PLATFORM_TITLES[platform.system()], args.return_code, args.build_test_logs
+        platform_title, args.return_code, args.build_test_logs
     )
 
     print(report)
