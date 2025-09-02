@@ -885,6 +885,11 @@ namespace {
     /// declaration whose initializer is being evaluated, if any.
     APValue *EvaluatingDeclValue;
 
+    /// Stack of loops and 'switch' statements which we're currently
+    /// breaking/continuing; null entries are used to mark unlabeled
+    /// break/continue.
+    SmallVector<const Stmt *> BreakContinueStack;
+
     /// Set of objects that are currently being constructed.
     llvm::DenseMap<ObjectUnderConstruction, ConstructionPhase>
         ObjectsUnderConstruction;
@@ -5377,6 +5382,44 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S,
                                    const SwitchCase *SC = nullptr);
 
+/// Helper to implement named break/continue. Returns 'true' if the evaluation
+/// result should be propagated up. Otherwise, it sets the evaluation result
+/// to either Continue to continue the current loop, or Succeeded to break it.
+static bool ShouldPropagateBreakContinue(EvalInfo &Info,
+                                         const Stmt *LoopOrSwitch,
+                                         ArrayRef<BlockScopeRAII *> Scopes,
+                                         EvalStmtResult &ESR) {
+  bool IsSwitch = isa<SwitchStmt>(LoopOrSwitch);
+
+  // For loops, map Succeeded to Continue so we don't have to check for both.
+  if (!IsSwitch && ESR == ESR_Succeeded) {
+    ESR = ESR_Continue;
+    return false;
+  }
+
+  if (ESR != ESR_Break && ESR != ESR_Continue)
+    return false;
+
+  // Are we breaking out of or continuing this statement?
+  bool CanBreakOrContinue = !IsSwitch || ESR == ESR_Break;
+  const Stmt *StackTop = Info.BreakContinueStack.back();
+  if (CanBreakOrContinue && (StackTop == nullptr || StackTop == LoopOrSwitch)) {
+    Info.BreakContinueStack.pop_back();
+    if (ESR == ESR_Break)
+      ESR = ESR_Succeeded;
+    return false;
+  }
+
+  // We're not. Propagate the result up.
+  for (BlockScopeRAII *S : Scopes) {
+    if (!S->destroy()) {
+      ESR = ESR_Failed;
+      break;
+    }
+  }
+  return true;
+}
+
 /// Evaluate the body of a loop, and translate the result as appropriate.
 static EvalStmtResult EvaluateLoopBody(StmtResult &Result, EvalInfo &Info,
                                        const Stmt *Body,
@@ -5387,18 +5430,7 @@ static EvalStmtResult EvaluateLoopBody(StmtResult &Result, EvalInfo &Info,
   if (ESR != ESR_Failed && ESR != ESR_CaseNotFound && !Scope.destroy())
     ESR = ESR_Failed;
 
-  switch (ESR) {
-  case ESR_Break:
-    return ESR_Succeeded;
-  case ESR_Succeeded:
-  case ESR_Continue:
-    return ESR_Continue;
-  case ESR_Failed:
-  case ESR_Returned:
-  case ESR_CaseNotFound:
-    return ESR;
-  }
-  llvm_unreachable("Invalid EvalStmtResult!");
+  return ESR;
 }
 
 /// Evaluate a switch statement.
@@ -5464,10 +5496,12 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
   EvalStmtResult ESR = EvaluateStmt(Result, Info, SS->getBody(), Found);
   if (ESR != ESR_Failed && ESR != ESR_CaseNotFound && !Scope.destroy())
     return ESR_Failed;
+  if (ShouldPropagateBreakContinue(Info, SS, /*Scopes=*/{}, ESR))
+    return ESR;
 
   switch (ESR) {
   case ESR_Break:
-    return ESR_Succeeded;
+    llvm_unreachable("Should have been converted to Succeeded");
   case ESR_Succeeded:
   case ESR_Continue:
   case ESR_Failed:
@@ -5565,6 +5599,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     case Stmt::WhileStmtClass: {
       EvalStmtResult ESR =
           EvaluateLoopBody(Result, Info, cast<WhileStmt>(S)->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, S, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       break;
@@ -5586,6 +5622,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
       EvalStmtResult ESR =
           EvaluateLoopBody(Result, Info, FS->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, FS, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       if (const auto *Inc = FS->getInc()) {
@@ -5748,6 +5786,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         break;
 
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, WS->getBody());
+      if (ShouldPropagateBreakContinue(Info, WS, &Scope, ESR))
+        return ESR;
+
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && !Scope.destroy())
           return ESR_Failed;
@@ -5764,6 +5805,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     bool Continue;
     do {
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, DS->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, DS, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       Case = nullptr;
@@ -5806,6 +5849,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       }
 
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, FS->getBody());
+      if (ShouldPropagateBreakContinue(Info, FS, {&IterScope, &ForScope}, ESR))
+        return ESR;
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && (!IterScope.destroy() || !ForScope.destroy()))
           return ESR_Failed;
@@ -5897,6 +5942,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
       // Loop body.
       ESR = EvaluateLoopBody(Result, Info, FS->getBody());
+      if (ShouldPropagateBreakContinue(Info, FS, {&InnerScope, &Scope}, ESR))
+        return ESR;
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && (!InnerScope.destroy() || !Scope.destroy()))
           return ESR_Failed;
@@ -5922,10 +5969,11 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     return EvaluateSwitch(Result, Info, cast<SwitchStmt>(S));
 
   case Stmt::ContinueStmtClass:
-    return ESR_Continue;
-
-  case Stmt::BreakStmtClass:
-    return ESR_Break;
+  case Stmt::BreakStmtClass: {
+    auto *B = cast<LoopControlStmt>(S);
+    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
+  }
 
   case Stmt::LabelStmtClass:
     return EvaluateStmt(Result, Info, cast<LabelStmt>(S)->getSubStmt(), Case);

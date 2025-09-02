@@ -1482,16 +1482,14 @@ public:
   }
 
   bool WalkUpFromContinueStmt(ContinueStmt *S) {
-    Builder.markChildToken(S->getContinueLoc(),
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getKwLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ContinueStatement, S);
     return true;
   }
 
   bool WalkUpFromBreakStmt(BreakStmt *S) {
-    Builder.markChildToken(S->getBreakLoc(),
-                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markChildToken(S->getKwLoc(), syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::BreakStatement, S);
     return true;

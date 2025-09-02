@@ -473,12 +473,21 @@ void StmtPrinter::VisitIndirectGotoStmt(IndirectGotoStmt *Node) {
 }
 
 void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
-  Indent() << "continue;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "continue " << Node->getLabelDecl()->getIdentifier()->getName()
+       << ';';
+  else
+    OS << "continue;";
   if (Policy.IncludeNewlines) OS << NL;
 }
 
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
-  Indent() << "break;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "break " << Node->getLabelDecl()->getIdentifier()->getName() << ';';
+  else
+    OS << "break;";
   if (Policy.IncludeNewlines) OS << NL;
 }
 
