@@ -17,22 +17,14 @@ define i32 @linear_transform_with_default(i32 %x) {
 ; TTINOLUT-LABEL: define i32 @linear_transform_with_default(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) {
 ; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[END:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[CASE0:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
-; TTINOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
-; TTINOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[CASE0]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE1]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE2]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE3]]:
+; TTINOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 4
+; TTINOLUT-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[END:.*]]
+; TTINOLUT:       [[SWITCH_LOOKUP]]:
+; TTINOLUT-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[X]], 3
+; TTINOLUT-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
 ; TTINOLUT-NEXT:    br label %[[END]]
 ; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 1, %[[CASE0]] ], [ 4, %[[CASE1]] ], [ 7, %[[CASE2]] ], [ 10, %[[CASE3]] ], [ 13, %[[ENTRY]] ]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 13, %[[ENTRY]] ], [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ]
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:
@@ -140,26 +132,8 @@ define i32 @linear_transform_no_default(i32 %x) {
 ;
 ; TTINOLUT-LABEL: define i32 @linear_transform_no_default(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) {
-; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[END:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
-; TTINOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
-; TTINOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
-; TTINOLUT-NEXT:      i32 4, label %[[CASE4:.*]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[CASE1]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE2]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE3]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE4]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[DEFAULT]]:
-; TTINOLUT-NEXT:    unreachable
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 3, %[[CASE1]] ], [ 6, %[[CASE2]] ], [ 9, %[[CASE3]] ], [ 12, %[[CASE4]] ], [ 0, %[[ENTRY]] ]
+; TTINOLUT-NEXT:  [[ENTRY:.*:]]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = mul nsw i32 [[X]], 3
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:
@@ -201,23 +175,11 @@ define i4 @bitmap_no_default(i32 %x) {
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_no_default(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) {
-; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[END:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
-; TTINOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
-; TTINOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[CASE1]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE2]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE3]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[DEFAULT]]:
-; TTINOLUT-NEXT:    unreachable
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
+; TTINOLUT-NEXT:  [[ENTRY:.*:]]
+; TTINOLUT-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i16
+; TTINOLUT-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
+; TTINOLUT-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -31712, [[SWITCH_SHIFTAMT]]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i4
 ; TTINOLUT-NEXT:    ret i4 [[IDX]]
 ;
 entry:
@@ -259,22 +221,16 @@ define i4 @bitmap_with_default(i32 %x) {
 ; TTINOLUT-LABEL: define i4 @bitmap_with_default(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) {
 ; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[END:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[CASE1:.*]]
-; TTINOLUT-NEXT:      i32 2, label %[[CASE2:.*]]
-; TTINOLUT-NEXT:      i32 3, label %[[CASE3:.*]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[CASE1]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE2]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[CASE3]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[DEFAULT]]:
+; TTINOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 4
+; TTINOLUT-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[END:.*]]
+; TTINOLUT:       [[SWITCH_LOOKUP]]:
+; TTINOLUT-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X]] to i16
+; TTINOLUT-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 4
+; TTINOLUT-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 -31712, [[SWITCH_SHIFTAMT]]
+; TTINOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i4
 ; TTINOLUT-NEXT:    br label %[[END]]
 ; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ -1, %[[DEFAULT]] ], [ 0, %[[ENTRY]] ]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ [[SWITCH_MASKED]], %[[SWITCH_LOOKUP]] ], [ -1, %[[ENTRY]] ]
 ; TTINOLUT-NEXT:    ret i4 [[IDX]]
 ;
 entry:
@@ -349,18 +305,9 @@ define i32 @single_value_withdefault(i32 %x) {
 ;
 ; TTINOLUT-LABEL: define i32 @single_value_withdefault(
 ; TTINOLUT-SAME: i32 [[X:%.*]]) {
-; TTINOLUT-NEXT:  [[ENTRY:.*]]:
-; TTINOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; TTINOLUT-NEXT:      i32 0, label %[[END:.*]]
-; TTINOLUT-NEXT:      i32 1, label %[[END]]
-; TTINOLUT-NEXT:      i32 2, label %[[END]]
-; TTINOLUT-NEXT:      i32 3, label %[[END]]
-; TTINOLUT-NEXT:      i32 4, label %[[END]]
-; TTINOLUT-NEXT:    ]
-; TTINOLUT:       [[DEFAULT]]:
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 3, %[[DEFAULT]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ], [ 2, %[[ENTRY]] ]
+; TTINOLUT-NEXT:  [[ENTRY:.*:]]
+; TTINOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 5
+; TTINOLUT-NEXT:    [[IDX:%.*]] = select i1 [[TMP0]], i32 2, i32 3
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:

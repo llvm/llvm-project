@@ -6929,10 +6929,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   BasicBlock *BB = SI->getParent();
   Function *Fn = BB->getParent();
-  // Only build lookup table when we have a target that supports it or the
-  // attribute is not set.
-  if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+  // Only build lookup table when the attribute is not set.
+  if (Fn->getFnAttribute("no-jump-tables").getValueAsBool())
     return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
@@ -7095,13 +7093,19 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   bool AnyLookupTables = any_of(
       PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
 
-  // The conversion from switch to lookup tables results in difficult-to-analyze
-  // code and makes pruning branches much harder. This is a problem if the
-  // switch expression itself can still be restricted as a result of inlining or
-  // CVP. Therefore, only apply this transformation during late stages of the
-  // optimisation pipeline.
-  // However, other switch replacements can be applied much earlier.
-  if (AnyLookupTables && !ConvertSwitchToLookupTable)
+  // A few conditions prevent the generation of lookup tables:
+  //     1. Not setting the ConvertSwitchToLookupTable option
+  //        This option prevents the LUT creation until a later stage in the
+  //        pipeline, because it would otherwise result in some
+  //        difficult-to-analyze code and make pruning branches much harder.
+  //        This is a problem if the switch expression itself can be restricted
+  //        by inlining or CVP.
+  //     2. The target does not support lookup tables.
+  // However, these objections do not apply to other switch replacements, like
+  // the bitmap, so we only stop here if any of these conditions are met and we
+  // want to create a LUT. Otherwise, continue with the switch replacement.
+  if (AnyLookupTables &&
+      (!ConvertSwitchToLookupTable || !TTI.shouldBuildLookupTables()))
     return false;
 
   Builder.SetInsertPoint(SI);
