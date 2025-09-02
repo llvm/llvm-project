@@ -9012,12 +9012,14 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
-static bool isTailCall(const CallInst *CI, const SelectionDAG *SelDAG,
-                       bool IsLowerToLibCall) {
-  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+static bool isInTailCallPositionWrapper(const CallInst *CI,
+                                        const SelectionDAG *SelDAG,
+                                        bool IsLowerToLibCall) {
+
   return CI && CI->isTailCall() &&
          isInTailCallPosition(*CI, SelDAG->getTarget(),
-                              ReturnsFirstArg && IsLowerToLibCall);
+                              funcReturnsFirstArgOfCall(*CI) &&
+                                  IsLowerToLibCall);
 }
 
 std::pair<SDValue, SDValue>
@@ -9041,7 +9043,8 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
       GetEntry(getDataLayout().getIntPtrType(*getContext()), Size)};
 
   TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall = isTailCall(CI, this, /*LowerToLibCall*/ true);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*LowerToLibCall*/ true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -9122,7 +9125,7 @@ SDValue SelectionDAG::getMemcpy(
     IsTailCall = *OverrideTailCall;
   } else {
     bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
-    IsTailCall = isTailCall(CI, this, LowersToMemcpy);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemcpy);
   }
 
   CLI.setDebugLoc(dl)
@@ -9236,7 +9239,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     bool LowersToMemmove =
         TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
-    IsTailCall = isTailCall(CI, this, LowersToMemmove);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemmove);
   }
 
   CLI.setDebugLoc(dl)
