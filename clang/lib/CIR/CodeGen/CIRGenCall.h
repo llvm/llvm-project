@@ -15,7 +15,6 @@
 #define CLANG_LIB_CODEGEN_CIRGENCALL_H
 
 #include "CIRGenValue.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/SmallVector.h"
