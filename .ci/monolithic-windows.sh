@@ -22,8 +22,7 @@ runtimes_targets="${4}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
-pip install typing_extensions
-pip install "nanobind @ git+https://github.com/wjakob/nanobind" --force
+pip install -q "nanobind @ git+https://github.com/wjakob/nanobind#53dce4e"
 
 export CC=cl
 export CXX=cl

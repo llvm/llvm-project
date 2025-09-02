@@ -742,26 +742,28 @@ function(add_mlir_python_extension libname extname)
       # the super project handle compile options as it wishes.
       get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
       target_compile_options(${NB_LIBRARY_TARGET_NAME}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
+        PRIVATE
+          -Wall -Wextra -Wpedantic
+          -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
+          -Wno-covered-switch-default
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          ${eh_rtti_enable})
 
       target_compile_options(${libname}
-	PRIVATE
-	  -Wall -Wextra -Wpedantic
-	  -Wno-c++98-compat-extra-semi
-	  -Wno-cast-qual
-	  -Wno-covered-switch-default
-	  -Wno-nested-anon-types
-	  -Wno-unused-parameter
-	  -Wno-zero-length-array
-	  ${eh_rtti_enable})
+        PRIVATE
+          -Wall -Wextra -Wpedantic
+          -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
+          -Wno-covered-switch-default
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          ${eh_rtti_enable})
     endif()
 
     if(APPLE)

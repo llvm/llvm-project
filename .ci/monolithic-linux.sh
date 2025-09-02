@@ -34,6 +34,7 @@ lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-outpu
 start-group "CMake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+pip install -q "nanobind @ git+https://github.com/wjakob/nanobind#53dce4e"
 
 # Set the system llvm-symbolizer as preferred.
 export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
