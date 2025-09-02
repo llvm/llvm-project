@@ -9,7 +9,9 @@
 #include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace emitc {
@@ -24,20 +26,24 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   Location loc = op->getLoc();
 
   builder.setInsertionPointAfter(op);
-  auto expressionOp = emitc::ExpressionOp::create(builder, loc, resultType);
+  auto expressionOp =
+      emitc::ExpressionOp::create(builder, loc, resultType, op->getOperands());
 
   // Replace all op's uses with the new expression's result.
   result.replaceAllUsesWith(expressionOp.getResult());
 
-  // Create an op to yield op's value.
-  Region &region = expressionOp.getRegion();
-  Block &block = region.emplaceBlock();
+  Block &block = expressionOp.createBody();
+  IRMapping mapper;
+  for (auto [operand, arg] :
+       llvm::zip(expressionOp.getOperands(), block.getArguments()))
+    mapper.map(operand, arg);
   builder.setInsertionPointToEnd(&block);
-  auto yieldOp = emitc::YieldOp::create(builder, loc, result);
 
-  // Move op into the new expression.
-  op->moveBefore(yieldOp);
+  Operation *rootOp = builder.clone(*op, mapper);
+  op->erase();
 
+  // Create an op to yield op's value.
+  emitc::YieldOp::create(builder, loc, rootOp->getResults()[0]);
   return expressionOp;
 }
 
@@ -53,51 +59,93 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
   using OpRewritePattern<ExpressionOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpressionOp expressionOp,
                                 PatternRewriter &rewriter) const override {
-    bool anythingFolded = false;
-    for (Operation &op : llvm::make_early_inc_range(
-             expressionOp.getBody()->without_terminator())) {
-      // Don't fold expressions whose result value has its address taken.
-      auto applyOp = dyn_cast<emitc::ApplyOp>(op);
-      if (applyOp && applyOp.getApplicableOperator() == "&")
-        continue;
+    Block *expressionBody = expressionOp.getBody();
+    ExpressionOp usedExpression;
+    SetVector<Value> foldedOperands;
 
-      for (Value operand : op.getOperands()) {
-        auto usedExpression = operand.getDefiningOp<ExpressionOp>();
-        if (!usedExpression)
-          continue;
+    auto takesItsOperandsAddress = [](Operation *user) {
+      auto applyOp = dyn_cast<emitc::ApplyOp>(user);
+      return applyOp && applyOp.getApplicableOperator() == "&";
+    };
 
-        // Don't fold expressions with multiple users: assume any
-        // re-materialization was done separately.
-        if (!usedExpression.getResult().hasOneUse())
-          continue;
-
-        // Don't fold expressions with side effects.
-        if (usedExpression.hasSideEffects())
-          continue;
-
-        // Fold the used expression into this expression by cloning all
-        // instructions in the used expression just before the operation using
-        // its value.
-        rewriter.setInsertionPoint(&op);
-        IRMapping mapper;
-        for (Operation &opToClone :
-             usedExpression.getBody()->without_terminator()) {
-          Operation *clone = rewriter.clone(opToClone, mapper);
-          mapper.map(&opToClone, clone);
-        }
-
-        Operation *expressionRoot = usedExpression.getRootOp();
-        Operation *clonedExpressionRootOp = mapper.lookup(expressionRoot);
-        assert(clonedExpressionRootOp &&
-               "Expected cloned expression root to be in mapper");
-        assert(clonedExpressionRootOp->getNumResults() == 1 &&
-               "Expected cloned root to have a single result");
-
-        rewriter.replaceOp(usedExpression, clonedExpressionRootOp);
-        anythingFolded = true;
-      }
+    // Select as expression to fold the first operand expression that
+    // - doesn't have its result value's address taken,
+    // - has a single user: assume any re-materialization was done separately,
+    // - has no side effects,
+    // and save all other operands to be used later as operands in the folded
+    // expression.
+    for (auto [operand, arg] : llvm::zip(expressionOp.getOperands(),
+                                         expressionBody->getArguments())) {
+      ExpressionOp operandExpression = operand.getDefiningOp<ExpressionOp>();
+      if (usedExpression || !operandExpression ||
+          llvm::any_of(arg.getUsers(), takesItsOperandsAddress) ||
+          !operandExpression.getResult().hasOneUse() ||
+          operandExpression.hasSideEffects())
+        foldedOperands.insert(operand);
+      else
+        usedExpression = operandExpression;
     }
-    return anythingFolded ? success() : failure();
+
+    // If no operand expression was selected, bail out.
+    if (!usedExpression)
+      return failure();
+
+    // Collect additional operands from the folded expression.
+    for (Value operand : usedExpression.getOperands())
+      foldedOperands.insert(operand);
+
+    // Create a new expression to hold the folding result.
+    rewriter.setInsertionPointAfter(expressionOp);
+    auto foldedExpression = emitc::ExpressionOp::create(
+        rewriter, expressionOp.getLoc(), expressionOp.getResult().getType(),
+        foldedOperands.getArrayRef(), expressionOp.getDoNotInline());
+    Block &foldedExpressionBody = foldedExpression.createBody();
+
+    // Map each operand of the new expression to its matching block argument.
+    IRMapping mapper;
+    for (auto [operand, arg] : llvm::zip(foldedExpression.getOperands(),
+                                         foldedExpressionBody.getArguments()))
+      mapper.map(operand, arg);
+
+    // Prepare to fold the used expression and the matched expression into the
+    // newly created folded expression.
+    auto foldExpression = [&rewriter, &mapper](ExpressionOp expressionToFold,
+                                               bool withTerminator) {
+      Block *expressionToFoldBody = expressionToFold.getBody();
+      for (auto [operand, arg] :
+           llvm::zip(expressionToFold.getOperands(),
+                     expressionToFoldBody->getArguments())) {
+        mapper.map(arg, mapper.lookup(operand));
+      }
+
+      for (Operation &opToClone : expressionToFoldBody->without_terminator())
+        rewriter.clone(opToClone, mapper);
+
+      if (withTerminator)
+        rewriter.clone(*expressionToFoldBody->getTerminator(), mapper);
+    };
+    rewriter.setInsertionPointToStart(&foldedExpressionBody);
+
+    // First, fold the used expression into the new expression and map its
+    // result to the clone of its root operation within the new expression.
+    foldExpression(usedExpression, /*withTerminator=*/false);
+    Operation *expressionRoot = usedExpression.getRootOp();
+    Operation *clonedExpressionRootOp = mapper.lookup(expressionRoot);
+    assert(clonedExpressionRootOp &&
+           "Expected cloned expression root to be in mapper");
+    assert(clonedExpressionRootOp->getNumResults() == 1 &&
+           "Expected cloned root to have a single result");
+    mapper.map(usedExpression.getResult(),
+               clonedExpressionRootOp->getResults()[0]);
+
+    // Now fold the matched expression into the new expression.
+    foldExpression(expressionOp, /*withTerminator=*/true);
+
+    // Complete the rewrite.
+    rewriter.replaceOp(expressionOp, foldedExpression);
+    rewriter.eraseOp(usedExpression);
+
+    return success();
   }
 };
 

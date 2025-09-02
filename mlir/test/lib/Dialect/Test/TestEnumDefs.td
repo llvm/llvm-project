@@ -27,9 +27,10 @@ def SomeI32Enum : I32EnumAttr<"SomeI32Enum", "",
 
 def I64Case5:  I64EnumAttrCase<"case5", 5>;
 def I64Case10: I64EnumAttrCase<"case10", 10>;
+def I64Case1p32 : I64EnumAttrCase<"caseLarse", 4294967296>;
 
 def SomeI64Enum: I64EnumAttr<
-  "SomeI64Enum", "", [I64Case5, I64Case10]>;
+  "SomeI64Enum", "", [I64Case5, I64Case10, I64Case1p32]>;
 
 //===----------------------------------------------------------------------===//
 // Test Enum
@@ -49,6 +50,13 @@ def TestEnum
 def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
     I32EnumCase<"a", 0>,
     I32EnumCase<"b", 1>
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
+    I64EnumCase<"a", 4294967296>,
+    I64EnumCase<"b", 4294967297>
   ]> {
   let cppNamespace = "::test";
 }

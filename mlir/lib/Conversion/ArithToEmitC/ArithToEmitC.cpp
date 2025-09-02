@@ -610,16 +610,19 @@ public:
              ? rewriter.getIntegerAttr(arithmeticType, 0)
              : rewriter.getIndexAttr(0)));
 
-    emitc::ExpressionOp ternary = emitc::ExpressionOp::create(
-        rewriter, op.getLoc(), arithmeticType, /*do_not_inline=*/false);
-    Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
+    emitc::ExpressionOp ternary =
+        emitc::ExpressionOp::create(rewriter, op.getLoc(), arithmeticType,
+                                    ValueRange({lhs, rhs, excessCheck, poison}),
+                                    /*do_not_inline=*/false);
+    Block &bodyBlock = ternary.createBody();
     auto currentPoint = rewriter.getInsertionPoint();
     rewriter.setInsertionPointToStart(&bodyBlock);
     Value arithmeticResult =
-        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
-    Value resultOrPoison =
-        emitc::ConditionalOp::create(rewriter, op.getLoc(), arithmeticType,
-                                     excessCheck, arithmeticResult, poison);
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType,
+                        bodyBlock.getArgument(0), bodyBlock.getArgument(1));
+    Value resultOrPoison = emitc::ConditionalOp::create(
+        rewriter, op.getLoc(), arithmeticType, bodyBlock.getArgument(2),
+        arithmeticResult, bodyBlock.getArgument(3));
     emitc::YieldOp::create(rewriter, op.getLoc(), resultOrPoison);
     rewriter.setInsertionPoint(op->getBlock(), currentPoint);
 

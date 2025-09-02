@@ -14,3 +14,27 @@ func.func @invalid_to_ptr(%v: !ptr.ptr<#ptr.generic_space>) {
   %r = ptr.to_ptr %v : !ptr.ptr<#ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
   return
 }
+
+// -----
+
+func.func @invalid_load_alignment(%arg0: !ptr.ptr<#ptr.generic_space>) -> i64 {
+  // expected-error@+1 {{alignment must be a power of 2}}
+  %r = ptr.load %arg0 alignment = 3 : !ptr.ptr<#ptr.generic_space> -> i64
+  return %r : i64
+}
+
+// -----
+
+func.func @invalid_store_alignment(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: i64) {
+  // expected-error@+1 {{alignment must be a power of 2}}
+  ptr.store %arg1, %arg0 alignment = 3 : i64, !ptr.ptr<#ptr.generic_space>
+  return
+}
+
+// -----
+
+func.func @store_const(%arg0: !ptr.ptr<#test.const_memory_space>, %arg1: i64) {
+  // expected-error@+1 {{memory space is read-only}}
+  ptr.store %arg1, %arg0 atomic monotonic alignment = 8 : i64, !ptr.ptr<#test.const_memory_space>
+  return
+}

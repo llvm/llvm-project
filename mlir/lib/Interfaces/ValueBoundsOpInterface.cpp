@@ -813,7 +813,7 @@ FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
       return false;
     // Keep processing as long as the strong relation cannot be proven.
     FailureOr<bool> ordered = cstr.strongComparePos(lhsPos, cmp, rhsPos);
-    return failed(ordered) ? true : false;
+    return failed(ordered);
   };
   ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
   lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);

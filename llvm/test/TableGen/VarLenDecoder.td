@@ -47,6 +47,12 @@ def FOO32 : MyVarInst<MemOp32> {
   );
 }
 
+// Instruction length table
+// CHECK: InstrLenTable
+// CHECK: 27,
+// CHECK-NEXT: 43,
+// CHECK-NEXT: };
+
 // CHECK-SMALL:      /* 0 */       MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
 // CHECK-SMALL-NEXT: /* 3 */       MCD::OPC_FilterValue, 8, 4, 0, // Skip to: 11
 // CHECK-SMALL-NEXT: /* 7 */       MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
@@ -60,11 +66,6 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-LARGE-NEXT: /* 12 */      MCD::OPC_FilterValueOrFail, 9,
 // CHECK-LARGE-NEXT: /* 14 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
 // CHECK-LARGE-NEXT: };
-
-// Instruction length table
-// CHECK: 27,
-// CHECK-NEXT: 43,
-// CHECK-NEXT: };
 
 // CHECK:      case 0:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);

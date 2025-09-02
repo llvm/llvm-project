@@ -455,9 +455,11 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, OpAsmOpInterface,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">, NoRegionArguments]> {
+def EmitC_ExpressionOp
+    : EmitC_Op<
+          "expression", [HasOnlyGraphRegion, OpAsmOpInterface,
+                         IsolatedFromAbove,
+                         SingleBlockImplicitTerminator<"emitc::YieldOp">]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
@@ -494,12 +496,13 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
     at its use.
   }];
 
-  let arguments = (ins UnitAttr:$do_not_inline);
+  let arguments = (ins Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$defs,
+      UnitAttr:$do_not_inline);
   let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
-  let assemblyFormat = "attr-dict (`noinline` $do_not_inline^)? `:` type($result) $region";
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -510,6 +513,13 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
     Operation *getRootOp();
+    Block &createBody() {
+      assert(getRegion().empty() && "expression already has a body");
+      Block &block = getRegion().emplaceBlock();
+      for (auto operand : getOperands())
+        block.addArgument(operand.getType(), operand.getLoc());
+      return block;
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods

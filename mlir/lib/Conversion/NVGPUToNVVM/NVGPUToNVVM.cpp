@@ -1695,8 +1695,10 @@ struct NVGPUTmaPrefetchOpLowering
   LogicalResult
   matchAndRewrite(nvgpu::TmaPrefetchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<NVVM::PrefetchTensorMapOp>(
-        op, adaptor.getTensorMapDescriptor(), adaptor.getPredicate());
+    rewriter.replaceOpWithNewOp<NVVM::PrefetchOp>(
+        op, /* CacheLevel */ nullptr, /* Cache Eviction Priority */ nullptr,
+        adaptor.getTensorMapDescriptor(), adaptor.getPredicate(),
+        /* Tensormap UnitAttr */ mlir::UnitAttr::get(op.getContext()));
     return success();
   }
 };

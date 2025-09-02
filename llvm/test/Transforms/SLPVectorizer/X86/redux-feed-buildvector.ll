@@ -10,19 +10,24 @@ declare void @llvm.masked.scatter.v2f64.v2p0(<2 x double>, <2 x ptr>, i32 immarg
 define void @test(ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr nocapture %arg2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, <8 x ptr> [[TMP1]], <8 x i64> <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15>
+; CHECK-NEXT:    [[GEP1_0:%.*]] = getelementptr inbounds double, ptr [[ARG:%.*]], i64 1
 ; CHECK-NEXT:    [[GEP2_0:%.*]] = getelementptr inbounds double, ptr [[ARG1:%.*]], i64 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> [[TMP2]], i32 8, <8 x i1> splat (i1 true), <8 x double> poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x double>, ptr [[GEP2_0]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <8 x double> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x double>, ptr [[ARG1]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <8 x double> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP5]])
-; CHECK-NEXT:    [[I142:%.*]] = insertelement <2 x double> poison, double [[TMP8]], i64 0
-; CHECK-NEXT:    [[I143:%.*]] = insertelement <2 x double> [[I142]], double [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[GEP2_0]], align 8
+; CHECK-NEXT:    [[GEP2_4:%.*]] = getelementptr inbounds double, ptr [[ARG1]], i64 20
+; CHECK-NEXT:    [[TMP1:%.*]] = call <15 x double> @llvm.masked.load.v15f64.p0(ptr [[GEP1_0]], i32 8, <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x double> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <15 x double> [[TMP1]], <15 x double> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x double>, ptr [[ARG1]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <8 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x double> [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP4]])
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x double>, ptr [[GEP2_4]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <15 x double> [[TMP1]], <15 x double> poison, <4 x i32> <i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x double> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd fast <4 x double> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[RDX_OP]])
+; CHECK-NEXT:    [[I142:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
+; CHECK-NEXT:    [[I143:%.*]] = insertelement <2 x double> [[I142]], double [[TMP11]], i64 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds double, ptr [[ARG2:%.*]], <2 x i64> <i64 0, i64 16>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I143]], <2 x ptr> [[P]], i32 8, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
