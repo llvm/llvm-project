@@ -454,6 +454,7 @@ define amdgpu_kernel void @double15_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v31, s67
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 m0, s2, 1
+; GCN-NEXT:    v_mov_b32_e32 v34, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s38
 ; GCN-NEXT:    v_mov_b32_e32 v3, s39
 ; GCN-NEXT:    v_mov_b32_e32 v4, s40
@@ -484,10 +485,9 @@ define amdgpu_kernel void @double15_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v29, s65
 ; GCN-NEXT:    v_mov_b32_e32 v30, s66
 ; GCN-NEXT:    v_movrels_b32_e32 v32, v1
+; GCN-NEXT:    v_mov_b32_e32 v33, s0
 ; GCN-NEXT:    v_movrels_b32_e32 v31, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[31:32]
+; GCN-NEXT:    flat_store_dwordx2 v[33:34], v[31:32]
 ; GCN-NEXT:    s_endpgm
 entry:
   %ext = extractelement <15 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0>, i32 %sel
@@ -537,6 +537,7 @@ define amdgpu_kernel void @double16_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v31, s67
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 m0, s2, 1
+; GCN-NEXT:    v_mov_b32_e32 v34, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, s38
 ; GCN-NEXT:    v_mov_b32_e32 v3, s39
 ; GCN-NEXT:    v_mov_b32_e32 v4, s40
@@ -567,10 +568,9 @@ define amdgpu_kernel void @double16_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v29, s65
 ; GCN-NEXT:    v_mov_b32_e32 v30, s66
 ; GCN-NEXT:    v_movrels_b32_e32 v32, v1
+; GCN-NEXT:    v_mov_b32_e32 v33, s0
 ; GCN-NEXT:    v_movrels_b32_e32 v31, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[31:32]
+; GCN-NEXT:    flat_store_dwordx2 v[33:34], v[31:32]
 ; GCN-NEXT:    s_endpgm
 entry:
   %ext = extractelement <16 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0, double 9.0, double 10.0, double 11.0, double 12.0, double 13.0, double 14.0, double 15.0, double 16.0>, i32 %sel
@@ -581,13 +581,15 @@ entry:
 define amdgpu_kernel void @float32_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-LABEL: float32_extelt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v33, s1
 ; GCN-NEXT:    s_mov_b32 m0, s2
+; GCN-NEXT:    v_mov_b32_e32 v32, s0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 4.0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0x40a00000
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0x40c00000
@@ -617,10 +619,8 @@ define amdgpu_kernel void @float32_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v29, 0x41f00000
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0x41f80000
 ; GCN-NEXT:    v_mov_b32_e32 v31, 0x42000000
-; GCN-NEXT:    v_movrels_b32_e32 v2, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    v_movrels_b32_e32 v0, v0
+; GCN-NEXT:    flat_store_dword v[32:33], v0
 ; GCN-NEXT:    s_endpgm
 entry:
   %ext = extractelement <32 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0, float 17.0, float 18.0, float 19.0, float 20.0, float 21.0, float 22.0, float 23.0, float 24.0, float 25.0, float 26.0, float 27.0, float 28.0, float 29.0, float 30.0, float 31.0, float 32.0>, i32 %sel

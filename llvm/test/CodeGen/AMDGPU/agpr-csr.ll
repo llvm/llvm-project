@@ -180,34 +180,34 @@ define amdgpu_kernel void @test_call_empty() #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v18, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v17, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v16, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v22, a19
-; GFX908-NEXT:    v_accvgpr_read_b32 v21, a18
-; GFX908-NEXT:    v_accvgpr_read_b32 v20, a17
-; GFX908-NEXT:    v_accvgpr_read_b32 v19, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v26, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v25, a22
-; GFX908-NEXT:    v_accvgpr_read_b32 v24, a21
-; GFX908-NEXT:    v_accvgpr_read_b32 v23, a20
-; GFX908-NEXT:    v_accvgpr_read_b32 v30, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v28, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v27, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v19, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v23, a23
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v18, a18
+; GFX908-NEXT:    v_accvgpr_read_b32 v17, a17
+; GFX908-NEXT:    v_accvgpr_read_b32 v16, a16
+; GFX908-NEXT:    v_accvgpr_read_b32 v22, a22
+; GFX908-NEXT:    v_accvgpr_read_b32 v21, a21
+; GFX908-NEXT:    v_accvgpr_read_b32 v20, a20
+; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v24, a24
 ; GFX908-NEXT:    v_accvgpr_read_b32 v35, a31
 ; GFX908-NEXT:    v_accvgpr_read_b32 v34, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v33, a29
@@ -216,19 +216,19 @@ define amdgpu_kernel void @test_call_empty() #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[32:35], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[24:27], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[20:23], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[16:19], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_endpgm
 bb:
@@ -315,34 +315,34 @@ define amdgpu_kernel void @test_call_areg4() #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v18, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v17, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v16, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v22, a19
-; GFX908-NEXT:    v_accvgpr_read_b32 v21, a18
-; GFX908-NEXT:    v_accvgpr_read_b32 v20, a17
-; GFX908-NEXT:    v_accvgpr_read_b32 v19, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v26, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v25, a22
-; GFX908-NEXT:    v_accvgpr_read_b32 v24, a21
-; GFX908-NEXT:    v_accvgpr_read_b32 v23, a20
-; GFX908-NEXT:    v_accvgpr_read_b32 v30, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v28, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v27, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v19, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v23, a23
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v18, a18
+; GFX908-NEXT:    v_accvgpr_read_b32 v17, a17
+; GFX908-NEXT:    v_accvgpr_read_b32 v16, a16
+; GFX908-NEXT:    v_accvgpr_read_b32 v22, a22
+; GFX908-NEXT:    v_accvgpr_read_b32 v21, a21
+; GFX908-NEXT:    v_accvgpr_read_b32 v20, a20
+; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v24, a24
 ; GFX908-NEXT:    v_accvgpr_read_b32 v35, a31
 ; GFX908-NEXT:    v_accvgpr_read_b32 v34, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v33, a29
@@ -351,19 +351,19 @@ define amdgpu_kernel void @test_call_areg4() #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[32:35], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[24:27], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[20:23], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[16:19], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_endpgm
 bb:
@@ -450,34 +450,34 @@ define amdgpu_kernel void @test_call_areg32() #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v18, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v17, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v16, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v22, a19
-; GFX908-NEXT:    v_accvgpr_read_b32 v21, a18
-; GFX908-NEXT:    v_accvgpr_read_b32 v20, a17
-; GFX908-NEXT:    v_accvgpr_read_b32 v19, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v26, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v25, a22
-; GFX908-NEXT:    v_accvgpr_read_b32 v24, a21
-; GFX908-NEXT:    v_accvgpr_read_b32 v23, a20
-; GFX908-NEXT:    v_accvgpr_read_b32 v30, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v28, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v27, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v19, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v23, a23
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v18, a18
+; GFX908-NEXT:    v_accvgpr_read_b32 v17, a17
+; GFX908-NEXT:    v_accvgpr_read_b32 v16, a16
+; GFX908-NEXT:    v_accvgpr_read_b32 v22, a22
+; GFX908-NEXT:    v_accvgpr_read_b32 v21, a21
+; GFX908-NEXT:    v_accvgpr_read_b32 v20, a20
+; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v24, a24
 ; GFX908-NEXT:    v_accvgpr_read_b32 v35, a31
 ; GFX908-NEXT:    v_accvgpr_read_b32 v34, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v33, a29
@@ -486,19 +486,19 @@ define amdgpu_kernel void @test_call_areg32() #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[32:35], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[24:27], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[20:23], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[16:19], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_endpgm
 bb:
@@ -585,34 +585,34 @@ define amdgpu_kernel void @test_call_areg64() #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v18, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v17, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v16, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v22, a19
-; GFX908-NEXT:    v_accvgpr_read_b32 v21, a18
-; GFX908-NEXT:    v_accvgpr_read_b32 v20, a17
-; GFX908-NEXT:    v_accvgpr_read_b32 v19, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v26, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v25, a22
-; GFX908-NEXT:    v_accvgpr_read_b32 v24, a21
-; GFX908-NEXT:    v_accvgpr_read_b32 v23, a20
-; GFX908-NEXT:    v_accvgpr_read_b32 v30, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v28, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v27, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v19, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v23, a23
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v18, a18
+; GFX908-NEXT:    v_accvgpr_read_b32 v17, a17
+; GFX908-NEXT:    v_accvgpr_read_b32 v16, a16
+; GFX908-NEXT:    v_accvgpr_read_b32 v22, a22
+; GFX908-NEXT:    v_accvgpr_read_b32 v21, a21
+; GFX908-NEXT:    v_accvgpr_read_b32 v20, a20
+; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v24, a24
 ; GFX908-NEXT:    v_accvgpr_read_b32 v35, a31
 ; GFX908-NEXT:    v_accvgpr_read_b32 v34, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v33, a29
@@ -621,19 +621,19 @@ define amdgpu_kernel void @test_call_areg64() #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[32:35], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[24:27], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[20:23], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[16:19], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_endpgm
 bb:
@@ -720,34 +720,34 @@ define amdgpu_kernel void @test_call_areg31_63() #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v6, a3
-; GFX908-NEXT:    v_accvgpr_read_b32 v5, a2
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v10, a7
-; GFX908-NEXT:    v_accvgpr_read_b32 v9, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v8, a5
-; GFX908-NEXT:    v_accvgpr_read_b32 v7, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v14, a11
-; GFX908-NEXT:    v_accvgpr_read_b32 v13, a10
-; GFX908-NEXT:    v_accvgpr_read_b32 v12, a9
-; GFX908-NEXT:    v_accvgpr_read_b32 v11, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v18, a15
-; GFX908-NEXT:    v_accvgpr_read_b32 v17, a14
-; GFX908-NEXT:    v_accvgpr_read_b32 v16, a13
-; GFX908-NEXT:    v_accvgpr_read_b32 v15, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v22, a19
-; GFX908-NEXT:    v_accvgpr_read_b32 v21, a18
-; GFX908-NEXT:    v_accvgpr_read_b32 v20, a17
-; GFX908-NEXT:    v_accvgpr_read_b32 v19, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v26, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v25, a22
-; GFX908-NEXT:    v_accvgpr_read_b32 v24, a21
-; GFX908-NEXT:    v_accvgpr_read_b32 v23, a20
-; GFX908-NEXT:    v_accvgpr_read_b32 v30, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v28, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v27, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v11, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v19, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v23, a23
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a6
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a5
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a4
+; GFX908-NEXT:    v_accvgpr_read_b32 v10, a10
+; GFX908-NEXT:    v_accvgpr_read_b32 v9, a9
+; GFX908-NEXT:    v_accvgpr_read_b32 v8, a8
+; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
+; GFX908-NEXT:    v_accvgpr_read_b32 v13, a13
+; GFX908-NEXT:    v_accvgpr_read_b32 v12, a12
+; GFX908-NEXT:    v_accvgpr_read_b32 v18, a18
+; GFX908-NEXT:    v_accvgpr_read_b32 v17, a17
+; GFX908-NEXT:    v_accvgpr_read_b32 v16, a16
+; GFX908-NEXT:    v_accvgpr_read_b32 v22, a22
+; GFX908-NEXT:    v_accvgpr_read_b32 v21, a21
+; GFX908-NEXT:    v_accvgpr_read_b32 v20, a20
+; GFX908-NEXT:    v_accvgpr_read_b32 v27, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v26, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v25, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v24, a24
 ; GFX908-NEXT:    v_accvgpr_read_b32 v35, a31
 ; GFX908-NEXT:    v_accvgpr_read_b32 v34, a30
 ; GFX908-NEXT:    v_accvgpr_read_b32 v33, a29
@@ -756,19 +756,19 @@ define amdgpu_kernel void @test_call_areg31_63() #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[32:35], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[24:27], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[20:23], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[16:19], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GFX908-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_endpgm
 bb:
@@ -856,26 +856,26 @@ define amdgpu_kernel void @test_call_unknown() #0 {
 ; GFX908-NEXT:    ; def a[0:31]
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    v_accvgpr_read_b32 v43, a3
+; GFX908-NEXT:    v_accvgpr_read_b32 v47, a7
+; GFX908-NEXT:    v_accvgpr_read_b32 v59, a11
+; GFX908-NEXT:    v_accvgpr_read_b32 v63, a15
+; GFX908-NEXT:    v_accvgpr_read_b32 v75, a19
+; GFX908-NEXT:    v_accvgpr_read_b32 v79, a23
 ; GFX908-NEXT:    v_accvgpr_read_b32 v42, a2
 ; GFX908-NEXT:    v_accvgpr_read_b32 v41, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v40, a0
-; GFX908-NEXT:    v_accvgpr_read_b32 v47, a7
 ; GFX908-NEXT:    v_accvgpr_read_b32 v46, a6
 ; GFX908-NEXT:    v_accvgpr_read_b32 v45, a5
 ; GFX908-NEXT:    v_accvgpr_read_b32 v44, a4
-; GFX908-NEXT:    v_accvgpr_read_b32 v59, a11
 ; GFX908-NEXT:    v_accvgpr_read_b32 v58, a10
 ; GFX908-NEXT:    v_accvgpr_read_b32 v57, a9
 ; GFX908-NEXT:    v_accvgpr_read_b32 v56, a8
-; GFX908-NEXT:    v_accvgpr_read_b32 v63, a15
 ; GFX908-NEXT:    v_accvgpr_read_b32 v62, a14
 ; GFX908-NEXT:    v_accvgpr_read_b32 v61, a13
 ; GFX908-NEXT:    v_accvgpr_read_b32 v60, a12
-; GFX908-NEXT:    v_accvgpr_read_b32 v75, a19
 ; GFX908-NEXT:    v_accvgpr_read_b32 v74, a18
 ; GFX908-NEXT:    v_accvgpr_read_b32 v73, a17
 ; GFX908-NEXT:    v_accvgpr_read_b32 v72, a16
-; GFX908-NEXT:    v_accvgpr_read_b32 v79, a23
 ; GFX908-NEXT:    v_accvgpr_read_b32 v78, a22
 ; GFX908-NEXT:    v_accvgpr_read_b32 v77, a21
 ; GFX908-NEXT:    v_accvgpr_read_b32 v76, a20
