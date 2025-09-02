@@ -1766,8 +1766,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                       &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
-        "Cannot vectorize early exit loop with non-load faults",
-        "EarlyExitLoopWithNonLoadFaults", ORE, TheLoop);
+        "Cannot vectorize non-read-only early exit loop",
+        "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
     return false;
   }
   // Check non-dereferenceable loads if any.
@@ -1775,7 +1775,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
-      reportVectorizationFailure("Loop contains strided unbound access",
+      reportVectorizationFailure("Loop contains potentially faulting strided load",
                                  "Cannot vectorize early exit loop with "
                                  "strided fault-only-first load",
                                  "EarlyExitLoopWithStridedFaultOnlyFirstLoad",
