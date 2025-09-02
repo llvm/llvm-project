@@ -1,6 +1,6 @@
 ; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
-;
-;    void f(float a[100][100]) {
+;    float a[100][100];
+;    void f() {
 ;      float x;
 ;
 ;      for (int i = 0; i < 100; i++) {
@@ -147,7 +147,9 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(ptr %a) {
+@a = common global [100 x [100 x float]] zeroinitializer
+
+define void @f() {
 bb:
   br label %bb5
 
@@ -184,7 +186,7 @@ bb11:                                             ; preds = %bb10
 
 bb12:                                             ; preds = %bb11, %bb10
   %x.3 = phi float [ 4.200000e+01, %bb11 ], [ %x.2, %bb10 ]
-  %tmp13 = getelementptr inbounds [100 x float], ptr %a, i64 %indvars.iv2, i64 %indvars.iv
+  %tmp13 = getelementptr inbounds [100 x float], ptr @a, i64 %indvars.iv2, i64 %indvars.iv
   %tmp14 = load float, ptr %tmp13, align 4
   %tmp15 = fadd float %tmp14, %x.3
   store float %tmp15, ptr %tmp13, align 4

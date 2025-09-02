@@ -43,11 +43,12 @@
 ; CHECK: The matrix multiplication pattern was detected
 ;
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+@A = common global [1600 x [2200 x double]] zeroinitializer
+@B = common global [2200 x [1800 x double]] zeroinitializer
+@tmp = common global [1600 x [1800 x double]] zeroinitializer
 
-; Function Attrs: norecurse nounwind uwtable
-define void @kernel_2mm(i32 %ni, i32 %nj, i32 %nk, i32 %nl, double %alpha, double %beta, ptr nocapture %tmp, ptr nocapture readonly %A, ptr nocapture readonly %B, ptr nocapture readnone %C, ptr nocapture readnone %D) local_unnamed_addr #0 {
+
+define void @kernel_2mm(i32 %ni, i32 %nj, i32 %nk, i32 %nl, double %alpha, double %beta) {
 entry:
   br label %entry.split
 
@@ -60,17 +61,17 @@ for.body:                                         ; preds = %for.inc25, %entry.s
 
 for.body3:                                        ; preds = %for.inc22, %for.body
   %indvars.iv46 = phi i64 [ 0, %for.body ], [ %indvars.iv.next47, %for.inc22 ]
-  %arrayidx5 = getelementptr inbounds [1800 x double], ptr %tmp, i64 %indvars.iv50, i64 %indvars.iv46
+  %arrayidx5 = getelementptr inbounds [1800 x double], ptr @tmp, i64 %indvars.iv50, i64 %indvars.iv46
   store double 0.000000e+00, ptr %arrayidx5, align 8, !tbaa !2
   br label %for.body8
 
 for.body8:                                        ; preds = %for.body8, %for.body3
   %0 = phi double [ 0.000000e+00, %for.body3 ], [ %add, %for.body8 ]
   %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body8 ]
-  %arrayidx12 = getelementptr inbounds [2200 x double], ptr %A, i64 %indvars.iv50, i64 %indvars.iv
+  %arrayidx12 = getelementptr inbounds [2200 x double], ptr @A, i64 %indvars.iv50, i64 %indvars.iv
   %1 = load double, ptr %arrayidx12, align 8, !tbaa !2
   %mul = fmul double %1, %alpha
-  %arrayidx16 = getelementptr inbounds [1800 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv46
+  %arrayidx16 = getelementptr inbounds [1800 x double], ptr @B, i64 %indvars.iv, i64 %indvars.iv46
   %2 = load double, ptr %arrayidx16, align 8, !tbaa !2
   %mul17 = fmul double %mul, %2
   %add = fadd double %0, %mul17
@@ -92,8 +93,6 @@ for.inc25:                                        ; preds = %for.inc22
 for.end27:                                        ; preds = %for.inc25
   ret void
 }
-
-attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="haswell" "target-features"="+aes,+avx,+avx2,+bmi,+bmi2,+cmov,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-adx,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vl,-avx512vpopcntdq,-clflushopt,-clwb,-clzero,-fma4,-lwp,-mwaitx,-pku,-prefetchwt1,-prfchw,-rdseed,-rtm,-sgx,-sha,-sse4a,-tbm,-xop,-xsavec,-xsaves" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

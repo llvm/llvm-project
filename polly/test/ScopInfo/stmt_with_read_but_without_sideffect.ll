@@ -8,8 +8,6 @@
 ; should have been removed. We use -polly-delicm to trigger such an
 ; iteration of an already deleted MemoryAccess.
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
 @ATH = external dso_local unnamed_addr constant [88 x float], align 16
 
 define void @setup_tone_curves() {
@@ -84,7 +82,7 @@ for.inc.1:                                        ; preds = %if.then.1, %if.else
 ; CHECK-NEXT:     Stmt_if_else_1_last
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_min_1_1__phi[] };
-; CHECK-NEXT:            new: [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_ath[i0] : p_0 <= 576460752303423487 };
+; CHECK-NEXT:            new: [p_0] -> { Stmt_if_else_1_last[i0] -> MemRef_ath[i0]
 ; CHECK-NEXT:     Stmt_for_inc_1
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [p_0] -> { Stmt_for_inc_1[i0] -> MemRef_min_1_1__phi[] };

@@ -10,10 +10,12 @@
 ;
 ; CHECK: The tensor contraction pattern was detected
 ;
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nk, i32 %nl, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) {
+@A = common global [32 x [32 x [1024 x double]]] zeroinitializer
+@B = common global [1024 x [1024 x double]] zeroinitializer
+@C = common global [32 x [1024 x [32 x double]]] zeroinitializer
+
+define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nk, i32 %nl, double %alpha, double %beta) {
 entry:
   br label %for.cond1.preheader
 
@@ -31,12 +33,12 @@ for.cond7.preheader:                              ; preds = %for.inc24, %for.con
 
 for.body9:                                        ; preds = %for.body9, %for.cond7.preheader
   %indvars.iv = phi i64 [ 0, %for.cond7.preheader ], [ %indvars.iv.next, %for.body9 ]
-  %arrayidx13 = getelementptr inbounds [32 x [1024 x double]], ptr %A, i64 %indvars.iv43, i64 %indvars.iv37, i64 %indvars.iv
+  %arrayidx13 = getelementptr inbounds [32 x [1024 x double]], ptr @A, i64 %indvars.iv43, i64 %indvars.iv37, i64 %indvars.iv
   %i = load double, ptr %arrayidx13, align 8
-  %arrayidx17 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv40
+  %arrayidx17 = getelementptr inbounds [1024 x double], ptr @B, i64 %indvars.iv, i64 %indvars.iv40
   %i1 = load double, ptr %arrayidx17, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx23 = getelementptr inbounds [1024 x [32 x double]], ptr %C, i64 %indvars.iv43, i64 %indvars.iv40, i64 %indvars.iv37
+  %arrayidx23 = getelementptr inbounds [1024 x [32 x double]], ptr @C, i64 %indvars.iv43, i64 %indvars.iv40, i64 %indvars.iv37
   %i2 = load double, ptr %arrayidx23, align 8
   %add = fadd fast double %i2, %mul
   store double %add, ptr %arrayidx23, align 8

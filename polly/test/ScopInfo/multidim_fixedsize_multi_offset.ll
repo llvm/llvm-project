@@ -21,8 +21,8 @@
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[1 + i0, 0] };
 ; CHECK-NEXT: }
-;
-;    void f(int A[][2]) {
+;    int A[100][2];
+;    void f() {
 ;      int(*B)[2] = &A[0][0];
 ;      int(*C)[2] = &A[1][0];
 ;      for (int i = 0; i < 100; i++) {
@@ -34,11 +34,12 @@
 ; Verify that the additional offset to A by accessing it through C is taken into
 ; account.
 ;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(ptr %A) {
+@A = common global [100 x [2 x i32]] zeroinitializer, align 4
+
+define void @f() {
 entry:
-  %arrayidx3 = getelementptr inbounds [2 x i32], ptr %A, i64 1, i64 0
+  %arrayidx3 = getelementptr inbounds [2 x i32], ptr @A, i64 1, i64 0
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -47,7 +48,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx5 = getelementptr inbounds [2 x i32], ptr %A, i64 %indvars.iv, i64 0
+  %arrayidx5 = getelementptr inbounds [2 x i32], ptr @A, i64 %indvars.iv, i64 0
   %tmp1 = load i32, ptr %arrayidx5, align 4
   %inc = add nsw i32 %tmp1, 1
   store i32 %inc, ptr %arrayidx5, align 4

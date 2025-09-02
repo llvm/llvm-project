@@ -13,20 +13,17 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] -> [i0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] -> MemRef_call[5, 5, 0] };
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] -> MemRef_call[2240] };
 ; CHECK-NEXT:     Stmt_for_cond40_preheader_5
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] : 0 <= i0 <= 1 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> [i0, 1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> MemRef_call[5, 5, 0] };
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> MemRef_call[2240] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> MemRef__pre160[] };
 ; CHECK-NEXT: }
-
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 declare noalias ptr @malloc()
 
