@@ -24,14 +24,12 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <cstdint>
 
 using namespace mlir;
 
 #define DEBUG_TYPE "scf-utils"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
@@ -525,13 +523,13 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   // If any control operand of any inner loop of `forOp` is defined within
   // `forOp`, no unroll jam.
   if (!areInnerBoundsInvariant(forOp)) {
-    LDBG("failed to unroll and jam: inner bounds are not invariant");
+    LDBG() << "failed to unroll and jam: inner bounds are not invariant";
     return failure();
   }
 
   // Currently, for operations with results are not supported.
   if (forOp->getNumResults() > 0) {
-    LDBG("failed to unroll and jam: unsupported loop with results");
+    LDBG() << "failed to unroll and jam: unsupported loop with results";
     return failure();
   }
 
@@ -540,16 +538,17 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount.has_value()) {
     // If the trip count is dynamic, do not unroll & jam.
-    LDBG("failed to unroll and jam: trip count could not be determined");
+    LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
   if (unrollJamFactor > *tripCount) {
-    LDBG("unroll and jam factor is greater than trip count, set factor to trip "
-         "count");
+    LDBG() << "unroll and jam factor is greater than trip count, set factor to "
+              "trip "
+              "count";
     unrollJamFactor = *tripCount;
   } else if (*tripCount % unrollJamFactor != 0) {
-    LDBG("failed to unroll and jam: unsupported trip count that is not a "
-         "multiple of unroll jam factor");
+    LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
+              "multiple of unroll jam factor";
     return failure();
   }
 
@@ -828,9 +827,8 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
       productOf = v;
   }
   if (!productOf) {
-    productOf = rewriter
-                    .create<arith::ConstantOp>(
-                        loc, rewriter.getOneAttr(getType(values.front())))
+    productOf = arith::ConstantOp::create(
+                    rewriter, loc, rewriter.getOneAttr(getType(values.front())))
                     .getResult();
   }
   return productOf.value();
@@ -1235,6 +1233,7 @@ static void getPerfectlyNestedLoopsImpl(
 
 static Loops stripmineSink(scf::ForOp forOp, Value factor,
                            ArrayRef<scf::ForOp> targets) {
+  assert(!forOp.getUnsignedCmp() && "unsigned loops are not supported");
   auto originalStep = forOp.getStep();
   auto iv = forOp.getInductionVar();
 
@@ -1243,6 +1242,8 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
 
   Loops innerLoops;
   for (auto t : targets) {
+    assert(!t.getUnsignedCmp() && "unsigned loops are not supported");
+
     // Save information for splicing ops out of t when done
     auto begin = t.getBody()->begin();
     auto nOps = t.getBody()->getOperations().size();
@@ -1417,6 +1418,8 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
+  assert(source.getUnsignedCmp() == target.getUnsignedCmp() &&
+         "incompatible signedness");
   unsigned numTargetOuts = target.getNumResults();
   unsigned numSourceOuts = source.getNumResults();
 
@@ -1430,7 +1433,8 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
   rewriter.setInsertionPointAfter(source);
   scf::ForOp fusedLoop = scf::ForOp::create(
       rewriter, source.getLoc(), source.getLowerBound(), source.getUpperBound(),
-      source.getStep(), fusedInitArgs);
+      source.getStep(), fusedInitArgs, /*bodyBuilder=*/nullptr,
+      source.getUnsignedCmp());
 
   // Map original induction variables and operands to those of the fused loop.
   IRMapping mapping;
@@ -1507,4 +1511,42 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
 
   rewriter.replaceOp(forallOp, normalizedForallOp);
   return normalizedForallOp;
+}
+
+bool mlir::isPerfectlyNestedForLoops(
+    MutableArrayRef<LoopLikeOpInterface> loops) {
+  assert(!loops.empty() && "unexpected empty loop nest");
+  if (loops.size() == 1)
+    return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
+  for (auto [outerLoop, innerLoop] :
+       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
+    auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
+    auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
+    if (!outerFor || !innerFor)
+      return false;
+    auto outerBBArgs = outerFor.getRegionIterArgs();
+    auto innerIterArgs = innerFor.getInitArgs();
+    if (outerBBArgs.size() != innerIterArgs.size())
+      return false;
+
+    for (auto [outerBBArg, innerIterArg] :
+         llvm::zip_equal(outerBBArgs, innerIterArgs)) {
+      if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
+          innerIterArg != outerBBArg)
+        return false;
+    }
+
+    ValueRange outerYields =
+        cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
+    ValueRange innerResults = innerFor.getResults();
+    if (outerYields.size() != innerResults.size())
+      return false;
+    for (auto [outerYield, innerResult] :
+         llvm::zip_equal(outerYields, innerResults)) {
+      if (!llvm::hasSingleElement(innerResult.getUses()) ||
+          outerYield != innerResult)
+        return false;
+    }
+  }
+  return true;
 }

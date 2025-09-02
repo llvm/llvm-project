@@ -605,8 +605,8 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:
-    DepFS =
-        new DependencyScanningWorkerFilesystem(Service.getSharedCache(), FS);
+    DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
+        Service.getSharedCache(), FS);
     BaseFS = DepFS;
     break;
   case ScanningMode::CanonicalPreprocessing:

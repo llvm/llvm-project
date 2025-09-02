@@ -51,14 +51,8 @@ static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 /// Return "true" if the given op is guaranteed to have neither "Allocate" nor
 /// "Free" side effects.
 static bool hasNeitherAllocateNorFreeSideEffect(Operation *op) {
-  if (isa<MemoryEffectOpInterface>(op))
-    return !hasEffect<MemoryEffects::Allocate>(op) &&
-           !hasEffect<MemoryEffects::Free>(op);
-  // If the op does not implement the MemoryEffectOpInterface but has has
-  // recursive memory effects, then this op in isolation (without its body) does
-  // not have any side effects. All the ops inside the regions of this op will
-  // be processed separately.
-  return op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+  return !mightHaveEffect<MemoryEffects::Allocate>(op) &&
+         !mightHaveEffect<MemoryEffects::Free>(op);
 }
 
 /// Return "true" if the given op has buffer semantics. I.e., it has buffer
@@ -517,9 +511,7 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
   //   MemoryEffectOpInterface. They usually do not have side effects apart
   //   from the callee, which will be analyzed separately. (This is similar to
   //   "recursive memory effects".)
-  if (!isa<MemoryEffectOpInterface>(op) &&
-      !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>() &&
-      !isa<CallOpInterface>(op))
+  if (hasUnknownEffects(op) && !isa<CallOpInterface>(op))
     return op->emitError(
         "ops with unknown memory side effects are not supported");
 
@@ -750,17 +742,16 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
 
   // Insert a runtime check and only clone if we still don't have ownership at
   // runtime.
-  Value maybeClone = builder
-                         .create<scf::IfOp>(
-                             memref.getLoc(), condition,
-                             [&](OpBuilder &builder, Location loc) {
-                               scf::YieldOp::create(builder, loc, newMemref);
-                             },
-                             [&](OpBuilder &builder, Location loc) {
-                               Value clone = bufferization::CloneOp::create(
-                                   builder, loc, newMemref);
-                               scf::YieldOp::create(builder, loc, clone);
-                             })
+  Value maybeClone = scf::IfOp::create(
+                         builder, memref.getLoc(), condition,
+                         [&](OpBuilder &builder, Location loc) {
+                           scf::YieldOp::create(builder, loc, newMemref);
+                         },
+                         [&](OpBuilder &builder, Location loc) {
+                           Value clone = bufferization::CloneOp::create(
+                               builder, loc, newMemref);
+                           scf::YieldOp::create(builder, loc, clone);
+                         })
                          .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
   state.updateOwnership(maybeClone, trueVal);

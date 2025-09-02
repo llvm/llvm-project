@@ -197,10 +197,9 @@ Value createSubgroupShuffleReduction(OpBuilder &builder, Location loc,
   // Parallel reduction using butterfly shuffles.
   for (unsigned i = ci.clusterStride; i < ci.clusterStride * ci.clusterSize;
        i <<= 1) {
-    Value shuffled = builder
-                         .create<gpu::ShuffleOp>(loc, packFn(laneVal), i,
-                                                 /*width=*/ci.subgroupSize,
-                                                 /*mode=*/gpu::ShuffleMode::XOR)
+    Value shuffled = gpu::ShuffleOp::create(builder, loc, packFn(laneVal), i,
+                                            /*width=*/ci.subgroupSize,
+                                            /*mode=*/gpu::ShuffleMode::XOR)
                          .getShuffleResult();
     laneVal = vector::makeArithReduction(builder, loc,
                                          gpu::convertReductionKind(mode),

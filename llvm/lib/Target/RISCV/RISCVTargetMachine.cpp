@@ -38,7 +38,6 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
@@ -94,21 +93,6 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> EnableMISchedLoadStoreClustering(
-    "riscv-misched-load-store-clustering", cl::Hidden,
-    cl::desc("Enable load and store clustering in the machine scheduler"),
-    cl::init(true));
-
-static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
-    "riscv-postmisched-load-store-clustering", cl::Hidden,
-    cl::desc("Enable PostRA load and store clustering in the machine scheduler"),
-    cl::init(true));
-
-static cl::opt<bool>
-    EnableVLOptimizer("riscv-enable-vl-optimizer",
-                      cl::desc("Enable the RISC-V VL Optimizer pass"),
-                      cl::init(true), cl::Hidden);
-
 static cl::opt<bool> DisableVectorMaskMutation(
     "riscv-disable-vector-mask-mutation",
     cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
@@ -122,6 +106,8 @@ static cl::opt<bool>
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
+  RegisterTargetMachine<RISCVTargetMachine> A(getTheRISCV32beTarget());
+  RegisterTargetMachine<RISCVTargetMachine> B(getTheRISCV64beTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeRISCVO0PreLegalizerCombinerPass(*PR);
@@ -155,21 +141,37 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVAsmPrinterPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT,
-                                   const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
+static std::string computeDataLayout(const Triple &TT,
+                                     const TargetOptions &Opts) {
+  std::string Ret;
+
+  if (TT.isLittleEndian())
+    Ret += "e";
+  else
+    Ret += "E";
+
+  Ret += "-m:e";
+
+  // Pointer and integer sizes.
   if (TT.isArch64Bit()) {
-    if (ABIName == "lp64e")
-      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
-
-    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+    Ret += "-p:64:64-i64:64-i128:128";
+    Ret += "-n32:64";
+  } else {
+    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+    Ret += "-p:32:32-i64:64";
+    Ret += "-n32";
   }
-  assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
 
-  if (ABIName == "ilp32e")
-    return "e-m:e-p:32:32-i64:64-n32-S32";
+  // Stack alignment based on ABI.
+  StringRef ABI = Opts.MCOptions.getABIName();
+  if (ABI == "ilp32e")
+    Ret += "-S32";
+  else if (ABI == "lp64e")
+    Ret += "-S64";
+  else
+    Ret += "-S128";
 
-  return "e-m:e-p:32:32-i64:64-n32-S128";
+  return Ret;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
@@ -299,15 +301,17 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
-  if (EnableMISchedLoadStoreClustering) {
+
+  if (ST.enableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+
+  if (ST.enableMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-  }
 
-  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   if (!DisableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
 
@@ -316,13 +320,16 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMI *DAG = createSchedPostRA(C);
-  if (EnablePostMISchedLoadStoreClustering) {
+
+  if (ST.enablePostMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+
+  if (ST.enablePostMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-  }
 
   return DAG;
 }
@@ -617,8 +624,7 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
-    if (EnableVLOptimizer)
-      addPass(createRISCVVLOptimizerPass());
+    addPass(createRISCVVLOptimizerPass());
   }
 
   addPass(createRISCVInsertReadWriteCSRPass());
@@ -648,12 +654,6 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                                  OptimizationLevel Level) {
     LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
-
-  PB.registerVectorizerEndEPCallback(
-      [](FunctionPassManager &FPM, OptimizationLevel Level) {
-        if (Level.isOptimizingForSpeed())
-          FPM.addPass(createFunctionToLoopPassAdaptor(EVLIndVarSimplifyPass()));
-      });
 }
 
 yaml::MachineFunctionInfo *

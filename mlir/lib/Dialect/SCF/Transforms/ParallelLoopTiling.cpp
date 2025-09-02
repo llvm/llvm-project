@@ -100,11 +100,10 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
                  op.getStep(), tileSizeConstants)) {
     // Collect the statically known loop bounds
     auto lowerBoundConstant =
-        dyn_cast_or_null<arith::ConstantIndexOp>(lowerBound.getDefiningOp());
+        lowerBound.getDefiningOp<arith::ConstantIndexOp>();
     auto upperBoundConstant =
-        dyn_cast_or_null<arith::ConstantIndexOp>(upperBound.getDefiningOp());
-    auto stepConstant =
-        dyn_cast_or_null<arith::ConstantIndexOp>(step.getDefiningOp());
+        upperBound.getDefiningOp<arith::ConstantIndexOp>();
+    auto stepConstant = step.getDefiningOp<arith::ConstantIndexOp>();
     auto tileSize =
         cast<arith::ConstantIndexOp>(tileSizeConstant.getDefiningOp()).value();
     // If the loop bounds and the loop step are constant and if the number of

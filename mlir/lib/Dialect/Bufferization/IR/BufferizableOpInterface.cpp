@@ -18,7 +18,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface
@@ -35,8 +34,6 @@ namespace bufferization {
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 
 #define DEBUG_TYPE "bufferizable-op-interface"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X))
 
 using namespace mlir;
 using namespace bufferization;
@@ -691,8 +688,8 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   if (failed(bufferType))
     return failure();
   ensureToBufferOpIsValid(value, *bufferType);
-  return rewriter
-      .create<bufferization::ToBufferOp>(value.getLoc(), *bufferType, value)
+  return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
+                                           *bufferType, value)
       .getResult();
 }
 
@@ -775,9 +772,8 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
 
   // Default bufferallocation via AllocOp.
   if (bufferAlignment != 0)
-    return b
-        .create<memref::AllocOp>(loc, type, dynShape,
-                                 b.getI64IntegerAttr(bufferAlignment))
+    return memref::AllocOp::create(b, loc, type, dynShape,
+                                   b.getI64IntegerAttr(bufferAlignment))
         .getResult();
   return memref::AllocOp::create(b, loc, type, dynShape).getResult();
 }

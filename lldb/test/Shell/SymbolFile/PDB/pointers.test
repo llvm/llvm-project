@@ -1,11 +1,12 @@
 REQUIRES: target-windows, msvc
-RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.obj %S/Inputs/PointerTypeTest.cpp
-RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.exe %T/PointerTypeTest.cpp.obj
-RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck %s
-RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST-F %s
-RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST %s
-RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN %s
-RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=F %s
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%t.dir/PointerTypeTest.cpp.obj %S/Inputs/PointerTypeTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%t.dir/PointerTypeTest.cpp.exe %t.dir/PointerTypeTest.cpp.obj
+RUN: lldb-test symbols %t.dir/PointerTypeTest.cpp.exe | FileCheck %s
+RUN: lldb-test symbols %t.dir/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST-F %s
+RUN: lldb-test symbols %t.dir/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST %s
+RUN: lldb-test symbols %t.dir/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN %s
+RUN: lldb-test symbols %t.dir/PointerTypeTest.cpp.exe | FileCheck --check-prefix=F %s
 
 CHECK: Module [[MOD:.*]]
 CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\PointerTypeTest.cpp'

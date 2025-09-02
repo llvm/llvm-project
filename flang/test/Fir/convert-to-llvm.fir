@@ -338,8 +338,7 @@ func.func @select(%arg : index, %arg2 : i32) -> i32 {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK:         %[[SELECTOR:.*]] = llvm.trunc %[[SELECTVALUE]] : i{{.*}} to i32
-// CHECK:         llvm.switch %[[SELECTOR]] : i32, ^bb5 [
+// CHECK:         llvm.switch %[[SELECTVALUE]] : i64, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, [[IDX]], i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),
@@ -384,7 +383,8 @@ func.func @select_rank(%arg : i32, %arg2 : i32) -> i32 {
 // CHECK:         %[[C0:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[C1:.*]] = llvm.mlir.constant(2 : i32) : i32
 // CHECK:         %[[C2:.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK:         llvm.switch %[[SELECTVALUE]] : i32, ^bb5 [
+// CHECK:         %[[SELECTOR:.*]] = llvm.sext %[[SELECTVALUE]] : i{{.*}} to i64
+// CHECK:         llvm.switch %[[SELECTOR]] : i64, ^bb5 [
 // CHECK:           1: ^bb1(%[[C0]] : i32),
 // CHECK:           2: ^bb2(%[[C2]], %[[SELECTVALUE]], %[[ARG1]] : i32, i32, i32),
 // CHECK:           3: ^bb3(%[[ARG1]], %[[C2]] : i32, i32),
@@ -2853,12 +2853,16 @@ func.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !fir.ref<i64>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: @test_call_arg_attrs_indirect
 func.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: (i16)-> i16) -> i16 {
   // CHECK: llvm.call %arg1(%{{.*}}) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   %0 = fir.call %arg1(%arg0) : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   return %0 : i16
 }
+
+// -----
 
 // CHECK-LABEL: @test_byval
 func.func @test_byval(%arg0: (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, %arg2: f64) {
@@ -2867,9 +2871,56 @@ func.func @test_byval(%arg0: (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) 
   return
 }
 
+// -----
+
 // CHECK-LABEL: @test_sret
 func.func @test_sret(%arg0: (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, %arg2: f64) {
   //  llvm.call %{{.*}}(%{{.*}}, %{{.*}}) : !llvm.ptr, (!llvm.ptr {llvm.sret = !llvm.struct<"t", (array<5 x f64>)>}, f64) -> ()
   fir.call %arg0(%arg1, %arg2) : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.sret = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
   return
 }
+
+// -----
+
+func.func @select_with_cast(%arg1 : i8, %arg2 : i16, %arg3: i64, %arg4: index) -> () {
+  fir.select %arg1 : i8 [ 1, ^bb1, unit, ^bb1 ]
+  ^bb1:
+  fir.select %arg2 : i16 [ 1, ^bb2, unit, ^bb2 ]
+  ^bb2:
+  fir.select %arg3 : i64 [ 1, ^bb3, unit, ^bb3 ]
+  ^bb3:
+  fir.select %arg4 : index [ 1, ^bb4, unit, ^bb4 ]
+  ^bb4:
+  fir.select %arg3 : i64 [ 4294967296, ^bb5, unit, ^bb5 ]
+  ^bb5:
+  return
+}
+// CHECK-LABEL:   llvm.func @select_with_cast(
+// CHECK-SAME:      %[[ARG0:.*]]: i8,
+// CHECK-SAME:      %[[ARG1:.*]]: i16,
+// CHECK-SAME:      %[[ARG2:.*]]: i64,
+// CHECK-SAME:      %[[ARG3:.*]]: i64) {
+// CHECK:           %[[VAL_0:.*]] = llvm.sext %[[ARG0]] : i8 to i64
+// CHECK:           llvm.switch %[[VAL_0]] : i64, ^bb1 [
+// CHECK:             1: ^bb1
+// CHECK:           ]
+// CHECK:         ^bb1:
+// CHECK:           %[[VAL_1:.*]] = llvm.sext %[[ARG1]] : i16 to i64
+// CHECK:           llvm.switch %[[VAL_1]] : i64, ^bb2 [
+// CHECK:             1: ^bb2
+// CHECK:           ]
+// CHECK:         ^bb2:
+// CHECK:           llvm.switch %[[ARG2]] : i64, ^bb3 [
+// CHECK:             1: ^bb3
+// CHECK:           ]
+// CHECK:         ^bb3:
+// CHECK:           llvm.switch %[[ARG3]] : i64, ^bb4 [
+// CHECK:             1: ^bb4
+// CHECK:           ]
+// CHECK:         ^bb4:
+// CHECK:           llvm.switch %[[ARG2]] : i64, ^bb5 [
+// CHECK:             4294967296: ^bb5
+// CHECK:           ]
+// CHECK:         ^bb5:
+// CHECK:           llvm.return
+// CHECK:         }

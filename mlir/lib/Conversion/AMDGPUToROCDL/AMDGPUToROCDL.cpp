@@ -14,6 +14,7 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -232,8 +233,8 @@ struct FatRawBufferCastLowering
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
         getTypeConverter()->convertType(op.getResult().getType()));
-    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
-                                         kAllocatedPtrPosInMemRefDescriptor);
+    SmallVector<int64_t> pos{kAllocatedPtrPosInMemRefDescriptor};
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr, pos);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
                                          kAlignedPtrPosInMemRefDescriptor);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, offset,
@@ -481,16 +482,16 @@ struct MemoryCounterWaitOpLowering
     if (chipset.majorVersion >= 12) {
       Location loc = op.getLoc();
       if (std::optional<int> ds = adaptor.getDs())
-        rewriter.create<ROCDL::WaitDscntOp>(loc, *ds);
+        ROCDL::WaitDscntOp::create(rewriter, loc, *ds);
 
       if (std::optional<int> load = adaptor.getLoad())
-        rewriter.create<ROCDL::WaitLoadcntOp>(loc, *load);
+        ROCDL::WaitLoadcntOp::create(rewriter, loc, *load);
 
       if (std::optional<int> store = adaptor.getStore())
-        rewriter.create<ROCDL::WaitStorecntOp>(loc, *store);
+        ROCDL::WaitStorecntOp::create(rewriter, loc, *store);
 
       if (std::optional<int> exp = adaptor.getExp())
-        rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
+        ROCDL::WaitExpcntOp::create(rewriter, loc, *exp);
 
       rewriter.eraseOp(op);
       return success();
@@ -1876,6 +1877,54 @@ struct AMDGPUSwizzleBitModeLowering
   }
 };
 
+struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<PermlaneSwapOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(PermlaneSwapOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx950)
+      return op->emitOpError("permlane_swap is only supported on gfx950+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    unsigned rowLength = op.getRowLength();
+    bool fi = op.getFetchInactive();
+    bool boundctrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      Type i32pair = LLVM::LLVMStructType::getLiteral(
+          rewriter.getContext(), {v.getType(), v.getType()});
+
+      if (rowLength == 16)
+        res = ROCDL::Permlane16SwapOp::create(rewriter, loc, i32pair, v, v, fi,
+                                              boundctrl);
+      else if (rowLength == 32)
+        res = ROCDL::Permlane32SwapOp::create(rewriter, loc, i32pair, v, v, fi,
+                                              boundctrl);
+      else
+        llvm_unreachable("unsupported row length");
+
+      Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      permuted.emplace_back(vdstNew);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -1944,6 +1993,6 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           TransposeLoadOpLowering>(converter, chipset);
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

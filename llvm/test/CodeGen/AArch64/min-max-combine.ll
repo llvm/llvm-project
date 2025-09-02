@@ -123,7 +123,7 @@ define i8 @smini8_zero(i8 %a) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    sxtb w8, w0
 ; CHECK-GLOBAL-NEXT:    cmp w8, #0
-; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, lt
+; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, mi
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call i8 @llvm.smin.i8(i8 %a, i8 0)
   ret i8 %c
@@ -148,7 +148,7 @@ define i16 @smini16_zero(i16 %a) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    sxth w8, w0
 ; CHECK-GLOBAL-NEXT:    cmp w8, #0
-; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, lt
+; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, mi
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call i16 @llvm.smin.i16(i16 %a, i16 0)
   ret i16 %c
@@ -170,7 +170,7 @@ define i32 @smini32_zero(i32 %a) {
 ; CHECK-GLOBAL-LABEL: smini32_zero:
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmp w0, #0
-; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, lt
+; CHECK-GLOBAL-NEXT:    csel w0, w0, wzr, mi
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call i32 @llvm.smin.i32(i32 %a, i32 0)
   ret i32 %c
@@ -192,7 +192,7 @@ define i64 @smini64_zero(i64 %a) {
 ; CHECK-GLOBAL-LABEL: smini64_zero:
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmp x0, #0
-; CHECK-GLOBAL-NEXT:    csel x0, x0, xzr, lt
+; CHECK-GLOBAL-NEXT:    csel x0, x0, xzr, mi
 ; CHECK-GLOBAL-NEXT:    ret
   %c = call i64 @llvm.smin.i64(i64 %a, i64 0)
   ret i64 %c

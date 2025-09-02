@@ -398,10 +398,9 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 
       retRows = GMatrix.rows;
       auto matmulType = RankedTensorType::get({retRows, filterW}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
@@ -422,10 +421,9 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 
       auto matmulType =
           RankedTensorType::get({retRows, GTMatrix.cols}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
@@ -547,10 +545,9 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
 
       retRows = BTMatrix.rows;
       auto matmulType = RankedTensorType::get({retRows, alphaW}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
@@ -572,10 +569,9 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
 
       retCols = BMatrix.cols;
       auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       Value B =
@@ -661,9 +657,8 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
       {inputShape[0] * inputShape[1],
        inputShape[2] * inputShape[3] * inputShape[4], filterShape[3]},
       outputElementType);
-  Value empty = rewriter
-                    .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                             outputElementType)
+  Value empty = tensor::EmptyOp::create(rewriter, loc, matmulType.getShape(),
+                                        outputElementType)
                     .getResult();
   Value zero = arith::ConstantOp::create(
       rewriter, loc, rewriter.getZeroAttr(outputElementType));
@@ -782,9 +777,8 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
       auto matmulType = RankedTensorType::get({retRows, valueW}, elementType);
       Value init = outInitVal;
       if (rightTransform || scalarFactor != 1) {
-        auto empty = builder
-                         .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                  elementType)
+        auto empty = tensor::EmptyOp::create(builder, loc,
+                                             matmulType.getShape(), elementType)
                          .getResult();
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
@@ -802,9 +796,8 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
           RankedTensorType::get({retRows, AMatrix.cols}, elementType);
       Value init = outInitVal;
       if (scalarFactor != 1) {
-        auto empty = builder
-                         .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                  elementType)
+        auto empty = tensor::EmptyOp::create(builder, loc,
+                                             matmulType.getShape(), elementType)
                          .getResult();
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
@@ -827,23 +820,21 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
           AffineMap::get(2, 0, context), identityAffineMap, identityAffineMap};
 
       matmulRetValue =
-          rewriter
-              .create<linalg::GenericOp>(
-                  loc, matmulType,
-                  ValueRange{scalarFactorValue, matmulRetValue},
-                  ValueRange{outInitVal}, affineMaps,
-                  llvm::ArrayRef<utils::IteratorType>{
-                      utils::IteratorType::parallel,
-                      utils::IteratorType::parallel},
-                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                      ValueRange args) {
-                    auto mulf = arith::MulFOp::create(nestedBuilder, nestedLoc,
-                                                      args[0], args[1]);
-                    auto addf = arith::AddFOp::create(
-                        nestedBuilder, nestedLoc, mulf.getResult(), args[2]);
-                    linalg::YieldOp::create(nestedBuilder, nestedLoc,
-                                            addf.getResult());
-                  })
+          linalg::GenericOp::create(
+              rewriter, loc, matmulType,
+              ValueRange{scalarFactorValue, matmulRetValue},
+              ValueRange{outInitVal}, affineMaps,
+              llvm::ArrayRef<utils::IteratorType>{
+                  utils::IteratorType::parallel, utils::IteratorType::parallel},
+              [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                  ValueRange args) {
+                auto mulf = arith::MulFOp::create(nestedBuilder, nestedLoc,
+                                                  args[0], args[1]);
+                auto addf = arith::AddFOp::create(nestedBuilder, nestedLoc,
+                                                  mulf.getResult(), args[2]);
+                linalg::YieldOp::create(nestedBuilder, nestedLoc,
+                                        addf.getResult());
+              })
               .getResult(0);
     }
 

@@ -53,7 +53,7 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
   Value ptrLike;
   FromPtrOp fromPtr = *this;
   while (fromPtr != nullptr) {
-    auto toPtr = dyn_cast_or_null<ToPtrOp>(fromPtr.getPtr().getDefiningOp());
+    auto toPtr = fromPtr.getPtr().getDefiningOp<ToPtrOp>();
     // Cannot fold if it's not a `to_ptr` op or the initial and final types are
     // different.
     if (!toPtr || toPtr.getPtr().getType() != fromPtr.getType())
@@ -64,13 +64,12 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
       ptrLike = toPtr.getPtr();
     } else if (md) {
       // Fold if the metadata can be verified to be equal.
-      if (auto mdOp = dyn_cast_or_null<GetMetadataOp>(md.getDefiningOp());
+      if (auto mdOp = md.getDefiningOp<GetMetadataOp>();
           mdOp && mdOp.getPtr() == toPtr.getPtr())
         ptrLike = toPtr.getPtr();
     }
     // Check for a sequence of casts.
-    fromPtr = dyn_cast_or_null<FromPtrOp>(ptrLike ? ptrLike.getDefiningOp()
-                                                  : nullptr);
+    fromPtr = ptrLike ? ptrLike.getDefiningOp<FromPtrOp>() : nullptr;
   }
   return ptrLike;
 }
@@ -83,6 +82,122 @@ LogicalResult FromPtrOp::verify() {
            << "expected the input and output to have the same memory space";
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+/// Verifies the attributes and the type of atomic memory access operations.
+template <typename OpTy>
+static LogicalResult
+verifyAtomicMemOp(OpTy memOp, ArrayRef<AtomicOrdering> unsupportedOrderings) {
+  if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
+    if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
+      return memOp.emitOpError("unsupported ordering '")
+             << stringifyAtomicOrdering(memOp.getOrdering()) << "'";
+    if (!memOp.getAlignment())
+      return memOp.emitOpError("expected alignment for atomic access");
+    return success();
+  }
+  if (memOp.getSyncscope()) {
+    return memOp.emitOpError(
+        "expected syncscope to be null for non-atomic access");
+  }
+  return success();
+}
+
+/// Verifies that the alignment attribute is a power of 2 if present.
+static LogicalResult
+verifyAlignment(std::optional<int64_t> alignment,
+                function_ref<InFlightDiagnostic()> emitError) {
+  if (!alignment)
+    return success();
+  if (alignment.value() <= 0)
+    return emitError() << "alignment must be positive";
+  if (!llvm::isPowerOf2_64(alignment.value()))
+    return emitError() << "alignment must be a power of 2";
+  return success();
+}
+
+void LoadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrMutable());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
+LogicalResult LoadOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  if (!ms.isValidLoad(getResult().getType(), getOrdering(), getAlignment(),
+                      emitDiag))
+    return failure();
+  if (failed(verifyAlignment(getAlignment(), emitDiag)))
+    return failure();
+  return verifyAtomicMemOp(*this,
+                           {AtomicOrdering::release, AtomicOrdering::acq_rel});
+}
+
+void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
+                   Value addr, unsigned alignment, bool isVolatile,
+                   bool isNonTemporal, bool isInvariant, bool isInvariantGroup,
+                   AtomicOrdering ordering, StringRef syncscope) {
+  build(builder, state, type, addr,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+        isVolatile, isNonTemporal, isInvariant, isInvariantGroup, ordering,
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+void StoreOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrMutable());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
+LogicalResult StoreOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  if (!ms.isValidStore(getValue().getType(), getOrdering(), getAlignment(),
+                       emitDiag))
+    return failure();
+  if (failed(verifyAlignment(getAlignment(), emitDiag)))
+    return failure();
+  return verifyAtomicMemOp(*this,
+                           {AtomicOrdering::acquire, AtomicOrdering::acq_rel});
+}
+
+void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
+                    Value addr, unsigned alignment, bool isVolatile,
+                    bool isNonTemporal, bool isInvariantGroup,
+                    AtomicOrdering ordering, StringRef syncscope) {
+  build(builder, state, value, addr,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt,
+        isVolatile, isNonTemporal, isInvariantGroup, ordering,
+        syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
 }
 
 //===----------------------------------------------------------------------===//
@@ -112,13 +227,13 @@ OpFoldResult ToPtrOp::fold(FoldAdaptor adaptor) {
   Value ptr;
   ToPtrOp toPtr = *this;
   while (toPtr != nullptr) {
-    auto fromPtr = dyn_cast_or_null<FromPtrOp>(toPtr.getPtr().getDefiningOp());
+    auto fromPtr = toPtr.getPtr().getDefiningOp<FromPtrOp>();
     // Cannot fold if it's not a `from_ptr` op.
     if (!fromPtr)
       return ptr;
     ptr = fromPtr.getPtr();
     // Check for chains of casts.
-    toPtr = dyn_cast_or_null<ToPtrOp>(ptr.getDefiningOp());
+    toPtr = ptr.getDefiningOp<ToPtrOp>();
   }
   return ptr;
 }

@@ -333,17 +333,16 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
   for (auto it :
        llvm::zip(paddedSubtensorResults, opToPad.getDpsInitsMutable())) {
     if (options.copyBackOp == LinalgPaddingOptions::CopyBackOp::LinalgCopy) {
-      replacements.push_back(rewriter
-                                 .create<linalg::CopyOp>(loc, std::get<0>(it),
-                                                         std::get<1>(it).get())
+      replacements.push_back(linalg::CopyOp::create(rewriter, loc,
+                                                    std::get<0>(it),
+                                                    std::get<1>(it).get())
                                  .getResult(0));
     } else if (options.copyBackOp ==
                LinalgPaddingOptions::CopyBackOp::
                    BufferizationMaterializeInDestination) {
       replacements.push_back(
-          rewriter
-              .create<bufferization::MaterializeInDestinationOp>(
-                  loc, std::get<0>(it), std::get<1>(it).get())
+          bufferization::MaterializeInDestinationOp::create(
+              rewriter, loc, std::get<0>(it), std::get<1>(it).get())
               ->getResult(0));
     } else {
       llvm_unreachable("unsupported copy back op");

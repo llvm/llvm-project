@@ -1,5 +1,4 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
 // At -O2, somehow "x = 42" appears first when piped into FileCheck,
 // see https://github.com/llvm/llvm-project/issues/143547.
