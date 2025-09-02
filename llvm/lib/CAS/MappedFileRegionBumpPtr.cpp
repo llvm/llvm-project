@@ -20,10 +20,10 @@
 /// and across multiple processes without locking for every read. Our current
 /// implementation strategy is:
 ///
-/// 1. Use \c sys::fs::resize_file_sparse to grow the file to its max size
+/// 1. Use \ref sys::fs::resize_file_sparse to grow the file to its max size
 ///    (typically several GB). If the file system doesn't support sparse file,
 ///    this may return a fully allocated file.
-/// 2. Call \c sys::fs::mapped_file_region to map the entire file.
+/// 2. Call \ref sys::fs::mapped_file_region to map the entire file.
 /// 3. [Automatic as part of 2.]
 /// 4. If supported, use \c fallocate or similiar APIs to ensure the file system
 ///    storage for the sparse file so we won't end up with partial file if the

@@ -32,10 +32,7 @@ namespace llvm::cas {
 /// Process-safe. Uses file locks when resizing the file during initialization
 /// and destruction.
 ///
-/// Thread-safe, assuming all threads use the same instance to talk to a given
-/// file/mapping. Unsafe to have multiple instances talking to the same file
-/// in the same process since file locks will misbehave. Clients should
-/// coordinate (somehow).
+/// Thread-safe. Requires OS support thread-safe file lock.
 ///
 /// Provides 8-byte alignment for all allocations.
 class MappedFileRegionBumpPtr {
