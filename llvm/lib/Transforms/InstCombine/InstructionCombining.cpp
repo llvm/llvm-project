@@ -2674,8 +2674,8 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   return nullptr;
 }
 
-// Combine constant offsets separated by variable offsets.
-// ptradd (ptradd (ptradd p, C1), x), C2 -> ptradd (ptradd p, x), C1+C2
+/// Combine constant offsets separated by variable offsets.
+/// ptradd (ptradd (ptradd p, C1), x), C2 -> ptradd (ptradd p, x), C1+C2
 static Instruction *combineConstantOffsets(GetElementPtrInst &GEP,
                                            InstCombinerImpl &IC) {
   if (!GEP.hasAllConstantIndices())
