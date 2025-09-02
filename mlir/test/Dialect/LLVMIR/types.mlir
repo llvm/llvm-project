@@ -197,3 +197,41 @@ llvm.func @ext_target() {
     %4 = "some.op"() : () -> !llvm.target<"target5", i32, f64, 0, 5>
     llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @target_ext_in_vector
+func.func @target_ext_in_vector() {
+  // CHECK: vector<4x!llvm.target<"spirv.Event">>
+  "some.op"() : () -> vector<4x!llvm.target<"spirv.Event">>
+
+  // CHECK: vector<[8]x!llvm.target<"spirv.DeviceEvent">>
+  "some.op"() : () -> vector<[8]x!llvm.target<"spirv.DeviceEvent">>
+
+  // CHECK: vector<16x!llvm.target<"cuda.CUstream">>
+  "some.op"() : () -> vector<16x!llvm.target<"cuda.CUstream">>
+
+  // CHECK: vector<4x!llvm.target<"nvvm.Foo", i32, 5>>
+  "some.op"() : () -> vector<4x!llvm.target<"nvvm.Foo", i32, 5>>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @target_ext_in_memref
+func.func @target_ext_in_memref() {
+  // CHECK: memref<4x!llvm.target<"spirv.Event">>
+  "some.op"() : () -> memref<4x!llvm.target<"spirv.Event">>
+
+  // CHECK: memref<8x!llvm.target<"spirv.DeviceEvent">>
+  "some.op"() : () -> memref<8x!llvm.target<"spirv.DeviceEvent">>
+
+  // CHECK: memref<?x!llvm.target<"cuda.CUstream">>
+  "some.op"() : () -> memref<?x!llvm.target<"cuda.CUstream">>
+
+  // CHECK: memref<4x8x!llvm.target<"nvvm.Foo", i32, 5>>
+  "some.op"() : () -> memref<4x8x!llvm.target<"nvvm.Foo", i32, 5>>
+
+  return
+}
