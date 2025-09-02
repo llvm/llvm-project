@@ -68,8 +68,10 @@ static FailureOr<char> getRegisterType(Type type, Location loc) {
     mlir::emitError(
         loc, "The register type could not be deduced from MLIR type. The ")
         << type
-        << " is not supported. Supported types are: i1, i16, i32, f32, f64, "
-           "pointers.\nSee the constraints from here: "
+        << " is not supported. Supported types are:"
+           "i1, i16, i32, i64, f32, f64,"
+           "pointers.\nPlease use llvm.bitcast if you have different type. "
+           "\nSee the constraints from here: "
            "https://docs.nvidia.com/cuda/inline-ptx-assembly/"
            "index.html#constraints";
     return failure();
@@ -89,20 +91,19 @@ static FailureOr<char> getRegisterType(Type type, Location loc) {
     // Case 2. Packed registers
     Type widened = elem;
     switch (lanes) {
-      // Pack 2x
+
     case 2:
-      if (elem.isF16() || elem.isBF16())
+      if (elem.isF16() || elem.isBF16()) // vector<2xf16>
         widened = f32;
-      else if (elem.isFloat(8))
+      else if (elem.isFloat(8)) // vector<2xf8>
         widened = i16;
       break;
-      // Pack 4x
     case 4:
-      if (elem.isInteger(8))
+      if (elem.isInteger(8)) // vector<i8x4>
         widened = i32;
-      else if (elem.isFloat(8))
+      else if (elem.isFloat(8)) // vector<f8x4>
         widened = f32;
-      else if (elem.isFloat(4))
+      else if (elem.isFloat(4)) // vector<f4x4>
         widened = i16;
       break;
       // Other packing is not supported
@@ -134,7 +135,7 @@ static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
   return elems;
 }
 
-void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
+LogicalResult PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   LDBG() << v << "\t Modifier : " << itype << "\n";
   registerModifiers.push_back(itype);
 
@@ -180,18 +181,20 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
       } else {
         FailureOr<char> regType = getRegisterType(t, loc);
         if (failed(regType))
-          (void)rewriter.notifyMatchFailure(loc, "failed to get register type");
+          return rewriter.notifyMatchFailure(loc,
+                                             "failed to get register type");
         ss << getModifier() << regType.value() << ",";
       }
     }
-    return;
+    return success();
   }
   // Handle Scalars
   addValue(v);
   FailureOr<char> regType = getRegisterType(v, loc);
   if (failed(regType))
-    (void)rewriter.notifyMatchFailure(loc, "failed to get register type");
+    return rewriter.notifyMatchFailure(loc, "failed to get register type");
   ss << getModifier() << regType.value() << ",";
+  return success();
 }
 
 /// Check if the operation needs to pack and unpack results.

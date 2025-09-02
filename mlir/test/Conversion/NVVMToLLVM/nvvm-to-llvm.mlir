@@ -759,10 +759,8 @@ llvm.func @nvvm_pmevent() {
 
 // -----
 
-llvm.func @inline_ptx_pack_4i8(%src : vector<4xi8>)  {
- %mask = arith.constant 0x00000001 : i32
- %zero = arith.constant 0 : i32
-// CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "dp4a.s32.s32 $0, $1, $2, $3;", "=r,r,n,n" %{{.*}}, %{{.*}}, %{{.*}} : (vector<4xi8>, i32, i32) -> i32
+llvm.func @inline_ptx_pack_4i8(%src : vector<4xi8>,  %mask : i32, %zero: i32)  {
+// CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "dp4a.s32.s32 $0, $1, $2, $3;", "=r,r,r,r" %{{.*}}, %{{.*}}, %{{.*}} : (vector<4xi8>, i32, i32) -> i32
  %wo0 = nvvm.inline_ptx "dp4a.s32.s32 {$w0}, {$r0}, {$r1}, {$r2};" 
                         ro(%src, %mask, %zero : vector<4xi8>, i32, i32) 
                         -> i32
