@@ -147,15 +147,30 @@ define ptr @merge_nuw_inbounds(ptr %p, i64 %a) {
   ret ptr %gep3
 }
 
+; It would be okay to preserve nusw here, as the constant addition does not
+; overflow.
 define ptr @merge_nuw_nusw(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge_nuw_nusw(
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw nuw i32, ptr [[P:%.*]], i64 [[A:%.*]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nusw nuw i8, ptr [[GEP2]], i64 5
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 5
 ; CHECK-NEXT:    ret ptr [[GEP3]]
 ;
   %gep1 = getelementptr nusw nuw i8, ptr %p, i64 1
   %gep2 = getelementptr nusw nuw i32, ptr %gep1, i64 %a
   %gep3 = getelementptr nusw nuw i32, ptr %gep2, i64 1
+  ret ptr %gep3
+}
+
+; Can't preserve nusw on the final GEP
+define ptr @merge_nuw_nusw_overflow(ptr %p, i64 %a) {
+; CHECK-LABEL: @merge_nuw_nusw_overflow(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw nuw i32, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[GEP2]], i64 -2305843009213693952
+; CHECK-NEXT:    ret ptr [[GEP3]]
+;
+  %gep1 = getelementptr nusw nuw i8, ptr %p, i64 u0x7000000000000000
+  %gep2 = getelementptr nusw nuw i32, ptr %gep1, i64 %a
+  %gep3 = getelementptr nusw nuw i8, ptr %gep2, i64 u0x7000000000000000
   ret ptr %gep3
 }
 
@@ -185,7 +200,7 @@ define ptr @merge_missing_nuw2(ptr %p, i64 %a) {
 
 define ptr @merge_missing_nuw3(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge_missing_nuw3(
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw i32, ptr [[P:%.*]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 5
 ; CHECK-NEXT:    ret ptr [[GEP3]]
 ;

@@ -2681,7 +2681,7 @@ static Instruction *combineConstantOffsets(GetElementPtrInst &GEP,
   if (!GEP.hasAllConstantIndices())
     return nullptr;
 
-  GEPNoWrapFlags NW = GEP.getNoWrapFlags();
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
   SmallVector<GetElementPtrInst *> Skipped;
   auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
   while (true) {
@@ -2725,8 +2725,9 @@ static Instruction *combineConstantOffsets(GetElementPtrInst &GEP,
     SkippedGEP->setNoWrapFlags(NW);
 
   return IC.replaceInstUsesWith(
-      GEP, IC.Builder.CreatePtrAdd(Skipped.front(), IC.Builder.getInt(Offset),
-                                   "", NW));
+      GEP,
+      IC.Builder.CreatePtrAdd(Skipped.front(), IC.Builder.getInt(Offset), "",
+                              NW.intersectForOffsetAdd(GEP.getNoWrapFlags())));
 }
 
 Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
