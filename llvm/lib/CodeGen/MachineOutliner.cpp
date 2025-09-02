@@ -479,8 +479,8 @@ struct MachineOutliner : public ModulePass {
     AU.addRequired<TargetPassConfig>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
-    if (RunOutlinerMode == RunOutliner::OptimisticProfileGuidedOutliner ||
-        RunOutlinerMode == RunOutliner::ConservativeProfileGuidedOutliner) {
+    if (RunOutlinerMode == RunOutliner::OptimisticPGO ||
+        RunOutlinerMode == RunOutliner::ConservativePGO) {
       AU.addRequired<BlockFrequencyInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
     }
@@ -1222,8 +1222,8 @@ static bool pgoAllowOutlining(RunOutliner RunOutlinerMode,
                               const ProfileSummaryInfo *PSI,
                               const BlockFrequencyInfo *BFI,
                               MachineBasicBlock &MBB) {
-  if (RunOutlinerMode != RunOutliner::OptimisticProfileGuidedOutliner &&
-      RunOutlinerMode != RunOutliner::ConservativeProfileGuidedOutliner)
+  if (RunOutlinerMode != RunOutliner::OptimisticPGO &&
+      RunOutlinerMode != RunOutliner::ConservativePGO)
     return true;
   auto *MF = MBB.getParent();
   if (MF->getFunction().hasFnAttribute(Attribute::Cold)) {
@@ -1236,7 +1236,7 @@ static bool pgoAllowOutlining(RunOutliner RunOutlinerMode,
     if (auto Count = BFI->getBlockProfileCount(BB))
       return *Count <= PSI->getOrCompColdCountThreshold();
 
-  if (RunOutlinerMode == RunOutliner::OptimisticProfileGuidedOutliner) {
+  if (RunOutlinerMode == RunOutliner::OptimisticPGO) {
     auto *TII = MF->getSubtarget().getInstrInfo();
     if (TII->shouldOutlineFromFunctionByDefault(*MF)) {
       // Profile data is unavailable, but we optimistically allow outlining
@@ -1245,7 +1245,7 @@ static bool pgoAllowOutlining(RunOutliner RunOutlinerMode,
     }
     return false;
   }
-  assert(RunOutlinerMode == RunOutliner::ConservativeProfileGuidedOutliner);
+  assert(RunOutlinerMode == RunOutliner::ConservativePGO);
   // Profile data is unavailable, so we conservatively block outlining
   ++NumPGOConservativeBlockedOutlined;
   return false;
@@ -1256,8 +1256,8 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   // iterating over each Function in M.
   LLVM_DEBUG(dbgs() << "*** Populating mapper ***\n");
   bool EnableProfileGuidedOutlining =
-      RunOutlinerMode == RunOutliner::OptimisticProfileGuidedOutliner ||
-      RunOutlinerMode == RunOutliner::ConservativeProfileGuidedOutliner;
+      RunOutlinerMode == RunOutliner::OptimisticPGO ||
+      RunOutlinerMode == RunOutliner::ConservativePGO;
   ProfileSummaryInfo *PSI = nullptr;
   if (EnableProfileGuidedOutlining)
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
@@ -1506,10 +1506,10 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
     case RunOutliner::AlwaysOutline:
       dbgs() << "all functions";
       break;
-    case RunOutliner::OptimisticProfileGuidedOutliner:
+    case RunOutliner::OptimisticPGO:
       dbgs() << "optimistically cold functions";
       break;
-    case RunOutliner::ConservativeProfileGuidedOutliner:
+    case RunOutliner::ConservativePGO:
       dbgs() << "conservatively cold functions";
       break;
     case RunOutliner::TargetDefault:

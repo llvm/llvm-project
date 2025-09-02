@@ -24,8 +24,8 @@ namespace llvm {
 enum class RunOutliner {
   TargetDefault,
   AlwaysOutline,
-  OptimisticProfileGuidedOutliner,
-  ConservativeProfileGuidedOutliner,
+  OptimisticPGO,
+  ConservativePGO,
   NeverOutline
 };
 enum class RegAllocType { Unset, Default, Basic, Fast, Greedy, PBQP };

@@ -3,8 +3,8 @@
 ; RUN: llvm-profdata merge %t/a.proftext -o %t/a.profdata
 ; RUN: opt %t/a.ll -passes=pgo-instr-use -pgo-test-profile-file=%t/a.profdata -S -o %t/a2.ll
 
-; RUN: llc < %t/a2.ll -enable-machine-outliner=conservative-profile-guided-outliner -mtriple=aarch64-linux-gnu -profile-summary-cold-count=0 | FileCheck %s --check-prefixes=CHECK,CONSERVATIVE
-; RUN: llc < %t/a2.ll -enable-machine-outliner=optimistic-profile-guided-outliner -mtriple=aarch64-linux-gnu -profile-summary-cold-count=0 | FileCheck %s --check-prefixes=CHECK,OPTIMISTIC
+; RUN: llc < %t/a2.ll -enable-machine-outliner=conservative-pgo -mtriple=aarch64-linux-gnu -profile-summary-cold-count=0 | FileCheck %s --check-prefixes=CHECK,CONSERVATIVE
+; RUN: llc < %t/a2.ll -enable-machine-outliner=optimistic-pgo -mtriple=aarch64-linux-gnu -profile-summary-cold-count=0 | FileCheck %s --check-prefixes=CHECK,OPTIMISTIC
 
 ;--- a.ll
 declare void @z(i32, i32, i32, i32)

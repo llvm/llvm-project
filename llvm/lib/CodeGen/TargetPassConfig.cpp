@@ -137,12 +137,10 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
     cl::values(
         clEnumValN(RunOutliner::AlwaysOutline, "always",
                    "Run on all functions guaranteed to be beneficial"),
-        clEnumValN(RunOutliner::OptimisticProfileGuidedOutliner,
-                   "optimistic-profile-guided-outliner",
+        clEnumValN(RunOutliner::OptimisticPGO, "optimistic-pgo",
                    "Outline cold code only. If a code block does not have "
                    "profile data, optimistically assume it is cold."),
-        clEnumValN(RunOutliner::ConservativeProfileGuidedOutliner,
-                   "conservative-profile-guided-outliner",
+        clEnumValN(RunOutliner::ConservativePGO, "conservative-pgo",
                    "Outline cold code only. If a code block does not have "
                    "profile, data, conservatively assume it is hot."),
         clEnumValN(RunOutliner::NeverOutline, "never", "Disable all outlining"),
