@@ -2426,7 +2426,7 @@ void SymbolFileNativePDB::BuildParentMap() {
 
   // After calling Append(), the type-name map needs to be sorted again to be
   // able to look up a type by its name.
-  m_type_base_names.Sort();
+  m_type_base_names.Sort(std::less<uint32_t>());
 
   // Now that we know the forward -> full mapping of all type indices, we can
   // re-write all the indices.  At the end of this process, we want a mapping
