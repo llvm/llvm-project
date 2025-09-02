@@ -244,8 +244,9 @@ Changes in existing checks
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
 - Improved :doc:`modernize-use-std-format 
-  <clang-tidy/checks/modernize/use-std-format>` now correctly replaces signed types, and correctly 
-  adds a ``static_cast`` to the underlying type when being printed in hex.
+  <clang-tidy/checks/modernize/use-std-format>` now correctly replaces signed 
+  types, and correctly adds a ``static_cast`` to the underlying type when being
+  printed in hex.
 
 Removed checks
 ^^^^^^^^^^^^^^
