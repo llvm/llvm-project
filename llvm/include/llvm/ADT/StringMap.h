@@ -220,14 +220,12 @@ public:
   using const_iterator = StringMapIterBase<ValueTy, true>;
   using iterator = StringMapIterBase<ValueTy, false>;
 
-  iterator begin() { return iterator(TheTable, NumBuckets == 0); }
-  iterator end() { return iterator(TheTable + NumBuckets, true); }
+  iterator begin() { return iterator(TheTable, NumBuckets != 0); }
+  iterator end() { return iterator(TheTable + NumBuckets); }
   const_iterator begin() const {
-    return const_iterator(TheTable, NumBuckets == 0);
+    return const_iterator(TheTable, NumBuckets != 0);
   }
-  const_iterator end() const {
-    return const_iterator(TheTable + NumBuckets, true);
-  }
+  const_iterator end() const { return const_iterator(TheTable + NumBuckets); }
 
   iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
     return make_range(StringMapKeyIterator<ValueTy>(begin()),
@@ -240,7 +238,7 @@ public:
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return iterator(TheTable + Bucket, true);
+    return iterator(TheTable + Bucket);
   }
 
   const_iterator find(StringRef Key) const { return find(Key, hash(Key)); }
@@ -249,7 +247,7 @@ public:
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return const_iterator(TheTable + Bucket, true);
+    return const_iterator(TheTable + Bucket);
   }
 
   /// lookup - Return the entry for the specified key, or a default
@@ -380,8 +378,7 @@ public:
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
-      return {iterator(TheTable + BucketNo, false),
-              false}; // Already exists in map.
+      return {iterator(TheTable + BucketNo), false}; // Already exists in map.
 
     if (Bucket == getTombstoneVal())
       --NumTombstones;
@@ -391,7 +388,7 @@ public:
     assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
-    return {iterator(TheTable + BucketNo, false), true};
+    return {iterator(TheTable + BucketNo), true};
   }
 
   // clear - Empties out the StringMap
@@ -444,10 +441,9 @@ public:
 
   StringMapIterBase() = default;
 
-  explicit StringMapIterBase(StringMapEntryBase **Bucket,
-                             bool NoAdvance = false)
+  explicit StringMapIterBase(StringMapEntryBase **Bucket, bool Advance = false)
       : Ptr(Bucket) {
-    if (!NoAdvance)
+    if (Advance)
       AdvancePastEmptyBuckets();
   }
 
@@ -469,7 +465,7 @@ public:
   template <bool ToConst,
             typename = typename std::enable_if<!IsConst && ToConst>::type>
   operator StringMapIterBase<ValueTy, ToConst>() const {
-    return StringMapIterBase<ValueTy, ToConst>(Ptr, true);
+    return StringMapIterBase<ValueTy, ToConst>(Ptr);
   }
 
   friend bool operator==(const StringMapIterBase &LHS,
