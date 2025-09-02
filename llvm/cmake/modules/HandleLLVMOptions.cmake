@@ -183,7 +183,15 @@ CHECK_CXX_SOURCE_COMPILES("
 int main() { return 0; }
 " LLVM_USES_LIBSTDCXX)
 
-option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ON)
+CHECK_CXX_SOURCE_COMPILES("
+#include <string>
+#if _GLIBCXX_USE_CXX11_ABI == 0
+#error _GLIBCXX_USE_CXX11_ABI not active
+#endif
+int main() { return 0; }
+" LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI)
+
+option(GLIBCXX_USE_CXX11_ABI "Use new libstdc++ CXX11 ABI" ${LLVM_DEFAULT_TO_GLIBCXX_USE_CXX11_ABI})
 
 if (LLVM_USES_LIBSTDCXX)
   if (GLIBCXX_USE_CXX11_ABI)
@@ -1172,16 +1180,13 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
-option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (deprecated)" Off)
-mark_as_advanced(LLVM_ENABLE_IR_PGO)
-
 set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR or Frontend")
 set(LLVM_VP_COUNTERS_PER_SITE "1.5" CACHE STRING "Value profile counters to use per site for IR PGO with Clang")
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED LLVM_VP_COUNTERS_PER_SITE)
 string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
 
 if (LLVM_BUILD_INSTRUMENTED)
-  if (LLVM_ENABLE_IR_PGO OR uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "IR")
+  if (uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "IR")
     append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
       CMAKE_CXX_FLAGS
       CMAKE_C_FLAGS)
@@ -1333,7 +1338,7 @@ endif()
 # linking (due to incompatibility). With MSVC, note that the plugin has to
 # explicitly link against (exactly one) tool so we can't unilaterally turn on
 # LLVM_ENABLE_PLUGINS when it's enabled.
-if("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION OFF)
 else()
   set(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS_OPTION ON)

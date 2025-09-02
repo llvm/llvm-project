@@ -853,8 +853,8 @@ void LoadOp::getEffects(
 /// Returns true if the given type is supported by atomic operations. All
 /// integer, float, and pointer types with a power-of-two bitsize and a minimal
 /// size of 8 bits are supported.
-static bool isTypeCompatibleWithAtomicOp(Type type,
-                                         const DataLayout &dataLayout) {
+bool LLVM::isTypeCompatibleWithAtomicOp(Type type,
+                                        const DataLayout &dataLayout) {
   if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
@@ -868,8 +868,9 @@ static bool isTypeCompatibleWithAtomicOp(Type type,
 
 /// Verifies the attributes and the type of atomic memory access operations.
 template <typename OpTy>
-LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
-                                ArrayRef<AtomicOrdering> unsupportedOrderings) {
+static LogicalResult
+verifyAtomicMemOp(OpTy memOp, Type valueType,
+                  ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
     DataLayout dataLayout = DataLayout::closest(memOp);
     if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
@@ -1119,7 +1120,7 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
 /// Verify that the parameter and return types of the variadic callee type match
 /// the `callOp` argument and result types.
 template <typename OpTy>
-LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
+static LogicalResult verifyCallOpVarCalleeType(OpTy callOp) {
   std::optional<LLVMFunctionType> varCalleeType = callOp.getVarCalleeType();
   if (!varCalleeType)
     return success();
@@ -2532,7 +2533,7 @@ LogicalResult GlobalOp::verifyRegions() {
 // LLVM::GlobalCtorsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
+static LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
   if (data.empty())
     return success();
 

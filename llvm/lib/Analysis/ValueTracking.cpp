@@ -1828,18 +1828,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::abs: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         bool IntMinIsPoison = match(II->getArgOperand(1), m_One());
-        Known = Known2.abs(IntMinIsPoison);
+        Known = Known.unionWith(Known2.abs(IntMinIsPoison));
         break;
       }
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.reverseBits();
-        Known.One |= Known2.One.reverseBits();
+        Known = Known.unionWith(Known2.reverseBits());
         break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        Known.Zero |= Known2.Zero.byteSwap();
-        Known.One |= Known2.One.byteSwap();
+        Known = Known.unionWith(Known2.byteSwap());
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
