@@ -144,3 +144,41 @@ void test_store_field3(Foo *ptr) {
 // OGCG:   %[[TMP2:.*]] = and i8 %[[TMP1]], -16
 // OGCG:   %[[TMP3:.*]] = or i8 %[[TMP2]], 4
 // OGCG:   store volatile i8 %[[TMP3]], ptr %[[MEMBER_ADDR]]
+
+struct A {
+  int x;
+  void set_x(int val) volatile;
+  int get_x() volatile;
+};
+
+void A::set_x(int val) volatile {
+  x = val;
+}
+
+// CIR: cir.func dso_local @_ZNV1A5set_xEi
+// CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %{{.*}}[0] {name = "x"}
+// CIR:   cir.store volatile {{.*}} %{{.*}}, %[[MEMBER_ADDR]]
+
+// LLVM: define {{.*}} void @_ZNV1A5set_xEi
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.A, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   store volatile i32 %{{.*}}, ptr %[[MEMBER_ADDR]]
+
+// OGCG: define {{.*}} void @_ZNV1A5set_xEi
+// OGCG:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   store volatile i32 %{{.*}}, ptr %[[MEMBER_ADDR]]
+
+int A::get_x() volatile {
+  return x;
+}
+
+// CIR: cir.func dso_local @_ZNV1A5get_xEv
+// CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %{{.*}}[0] {name = "x"}
+// CIR:   cir.load volatile {{.*}} %[[MEMBER_ADDR]]
+
+// LLVM: define {{.*}} i32 @_ZNV1A5get_xEv
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.A, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]
+
+// OGCG: define {{.*}} i32 @_ZNV1A5get_xEv
+// OGCG:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]

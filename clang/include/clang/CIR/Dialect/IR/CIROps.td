@@ -432,8 +432,8 @@ def CIR_LoadOp : CIR_Op<"load", [
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
-                       OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$is_volatile,
+                       OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
@@ -484,8 +484,8 @@ def CIR_StoreOp : CIR_Op<"store", [
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
-                       OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$is_volatile,
+                       OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
