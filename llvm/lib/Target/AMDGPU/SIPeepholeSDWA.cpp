@@ -291,21 +291,7 @@ static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
   if (!Reg->isReg() || !Reg->isDef())
     return nullptr;
 
-  MachineOperand *ResMO = nullptr;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg->getReg())) {
-    // If there exist use of subreg of Reg then return nullptr
-    if (!isSameReg(UseMO, *Reg))
-      return nullptr;
-
-    // Check that there is only one instruction that uses Reg
-    if (!ResMO) {
-      ResMO = &UseMO;
-    } else if (ResMO->getParent() != UseMO.getParent()) {
-      return nullptr;
-    }
-  }
-
-  return ResMO;
+  return MRI->getOneNonDBGUse(Reg->getReg());
 }
 
 static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
