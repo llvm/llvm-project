@@ -2997,9 +2997,11 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
         // they're not in the same scope.
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
           (IsProcedure(other) || IsBlockData(other)) &&
-          (!IsExternalProcedureDefinition(symbol) ||
-              !IsExternalProcedureDefinition(other))) {
-        // both are procedures/BLOCK DATA, not both definitions
+          (!(IsExternalProcedureDefinition(symbol) || GetMainEntry(&symbol)) ||
+              !(IsExternalProcedureDefinition(other) || GetMainEntry(&other)))) {
+        // Both are procedures/BLOCK DATA, not both definitions.
+        // Note: GetMainEntry() above returns non-null in case symbol
+        // is an alternate entry.
       } else if (IsSameSymbolFromHermeticModule(symbol, other)) {
         // Both symbols are the same thing.
       } else if (symbol.has<ModuleDetails>()) {
