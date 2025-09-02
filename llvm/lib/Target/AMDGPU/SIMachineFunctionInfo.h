@@ -293,6 +293,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned PSInputEnable = 0;
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
+  bool DisableTBufferCombine = false;
+
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
@@ -524,6 +526,9 @@ private:
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
+
+  // Disable combining of TBUFFER instructions.
+  bool DisableTBufferCombine = false;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -1207,6 +1212,11 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  bool isTBufferCombineDisabled() const { return DisableTBufferCombine; }
+  void setDisableTBufferCombine(bool IsDisabled) {
+    DisableTBufferCombine = IsDisabled;
+  }
 };
 
 } // end namespace llvm

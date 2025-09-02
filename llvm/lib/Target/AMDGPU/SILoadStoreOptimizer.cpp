@@ -62,6 +62,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -2505,6 +2506,14 @@ SILoadStoreOptimizer::collectMergeableInsts(
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
+        continue;
+      }
+
+      const MachineFunction *MF = MI.getParent()->getParent();
+      const auto *MFI = MF->getInfo<SIMachineFunctionInfo>();
+      if (MFI->isTBufferCombineDisabled()) {
+        LLVM_DEBUG(
+            dbgs() << "Skip TBUFFER combine: disabled by function attribute\n");
         continue;
       }
     }
