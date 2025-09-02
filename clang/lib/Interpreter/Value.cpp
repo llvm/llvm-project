@@ -11,12 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/Value.h"
+#include "clang/AST/Type.h"
+
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/Value.h"
 #include "llvm/ADT/StringExtras.h"
+
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+
+#include <atomic>
+#include <future>
+#include <mutex>
+#include <unordered_map>
+
 #include <cassert>
 #include <utility>
 
@@ -251,7 +266,7 @@ const ASTContext &Value::getASTContext() const {
 void Value::dump() const { print(llvm::outs()); }
 
 void Value::printType(llvm::raw_ostream &Out) const {
-  Out << Interp->ValueTypeToString(*this);
+  // Out << Interp->ValueTypeToString(*this);
 }
 
 void Value::printData(llvm::raw_ostream &Out) const {
@@ -279,4 +294,407 @@ void Value::print(llvm::raw_ostream &Out) const {
   Out << Str;
 }
 
+class BuiltinValueBuffer : public ValueBuffer {
+public:
+  std::vector<char> raw;
+  BuiltinValueBuffer(QualType _Ty) { Ty = _Ty; }
+  template <typename T> T as() const {
+    T v{};
+    assert(raw.size() >= sizeof(T) && "Buffer too small for type!");
+    memcpy(&v, raw.data(), sizeof(T));
+    return v;
+  }
+  std::string toString() const override {
+    if (Ty->isCharType()) {
+      unsigned char c = as<unsigned char>();
+      switch (c) {
+      case '\n':
+        return "'\\n'";
+      case '\t':
+        return "'\\t'";
+      case '\r':
+        return "'\\r'";
+      case '\'':
+        return "'\\''";
+      case '\\':
+        return "'\\'";
+      default:
+        if (std::isprint(c))
+          return std::string("'") + static_cast<char>(c) + "'";
+        else {
+          return llvm::formatv("'\\x{0:02X}'", c).str();
+        }
+      }
+    }
+    if (auto *BT = Ty.getCanonicalType()->getAs<BuiltinType>()) {
+
+      auto formatFloating = [](auto Val, char Suffix = '\0') -> std::string {
+        std::string Out;
+        llvm::raw_string_ostream SS(Out);
+
+        if (std::isnan(Val) || std::isinf(Val)) {
+          SS << llvm::format("%g", Val);
+          return SS.str();
+        }
+        if (Val == static_cast<decltype(Val)>(static_cast<int64_t>(Val)))
+          SS << llvm::format("%.1f", Val);
+        else if (std::abs(Val) < 1e-4 || std::abs(Val) > 1e6 || Suffix == 'f')
+          SS << llvm::format("%#.6g", Val);
+        else if (Suffix == 'L')
+          SS << llvm::format("%#.12Lg", Val);
+        else
+          SS << llvm::format("%#.8g", Val);
+
+        if (Suffix != '\0')
+          SS << Suffix;
+        return SS.str();
+      };
+
+      std::string Str;
+      llvm::raw_string_ostream SS(Str);
+      switch (BT->getKind()) {
+      default:
+        return "{ error: unknown builtin type '" +
+               std::to_string(BT->getKind()) + " '}";
+      case clang::BuiltinType::Bool:
+        SS << ((as<bool>()) ? "true" : "false");
+        return Str;
+      case clang::BuiltinType::Short:
+        SS << as<short>();
+        return Str;
+      case clang::BuiltinType::UShort:
+        SS << as<unsigned short>();
+        return Str;
+      case clang::BuiltinType::Int:
+        SS << as<int>();
+        return Str;
+      case clang::BuiltinType::UInt:
+        SS << as<unsigned int>();
+        return Str;
+      case clang::BuiltinType::Long:
+        SS << as<long>();
+        return Str;
+      case clang::BuiltinType::ULong:
+        SS << as<unsigned long>();
+        return Str;
+      case clang::BuiltinType::LongLong:
+        SS << as<long long>();
+        return Str;
+      case clang::BuiltinType::ULongLong:
+        SS << as<unsigned long long>();
+        return Str;
+      case clang::BuiltinType::Float:
+        return formatFloating(as<float>(), /*suffix=*/'f');
+
+      case clang::BuiltinType::Double:
+        return formatFloating(as<double>());
+
+      case clang::BuiltinType::LongDouble:
+        return formatFloating(as<long double>(), /*suffix=*/'L');
+      }
+    }
+
+    return "";
+  }
+
+  bool isValid() const override { return !raw.empty(); }
+};
+
+class ArrayValueBuffer : public ValueBuffer {
+public:
+  std::vector<std::unique_ptr<ValueBuffer>> Elements;
+  ArrayValueBuffer(QualType EleTy) { Ty = EleTy; }
+  std::string toString() const override {
+    std::ostringstream OS;
+    OS << "{";
+    for (size_t i = 0; i < Elements.size(); ++i) {
+      OS << Elements[i]->toString();
+      if (i + 1 < Elements.size())
+        OS << ",";
+    }
+    OS << "}";
+    return OS.str();
+  }
+
+  bool isValid() const override { return !Elements.empty(); }
+};
+
+static std::string escapeString(const std::vector<char> &Raw) {
+  std::string Out;
+  for (char c : Raw) {
+    switch (c) {
+    case '\n':
+      Out += "\\n";
+      break;
+    case '\t':
+      Out += "\\t";
+      break;
+    case '\r':
+      Out += "\\r";
+      break;
+    case '\"':
+      Out += "\\\"";
+      break;
+    case '\\':
+      Out += "\\\\";
+      break;
+    default:
+      if (std::isprint(static_cast<unsigned char>(c)))
+        Out.push_back(c);
+      else {
+        char buf[5];
+        snprintf(buf, sizeof(buf), "\\x%02X", static_cast<unsigned char>(c));
+        Out += buf;
+      }
+      break;
+    }
+  }
+  return Out;
+}
+
+class PointerValueBuffer : public ValueBuffer {
+public:
+  uint64_t Address = 0;
+  std::unique_ptr<ValueBuffer> Pointee; // optional, used only for char*
+
+  PointerValueBuffer(QualType _Ty, uint64_t Addr = 0) : Address(Addr) {
+    Ty = _Ty;
+  }
+
+  std::string toString() const override {
+    auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
+    if (!PtrTy)
+      return "";
+
+    auto PointeeTy = PtrTy->getPointeeType();
+
+    // char* -> print string literal
+    if (PointeeTy->isCharType() && Pointee) {
+      if (auto *BE = static_cast<BuiltinValueBuffer *>(Pointee.get()))
+        return "\"" + escapeString(BE->raw) + "\"";
+    }
+
+    if (Address == 0)
+      return "nullptr";
+
+    std::ostringstream OS;
+    OS << "0x" << std::hex << Address;
+    return OS.str();
+  }
+
+  bool isValid() const override { return Address != 0; }
+};
+
+class ReaderDispatcher {
+private:
+  ASTContext &Ctx;
+  llvm::orc::MemoryAccess &MA;
+
+public:
+  ReaderDispatcher(ASTContext &Ctx, llvm::orc::MemoryAccess &MA)
+      : Ctx(Ctx), MA(MA) {}
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  read(QualType QT, llvm::orc::ExecutorAddr Addr);
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr);
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr);
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  readArray(QualType Ty, llvm::orc::ExecutorAddr Addr);
+
+  // TODO: record, function, etc.
+};
+
+class TypeReadVisitor
+    : public TypeVisitor<TypeReadVisitor,
+                         llvm::Expected<std::unique_ptr<ValueBuffer>>> {
+  ReaderDispatcher &Dispatcher;
+  llvm::orc::ExecutorAddr Addr;
+
+public:
+  TypeReadVisitor(ReaderDispatcher &D, llvm::orc::ExecutorAddr A)
+      : Dispatcher(D), Addr(A) {}
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>> VisitType(const Type *T) {
+    return llvm::make_error<llvm::StringError>(
+        "Unsupported type in ReaderDispatcher", llvm::inconvertibleErrorCode());
+  }
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  VisitBuiltinType(const BuiltinType *BT) {
+    return Dispatcher.readBuiltin(QualType(BT, 0), Addr);
+  }
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  VisitPointerType(const PointerType *PT) {
+    return Dispatcher.readPointer(QualType(PT, 0), Addr);
+  }
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  VisitConstantArrayType(const ConstantArrayType *AT) {
+    return Dispatcher.readArray(QualType(AT, 0), Addr);
+  }
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
+  VisitRecordType(const RecordType *RT) {
+    return llvm::make_error<llvm::StringError>(
+        "RecordType reading not yet implemented",
+        llvm::inconvertibleErrorCode());
+  }
+};
+
+llvm::Expected<std::unique_ptr<ValueBuffer>>
+ReaderDispatcher::read(QualType QT, llvm::orc::ExecutorAddr Addr) {
+  TypeReadVisitor V(*this, Addr);
+  return V.Visit(QT.getTypePtr());
+}
+
+llvm::Expected<std::unique_ptr<ValueBuffer>>
+ReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  auto Size = Ctx.getTypeSizeInChars(Ty).getQuantity();
+  auto ResOrErr = MA.readBuffers({llvm::orc::ExecutorAddrRange(Addr, Size)});
+  if (!ResOrErr)
+    return ResOrErr.takeError();
+
+  auto Buf = std::make_unique<BuiltinValueBuffer>(Ty);
+  const auto &Res = *ResOrErr;
+  std::vector<char> ElemBuf(Size);
+  std::memcpy(ElemBuf.data(), Res.back().data(), Size);
+  Buf->raw = std::move(ElemBuf);
+  return std::move(Buf);
+}
+
+llvm::Expected<std::unique_ptr<ValueBuffer>>
+ReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
+  if (!CAT)
+    return llvm::make_error<llvm::StringError>("Not a ConstantArrayType",
+                                               llvm::inconvertibleErrorCode());
+
+  QualType ElemTy = CAT->getElementType();
+  size_t ElemSize = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+
+  auto Buf = std::make_unique<ArrayValueBuffer>(Ty);
+
+  for (size_t i = 0; i < CAT->getZExtSize(); ++i) {
+    auto ElemAddr = Addr + i * ElemSize;
+    auto ElemBufOrErr = read(ElemTy, ElemAddr);
+    if (!ElemBufOrErr)
+      return ElemBufOrErr.takeError();
+    Buf->Elements.push_back(std::move(*ElemBufOrErr));
+  }
+
+  return std::move(Buf);
+}
+
+llvm::Expected<std::unique_ptr<ValueBuffer>>
+ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
+                                                llvm::orc::ExecutorAddr Addr) {
+  auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
+  if (!PtrTy)
+    return llvm::make_error<llvm::StringError>("Not a PointerType",
+                                               llvm::inconvertibleErrorCode());
+
+  auto AddrOrErr = MA.readUInt64s({Addr});
+  if (!AddrOrErr)
+    return AddrOrErr.takeError();
+
+  uint64_t PtrValAddr = AddrOrErr->back();
+  if (PtrValAddr == 0)
+    return std::make_unique<PointerValueBuffer>(Ty); // null pointer
+
+  llvm::orc::ExecutorAddr PointeeAddr(PtrValAddr);
+  auto PtrBuf = std::make_unique<PointerValueBuffer>(Ty, PtrValAddr);
+
+  QualType PointeeTy = PtrTy->getPointeeType();
+  if (PointeeTy->isCharType()) {
+    std::string S;
+    for (size_t i = 0; i < 1024; ++i) {
+      auto CRes = MA.readUInt8s({PointeeAddr + i});
+      if (!CRes)
+        return CRes.takeError();
+      char c = static_cast<char>(CRes->back());
+      if (c == '\0')
+        break;
+      S.push_back(c);
+    }
+    auto Buf = std::make_unique<BuiltinValueBuffer>(PointeeTy);
+    Buf->raw.assign(S.begin(), S.end());
+    PtrBuf->Pointee = std::move(Buf);
+  }
+  // else {
+  //   auto BufOrErr = read(PointeeTy, PointeeAddr);
+  //   if (!BufOrErr)
+  //     return BufOrErr.takeError();
+  //   PtrBuf->Pointee = std::move(*BufOrErr);
+  // }
+  return std::move(PtrBuf);
+}
+
+ValueResultManager::ValueResultManager(ASTContext &Ctx,
+                                       llvm::orc::MemoryAccess &MA)
+    : Ctx(Ctx), MemAcc(MA) {}
+
+std::unique_ptr<ValueResultManager>
+ValueResultManager::Create(llvm::orc::LLJIT &EE, ASTContext &Ctx, bool IsOop) {
+  auto &ES = EE.getExecutionSession();
+  auto &EPC = ES.getExecutorProcessControl();
+  auto VRMgr = std::make_unique<ValueResultManager>(Ctx, EPC.getMemoryAccess());
+  if (IsOop)
+    VRMgr->Initialize(EE);
+  return VRMgr;
+}
+
+void ValueResultManager::Initialize(llvm::orc::LLJIT &EE) {
+  auto &ES = EE.getExecutionSession();
+
+  llvm::orc::ExecutionSession::JITDispatchHandlerAssociationMap Handlers;
+  using OrcSendResultFn =
+      llvm::orc::shared::SPSError(uint64_t, llvm::orc::shared::SPSExecutorAddr);
+
+  const char *SendValFnTag = "___orc_rt_SendResultValue_tag";
+#ifndef __APPLE__
+  ++SendValFnTag;
+#endif
+  Handlers[ES.intern(SendValFnTag)] = ES.wrapAsyncWithSPS<OrcSendResultFn>(
+      this, &ValueResultManager::deliverResult);
+
+  llvm::cantFail(ES.registerJITDispatchHandlers(*EE.getPlatformJITDylib(),
+                                                std::move(Handlers)));
+}
+
+void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
+                                       llvm::orc::ExecutorAddr Addr) {
+  QualType Ty;
+
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    auto It = IdToType.find(ID);
+    if (It == IdToType.end()) {
+      SendResult(llvm::make_error<llvm::StringError>(
+          "Unknown ValueId in deliverResult", llvm::inconvertibleErrorCode()));
+    }
+    Ty = It->second;
+    IdToType.erase(It);
+  }
+
+  ReaderDispatcher Runner(Ctx, MemAcc);
+  auto BufOrErr = Runner.read(Ty, Addr);
+
+  ValBuf.reset();
+  if (!BufOrErr) {
+    SendResult(BufOrErr.takeError());
+    return;
+  }
+
+  // Store the successfully read value buffer
+  ValBuf.swap(*BufOrErr);
+
+  SendResult(llvm::Error::success());
+  return;
+}
 } // namespace clang

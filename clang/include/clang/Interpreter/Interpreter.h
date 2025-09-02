@@ -104,10 +104,7 @@ class Interpreter {
 
   unsigned InitPTUSize = 0;
 
-  // This member holds the last result of the value printing. It's a class
-  // member because we might want to access it after more inputs. If no value
-  // printing happens, it's in an invalid state.
-  Value LastValue;
+  std::unique_ptr<ValueResultManager> ValMgr;
 
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
@@ -148,7 +145,7 @@ public:
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
-  llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
+  llvm::Error ParseAndExecute(llvm::StringRef Code);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
@@ -187,9 +184,8 @@ private:
   /// @{
 
   std::string ValueDataToString(const Value &V) const;
-  std::string ValueTypeToString(const Value &V) const;
 
-  llvm::Expected<Expr *> convertExprToValue(Expr *E);
+  llvm::Expected<Expr *> convertExprToValue(Expr *E, bool IsOOP = true);
 
   // When we deallocate clang::Value we need to run the destructor of the type.
   // This function forces emission of the needed dtor.
