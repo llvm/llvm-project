@@ -138,6 +138,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FNEG(SDNode *Node);
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
+  SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -475,6 +476,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1291,6 +1294,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+    Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
+    return;
 
   case ISD::FADD:
   case ISD::FMUL:
@@ -1794,6 +1801,50 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
                                    Mask, EVL, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
+}
+
+SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  SDValue SourceValue = N->getOperand(0);
+  SDValue SinkValue = N->getOperand(1);
+  SDValue EltSize = N->getOperand(2);
+
+  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
+  EVT VT = N->getValueType(0);
+  EVT PtrVT = SourceValue->getValueType(0);
+
+  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  if (IsReadAfterWrite)
+    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
+
+  // If the difference is positive then some elements may alias
+  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                     Diff.getValueType());
+  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
+                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+
+  // Create the lane mask
+  EVT SplatVT = VT.changeElementType(PtrVT);
+  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, Diff);
+  SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
+  EVT MaskVT = VT.changeElementType(MVT::i1);
+  SDValue DiffMask =
+      DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
+
+  EVT EltVT = VT.getVectorElementType();
+  // Extend the diff setcc in case the intrinsic has been promoted to a vector
+  // type with elements larger than i1
+  if (EltVT.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
+    DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
+
+  // Splat the compare result then OR it with the lane mask
+  if (CmpVT.getScalarSizeInBits() < EltVT.getScalarSizeInBits())
+    Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Cmp);
+  SDValue Splat = DAG.getSplat(VT, DL, Cmp);
+  return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

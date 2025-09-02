@@ -24019,6 +24019,130 @@ Examples:
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
 
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from %ptrA followed by a vector store to %ptrB, this
+instruction generates a mask where an active lane indicates that the
+write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when loading from %ptrA then storing to
+%ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to %ptrA followed by a vector load from %ptrB, this
+instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when storing to %ptrA then loading from
+%ptrB is safe and doesn't result in aliasing, meaning that:
+
+* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+  occurs before loading from this address), or
+* ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
 .. _int_experimental_vp_splice:
 
 '``llvm.experimental.vp.splice``' Intrinsic

@@ -735,6 +735,7 @@ private:
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
