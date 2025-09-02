@@ -1,4 +1,4 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
 
 # RUN: rm -rf %t; split-file %s %t
 

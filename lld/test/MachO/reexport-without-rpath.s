@@ -1,4 +1,4 @@
-# REQUIRES: aarch64, shell
+# REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t
 # RUN: ln -s Versions/A/Developer %t/Developer/Library/Frameworks/Developer.framework/
 # RUN: ln -s Versions/A/DeveloperCore %t/Developer/Library/PrivateFrameworks/DeveloperCore.framework/
