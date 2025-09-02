@@ -250,7 +250,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       ++NumOperands;
     }
     if (auto *SDst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::sdst)) {
-      if (TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, SDst)) {
+      if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::sdst)) {
         DPPInst.add(*SDst);
         ++NumOperands;
       }
@@ -296,11 +296,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
     int Src0Idx = NumOperands;
-    if (!TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src0)) {
-      LLVM_DEBUG(dbgs() << "  failed: src0 is illegal\n");
-      Fail = true;
-      break;
-    }
+
     DPPInst.add(*Src0);
     DPPInst->getOperand(NumOperands).setIsKill(false);
     ++NumOperands;
@@ -319,7 +315,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
     if (Src1) {
-      int OpNum = NumOperands;
+      assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
+             "dpp version of instruction missing src1");
       // If subtarget does not support SGPRs for src1 operand then the
       // requirements are the same as for src0. We check src0 instead because
       // pseudos are shared between subtargets and allow SGPR for src1 on all.
@@ -327,13 +324,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
         assert(getOperandSize(*DPPInst, Src0Idx, *MRI) ==
                    getOperandSize(*DPPInst, NumOperands, *MRI) &&
                "Src0 and Src1 operands should have the same size");
-        OpNum = Src0Idx;
       }
-      if (!TII->isOperandLegal(*DPPInst.getInstr(), OpNum, Src1)) {
-        LLVM_DEBUG(dbgs() << "  failed: src1 is illegal\n");
-        Fail = true;
-        break;
-      }
+
       DPPInst.add(*Src1);
       ++NumOperands;
     }
@@ -349,9 +341,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2);
     if (Src2) {
-      if (!TII->getNamedOperand(*DPPInst.getInstr(), AMDGPU::OpName::src2) ||
-          !TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src2)) {
-        LLVM_DEBUG(dbgs() << "  failed: src2 is illegal\n");
+      if (!AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src2)) {
+        LLVM_DEBUG(dbgs() << "  failed: dpp does not have src2\n");
         Fail = true;
         break;
       }
@@ -431,6 +422,24 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask));
     DPPInst.addImm(CombBCZ ? 1 : 0);
+
+    constexpr AMDGPU::OpName Srcs[] = {
+        AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
+
+    // FIXME: isOperandLegal expects to operate on an completely built
+    // instruction. We should have better legality APIs to check if the
+    // candidate operands will be legal without building the instruction first.
+    for (auto [I, OpName] : enumerate(Srcs)) {
+      int OpIdx = AMDGPU::getNamedOperandIdx(DPPOp, OpName);
+      if (OpIdx == -1)
+        break;
+
+      if (!TII->isOperandLegal(*DPPInst, OpIdx)) {
+        LLVM_DEBUG(dbgs() << "  failed: src" << I << " operand is illegal\n");
+        Fail = true;
+        break;
+      }
+    }
   } while (false);
 
   if (Fail) {

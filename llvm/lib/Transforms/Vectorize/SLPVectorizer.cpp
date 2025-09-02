@@ -23842,8 +23842,7 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI, AssumptionCache *AC,
-                     DominatorTree &DT) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -24242,7 +24241,7 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost =
-            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V, DT, DL, TLI);
+            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V);
         InstructionCost Cost = V.getTreeCost(VL, ReductionCost);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
@@ -24547,9 +24546,7 @@ private:
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
                                    ArrayRef<Value *> ReducedVals,
                                    bool IsCmpSelMinMax, FastMathFlags FMF,
-                                   const BoUpSLP &R, DominatorTree &DT,
-                                   const DataLayout &DL,
-                                   const TargetLibraryInfo &TLI) {
+                                   const BoUpSLP &R) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -24574,22 +24571,6 @@ private:
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
-            if (RdxKind == RecurKind::FAdd) {
-              InstructionCost FMACost = canConvertToFMA(
-                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
-              if (FMACost.isValid()) {
-                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
-                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
-                  // Also, exclude scalar fmul cost.
-                  InstructionCost FMulCost =
-                      TTI->getInstructionCost(I, CostKind);
-                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
-                  FMACost -= FMulCost;
-                }
-                ScalarCost += FMACost;
-                continue;
-              }
-            }
             ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
             continue;
           }
@@ -24654,43 +24635,8 @@ private:
           auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
               std::make_pair(RedTy, true));
           VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
-          InstructionCost FMACost = InstructionCost::getInvalid();
-          if (RdxKind == RecurKind::FAdd) {
-            // Check if the reduction operands can be converted to FMA.
-            SmallVector<Value *> Ops;
-            FastMathFlags FMF;
-            FMF.set();
-            for (Value *RdxVal : ReducedVals) {
-              if (!RdxVal->hasOneUse()) {
-                Ops.clear();
-                break;
-              }
-              if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
-                FMF &= FPCI->getFastMathFlags();
-              Ops.push_back(RdxVal->user_back());
-            }
-            FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                      *TTI, TLI);
-            if (FMACost.isValid()) {
-              // Calculate actual FMAD cost.
-              IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
-                                          {RVecTy, RVecTy, RVecTy}, FMF);
-              FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
-
-              LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
-              // Also, exclude vector fmul cost.
-              InstructionCost FMulCost = TTI->getArithmeticInstrCost(
-                  Instruction::FMul, RVecTy, CostKind);
-              LLVM_DEBUG(dbgs()
-                         << "Minus vector FMul cost: " << FMulCost << "\n");
-              FMACost -= FMulCost;
-            }
-          }
-          if (FMACost.isValid())
-            VectorCost += FMACost;
-          else
-            VectorCost +=
-                TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          VectorCost +=
+              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
           if (RType != RedTy) {
             unsigned Opcode = Instruction::Trunc;
             if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
@@ -25358,7 +25304,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -25503,7 +25449,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
