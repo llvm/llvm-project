@@ -429,17 +429,15 @@ _mm_maskz_mul_epu32(__mmask8 __M, __m128i __X, __m128i __Y)
                                              (__v2di)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_maskz_mullo_epi32(__mmask8 __M, __m256i __A, __m256i __B)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm256_maskz_mullo_epi32(__mmask8 __M, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectd_256((__mmask8)__M,
                                              (__v8si)_mm256_mullo_epi32(__A, __B),
                                              (__v8si)_mm256_setzero_si256());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_mask_mullo_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm256_mask_mullo_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectd_256((__mmask8)__M,
                                              (__v8si)_mm256_mullo_epi32(__A, __B),
                                              (__v8si)__W);

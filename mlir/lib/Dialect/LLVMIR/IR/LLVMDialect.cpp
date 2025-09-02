@@ -853,8 +853,8 @@ void LoadOp::getEffects(
 /// Returns true if the given type is supported by atomic operations. All
 /// integer, float, and pointer types with a power-of-two bitsize and a minimal
 /// size of 8 bits are supported.
-static bool isTypeCompatibleWithAtomicOp(Type type,
-                                         const DataLayout &dataLayout) {
+bool LLVM::isTypeCompatibleWithAtomicOp(Type type,
+                                        const DataLayout &dataLayout) {
   if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
