@@ -4115,6 +4115,9 @@ __m256 test_mm256_maskz_cvtepu32_ps(__mmask8 __U, __m256i __A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_cvtepu32_ps(__U,__A); 
 }
+
+TEST_CONSTEXPR(match_m256(_mm256_maskz_cvtepu32_ps(/*1010 0101=*/0xa5,(__m256i)(__v8su){1, 1, 2, 2, 4, 4, 8, 8}), 1.0f, 0.0f, 2.0f, 0.0f, 0.0f, 4.0f, 0.0f, 8.0f));
+
 __m128d test_mm_mask_div_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   // CHECK-LABEL: test_mm_mask_div_pd
   // CHECK: fdiv <2 x double> %{{.*}}, %{{.*}}
