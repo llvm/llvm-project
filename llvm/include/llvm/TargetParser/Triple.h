@@ -246,7 +246,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
-    LastOSType = Vulkan
+    CheriotRTOS,
+    LastOSType = CheriotRTOS
   };
   enum EnvironmentType {
     UnknownEnvironment,
