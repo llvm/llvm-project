@@ -107,8 +107,7 @@ body: |
     ; CHECK-NEXT: %passthru:vrnov0 = COPY $v8
     ; CHECK-NEXT: %x:vr = COPY $v9
     ; CHECK-NEXT: %y:vr = COPY $v10
-    ; CHECK-NEXT: %vfmadd:vrnov0 = nofpexcept PseudoVFMADD_VV_M1_E32 %x, %y, %passthru, 7, %avl, 5 /* e32 */, 3 /* ta, ma */, implicit $frm
-    ; CHECK-NEXT: %vmerge:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, %vfmadd, %mask, %avl, 5 /* e32 */
+    ; CHECK-NEXT: %vmerge:vrnov0 = nofpexcept PseudoVFMACC_VV_M1_E32_MASK %passthru, %y, %x, %mask, 7, %avl, 5 /* e32 */, 0 /* tu, mu */, implicit $frm
     %avl:gprnox0 = COPY $x8
     %mask:vmv0 = COPY $v0
     %passthru:vrnov0 = COPY $v8
