@@ -21,9 +21,11 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DataLayout.h"
@@ -182,6 +184,7 @@ struct State {
   DominatorTree &DT;
   LoopInfo &LI;
   ScalarEvolution &SE;
+  TargetLibraryInfo &TLI;
   const DataLayout &DL;
   LLVMContext &Ctx;
   SmallVector<Instruction *, 4> ExtraCmps;
@@ -200,8 +203,9 @@ struct State {
   DenseMap<PHINode *, InductionInfo> PtrInductionPHIInfoMap;
 
   State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+        TargetLibraryInfo &TLI,
         const DataLayout &DL, LLVMContext &Ctx)
-      : DT(DT), LI(LI), SE(SE), DL(DL), Ctx(Ctx) {}
+      : DT(DT), LI(LI), SE(SE), TLI(TLI), DL(DL), Ctx(Ctx) {}
 
   ~State() {
     for (Instruction *I : reverse(ExtraCmps))
@@ -1440,10 +1444,50 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 }
 
+static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
+                                          uint64_t AccessSize,
+                                          CmpPredicate &Pred, Value *&A,
+                                          Value *&B, const DataLayout &DL,
+                                          const TargetLibraryInfo &TLI) {
+  auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
+  if (!Offset.NW.hasNoUnsignedWrap())
+    return false;
+
+  if (Offset.VariableOffsets.size() != 1)
+    return false;
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size =
+      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
+  // Index * Scale + ConstOffset + AccessSize <= AllocSize
+  // With nuw flag, we know that the index addition doesn't have unsigned wrap.
+  // If (AllocSize - (ConstOffset + AccessSize)) wraps around, there is no valid
+  // value for Index.
+  uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
+  auto &[Index, Scale] = Offset.VariableOffsets.front();
+  APInt MaxIndex = (APInt(BitWidth, Size->getFixedValue() - AccessSize,
+                          /*isSigned=*/false, /*implicitTrunc=*/true) -
+                    Offset.ConstantOffset)
+                       .udiv(Scale);
+  Pred = ICmpInst::ICMP_ULE;
+  A = Index;
+  B = ConstantInt::get(Index->getType(), MaxIndex);
+  return true;
+}
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
+  auto &DL = BB.getDataLayout();
 
-  // True as long as long as the current instruction is guaranteed to execute.
+  // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
@@ -1470,6 +1514,38 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
       }
       continue;
+    }
+
+    auto AddFactFromMemoryAccess = [&](Value *Ptr, Type *AccessType) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      if (!GEP)
+        return;
+      TypeSize AccessSize = DL.getTypeStoreSize(AccessType);
+      if (!AccessSize.isFixed())
+        return;
+      if (GuaranteedToExecute) {
+        CmpPredicate Pred;
+        Value *A, *B;
+        if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
+                                          Pred, A, B, DL, TLI)) {
+          // The memory access is guaranteed to execute when BB is entered,
+          // hence the constraint holds on entry to BB.
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              DT.getNode(I.getParent()), Pred, A, B));
+        }
+      } else {
+        WorkList.emplace_back(
+            FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
+      }
+    };
+
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isVolatile())
+        AddFactFromMemoryAccess(LI->getPointerOperand(), LI->getAccessType());
+    }
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isVolatile())
+        AddFactFromMemoryAccess(SI->getPointerOperand(), SI->getAccessType());
     }
 
     auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -2279,12 +2355,13 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution &SE,
-                                 OptimizationRemarkEmitter &ORE) {
+                                 OptimizationRemarkEmitter &ORE,
+                                 TargetLibraryInfo &TLI) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
   const DataLayout &DL = F.getDataLayout();
-  State S(DT, LI, SE, DL, F.getContext());
+  State S(DT, LI, SE, TLI, DL, F.getContext());
   S.collectPHIInductionVars(F);
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(S, FunctionArgs);
@@ -2457,6 +2534,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         }
         continue;
       }
+
+      auto &DL = F.getDataLayout();
+      auto AddFactsAboutIndices = [&](Value *Ptr, Type *AccessType) {
+        CmpPredicate Pred;
+        Value *A, *B;
+        if (getConstraintFromMemoryAccess(
+                *cast<GetElementPtrInst>(Ptr),
+                DL.getTypeStoreSize(AccessType).getFixedValue(), Pred, A, B, DL,
+                TLI))
+          AddFact(Pred, A, B);
+      };
+
+      if (auto *LI = dyn_cast<LoadInst>(CB.Inst)) {
+        AddFactsAboutIndices(LI->getPointerOperand(), LI->getAccessType());
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(CB.Inst)) {
+        AddFactsAboutIndices(SI->getPointerOperand(), SI->getAccessType());
+        continue;
+      }
     }
 
     Value *A = nullptr, *B = nullptr;
@@ -2515,7 +2612,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  if (!eliminateConstraints(F, DT, LI, SE, ORE))
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
