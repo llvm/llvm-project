@@ -313,8 +313,8 @@ void ASTStmtWriter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
 void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKwLoc());
-  Record.push_back(S->isLabeled());
-  if (S->isLabeled()) {
+  Record.push_back(S->hasLabelTarget());
+  if (S->hasLabelTarget()) {
     Record.AddDeclRef(S->getLabelDecl());
     Record.AddSourceLocation(S->getLabelLoc());
   }

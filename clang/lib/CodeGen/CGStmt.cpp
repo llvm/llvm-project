@@ -1734,10 +1734,10 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
 
 auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     -> const BreakContinue * {
-  if (!S.isLabeled())
+  if (!S.hasLabelTarget())
     return &BreakContinueStack.back();
 
-  Stmt *LoopOrSwitch = S.getLabelTarget();
+  const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
   assert(LoopOrSwitch && "break/continue target not set?");
   for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
     if (BC.LoopOrSwitch == LoopOrSwitch)

@@ -897,7 +897,7 @@ namespace {
     /// Stack of loops and 'switch' statements which we're currently
     /// breaking/continuing; null entries are used to mark unlabeled
     /// break/continue.
-    SmallVector<Stmt *> BreakContinueStack;
+    SmallVector<const Stmt *> BreakContinueStack;
 
     /// Set of objects that are currently being constructed.
     llvm::DenseMap<ObjectUnderConstruction, ConstructionPhase>
@@ -5979,8 +5979,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->isLabeled() ? B->getLabelTarget()
-                                                     : nullptr);
+    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 

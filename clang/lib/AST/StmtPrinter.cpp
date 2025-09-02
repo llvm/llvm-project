@@ -477,7 +477,7 @@ void StmtPrinter::VisitIndirectGotoStmt(IndirectGotoStmt *Node) {
 
 void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
   Indent();
-  if (Node->isLabeled())
+  if (Node->hasLabelTarget())
     OS << "continue " << Node->getLabelDecl()->getIdentifier()->getName()
        << ';';
   else
@@ -487,7 +487,7 @@ void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
 
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   Indent();
-  if (Node->isLabeled())
+  if (Node->hasLabelTarget())
     OS << "break " << Node->getLabelDecl()->getIdentifier()->getName() << ';';
   else
     OS << "break;";

@@ -1414,12 +1414,12 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
 }
 
 void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
-  if (!Node->isLabeled())
+  if (!Node->hasLabelTarget())
     return;
 
   OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
 
-  auto *Target = Node->getLabelTarget();
+  auto *Target = Node->getNamedLoopOrSwitch();
   if (!Target) {
     ColorScope Color(OS, ShowColors, NullColor);
     OS << "<<<NULL>>>";

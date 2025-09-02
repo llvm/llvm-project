@@ -7412,10 +7412,10 @@ static ExpectedStmt ImportLoopControlStmt(ASTNodeImporter &NodeImporter,
                                           ASTImporter &Importer, StmtClass *S) {
   Error Err = Error::success();
   auto ToLoc = NodeImporter.importChecked(Err, S->getKwLoc());
-  auto ToLabelLoc = S->isLabeled()
+  auto ToLabelLoc = S->hasLabelTarget()
                         ? NodeImporter.importChecked(Err, S->getLabelLoc())
                         : SourceLocation();
-  auto ToDecl = S->isLabeled()
+  auto ToDecl = S->hasLabelTarget()
                     ? NodeImporter.importChecked(Err, S->getLabelDecl())
                     : nullptr;
   if (Err)

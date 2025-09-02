@@ -2173,6 +2173,14 @@ public:
   SourceLocation getBeginLoc() const { return getIdentLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
+  /// Look through nested labels and return the first non-label statement; e.g.
+  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop/
+  const Stmt *getInnermostLabeledStmt() const;
+  Stmt* getInnermostLabeledStmt() {
+    return const_cast<Stmt *>(
+        const_cast<const LabelStmt *>(this)->getInnermostLabeledStmt());
+  }
+
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
   const_child_range children() const {
@@ -3048,10 +3056,14 @@ public:
 /// Base class for BreakStmt and ContinueStmt.
 class LoopControlStmt : public Stmt {
   /// If this is a labeled break/continue, the label whose statement we're
-  /// targeting.
+  /// targeting, as well as the source location of the label after the
+  /// keyword; for example:
+  ///
+  ///   a: // <-- TargetLabel
+  ///   for (;;)
+  ///     break a; // <-- Label
+  ///
   LabelDecl *TargetLabel = nullptr;
-
-  /// Location of the label, if any.
   SourceLocation Label;
 
 protected:
@@ -3074,10 +3086,10 @@ public:
 
   SourceLocation getBeginLoc() const { return getKwLoc(); }
   SourceLocation getEndLoc() const {
-    return isLabeled() ? getLabelLoc() : getKwLoc();
+    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
   }
 
-  bool isLabeled() const { return TargetLabel != nullptr; }
+  bool hasLabelTarget() const { return TargetLabel != nullptr; }
 
   SourceLocation getLabelLoc() const { return Label; }
   void setLabelLoc(SourceLocation L) { Label = L; }
@@ -3088,7 +3100,7 @@ public:
 
   /// If this is a labeled break/continue, get the loop or switch statement
   /// that this targets.
-  Stmt *getLabelTarget() const;
+  const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
   child_range children() {
