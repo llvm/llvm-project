@@ -223,8 +223,8 @@ body: |
     ; GREEDY-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR1]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
     ; GREEDY-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_1]], [[DEF]], 512, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; GREEDY-NEXT: [[V_MFMA_F32_4X4X1F32_e64_2:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GREEDY-NEXT: [[V_MUL_LO_U32_e64_2:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
     ; GREEDY-NEXT: [[V_MFMA_F32_4X4X1F32_e64_3:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GREEDY-NEXT: [[V_MUL_LO_U32_e64_2:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
     ; GREEDY-NEXT: [[V_MUL_LO_U32_e64_3:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
     ; GREEDY-NEXT: [[V_MFMA_F32_4X4X1F32_e64_4:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_3]], 0, 0, 0, implicit $mode, implicit $exec
     ; GREEDY-NEXT: SCHED_GROUP_BARRIER 16, 2, 0
