@@ -15,7 +15,7 @@
 ; RUN:   -r=%t/main.o,main,plx 2>&1
 ; RUN: llvm-dis %t/t.exe.1.4.opt.bc -o - | FileCheck %s
 
-; CHECK:      define dso_local noundef i32 @main() local_unnamed_addr #0 {
+; CHECK:      define dso_local noundef i32 @main() local_unnamed_addr #0 !guid {{.*}} {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:  ret i32 35
 ; CHECK-NEXT: }

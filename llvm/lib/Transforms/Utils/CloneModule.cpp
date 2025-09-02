@@ -129,17 +129,21 @@ std::unique_ptr<Module> llvm::CloneModule(
   for (const Function &I : M) {
     Function *F = cast<Function>(VMap[&I]);
 
-    if (I.isDeclaration()) {
+    auto CopyMD = [&]() {
       // Copy over metadata for declarations since we're not doing it below in
       // CloneFunctionInto().
       SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
       I.getAllMetadata(MDs);
       for (auto MD : MDs)
         F->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+    };
+    if (I.isDeclaration()) {
+      CopyMD();
       continue;
     }
 
     if (!ShouldCloneDefinition(&I)) {
+      CopyMD();            
       // Skip after setting the correct linkage for an external reference.
       F->setLinkage(GlobalValue::ExternalLinkage);
       // Personality function is not valid on a declaration.

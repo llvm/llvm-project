@@ -34,44 +34,44 @@ define i64 @ok2(ptr %this, i64 %arg) {
 declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
 
 ; M0: define void @wrongtype1
-; M1: declare void @wrongtype1()
+; M1: declare !guid !{{.*}} void @wrongtype1()
 define void @wrongtype1(ptr) {
   ret void
 }
 
 ; M0: define i128 @wrongtype2
-; M1: declare void @wrongtype2()
+; M1: declare !guid !{{.*}} void @wrongtype2()
 define i128 @wrongtype2(ptr) {
   ret i128 0
 }
 
 ; M0: define i64 @wrongtype3
-; M1: declare void @wrongtype3()
+; M1: declare !guid !{{.*}} void @wrongtype3()
 define i64 @wrongtype3() {
   ret i64 0
 }
 
 ; M0: define i64 @wrongtype4
-; M1: declare void @wrongtype4()
+; M1: declare !guid !{{.*}} void @wrongtype4()
 define i64 @wrongtype4(ptr, ptr) {
   ret i64 0
 }
 
 ; M0: define i64 @wrongtype5
-; M1: declare void @wrongtype5()
+; M1: declare !guid !{{.*}} void @wrongtype5()
 define i64 @wrongtype5(ptr, i128) {
   ret i64 0
 }
 
 ; M0: define i64 @usesthis
-; M1: declare void @usesthis()
+; M1: declare !guid !{{.*}} void @usesthis()
 define i64 @usesthis(ptr %this) {
   %i = ptrtoint ptr %this to i64
   ret i64 %i
 }
 
 ; M0: define i8 @reads
-; M1: declare void @reads()
+; M1: declare !guid !{{.*}} void @reads()
 define i8 @reads(ptr %this) {
   %l = load i8, ptr %this
   ret i8 %l
