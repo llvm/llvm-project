@@ -562,6 +562,8 @@ public:
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
   void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
+  void emitExpandAtomicLoad(LoadInst *LI) const override;
+  void emitExpandAtomicStore(StoreInst *SI) const override;
 
   LoadInst *
   lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;

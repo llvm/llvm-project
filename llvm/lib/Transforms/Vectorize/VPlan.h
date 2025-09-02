@@ -219,6 +219,9 @@ public:
   size_t getNumSuccessors() const { return Successors.size(); }
   size_t getNumPredecessors() const { return Predecessors.size(); }
 
+  /// Returns true if this block has any predecessors.
+  bool hasPredecessors() const { return !Predecessors.empty(); }
+
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
   /// has successors. \return the root enclosing block if all enclosing blocks
@@ -400,7 +403,7 @@ class LLVM_ABI_FOR_TEST VPRecipeBase
 
 public:
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
-               DebugLoc DL = {})
+               DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
   virtual ~VPRecipeBase() = default;
@@ -518,11 +521,11 @@ protected:
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = {})
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPValue(this) {}
 
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                    Value *UV, DebugLoc DL = {})
+                    Value *UV, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -557,6 +560,7 @@ public:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
+    case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
@@ -864,7 +868,7 @@ public:
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      DebugLoc DL = {})
+                      DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags() {}
 
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
@@ -872,7 +876,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
       : VPSingleDefRecipe(SC, Operands, &I, I.getDebugLoc()), VPIRFlags(I) {}
 
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
-                      const VPIRFlags &Flags, DebugLoc DL = {})
+                      const VPIRFlags &Flags,
+                      DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -975,6 +980,10 @@ public:
     Not,
     SLPLoad,
     SLPStore,
+    // Creates a mask where each lane is active (true) whilst the current
+    // counter (first operand + index) is less than the second operand. i.e.
+    //    mask[i] = icmpt ult (op0 + i), op1
+    // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
     ExplicitVectorLength,
     CalculateTripCountMinusVF,
@@ -1081,13 +1090,13 @@ private:
 #endif
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL = {},
-                const Twine &Name = "")
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = {},
+                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
                 const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
@@ -1480,7 +1489,8 @@ public:
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    const VPIRFlags &Flags = {}, DebugLoc DL = {})
+                    const VPIRFlags &Flags = {},
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
         VPIRMetadata(), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
@@ -1538,7 +1548,7 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 public:
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         DebugLoc DL = {})
+                         DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
@@ -1547,7 +1557,7 @@ public:
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
-                         DebugLoc DL = {})
+                         DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
@@ -1616,7 +1626,8 @@ class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
-                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
+                    ArrayRef<VPValue *> CallArguments,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
         VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
@@ -1666,7 +1677,7 @@ class VPHistogramRecipe : public VPRecipeBase {
 
 public:
   VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = {})
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
 
   ~VPHistogramRecipe() override = default;
@@ -1997,6 +2008,9 @@ public:
     return getOperand(1);
   }
 
+  /// Update the incoming value from the loop backedge.
+  void setBackedgeValue(VPValue *V) { setOperand(1, V); }
+
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.
   virtual VPRecipeBase &getBackedgeRecipe() {
@@ -2228,8 +2242,8 @@ protected:
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
-                   const Twine &Name = "")
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr,
+                   DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
       : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
         Name(Name.str()) {
     if (Start)
@@ -2432,12 +2446,13 @@ public:
   }
 };
 
-/// VPInterleaveRecipe is a recipe for transforming an interleave group of load
-/// or stores into one wide load/store and shuffles. The first operand of a
-/// VPInterleave recipe is the address, followed by the stored values, followed
-/// by an optional mask.
-class LLVM_ABI_FOR_TEST VPInterleaveRecipe : public VPRecipeBase,
-                                             public VPIRMetadata {
+/// A common base class for interleaved memory operations.
+/// An Interleaved memory operation is a memory access method that combines
+/// multiple strided loads/stores into a single wide load/store with shuffles.
+/// The first operand is the start address. The optional operands are, in order,
+/// the stored values and the mask.
+class LLVM_ABI_FOR_TEST VPInterleaveBase : public VPRecipeBase,
+                                           public VPIRMetadata {
   const InterleaveGroup<Instruction> *IG;
 
   /// Indicates if the interleave group is in a conditional block and requires a
@@ -2448,12 +2463,14 @@ class LLVM_ABI_FOR_TEST VPInterleaveRecipe : public VPRecipeBase,
   /// unusued gaps can be loaded speculatively.
   bool NeedsMaskForGaps = false;
 
-public:
-  VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
-                     ArrayRef<VPValue *> StoredValues, VPValue *Mask,
-                     bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}, DL), VPIRMetadata(MD),
-        IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
+protected:
+  VPInterleaveBase(const unsigned char SC,
+                   const InterleaveGroup<Instruction> *IG,
+                   ArrayRef<VPValue *> Operands,
+                   ArrayRef<VPValue *> StoredValues, VPValue *Mask,
+                   bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(MD), IG(IG),
+        NeedsMaskForGaps(NeedsMaskForGaps) {
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
@@ -2471,14 +2488,19 @@ public:
       addOperand(Mask);
     }
   }
-  ~VPInterleaveRecipe() override = default;
 
-  VPInterleaveRecipe *clone() override {
-    return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps, *this, getDebugLoc());
+public:
+  VPInterleaveBase *clone() override = 0;
+
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPInterleaveSC ||
+           R->getVPDefID() == VPRecipeBase::VPInterleaveEVLSC;
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
@@ -2488,25 +2510,65 @@ public:
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
   VPValue *getMask() const {
-    // Mask is optional and therefore the last, currently 2nd operand.
+    // Mask is optional and the last operand.
     return HasMask ? getOperand(getNumOperands() - 1) : nullptr;
   }
+
+  /// Return true if the access needs a mask because of the gaps.
+  bool needsMaskForGaps() const { return NeedsMaskForGaps; }
+
+  const InterleaveGroup<Instruction> *getInterleaveGroup() const { return IG; }
+
+  Instruction *getInsertPos() const { return IG->getInsertPos(); }
+
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPInterleaveBase should not be instantiated.");
+  }
+
+  /// Return the cost of this recipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+
+  /// Returns the number of stored operands of this interleave group. Returns 0
+  /// for load interleave groups.
+  virtual unsigned getNumStoreOperands() const = 0;
 
   /// Return the VPValues stored by this interleave group. If it is a load
   /// interleave group, return an empty ArrayRef.
   ArrayRef<VPValue *> getStoredValues() const {
-    // The first operand is the address, followed by the stored values, followed
-    // by an optional mask.
-    return ArrayRef<VPValue *>(op_begin(), getNumOperands())
-        .slice(1, getNumStoreOperands());
+    return ArrayRef<VPValue *>(op_end() -
+                                   (getNumStoreOperands() + (HasMask ? 1 : 0)),
+                               getNumStoreOperands());
   }
+};
+
+/// VPInterleaveRecipe is a recipe for transforming an interleave group of load
+/// or stores into one wide load/store and shuffles. The first operand of a
+/// VPInterleave recipe is the address, followed by the stored values, followed
+/// by an optional mask.
+class LLVM_ABI_FOR_TEST VPInterleaveRecipe final : public VPInterleaveBase {
+public:
+  VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
+                     ArrayRef<VPValue *> StoredValues, VPValue *Mask,
+                     bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
+      : VPInterleaveBase(VPDef::VPInterleaveSC, IG, Addr, StoredValues, Mask,
+                         NeedsMaskForGaps, MD, DL) {}
+
+  ~VPInterleaveRecipe() override = default;
+
+  VPInterleaveRecipe *clone() override {
+    return new VPInterleaveRecipe(getInterleaveGroup(), getAddr(),
+                                  getStoredValues(), getMask(),
+                                  needsMaskForGaps(), *this, getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
 
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPInterleaveRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2514,22 +2576,64 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
-
-  /// Returns the number of stored operands of this interleave group. Returns 0
-  /// for load interleave groups.
-  unsigned getNumStoreOperands() const {
-    return getNumOperands() - (HasMask ? 2 : 1);
-  }
-
-  /// The recipe only uses the first lane of the address.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getAddr() && !llvm::is_contained(getStoredValues(), Op);
   }
 
-  Instruction *getInsertPos() const { return IG->getInsertPos(); }
+  unsigned getNumStoreOperands() const override {
+    return getNumOperands() - (getMask() ? 2 : 1);
+  }
+};
+
+/// A recipe for interleaved memory operations with vector-predication
+/// intrinsics. The first operand is the address, the second operand is the
+/// explicit vector length. Stored values and mask are optional operands.
+class LLVM_ABI_FOR_TEST VPInterleaveEVLRecipe final : public VPInterleaveBase {
+public:
+  VPInterleaveEVLRecipe(VPInterleaveRecipe &R, VPValue &EVL, VPValue *Mask)
+      : VPInterleaveBase(VPDef::VPInterleaveEVLSC, R.getInterleaveGroup(),
+                         ArrayRef<VPValue *>({R.getAddr(), &EVL}),
+                         R.getStoredValues(), Mask, R.needsMaskForGaps(), R,
+                         R.getDebugLoc()) {
+    assert(!getInterleaveGroup()->isReverse() &&
+           "Reversed interleave-group with tail folding is not supported.");
+    assert(!needsMaskForGaps() && "Interleaved access with gap mask is not "
+                                  "supported for scalable vector.");
+  }
+
+  ~VPInterleaveEVLRecipe() override = default;
+
+  VPInterleaveEVLRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPInterleaveEVLSC)
+
+  /// The VPValue of the explicit vector length.
+  VPValue *getEVL() const { return getOperand(1); }
+
+  /// Generate the wide load or store, and shuffles.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// The recipe only uses the first lane of the address, and EVL operand.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return (Op == getAddr() && !llvm::is_contained(getStoredValues(), Op)) ||
+           Op == getEVL();
+  }
+
+  unsigned getNumStoreOperands() const override {
+    return getNumOperands() - (getMask() ? 3 : 2);
+  }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
@@ -2559,14 +2663,14 @@ protected:
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
   VPReductionRecipe(const RecurKind RdxKind, FastMathFlags FMFs,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered, DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, nullptr,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
@@ -2684,7 +2788,7 @@ public:
 class LLVM_ABI_FOR_TEST VPReductionEVLRecipe : public VPReductionRecipe {
 public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
-                       DebugLoc DL = {})
+                       DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceKind(),
             R.getFastMathFlags(),
@@ -3535,7 +3639,8 @@ public:
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step, VPValue *VF, DebugLoc DL = {})
+                        VPValue *Step, VPValue *VF,
+                        DebugLoc DL = DebugLoc::getUnknown())
       : VPScalarIVStepsRecipe(
             IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
@@ -4297,9 +4402,8 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return count_if(ExitBlocks,
-                    [](VPIRBasicBlock *EB) {
-                      return EB->getNumPredecessors() != 0;
-                    }) > 1 ||
+                    [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
+               1 ||
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 
@@ -4307,7 +4411,7 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return !(getScalarPreheader()->getNumPredecessors() == 0 ||
+    return !(!getScalarPreheader()->hasPredecessors() ||
              getScalarPreheader()->getSinglePredecessor() == getEntry());
   }
 };
