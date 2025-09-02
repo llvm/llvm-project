@@ -17,6 +17,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -1039,7 +1040,7 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
     bool isResultDistributed = distributedResultType.getNumElements() <
                                oldCastOp.getResultVectorType().getNumElements();
 
-    // If the result is not distributed, source distribted type is the same
+    // If the result is not distributed, source distributed type is the same
     // as the source type. If the result is distributed, we need to compute the
     // distributed source type according to following rules:
     // 1. If the source type is yielded from the warp op, we can use the
@@ -1051,7 +1052,7 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
       // Check if the source is yielded from the warp op.
       gpu::YieldOp yieldOp = cast<gpu::YieldOp>(
           warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-      auto *it =
+      OpOperand *it =
           llvm::find_if(yieldOp->getOpOperands(), [&](OpOperand &operand) {
             return operand.get() == oldCastOp.getSource();
           });
@@ -2155,7 +2156,9 @@ struct WarpOpMultiReduction : public WarpDistributionPattern {
     // case each lane owns its portion of the result (i.e. result is also
     // distributed).
     // 3. If reduction dim == 1, its a row reduction that require cross lanes
-    // shuffles. In this case result is not distributed and broadcasted instead.
+    // shuffles. In this case, the reduction result is not distributed across
+    // lanes. Instead each lane owns a complete copy of the result
+    // (broadcasted).
     // TODO: These assumptions are fairly restrictive. For example, source
     // vector can have row distributed layout. Improve support for such cases.
     if (sourceType.getShape()[1] % warpOp.getWarpSize() != 0)
