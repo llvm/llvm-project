@@ -31,9 +31,9 @@ TEST_F(LlvmLibcAtanpif16Test, SpecialNumbers) {
 
 TEST_F(LlvmLibcAtanpif16Test, SymmetryProperty) {
   // Test that atanpi(-x) = -atanpi(x)
-  constexpr float16 TEST_VALS[] = {0.1f16,  0.25f16, 0.5f16,   0.75f16,
-                                   1.0f16,  1.5f16,  2.0f16,   5.0f16,
-                                   10.0f16, 50.0f16, 100.0f16, 1000.0f16};
+  constexpr array<float16, 12> TEST_VALS = {
+      0.1f16, 0.25f16, 0.5f16,  0.75f16, 1.0f16,   1.5f16,
+      2.0f16, 5.0f16,  10.0f16, 50.0f16, 100.0f16, 1000.0f16};
 
   for (float16 x : TEST_VALS) {
     FPBits neg_x_bits(x);
