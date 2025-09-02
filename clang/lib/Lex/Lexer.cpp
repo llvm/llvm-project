@@ -4040,9 +4040,17 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
-    if (returnedToken && Result.isModuleContextualKeyword(LangOpts) &&
-        !LexingRawMode && !Is_PragmaLexer && !ParsingPreprocessorDirective &&
-        PP &&
+
+    // Check eof token first, because eof token may be encountered in
+    // LexIdentifierContinue, and the current lexer will be deleted in
+    // HandleEndOfFile, causing members(eg. LangOpts) to become an inaccessible
+    // dangling reference.
+    //
+    // FIXME: Whether a more reasonable memory management method needed? such as
+    // delaying the deletion of the current Lexer.
+    if (returnedToken && Result.isNot(tok::eof) &&
+        Result.isModuleContextualKeyword(LangOpts) && !LexingRawMode &&
+        !Is_PragmaLexer && !ParsingPreprocessorDirective && PP &&
         PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
