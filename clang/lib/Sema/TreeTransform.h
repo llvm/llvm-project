@@ -8747,13 +8747,31 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  return S;
+  if (!S->hasLabelTarget())
+    return S;
+
+  Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
+                                        S->getLabelDecl());
+  if (!LD)
+    return StmtError();
+
+  return new (SemaRef.Context)
+      ContinueStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  return S;
+  if (!S->hasLabelTarget())
+    return S;
+
+  Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
+                                        S->getLabelDecl());
+  if (!LD)
+    return StmtError();
+
+  return new (SemaRef.Context)
+      BreakStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>

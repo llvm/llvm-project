@@ -16,8 +16,6 @@ def DoStmt : StmtNode<Stmt>;
 def ForStmt : StmtNode<Stmt>;
 def GotoStmt : StmtNode<Stmt>;
 def IndirectGotoStmt : StmtNode<Stmt>;
-def ContinueStmt : StmtNode<Stmt>;
-def BreakStmt : StmtNode<Stmt>;
 def ReturnStmt : StmtNode<Stmt>;
 def DeclStmt  : StmtNode<Stmt>;
 def SwitchCase : StmtNode<Stmt, 1>;
@@ -25,6 +23,11 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+
+// Break/continue.
+def LoopControlStmt : StmtNode<Stmt, 1>;
+def ContinueStmt : StmtNode<LoopControlStmt>;
+def BreakStmt : StmtNode<LoopControlStmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
