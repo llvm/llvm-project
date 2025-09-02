@@ -9554,8 +9554,6 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
           MI.getOpcode() == TargetOpcode::G_ABDU) &&
          "Expected G_ABDS or G_ABDU instruction");
 
-  // lhs_frz = freeze(lhs)
-  // rhs_frz = freeze(rhs)
   Register DstReg = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
