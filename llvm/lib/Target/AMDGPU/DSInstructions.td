@@ -19,6 +19,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   // Most instruction load and store data, so set this as the default.
   let mayLoad = 1;
   let mayStore = 1;
+  let FixedSize = true;
 
   let hasSideEffects = 0;
   let SchedRW = [WriteLDS];
@@ -774,10 +775,10 @@ def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
 } // End OtherPredicates = [HasImageInsts].
 
-defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
-defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
-defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
-defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc_gfx9<"ds_cond_sub_u32">;
+defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc_gfx9<"ds_cond_sub_rtn_u32", VGPR_32>;
+defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc_gfx9<"ds_sub_clamp_u32">;
+defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPR_32>;
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 

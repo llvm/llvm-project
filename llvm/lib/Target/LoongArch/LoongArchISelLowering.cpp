@@ -342,6 +342,13 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           MVT::v2i16, MVT::v4i32, MVT::v2i32, MVT::v2i64}) {
       setOperationAction(ISD::TRUNCATE, VT, Custom);
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
   }
 
@@ -529,6 +536,14 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBF16_TO_FP(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+    return lowerVECREDUCE(Op, DAG);
   }
   return SDValue();
 }
@@ -577,6 +592,45 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
     SDValue Tmp = DAG.getNode(LoongArchISD::XVPERMI, DL, MVT::v4i64, Val,
                               DAG.getConstant(2, DL, MVT::i64));
     Val = DAG.getNode(ISD::ADD, DL, MVT::v4i64, Tmp, Val);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
+                     DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+}
+
+// Lower vecreduce_and/or/xor/[s/u]max/[s/u]min.
+// For Example:
+//  call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %a)
+// can be lowered to:
+//  VBSRL_V       vr1, vr0, 8
+//  VMAX_W        vr0, vr1, vr0
+//  VBSRL_V       vr1, vr0, 4
+//  VMAX_W        vr0, vr1, vr0
+//  VPICKVE2GR_W  a0,  vr0, 0
+// For 256 bit vector, it is illegal and will be spilt into
+// two 128 bit vector by default then processed by this.
+SDValue LoongArchTargetLowering::lowerVECREDUCE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  MVT OpVT = Op.getSimpleValueType();
+  SDValue Val = Op.getOperand(0);
+
+  unsigned NumEles = Val.getSimpleValueType().getVectorNumElements();
+  unsigned EleBits = Val.getSimpleValueType().getScalarSizeInBits();
+
+  // Ensure operand type legal or enable it legal.
+  while (!isTypeLegal(Val.getSimpleValueType())) {
+    Val = DAG.WidenVector(Val, DL);
+  }
+
+  unsigned Opcode = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  MVT VecTy = Val.getSimpleValueType();
+
+  for (int i = NumEles; i > 1; i /= 2) {
+    SDValue ShiftAmt = DAG.getConstant(i * EleBits / 16, DL, MVT::i64);
+    SDValue Tmp = DAG.getNode(LoongArchISD::VBSRL, DL, VecTy, Val, ShiftAmt);
+    Val = DAG.getNode(Opcode, DL, VecTy, Tmp, Val);
   }
 
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Val,
