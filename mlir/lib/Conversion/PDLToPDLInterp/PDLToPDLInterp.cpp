@@ -644,8 +644,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
   if (auto symName = pattern.getSymName())
     rewriterName = symName.value();
   auto rewriterFunc = pdl_interp::FuncOp::create(
-      builder, pattern.getLoc(), rewriterName,
-      builder.getFunctionType({}, {}));
+      builder, pattern.getLoc(), rewriterName, builder.getFunctionType({}, {}));
   rewriterSymbolTable.insert(rewriterFunc);
 
   // Generate the rewriter function body.
