@@ -12,8 +12,10 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
-#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -59,6 +61,16 @@ public:
                               truncatedArrayTy),
         trailingZerosNum);
   }
+
+  cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                    cir::ArrayType arrayTy) const {
+    return cir::ConstArrayAttr::get(arrayTy, attrs);
+  }
+
+  mlir::Attribute getConstRecordOrZeroAttr(mlir::ArrayAttr arrayAttr,
+                                           bool packed = false,
+                                           bool padded = false,
+                                           mlir::Type type = {});
 
   cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
                                           bool packed = false,
@@ -149,6 +161,12 @@ public:
 
     return type;
   }
+
+  cir::RecordType getCompleteRecordType(mlir::ArrayAttr fields,
+                                        bool packed = false,
+                                        bool padded = false,
+                                        llvm::StringRef name = "",
+                                        const clang::RecordDecl *ast = nullptr);
 
   /// Get an incomplete CIR struct type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
