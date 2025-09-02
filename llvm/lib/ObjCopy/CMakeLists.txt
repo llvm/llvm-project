@@ -44,6 +44,7 @@ source_group("Source Files\\DXContainer" REGULAR_EXPRESSION
 add_llvm_component_library(LLVMObjCopy
   Archive.cpp
   DXContainer/DXContainerObjcopy.cpp
+  DXContainer/DXContainerObject.cpp
   DXContainer/DXContainerReader.cpp
   DXContainer/DXContainerWriter.cpp
   CommonConfig.cpp

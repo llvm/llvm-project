@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-signed-char-misuse %t -- -- -std=c23
+// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-signed-char-misuse %t
 
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly caught by the check.

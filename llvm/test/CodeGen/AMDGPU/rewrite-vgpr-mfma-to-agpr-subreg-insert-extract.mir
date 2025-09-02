@@ -18,6 +18,7 @@ body:             |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub2_sub3:areg_128_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY3]].sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)
@@ -28,6 +29,7 @@ body:             |
     %3:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     %4:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
     undef %5.sub0_sub1:areg_128_align2 = COPY %4
+    %5.sub2_sub3 = IMPLICIT_DEF
     INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, %5
     GLOBAL_STORE_DWORDX4 %0, %5, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     GLOBAL_STORE_DWORDX2 %0, %5.sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)
@@ -136,15 +138,17 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub0
+    ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:areg_128_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[DEF]].sub0
     ; CHECK-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64_align2 = COPY $vgpr4_vgpr5
     %1:av_64_align2 = COPY $vgpr0_vgpr1
     %2:av_64_align2 = COPY $vgpr2_vgpr3
     %3:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    undef %4.sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
+    undef %4.sub0 = IMPLICIT_DEF
+    %4.sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
     %5:agpr_32 = COPY %4.sub0
     GLOBAL_STORE_DWORD %0, %5, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     SI_RETURN
@@ -167,6 +171,7 @@ body:             |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]].sub2_sub3:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_]].sub2_sub3
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub2_sub3:areg_128_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY3]].sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)
@@ -177,6 +182,7 @@ body:             |
     %3:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     undef %4.sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
     undef %5.sub0_sub1:areg_128_align2 = COPY %4.sub2_sub3
+    %5.sub2_sub3 = IMPLICIT_DEF
     INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, %5
     GLOBAL_STORE_DWORDX4 %0, %5, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     GLOBAL_STORE_DWORDX2 %0, %5.sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)
@@ -201,6 +207,7 @@ body:             |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub1:areg_128_align2 = COPY [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]].sub2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub2_sub3:areg_128_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, [[COPY3]]
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY3]].sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)
@@ -211,6 +218,7 @@ body:             |
     %3:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     undef %4.sub2_sub3:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3, 0, 0, 0, implicit $mode, implicit $exec
     undef %5.sub1:areg_128_align2 = COPY %4.sub2
+    %5.sub2_sub3 = IMPLICIT_DEF
     INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 6291465 /* reguse:AReg_128_Align2 */, %5
     GLOBAL_STORE_DWORDX4 %0, %5, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     GLOBAL_STORE_DWORDX2 %0, %5.sub2_sub3, 0, 0, implicit $exec :: (store (s128), addrspace 1)

@@ -890,13 +890,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V: {
-    for (const MachineMemOperand *MMO : MI.memoperands())
-      if (MMO->isVolatile())
-        return false;
-    return true;
-  }
-
+  case RISCV::VLOXEI64_V:
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
@@ -1335,6 +1329,13 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->isVolatile()) {
+      LLVM_DEBUG(dbgs() << "Not a candidate because contains volatile MMO\n");
+      return false;
+    }
+  }
+
   // Some instructions that produce vectors have semantics that make it more
   // difficult to determine whether the VL can be reduced. For example, some
   // instructions, such as reductions, may write lanes past VL to a scalar
@@ -1348,7 +1349,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TODO: Use a better approach than a white-list, such as adding
   // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
-    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
+    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
+                      << MI);
     return false;
   }
 
@@ -1373,14 +1375,14 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     return DemandedVLs.lookup(&UserMI);
 
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to lack of VL, assume that"
+    LLVM_DEBUG(dbgs() << "  Abort due to lack of VL, assume that"
                          " use VLMAX\n");
     return DemandedVL::vlmax();
   }
 
   if (RISCVII::readsPastVL(
           TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
-    LLVM_DEBUG(dbgs() << "    Abort because used by unsafe instruction\n");
+    LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
 
@@ -1396,7 +1398,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
     if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort because user is passthru in "
+      LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
     }
@@ -1477,7 +1479,7 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
-  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
+  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
@@ -1495,13 +1497,13 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
          "Expected VL to be an Imm or virtual Reg");
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
 
   if (CommonVL->isIdenticalTo(VLOp)) {
     LLVM_DEBUG(
-        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+        dbgs() << "  Abort due to CommonVL == VLOp, no point in reducing.\n");
     return false;
   }
 
@@ -1512,8 +1514,10 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
     return true;
   }
   const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-  if (!MDT->dominates(VLMI, &MI))
+  if (!MDT->dominates(VLMI, &MI)) {
+    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
     return false;
+  }
   LLVM_DEBUG(
       dbgs() << "  Reduce VL from " << VLOp << " to "
              << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
