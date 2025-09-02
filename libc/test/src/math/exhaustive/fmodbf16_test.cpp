@@ -38,5 +38,5 @@ TEST_F(LlvmLibcFmodf16ExhaustiveTest, NegativePositiveRange) {
 }
 
 TEST_F(LlvmLibcFmodf16ExhaustiveTest, NegativeNegativeRange) {
-  test_full_range_all_roundings(NEG_START, NEG_STOP, POS_START, POS_STOP);
+  test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
 }
