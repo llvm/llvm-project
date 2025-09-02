@@ -1628,6 +1628,8 @@ void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
+      if (*DWOId == 0)
+          continue;
       std::string DWOName = dwarf::toString(
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
