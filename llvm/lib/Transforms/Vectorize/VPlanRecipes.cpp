@@ -2891,7 +2891,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
-    }
+  }
   }
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");

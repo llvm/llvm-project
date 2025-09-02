@@ -3553,7 +3553,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *MulR = cast<VPWidenRecipe>(Mul->getDefiningRecipe());
 
-    // Match reduce.add(mul(ext, ext)).
+    // Match reduce.add/sub(mul(ext, ext)).
     if (RecipeA && RecipeB &&
         (RecipeA->getOpcode() == RecipeB->getOpcode() || IsPartialReduction) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
