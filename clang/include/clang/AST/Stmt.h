@@ -2174,7 +2174,7 @@ public:
   SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
   /// Look through nested labels and return the first non-label statement; e.g.
-  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop/
+  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop.
   const Stmt *getInnermostLabeledStmt() const;
   Stmt *getInnermostLabeledStmt() {
     return const_cast<Stmt *>(
