@@ -611,7 +611,7 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.index_cast to spirv.Select if the source type is i1
+/// Converts arith.index_cast to spirv.Select if the source type is i1.
 struct IndexCastI1IndexPattern final
     : public OpConversionPattern<arith::IndexCastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -619,8 +619,8 @@ struct IndexCastI1IndexPattern final
   LogicalResult
   matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = adaptor.getOperands().front().getType();
-    if (!srcType.isInteger(1))
+    Type srcType = adaptor.getIn().getType();
+    if (!isBoolScalarOrVector(srcType))
       return failure();
 
     Type dstType = getTypeConverter()->convertType(op.getType());
@@ -631,7 +631,7 @@ struct IndexCastI1IndexPattern final
     Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(
-        op, dstType, adaptor.getOperands().front(), one, zero);
+        op, dstType, adaptor.getIn(), one, zero);
     return success();
   }
 };

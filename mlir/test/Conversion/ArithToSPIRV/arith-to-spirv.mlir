@@ -734,12 +734,21 @@ func.func @index_castui4(%arg0: index) {
   return
 }
 
-// CHECK-LABEL: index_casti1index
-func.func @index_casti1index(%arg0 : i1) {
+// CHECK-LABEL: index_casti1index_1
+func.func @index_casti1index_1(%arg0 : i1) {
   // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
   // CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
   // CHECK: spirv.Select %{{.+}}, %[[ONE]], %[[ZERO]] : i1, i32
   %0 = arith.index_cast %arg0 : i1 to index
+  return
+}
+
+// CHECK-LABEL: index_casti1index_2
+func.func @index_casti1index_2(%arg0 : vector<3xi1>) {
+  // CHECK: %[[ZERO:.+]] = spirv.Constant dense<0> : vector<3xi32>
+  // CHECK: %[[ONE:.+]] = spirv.Constant dense<1> : vector<3xi32>
+  // CHECK: spirv.Select %{{.+}}, %[[ONE]], %[[ZERO]] : vector<3xi1>, vector<3xi32>
+  %0 = arith.index_cast %arg0 : vector<3xi1> to vector<3xindex>
   return
 }
 
