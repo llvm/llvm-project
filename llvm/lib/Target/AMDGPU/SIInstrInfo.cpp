@@ -4758,6 +4758,31 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
   return Inst32;
 }
 
+bool SIInstrInfo::physRegUsesConstantBus(const MachineOperand &RegOp) const {
+  // Null is free
+  Register Reg = RegOp.getReg();
+  if (Reg == AMDGPU::SGPR_NULL || Reg == AMDGPU::SGPR_NULL64)
+    return false;
+
+  // SGPRs use the constant bus
+
+  // FIXME: implicit registers that are not part of the MCInstrDesc's implicit
+  // physical register operands should also count, except for exec.
+  if (RegOp.isImplicit())
+    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::M0;
+
+  // SGPRs use the constant bus
+  return AMDGPU::SReg_32RegClass.contains(Reg) ||
+         AMDGPU::SReg_64RegClass.contains(Reg);
+}
+
+bool SIInstrInfo::regUsesConstantBus(const MachineOperand &RegOp,
+                                     const MachineRegisterInfo &MRI) const {
+  Register Reg = RegOp.getReg();
+  return Reg.isVirtual() ? RI.isSGPRClass(MRI.getRegClass(Reg))
+                         : physRegUsesConstantBus(RegOp);
+}
+
 bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
                                   const MachineOperand &MO,
                                   const MCOperandInfo &OpInfo) const {
@@ -4765,23 +4790,9 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
   if (!MO.isReg())
     return !isInlineConstant(MO, OpInfo);
 
-  if (!MO.isUse())
-    return false;
-
-  if (MO.getReg().isVirtual())
-    return RI.isSGPRClass(MRI.getRegClass(MO.getReg()));
-
-  // Null is free
-  if (MO.getReg() == AMDGPU::SGPR_NULL || MO.getReg() == AMDGPU::SGPR_NULL64)
-    return false;
-
-  // SGPRs use the constant bus
-  if (MO.isImplicit()) {
-    return MO.getReg() == AMDGPU::M0 || MO.getReg() == AMDGPU::VCC ||
-           MO.getReg() == AMDGPU::VCC_LO;
-  }
-  return AMDGPU::SReg_32RegClass.contains(MO.getReg()) ||
-         AMDGPU::SReg_64RegClass.contains(MO.getReg());
+  Register Reg = MO.getReg();
+  return Reg.isVirtual() ? RI.isSGPRClass(MRI.getRegClass(Reg))
+                         : physRegUsesConstantBus(MO);
 }
 
 static Register findImplicitSGPRRead(const MachineInstr &MI) {
@@ -6250,13 +6261,12 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
         continue;
       const MachineOperand &Op = MI.getOperand(i);
       if (Op.isReg()) {
-        RegSubRegPair SGPR(Op.getReg(), Op.getSubReg());
-        if (!SGPRsUsed.count(SGPR) &&
-            // FIXME: This can access off the end of the operands() array.
-            usesConstantBus(MRI, Op, InstDesc.operands().begin()[i])) {
-          if (--ConstantBusLimit <= 0)
-            return false;
-          SGPRsUsed.insert(SGPR);
+        if (Op.isUse()) {
+          RegSubRegPair SGPR(Op.getReg(), Op.getSubReg());
+          if (regUsesConstantBus(Op, MRI) && SGPRsUsed.insert(SGPR).second) {
+            if (--ConstantBusLimit <= 0)
+              return false;
+          }
         }
       } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
                  !isInlineConstant(Op, InstDesc.operands()[i])) {
