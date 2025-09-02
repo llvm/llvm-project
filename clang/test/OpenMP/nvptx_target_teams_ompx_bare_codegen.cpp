@@ -30,29 +30,36 @@ int bar(int n){
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l13
 // CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
-// CHECK-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
-// CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A_ADDR]], align 1
-// CHECK-NEXT:    store i8 [[TMP0]], ptr [[A_CASTED]], align 1
-// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l13_omp_outlined(ptr null, ptr [[DOTZERO_ADDR]], i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[A_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_CASTED]] to ptr
+// CHECK-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A_ADDR_ASCAST]], align 1
+// CHECK-NEXT:    store i8 [[TMP0]], ptr [[A_CASTED_ASCAST]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A_CASTED_ASCAST]], align 8
+// CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l13_omp_outlined(ptr null, ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l13_omp_outlined
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
-// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    store i8 2, ptr [[A_ADDR]], align 1
+// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTGLOBAL_TID__ADDR]] to ptr
+// CHECK-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBOUND_TID__ADDR]] to ptr
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i8 2, ptr [[A_ADDR_ASCAST]], align 1
 // CHECK-NEXT:    ret void
 //
