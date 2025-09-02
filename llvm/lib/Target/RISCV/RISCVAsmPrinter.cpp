@@ -332,10 +332,11 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const Function &F = MI->getParent()->getParent()->getFunction();
     if (F.hasFnAttribute("patchable-function-entry")) {
       unsigned Num;
-      assert(!F.getFnAttribute("patchable-function-entry")
-                  .getValueAsString()
-                  .getAsInteger(10, Num) &&
-             "Enforced by the verified");
+      [[maybe_unused]] bool Result =
+          F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num);
+      assert(!Result && "Enforced by the verifier");
       emitNops(Num);
       return;
     }
