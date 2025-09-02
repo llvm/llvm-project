@@ -6923,7 +6923,8 @@ static void reuseTableCompare(
 /// lookup tables.
 static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                  DomTreeUpdater *DTU, const DataLayout &DL,
-                                 const TargetTransformInfo &TTI) {
+                                 const TargetTransformInfo &TTI,
+                                 bool ConvertSwitchToLookupTable) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -7090,6 +7091,18 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                   ResultList, DefaultVal, DL, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
+
+  bool AnyLookupTables = any_of(
+      PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
+
+  // The conversion from switch to lookup tables results in difficult-to-analyze
+  // code and makes pruning branches much harder. This is a problem if the
+  // switch expression itself can still be restricted as a result of inlining or
+  // CVP. Therefore, only apply this transformation during late stages of the
+  // optimisation pipeline.
+  // However, other switch replacements can be applied much earlier.
+  if (AnyLookupTables && !ConvertSwitchToLookupTable)
+    return false;
 
   Builder.SetInsertPoint(SI);
   // TableIndex is the switch condition - TableIndexOffset if we don't
@@ -7732,13 +7745,8 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
     return requestResimplify();
 
-  // The conversion from switch to lookup tables results in difficult-to-analyze
-  // code and makes pruning branches much harder. This is a problem if the
-  // switch expression itself can still be restricted as a result of inlining or
-  // CVP. Therefore, only apply this transformation during late stages of the
-  // optimisation pipeline.
-  if (Options.ConvertSwitchToLookupTable &&
-      simplifySwitchLookup(SI, Builder, DTU, DL, TTI))
+  if (simplifySwitchLookup(SI, Builder, DTU, DL, TTI,
+                           Options.ConvertSwitchToLookupTable))
     return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
