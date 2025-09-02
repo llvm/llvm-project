@@ -345,7 +345,7 @@ struct VPlanTransforms {
   /// This effectively is a very simple form of loop-aware SLP, where we use
   /// interleave groups to identify candidates.
   static std::unique_ptr<VPlan>
-  narrowInterleaveGroups(VPlan &Plan, unsigned VectorRegWidth, VFRange &Range);
+  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop

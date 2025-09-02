@@ -3878,13 +3878,21 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 }
 
 std::unique_ptr<VPlan>
-VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, unsigned VectorRegWidth,
-                                        VFRange &Range) {
+VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
+                                        const TargetTransformInfo &TTI) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
 
   if (!VectorLoop)
     return nullptr;
+
+  auto GetVectorWidthForVF = [&TTI](ElementCount VF) {
+    return TTI
+        .getRegisterBitWidth(VF.isFixed()
+                                 ? TargetTransformInfo::RGK_FixedWidthVector
+                                 : TargetTransformInfo::RGK_ScalableVector)
+        .getKnownMinValue();
+  };
 
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPInterleaveRecipe *> StoreGroups;
@@ -3920,14 +3928,14 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, unsigned VectorRegWidth,
     // suitable VF across the Plans VFs.
     //
     if (VFToOptimize) {
-      if (!isConsecutiveInterleaveGroup(InterleaveR,
-                                        VFToOptimize->getKnownMinValue(),
-                                        TypeInfo, VectorRegWidth))
+      if (!isConsecutiveInterleaveGroup(
+              InterleaveR, VFToOptimize->getKnownMinValue(), TypeInfo,
+              GetVectorWidthForVF(*VFToOptimize)))
         return nullptr;
     } else {
       for (ElementCount VF : Plan.vectorFactors()) {
         if (isConsecutiveInterleaveGroup(InterleaveR, VF.getKnownMinValue(),
-                                         TypeInfo, VectorRegWidth)) {
+                                         TypeInfo, GetVectorWidthForVF(VF))) {
           VFToOptimize = VF;
           break;
         }
