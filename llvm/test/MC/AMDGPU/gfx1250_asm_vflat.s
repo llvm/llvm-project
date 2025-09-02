@@ -3096,6 +3096,87 @@ flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset
 // GFX1250: flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x40,0x1c,0xec,0x02,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+cluster_load_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_b32 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] offset:64
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] offset:64 ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] offset:-64
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] offset:-64 ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[4:5] offset:64 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b32 v1, v2, s[4:5] offset:64 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0xc0,0x19,0xee,0x01,0x00,0x3d,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off offset:64
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off offset:64 ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off offset:-64
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off offset:-64 ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] offset:64
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] offset:64 ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] offset:-64
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] offset:-64 ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[2:3], v2, s[4:5] offset:64 scale_offset th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b64 v[2:3], v2, s[4:5] offset:64 scale_offset th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x04,0x00,0x1a,0xee,0x02,0x00,0x69,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off offset:64
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off offset:64 ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off offset:-64
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off offset:-64 ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x68,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] offset:64
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] offset:64 ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] offset:-64
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] offset:-64 ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+
 flat_atomic_add_f64 v[0:1], v[2:3] offset:4095
 // GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
