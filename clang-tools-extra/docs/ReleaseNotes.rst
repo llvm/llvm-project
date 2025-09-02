@@ -213,6 +213,11 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- Improved :doc:`modernize-use-std-format 
+  <clang-tidy/checks/modernize/use-std-format>` now correctly replaces signed 
+  types, and correctly adds a ``static_cast`` to the underlying type when being
+  printed in hex.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
   when the format string is converted to a different type by an implicit
@@ -242,11 +247,6 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
-
-- Improved :doc:`modernize-use-std-format 
-  <clang-tidy/checks/modernize/use-std-format>` now correctly replaces signed 
-  types, and correctly adds a ``static_cast`` to the underlying type when being
-  printed in hex.
 
 Removed checks
 ^^^^^^^^^^^^^^
