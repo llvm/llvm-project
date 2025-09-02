@@ -1996,6 +1996,17 @@ let TargetPrefix = "riscv" in {
   defm zip16p      : RVPBinaryIntrinsics;
   defm zip8hp      : RVPBinaryIntrinsics;
   defm zip16hp     : RVPBinaryIntrinsics;
+  defm ppack_h     : RVPBinaryIntrinsics;
+  defm ppack_w     : RVPBinaryIntrinsics;
+  defm ppackbt_h   : RVPBinaryIntrinsics;
+  defm ppackbt_w   : RVPBinaryIntrinsics;
+  defm packbt      : RVPBinaryIntrinsics;
+  defm ppacktb_h   : RVPBinaryIntrinsics;
+  defm ppacktb_w   : RVPBinaryIntrinsics;
+  defm packtb      : RVPBinaryIntrinsics;
+  defm ppackt_h    : RVPBinaryIntrinsics;
+  defm ppackt_w    : RVPBinaryIntrinsics;
+  defm packt       : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],

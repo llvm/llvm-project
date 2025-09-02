@@ -1266,3 +1266,124 @@ define i64 @mulsu_w11(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.mulsu.w11.i64.i64.i64(i64 %a, i64 %b)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.ppack.h.i64(i64, i64)
+
+define i64 @ppack_h(i64 %a, i64 %b) {
+; RV64P-LABEL: ppack_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppack.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppack.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppack.w.i64(i64, i64)
+
+define i64 @ppack_w(i64 %a, i64 %b) {
+; RV64P-LABEL: ppack_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppack.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppack.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppackbt.h.i64(i64, i64)
+
+define i64 @ppackbt_h(i64 %a, i64 %b) {
+; RV64P-LABEL: ppackbt_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppackbt.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppackbt.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppackbt.w.i64(i64, i64)
+
+define i64 @ppackbt_w(i64 %a, i64 %b) {
+; RV64P-LABEL: ppackbt_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppackbt.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppackbt.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.packbt.i64(i64, i64)
+
+define i64 @packbt(i64 %a, i64 %b) {
+; RV64P-LABEL: packbt:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    packbt a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.packbt.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppacktb.h.i64(i64, i64)
+
+define i64 @ppacktb_h(i64 %a, i64 %b) {
+; RV64P-LABEL: ppacktb_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppacktb.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppacktb.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppacktb.w.i64(i64, i64)
+
+define i64 @ppacktb_w(i64 %a, i64 %b) {
+; RV64P-LABEL: ppacktb_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppacktb.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppacktb.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.packtb.i64(i64, i64)
+
+define i64 @packtb(i64 %a, i64 %b) {
+; RV64P-LABEL: packtb:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    packtb a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.packtb.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppackt.h.i64(i64, i64)
+
+define i64 @ppackt_h(i64 %a, i64 %b) {
+; RV64P-LABEL: ppackt_h:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppackt.h a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppackt.h.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.ppackt.w.i64(i64, i64)
+
+define i64 @ppackt_w(i64 %a, i64 %b) {
+; RV64P-LABEL: ppackt_w:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    ppackt.w a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.ppackt.w.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.packt.i64(i64, i64)
+
+define i64 @packt(i64 %a, i64 %b) {
+; RV64P-LABEL: packt:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    packt a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.packt.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}

@@ -903,3 +903,80 @@ define i32 @mulsu_h11(i32 %a, i32 %b) {
     %tmp = call i32 @llvm.riscv.mulsu.h11.i32.i32.i32(i32 %a, i32 %b)
     ret i32 %tmp
 }
+
+declare i32 @llvm.riscv.ppack.h.i32(i32, i32)
+
+define i32 @ppack_h(i32 %a, i32 %b) {
+; RV32P-LABEL: ppack_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ppack.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ppack.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.ppackbt.h.i32(i32, i32)
+
+define i32 @ppackbt_h(i32 %a, i32 %b) {
+; RV32P-LABEL: ppackbt_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ppackbt.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ppackbt.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.packbt.i32(i32, i32)
+
+define i32 @packbt(i32 %a, i32 %b) {
+; RV32P-LABEL: packbt:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    packbt a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.packbt.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.ppacktb.h.i32(i32, i32)
+
+define i32 @ppacktb_h(i32 %a, i32 %b) {
+; RV32P-LABEL: ppacktb_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ppacktb.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ppacktb.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.packtb.i32(i32, i32)
+
+define i32 @packtb(i32 %a, i32 %b) {
+; RV32P-LABEL: packtb:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    packtb a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.packtb.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.ppackt.h.i32(i32, i32)
+
+define i32 @ppackt_h(i32 %a, i32 %b) {
+; RV32P-LABEL: ppackt_h:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    ppackt.h a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.ppackt.h.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.packt.i32(i32, i32)
+
+define i32 @packt(i32 %a, i32 %b) {
+; RV32P-LABEL: packt:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    packt a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.packt.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
