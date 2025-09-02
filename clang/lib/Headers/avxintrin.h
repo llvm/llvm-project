@@ -2182,9 +2182,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_pd(__m128i __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_pd(__m128i __a) {
   return (__m256d)__builtin_convertvector((__v4si)__a, __v4df);
 }
 
@@ -2197,9 +2196,8 @@ _mm256_cvtepi32_pd(__m128i __a)
 /// \param __a
 ///    A 256-bit integer vector.
 /// \returns A 256-bit vector of [8 x float] containing the converted values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_ps(__m256i __a)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_ps(__m256i __a) {
   return (__m256)__builtin_convertvector((__v8si)__a, __v8sf);
 }
 
@@ -2248,9 +2246,8 @@ _mm256_cvtps_epi32(__m256 __a)
 /// \param __a
 ///    A 128-bit vector of [4 x float].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtps_pd(__m128 __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtps_pd(__m128 __a) {
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
