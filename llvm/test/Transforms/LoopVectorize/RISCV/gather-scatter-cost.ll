@@ -97,23 +97,23 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23-NEXT:  entry:
 ; RVA23-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; RVA23:       vector.ph:
-; RVA23-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i64> @llvm.stepvector.nxv16i64()
-; RVA23-NEXT:    [[TMP1:%.*]] = mul <vscale x 16 x i64> [[TMP0]], splat (i64 1)
-; RVA23-NEXT:    [[INDUCTION:%.*]] = add <vscale x 16 x i64> zeroinitializer, [[TMP1]]
+; RVA23-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
+; RVA23-NEXT:    [[TMP1:%.*]] = mul <vscale x 8 x i64> [[TMP0]], splat (i64 1)
+; RVA23-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP1]]
 ; RVA23-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; RVA23:       vector.body:
-; RVA23-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; RVA23-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
+; RVA23-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; RVA23-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; RVA23-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[TMP3]], i64 0
-; RVA23-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
-; RVA23-NEXT:    [[TMP4:%.*]] = mul <vscale x 16 x i64> [[VEC_IND]], splat (i64 7)
-; RVA23-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START:%.*]], <vscale x 16 x i64> [[TMP4]]
-; RVA23-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> align 1 [[TMP5]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
+; RVA23-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP3]], i64 0
+; RVA23-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+; RVA23-NEXT:    [[TMP4:%.*]] = mul <vscale x 8 x i64> [[VEC_IND]], splat (i64 7)
+; RVA23-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START:%.*]], <vscale x 8 x i64> [[TMP4]]
+; RVA23-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> zeroinitializer, <vscale x 8 x ptr> align 1 [[TMP5]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP2]])
 ; RVA23-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP2]] to i64
 ; RVA23-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
-; RVA23-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; RVA23-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; RVA23-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; RVA23-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; RVA23:       middle.block:
