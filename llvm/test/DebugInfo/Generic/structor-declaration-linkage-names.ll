@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; REQUIRES: ci_stability
