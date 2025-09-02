@@ -28,7 +28,6 @@ class APNumericStorage {
     uint64_t VAL;   ///< Used to store the <= 64 bits integer value.
     uint64_t *pVal; ///< Used to store the >64 bits integer value.
   };
-  unsigned BitWidth;
 
   bool hasAllocation() const { return llvm::APInt::getNumWords(BitWidth) > 1; }
 
@@ -36,6 +35,7 @@ class APNumericStorage {
   void operator=(const APNumericStorage &) = delete;
 
 protected:
+  unsigned BitWidth;
   APNumericStorage() : VAL(0), BitWidth(0) {}
 
   llvm::APInt getIntValue() const {
@@ -51,6 +51,7 @@ protected:
 class APIntStorage : private APNumericStorage {
 public:
   llvm::APInt getValue() const { return getIntValue(); }
+  unsigned getBitWidth() const { return BitWidth; }
   void setValue(const ASTContext &C, const llvm::APInt &Val) {
     setIntValue(C, Val);
   }

@@ -117,9 +117,7 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) inreg %o
 ;
 ; GFX1250-LABEL: no_free_sgprs_block_count_x:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x28
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s18
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[8:9]
 ; GFX1250-NEXT:    s_endpgm
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -211,10 +209,10 @@ define amdgpu_kernel void @incorrect_type_i64_block_count_x(ptr addrspace(1) inr
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB5_0:
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x8
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90a-LABEL: incorrect_type_i64_block_count_x:
@@ -226,10 +224,10 @@ define amdgpu_kernel void @incorrect_type_i64_block_count_x(ptr addrspace(1) inr
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB5_0:
 ; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX90a-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90a-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX90a-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
+; GFX90a-NEXT:    global_store_dwordx2 v0, v[2:3], s[8:9]
 ; GFX90a-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: incorrect_type_i64_block_count_x:
