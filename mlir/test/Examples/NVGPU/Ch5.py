@@ -156,7 +156,7 @@ def producer_loop(
 ):
     phase = const(True, ty=T.bool())
 
-    for iv, phase in scf.for_(0, (K // TILE_K), 1, [phase]):
+    for iv, phase, _ in scf.for_(0, (K // TILE_K), 1, [phase]):
         stage = iv % num_stages
         # Wait MMA to be done
         mbar_mma[stage].try_wait(phase)
