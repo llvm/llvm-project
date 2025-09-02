@@ -4088,6 +4088,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenIntOrFpInductionSC:
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
+      case VPDef::VPInterleaveEVLSC:
       case VPDef::VPInterleaveSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
@@ -4116,8 +4117,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
 
       // If no def nor is a store, e.g., branches, continue - no value to check.
       if (R.getNumDefinedValues() == 0 &&
-          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveRecipe>(
-              &R))
+          !isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe, VPInterleaveBase>(&R))
         continue;
       // For multi-def recipes, currently only interleaved loads, suffice to
       // check first def only.
@@ -4220,9 +4220,16 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
                 }
               }
             }
-            [[fallthrough]];
+            C += VPI->cost(VF, CostCtx);
+            break;
           }
-          case VPInstruction::ActiveLaneMask:
+          case VPInstruction::ActiveLaneMask: {
+            unsigned Multiplier =
+                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                    ->getZExtValue();
+            C += VPI->cost(VF * Multiplier, CostCtx);
+            break;
+          }
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
             break;
@@ -5419,7 +5426,8 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
                              TTI::CastContextHint::None, CostKind, RedOp);
 
     InstructionCost RedCost = TTI.getMulAccReductionCost(
-        IsUnsigned, RdxDesc.getRecurrenceType(), ExtType, CostKind);
+        IsUnsigned, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), ExtType,
+        CostKind);
 
     if (RedCost.isValid() &&
         RedCost < ExtCost * 2 + MulCost + Ext2Cost + BaseCost)
@@ -5464,7 +5472,8 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getMulAccReductionCost(
-          IsUnsigned, RdxDesc.getRecurrenceType(), ExtType, CostKind);
+          IsUnsigned, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), ExtType,
+          CostKind);
       InstructionCost ExtraExtCost = 0;
       if (Op0Ty != LargestOpTy || Op1Ty != LargestOpTy) {
         Instruction *ExtraExtOp = (Op0Ty != LargestOpTy) ? Op0 : Op1;
@@ -5483,7 +5492,8 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
       InstructionCost RedCost = TTI.getMulAccReductionCost(
-          true, RdxDesc.getRecurrenceType(), VectorTy, CostKind);
+          true, RdxDesc.getOpcode(), RdxDesc.getRecurrenceType(), VectorTy,
+          CostKind);
 
       if (RedCost.isValid() && RedCost < MulCost + BaseCost)
         return I == RetI ? RedCost : 0;
@@ -7261,8 +7271,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  BasicBlock *EntryBB =
-      cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
                         State.CFG.PrevBB->getSingleSuccessor());
@@ -7295,13 +7303,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // the cost-model.
   //
   //===------------------------------------------------===//
-
-  // Move check blocks to their final position.
-  // TODO: Move as part of VPIRBB execute and update impacted tests.
-  if (BasicBlock *MemCheckBlock = ILV.RTChecks.getMemRuntimeChecks().second)
-    MemCheckBlock->moveAfter(EntryBB);
-  if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
-    SCEVCheckBlock->moveAfter(EntryBB);
 
   BestVPlan.execute(&State);
 
