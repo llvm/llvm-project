@@ -183,12 +183,10 @@ public:
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits,
-                   std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
+                   unsigned MaxTargetVectorWidthInBits)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
         SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
-        LoopGuards(LoopGuards) {}
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -375,7 +373,7 @@ private:
       PointerBounds;
 
   /// Cache for the loop guards of InnermostLoop.
-  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -533,9 +531,8 @@ public:
           AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
   };
 
-  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
-                         std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
-      : DC(DC), SE(SE), LoopGuards(LoopGuards) {}
+  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE)
+      : DC(DC), SE(SE) {}
 
   /// Reset the state of the pointer runtime information.
   void reset() {
@@ -648,9 +645,6 @@ private:
 
   /// Holds a pointer to the ScalarEvolution analysis.
   ScalarEvolution *SE;
-
-  /// Cache for the loop guards of the loop.
-  std::optional<ScalarEvolution::LoopGuards> &LoopGuards;
 
   /// Set of run-time checks required to establish independence of
   /// otherwise may-aliasing pointers in the loop.
@@ -827,9 +821,6 @@ private:
 
   Loop *TheLoop;
 
-  /// Cache for the loop guards of TheLoop.
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
-
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
   bool AllowPartial;
@@ -947,8 +938,7 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+    DominatorTree *DT, AssumptionCache *AC);
 
 class LoopAccessInfoManager {
   /// The cache.
