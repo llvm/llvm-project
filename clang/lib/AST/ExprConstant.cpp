@@ -5390,7 +5390,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S,
                                    const SwitchCase *SC = nullptr);
 
-/// Helper to implement labeled break/continue. Returns 'true' if the evaluation
+/// Helper to implement named break/continue. Returns 'true' if the evaluation
 /// result should be propagated up. Otherwise, it sets the evaluation result
 /// to either Continue to continue the current loop, or Succeeded to break it.
 static bool ShouldPropagateBreakContinue(EvalInfo &Info,

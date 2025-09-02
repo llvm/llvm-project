@@ -3055,7 +3055,7 @@ public:
 
 /// Base class for BreakStmt and ContinueStmt.
 class LoopControlStmt : public Stmt {
-  /// If this is a labeled break/continue, the label whose statement we're
+  /// If this is a named break/continue, the label whose statement we're
   /// targeting, as well as the source location of the label after the
   /// keyword; for example:
   ///
@@ -3096,7 +3096,7 @@ public:
   const LabelDecl *getLabelDecl() const { return TargetLabel; }
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
-  /// If this is a labeled break/continue, get the loop or switch statement
+  /// If this is a named break/continue, get the loop or switch statement
   /// that this targets.
   const Stmt *getNamedLoopOrSwitch() const;
 
