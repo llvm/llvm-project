@@ -3545,7 +3545,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyOperationBase &self) {
             return PyOpSuccessors(self.getOperation().getRef());
           },
-          "Returns the list of Operation successors.");
+          "Returns the list of Operation successors.")
+      .def("_set_invalid", &PyOperation::setInvalid,
+           "Invalidate the operation.");
 
   auto opViewClass =
       nb::class_<PyOpView, PyOperationBase>(m, "OpView")
@@ -3589,7 +3591,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               [](PyOperationBase &self) {
                 return PyOpSuccessors(self.getOperation().getRef());
               },
-              "Returns the list of Operation successors.");
+              "Returns the list of Operation successors.")
+          .def(
+              "_set_invalid",
+              [](PyOpView &self) { self.getOperation().setInvalid(); },
+              "Invalidate the operation.");
   opViewClass.attr("_ODS_REGIONS") = nb::make_tuple(0, true);
   opViewClass.attr("_ODS_OPERAND_SEGMENTS") = nb::none();
   opViewClass.attr("_ODS_RESULT_SEGMENTS") = nb::none();

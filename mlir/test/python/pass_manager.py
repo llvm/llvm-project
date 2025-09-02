@@ -231,6 +231,27 @@ def testPostPassOpInvalidation():
 
         PassManager.parse("builtin.module(canonicalize)").run(module)
 
+        func_op._set_invalid()
+        try:
+            log(func_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
+        outer_const_op._set_invalid()
+        try:
+            log(outer_const_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
+        inner_const_op._set_invalid()
+        try:
+            log(inner_const_op)
+        except RuntimeError as e:
+            # CHECK: the operation has been invalidated
+            log(e)
+
         # CHECK: func.func @foo() {
         # CHECK:   return
         # CHECK: }
