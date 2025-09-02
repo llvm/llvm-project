@@ -5,7 +5,7 @@
 ; REQUIRES: asserts
 
 ; FIXME: Support TLI.expandUnalignedLoad()/TLI.expandUnalignedStore() for SVE.
-; CHECK-FIXME: LLVM ERROR: Cannot implicitly convert a scalable size to a fixed-width size in `TypeSize::operator ScalarTy()
+; CHECK-FIXME: LLVM ERROR: Invalid size request on a scalable vector.
 
 define void @unaligned_nxv16i1(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: unaligned_nxv16i1:
