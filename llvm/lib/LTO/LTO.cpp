@@ -27,6 +27,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -752,6 +753,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // FIXME: instead of this check, it would be desirable to compute GUIDs
     // based on mangled name, but this requires an access to the Target Triple
     // and would be relatively invasive on the codebase.
+    // FIXME: use the GUID member of GlobalRes.
     if (GlobalRes.IRName != Sym.getIRName()) {
       GlobalRes.Partition = GlobalResolution::External;
       GlobalRes.VisibleOutsideSummary = true;
@@ -1163,21 +1165,27 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   llvm::TimeTraceScope timeScope("LTO add thin LTO");
   const auto BMID = BM.getModuleIdentifier();
   ArrayRef<SymbolResolution> ResTmp = Res;
+  DenseSet<StringRef> Prevailing;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
     const SymbolResolution &R = ResTmp.consume_front();
-
-    if (!Sym.getIRName().empty() && R.Prevailing) {
-      auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
-                                           GlobalValue::ExternalLinkage, ""));
-      ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
-    }
+    if (!Sym.getIRName().empty() && R.Prevailing)
+      Prevailing.insert(Sym.getIRName());
   }
 
+  StringMap<GlobalValue::GUID> IRSpecifiedGUIDs;
   if (Error Err = BM.readSummary(
-          ThinLTO.CombinedIndex, BMID, [&](GlobalValue::GUID GUID) {
-            return ThinLTO.isPrevailingModuleForGUID(GUID, BMID);
+          ThinLTO.CombinedIndex, BMID,
+          [&](StringRef Name) { return (Prevailing.count(Name) > 0); },
+          [&](ValueInfo VI) {
+            auto IT = IRSpecifiedGUIDs.insert({VI.name(), VI.getGUID()});
+            (void)IT;
+            assert(IT.second);
+            if (auto GRIt = GlobalResolutions->find(VI.name());
+                GRIt != GlobalResolutions->end() &&
+                Prevailing.count(VI.name())) {
+              GRIt->second.setGUID(VI.getGUID());
+            }
           }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
@@ -1185,28 +1193,31 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!Res.empty());
     const SymbolResolution &R = Res.consume_front();
-
+    auto GUIDIter = IRSpecifiedGUIDs.find(Sym.getIRName());
+    auto GUID =
+        GUIDIter == IRSpecifiedGUIDs.end()
+            ? GlobalValue::getGUIDAssumingExternalLinkage(
+                  GlobalValue::getGlobalIdentifier(
+                      Sym.getIRName(), GlobalValue::ExternalLinkage, ""))
+            : GUIDIter->second;
     if (!Sym.getIRName().empty() &&
         (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
-      auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
-                                           GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing) {
-        assert(ThinLTO.isPrevailingModuleForGUID(GUID, BMID));
-
+        ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
         // Find the summary in the module for this very GV and record the new
         // linkage so that we can switch it when we import the GV.
         if (R.LinkerRedefined)
-          if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID))
+          if (auto *S = ThinLTO.CombinedIndex.findSummaryInModule(
+                  GUID, BMID))
             S->setLinkage(GlobalValue::WeakAnyLinkage);
       }
 
       // If the linker resolved the symbol to a local definition then mark it
       // as local in the summary for the module we are adding.
       if (R.FinalDefinitionInLinkageUnit) {
-        if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID)) {
+        if (auto *S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID)) {
           S->setDSOLocal(true);
         }
       }
@@ -1301,8 +1312,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     if (Res.second.IRName.empty())
       continue;
 
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
+    GlobalValue::GUID GUID = Res.second.getGUID();
 
     if (Res.second.VisibleOutsideSummary && Res.second.Prevailing)
       GUIDPreservedSymbols.insert(GUID);
@@ -2103,8 +2113,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     if (Res.second.Partition != GlobalResolution::External ||
         !Res.second.isPrevailingIRSymbol())
       continue;
-    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
+    auto GUID = Res.second.getGUID();
     // Mark exported unless index-based analysis determined it to be dead.
     if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
       ExportedGUIDs.insert(GUID);

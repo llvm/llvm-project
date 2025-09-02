@@ -79,6 +79,48 @@ GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
   return MD5Hash(GlobalIdentifier);
 }
 
+void GlobalValue::assignGUID() {
+  if (getMetadata(LLVMContext::MD_unique_id) != nullptr)
+    return;
+
+  const GUID G =
+      GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  setMetadata(
+      LLVMContext::MD_unique_id,
+      MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                                    Type::getInt64Ty(getContext()), G))}));
+}
+
+GlobalValue::GUID GlobalValue::getGUID() const {
+  auto MaybeGUID = getGUIDIfAssigned();
+  assert(MaybeGUID.has_value() &&
+         "GUID was not assigned before calling GetGUID()");
+  return *MaybeGUID;
+}
+
+std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
+  // First check the metadata.
+  auto *MD = getMetadata(LLVMContext::MD_unique_id);
+  if (MD != nullptr)
+    return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                                ->getValue()
+                                ->stripPointerCasts())
+        ->getZExtValue();
+
+  // Handle a few special cases where we just want to compute it based on the
+  // current properties.
+  if (isDeclaration() || isa<GlobalAlias>(this) || getName().starts_with("llvm.")) {
+    return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
+  
+  // Otherwise we try to look it up in the module, for cases where we've read
+  // the GUID table but not the metadata.
+  if (getParent() == nullptr) return {};
+  const Module &M = *getParent();
+
+  return M.getGUID(this);
+}
+
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \

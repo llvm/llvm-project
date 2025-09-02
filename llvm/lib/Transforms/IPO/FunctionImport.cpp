@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1878,6 +1879,21 @@ static void internalizeGVsAfterImport(Module &M) {
     }
 }
 
+static GlobalValue::GUID getGUIDOrFallback(const GlobalValue& GV) {
+    // Modules compiled against the current version should have a GUID table
+    // and hence have the GUID available simply by calling getGUID(). But we
+    // want to support running on old bitcode files which have no embedded
+    // GUIDs. So if it's missing we fall back to computing the GUID with its
+    // current name / linkage type.
+    const auto MaybeGUID = GV.getGUIDIfAssigned();
+    return MaybeGUID ? *MaybeGUID
+        : GlobalValue::getGUIDAssumingExternalLinkage(
+            GlobalValue::getGlobalIdentifier(
+              GV.getName(),
+              GV.getLinkage(),
+              GV.getParent()->getSourceFileName()));
+}
+
 // Automatically import functions in Module \p DestModule based on the summaries
 // index.
 Expected<bool> FunctionImporter::importFunctions(
@@ -1892,7 +1908,7 @@ Expected<bool> FunctionImporter::importFunctions(
   DenseSet<GlobalValue::GUID> MoveSymbolGUIDSet;
   MoveSymbolGUIDSet.insert_range(MoveSymbolGUID);
   for (auto &F : DestModule)
-    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(F.getGUID()))
+    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(getGUIDOrFallback(F)))
       F.deleteBody();
 
   IRMover Mover(DestModule);
@@ -1920,7 +1936,7 @@ Expected<bool> FunctionImporter::importFunctions(
       for (Function &F : *SrcModule) {
         if (!F.hasName())
           continue;
-        auto GUID = F.getGUID();
+        auto GUID = getGUIDOrFallback(F);
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
@@ -1960,7 +1976,7 @@ Expected<bool> FunctionImporter::importFunctions(
       for (GlobalVariable &GV : SrcModule->globals()) {
         if (!GV.hasName())
           continue;
-        auto GUID = GV.getGUID();
+        auto GUID = getGUIDOrFallback(GV);
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
@@ -1984,29 +2000,31 @@ Expected<bool> FunctionImporter::importFunctions(
       for (GlobalAlias &GA : SrcModule->aliases()) {
         if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
           continue;
-        auto GUID = GA.getGUID();
+        auto GUID = getGUIDOrFallback(GA);
         auto MaybeImportType = ImportList.getImportType(ModName, GUID);
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
 
-        LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
-                          << " importing alias"
-                          << (ImportDefinition
-                                  ? " definition "
-                                  : (MaybeImportType ? " declaration " : " "))
-                          << GUID << " " << GA.getName() << " from "
+       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                         << " importing alias"
+                         << (ImportDefinition
+                                 ? " definition "
+                                 : (MaybeImportType ? " declaration " : " "))
+                         << GUID << " " << GA.getName() << " from "
+                         << SrcModule->getSourceFileName() << "\n");
+       if (ImportDefinition) {
+         if (Error Err = GA.materialize())
+           return std::move(Err);
+         // Import alias as a copy of its aliasee.
+         GlobalObject *GO = GA.getAliaseeObject();
+         if (Error Err = GO->materialize())
+           return std::move(Err);
+         auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
+         assert(Fn);
+         (void)Fn;
+         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << getGUIDOrFallback(*GO) << " "
+                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (ImportDefinition) {
-          if (Error Err = GA.materialize())
-            return std::move(Err);
-          // Import alias as a copy of its aliasee.
-          GlobalObject *GO = GA.getAliaseeObject();
-          if (Error Err = GO->materialize())
-            return std::move(Err);
-          auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
-          LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID()
-                            << " " << GO->getName() << " from "
-                            << SrcModule->getSourceFileName() << "\n");
           if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
             // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
             // statistics and debugging.
