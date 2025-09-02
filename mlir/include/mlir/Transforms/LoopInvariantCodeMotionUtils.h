@@ -9,9 +9,12 @@
 #ifndef MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 #define MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include <utility>
 
 namespace mlir {
 
@@ -20,6 +23,17 @@ class Operation;
 class Region;
 class RewriterBase;
 class Value;
+
+/// Gathers potential conflicts on all memory resources used within loop
+///
+/// Given a target loop and an op within it (or the loop op itself), 
+/// gathers op's memory effects and flags potential resource conflicts 
+/// in a map and then recurses into the op's regions to gather nested 
+/// resource conflicts 
+///
+/// First call should use loop = someLoop and op = someLoop.getOperation()
+void gatherResourceConflicts(LoopLikeOpInterface loop, Operation *op,
+    DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts);
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
 /// loop-invariant if it depends only of values defined outside of the loop.
@@ -63,7 +77,7 @@ class Value;
 ///
 /// Returns the number of operations moved.
 size_t moveLoopInvariantCode(
-    ArrayRef<Region *> regions,
+    LoopLikeOpInterface loopLike,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
     function_ref<void(Operation *, Region *)> moveOutOfRegion);

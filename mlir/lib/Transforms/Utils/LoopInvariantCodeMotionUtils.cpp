@@ -21,6 +21,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include <queue>
+#include <utility>
 
 #define DEBUG_TYPE "licm"
 
@@ -58,14 +59,149 @@ static bool canBeHoisted(Operation *op,
       op, [&](OpOperand &operand) { return definedOutside(operand.get()); });
 }
 
+static void mergeResource(
+  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &dstMap,
+  const MemoryEffects::EffectInstance &srcEffect,
+  bool srcHasConflict) {
+
+  TypeID srcResourceID = srcEffect.getEffect()->getEffectID();
+
+  bool srcIsAllocOrFree = isa<MemoryEffects::Allocate>(srcEffect.getEffect())
+    || isa<MemoryEffects::Free>(srcEffect.getEffect());
+
+  bool conflict = srcHasConflict || srcIsAllocOrFree;
+
+  DenseMap<mlir::Value, std::pair<int, bool>> myMap;
+
+  auto dstIt = dstMap.find(srcResourceID);
+
+  // if it doesnt already exist, create entry for resource in map
+  if (dstIt == dstMap.end()) {
+    dstMap.try_emplace(srcResourceID, std::make_pair(conflict, srcEffect));
+    return;
+  }
+
+  // resource already in use
+  bool dstHasConflict = dstIt->second.first;
+  auto dstEffect = dstIt->second.second;
+
+  if (dstHasConflict)
+    return;
+
+  bool srcWrite = isa<MemoryEffects::Write>(srcEffect.getEffect());
+  bool dstRead = isa<MemoryEffects::Read>(dstEffect.getEffect());
+  bool readBeforeWrite = dstRead && srcWrite;
+  
+  conflict = conflict || readBeforeWrite;
+
+  dstMap.try_emplace(srcResourceID, std::make_pair(conflict, srcEffect));
+}
+
+static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
+  for (const auto &input : op->getOperands())
+    if (loopLike.isDefinedOutsideOfLoop(input))
+      return true;
+
+  return false;
+}
+
+static bool mayHaveMemoryEffectConflict(Operation *op,
+  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts) {
+
+  auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
+  
+  // op does not implement the memory effect op interface
+  // shouldn't be flagged as movable to be conservative
+  if (!memInterface) 
+    return true;
+
+  // gather all effects on op
+  llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+  memInterface.getEffects(effects);
+
+  // op has interface but no effects, be conservative
+  if (effects.empty()) 
+    return true;
+
+  // RFC moving ops with HasRecursiveMemoryEffects that have nested ops
+  // with effects is not supported
+
+  // op has no conflicts IFF all resources are flagged as having no conflicts
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    auto resourceID = effect.getResource()->getResourceID();
+
+    auto resConIt = resourceConflicts.find(resourceID); 
+    if (resConIt == resourceConflicts.end())
+      return true; // RFC realistically shouldn't reach here but just in case?
+    
+    bool hasConflict = resConIt->second.first;
+    if (hasConflict)
+      return true;
+  }
+
+  return false;
+}
+
+void mlir::gatherResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
+  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts) {
+
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    // gather all effects on op
+    llvm::SmallVector<MemoryEffects::EffectInstance> effects =
+      MemoryEffects::getMemoryEffectsSorted(op);
+
+    if (!effects.empty()) {
+      // any variant input to the op could be the data source
+      // for writes, set all writes to conflict
+      bool writesConflict = hasLoopVariantInput(loopLike, op);
+
+      for (const MemoryEffects::EffectInstance &effect : effects) {
+        bool conflict = false;
+        bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
+        
+        // all writes to a resource that follow a read on any other resource
+        // have to be considered a conflict as guaranteeing that the read
+        // is invariant and won't affect the write requires more robust logic
+        if (isa<MemoryEffects::Read>(effect.getEffect()))
+          writesConflict = true;
+
+        if (isWrite)
+          if (writesConflict)
+            conflict = true;
+
+        mergeResource(resourceConflicts, effect, conflict);
+      }
+    }
+  }
+
+  for (Region &region : op->getRegions())
+    for (Operation &opInner : region.getOps()) 
+        gatherResourceConflicts(loopLike, &opInner, resourceConflicts);
+}
+
 size_t mlir::moveLoopInvariantCode(
-    ArrayRef<Region *> regions,
+    LoopLikeOpInterface loopLike,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
     function_ref<void(Operation *, Region *)> moveOutOfRegion) {
   size_t numMoved = 0;
 
-  for (Region *region : regions) {
+  // check that the loop isn't dead
+  auto isDead = isZeroTrip(loopLike);
+  if (!isDead.has_value() || isDead.value())
+    return numMoved;
+
+  // go through loop body and map out resource usages
+  // op->regions are essentially merged sequentially
+  // e.g. an if's "then" and "else" regions are treated like one
+  // continuous region --> need to add fork checking
+  //
+  // loop "do" and "then" regions also merged
+  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> resourceConflicts;
+  mlir::gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
+
+
+  for (Region *region : loopLike.getLoopRegions()) {
     LDBG() << "Original loop:\n" << *region->getParentOp();
 
     std::queue<Operation *> worklist;
@@ -86,8 +222,13 @@ size_t mlir::moveLoopInvariantCode(
 
       LDBG() << "Checking op: "
              << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      if (!shouldMoveOutOfRegion(op, region) ||
-          !canBeHoisted(op, definedOutside))
+
+      bool noMemoryConflicts = isMemoryEffectFree(op) 
+        || !mayHaveMemoryEffectConflict(op, resourceConflicts);
+
+      if (!noMemoryConflicts
+        || !shouldMoveOutOfRegion(op, region)
+        || !canBeHoisted(op, definedOutside))
         continue;
 
       LDBG() << "Moving loop-invariant op: " << *op;
@@ -107,12 +248,12 @@ size_t mlir::moveLoopInvariantCode(
 
 size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
   return moveLoopInvariantCode(
-      loopLike.getLoopRegions(),
+      loopLike,
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
       [&](Operation *op, Region *) {
-        return isSpeculatable(op) && isMemoryEffectMovable(op);
+        return isSpeculatable(op);
       },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }

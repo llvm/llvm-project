@@ -348,6 +348,14 @@ struct AlwaysSpeculatableImplTrait
 //===----------------------------------------------------------------------===//
 
 namespace MemoryEffects {
+enum Priority {
+  kDefault = 0,
+  kAllocPriority = 1,
+  kFreePriority = 2,
+  kReadPriority = 3,
+  kWritePriority = 4
+};
+
 /// This class represents the base class used for memory effects.
 struct Effect : public SideEffects::Effect {
   using SideEffects::Effect::Effect;
@@ -357,28 +365,48 @@ struct Effect : public SideEffects::Effect {
   using Base = SideEffects::Effect::Base<DerivedEffect, Effect>;
 
   static bool classof(const SideEffects::Effect *effect);
+
+  /// Return the priority associated with this memory effect.
+  Priority getPriority() const { return priority; }
+
+protected:
+  /// Priority value for this effect. Lower numbers indicate higher precedence.
+  Priority priority = kDefault;
 };
 using EffectInstance = SideEffects::EffectInstance<Effect>;
+
+/// Returns vector of effects sorted by effect stage then priority
+/// priority order: allocate -> free -> read -> write
+llvm::SmallVector<MemoryEffects::EffectInstance>
+getMemoryEffectsSorted(Operation *op);
 
 /// The following effect indicates that the operation allocates from some
 /// resource. An 'allocate' effect implies only allocation of the resource, and
 /// not any visible mutation or dereference.
-struct Allocate : public Effect::Base<Allocate> {};
+struct Allocate : public Effect::Base<Allocate> {
+  Allocate() : Effect::Base<Allocate>() { this->priority = kAllocPriority; }
+};
 
 /// The following effect indicates that the operation frees some resource that
 /// has been allocated. An 'allocate' effect implies only de-allocation of the
 /// resource, and not any visible allocation, mutation or dereference.
-struct Free : public Effect::Base<Free> {};
+struct Free : public Effect::Base<Free> {
+  Free() : Effect::Base<Free>() { this->priority = kFreePriority; }
+};
 
 /// The following effect indicates that the operation reads from some resource.
 /// A 'read' effect implies only dereferencing of the resource, and not any
 /// visible mutation.
-struct Read : public Effect::Base<Read> {};
+struct Read : public Effect::Base<Read> {
+  Read() : Effect::Base<Read>() { this->priority = kReadPriority; }
+};
 
 /// The following effect indicates that the operation writes to some resource. A
 /// 'write' effect implies only mutating a resource, and not any visible
 /// dereference or read.
-struct Write : public Effect::Base<Write> {};
+struct Write : public Effect::Base<Write> {
+  Write() : Effect::Base<Write>() { this->priority = kWritePriority; }
+};
 } // namespace MemoryEffects
 
 //===----------------------------------------------------------------------===//
@@ -470,17 +498,6 @@ bool wouldOpBeTriviallyDead(Operation *op);
 ///
 std::optional<bool> isZeroTrip(mlir::LoopLikeOpInterface &loop);
 
-/// Returns true if the given operation is allowed to be moved under the
-/// memory effects interface.
-///
-/// An operation is movable if either case is true:
-/// (a) free of memory effects as defined in isMemoryEffectFree()
-/// (b) if the operation does have memory effects, it must be conflict-free
-/// as defined in isMemoryEffectConflictFree()
-///
-/// If the operation meets either criteria, then it is movable under memory effects
-bool isMemoryEffectMovable(Operation *op);
-
 /// Returns true if the given operation is free of memory effects.
 ///
 /// An operation is free of memory effects if its implementation of
@@ -492,35 +509,6 @@ bool isMemoryEffectMovable(Operation *op);
 /// If the operation has both, then it is free of memory effects if both
 /// conditions are satisfied.
 bool isMemoryEffectFree(Operation *op);
-
-/// Returns true if the given operation has conflict-free write effects
-///
-/// An operation is conflict free:
-/// (1) Parent is a loop with the LoopLikeOpInterface
-/// (2) Parent loop is not a zero trip loop and has constant bounds/steps
-/// (3) all of the op's memory effects are of type Write
-/// (4) there are no other ops with Alloc/Free/Write effects on the same
-/// resources within the op's parent loop region
-/// (5) all ops in the parent loop region with Read effects on the same
-/// resources are dominated by the operation
-///
-/// If the operation meets all criteria, then it is conflict free
-bool isMemoryEffectConflictFree(Operation *op);
-
-/// Returns true if op and/or any operations within its nested regions
-/// have a memory effect conflict with mainOp as defined below:
-///
-/// op has a memory effect conflict with mainOp if op and/or any of 
-/// the operations in its nested regions meet any of these criteria:
-/// (a) they have any Alloc/Free/Write effects on the resources used by mainOp 
-/// (b) they dominate mainOp and have any read effect on the resources used by mainOp
-///
-/// Function mutates resources map
-///
-/// If none of the critera above are met, mainOp and op are conflict free
-bool hasMemoryEffectConflict(
-    Operation *mainOp, Operation *op, 
-    mlir::DominanceInfo &dom, DenseMap<TypeID, int> &resourceCounts);
 
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.
