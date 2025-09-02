@@ -19,6 +19,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   // Most instruction load and store data, so set this as the default.
   let mayLoad = 1;
   let mayStore = 1;
+  let FixedSize = true;
 
   let hasSideEffects = 0;
   let SchedRW = [WriteLDS];
@@ -76,7 +77,6 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // encoding fields
   bits<10> vdst;
@@ -276,7 +276,6 @@ class DS_BVH_STACK<string opName,
    data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
-  let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
   // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
@@ -293,7 +292,6 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
   let has_data1 = 0;
 }
@@ -777,10 +775,10 @@ def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
   "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
 } // End OtherPredicates = [HasImageInsts].
 
-defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
-defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
-defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
-defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc_gfx9<"ds_cond_sub_u32">;
+defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc_gfx9<"ds_cond_sub_rtn_u32", VGPR_32>;
+defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc_gfx9<"ds_sub_clamp_u32">;
+defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPR_32>;
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 

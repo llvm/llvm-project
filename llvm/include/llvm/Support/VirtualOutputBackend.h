@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the VirtualOutputBackend class.
+/// This file contains the declarations of the VirtualOutputBackend class, which
+/// can be used to virtualized output files from LLVM tools.
+/// VirtualOutputBackend provides an unified interface to write outputs and a
+/// configurable interface for tools to operate on those outputs.
+/// VirtualOutputBackend contains basic implementations like writing to disk
+/// with different configurations, or advanced logics like output filtering
+/// and duplicating.
 ///
 //===----------------------------------------------------------------------===//
 

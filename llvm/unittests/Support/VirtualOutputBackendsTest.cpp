@@ -378,7 +378,7 @@ public:
 
 bool OnDiskOutputBackendProvider::shouldUseTemporaries(
     const FileInfo &Info) const {
-  return Info.Config.getAtomicWrite() && !Settings.DisableTemporaries;
+  return Info.Config.getAtomicWrite() && Settings.UseTemporaries;
 }
 
 struct ProviderGeneratorList {
@@ -400,13 +400,13 @@ ProviderGeneratorList BackendGenerators = {
     {"OnDisk_DisableRemoveOnSignal",
      []() {
        OnDiskOutputBackend::OutputSettings Settings;
-       Settings.DisableRemoveOnSignal = true;
+       Settings.RemoveOnSignal = false;
        return std::make_unique<OnDiskOutputBackendProvider>(Settings);
      }},
     {"OnDisk_DisableTemporaries",
      []() {
        OnDiskOutputBackend::OutputSettings Settings;
-       Settings.DisableTemporaries = true;
+       Settings.UseTemporaries = false;
        return std::make_unique<OnDiskOutputBackendProvider>(Settings);
      }},
 };

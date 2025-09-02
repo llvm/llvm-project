@@ -193,9 +193,9 @@ applySettings(std::optional<OutputConfig> &&Config,
               const OnDiskOutputBackend::OutputSettings &Settings) {
   if (!Config)
     Config = Settings.DefaultConfig;
-  if (Settings.DisableTemporaries)
+  if (!Settings.UseTemporaries)
     Config->setNoAtomicWrite();
-  if (Settings.DisableRemoveOnSignal)
+  if (!Settings.RemoveOnSignal)
     Config->setNoDiscardOnSignal();
   return *Config;
 }
@@ -222,7 +222,7 @@ public:
   /// \post FD and \a TempPath are initialized if this is successful.
   Error tryToCreateTemporary(std::optional<int> &FD);
 
-  Error initializeFD(std::optional<int> &FD);
+  Error initializeFile(std::optional<int> &FD);
   Error initializeStream();
   Error reset();
 
@@ -282,7 +282,7 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
   });
 }
 
-Error OnDiskOutputFile::initializeFD(std::optional<int> &FD) {
+Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
@@ -339,7 +339,7 @@ Error OnDiskOutputFile::initializeStream() {
       return make_error<OutputError>(OutputPath, EC);
   } else {
     std::optional<int> FD;
-    if (Error E = initializeFD(FD))
+    if (Error E = initializeFile(FD))
       return E;
     FileOS.emplace(*FD, /*shouldClose=*/true);
   }

@@ -8,8 +8,9 @@
 ///
 /// \file
 /// This file contains the declarations of the HashingOutputBackend class, which
-/// is the VirtualOutputBackend that is only producing the hash for the output
-/// files.
+/// is the VirtualOutputBackend that only produces the hashes for the output
+/// files. This is useful for checking if the outputs are deterministic without
+/// storing output files in memory or on disk.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -63,7 +64,7 @@ private:
   friend class HashingOutputFile<HasherT>;
   void addOutputFile(StringRef Path, StringRef Hash) {
     std::lock_guard<std::mutex> Lock(OutputHashLock);
-    OutputHashes[Path] = std::string(Hash);
+    OutputHashes[Path] = Hash.str();
   }
 
 protected:

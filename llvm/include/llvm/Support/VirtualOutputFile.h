@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the llvm::vfs::OutputFile class.
+/// This file contains the declarations of the llvm::vfs::OutputFile class,
+/// which is a virtualized output file from output backend. \c OutputFile can be
+/// use a \c raw_pwrite_stream for writing, and are required to be `keep()` or
+/// `discard()` in the end.
 ///
 //===----------------------------------------------------------------------===//
 
