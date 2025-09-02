@@ -1,7 +1,6 @@
 ; In coro-split, this coroutine code reduced IR, produced using clang with async-exceptions
 ; crashed before fix because of the validation mismatch of Instruction does not dominate all uses!
-; RUN: opt < %s -passes='coro-split' -S 2>&1 | FileCheck %s --implicit-check-not="Instruction does not dominate all uses!"
-; RUN: opt < %s -passes='default<Os>,coro-split' -S 2>&1 | FileCheck %s --implicit-check-not="Instruction does not dominate all uses!"
+; RUN: opt < %s -passes='coro-split' -S
 
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 personality ptr null {

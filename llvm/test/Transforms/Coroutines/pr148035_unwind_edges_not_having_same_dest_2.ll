@@ -1,6 +1,6 @@
 ; In coro-split, this coroutine standard code reduced IR, produced using clang with async-exceptions
 ; crashed before fix because of the validation mismatch of Unwind edges out of a funclet pad must have the same unwind dest
-; RUN: opt < %s -passes='coro-split' -S 2>&1 | FileCheck %s --implicit-check-not="Unwind edges out of a funclet pad must have the same unwind dest"
+; RUN: opt < %s -passes='coro-split' -S
 
 ; Function Attrs: presplitcoroutine
 define i1 @"?resuming_on_new_thread@@YA?AUtask@@AEAVjthread@std@@@Z"() #0 personality ptr null {

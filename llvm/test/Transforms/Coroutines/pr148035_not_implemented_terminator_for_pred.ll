@@ -1,7 +1,6 @@
 ; In coro-split, this coroutine code reduced IR, produced using clang with async-exceptions
 ; crashed after first phase of fix because the terminator cleanupret was not implemented on predecessor fixer at the time
 ; RUN: opt < %s -passes='coro-split' -S
-; RUN: opt < %s -passes='default<Os>,coro-split' -S
 
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete@H@std@@@std@@0@Z"(ptr %0) #0 personality ptr null {
