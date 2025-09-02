@@ -232,7 +232,7 @@ func.func @fuse_by_collapsing_dynamic_2(%arg0 : tensor<?xf32>, %sz0: index, %sz1
   %1 = linalg.generic {
       indexing_maps = [#map0, #map0],
       iterator_types = ["parallel", "parallel"]}
-      ins(%0 : tensor<?x?xf32>) 
+      ins(%0 : tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
         ^bb0(%b0 : f32, %b1 : f32):
           %out = arith.negf %b0 : f32
@@ -858,3 +858,54 @@ func.func @partial_fuse_by_collapsing(%arg0: tensor<4x?x32x128x192xf16>, %arg1: 
 //       CHECK:   %[[COLLAPSED:.+]] = tensor.collapse_shape %[[EXPANDED]]
 //  CHECK-SAME:     tensor<4x128x192x?x32xf32> into tensor<512x192x?xf32>
 //       CHECK:   return %[[COLLAPSED]] : tensor<512x192x?xf32>
+
+// -----
+
+func.func @fold_tensor_pad_with_collapse(%arg0: tensor<32x16x256x256xf32>) -> tensor<512x258x258xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<32x16x256x256xf32>) -> tensor<32x16x256x256xf32>
+  %padded = tensor.pad %0 low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%i0: index, %i1: index, %i2: index, %i3: index):
+      tensor.yield %cst : f32
+  } : tensor<32x16x256x256xf32> to tensor<32x16x258x258xf32>
+  %collapsed = tensor.collapse_shape %padded [[0, 1], [2], [3]]
+    : tensor<32x16x258x258xf32> into tensor<512x258x258xf32>
+  return %collapsed : tensor<512x258x258xf32>
+}
+//      CHECK: func @fold_tensor_pad_with_collapse(
+// CHECK-SAME:     %[[ARG0:[^:]+]]: tensor<32x16x256x256xf32>
+//  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//      CHECK:   %[[FILLED:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[ARG0]] : tensor<32x16x256x256xf32>)
+//      CHECK:   %[[COLLAPSED:.+]] = tensor.collapse_shape %[[FILLED]] {{\[}}[0, 1], [2], [3]{{\]}}
+// CHECK-SAME:       : tensor<32x16x256x256xf32> into tensor<512x256x256xf32>
+//      CHECK:   %[[PADDED:.*]] = tensor.pad %[[COLLAPSED]] low[0, 1, 1] high[0, 1, 1]
+//      CHECK:   ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index):
+//      CHECK:     tensor.yield %[[CST]] : f32
+//      CHECK:   } : tensor<512x256x256xf32> to tensor<512x258x258xf32>
+//      CHECK:   return %[[PADDED]] : tensor<512x258x258xf32>
+
+// -----
+
+func.func @fold_tensor_pad_with_collapse_dynamic_pad_zero(%arg0: tensor<32x16x256x256xf32>) -> tensor<512x258x258xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<32x16x256x256xf32>) -> tensor<32x16x256x256xf32>
+  %padded = tensor.pad %0 low[%c0, %c0, %c1, %c1] high[%c0, %c0, %c1, %c1] {
+    ^bb0(%i0: index, %i1: index, %i2: index, %i3: index):
+      tensor.yield %cst : f32
+  } : tensor<32x16x256x256xf32> to tensor<32x16x258x258xf32>
+  %collapsed = tensor.collapse_shape %padded [[0, 1], [2], [3]]
+    : tensor<32x16x258x258xf32> into tensor<512x258x258xf32>
+  return %collapsed : tensor<512x258x258xf32>
+}
+//      CHECK: func @fold_tensor_pad_with_collapse_dynamic_pad_zero(
+// CHECK-SAME:     %[[ARG0:[^:]+]]: tensor<32x16x256x256xf32>
+//      CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//      CHECK:   %[[FILLED:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[ARG0]] : tensor<32x16x256x256xf32>)
+//      CHECK:   %[[COLLAPSED:.+]] = tensor.collapse_shape %[[FILLED]] {{\[}}[0, 1], [2], [3]{{\]}}
+// CHECK-SAME:       : tensor<32x16x256x256xf32> into tensor<512x256x256xf32>
+//      CHECK:   %[[PADDED:.*]] = tensor.pad %[[COLLAPSED]] low[0, 1, 1] high[0, 1, 1]
+//      CHECK:   ^bb0(
+//      CHECK:     tensor.yield %[[CST]] : f32
+//      CHECK:   return %[[PADDED]]
