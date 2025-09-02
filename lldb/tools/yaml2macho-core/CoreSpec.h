@@ -10,6 +10,7 @@
 #define YAML2MACHOCOREFILE_CORESPEC_H
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
