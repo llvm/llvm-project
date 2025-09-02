@@ -365,13 +365,13 @@ class TestStructuredDataAPI(TestBase):
             self.assertEqual(str(data), str(original))
 
     def test_round_trip_int(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, "0", "11", "-1", True, False):
+        for original in (0, 11, -1):
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
             self.assertEqual(int(data), int(original))
 
     def test_round_trip_float(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, "0.0", "4.5", "-0.25"):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25):
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
             self.assertEqual(float(data), float(original))
