@@ -24894,6 +24894,18 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::Freeze || Op == Instruction::Store)
     return false;
 
+  if (Op == Instruction::Call) {
+    const CallInst &CI = cast<CallInst>(Inst);
+    const Function *F = CI.getCalledFunction();
+    Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
+
+    const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+        RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(ID);
+    // Mark RVV intrinsic is supported.
+    if (II)
+      return false;
+  }
+
   if (Inst.getType()->isScalableTy())
     return true;
 
