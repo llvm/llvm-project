@@ -90,7 +90,7 @@
 #include <cctype>
 #include <cstring>
 
-// #define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
+//#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
 #ifdef ENABLE_DEBUG_PRINTF
 #include <cstdio>
@@ -1716,7 +1716,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
     return this;
 
   if (file_index) {
-    // We have a SymbolFileDWARFDebugMap, so let it find the right file
+      // We have a SymbolFileDWARFDebugMap, so let it find the right file
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
 
@@ -1725,8 +1725,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
       return GetDwpSymbolFile().get(); // DWP case
 
     // Handle the .dwo file case correctly
-    return DebugInfo()
-        .GetUnitAtIndex(*die_ref.file_index())
+    return DebugInfo().GetUnitAtIndex(*die_ref.file_index())
         ->GetDwoSymbolFile(); // DWO case
   }
   return this;
