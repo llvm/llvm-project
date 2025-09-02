@@ -244,6 +244,94 @@ define i32 @sati(i32 %a, i32 %b) {
     ret i32 %tmp
 }
 
+declare i32 @llvm.riscv.psrl.bs.i32(i32, i32)
+
+define i32 @psrl_bs(i32 %a, i32 %b) {
+; RV32P-LABEL: psrl_bs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrl.bs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrl.bs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psrl.hs.i32(i32, i32)
+
+define i32 @psrl_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: psrl_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psrl.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psrl.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.predsum.bs.i32(i32, i32)
+
+define i32 @predsum_bs(i32 %a, i32 %b) {
+; RV32P-LABEL: predsum_bs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    predsum.bs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.predsum.bs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.predsum.hs.i32(i32, i32)
+
+define i32 @predsum_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: predsum_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    predsum.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.predsum.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.predsumu.bs.i32(i32, i32)
+
+define i32 @predsumu_bs(i32 %a, i32 %b) {
+; RV32P-LABEL: predsumu_bs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    predsumu.bs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.predsumu.bs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.predsumu.hs.i32(i32, i32)
+
+define i32 @predsumu_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: predsumu_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    predsumu.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.predsumu.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psra.bs.i32(i32, i32)
+
+define i32 @psra_bs(i32 %a, i32 %b) {
+; RV32P-LABEL: psra_bs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psra.bs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psra.bs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.psra.hs.i32(i32, i32)
+
+define i32 @psra_hs(i32 %a, i32 %b) {
+; RV32P-LABEL: psra_hs:
+; RV32P:       # %bb.0:
+; RV32P-NEXT:    psra.hs a0, a0, a1
+; RV32P-NEXT:    ret
+    %tmp = call i32 @llvm.riscv.psra.hs.i32(i32 %a, i32 %b)
+    ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.sadd.i32(i32, i32)
 
 define i32 @sadd(i32 %a, i32 %b) {

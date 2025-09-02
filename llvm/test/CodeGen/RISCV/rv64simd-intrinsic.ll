@@ -353,3 +353,135 @@ define i64 @sati(i64 %a, i64 %b) {
     %tmp = call i64 @llvm.riscv.sati.i64.i64(i64 %a, i64 1)
     ret i64 %tmp
 }
+
+declare i64 @llvm.riscv.psrl.bs.i64(i64, i64)
+
+define i64 @psrl_bs(i64 %a, i64 %b) {
+; RV64P-LABEL: psrl_bs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrl.bs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrl.bs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrl.hs.i64(i64, i64)
+
+define i64 @psrl_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: psrl_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrl.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrl.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psrl.ws.i64(i64, i64)
+
+define i64 @psrl_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: psrl_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psrl.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psrl.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsum.bs.i64(i64, i64)
+
+define i64 @predsum_bs(i64 %a, i64 %b) {
+; RV64P-LABEL: predsum_bs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsum.bs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsum.bs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsum.hs.i64(i64, i64)
+
+define i64 @predsum_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: predsum_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsum.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsum.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsum.ws.i64(i64, i64)
+
+define i64 @predsum_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: predsum_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsum.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsum.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsumu.bs.i64(i64, i64)
+
+define i64 @predsumu_bs(i64 %a, i64 %b) {
+; RV64P-LABEL: predsumu_bs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsumu.bs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsumu.bs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsumu.hs.i64(i64, i64)
+
+define i64 @predsumu_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: predsumu_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsumu.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsumu.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.predsumu.ws.i64(i64, i64)
+
+define i64 @predsumu_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: predsumu_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    predsumu.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.predsumu.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psra.bs.i64(i64, i64)
+
+define i64 @psra_bs(i64 %a, i64 %b) {
+; RV64P-LABEL: psra_bs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psra.bs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psra.bs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psra.hs.i64(i64, i64)
+
+define i64 @psra_hs(i64 %a, i64 %b) {
+; RV64P-LABEL: psra_hs:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psra.hs a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psra.hs.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
+
+declare i64 @llvm.riscv.psra.ws.i64(i64, i64)
+
+define i64 @psra_ws(i64 %a, i64 %b) {
+; RV64P-LABEL: psra_ws:
+; RV64P:       # %bb.0:
+; RV64P-NEXT:    psra.ws a0, a0, a1
+; RV64P-NEXT:    ret
+    %tmp = call i64 @llvm.riscv.psra.ws.i64(i64 %a, i64 %b)
+    ret i64 %tmp
+}
