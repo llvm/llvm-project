@@ -632,6 +632,10 @@ struct ConvertXeVMToLLVMPass
   void runOnOperation() override {
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect>();
+    target.addDynamicallyLegalOp<LLVM::LoadOp>(
+        [](LLVM::LoadOp op) { return !op->hasAttr("cache_control"); });
+    target.addDynamicallyLegalOp<LLVM::StoreOp>(
+        [](LLVM::StoreOp op) { return !op->hasAttr("cache_control"); });
     target.addIllegalDialect<XeVMDialect>();
     RewritePatternSet patterns(&getContext());
     populateXeVMToLLVMConversionPatterns(patterns);
