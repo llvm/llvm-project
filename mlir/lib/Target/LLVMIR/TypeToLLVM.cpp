@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 
@@ -71,7 +72,7 @@ public:
             })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
                   LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
-                  LLVM::LLVMTargetExtType>(
+                  LLVM::LLVMTargetExtType, PtrLikeTypeInterface>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
@@ -147,6 +148,14 @@ private:
     translateTypes(type.getTypeParams(), typeParams);
     return llvm::TargetExtType::get(context, type.getExtTypeName(), typeParams,
                                     type.getIntParams());
+  }
+
+  /// Translates the given ptr type.
+  llvm::Type *translate(PtrLikeTypeInterface type) {
+    auto memSpace = dyn_cast<LLVM::AddressSpaceAttr>(type.getMemorySpace());
+    assert(memSpace && "expected pointer with the LLVM address space");
+    assert(!type.hasPtrMetadata() && "expected pointer without metadata");
+    return llvm::PointerType::get(context, memSpace.getAddressSpace());
   }
 
   /// Translates a list of types.

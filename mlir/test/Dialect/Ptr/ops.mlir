@@ -42,3 +42,17 @@ func.func @store_ops(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: f32, %arg2: i64
   ptr.store volatile %arg3, %arg0 atomic syncscope("workgroup") release nontemporal alignment = 4 : i32, !ptr.ptr<#ptr.generic_space>
   return
 }
+
+/// Test load operations with llvm.address_space memory space
+func.func @llvm_load(%arg0: !ptr.ptr<#llvm.address_space<1>>) -> (f32, i32) {
+  %0 = ptr.load %arg0 : !ptr.ptr<#llvm.address_space<1>> -> f32
+  %1 = ptr.load volatile %arg0 atomic acquire alignment = 4 : !ptr.ptr<#llvm.address_space<1>> -> i32
+  return %0, %1 : f32, i32
+}
+
+/// Test store operations with llvm.address_space memory space
+func.func @llvm_store(%arg0: !ptr.ptr<#llvm.address_space<2>>, %arg1: f32, %arg2: i64) {
+  ptr.store %arg1, %arg0 : f32, !ptr.ptr<#llvm.address_space<2>>
+  ptr.store %arg2, %arg0 atomic release alignment = 8 : i64, !ptr.ptr<#llvm.address_space<2>>
+  return
+}

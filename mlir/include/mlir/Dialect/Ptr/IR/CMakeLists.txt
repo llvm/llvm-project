@@ -7,8 +7,6 @@ mlir_tablegen(PtrOpsAttrs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=ptr)
 add_mlir_dialect_tablegen_target(MLIRPtrOpsAttributesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS MemorySpaceInterfaces.td)
-mlir_tablegen(MemorySpaceInterfaces.h.inc -gen-op-interface-decls)
-mlir_tablegen(MemorySpaceInterfaces.cpp.inc -gen-op-interface-defs)
 mlir_tablegen(MemorySpaceAttrInterfaces.h.inc -gen-attr-interface-decls)
 mlir_tablegen(MemorySpaceAttrInterfaces.cpp.inc -gen-attr-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRPtrMemorySpaceInterfacesIncGen)
