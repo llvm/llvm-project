@@ -175,3 +175,22 @@ void test_obt_type_merging() {
   _Static_assert(_Generic((a + b), int __wrap: 1, default: 0), "a + b should be __wrap int");
   _Static_assert(_Generic((a + c), pid_t __wrap: 1, default: 0), "a + c should be __wrap pid_t");
 }
+
+typedef unsigned long __no_wrap test_size_t;
+typedef int __wrap test_wrap_int;
+
+void test_pointer_arithmetic_crash_fix() {
+  int a = 42;
+  test_size_t offset = 10;
+  test_wrap_int w_offset = 5;
+
+  int *ptr1 = &a + offset;
+  int *ptr2 = &a + w_offset;
+  int *ptr3 = offset + &a;
+
+  test_size_t bad1 = &a + offset;     // expected-error {{incompatible pointer to integer conversion}}
+  test_wrap_int bad2 = &a + w_offset; // expected-error {{incompatible pointer to integer conversion}}
+  test_size_t b = &a + b;       // expected-error {{incompatible pointer to integer conversion}}
+  int arr[10];
+  test_size_t diff = &arr[5] - &arr[0]; // OK: pointer difference assigned to OBT
+}
