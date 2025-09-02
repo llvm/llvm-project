@@ -2982,7 +2982,8 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
 bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (isa<AllocaInst>(CurInst) || CurInst->isTerminator() ||
       isa<PHINode>(CurInst) || CurInst->getType()->isVoidTy() ||
-      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects())
+      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects() ||
+      CurInst->getType()->isTokenLikeTy())
     return false;
 
   // Don't do PRE on compares. The PHI would prevent CodeGenPrepare from
