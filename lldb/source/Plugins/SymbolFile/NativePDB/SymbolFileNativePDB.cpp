@@ -1735,11 +1735,11 @@ void SymbolFileNativePDB::CacheFunctionNames() {
   }
 
   // Sort them before value searching is working properly.
-  m_func_full_names.Sort();
+  m_func_full_names.Sort(std::less<uint32_t>());
   m_func_full_names.SizeToFit();
-  m_func_method_names.Sort();
+  m_func_method_names.Sort(std::less<uint32_t>());
   m_func_method_names.SizeToFit();
-  m_func_base_names.Sort();
+  m_func_base_names.Sort(std::less<uint32_t>());
   m_func_base_names.SizeToFit();
 }
 
