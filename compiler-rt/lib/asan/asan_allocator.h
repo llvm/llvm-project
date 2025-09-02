@@ -334,6 +334,13 @@ hsa_status_t asan_hsa_amd_ipc_memory_attach(
   const hsa_agent_t* mapping_agents, void** mapped_ptr);
 hsa_status_t asan_hsa_amd_ipc_memory_detach(
   void* mapped_ptr);
+hsa_status_t asan_hsa_amd_vmem_address_reserve_align(void** ptr, size_t size,
+                                                     uint64_t address,
+                                                     uint64_t alignment,
+                                                     uint64_t flags,
+                                                     BufferedStackTrace* stack);
+hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
+                                            BufferedStackTrace* stack);
 } // namespace __asan
 #endif
 

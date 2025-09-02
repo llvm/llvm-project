@@ -1397,6 +1397,9 @@ DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_attach,
   const hsa_amd_ipc_memory_t *handle, size_t len, uint32_t num_agents,
   const hsa_agent_t *mapping_agents, void **mapped_ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_ipc_memory_detach, void *mapped_ptr)
+DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_reserve_align, void** ptr,
+             size_t size, uint64_t address, uint64_t alignment, uint64_t flags)
+DECLARE_REAL(hsa_status_t, hsa_amd_vmem_address_free, void* ptr, size_t size);
 
 namespace __asan {
 
@@ -1425,9 +1428,8 @@ hsa_status_t asan_hsa_amd_memory_pool_free(
   if (p) {
     instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
     return HSA_STATUS_SUCCESS;
-  } else {
-    return REAL(hsa_amd_memory_pool_free)(ptr);
   }
+  return REAL(hsa_amd_memory_pool_free)(ptr);
 }
 
 hsa_status_t asan_hsa_amd_agents_allow_access(
@@ -1435,11 +1437,8 @@ hsa_status_t asan_hsa_amd_agents_allow_access(
   const void *ptr,
   BufferedStackTrace *stack) {
   void *p = get_allocator().GetBlockBegin(ptr);
-  if (p) {
-    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, p);
-  } else {
-    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, ptr);
-  }
+  return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags,
+                                           p ? p : ptr);
 }
 
 // For asan allocator, kMetadataSize is 0 and maximum redzone size is 2048. This
@@ -1486,6 +1485,60 @@ hsa_status_t asan_hsa_amd_ipc_memory_detach(void *mapped_ptr) {
   void *mapped_ptr_ =
       reinterpret_cast<void *>(reinterpret_cast<uptr>(mapped_ptr) - kPageSize_);
   return REAL(hsa_amd_ipc_memory_detach)(mapped_ptr_);
+}
+
+hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
+    void** ptr, size_t size, uint64_t address, uint64_t alignment,
+    uint64_t flags, BufferedStackTrace* stack) {
+  // Bypass the tracking for a fixed address since it cannot be supported.
+  // Reasons:
+  //  1. Address may not meet the alignment/page-size requirement.
+  //  2. Requested range overlaps an existing reserved/mapped range.
+  //  3. Insufficient VA space to honor that exact placement.
+  if (address)
+    return REAL(hsa_amd_vmem_address_reserve_align)(ptr, size, address,
+                                                    alignment, flags);
+
+  if (alignment < kPageSize_)
+    alignment = kPageSize_;
+
+  if (UNLIKELY(!IsPowerOfTwo(alignment))) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func =
+      reinterpret_cast<void*>(asan_hsa_amd_vmem_address_reserve_align);
+  aa_info.memory_pool = {0};
+  aa_info.size = size;
+  aa_info.flags64 = flags;
+  aa_info.address = 0;
+  aa_info.alignment = alignment;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC,
+                                          false, &aa_info));
+
+  return aa_info.status;
+}
+
+hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
+                                            BufferedStackTrace* stack) {
+  if (UNLIKELY(!IsAligned(reinterpret_cast<uptr>(ptr), kPageSize_))) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+  if (size == 0) {
+    errno = errno_EINVAL;
+    return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  void* p = get_allocator().GetBlockBegin(ptr);
+  if (p) {
+    instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+    return HSA_STATUS_SUCCESS;
+  }
+  return REAL(hsa_amd_vmem_address_free)(ptr, size);
 }
 }  // namespace __asan
 #endif
