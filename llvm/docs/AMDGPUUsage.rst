@@ -14510,6 +14510,14 @@ For GFX12:
 * A memory attached last level (MALL) cache exists for GPU memory.
   The MALL cache is fully coherent with GPU memory and has no impact on system
   coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
+* The wait instructions below must be added before any ``SCOPE_SYS`` store in
+  order for the store to remain in order with previous memory operations.
+
+  * ``s_wait_loadcnt 0x0``
+  * ``s_wait_storecnt 0x0``
+  * ``s_wait_kmcnt 0x0``
+  * ``s_wait_samplecnt 0x0``
+  * ``s_wait_bvhcnt 0x0``
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
@@ -14669,7 +14677,20 @@ the instruction in the code sequence that references the table.
                                - wavefront    - generic
                                - workgroup                 - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                - agent
-                               - system
+     store atomic monotonic    - system       - global   1. | ``s_wait_loadcnt 0x0``
+                                              - generic     | ``s_wait_storecnt 0x0``
+                                                            | ``s_wait_kmcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_bvhcnt 0x0``
+
+                                                           - The waits can be independently moved as long as the
+                                                             counter they wait on is known to be zero before issuing
+                                                             the following store instruction.
+
+                                                         2. buffer/global/flat_store
+
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+
      store atomic monotonic    - singlethread - local    1. ds_store
                                - wavefront
                                - workgroup
@@ -15255,7 +15276,9 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
+                                                            | ``s_wait_kmcnt 0x0``
 
+                                                           - If agent scope, omit ``s_wait_kmcnt 0x0``.
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
                                                            - The waits can be
                                                              independently moved
