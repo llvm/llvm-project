@@ -73,8 +73,9 @@ using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "hash-recognize"
 
-/// Checks if Loop \p L contains instructions unreachable \p Roots on the
-/// use-def chain.
+/// Checks that all instructions reachable from \p Roots on the use-def chain
+/// are contained within loop \p L, and that that are no stray instructions in
+/// the loop not visited by the use-def walk.
 static bool containsUnreachable(const Loop &L,
                                 ArrayRef<const Instruction *> Roots) {
   SmallPtrSet<const Instruction *, 16> Visited;
@@ -93,7 +94,6 @@ static bool containsUnreachable(const Loop &L,
         if (!L.contains(UI))
           return true;
         Worklist.push_back(UI);
-        continue;
       }
     }
   }
@@ -157,17 +157,15 @@ private:
 /// compare are swapped). We check that the LHS is (ConditionalRecurrence.Phi
 /// [xor SimpleRecurrence.Phi]) in the big-endian case, and additionally check
 /// for an AND with one in the little-endian case. We then check AllowedByR
-/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and [0,
-/// 1) in the little-endian case: CheckAllowedByR checks for
-/// significant-bit-clear, and this must be equal to ConditionalRecurrence.BO
-/// (which is the bit-shift, as already checked by isBigEndianBitShift) for
-/// well-formedness.
+/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and
+/// against [0, 1) in the little-endian case: CheckAllowedByR checks for
+/// significant-bit-clear, and we match the corresponding arms of the select
+/// against bit-shift and bit-shift-and-xor-gen-poly.
 static bool
 isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 const RecurrenceInfo &SimpleRecurrence,
                                 bool ByteOrderSwapped) {
   auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
-  DataLayout DL = SI->getParent()->getDataLayout();
   CmpPredicate Pred;
   const Value *L;
   const APInt *R;
@@ -197,9 +195,11 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
 
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
   if (AllowedByR == CheckAllowedByR)
-    return TV == BitShift;
+    return TV == BitShift &&
+           match(FV, m_c_Xor(m_Specific(BitShift), m_Constant()));
   if (AllowedByR.inverse() == CheckAllowedByR)
-    return FV == BitShift;
+    return FV == BitShift &&
+           match(TV, m_c_Xor(m_Specific(BitShift), m_Constant()));
   return false;
 }
 
@@ -219,8 +219,11 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
 ///    %BO = binop %step, %rec
 ///
 bool RecurrenceInfo::matchSimpleRecurrence(const PHINode *P) {
-  Phi = P;
-  return llvm::matchSimpleRecurrence(Phi, BO, Start, Step);
+  if (llvm::matchSimpleRecurrence(P, BO, Start, Step)) {
+    Phi = P;
+    return true;
+  }
+  return false;
 }
 
 /// Digs for a recurrence starting with \p V hitting the PHI node in a use-def
