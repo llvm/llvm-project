@@ -7,49 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TypeSize.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/WithColor.h"
-
-#include "DebugOptions.h"
+#include "llvm/Support/Error.h"
 
 using namespace llvm;
 
-#ifndef STRICT_FIXED_SIZE_VECTORS
-namespace {
-struct CreateScalableErrorAsWarning {
-  /// The ScalableErrorAsWarning is a temporary measure to suppress errors from
-  /// using the wrong interface on a scalable vector.
-  static void *call() {
-    return new cl::opt<bool>(
-        "treat-scalable-fixed-error-as-warning", cl::Hidden,
-        cl::desc(
-            "Treat issues where a fixed-width property is requested from a "
-            "scalable type as a warning, instead of an error"));
-  }
-};
-} // namespace
-static ManagedStatic<cl::opt<bool>, CreateScalableErrorAsWarning>
-    ScalableErrorAsWarning;
-void llvm::initTypeSizeOptions() { *ScalableErrorAsWarning; }
-#else
-void llvm::initTypeSizeOptions() {}
-#endif
-
-void llvm::reportInvalidSizeRequest(const char *Msg) {
-#ifndef STRICT_FIXED_SIZE_VECTORS
-  if (*ScalableErrorAsWarning) {
-    WithColor::warning() << "Invalid size request on a scalable vector; " << Msg
-                         << "\n";
-    return;
-  }
-#endif
-  report_fatal_error("Invalid size request on a scalable vector.");
-}
-
 TypeSize::operator TypeSize::ScalarTy() const {
   if (isScalable()) {
-    reportInvalidSizeRequest(
+    reportFatalInternalError(
         "Cannot implicitly convert a scalable size to a fixed-width size in "
         "`TypeSize::operator ScalarTy()`");
     return getKnownMinValue();
