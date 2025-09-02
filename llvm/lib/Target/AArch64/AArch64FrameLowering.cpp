@@ -383,6 +383,17 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
   return false;
 }
 
+static bool isTargetWindows(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+}
+
+bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
+    const MachineFunction &MF) const {
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize() &&
+         needsWinCFI(MF);
+}
+
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
 /// When Exit block is given, this check is for epilog.
@@ -1168,10 +1179,6 @@ bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
   return true;
 }
 
-static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
-}
-
 void AArch64FrameLowering::emitPacRetPlusLeafHardening(
     MachineFunction &MF) const {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
@@ -1270,8 +1277,7 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
     return StackOffset::getFixed(ObjectOffset - getOffsetOfLocalArea());
 
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool FPAfterSVECalleeSaves =
-      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = hasSVECalleeSavesAboveFrameRecord(MF);
   if (MFI.hasScalableStackID(FI)) {
     if (FPAfterSVECalleeSaves &&
         -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize()) {
@@ -1441,8 +1447,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       "In the presence of dynamic stack pointer realignment, "
       "non-argument/CSR objects cannot be accessed through the frame pointer");
 
-  bool FPAfterSVECalleeSaves =
-      isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = hasSVECalleeSavesAboveFrameRecord(MF);
 
   if (isSVE) {
     StackOffset FPOffset = StackOffset::get(
@@ -1701,7 +1706,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     FirstReg = Count - 1;
   }
 
-  bool FPAfterSVECalleeSaves = IsWindows && AFI->getSVECalleeSavedStackSize();
+  bool FPAfterSVECalleeSaves = AFL.hasSVECalleeSavesAboveFrameRecord(MF);
   // Windows AAPCS has x9-x15 as volatile registers, x16-x17 as intra-procedural
   // scratch, x18 as platform reserved. However, clang has extended calling
   // convensions such as preserve_most and preserve_all which treat these as
