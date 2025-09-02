@@ -353,6 +353,12 @@ protected:
   DenseMapBase() = default;
 
   void destroyAll() {
+    // No need to iterate through the buckets if both KeyT and ValueT are
+    // trivially destructible.
+    if constexpr (std::is_trivially_destructible_v<KeyT> &&
+                  std::is_trivially_destructible_v<ValueT>)
+      return;
+
     if (getNumBuckets() == 0) // Nothing to do.
       return;
 
