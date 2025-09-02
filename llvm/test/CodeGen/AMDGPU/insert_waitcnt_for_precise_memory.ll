@@ -315,9 +315,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp)  {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[16:17]
 ;

@@ -1884,80 +1884,81 @@ entry:
 define amdgpu_kernel void @insert_w_offset(ptr addrspace(1) %out, i32 %in) {
 ; GENERIC-LABEL: insert_w_offset:
 ; GENERIC:       ; %bb.0: ; %entry
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GENERIC-NEXT:    s_load_dword s4, s[4:5], 0xb
-; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
-; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x41880000
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x40400000
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41000000
-; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x40e00000
-; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x40c00000
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x41000000
+; GENERIC-NEXT:    v_mov_b32_e32 v3, 0x40e00000
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x40c00000
 ; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x40a00000
-; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41300000
-; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41200000
-; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41100000
-; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41700000
-; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41600000
-; GENERIC-NEXT:    v_mov_b32_e32 v18, 0x41500000
+; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41400000
+; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41300000
+; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41200000
+; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41100000
+; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41800000
+; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41700000
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_add_i32 s4, s4, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
+; GENERIC-NEXT:    s_add_i32 s14, s0, 1
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 3
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 2
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v0, v10, s[0:1]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 1
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 0
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 7
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v1, v10, s[6:7]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 6
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 5
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 4
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v5, v10, s[12:13]
+; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41600000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v3, v10, s[6:7]
+; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41500000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v4, v10, s[8:9]
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GENERIC-NEXT:    s_mov_b32 s7, 0xf000
+; GENERIC-NEXT:    s_mov_b32 s6, -1
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v3, 4.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, 2.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v0, 1.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v4, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v5, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v9, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v11, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, 2.0, v10, s[0:1]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 1.0, v10, s[2:3]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 10
+; GENERIC-NEXT:    v_cndmask_b32_e64 v4, v9, v10, s[10:11]
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v12, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v11, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 9
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v13, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v12, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 8
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v14, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v13, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 15
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v15, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v14, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 14
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[4:7], 0 offset:32
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v16, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v15, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v17, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v16, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v18, v10, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:48
-; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v17, v10, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[4:7], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insert_w_offset:
@@ -2237,81 +2238,82 @@ entry:
 define amdgpu_kernel void @insert_unsigned_base_plus_offset(ptr addrspace(1) %out, i16 %in) {
 ; GENERIC-LABEL: insert_unsigned_base_plus_offset:
 ; GENERIC:       ; %bb.0: ; %entry
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GENERIC-NEXT:    s_load_dword s4, s[4:5], 0xb
-; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
-; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x41880000
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x40400000
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41000000
-; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x40e00000
-; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x40c00000
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x41000000
+; GENERIC-NEXT:    v_mov_b32_e32 v3, 0x40e00000
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x40c00000
 ; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x40a00000
-; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41300000
-; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41200000
-; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41100000
-; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41700000
-; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41600000
-; GENERIC-NEXT:    v_mov_b32_e32 v18, 0x41500000
+; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41400000
+; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41300000
+; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41200000
+; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41100000
+; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41800000
+; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41700000
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_and_b32 s4, s4, 0xffff
-; GENERIC-NEXT:    s_add_i32 s4, s4, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
+; GENERIC-NEXT:    s_and_b32 s0, s0, 0xffff
+; GENERIC-NEXT:    s_add_i32 s14, s0, 1
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 3
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 2
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v0, v10, s[0:1]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 1
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 0
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 7
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v1, v10, s[6:7]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 6
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 5
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 4
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v5, v10, s[12:13]
+; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41600000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v3, v10, s[6:7]
+; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41500000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v4, v10, s[8:9]
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GENERIC-NEXT:    s_mov_b32 s7, 0xf000
+; GENERIC-NEXT:    s_mov_b32 s6, -1
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v3, 4.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, 2.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v0, 1.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v4, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v5, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v9, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v11, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, 2.0, v10, s[0:1]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 1.0, v10, s[2:3]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 10
+; GENERIC-NEXT:    v_cndmask_b32_e64 v4, v9, v10, s[10:11]
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v12, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v11, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 9
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v13, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v12, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 8
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v14, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v13, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 15
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v15, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v14, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 14
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[4:7], 0 offset:32
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v16, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v15, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v17, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v16, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v18, v10, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:48
-; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v17, v10, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[4:7], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insert_unsigned_base_plus_offset:
@@ -2592,81 +2594,82 @@ entry:
 define amdgpu_kernel void @insert_signed_base_plus_offset(ptr addrspace(1) %out, i16 %in) {
 ; GENERIC-LABEL: insert_signed_base_plus_offset:
 ; GENERIC:       ; %bb.0: ; %entry
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GENERIC-NEXT:    s_load_dword s4, s[4:5], 0xb
-; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
-; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x41880000
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x40400000
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41000000
-; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x40e00000
-; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x40c00000
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x41000000
+; GENERIC-NEXT:    v_mov_b32_e32 v3, 0x40e00000
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x40c00000
 ; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x40a00000
-; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41300000
-; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41200000
-; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41100000
-; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41700000
-; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41600000
-; GENERIC-NEXT:    v_mov_b32_e32 v18, 0x41500000
+; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41400000
+; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41300000
+; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41200000
+; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41100000
+; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41800000
+; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41700000
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_sext_i32_i16 s4, s4
-; GENERIC-NEXT:    s_add_i32 s4, s4, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
+; GENERIC-NEXT:    s_sext_i32_i16 s0, s0
+; GENERIC-NEXT:    s_add_i32 s14, s0, 1
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 3
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 2
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v0, v10, s[0:1]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 1
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 0
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 7
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v1, v10, s[6:7]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 6
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 5
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 4
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v5, v10, s[12:13]
+; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41600000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v3, v10, s[6:7]
+; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41500000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v4, v10, s[8:9]
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GENERIC-NEXT:    s_mov_b32 s7, 0xf000
+; GENERIC-NEXT:    s_mov_b32 s6, -1
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v3, 4.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, 2.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v0, 1.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v4, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v5, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v9, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v11, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, 2.0, v10, s[0:1]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 1.0, v10, s[2:3]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 10
+; GENERIC-NEXT:    v_cndmask_b32_e64 v4, v9, v10, s[10:11]
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v12, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v11, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 9
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v13, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v12, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 8
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v14, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v13, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 15
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v15, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v14, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 14
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[4:7], 0 offset:32
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v16, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v15, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v17, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v16, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v18, v10, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:48
-; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v17, v10, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[4:7], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insert_signed_base_plus_offset:
@@ -2954,79 +2957,80 @@ entry:
 define amdgpu_kernel void @insert_wo_offset(ptr addrspace(1) %out, i32 %in) {
 ; GENERIC-LABEL: insert_wo_offset:
 ; GENERIC:       ; %bb.0: ; %entry
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GENERIC-NEXT:    s_load_dword s4, s[4:5], 0xb
-; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
-; GENERIC-NEXT:    s_mov_b32 s2, -1
+; GENERIC-NEXT:    s_load_dword s14, s[4:5], 0xb
 ; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x41880000
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x40400000
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41000000
-; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x40e00000
-; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x40c00000
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x41000000
+; GENERIC-NEXT:    v_mov_b32_e32 v3, 0x40e00000
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x40c00000
 ; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x40a00000
-; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41300000
-; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41200000
-; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41100000
-; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41700000
-; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41600000
-; GENERIC-NEXT:    v_mov_b32_e32 v18, 0x41500000
+; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41400000
+; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41300000
+; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41200000
+; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x41100000
+; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x41800000
+; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x41700000
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 3
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 2
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v0, v10, s[0:1]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 1
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 0
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 7
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v1, v10, s[6:7]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 6
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 5
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 4
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v5, v10, s[12:13]
+; GENERIC-NEXT:    v_mov_b32_e32 v16, 0x41600000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v3, v10, s[6:7]
+; GENERIC-NEXT:    v_mov_b32_e32 v17, 0x41500000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v4, v10, s[8:9]
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GENERIC-NEXT:    s_mov_b32 s7, 0xf000
+; GENERIC-NEXT:    s_mov_b32 s6, -1
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v3, 4.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, 2.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v0, 1.0, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v4, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v5, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v9, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v11, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, 2.0, v10, s[0:1]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 1.0, v10, s[2:3]
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 10
+; GENERIC-NEXT:    v_cndmask_b32_e64 v4, v9, v10, s[10:11]
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v12, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v11, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 9
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v13, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v12, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 8
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v14, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v13, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 15
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v15, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v14, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 14
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[4:7], 0 offset:32
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v16, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v15, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v17, v10, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v16, v10, vcc
+; GENERIC-NEXT:    s_cmp_eq_u32 s14, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v18, v10, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:48
-; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v17, v10, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[4:7], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insert_wo_offset:
@@ -3593,8 +3597,8 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ;
 ; GFX9-IDXMODE-LABEL: insert_neg_offset_sgpr:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
-; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-IDXMODE-NEXT:    s_load_dword s2, s[4:5], 0x34
+; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, 3
@@ -3612,8 +3616,6 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, 15
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, v15
-; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    s_addk_i32 s2, 0xfe00
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, v14
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v14, v13
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v13, v12
@@ -3629,6 +3631,8 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-IDXMODE-NEXT:    s_addk_i32 s2, 0xfe00
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 16
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
@@ -5646,116 +5650,116 @@ bb2:
 define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in, <16 x i32> %vec0) {
 ; GENERIC-LABEL: insert_vgpr_offset_multiple_in_block:
 ; GENERIC:       ; %bb.0: ; %entry
-; GENERIC-NEXT:    s_load_dwordx2 s[24:25], s[4:5], 0xd
+; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; GENERIC-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
-; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
-; GENERIC-NEXT:    s_mov_b32 s26, 0
+; GENERIC-NEXT:    s_mov_b32 s7, 0xf000
+; GENERIC-NEXT:    s_mov_b32 s2, 0
 ; GENERIC-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GENERIC-NEXT:    v_mov_b32_e32 v2, 0
-; GENERIC-NEXT:    s_mov_b32 s27, s3
+; GENERIC-NEXT:    s_mov_b32 s3, s7
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    buffer_load_dword v14, v[1:2], s[24:27], 0 addr64 glc
+; GENERIC-NEXT:    buffer_load_dword v2, v[1:2], s[0:3], 0 addr64 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    v_mov_b32 v1, 62
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:    v_mov_b32_e32 v10, s22
-; GENERIC-NEXT:    v_mov_b32_e32 v11, s23
-; GENERIC-NEXT:    v_mov_b32_e32 v15, s16
-; GENERIC-NEXT:    v_mov_b32_e32 v2, s18
-; GENERIC-NEXT:    v_mov_b32_e32 v3, s19
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s12
-; GENERIC-NEXT:    v_mov_b32_e32 v5, s13
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s14
-; GENERIC-NEXT:    v_mov_b32_e32 v7, s15
-; GENERIC-NEXT:    v_mov_b32_e32 v8, s8
-; GENERIC-NEXT:    v_mov_b32_e32 v9, s9
-; GENERIC-NEXT:    v_mov_b32_e32 v12, s10
-; GENERIC-NEXT:    v_mov_b32_e32 v13, s11
-; GENERIC-NEXT:    v_add_i32_e32 v18, vcc, 1, v14
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v16, v2, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v17, v3, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v19, v4, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v20, v5, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v14
+; GENERIC-NEXT:    v_mov_b32_e32 v3, s23
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s19
+; GENERIC-NEXT:    v_mov_b32_e32 v5, s15
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s10
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s11
+; GENERIC-NEXT:    v_add_i32_e32 v15, vcc, 1, v2
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v5, v1, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v8, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v9, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v12, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v13, v1, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, 63, v5, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v18
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, 63, v6, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v10, 63, v5, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v14, 63, v4, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 15, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v18, 63, v3, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, 63, v3, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v4, 63, v3, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s14
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v3, 63, v3, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, 63, v2, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v18
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v8, s13
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, 63, v6, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, 63, v20, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, 63, v19, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v13, 63, v17, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v12, 63, v16, vcc
-; GENERIC-NEXT:    v_mov_b32_e32 v16, s17
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v19, v10, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v17, v11, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v10, v15, v1, vcc
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v14
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v8, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v11, s12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, 63, v7, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v11, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v11, s18
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, 63, v7, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v11, v11, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v12, s17
+; GENERIC-NEXT:    v_cndmask_b32_e32 v13, 63, v11, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v11, v12, v1, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v16, s16
+; GENERIC-NEXT:    v_cndmask_b32_e32 v12, 63, v11, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v15
+; GENERIC-NEXT:    v_mov_b32_e32 v16, s20
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; GENERIC-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
-; GENERIC-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; GENERIC-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
-; GENERIC-NEXT:    v_mov_b32_e32 v19, s20
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
-; GENERIC-NEXT:    v_mov_b32_e32 v15, s21
-; GENERIC-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
-; GENERIC-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
-; GENERIC-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
-; GENERIC-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GENERIC-NEXT:    s_mov_b32 s2, -1
-; GENERIC-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v2
+; GENERIC-NEXT:    v_mov_b32_e32 v19, s21
+; GENERIC-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v2
+; GENERIC-NEXT:    v_mov_b32_e32 v17, s22
+; GENERIC-NEXT:    v_cmp_eq_u32_e64 s[2:3], 14, v2
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v17, v1, s[2:3]
+; GENERIC-NEXT:    v_cmp_ne_u32_e64 s[2:3], 14, v15
+; GENERIC-NEXT:    v_cndmask_b32_e64 v17, 63, v2, s[2:3]
+; GENERIC-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GENERIC-NEXT:    s_mov_b32 s6, -1
+; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v16, v1, vcc
+; GENERIC-NEXT:    v_cndmask_b32_e64 v16, v19, v1, s[0:1]
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v16, 63, v16, vcc
+; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v15, 63, v2, vcc
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    buffer_store_dwordx4 v[14:17], off, s[0:3], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[15:18], off, s[4:7], 0 offset:48
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
-; GENERIC-NEXT:    buffer_store_dwordx4 v[10:13], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    buffer_store_dwordx4 v[11:14], off, s[4:7], 0 offset:32
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    buffer_store_dwordx4 v[7:10], off, s[4:7], 0 offset:16
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
-; GENERIC-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0
+; GENERIC-NEXT:    buffer_store_dwordx4 v[3:6], off, s[4:7], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GENERIC-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GENERIC-NEXT:    s_cbranch_execz .LBB17_2
 ; GENERIC-NEXT:  ; %bb.1: ; %bb1
-; GENERIC-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; GENERIC-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:  .LBB17_2: ; %bb2
 ; GENERIC-NEXT:    s_endpgm
@@ -6187,117 +6191,116 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ;
 ; SI-MOVREL-LABEL: insert_vgpr_offset_multiple_in_block:
 ; SI-MOVREL:       ; %bb.0: ; %entry
-; SI-MOVREL-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
-; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
-; SI-MOVREL-NEXT:    s_mov_b32 s10, 0
-; SI-MOVREL-NEXT:    s_mov_b32 s11, s3
+; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; SI-MOVREL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-MOVREL-NEXT:    s_mov_b32 s2, 0
+; SI-MOVREL-NEXT:    s_mov_b32 s3, s7
 ; SI-MOVREL-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dword v14, v[1:2], s[8:11], 0 addr64 glc
+; SI-MOVREL-NEXT:    buffer_load_dword v2, v[1:2], s[0:3], 0 addr64 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
 ; SI-MOVREL-NEXT:    v_mov_b32 v1, 62
 ; SI-MOVREL-NEXT:    ;;#ASMEND
-; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
+; SI-MOVREL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-MOVREL-NEXT:    s_mov_b32 s6, -1
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v2, s18
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v3, s19
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v4, s12
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v5, s13
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v6, s14
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v7, s15
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v8, s8
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v9, s9
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v12, s10
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v13, s11
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v10, s22
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v11, s23
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v15, s16
-; SI-MOVREL-NEXT:    v_add_i32_e32 v18, vcc, 1, v14
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v16, v2, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v17, v3, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v19, v4, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v20, v5, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v14
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v3, s23
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v4, s19
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v5, s15
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v6, s11
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v7, s10
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v8, s13
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v11, s12
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v12, s17
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v16, s16
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, s22
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v19, s21
+; SI-MOVREL-NEXT:    v_add_i32_e32 v15, vcc, 1, v2
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v5, v5, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v2
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v2, v8, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, v9, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v4, v12, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v5, v13, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v5, 63, v5, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v18
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v6, 63, v6, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v10, 63, v5, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v14, 63, v4, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 15, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v18, 63, v3, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v15
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v4, s9
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v5, 63, v3, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v15
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v7, s8
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v4, 63, v3, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v15
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v7, s14
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v3, 63, v3, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v2, 63, v2, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v18
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v15
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v8, 63, v6, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, 63, v20, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v6, 63, v19, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v13, 63, v17, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v12, 63, v16, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v19, v10, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v17, v11, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v14
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v16, s17
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v10, v15, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v14
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, v8, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v8, 63, v7, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, v11, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v15
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v11, s18
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v7, 63, v7, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v11, v11, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v13, 63, v11, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v11, v12, v1, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v12, 63, v11, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v2
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v15
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e64 s[2:3], 14, v2
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v16, s20
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v15, s21
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
-; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
-; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v19, s20
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v2
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v2
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v2, v17, v1, s[2:3]
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[2:3], 14, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v17, 63, v2, s[2:3]
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v2, v16, v1, vcc
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v16, v19, v1, s[0:1]
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v16, 63, v16, vcc
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v15
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v15, 63, v2, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[14:17], off, s[0:3], 0 offset:48
+; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[15:18], off, s[4:7], 0 offset:48
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[10:13], off, s[0:3], 0 offset:32
+; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[11:14], off, s[4:7], 0 offset:32
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:16
+; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[7:10], off, s[4:7], 0 offset:16
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0
+; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[3:6], off, s[4:7], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; SI-MOVREL-NEXT:    s_cbranch_execz .LBB17_2
 ; SI-MOVREL-NEXT:  ; %bb.1: ; %bb1
-; SI-MOVREL-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; SI-MOVREL-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:  .LBB17_2: ; %bb2
 ; SI-MOVREL-NEXT:    s_endpgm
@@ -6311,121 +6314,121 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s0, v1
 ; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
-; VI-NEXT:    flat_load_dword v14, v[1:2] glc
+; VI-NEXT:    flat_load_dword v5, v[1:2] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v3, s19
+; VI-NEXT:    v_mov_b32_e32 v1, s23
+; VI-NEXT:    v_mov_b32_e32 v2, s19
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    v_mov_b32 v1, 62
+; VI-NEXT:    v_mov_b32 v6, 62
 ; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    v_mov_b32_e32 v4, s12
-; VI-NEXT:    v_mov_b32_e32 v5, s13
-; VI-NEXT:    v_mov_b32_e32 v6, s14
-; VI-NEXT:    v_mov_b32_e32 v7, s15
-; VI-NEXT:    v_mov_b32_e32 v8, s8
-; VI-NEXT:    v_mov_b32_e32 v9, s9
-; VI-NEXT:    v_mov_b32_e32 v12, s10
-; VI-NEXT:    v_mov_b32_e32 v13, s11
-; VI-NEXT:    v_mov_b32_e32 v10, s22
-; VI-NEXT:    v_mov_b32_e32 v11, s23
-; VI-NEXT:    v_mov_b32_e32 v15, s16
-; VI-NEXT:    v_add_u32_e32 v18, vcc, 1, v14
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v14
-; VI-NEXT:    v_cndmask_b32_e32 v16, v2, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v14
-; VI-NEXT:    v_cndmask_b32_e32 v17, v3, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v14
-; VI-NEXT:    v_cndmask_b32_e32 v19, v4, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v14
-; VI-NEXT:    v_cndmask_b32_e32 v20, v5, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v14
-; VI-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; VI-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v14
-; VI-NEXT:    v_cndmask_b32_e32 v2, v8, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
-; VI-NEXT:    v_cndmask_b32_e32 v3, v9, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v14
-; VI-NEXT:    v_cndmask_b32_e32 v4, v12, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v14
-; VI-NEXT:    v_cndmask_b32_e32 v5, v13, v1, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v18
-; VI-NEXT:    v_cndmask_b32_e32 v5, 63, v5, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v18
-; VI-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v18
-; VI-NEXT:    v_cndmask_b32_e32 v3, 63, v3, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; VI-NEXT:    v_cndmask_b32_e32 v2, 63, v2, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v18
-; VI-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v18
-; VI-NEXT:    v_cndmask_b32_e32 v8, 63, v6, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v18
-; VI-NEXT:    v_cndmask_b32_e32 v7, 63, v20, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v18
-; VI-NEXT:    v_cndmask_b32_e32 v6, 63, v19, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v18
-; VI-NEXT:    v_cndmask_b32_e32 v13, 63, v17, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v18
-; VI-NEXT:    v_cndmask_b32_e32 v12, 63, v16, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v14
-; VI-NEXT:    v_cndmask_b32_e32 v19, v10, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v14
-; VI-NEXT:    v_cndmask_b32_e32 v17, v11, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v14
-; VI-NEXT:    v_mov_b32_e32 v16, s17
-; VI-NEXT:    v_cndmask_b32_e32 v10, v15, v1, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v14
-; VI-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
-; VI-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
-; VI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
-; VI-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; VI-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; VI-NEXT:    v_mov_b32_e32 v15, s21
-; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
-; VI-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
-; VI-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
-; VI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
-; VI-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v3, s15
+; VI-NEXT:    v_mov_b32_e32 v4, s11
+; VI-NEXT:    v_mov_b32_e32 v7, s10
+; VI-NEXT:    v_mov_b32_e32 v8, s13
+; VI-NEXT:    v_mov_b32_e32 v11, s12
+; VI-NEXT:    v_mov_b32_e32 v12, s17
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    v_mov_b32_e32 v19, s20
-; VI-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
-; VI-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
+; VI-NEXT:    v_mov_b32_e32 v16, s16
+; VI-NEXT:    v_mov_b32_e32 v19, s21
+; VI-NEXT:    v_mov_b32_e32 v21, s20
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s2, s0, 48
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v19, s3
-; VI-NEXT:    v_mov_b32_e32 v18, s2
+; VI-NEXT:    v_add_u32_e32 v15, vcc, 1, v5
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v5
+; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v5
+; VI-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v5
+; VI-NEXT:    v_cndmask_b32_e32 v3, v3, v6, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v5
+; VI-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v15
+; VI-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v15
+; VI-NEXT:    v_cndmask_b32_e32 v10, 63, v3, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v15
+; VI-NEXT:    v_cndmask_b32_e32 v14, 63, v2, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 15, v15
+; VI-NEXT:    v_cndmask_b32_e32 v18, 63, v1, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v5
+; VI-NEXT:    v_cndmask_b32_e32 v1, v7, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v15
+; VI-NEXT:    v_mov_b32_e32 v2, s9
+; VI-NEXT:    v_cndmask_b32_e32 v3, 63, v1, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; VI-NEXT:    v_cndmask_b32_e32 v1, v2, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v15
+; VI-NEXT:    v_mov_b32_e32 v7, s8
+; VI-NEXT:    v_cndmask_b32_e32 v2, 63, v1, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; VI-NEXT:    v_cndmask_b32_e32 v1, v7, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v15
+; VI-NEXT:    v_mov_b32_e32 v7, s14
+; VI-NEXT:    v_cndmask_b32_e32 v1, 63, v1, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v5
+; VI-NEXT:    v_cndmask_b32_e32 v7, v7, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v15
+; VI-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v5
+; VI-NEXT:    v_cndmask_b32_e32 v7, v8, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v15
+; VI-NEXT:    v_cndmask_b32_e32 v8, 63, v7, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v5
+; VI-NEXT:    v_cndmask_b32_e32 v7, v11, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v15
+; VI-NEXT:    v_mov_b32_e32 v11, s18
+; VI-NEXT:    v_cndmask_b32_e32 v7, 63, v7, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v5
+; VI-NEXT:    v_cndmask_b32_e32 v11, v11, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v15
+; VI-NEXT:    v_cndmask_b32_e32 v13, 63, v11, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v5
+; VI-NEXT:    v_cndmask_b32_e32 v11, v12, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v15
+; VI-NEXT:    v_cndmask_b32_e32 v12, 63, v11, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v5
+; VI-NEXT:    v_cndmask_b32_e32 v11, v16, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v15
+; VI-NEXT:    v_mov_b32_e32 v16, s22
+; VI-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v5
+; VI-NEXT:    v_cndmask_b32_e32 v16, v16, v6, vcc
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v15
+; VI-NEXT:    v_cndmask_b32_e32 v17, 63, v16, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v5
+; VI-NEXT:    v_cndmask_b32_e32 v16, v19, v6, vcc
+; VI-NEXT:    v_mov_b32_e32 v20, s3
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v15
+; VI-NEXT:    v_mov_b32_e32 v19, s2
 ; VI-NEXT:    s_add_u32 s2, s0, 32
+; VI-NEXT:    v_cndmask_b32_e32 v16, 63, v16, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v5
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    flat_store_dwordx4 v[18:19], v[14:17]
+; VI-NEXT:    v_cndmask_b32_e32 v5, v21, v6, vcc
+; VI-NEXT:    v_mov_b32_e32 v22, s3
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v15
+; VI-NEXT:    v_mov_b32_e32 v21, s2
+; VI-NEXT:    s_add_u32 s2, s0, 16
+; VI-NEXT:    v_cndmask_b32_e32 v15, 63, v5, vcc
+; VI-NEXT:    s_addc_u32 s3, s1, 0
+; VI-NEXT:    flat_store_dwordx4 v[19:20], v[15:18]
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    flat_store_dwordx4 v[21:22], v[11:14]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; VI-NEXT:    v_mov_b32_e32 v15, s3
-; VI-NEXT:    v_mov_b32_e32 v14, s2
-; VI-NEXT:    s_add_u32 s2, s0, 16
-; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    flat_store_dwordx4 v[14:15], v[10:13]
+; VI-NEXT:    v_mov_b32_e32 v12, s3
+; VI-NEXT:    v_mov_b32_e32 v11, s2
+; VI-NEXT:    flat_store_dwordx4 v[11:12], v[7:10]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v11, s3
-; VI-NEXT:    v_mov_b32_e32 v10, s2
-; VI-NEXT:    flat_store_dwordx4 v[10:11], v[6:9]
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v7, s1
-; VI-NEXT:    v_mov_b32_e32 v6, s0
-; VI-NEXT:    flat_store_dwordx4 v[6:7], v[2:5]
+; VI-NEXT:    v_mov_b32_e32 v8, s1
+; VI-NEXT:    v_mov_b32_e32 v7, s0
+; VI-NEXT:    flat_store_dwordx4 v[7:8], v[1:4]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; VI-NEXT:    s_cbranch_execz .LBB17_2
 ; VI-NEXT:  ; %bb.1: ; %bb1
-; VI-NEXT:    flat_store_dword v[0:1], v1
+; VI-NEXT:    flat_store_dword v[0:1], v6
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:  .LBB17_2: ; %bb2
 ; VI-NEXT:    s_endpgm
@@ -6435,104 +6438,104 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
 ; GFX9-IDXMODE-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x64
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v20, 0
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dword v14, v1, s[0:1] glc
+; GFX9-IDXMODE-NEXT:    global_load_dword v2, v1, s[0:1] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
 ; GFX9-IDXMODE-NEXT:    v_mov_b32 v1, 62
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v2, s18
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, s19
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, s12
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v5, s13
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v6, s14
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v7, s15
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v8, s8
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v9, s9
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v12, s10
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v13, s11
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v10, s22
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v11, s23
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, s16
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v16, v2, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v17, v3, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v19, v4, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v20, v5, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v2, v8, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, v9, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v14
-; GFX9-IDXMODE-NEXT:    v_add_u32_e32 v18, 1, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v4, v12, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v5, v13, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v5, 63, v5, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v4, 63, v4, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, 63, v3, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v2, 63, v2, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v8, 63, v6, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, 63, v20, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v6, 63, v19, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v13, 63, v17, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v12, 63, v16, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v19, v10, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v17, v11, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v14
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, s17
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v10, v15, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, s21
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
-; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, s23
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, s19
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v5, s15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v6, s11
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v7, s10
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v8, s13
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v11, s12
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v12, s17
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, s16
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v19, s20
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v18, 0
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v2
+; GFX9-IDXMODE-NEXT:    v_add_u32_e32 v15, 1, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v5, v5, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v6, 63, v6, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v10, 63, v5, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 11, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v14, 63, v4, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 15, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v18, 63, v3, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, s9
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v5, 63, v3, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v7, s8
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v4, 63, v3, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, v7, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v7, s14
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v3, 63, v3, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, v7, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v9, 63, v7, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, v8, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v8, 63, v7, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, v11, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v11, s18
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v7, 63, v7, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, v11, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 10, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v13, 63, v11, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, v12, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v12, 63, v11, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v15
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, s22
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v16, v16, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v17, 63, v16, vcc
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, s21
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v2
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v2
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v2, v16, v1, s[0:1]
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v16, 63, v2, s[0:1]
+; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v2, v19, v1, vcc
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v15
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v15, 63, v2, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v18, v[14:17], s[0:1] offset:48
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v20, v[15:18], s[0:1] offset:48
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v18, v[10:13], s[0:1] offset:32
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v20, v[11:14], s[0:1] offset:32
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v18, v[6:9], s[0:1] offset:16
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v20, v[7:10], s[0:1] offset:16
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v18, v[2:5], s[0:1]
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v20, v[3:6], s[0:1]
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-IDXMODE-NEXT:    s_cbranch_execz .LBB17_2
@@ -6567,134 +6570,136 @@ bb2:
 define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %out1, i32 %in) {
 ; GENERIC-LABEL: insert_w_offset_multiple_in_block:
 ; GENERIC:       ; %bb.0: ; %entry
+; GENERIC-NEXT:    s_load_dword s33, s[4:5], 0xb
+; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41500000
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41880000
+; GENERIC-NEXT:    v_mov_b32_e32 v6, 0x41600000
+; GENERIC-NEXT:    v_mov_b32_e32 v7, 0x41700000
+; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x41800000
+; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x41100000
+; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x41200000
+; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x41300000
+; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41400000
+; GENERIC-NEXT:    v_mov_b32_e32 v13, 0x40a00000
+; GENERIC-NEXT:    v_mov_b32_e32 v14, 0x40c00000
+; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x40e00000
+; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x41000000
+; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x40400000
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    s_add_i32 s30, s33, 1
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 12
+; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 13
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 14
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 15
+; GENERIC-NEXT:    s_cselect_b64 s[14:15], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 8
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 9
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 10
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 4
+; GENERIC-NEXT:    s_cselect_b64 s[16:17], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 5
+; GENERIC-NEXT:    s_cselect_b64 s[18:19], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 6
+; GENERIC-NEXT:    s_cselect_b64 s[20:21], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 7
+; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 0
+; GENERIC-NEXT:    s_cselect_b64 s[24:25], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 1
+; GENERIC-NEXT:    s_cselect_b64 s[26:27], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 2
+; GENERIC-NEXT:    s_cselect_b64 s[28:29], -1, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s30, 3
+; GENERIC-NEXT:    s_cselect_b64 s[30:31], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v19, 4.0, v4, s[30:31]
+; GENERIC-NEXT:    s_add_i32 s33, s33, 2
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 3
+; GENERIC-NEXT:    s_cselect_b64 s[30:31], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v3, v4, v19, s[30:31]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v18, v1, v4, s[28:29]
 ; GENERIC-NEXT:    s_load_dwordx2 s[28:29], s[4:5], 0x9
-; GENERIC-NEXT:    s_load_dword s24, s[4:5], 0xb
 ; GENERIC-NEXT:    s_mov_b32 s31, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s30, -1
-; GENERIC-NEXT:    v_mov_b32_e32 v1, 0x41500000
-; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x41880000
-; GENERIC-NEXT:    v_mov_b32_e32 v2, 0x41600000
-; GENERIC-NEXT:    v_mov_b32_e32 v3, 0x41700000
-; GENERIC-NEXT:    v_mov_b32_e32 v4, 0x41800000
-; GENERIC-NEXT:    v_mov_b32_e32 v5, 0x41100000
-; GENERIC-NEXT:    v_mov_b32_e32 v6, 0x41200000
-; GENERIC-NEXT:    v_mov_b32_e32 v7, 0x41300000
-; GENERIC-NEXT:    v_mov_b32_e32 v8, 0x41400000
-; GENERIC-NEXT:    v_mov_b32_e32 v9, 0x40a00000
-; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x40c00000
-; GENERIC-NEXT:    v_mov_b32_e32 v11, 0x40e00000
-; GENERIC-NEXT:    v_mov_b32_e32 v12, 0x41000000
-; GENERIC-NEXT:    v_mov_b32_e32 v15, 0x40400000
+; GENERIC-NEXT:    v_cndmask_b32_e64 v16, 1.0, v4, s[24:25]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v17, 2.0, v4, s[26:27]
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_add_i32 s25, s24, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 12
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 13
-; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 14
-; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 15
+; GENERIC-NEXT:    buffer_store_dwordx4 v[16:19], off, s[28:31], 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 2
 ; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 8
-; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 9
-; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 10
-; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 11
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v4, v18, s[4:5]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 1
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, v4, v17, s[4:5]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 0
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 7
+; GENERIC-NEXT:    s_waitcnt expcnt(0)
+; GENERIC-NEXT:    v_cndmask_b32_e64 v19, v0, v4, s[22:23]
+; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v20, v4, v19, s[22:23]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v0, v4, v16, s[4:5]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v16, v13, v4, s[16:17]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v17, v14, v4, s[18:19]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v18, v15, v4, s[20:21]
+; GENERIC-NEXT:    buffer_store_dwordx4 v[16:19], off, s[28:31], 0 offset:16
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 6
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    s_waitcnt expcnt(0)
+; GENERIC-NEXT:    v_cndmask_b32_e64 v19, v4, v18, s[4:5]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 5
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v18, v4, v17, s[4:5]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 4
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 11
+; GENERIC-NEXT:    v_cndmask_b32_e64 v12, v12, v4, s[12:13]
 ; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 4
-; GENERIC-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 5
-; GENERIC-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 6
-; GENERIC-NEXT:    s_cselect_b64 s[18:19], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 7
-; GENERIC-NEXT:    s_cselect_b64 s[20:21], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 0
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v13, 1.0, v0, s[22:23]
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 1
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v14, 2.0, v0, s[22:23]
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 2
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v15, v15, v0, s[22:23]
-; GENERIC-NEXT:    s_cmp_eq_u32 s25, 3
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v16, 4.0, v0, s[22:23]
-; GENERIC-NEXT:    s_add_i32 s26, s24, 2
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 3
-; GENERIC-NEXT:    buffer_store_dwordx4 v[13:16], off, s[28:31], 0
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 2
-; GENERIC-NEXT:    s_cselect_b64 s[24:25], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v13, v4, v12, s[12:13]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v17, v4, v16, s[4:5]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v9, v9, v4, s[6:7]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v10, v10, v4, s[8:9]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v11, v11, v4, s[10:11]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 10
+; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 9
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 8
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 15
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v8, v4, s[14:15]
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v14, v4, v8, s[10:11]
+; GENERIC-NEXT:    buffer_store_dwordx4 v[17:20], off, s[28:31], 0 offset:80
+; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v5, v4, vcc
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v6, v4, s[0:1]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v7, v4, s[2:3]
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[28:31], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[9:12], off, s[28:31], 0 offset:32
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e64 v16, v0, v16, s[22:23]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v15, v0, v15, s[24:25]
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 1
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v14, v0, v14, s[22:23]
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 0
-; GENERIC-NEXT:    s_cselect_b64 s[22:23], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v13, v0, v13, s[22:23]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v9, v9, v0, s[14:15]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v10, v10, v0, s[16:17]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v11, v11, v0, s[18:19]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v12, v12, v0, s[20:21]
-; GENERIC-NEXT:    buffer_store_dwordx4 v[9:12], off, s[28:31], 0 offset:16
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 7
-; GENERIC-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 6
-; GENERIC-NEXT:    s_cselect_b64 s[16:17], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v12, v4, v11, s[4:5]
+; GENERIC-NEXT:    v_cndmask_b32_e64 v11, v4, v10, s[6:7]
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 14
+; GENERIC-NEXT:    v_cndmask_b32_e64 v10, v4, v9, s[8:9]
+; GENERIC-NEXT:    buffer_store_dwordx4 v[10:13], off, s[28:31], 0 offset:96
+; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e64 v12, v0, v12, s[14:15]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v11, v0, v11, s[16:17]
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 5
-; GENERIC-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v10, v0, v10, s[14:15]
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 4
-; GENERIC-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e64 v9, v0, v9, s[14:15]
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
-; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v2, v0, s[0:1]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v3, v3, v0, s[2:3]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v4, v4, v0, s[4:5]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v5, v0, s[6:7]
-; GENERIC-NEXT:    buffer_store_dwordx4 v[1:4], off, s[28:31], 0 offset:48
-; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v6, v0, s[8:9]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s[10:11]
-; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v8, v0, s[12:13]
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[28:31], 0 offset:32
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 11
-; GENERIC-NEXT:    buffer_store_dwordx4 v[9:12], off, s[28:31], 0 offset:80
+; GENERIC-NEXT:    v_cndmask_b32_e32 v13, v4, v7, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    s_waitcnt expcnt(1)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v0, v8, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 10
+; GENERIC-NEXT:    v_cndmask_b32_e32 v12, v4, v6, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s33, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v0, v7, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 9
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v0, v6, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 8
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v0, v5, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 15
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[28:31], 0 offset:96
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v0, v3, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 13
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s26, 12
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[1:4], off, s[28:31], 0 offset:112
-; GENERIC-NEXT:    buffer_store_dwordx4 v[13:16], off, s[28:31], 0 offset:64
+; GENERIC-NEXT:    v_cndmask_b32_e32 v11, v4, v5, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[11:14], off, s[28:31], 0 offset:112
+; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[28:31], 0 offset:64
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insert_w_offset_multiple_in_block:
@@ -6889,7 +6894,6 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v32, 0x41880000
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v32
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v31, v15
-; SI-MOVREL-NEXT:    s_add_i32 m0, s2, 2
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v30, v14
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v29, v13
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v28, v12
@@ -6905,16 +6909,17 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v18, v2
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, v1
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v16, v0
+; SI-MOVREL-NEXT:    s_add_i32 m0, s2, 2
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v16, v32
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], 0 offset:48
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[28:31], off, s[0:3], 0 offset:112
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[24:27], off, s[0:3], 0 offset:96
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[20:23], off, s[0:3], 0 offset:80
+; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:64
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
@@ -6940,11 +6945,15 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, 0x41600000
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v14, 0x41700000
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v32, 0x41880000
-; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v32
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v34, 0x41880000
+; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v34
 ; VI-MOVREL-NEXT:    s_add_i32 m0, s2, 2
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v31, v15
 ; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 48
+; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v33, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v31, v15
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v32, s2
+; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 32
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v30, v14
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v29, v13
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v28, v12
@@ -6961,45 +6970,39 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, v1
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v16, v0
 ; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
-; VI-MOVREL-NEXT:    v_movreld_b32_e32 v16, v32
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v33, s3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v32, s2
-; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 32
-; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
-; VI-MOVREL-NEXT:    s_nop 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, s3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, s2
+; VI-MOVREL-NEXT:    v_movreld_b32_e32 v16, v34
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v35, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v34, s2
 ; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 16
 ; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
-; VI-MOVREL-NEXT:    s_nop 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, s3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, s2
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[34:35], v[8:11]
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, s2
 ; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 64
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
+; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, s5
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, s4
+; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x60
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
+; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, s4
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, s5
+; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x50
+; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v7, s5
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v6, s4
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[4:5], v[24:27]
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, s0
-; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[6:7], v[20:23]
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v7, s3
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[8:9], v[28:31]
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v6, s2
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s4
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s5
-; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x60
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[28:31]
-; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s4
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s5
-; VI-MOVREL-NEXT:    s_add_u32 s0, s0, 0x50
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
-; VI-MOVREL-NEXT:    s_addc_u32 s1, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s1
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[20:23]
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[6:7], v[16:19]
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-IDXMODE-LABEL: insert_w_offset_multiple_in_block:
@@ -7009,9 +7012,10 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 1.0
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, 2.0
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v2, 0x40400000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v3, 4.0
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    s_add_i32 s3, s2, 1
+; VI-IDXMODE-NEXT:    s_add_i32 s4, s2, 2
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v3, 4.0
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, 0x40a00000
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, 0x40c00000
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v6, 0x40e00000
@@ -7024,12 +7028,16 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, 0x41600000
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v14, 0x41700000
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v15, 0x41800000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v32, 0x41880000
+; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 48
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v34, 0x41880000
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v32
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v34
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
+; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v33, s3
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v31, v15
-; VI-IDXMODE-NEXT:    s_add_i32 s2, s2, 2
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v32, s2
+; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 32
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v30, v14
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v29, v13
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v28, v12
@@ -7045,49 +7053,42 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v18, v2
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, v1
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, v0
-; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, v32
+; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
+; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s4, gpr_idx(DST)
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, v34
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
-; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 48
-; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v33, s3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v32, s2
-; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 32
-; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
-; VI-IDXMODE-NEXT:    s_nop 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, s3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, s2
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v35, s3
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v34, s2
 ; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 16
 ; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
-; VI-IDXMODE-NEXT:    s_nop 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, s3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, s2
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[34:35], v[8:11]
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, s3
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, s2
 ; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 64
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
 ; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
+; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, s5
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, s4
+; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x60
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
+; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, s4
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, s5
+; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x50
+; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v7, s5
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v6, s4
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[4:5], v[24:27]
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, s0
-; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[6:7], v[20:23]
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v7, s3
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[8:9], v[28:31]
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v6, s2
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s4
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s5
-; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x60
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[28:31]
-; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s4
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s5
-; VI-IDXMODE-NEXT:    s_add_u32 s0, s0, 0x50
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
-; VI-IDXMODE-NEXT:    s_addc_u32 s1, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s1
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[20:23]
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s2
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s3
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[6:7], v[16:19]
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;
 ; GFX9-IDXMODE-LABEL: insert_w_offset_multiple_in_block:
@@ -7117,7 +7118,6 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v32
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v31, v15
-; GFX9-IDXMODE-NEXT:    s_add_i32 s2, s2, 2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v30, v14
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v29, v13
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v28, v12
@@ -7133,18 +7133,19 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v18, v2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, v1
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, v0
+; GFX9-IDXMODE-NEXT:    s_add_i32 s2, s2, 2
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v33, 0
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, v32
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v32, 0
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
-; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[12:15], s[0:1] offset:48
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[8:11], s[0:1] offset:32
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[4:7], s[0:1] offset:16
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[28:31], s[0:1] offset:112
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[24:27], s[0:1] offset:96
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[20:23], s[0:1] offset:80
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[0:3], s[0:1]
+; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v33, v[16:19], s[0:1] offset:64
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %add1 = add i32 %in, 1
@@ -8620,85 +8621,86 @@ entry:
 define amdgpu_kernel void @insertelement_v16f32_or_index(ptr addrspace(1) %out, <16 x float> %a, i32 %idx.in) nounwind {
 ; GENERIC-LABEL: insertelement_v16f32_or_index:
 ; GENERIC:       ; %bb.0:
-; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GENERIC-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x19
-; GENERIC-NEXT:    s_load_dword s4, s[4:5], 0x29
+; GENERIC-NEXT:    s_load_dword s0, s[4:5], 0x29
+; GENERIC-NEXT:    v_mov_b32_e32 v0, 0x40a00000
+; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
+; GENERIC-NEXT:    s_lshl_b32 s0, s0, 2
+; GENERIC-NEXT:    v_mov_b32_e32 v1, s11
+; GENERIC-NEXT:    v_mov_b32_e32 v2, s10
+; GENERIC-NEXT:    v_mov_b32_e32 v5, s9
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s8
+; GENERIC-NEXT:    v_mov_b32_e32 v3, s15
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s14
+; GENERIC-NEXT:    v_mov_b32_e32 v10, s13
+; GENERIC-NEXT:    v_mov_b32_e32 v11, s12
+; GENERIC-NEXT:    v_mov_b32_e32 v9, s19
+; GENERIC-NEXT:    v_mov_b32_e32 v12, s18
+; GENERIC-NEXT:    v_mov_b32_e32 v13, s17
+; GENERIC-NEXT:    s_or_b32 s14, s0, 1
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 3
+; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 2
+; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 1
+; GENERIC-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 0
+; GENERIC-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 7
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v8, v0, v3, s[6:7]
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 6
+; GENERIC-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 5
+; GENERIC-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 4
+; GENERIC-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 11
+; GENERIC-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GENERIC-NEXT:    v_cndmask_b32_e64 v9, v0, v9, s[12:13]
+; GENERIC-NEXT:    v_mov_b32_e32 v14, s16
+; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v0, v2, vcc
+; GENERIC-NEXT:    v_mov_b32_e32 v15, s23
+; GENERIC-NEXT:    v_cndmask_b32_e64 v2, v0, v5, s[0:1]
+; GENERIC-NEXT:    v_mov_b32_e32 v16, s22
+; GENERIC-NEXT:    v_cndmask_b32_e64 v1, v0, v6, s[2:3]
+; GENERIC-NEXT:    v_mov_b32_e32 v17, s21
+; GENERIC-NEXT:    v_cndmask_b32_e64 v7, v0, v7, s[6:7]
+; GENERIC-NEXT:    v_mov_b32_e32 v18, s20
+; GENERIC-NEXT:    v_cndmask_b32_e64 v6, v0, v10, s[8:9]
+; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
-; GENERIC-NEXT:    v_mov_b32_e32 v10, 0x40a00000
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 10
+; GENERIC-NEXT:    v_cndmask_b32_e64 v5, v0, v11, s[10:11]
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_lshl_b32 s4, s4, 2
-; GENERIC-NEXT:    v_mov_b32_e32 v0, s11
-; GENERIC-NEXT:    v_mov_b32_e32 v1, s10
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s9
-; GENERIC-NEXT:    v_mov_b32_e32 v5, s8
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s15
-; GENERIC-NEXT:    v_mov_b32_e32 v8, s14
-; GENERIC-NEXT:    v_mov_b32_e32 v9, s13
-; GENERIC-NEXT:    v_mov_b32_e32 v11, s12
-; GENERIC-NEXT:    v_mov_b32_e32 v12, s19
-; GENERIC-NEXT:    v_mov_b32_e32 v13, s18
-; GENERIC-NEXT:    v_mov_b32_e32 v14, s17
-; GENERIC-NEXT:    v_mov_b32_e32 v15, s16
-; GENERIC-NEXT:    v_mov_b32_e32 v16, s23
-; GENERIC-NEXT:    v_mov_b32_e32 v17, s22
-; GENERIC-NEXT:    v_mov_b32_e32 v18, s21
-; GENERIC-NEXT:    v_mov_b32_e32 v19, s20
-; GENERIC-NEXT:    s_or_b32 s4, s4, 1
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 3
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v3, v10, v0, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v2, v10, v1, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v1, v10, v4, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v0, v10, v5, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v10, v6, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v10, v8, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v10, v9, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v4, v10, v11, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v10, v12, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:16
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v10, v13, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 9
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v0, v12, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 9
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v10, v14, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 8
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v0, v13, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 8
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v5, v10, v15, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 15
+; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v0, v14, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 15
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v10, v16, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], off, s[0:3], 0 offset:32
+; GENERIC-NEXT:    v_cndmask_b32_e32 v10, v0, v15, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 14
+; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:32
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v10, v17, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 13
+; GENERIC-NEXT:    v_cndmask_b32_e32 v9, v0, v16, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 13
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v10, v18, vcc
-; GENERIC-NEXT:    s_cmp_lg_u32 s4, 12
+; GENERIC-NEXT:    v_cndmask_b32_e32 v8, v0, v17, vcc
+; GENERIC-NEXT:    s_cmp_lg_u32 s14, 12
 ; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v6, v10, v19, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0 offset:48
-; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; GENERIC-NEXT:    v_cndmask_b32_e32 v7, v0, v18, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: insertelement_v16f32_or_index:
@@ -9810,15 +9812,15 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB27_1
 ; VI-MOVREL-NEXT:  ; %bb.2:
 ; VI-MOVREL-NEXT:    s_mov_b64 exec, s[0:1]
-; VI-MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 48, v0
-; VI-MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[2:3], v[17:20]
+; VI-MOVREL-NEXT:    v_add_u32_e64 v3, s[0:1], 48, v0
 ; VI-MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 32, v0
+; VI-MOVREL-NEXT:    v_addc_u32_e64 v4, s[0:1], 0, v1, s[0:1]
+; VI-MOVREL-NEXT:    v_add_u32_e64 v21, s[0:1], 16, v0
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-MOVREL-NEXT:    v_addc_u32_e64 v22, vcc, 0, v1, s[0:1]
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[2:3], v[13:16]
-; VI-MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
-; VI-MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[2:3], v[9:12]
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[21:22], v[9:12]
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
@@ -9855,15 +9857,15 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB27_1
 ; VI-IDXMODE-NEXT:  ; %bb.2:
 ; VI-IDXMODE-NEXT:    s_mov_b64 exec, s[0:1]
-; VI-IDXMODE-NEXT:    v_add_u32_e32 v2, vcc, 48, v0
-; VI-IDXMODE-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[2:3], v[17:20]
+; VI-IDXMODE-NEXT:    v_add_u32_e64 v3, s[0:1], 48, v0
 ; VI-IDXMODE-NEXT:    v_add_u32_e32 v2, vcc, 32, v0
+; VI-IDXMODE-NEXT:    v_addc_u32_e64 v4, s[0:1], 0, v1, s[0:1]
+; VI-IDXMODE-NEXT:    v_add_u32_e64 v21, s[0:1], 16, v0
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-IDXMODE-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-IDXMODE-NEXT:    v_addc_u32_e64 v22, vcc, 0, v1, s[0:1]
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[2:3], v[13:16]
-; VI-IDXMODE-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
-; VI-IDXMODE-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[2:3], v[9:12]
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[21:22], v[9:12]
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;

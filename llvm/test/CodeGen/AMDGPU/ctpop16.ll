@@ -721,7 +721,6 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v2
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
@@ -730,6 +729,7 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v6
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v7
+; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    v_bcnt_u32_b32_e64 v7, v7, 0
 ; SI-NEXT:    v_bcnt_u32_b32_e64 v6, v6, 0
@@ -789,12 +789,12 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; VI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
 ; VI-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
 ; VI-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
 ; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
+; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_bcnt_u32_b32 v8, v8, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v9, v9, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v10, v10, 0

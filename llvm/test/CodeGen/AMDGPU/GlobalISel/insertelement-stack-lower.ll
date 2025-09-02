@@ -154,61 +154,61 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
 ; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:16
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:4
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 offset:8
-; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:12
-; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:16
 ; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], 0 offset:20
 ; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], 0 offset:24
 ; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], 0 offset:28
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], 0 offset:12
 ; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], 0 offset:32
+; GCN-NEXT:    buffer_load_dword v12, off, s[0:3], 0 offset:48
 ; GCN-NEXT:    buffer_load_dword v9, off, s[0:3], 0 offset:36
 ; GCN-NEXT:    buffer_load_dword v10, off, s[0:3], 0 offset:40
-; GCN-NEXT:    buffer_load_dword v11, off, s[0:3], 0 offset:44
-; GCN-NEXT:    buffer_load_dword v12, off, s[0:3], 0 offset:48
 ; GCN-NEXT:    buffer_load_dword v13, off, s[0:3], 0 offset:52
 ; GCN-NEXT:    buffer_load_dword v14, off, s[0:3], 0 offset:56
 ; GCN-NEXT:    buffer_load_dword v15, off, s[0:3], 0 offset:60
+; GCN-NEXT:    buffer_load_dword v11, off, s[0:3], 0 offset:44
 ; GCN-NEXT:    buffer_load_dword v16, off, s[0:3], 0 offset:64
+; GCN-NEXT:    buffer_load_dword v20, off, s[0:3], 0 offset:80
 ; GCN-NEXT:    buffer_load_dword v17, off, s[0:3], 0 offset:68
 ; GCN-NEXT:    buffer_load_dword v18, off, s[0:3], 0 offset:72
-; GCN-NEXT:    buffer_load_dword v19, off, s[0:3], 0 offset:76
-; GCN-NEXT:    buffer_load_dword v20, off, s[0:3], 0 offset:80
 ; GCN-NEXT:    buffer_load_dword v21, off, s[0:3], 0 offset:84
 ; GCN-NEXT:    buffer_load_dword v22, off, s[0:3], 0 offset:88
 ; GCN-NEXT:    buffer_load_dword v23, off, s[0:3], 0 offset:92
+; GCN-NEXT:    buffer_load_dword v19, off, s[0:3], 0 offset:76
 ; GCN-NEXT:    buffer_load_dword v24, off, s[0:3], 0 offset:96
+; GCN-NEXT:    buffer_load_dword v28, off, s[0:3], 0 offset:112
 ; GCN-NEXT:    buffer_load_dword v25, off, s[0:3], 0 offset:100
 ; GCN-NEXT:    buffer_load_dword v26, off, s[0:3], 0 offset:104
-; GCN-NEXT:    buffer_load_dword v27, off, s[0:3], 0 offset:108
-; GCN-NEXT:    buffer_load_dword v28, off, s[0:3], 0 offset:112
 ; GCN-NEXT:    buffer_load_dword v29, off, s[0:3], 0 offset:116
 ; GCN-NEXT:    buffer_load_dword v30, off, s[0:3], 0 offset:120
 ; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], 0 offset:124
+; GCN-NEXT:    buffer_load_dword v27, off, s[0:3], 0 offset:108
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], 0 offset:128
+; GCN-NEXT:    buffer_load_dword v36, off, s[0:3], 0 offset:144
 ; GCN-NEXT:    buffer_load_dword v33, off, s[0:3], 0 offset:132
 ; GCN-NEXT:    buffer_load_dword v34, off, s[0:3], 0 offset:136
-; GCN-NEXT:    buffer_load_dword v35, off, s[0:3], 0 offset:140
-; GCN-NEXT:    buffer_load_dword v36, off, s[0:3], 0 offset:144
 ; GCN-NEXT:    buffer_load_dword v37, off, s[0:3], 0 offset:148
 ; GCN-NEXT:    buffer_load_dword v38, off, s[0:3], 0 offset:152
 ; GCN-NEXT:    buffer_load_dword v39, off, s[0:3], 0 offset:156
+; GCN-NEXT:    buffer_load_dword v35, off, s[0:3], 0 offset:140
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], 0 offset:160
+; GCN-NEXT:    buffer_load_dword v44, off, s[0:3], 0 offset:176
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], 0 offset:164
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], 0 offset:168
-; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], 0 offset:172
-; GCN-NEXT:    buffer_load_dword v44, off, s[0:3], 0 offset:176
 ; GCN-NEXT:    buffer_load_dword v45, off, s[0:3], 0 offset:180
 ; GCN-NEXT:    buffer_load_dword v46, off, s[0:3], 0 offset:184
 ; GCN-NEXT:    buffer_load_dword v47, off, s[0:3], 0 offset:188
+; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], 0 offset:172
 ; GCN-NEXT:    buffer_load_dword v48, off, s[0:3], 0 offset:192
+; GCN-NEXT:    buffer_load_dword v52, off, s[0:3], 0 offset:208
 ; GCN-NEXT:    buffer_load_dword v49, off, s[0:3], 0 offset:196
 ; GCN-NEXT:    buffer_load_dword v50, off, s[0:3], 0 offset:200
-; GCN-NEXT:    buffer_load_dword v51, off, s[0:3], 0 offset:204
-; GCN-NEXT:    buffer_load_dword v52, off, s[0:3], 0 offset:208
 ; GCN-NEXT:    buffer_load_dword v53, off, s[0:3], 0 offset:212
 ; GCN-NEXT:    buffer_load_dword v54, off, s[0:3], 0 offset:216
 ; GCN-NEXT:    buffer_load_dword v55, off, s[0:3], 0 offset:220
+; GCN-NEXT:    buffer_load_dword v51, off, s[0:3], 0 offset:204
 ; GCN-NEXT:    buffer_load_dword v56, off, s[0:3], 0 offset:224
 ; GCN-NEXT:    buffer_load_dword v57, off, s[0:3], 0 offset:228
 ; GCN-NEXT:    buffer_load_dword v58, off, s[0:3], 0 offset:232
@@ -217,33 +217,26 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
 ; GCN-NEXT:    buffer_load_dword v61, off, s[0:3], 0 offset:244
 ; GCN-NEXT:    buffer_load_dword v62, off, s[0:3], 0 offset:248
 ; GCN-NEXT:    buffer_load_dword v63, off, s[0:3], 0 offset:252
-; GCN-NEXT:    s_waitcnt vmcnt(60)
+; GCN-NEXT:    s_waitcnt vmcnt(56)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[0:3], s[20:21]
-; GCN-NEXT:    s_waitcnt vmcnt(57)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[4:7], s[20:21] offset:16
-; GCN-NEXT:    s_waitcnt vmcnt(54)
+; GCN-NEXT:    s_waitcnt vmcnt(50)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[8:11], s[20:21] offset:32
-; GCN-NEXT:    s_waitcnt vmcnt(51)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[12:15], s[20:21] offset:48
-; GCN-NEXT:    s_waitcnt vmcnt(48)
+; GCN-NEXT:    s_waitcnt vmcnt(44)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[16:19], s[20:21] offset:64
-; GCN-NEXT:    s_waitcnt vmcnt(45)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[20:23], s[20:21] offset:80
-; GCN-NEXT:    s_waitcnt vmcnt(42)
+; GCN-NEXT:    s_waitcnt vmcnt(38)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[24:27], s[20:21] offset:96
-; GCN-NEXT:    s_waitcnt vmcnt(39)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[28:31], s[20:21] offset:112
-; GCN-NEXT:    s_waitcnt vmcnt(36)
+; GCN-NEXT:    s_waitcnt vmcnt(32)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[32:35], s[20:21] offset:128
-; GCN-NEXT:    s_waitcnt vmcnt(33)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[36:39], s[20:21] offset:144
-; GCN-NEXT:    s_waitcnt vmcnt(30)
+; GCN-NEXT:    s_waitcnt vmcnt(26)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[40:43], s[20:21] offset:160
-; GCN-NEXT:    s_waitcnt vmcnt(27)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[44:47], s[20:21] offset:176
-; GCN-NEXT:    s_waitcnt vmcnt(24)
+; GCN-NEXT:    s_waitcnt vmcnt(20)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[48:51], s[20:21] offset:192
-; GCN-NEXT:    s_waitcnt vmcnt(21)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[52:55], s[20:21] offset:208
 ; GCN-NEXT:    s_waitcnt vmcnt(18)
 ; GCN-NEXT:    global_store_dwordx4 v64, v[56:59], s[20:21] offset:224
