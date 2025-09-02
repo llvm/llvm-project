@@ -3542,13 +3542,12 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
   // VPReplicateRegion::execute(), via shouldPack().
   // TODO: materialize build vectors for replicating recipes in replicating
   // regions.
-  // TODO: materialize build vectors for VPInstructions.
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
-      if (!DefR || !isa<VPReplicateRecipe, VPInstruction>(DefR))
+      if (!isa<VPReplicateRecipe, VPInstruction>(&R))
         continue;
+      auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion =
             cast<VPRecipeBase>(U)->getParent()->getParent();

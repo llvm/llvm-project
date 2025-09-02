@@ -158,7 +158,7 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each VPReplicateRecipe and replicating VPInstruction outside on
+  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
   /// any replicate region in \p Plan with \p VF single-scalar recipes.
   /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
   /// dissolving the latter.

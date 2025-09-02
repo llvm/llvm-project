@@ -463,8 +463,9 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of \p DefR for lane \p Lane. Use \p
-/// Def2LaneDefs to look up scalar definitions for operands of \DefR.
+/// Create a single-scalar clone of \p DefR (must either be a VPReplicateRecipe
+/// or VPInstruction) for lane \p Lane. Use \p Def2LaneDefs to look up scalar
+/// definitions for operands of \DefR.
 static VPRecipeWithIRFlags *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
              VPRecipeWithIRFlags *DefR, VPLane Lane,
@@ -503,10 +504,15 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 
   VPRecipeWithIRFlags *New;
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(DefR)) {
+    // TODO: have cloning of replicate recipes also provide the desired result
+    // coupled with setting its operands to NewOps (deriving IsSingleScalar and
+    // Mask from the operands?)
     New =
         new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
                               /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
   } else {
+    assert(isa<VPInstruction>(DefR) &&
+           "DefR must either be a VPReplicateRecipe or VPInstruction");
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
       New->setOperand(Idx, Op);
@@ -538,14 +544,14 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (!isa<VPInstruction, VPReplicateRecipe>(&R) ||
+          (isa<VPReplicateRecipe>(&R) &&
+           cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
+          (isa<VPInstruction>(&R) &&
+           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
+        continue;
+
       auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
-      if (!DefR || !isa<VPInstruction, VPReplicateRecipe>(DefR))
-        continue;
-      if ((isa<VPReplicateRecipe>(DefR) &&
-           cast<VPReplicateRecipe>(DefR)->isSingleScalar()) ||
-          (isa<VPInstruction>(DefR) &&
-           !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes()))
-        continue;
 
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
