@@ -98,127 +98,175 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
-template <bool isLoad, typename OpType>
-int32_t getL1CacheControl(OpType op) {
+static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
-  if constexpr (isLoad) {
-    switch (*op.getCacheControl()) {
-    case LoadCacheControl::L1UC_L2UC_L3UC:
-    case LoadCacheControl::L1UC_L2UC_L3C:
-    case LoadCacheControl::L1UC_L2C_L3UC:
-    case LoadCacheControl::L1UC_L2C_L3C:
-      control = 1;
-      break;
-    case LoadCacheControl::L1C_L2UC_L3UC:
-    case LoadCacheControl::L1C_L2UC_L3C:
-    case LoadCacheControl::L1C_L2C_L3UC:
-    case LoadCacheControl::L1C_L2C_L3C:
-      control = 2;
-      break;
-    case LoadCacheControl::L1S_L2UC_L3UC:
-    case LoadCacheControl::L1S_L2UC_L3C:
-    case LoadCacheControl::L1S_L2C_L3UC:
-    case LoadCacheControl::L1S_L2C_L3C:
-      control = 3;
-      break;
-    case LoadCacheControl::INVALIDATE_READ:
-      control = 4;
-      break;
-    }
-  } else {
-    switch (*op.getCacheControl()) {
-    case StoreCacheControl::L1UC_L2UC_L3UC:
-    case StoreCacheControl::L1UC_L2UC_L3WB:
-    case StoreCacheControl::L1UC_L2WB_L3UC:
-    case StoreCacheControl::L1UC_L2WB_L3WB:
-      control = 1;
-      break;
-    case StoreCacheControl::L1WT_L2UC_L3UC:
-    case StoreCacheControl::L1WT_L2UC_L3WB:
-    case StoreCacheControl::L1WT_L2WB_L3UC:
-    case StoreCacheControl::L1WT_L2WB_L3WB:
-      control = 2;
-      break;
-    case StoreCacheControl::L1S_L2UC_L3UC:
-    case StoreCacheControl::L1S_L2UC_L3WB:
-    case StoreCacheControl::L1S_L2WB_L3UC:
-    case StoreCacheControl::L1S_L2WB_L3WB:
-      control = 3;
-      break;
-    case StoreCacheControl::L1WB_L2UC_L3UC:
-    case StoreCacheControl::L1WB_L2WB_L3UC:
-    case StoreCacheControl::L1WB_L2UC_L3WB:
-      control = 4;
-      break;
-    }
+  switch (cc) {
+  case LoadCacheControl::L1UC_L2UC_L3UC:
+  case LoadCacheControl::L1UC_L2UC_L3C:
+  case LoadCacheControl::L1UC_L2C_L3UC:
+  case LoadCacheControl::L1UC_L2C_L3C:
+    control = 1;
+    break;
+  case LoadCacheControl::L1C_L2UC_L3UC:
+  case LoadCacheControl::L1C_L2UC_L3C:
+  case LoadCacheControl::L1C_L2C_L3UC:
+  case LoadCacheControl::L1C_L2C_L3C:
+    control = 2;
+    break;
+  case LoadCacheControl::L1S_L2UC_L3UC:
+  case LoadCacheControl::L1S_L2UC_L3C:
+  case LoadCacheControl::L1S_L2C_L3UC:
+  case LoadCacheControl::L1S_L2C_L3C:
+    control = 3;
+    break;
+  case LoadCacheControl::INVALIDATE_READ:
+    control = 4;
+    break;
   }
   return control;
 }
 
-template <bool isLoad, typename OpType>
-int32_t getL3CacheControl(OpType op) {
+static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
-  if constexpr (isLoad) {
-    switch (*op.getCacheControl()) {
-    case LoadCacheControl::L1UC_L2UC_L3UC:
-    case LoadCacheControl::L1UC_L2C_L3UC:
-    case LoadCacheControl::L1C_L2UC_L3UC:
-    case LoadCacheControl::L1C_L2C_L3UC:
-    case LoadCacheControl::L1S_L2UC_L3UC:
-    case LoadCacheControl::L1S_L2C_L3UC:
-      control = 1;
-      break;
-    case LoadCacheControl::L1UC_L2UC_L3C:
-    case LoadCacheControl::L1UC_L2C_L3C:
-    case LoadCacheControl::L1C_L2UC_L3C:
-    case LoadCacheControl::L1C_L2C_L3C:
-    case LoadCacheControl::L1S_L2UC_L3C:
-    case LoadCacheControl::L1S_L2C_L3C:
-      control = 2;
-      break;
-    case LoadCacheControl::INVALIDATE_READ:
-      control = 4;
-      break;
-    }
-  } else {
-    switch (*op.getCacheControl()) {
-    case StoreCacheControl::L1UC_L2UC_L3UC:
-    case StoreCacheControl::L1UC_L2WB_L3UC:
-    case StoreCacheControl::L1WT_L2UC_L3UC:
-    case StoreCacheControl::L1WT_L2WB_L3UC:
-    case StoreCacheControl::L1S_L2UC_L3UC:
-    case StoreCacheControl::L1S_L2WB_L3UC:
-    case StoreCacheControl::L1WB_L2UC_L3UC:
-    case StoreCacheControl::L1WB_L2WB_L3UC:
-      control = 1;
-      break;
-    case StoreCacheControl::L1UC_L2UC_L3WB:
-    case StoreCacheControl::L1UC_L2WB_L3WB:
-    case StoreCacheControl::L1WT_L2UC_L3WB:
-    case StoreCacheControl::L1WT_L2WB_L3WB:
-    case StoreCacheControl::L1S_L2UC_L3WB:
-    case StoreCacheControl::L1S_L2WB_L3WB:
-    case StoreCacheControl::L1WB_L2UC_L3WB:
-      control = 2;
-      break;
-    }
+  switch (cc) {
+  case StoreCacheControl::L1UC_L2UC_L3UC:
+  case StoreCacheControl::L1UC_L2UC_L3WB:
+  case StoreCacheControl::L1UC_L2WB_L3UC:
+  case StoreCacheControl::L1UC_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WT_L2UC_L3UC:
+  case StoreCacheControl::L1WT_L2UC_L3WB:
+  case StoreCacheControl::L1WT_L2WB_L3UC:
+  case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 2;
+    break;
+  case StoreCacheControl::L1S_L2UC_L3UC:
+  case StoreCacheControl::L1S_L2UC_L3WB:
+  case StoreCacheControl::L1S_L2WB_L3UC:
+  case StoreCacheControl::L1S_L2WB_L3WB:
+    control = 3;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
+    control = 4;
+    break;
   }
   return control;
+}
+
+static int32_t getL3CacheControl(LoadCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case LoadCacheControl::L1UC_L2UC_L3UC:
+  case LoadCacheControl::L1UC_L2C_L3UC:
+  case LoadCacheControl::L1C_L2UC_L3UC:
+  case LoadCacheControl::L1C_L2C_L3UC:
+  case LoadCacheControl::L1S_L2UC_L3UC:
+  case LoadCacheControl::L1S_L2C_L3UC:
+    control = 1;
+    break;
+  case LoadCacheControl::L1UC_L2UC_L3C:
+  case LoadCacheControl::L1UC_L2C_L3C:
+  case LoadCacheControl::L1C_L2UC_L3C:
+  case LoadCacheControl::L1C_L2C_L3C:
+  case LoadCacheControl::L1S_L2UC_L3C:
+  case LoadCacheControl::L1S_L2C_L3C:
+    control = 2;
+    break;
+  case LoadCacheControl::INVALIDATE_READ:
+    control = 4;
+    break;
+  }
+  return control;
+}
+
+static int32_t getL3CacheControl(StoreCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case StoreCacheControl::L1UC_L2UC_L3UC:
+  case StoreCacheControl::L1UC_L2WB_L3UC:
+  case StoreCacheControl::L1WT_L2UC_L3UC:
+  case StoreCacheControl::L1WT_L2WB_L3UC:
+  case StoreCacheControl::L1S_L2UC_L3UC:
+  case StoreCacheControl::L1S_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+    control = 1;
+    break;
+  case StoreCacheControl::L1UC_L2UC_L3WB:
+  case StoreCacheControl::L1UC_L2WB_L3WB:
+  case StoreCacheControl::L1WT_L2UC_L3WB:
+  case StoreCacheControl::L1WT_L2WB_L3WB:
+  case StoreCacheControl::L1S_L2UC_L3WB:
+  case StoreCacheControl::L1S_L2WB_L3WB:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
+    control = 2;
+    break;
+  }
+  return control;
+}
+
+static std::optional<LoadCacheControl> getCacheControl(PrefetchOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(BlockLoad2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(BlockPrefetch2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<StoreCacheControl> getCacheControl(BlockStore2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
+  if (op->hasAttr("cache_control")) {
+    auto attr = op->getAttrOfType<xevm::LoadCacheControlAttr>("cache_control");
+    if (!attr)
+      return std::nullopt;
+    return std::optional<LoadCacheControl>(attr.getValue());
+  }
+  return std::nullopt;
+}
+
+static std::optional<StoreCacheControl> getCacheControl(LLVM::StoreOp op) {
+  if (op->hasAttr("cache_control")) {
+    auto attr = op->getAttrOfType<xevm::StoreCacheControlAttr>("cache_control");
+    if (!attr)
+      return std::nullopt;
+    return std::optional<StoreCacheControl>(attr.getValue());
+  }
+  return std::nullopt;
+}
+
+template <typename OpType>
+int32_t getL1CacheControl(OpType op) {
+  return getL1CacheControl(*getCacheControl(op));
+}
+
+template <typename OpType>
+int32_t getL3CacheControl(OpType op) {
+  return getL3CacheControl(*getCacheControl(op));
 }
 
 template <bool isLoad, typename OpType>
 static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
-  if (!op.getCacheControl())
+  if (!getCacheControl(op))
     return {};
   constexpr int32_t decorationCacheControlArity{4};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<isLoad, OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op), 0};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<isLoad, OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op), 0};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 
