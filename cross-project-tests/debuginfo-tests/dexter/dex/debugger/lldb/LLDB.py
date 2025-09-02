@@ -232,7 +232,7 @@ class LLDB(DebuggerBase):
                     ):
                         stepped_to_breakpoint = True
             if stepped_to_breakpoint:
-                self._thread.Continue()
+                self._process.Continue()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
