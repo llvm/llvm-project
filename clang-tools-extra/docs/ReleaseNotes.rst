@@ -211,12 +211,8 @@ Changes in existing checks
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
   when the format string is converted to a different type by an implicit
-  constructor call.
-
-- Improved :doc:`modernize-use-std-format 
-  <clang-tidy/checks/modernize/use-std-format>` now correctly replaces signed 
-  types, and correctly adds a ``static_cast`` to the underlying type when being
-  printed in hex.
+  constructor call. Also correctly replaces signed types, and correctly
+  adds a ``static_cast`` to the underlying type when being printed in hex.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
