@@ -153,7 +153,7 @@ class SPIRVEmitIntrinsics
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
-  void insertFPFastMathDefault(Module &M);
+  void insertConstantsForFPFastMathDefault(Module &M);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -2312,7 +2312,7 @@ static FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
   return FPFastMathDefaultInfoVec[Index];
 }
 
-void SPIRVEmitIntrinsics::insertFPFastMathDefault(Module &M) {
+void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
   const SPIRVSubtarget *ST = TM->getSubtargetImpl();
   if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
     return;
