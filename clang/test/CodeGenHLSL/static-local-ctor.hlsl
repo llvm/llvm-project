@@ -22,7 +22,7 @@ void InitBuf(RWBuffer<int> buf) {
 // CHECK-NEXT: br i1 [[Tmp3]]
 // CHECK-NOT: _Init_thread_header
 // CHECK: init.check:
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1EjijjPKc(
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiE27__createFromImplicitBindingEjjijPKc(
 // CHECK-NEXT: store i8 1, ptr @_ZGVZ4mainvE5mybuf
 // CHECK-NOT: _Init_thread_footer
 

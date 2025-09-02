@@ -34,7 +34,7 @@ RESOURCE Buffer;
 
 #endif
 
-// CHECK: CXXRecordDecl {{.*}} implicit referenced <undeserialized declarations> class [[RESOURCE]] definition
+// CHECK: CXXRecordDecl {{.*}} implicit referenced class [[RESOURCE]] definition
 // CHECK: FinalAttr {{.*}}  Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]

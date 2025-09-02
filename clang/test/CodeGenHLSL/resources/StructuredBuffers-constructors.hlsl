@@ -27,32 +27,37 @@ export void foo() {
 // CHECK: @_ZL4Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison, align 4
 // CHECK: @[[Buf2Str:.*]] = private unnamed_addr constant [5 x i8] c"Buf2\00", align 1
 
-// Buf1 initialization part 1 - global init function that calls StructuredBuffer<float> C1 constructor
+// Buf1 initialization part 1 - global init function that calls StructuredBuffer<float>::__createFromBinding
 // with explicit binding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
+// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfE19__createFromBindingEjjijPKc(ptr {{.*}} @_ZL4Buf1,
 // CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
-// Buf1 initialization part 2 - body of StructuredBuffer<float> C1 constructor with explicit binding 
-// that calls the C2 constructor
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this, 
-// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
-// CHECK: call void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4)
-// CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
+// Buf1 initialization part 2 - body of StructuredBuffer<float>::::__createFromBinding
 
-// Buf2 initialization part 1 - global init function that calls RWStructuredBuffer<float> C1 constructor with
-// implicit binding
+// CHECK: define {{.*}} void @_ZN4hlsl16StructuredBufferIfE19__createFromBindingEjjijPKc(
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::StructuredBuffer") align 4 %[[Tmp1:.*]], i32 noundef %registerNo, 
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Handle1:.*]] = call target("dx.RawBuffer", float, 0, 0) 
+// CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
+// CHECK: call void @_ZN4hlsl16StructuredBufferIfEC1EU13_Res_t_Raw_CTfu17__hlsl_resource_t(
+// CHECK-SAME: ptr {{.*}} %[[Tmp1]], target("dx.RawBuffer", float, 0, 0) %[[Handle1]])
+
+// Buf2 initialization part 1 - global init function that calls RWStructuredBuffer<float>::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2,
-// CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 0, i32 noundef 0, ptr noundef @[[Buf2Str]])
+// CHECK-NEXT: call void @_ZN4hlsl18RWStructuredBufferIfE27__createFromImplicitBindingEjjijPKc(ptr {{.*}} @_ZL4Buf2,
+// CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
-// Buf2 initialization part 2 - body of RWStructuredBuffer<float> C1 constructor with implicit binding that calls the C2 constructor
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
-// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
-// CHECK: call void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4)
-// CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
+// Buf2 initialization part 2 - body of RWStructuredBuffer<float>::__createFromImplicitBinding
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfE27__createFromImplicitBindingEjjijPKc(
+// CHECK-SAME: ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align 4 %[[Tmp2:.*]], i32 noundef %orderId, 
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: %[[Handle2:.*]] = call target("dx.RawBuffer", float, 1, 0)
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t(
+// CHECK: call void @_ZN4hlsl18RWStructuredBufferIfEC1EU13_Res_u_Raw_CTfu17__hlsl_resource_t(
+// CHECK-SAME: ptr {{.*}} %[[Tmp2]], target("dx.RawBuffer", float, 1, 0) %[[Handle2]])
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // AppendStructuredBuffer<float> C1 default constructor
@@ -66,23 +71,17 @@ export void foo() {
 // CHECK: define linkonce_odr hidden void @_ZN4hlsl22AppendStructuredBufferIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK: call void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
 
-// Buf1 initialization part 3 - body of AppendStructuredBuffer<float> C2 constructor with explicit binding 
-// that initializes handle with @llvm.dx.resource.handlefrombinding
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
-// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
-// CHECK-DXIL: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
-// CHECK-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], ptr %__handle, align 4
+// Buf1 initialization part 3 - body of StructuredBuffer<float> constructor with handle
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl16StructuredBufferIfEC1EU13_Res_t_Raw_CTfu17__hlsl_resource_t(ptr {{.*}} %this,
+// CHECK-SAME: target("dx.RawBuffer", float, 0, 0) %handle)
+// CHECK: %[[HandlePtr1:.*]] = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %{{.*}}, ptr %[[HandlePtr1]], align 4
 
-// Buf2 initialization part 3 - body of RWStructuredBuffer<float> C2 constructor with implicit binding that initializes
-// handle with @llvm.dx.resource.handlefromimplicitbinding
-// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
-// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
-// CHECK: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t
-// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
-// CHECK-NEXT: store target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], ptr %__handle, align 4
+// Buf2 initialization part 3 - body of RWStructuredBuffer<float> constructor with handle
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfEC2EU13_Res_u_Raw_CTfu17__hlsl_resource_t(ptr {{.*}} %this,
+// CHECK-SAME: target("dx.RawBuffer", float, 1, 0) %handle)
+// CHECK: %[[HandlePtr2:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 1, 0) %{{.*}}, ptr %[[HandlePtr2]], align 4
 
 // Buf3 initialization part 3 - body of AppendStructuredBuffer<float> default C2 constructor that
 // initializes handle to poison

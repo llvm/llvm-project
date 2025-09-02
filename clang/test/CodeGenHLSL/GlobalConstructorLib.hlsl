@@ -31,9 +31,11 @@ void SecondEntry() {}
 // CHECK: ret void
 
 
-// Verify the constructor is alwaysinline
+// Verify the constructors are alwaysinline
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
-// NOINLINE-NEXT: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC2EjijjPKc({{.*}} [[CtorAttr:\#[0-9]+]]
+// NOINLINE-NEXT: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC1EU9_Res_u_CTfu17__hlsl_resource_t(ptr {{.*}} %this, target("dx.TypedBuffer", float, 1, 0, 0) %handle) {{.*}} [[CtorAttr:\#[0-9]+]]
+// NOINLINE: ; Function Attrs: {{.*}}alwaysinline
+// NOINLINE-NEXT: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC2EU9_Res_u_CTfu17__hlsl_resource_t(ptr {{.*}} %this, target("dx.TypedBuffer", float, 1, 0, 0) %handle) {{.*}} [[CtorAttr]]
 
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
 // NOINLINE-NEXT: define internal void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl() [[InitAttr:\#[0-9]+]]
