@@ -1060,8 +1060,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
-    if (Res == CUDA_SUCCESS)
+    if (Res == CUDA_SUCCESS) {
       Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
+      Info.add("Product Name", TmpChar, "", DeviceInfo::PRODUCT_NAME);
+    }
 
     Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
@@ -1118,7 +1120,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       MaxBlock.add("z", TmpInt);
 
-    auto &MaxGrid = *Info.add("Maximum Grid Dimensions", "");
+    // TODO: I assume CUDA devices have no limit on the amount of threads,
+    // verify this
+    Info.add("Maximum Grid Size", std::numeric_limits<uint32_t>::max(), "",
+             DeviceInfo::MAX_WORK_SIZE);
+
+    auto &MaxGrid = *Info.add("Maximum Grid Dimensions", std::monostate{}, "",
+                              DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
       MaxGrid.add("x", TmpInt);

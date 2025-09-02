@@ -123,8 +123,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
   bool NoInfsFPMath = false; ///< Set no-infs-fp-math attribute for functions.
   bool NoNaNsFPMath = false; ///< Set no-nans-fp-math attribute for functions.
-  bool ApproxFuncFPMath =
-      false; ///< Set approx-func-fp-math attribute for functions.
+  bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.

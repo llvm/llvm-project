@@ -2338,23 +2338,15 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
+  // TODO: Support mul.
+  if (BinOp == Instruction::Mul)
+    return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
   if (!RHSC)
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
-  if (BinOp == Instruction::Mul) {
-    // Multiplying by 0 or 1 never overflows
-    if (C.isZero() || C.isOne())
-      return true;
-    if (Signed)
-      return false;
-    APInt Limit = APInt::getMaxValue(NumBits).udiv(C);
-    // To avoid overflow, we need to make sure that LHS <= MAX / C.
-    return isKnownPredicateAt(ICmpInst::ICMP_ULE, LHS, getConstant(Limit),
-                              CtxI);
-  }
   bool IsSub = (BinOp == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.
@@ -16009,6 +16001,16 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      // Trip count expressions sometimes consist of adding 3 operands, i.e.
+      // (Const + A + B). There may be guard info for A + B, and if so, apply
+      // it.
+      // TODO: Could more generally apply guards to Add sub-expressions.
+      if (isa<SCEVConstant>(Expr->getOperand(0)) &&
+          Expr->getNumOperands() == 3) {
+        if (const SCEV *S = Map.lookup(
+                SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2))))
+          return SE.getAddExpr(Expr->getOperand(0), S);
+      }
       SmallVector<const SCEV *, 2> Operands;
       bool Changed = false;
       for (const auto *Op : Expr->operands()) {
