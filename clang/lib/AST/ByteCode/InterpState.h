@@ -115,7 +115,13 @@ public:
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      Alloc = std::make_unique<DynamicAllocator>();
+    }
+
+    return *Alloc.get();
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
@@ -161,7 +167,7 @@ private:
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
+  std::unique_ptr<DynamicAllocator> Alloc;
 
 public:
   /// Reference to the module containing all bytecode.
