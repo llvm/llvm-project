@@ -383,7 +383,7 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
     // the same unwind dest"
     BasicBlock *UnwindDest = nullptr;
     if (auto *Invoke =
-dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
+            dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
       UnwindDest = Invoke->getUnwindDest();
     }
 
