@@ -574,6 +574,9 @@ public:
     const clang::CXXRecordDecl *vtableClass;
   };
 
+  using VisitedVirtualBasesSetTy =
+      llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>;
+
   using VPtrsVector = llvm::SmallVector<VPtr, 4>;
   VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
   void getVTablePointers(clang::BaseSubobject base,
@@ -581,7 +584,7 @@ public:
                          clang::CharUnits offsetFromNearestVBase,
                          bool baseIsNonVirtualPrimaryBase,
                          const clang::CXXRecordDecl *vtableClass,
-                         VPtrsVector &vptrs);
+                         VisitedVirtualBasesSetTy &vbases, VPtrsVector &vptrs);
   /// Return the Value of the vtable pointer member pointed to by thisAddr.
   mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
                            const clang::CXXRecordDecl *vtableClass);
@@ -1140,6 +1143,8 @@ public:
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  void emitCXXThrowExpr(const CXXThrowExpr *e);
+
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 
@@ -1287,6 +1292,8 @@ public:
   /// the LLVM value representation.  The l-value must be a simple
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+  mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
+                               SourceLocation loc, LValueBaseInfo baseInfo);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -1379,6 +1386,8 @@ public:
 
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
+  mlir::Value emitUnPromotedValue(mlir::Value result, QualType unPromotionType);
+
   /// Emit a reached-unreachable diagnostic if \p loc is valid and runtime
   /// checking is enabled. Otherwise, just emit an unreachable instruction.
   /// \p createNewBlock indicates whether to create a new block for the IR
@@ -1446,7 +1455,7 @@ public:
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
-          value.getLoc(), value, addr,
+          value.getLoc(), value, addr, /*isVolatile=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
@@ -1503,6 +1512,17 @@ public:
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
   void emitVAEnd(mlir::Value vaList);
+
+  /// Generate code to get an argument from the passed in pointer
+  /// and update it accordingly.
+  ///
+  /// \param ve The \c VAArgExpr for which to generate code.
+  ///
+  /// \param vaListAddr Receives a reference to the \c va_list as emitted by
+  /// either \c emitVAListRef or \c emitMSVAListRef.
+  ///
+  /// \returns SSA value with the argument.
+  mlir::Value emitVAArg(VAArgExpr *ve);
 
   /// ----------------------
   /// CIR build helpers

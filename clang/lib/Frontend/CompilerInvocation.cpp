@@ -623,6 +623,9 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  LangOpts.NamedLoops =
+      Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
+
   // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
@@ -639,6 +642,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (Args.hasArg(OPT_fdx_rootsignature_version) && !LangOpts.HLSL)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fdx-rootsignature-version" << GetInputKindName(IK);
+
+  if (Args.hasArg(OPT_fdx_rootsignature_define) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-rootsignature-define" << GetInputKindName(IK);
 
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
@@ -1315,15 +1322,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
   if (AnOpts.ShouldTrackConditionsDebug && !AnOpts.ShouldTrackConditions)
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << "track-conditions-debug" << "'track-conditions' to also be enabled";
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
-                                                           << "a filename";
-
-  if (!AnOpts.ModelPath.empty() &&
-      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
-                                                           << "a filename";
 }
 
 /// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.

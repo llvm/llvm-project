@@ -459,8 +459,7 @@ public:
   }
 
   virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
+  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const {
     return 0;
   }
@@ -972,8 +971,8 @@ public:
   }
 
   virtual InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
-                         TTI::TargetCostKind CostKind) const {
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 

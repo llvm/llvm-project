@@ -285,10 +285,10 @@ SimpleLogicalContext DataflowAnalysisContext::exportLogicalContext(
     llvm::DenseSet<dataflow::Atom> TargetTokens) const {
   SimpleLogicalContext LC;
 
-  if (Invariant != nullptr) {
-    LC.Invariant = Invariant;
+  // Copy `Invariant` even if it is null, to initialize the field.
+  LC.Invariant = Invariant;
+  if (Invariant != nullptr)
     getReferencedAtoms(*Invariant, TargetTokens);
-  }
 
   llvm::DenseSet<dataflow::Atom> Dependencies =
       collectDependencies(std::move(TargetTokens));

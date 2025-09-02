@@ -1642,6 +1642,17 @@ defm auto_import : BoolFOption<"auto-import",
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<offload_targets_EQ>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
+// This flag is only here so we can test the named loops implementation
+// in C++ mode and C language modes before C2y to make sure it actually
+// works; it should be removed once the syntax of the feature is stable
+// enough to backport it to earlier language modes (and to C++ if it ever
+// gets standardised as a C++ feature).
+defm named_loops
+    : BoolFOption<
+          "named-loops", LangOpts<"NamedLoops">, DefaultFalse,
+          PosFlag<SetTrue, [], [CC1Option], "Enable support for named loops">,
+          NegFlag<SetFalse>>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,
@@ -1851,7 +1862,7 @@ defm pseudo_probe_for_profiling
                   CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
                   PosFlag<SetTrue, [], [ClangOption], "Emit">,
                   NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
-                  BothFlags<[], [ClangOption, CC1Option],
+                  BothFlags<[], [ClangOption, CC1Option, CLOption],
                             " pseudo probes for sample profiling">>;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -2612,16 +2623,27 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
-defm sanitize_debug_trap_reasons
-    : BoolFOption<
-          "sanitize-debug-trap-reasons",
-          CodeGenOpts<"SanitizeDebugTrapReasons">, DefaultTrue,
-          PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                  "Annotate trap blocks in debug info with UBSan trap reasons">,
-          NegFlag<SetFalse, [], [ClangOption, CC1Option],
-                  "Do not annotate trap blocks in debug info with UBSan trap "
-                  "reasons">>;
-
+def fsanitize_debug_trap_reasons_EQ
+  : Joined<["-"], "fsanitize-debug-trap-reasons=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Set how trap reasons are emitted. "
+      "`none` - Not emitted. This gives the smallest debug info; "
+      "`basic` - Emit a fixed trap message per check type. This increases the "
+      "debug info size but not as much as `detailed`; "
+      "`detailed` - Emit a more detailed trap message. This increases the "
+      "debug info size the most. Default is `detailed`.">,
+    Values<"none,basic,detailed">,
+    NormalizedValuesScope<"CodeGenOptions::SanitizeDebugTrapReasonKind">,
+    NormalizedValues<["None", "Basic", "Detailed"]>,
+    MarshallingInfoEnum<CodeGenOpts<"SanitizeDebugTrapReasons">, "Detailed">;
+def fsanitize_debug_trap_reasons
+    : Flag<["-"], "fsanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["detailed"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=detailed">;
+def fno_sanitize_debug_trap_reasons
+    : Flag<["-"], "fno-sanitize-debug-trap-reasons">, Group<f_clang_Group>,
+      Alias<fsanitize_debug_trap_reasons_EQ>, AliasArgs<["none"]>,
+      HelpText<"Alias for -fsanitize-debug-trap-reasons=none">;
 defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   CodeGenOpts<"SanitizeMinimalRuntime">, DefaultFalse,
   PosFlag<SetTrue>,
@@ -6820,10 +6842,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
@@ -9404,6 +9426,11 @@ def res_may_alias : Option<["/", "-"], "res-may-alias", KIND_FLAG>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
   HelpText<"Assume that UAVs/SRVs may alias">,
   MarshallingInfoFlag<CodeGenOpts<"ResMayAlias">>;
+def dxc_strip_rootsignature :
+  Option<["/", "-"], "Qstrip-rootsignature", KIND_FLAG>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>,
+  HelpText<"Omit the root signature from produced DXContainer">;
 def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
   HelpText<"Set target profile">,
   Values<"ps_6_0, ps_6_1, ps_6_2, ps_6_3, ps_6_4, ps_6_5, ps_6_6, ps_6_7,"
@@ -9434,6 +9461,18 @@ def fdx_rootsignature_version :
 def dxc_rootsig_ver :
   Separate<["/", "-"], "force-rootsig-ver">,
   Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
+def fdx_rootsignature_define :
+  Joined<["-"], "fdx-rootsignature-define=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"HLSLRootSigOverride">, "\"\"">,
+  HelpText<"Override entry function root signature with root signature at "
+           "given macro name.">;
+def dxc_rootsig_define :
+  Separate<["-"], "rootsig-define">,
+  Alias<fdx_rootsignature_define>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
@@ -9468,8 +9507,12 @@ def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
 def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
-      HelpText<"Specify the available SPIR-V extensions. If this option is not "
-               "specified, then all extensions are available.">;
+      HelpText<
+          "Specify the available SPIR-V extensions. If this option is not "
+          "specified, then all extensions are available. If KHR is specified, "
+          "then all KHR extensions will be available. If DXC is specifided, "
+          "then all extensions implemented by the DirectX Shader compiler will "
+          "be available. This option is useful for moving from DXC to Clang.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;
@@ -9479,6 +9522,16 @@ def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
 def fvk_use_scalar_layout
     : DXCFlag<"fvk-use-scalar-layout">,
       HelpText<"Use scalar memory layout for Vulkan resources.">;
+
+def fhlsl_spv_use_unknown_image_format
+    : Flag<["-"], "fspv-use-unknown-image-format">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"For storage images and texel buffers, sets the default format "
+               "to 'Unknown' when not specified via the `vk::image_format` "
+               "attribute. If this option is not used, the format is inferred "
+               "from the resource's data type.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
