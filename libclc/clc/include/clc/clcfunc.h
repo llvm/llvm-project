@@ -24,6 +24,8 @@
 #define _CLC_DEF __attribute__((always_inline))
 #endif
 
+#define _CLC_DEF_WEAK _CLC_DEF __attribute__((weak))
+
 #if __OPENCL_C_VERSION__ == CL_VERSION_2_0 ||                                  \
     (__OPENCL_C_VERSION__ >= CL_VERSION_3_0 &&                                 \
      defined(__opencl_c_generic_address_space))
