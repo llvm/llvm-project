@@ -718,8 +718,8 @@ _mm512_cvtepu64_pd(__m512i __A) {
   return (__m512d)__builtin_convertvector((__v8du)__A, __v8df);
 }
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512
-_mm512_mask_cvtepu64_pd (__m512d __W, __mmask8 __U, __m512i __A) {
+static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_cvtepu64_pd(__m512d __W, __mmask8 __U, __m512i __A) {
   return (__m512d)__builtin_ia32_selectpd_512((__mmask8)__U,
                                               (__v8df)_mm512_cvtepu64_pd(__A),
                                               (__v8df)__W);
