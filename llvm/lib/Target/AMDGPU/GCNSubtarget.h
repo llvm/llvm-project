@@ -236,6 +236,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
+  bool Has1024AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -1436,6 +1437,8 @@ public:
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
+
+  bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
