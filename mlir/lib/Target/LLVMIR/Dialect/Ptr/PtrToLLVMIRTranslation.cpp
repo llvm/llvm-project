@@ -59,24 +59,25 @@ convertPtrAddOp(PtrAddOp ptrAddOp, llvm::IRBuilderBase &builder,
   if (!basePtr || !offset)
     return ptrAddOp.emitError("Failed to lookup operands");
 
-  // Create GEP instruction for pointer arithmetic
-  auto *gep = cast<llvm::GetElementPtrInst>(
-      builder.CreateGEP(builder.getInt8Ty(), basePtr, {offset}));
-
-  // Set the appropriate flags
+  // Create the GEP flags
+  llvm::GEPNoWrapFlags gepFlags;
   switch (ptrAddOp.getFlags()) {
   case ptr::PtrAddFlags::none:
     break;
   case ptr::PtrAddFlags::nusw:
-    gep->setNoWrapFlags(llvm::GEPNoWrapFlags::noUnsignedSignedWrap());
+    gepFlags = llvm::GEPNoWrapFlags::noUnsignedSignedWrap();
     break;
   case ptr::PtrAddFlags::nuw:
-    gep->setNoWrapFlags(llvm::GEPNoWrapFlags::noUnsignedWrap());
+    gepFlags = llvm::GEPNoWrapFlags::noUnsignedWrap();
     break;
   case ptr::PtrAddFlags::inbounds:
-    gep->setNoWrapFlags(llvm::GEPNoWrapFlags::inBounds());
+    gepFlags = llvm::GEPNoWrapFlags::inBounds();
     break;
   }
+
+  // Create GEP instruction for pointer arithmetic
+  llvm::Value *gep =
+      builder.CreateGEP(builder.getInt8Ty(), basePtr, {offset}, "", gepFlags);
 
   moduleTranslation.mapValue(ptrAddOp.getResult(), gep);
   return success();
@@ -96,9 +97,7 @@ static LogicalResult convertLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
     return loadOp.emitError("Failed to convert result type");
 
   // Create the load instruction.
-  llvm::MaybeAlign alignment = loadOp.getAlignment()
-                                   ? llvm::MaybeAlign(*loadOp.getAlignment())
-                                   : llvm::MaybeAlign();
+  llvm::MaybeAlign alignment(loadOp.getAlignment().value_or(0));
   llvm::LoadInst *loadInst = builder.CreateAlignedLoad(
       resultType, ptr, alignment, loadOp.getVolatile_());
 
@@ -147,9 +146,7 @@ convertStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
     return storeOp.emitError("Failed to lookup operands");
 
   // Create the store instruction.
-  llvm::MaybeAlign alignment = storeOp.getAlignment()
-                                   ? llvm::MaybeAlign(*storeOp.getAlignment())
-                                   : llvm::MaybeAlign();
+  llvm::MaybeAlign alignment(storeOp.getAlignment().value_or(0));
   llvm::StoreInst *storeInst =
       builder.CreateAlignedStore(value, ptr, alignment, storeOp.getVolatile_());
 
@@ -221,16 +218,16 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final {
 
     return llvm::TypeSwitch<Operation *, LogicalResult>(op)
-        .Case<PtrAddOp>([&](PtrAddOp ptrAddOp) {
+        .Case([&](PtrAddOp ptrAddOp) {
           return convertPtrAddOp(ptrAddOp, builder, moduleTranslation);
         })
-        .Case<LoadOp>([&](LoadOp loadOp) {
+        .Case([&](LoadOp loadOp) {
           return convertLoadOp(loadOp, builder, moduleTranslation);
         })
-        .Case<StoreOp>([&](StoreOp storeOp) {
+        .Case([&](StoreOp storeOp) {
           return convertStoreOp(storeOp, builder, moduleTranslation);
         })
-        .Case<TypeOffsetOp>([&](TypeOffsetOp typeOffsetOp) {
+        .Case([&](TypeOffsetOp typeOffsetOp) {
           return convertTypeOffsetOp(typeOffsetOp, builder, moduleTranslation);
         })
         .Default([&](Operation *op) {
