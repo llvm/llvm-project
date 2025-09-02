@@ -1719,6 +1719,37 @@ Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+// Allow existing calls to operator new() that takes a __hot_cold_t parameter to
+// be updated with a compiler-determined hot cold hint value. This is used in
+// cases where the call is marked nobuiltin (because operator new called
+// explicitly) and therefore cannot be replaced with a different callee.
+Value *LibCallSimplifier::optimizeExistingHotColdNew(CallInst *CI,
+                                                     IRBuilderBase &B) {
+  if (!OptimizeHotColdNew || !OptimizeExistingHotColdNew)
+    return nullptr;
+  Function *Callee = CI->getCalledFunction();
+  if (!Callee)
+    return nullptr;
+  LibFunc Func;
+  if (!TLI->getLibFunc(*Callee, Func))
+    return nullptr;
+  switch (Func) {
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    return optimizeNew(CI, B, Func);
+  default:
+    return nullptr;
+  }
+}
+
 // When enabled, replace operator new() calls marked with a hot or cold memprof
 // attribute with an operator new() call that takes a __hot_cold_t parameter.
 // Currently this is supported by the open source version of tcmalloc, see:
@@ -4094,8 +4125,11 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
-  if (CI->isNoBuiltin())
-    return nullptr;
+  if (CI->isNoBuiltin()) {
+    // If this is an existing call to a hot cold operator new, we can update the
+    // hint parameter value, which doesn't change the callee.
+    return optimizeExistingHotColdNew(CI, Builder);
+  }
 
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
