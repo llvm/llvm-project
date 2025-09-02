@@ -847,6 +847,8 @@ __m512d test_mm512_maskz_cvtepu64_pd(__mmask8 __U, __m512i __A) {
   return _mm512_maskz_cvtepu64_pd(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_cvtepu64_pd(/*1010 0101=*/0xa5, (__m512i)(__v8du){1, 1, 2, 2, 4, 4, 8, 8}), 1.0, 0.0, 2.0, 0.0, 0.0, 4.0, 0.0, 8.0));
+
 __m512d test_mm512_cvt_roundepu64_pd(__m512i __A) {
   // CHECK-LABEL: test_mm512_cvt_roundepu64_pd
   // CHECK: @llvm.x86.avx512.uitofp.round.v8f64.v8i64
