@@ -9,7 +9,7 @@
 #ifndef SANITIZER_PTRAUTH_H
 #define SANITIZER_PTRAUTH_H
 
-#if __has_feature(ptrauth_intrinsics)
+#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
 #  include <ptrauth.h>
 #elif defined(__ARM_FEATURE_PAC_DEFAULT) && !defined(__APPLE__)
 // On the stack the link register is protected with Pointer

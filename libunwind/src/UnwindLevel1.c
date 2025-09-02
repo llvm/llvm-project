@@ -31,10 +31,6 @@
 #include "shadow_stack_unwind.h"
 #include "unwind.h"
 
-#if __has_include(<ptrauth.h>)
-#include <ptrauth.h>
-#endif
-
 #if !defined(_LIBUNWIND_ARM_EHABI) && !defined(__USING_SJLJ_EXCEPTIONS__) &&   \
     !defined(__wasm__)
 
@@ -612,7 +608,7 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
 
-#if __has_feature(ptrauth_calls)
+#if __libunwind_has_ptrauth
   // If we are in an arm64e frame, then the PC should have been signed with the
   // sp
   {

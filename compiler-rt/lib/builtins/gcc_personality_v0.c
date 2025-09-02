@@ -30,8 +30,11 @@ EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
                                             _Unwind_Personality_Fn);
 #endif
 
-#if __has_feature(ptrauth_qualifier)
+#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
 #include <ptrauth.h>
+
+#define __gcc_personality_has_ptrauth 1
+
 #if __has_feature(ptrauth_restricted_intptr_qualifier)
 #define __ptrauth_gcc_personality_intptr(key, addressDiscriminated,            \
                                               discriminator)                   \
@@ -42,6 +45,7 @@ EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
   __ptrauth(key, addressDiscriminated, discriminator)
 #endif
 #else
+#define __gcc_personality_has_ptrauth 0
 #define __ptrauth_gcc_personality_intptr(...)
 #endif
 
@@ -283,7 +287,7 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
       _Unwind_SetGR(context, __builtin_eh_return_data_regno(1), 0);
       size_t __ptrauth_gcc_personality_lpad landingPad =
           funcStart + landingPadOffset;
-#if __has_feature(ptrauth_qualifier)
+#if __gcc_personality_has_ptrauth
       uintptr_t stackPointer = _Unwind_GetGR(context, -2);
       const uintptr_t existingDiscriminator =
         ptrauth_blend_discriminator(&landingPad,

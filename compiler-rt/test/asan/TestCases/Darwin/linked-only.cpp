@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include "sanitizer/asan_interface.h"
-#if __has_feature(ptrauth_calls)
+#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
 #  include <ptrauth.h>
 #endif
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   // CHECK: =-1=
 
   char *mainptr;
-#if __has_feature(ptrauth_calls)
+#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
   mainptr = (char *)ptrauth_strip((void *)&main, ptrauth_key_return_address);
 #else
   mainptr = (char *)&main;

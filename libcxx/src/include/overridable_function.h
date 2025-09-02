@@ -13,7 +13,7 @@
 #include <__config>
 #include <cstdint>
 
-#if __has_feature(ptrauth_calls)
+#if __ptrauth_cxxabi_has_ptrauth
 #  include <ptrauth.h>
 #endif
 
@@ -83,7 +83,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   uintptr_t __end   = reinterpret_cast<uintptr_t>(&__lcxx_override_end);
   uintptr_t __ptr   = reinterpret_cast<uintptr_t>(_Func);
 
-#  if __has_feature(ptrauth_calls)
+#  if __ptrauth_cxxabi_has_ptrauth
   // We must pass a void* to ptrauth_strip since it only accepts a pointer type. Also, in particular,
   // we must NOT pass a function pointer, otherwise we will strip the function pointer, and then attempt
   // to authenticate and re-sign it when casting it to a uintptr_t again, which will fail because we just
@@ -117,7 +117,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   uintptr_t __end   = reinterpret_cast<uintptr_t>(&__stop___lcxx_override);
   uintptr_t __ptr   = reinterpret_cast<uintptr_t>(_Func);
 
-#  if __has_feature(ptrauth_calls)
+#  if __ptrauth_cxxabi_has_ptrauth
   // We must pass a void* to ptrauth_strip since it only accepts a pointer type. See full explanation above.
   __ptr = reinterpret_cast<uintptr_t>(ptrauth_strip(reinterpret_cast<void*>(__ptr), ptrauth_key_function_pointer));
 #  endif

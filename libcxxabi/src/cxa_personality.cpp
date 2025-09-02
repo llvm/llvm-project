@@ -22,11 +22,7 @@
 #include "private_typeinfo.h"
 #include "unwind.h"
 
-#if __has_include(<ptrauth.h>)
-#  include <ptrauth.h>
-#endif
-
-#if __has_extension(ptrauth_qualifier)
+#if __ptrauth_cxxabi_has_ptrauth
 // The actual value of the discriminators listed below is not important.
 // The derivation of the constants is only being included for the purpose
 // of maintaining a record of how they were originally produced.
@@ -630,7 +626,7 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
                 reinterpret_cast<uintptr_t>(unwind_exception));
   _Unwind_SetGR(context, __builtin_eh_return_data_regno(1),
                 static_cast<uintptr_t>(results.ttypeIndex));
-#if __has_feature(ptrauth_qualifier)
+#if __ptrauth_cxxabi_has_ptrauth
   auto stackPointer = _Unwind_GetGR(context, UNW_REG_SP);
   // We manually re-sign the IP as the __ptrauth qualifiers cannot
   // express the required relationship with the destination address

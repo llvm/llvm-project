@@ -23,10 +23,6 @@
 
 #include "config.h"
 
-#if __has_include(<ptrauth.h>)
-#include <ptrauth.h>
-#endif
-
 namespace libunwind {
 
 /// CFI_Parser does basic parsing of a CFI (Call Frame Information) records.
@@ -402,7 +398,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
         pint_t personality = addressSpace.getEncodedP(
             p, cieContentEnd, cieInfo->personalityEncoding,
             /*datarelBase=*/0, &resultAddr);
-#if __has_feature(ptrauth_calls)
+#if __libunwind_has_ptrauth
         if (personality) {
           // The GOT for the personality function was signed address
           // authenticated. Manually re-sign with the CIE_Info::personality

@@ -22,10 +22,6 @@
 #include "dwarf2.h"
 #include "libunwind_ext.h"
 
-#if __has_include(<ptrauth.h>)
-#include <ptrauth.h>
-#endif
-
 namespace libunwind {
 
 

@@ -14,9 +14,6 @@
 #include "config.h"
 #include "libunwind_ext.h"
 
-#if __has_include(<ptrauth.h>)
-#include <ptrauth.h>
-#endif
 #include <stdlib.h>
 #include <sys/types.h>
 
@@ -131,7 +128,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
 
       pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
 
-#if __has_feature(ptrauth_calls)
+#if __libunwind_has_ptrauth
       // It is only valid to set the IP within the current function.
       // This is important for ptrauth, otherwise the IP cannot be correctly
       // signed.

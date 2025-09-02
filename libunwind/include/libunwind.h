@@ -43,11 +43,13 @@
   #define LIBUNWIND_AVAIL
 #endif
 
-#if __has_extension(ptrauth_qualifier)
+#if __has_feature(ptrauth_calls) || defined(__PTRAUTH__)
 
-  #if __has_include(<ptrauth.h>)
-    #include <ptrauth.h>
-  #endif
+  #include <ptrauth.h>
+
+  // Local "has pointer auth" macro to for backwards compatibility
+  // with compilers that do not provide the __PTRAUTH__ macro
+  #define __libunwind_has_ptrauth 1
 
   #if __has_extension(ptrauth_restricted_intptr_qualifier)
     #define __unwind_ptrauth_restricted_intptr(...) \
@@ -122,6 +124,9 @@
                                        __ptrauth_unwind_cie_info_personality_disc)
 
 #else
+  // We explicitly define the not enabled case so that checks fail if they
+  // do not include the correct definitions.
+  #define __libunwind_has_ptrauth 0
 
   #define __ptrauth_unwind_upi_handler
   #define __ptrauth_unwind_upi_handler_intptr

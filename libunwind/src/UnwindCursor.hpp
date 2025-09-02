@@ -111,10 +111,6 @@ extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
 
 #endif
 
-#if __has_include(<ptrauth.h>)
-#include <ptrauth.h>
-#endif
-
 namespace libunwind {
 
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
@@ -1055,7 +1051,7 @@ private:
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
-#if __has_extension(ptrauth_calls)
+#if __libunwind_has_ptrauth
     typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
     typename R::link_reg_t pc;
     _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
@@ -1999,7 +1995,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
         personalityIndex * sizeof(uint32_t));
     pint_t personalityPointer = sects.dso_base + (pint_t)personalityDelta;
     personality = _addressSpace.getP(personalityPointer);
-#if __has_feature(ptrauth_calls)
+#if __libunwind_has_ptrauth
     // The GOT for the personality function was signed address authenticated.
     // Resign it as a regular function pointer.
     const auto discriminator =
@@ -2686,7 +2682,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif
 
   typename R::link_reg_t pc;
-#if __has_extension(ptrauth_calls)
+#if __libunwind_has_ptrauth
   _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
 #else
   pc = rawPC;
@@ -3241,7 +3237,7 @@ void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          unw_word_t *offset) {
-#if __has_extension(ptrauth_calls)
+#if __libunwind_has_ptrauth
   typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
   typename R::link_reg_t pc;
   _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
