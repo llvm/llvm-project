@@ -939,23 +939,32 @@ def : PatGprGpr<int_riscv_pssubu_b,    PSSUBU_B>;
 def : PatGprGpr<int_riscv_pssubu_h,    PSSUBU_H>;
 def : PatGprGpr<int_riscv_pasubu_b,    PASUBU_B>;
 def : PatGprGpr<int_riscv_pasubu_h,    PASUBU_H>;
+def : PatGprGpr<int_riscv_pdif_b,      PDIF_B>;
+def : PatGprGpr<int_riscv_pdif_h,      PDIF_H>;
+def : PatGprGpr<int_riscv_pdifu_b,     PDIFU_B>;
+def : PatGprGpr<int_riscv_pdifu_h,     PDIFU_H>;
+def : PatGprGpr<int_riscv_slx,         SLX>;
+def : PatGprGpr<int_riscv_pmul_h_b01,  PMUL_H_B01>;
+def : PatGprGpr<int_riscv_pmulu_h_b01, PMULU_H_B01>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
-def : PatGprImm<int_riscv_sslai, SSLAI, uimm5>;
-def : PatGprGpr<int_riscv_ssha,  SSHA>;
-def : PatGprGpr<int_riscv_sshar, SSHAR>;
-def : PatGprImm<int_riscv_usati, USATI_RV32, uimm5>;
-def : PatGprImm<int_riscv_srari, SRARI_RV32, uimm5>;
-def : PatGprImm<int_riscv_sati,  SATI_RV32,  uimm5>;
-def : PatGprGpr<int_riscv_sadd,  SADD>;
-def : PatGprGpr<int_riscv_aadd,  AADD>;
-def : PatGprGpr<int_riscv_saddu, SADDU>;
-def : PatGprGpr<int_riscv_aaddu, AADDU>;
-def : PatGprGpr<int_riscv_ssub,  SSUB>;
-def : PatGprGpr<int_riscv_asub,  ASUB>;
-def : PatGprGpr<int_riscv_ssubu, SSUBU>;
-def : PatGprGpr<int_riscv_asubu, ASUBU>;
+def : PatGprImm<int_riscv_sslai,    SSLAI, uimm5>;
+def : PatGprGpr<int_riscv_ssha,     SSHA>;
+def : PatGprGpr<int_riscv_sshar,    SSHAR>;
+def : PatGprImm<int_riscv_usati,    USATI_RV32, uimm5>;
+def : PatGprImm<int_riscv_srari,    SRARI_RV32, uimm5>;
+def : PatGprImm<int_riscv_sati,     SATI_RV32,  uimm5>;
+def : PatGprGpr<int_riscv_sadd,     SADD>;
+def : PatGprGpr<int_riscv_aadd,     AADD>;
+def : PatGprGpr<int_riscv_saddu,    SADDU>;
+def : PatGprGpr<int_riscv_aaddu,    AADDU>;
+def : PatGprGpr<int_riscv_ssub,     SSUB>;
+def : PatGprGpr<int_riscv_asub,     ASUB>;
+def : PatGprGpr<int_riscv_ssubu,    SSUBU>;
+def : PatGprGpr<int_riscv_asubu,    ASUBU>;
+def : PatGprGpr<int_riscv_mul_h01,  MUL_H01>;
+def : PatGprGpr<int_riscv_mulu_h01, MULU_H01>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -989,4 +998,8 @@ def : PatGprGpr<int_riscv_pssub_w,     PSSUB_W>;
 def : PatGprGpr<int_riscv_pasub_w,     PASUB_W>;
 def : PatGprGpr<int_riscv_pssubu_w,    PSSUBU_W>;
 def : PatGprGpr<int_riscv_pasubu_w,    PASUBU_W>;
+def : PatGprGpr<int_riscv_pmul_w_h01,  PMUL_W_H01>;
+def : PatGprGpr<int_riscv_pmulu_w_h01, PMULU_W_H01>;
+def : PatGprGpr<int_riscv_mul_w01,     MUL_W01>;
+def : PatGprGpr<int_riscv_mulu_w01,    MULU_W01>;
 } // Predicates = [HasStdExtP, IsRV64]

@@ -1974,6 +1974,15 @@ let TargetPrefix = "riscv" in {
   defm pasubu_b    : RVPBinaryIntrinsics;
   defm pasubu_h    : RVPBinaryIntrinsics;
   defm pasubu_w    : RVPBinaryIntrinsics;
+  defm pdif_b      : RVPBinaryIntrinsics;
+  defm pdif_h      : RVPBinaryIntrinsics;
+  defm pdifu_b     : RVPBinaryIntrinsics;
+  defm pdifu_h     : RVPBinaryIntrinsics;
+  defm slx         : RVPBinaryIntrinsics;
+  defm mul_h01     : RVPBinaryIntrinsics;
+  defm mul_w01     : RVPBinaryIntrinsics;
+  defm mulu_h01    : RVPBinaryIntrinsics;
+  defm mulu_w01    : RVPBinaryIntrinsics;
 
   class RVPBinaryAABIntrinsics
       : Intrinsic<[llvm_any_ty],
@@ -1984,7 +1993,7 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME   : RVPBinaryAABIntrinsics;
   }
 
-      defm pslli_b  : RVPBinaryAABIntrinsics;
+  defm pslli_b  : RVPBinaryAABIntrinsics;
   defm pslli_h  : RVPBinaryAABIntrinsics;
   defm pslli_w  : RVPBinaryAABIntrinsics;
   defm psslai_h : RVPBinaryAABIntrinsics;
@@ -2005,6 +2014,20 @@ let TargetPrefix = "riscv" in {
   defm psati_h  : RVPBinaryAABIntrinsics;
   defm psati_w  : RVPBinaryAABIntrinsics;
   defm sati     : RVPBinaryAABIntrinsics;
+
+  class RVPBinaryABBIntrinsics
+      : Intrinsic<[llvm_any_ty],
+                  [LLVMMatchType<0>, llvm_any_ty],
+                  [IntrNoMem]>;
+
+  multiclass RVPBinaryABBIntrinsics {
+    def "int_riscv_" # NAME   : RVPBinaryABBIntrinsics;
+  }
+
+  defm pmul_h_b01  : RVPBinaryABBIntrinsics;
+  defm pmul_w_h01  : RVPBinaryABBIntrinsics;
+  defm pmulu_h_b01 : RVPBinaryABBIntrinsics;
+  defm pmulu_w_h01 : RVPBinaryABBIntrinsics;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions
