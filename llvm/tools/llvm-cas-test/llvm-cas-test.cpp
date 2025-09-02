@@ -10,6 +10,7 @@
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -89,11 +90,11 @@ struct Config {
 
   void constrainParameters() {
     // reduce the size of parameter if they are too big.
-    NumShards = NumShards % MaxShards;
-    NumChildren = NumChildren % MaxChildren;
-    TreeDepth = TreeDepth % MaxDepth;
-    DataLength = DataLength % MaxDataLength;
-    PrecentFile = PrecentFile % 100;
+    NumShards = OptNumShards ? OptNumShards : NumShards % MaxShards;
+    NumChildren = OptNumChildren ? OptNumChildren : NumChildren % MaxChildren;
+    TreeDepth = OptTreeDepth ? OptTreeDepth : TreeDepth % MaxDepth;
+    DataLength = OptDataLength ? OptDataLength : DataLength % MaxDataLength;
+    PrecentFile = OptPrecentFile ? OptPrecentFile : PrecentFile % 100;
 
     if (ForceKill) {
       Settings |= Fork;
@@ -102,7 +103,7 @@ struct Config {
   }
 
   bool extendToFile(uint8_t Seed) const {
-    return ((float)Seed / (float)UINT8_MAX) > ((float)PrecentFile / 100.0f);
+    return ((float)Seed / (float)UINT8_MAX) < ((float)PrecentFile / 100.0f);
   }
 
   void init() {
@@ -139,35 +140,39 @@ static void fillData(ObjectStore &CAS, ActionCache &AC, const Config &Conf) {
   DefaultThreadPool ThreadPool(hardware_concurrency());
   for (size_t I = 0; I != Conf.NumShards; ++I) {
     ThreadPool.async([&] {
-      std::vector<ObjectRef> Refs;
-      for (unsigned Depth = 0; Depth < Conf.TreeDepth; ++Depth) {
-        unsigned NumNodes = (Conf.TreeDepth - Depth + 1) * Conf.NumChildren + 1;
-        std::vector<ObjectRef> Created;
-        Created.reserve(NumNodes);
-        ArrayRef<ObjectRef> PreviouslyCreated(Refs);
-        for (unsigned I = 0; I < NumNodes; ++I) {
-          std::vector<char> Data(Conf.DataLength);
-          getRandomBytes(Data.data(), Data.size());
-          // Use the first byte that generated to decide if we should make it
-          // 64KB bigger and force that into a file based storage.
-          if (Conf.extendToFile(Data[0]))
-            Data.resize(64LL * 1024LL + Conf.DataLength);
+      CrashRecoveryContext CRC;
+      CRC.RunSafely([&]() {
+        std::vector<ObjectRef> Refs;
+        for (unsigned Depth = 0; Depth < Conf.TreeDepth; ++Depth) {
+          unsigned NumNodes =
+              (Conf.TreeDepth - Depth + 1) * Conf.NumChildren + 1;
+          std::vector<ObjectRef> Created;
+          Created.reserve(NumNodes);
+          ArrayRef<ObjectRef> PreviouslyCreated(Refs);
+          for (unsigned I = 0; I < NumNodes; ++I) {
+            std::vector<char> Data(Conf.DataLength);
+            getRandomBytes(Data.data(), Data.size());
+            // Use the first byte that generated to decide if we should make it
+            // 64KB bigger and force that into a file based storage.
+            if (Conf.extendToFile(Data[0]))
+              Data.resize(64LL * 1024LL + Conf.DataLength);
 
-          if (Depth == 0) {
-            auto Ref = ExitOnErr(CAS.store({}, Data));
-            Created.push_back(Ref);
-          } else {
-            auto Parent = PreviouslyCreated.slice(I, Conf.NumChildren);
-            auto Ref = ExitOnErr(CAS.store(Parent, Data));
-            Created.push_back(Ref);
+            if (Depth == 0) {
+              auto Ref = ExitOnErr(CAS.store({}, Data));
+              Created.push_back(Ref);
+            } else {
+              auto Parent = PreviouslyCreated.slice(I, Conf.NumChildren);
+              auto Ref = ExitOnErr(CAS.store(Parent, Data));
+              Created.push_back(Ref);
+            }
           }
+          // Put a self mapping in action cache to avoid cache poisoning.
+          if (!Created.empty())
+            ExitOnErr(
+                AC.put(CAS.getID(Created.back()), CAS.getID(Created.back())));
+          Refs.swap(Created);
         }
-        // Put a self mapping in action cache to avoid cache poisoning.
-        if (!Created.empty())
-          ExitOnErr(
-              AC.put(CAS.getID(Created.back()), CAS.getID(Created.back())));
-        Refs.swap(Created);
-      }
+      });
     });
   }
   ThreadPool.wait();
@@ -181,7 +186,6 @@ static int genData() {
 
   auto DB = ExitOnErr(cas::createOnDiskUnifiedCASDatabases(CASPath));
   fillData(*DB.first, *DB.second, Conf);
-
   return 0;
 }
 
