@@ -87,10 +87,11 @@ LLVM_ABI bool isDereferenceableAndAlignedInLoop(
 
 /// Returns true if the loop contains read-only memory accesses and doesn't
 /// throw. Puts loads that may fault into \p NonDereferenceableAndAlignedLoads.
-LLVM_ABI bool isLoopSafeWithLoadOnlyFaults(
-    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<LoadInst *> *NonDereferenceableAndAlignedLoads,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+LLVM_ABI bool
+isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
+               AssumptionCache *AC,
+               SmallVectorImpl<LoadInst *> *NonDereferenceableAndAlignedLoads,
+               SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

@@ -209,9 +209,9 @@ loop.end:
 
     SmallVector<LoadInst *, 4> NonDerefLoads;
     if (FFLI)
-      return isLoopSafeWithLoadOnlyFaults(L, &SE, &DT, &AC, &NonDerefLoads) &&
+      return isReadOnlyLoop(L, &SE, &DT, &AC, &NonDerefLoads) &&
              (NonDerefLoads.size() == 1) && (NonDerefLoads[0] == FFLI);
-    return isLoopSafeWithLoadOnlyFaults(L, &SE, &DT, &AC, &NonDerefLoads) &&
+    return isReadOnlyLoop(L, &SE, &DT, &AC, &NonDerefLoads) &&
            NonDerefLoads.empty();
   };
 

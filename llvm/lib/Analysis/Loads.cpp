@@ -856,7 +856,7 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
   return isPointerAlwaysReplaceable(From, To, DL);
 }
 
-bool llvm::isLoopSafeWithLoadOnlyFaults(
+bool llvm::isReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     SmallVectorImpl<LoadInst *> *NonDereferenceableAndAlignedLoads,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
