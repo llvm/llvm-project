@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    UseSymbolicMaxBTCForDerefInLoop("use-symbolic-maxbtc-deref-loop",
+                                    cl::init(false));
+
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -276,8 +280,7 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   // this function is only used when one address use dominates the
   // other, which means that they'll always either have the same
   // value or one of them will have an undefined value.
-  if (isa<BinaryOperator>(A) || isa<CastInst>(A) || isa<PHINode>(A) ||
-      isa<GetElementPtrInst>(A))
+  if (isa<CastInst>(A) || isa<PHINode>(A) || isa<GetElementPtrInst>(A))
     if (const Instruction *BI = dyn_cast<Instruction>(B))
       if (cast<Instruction>(A)->isIdenticalToWhenDefined(BI))
         return true;
@@ -333,7 +336,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
-  if (isa<SCEVCouldNotCompute>(BECount)) {
+  if (isa<SCEVCouldNotCompute>(BECount) && !UseSymbolicMaxBTCForDerefInLoop) {
     // TODO: Support symbolic max backedge taken counts for loops without
     // computable backedge taken counts.
     MaxBECount =
@@ -341,6 +344,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
             ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
             : SE.getConstantMaxBackedgeTakenCount(L);
   }
+
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
       L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
@@ -382,7 +386,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (Offset->getAPInt().urem(Alignment.value()) != 0)
       return false;
 
-    AccessSize = MaxPtrDiff + Offset->getAPInt();
+    bool Overflow = false;
+    AccessSize = MaxPtrDiff.uadd_ov(Offset->getAPInt(), Overflow);
+    if (Overflow)
+      return false;
     AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
     Base = NewBase->getValue();
   } else
@@ -631,9 +638,13 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!Val || !Len)
       return nullptr;
 
-    // TODO: Handle offsets.
-    Value *Dst = MSI->getDest();
-    if (!AreEquivalentAddressValues(Dst, Ptr))
+    // Handle offsets.
+    int64_t StoreOffset = 0, LoadOffset = 0;
+    const Value *StoreBase =
+        GetPointerBaseWithConstantOffset(MSI->getDest(), StoreOffset, DL);
+    const Value *LoadBase =
+        GetPointerBaseWithConstantOffset(Ptr, LoadOffset, DL);
+    if (StoreBase != LoadBase || LoadOffset < StoreOffset)
       return nullptr;
 
     if (IsLoadCSE)
@@ -645,7 +656,7 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
 
     // Make sure the read bytes are contained in the memset.
     uint64_t LoadSize = LoadTypeSize.getFixedValue();
-    if ((Len->getValue() * 8).ult(LoadSize))
+    if ((Len->getValue() * 8).ult(LoadSize + (LoadOffset - StoreOffset) * 8))
       return nullptr;
 
     APInt Splat = LoadSize >= 8 ? APInt::getSplat(LoadSize, Val->getValue())
@@ -832,6 +843,10 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   // Not a pointer, just return true.
   if (!To->getType()->isPointerTy())
     return true;
+
+  // Do not perform replacements in lifetime intrinsic arguments.
+  if (isa<LifetimeIntrinsic>(U.getUser()))
+    return false;
 
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;

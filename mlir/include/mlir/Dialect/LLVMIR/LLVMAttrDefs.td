@@ -11,8 +11,10 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -20,6 +22,41 @@ class LLVM_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AddressSpaceAttr :
+    LLVM_Attr<"AddressSpace", "address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let summary = "LLVM address space";
+  let description = [{
+    The `address_space` attribute represents an LLVM address space. It takes an
+    unsigned integer parameter that specifies the address space number.
+
+    Different address spaces in LLVM can have different properties:
+    - Address space 0 is the default/generic address space
+    - Other address spaces may have specific semantics (e.g., shared memory,
+      constant memory, etc.) depending on the target architecture
+
+    Example:
+
+    ```mlir
+    // Address space 0 (default)
+    #llvm.address_space<0>
+
+    // Address space 1 (e.g., global memory on some targets)
+    #llvm.address_space<1>
+
+    // Address space 3 (e.g., shared memory on some GPU targets)
+    #llvm.address_space<3>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1245,7 +1282,8 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features",
+                                        [DLTIQueryInterface]>
 {
   let summary = "LLVM target features attribute";
 
@@ -1298,10 +1336,41 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     static constexpr StringLiteral getAttributeName() {
       return StringLiteral("target_features");
     }
+
+    /// Returns the attribute associated with the key.
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
   }];
 
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
+                                [LLVM_TargetAttrInterface]> {
+  let summary = "LLVM target info: triple, chip, features";
+  let description = [{
+    An attribute to hold LLVM target information, specifying LLVM's target
+    `triple` string, the target `chip` string (i.e. the `cpu` string), and
+    target `features` string as an attribute. The latter is optional.
+
+    Responds to DLTI-queries on the keys:
+      * A query for `"triple"` returns the `StringAttr` for the `triple`.
+      * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`.
+      * A query for `"features"` returns the `StringAttr`, if provided.
+  }];
+  let parameters = (ins "StringAttr":$triple,
+                        "StringAttr":$chip,
+                        OptionalParameter<"TargetFeaturesAttr", "">:$features);
+
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
+
+  let extraClassDeclaration = [{
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

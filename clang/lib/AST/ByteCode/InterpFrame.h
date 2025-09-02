@@ -59,7 +59,7 @@ public:
   void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
-  Frame *getCaller() const override;
+  Frame *getCaller() const override { return Caller; }
 
   /// Returns the location of the call to the frame.
   SourceRange getCallRange() const override;
@@ -86,6 +86,7 @@ public:
 
   /// Returns a pointer to a local variables.
   Pointer getLocalPointer(unsigned Offset) const;
+  Block *getLocalBlock(unsigned Offset) const;
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {

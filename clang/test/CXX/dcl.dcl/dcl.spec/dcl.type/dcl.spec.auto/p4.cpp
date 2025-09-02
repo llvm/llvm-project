@@ -46,7 +46,7 @@ const auto S::c = 0;
 namespace std { template<typename T> struct initializer_list { const T *a, *b; initializer_list(); }; }
 
 // In an initializer of the form ( expression-list ), the expression-list
-// shall be a single assigment-expression.
+// shall be a single assignment-expression.
 auto parens1(1);
 auto parens2(2, 3); // expected-error {{initializer for variable 'parens2' with type 'auto' contains multiple expressions}}
 #if __cplusplus >= 201103L

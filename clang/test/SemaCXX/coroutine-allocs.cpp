@@ -19,7 +19,7 @@ struct resumable {
   };
 };
 
-resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f1'}}
+resumable f1() { // expected-error {{'operator new' provided by 'std::coroutine_traits<resumable>::promise_type' (aka 'typename resumable::promise_type') is not usable with the function signature of 'f1'}}
   co_return;
 }
 
@@ -52,11 +52,11 @@ resumable f4(Allocator) {
   co_return;
 }
 
-resumable f5(const Allocator) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator>::promise_type' (aka 'resumable::promise_type') is not usable}}
+resumable f5(const Allocator) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator>::promise_type' (aka 'typename resumable::promise_type') is not usable}}
   co_return;
 }
 
-resumable f6(const Allocator &) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator &>::promise_type' (aka 'resumable::promise_type') is not usable}}
+resumable f6(const Allocator &) { // expected-error {{operator new' provided by 'std::coroutine_traits<resumable, const Allocator &>::promise_type' (aka 'typename resumable::promise_type') is not usable}}
   co_return;
 }
 

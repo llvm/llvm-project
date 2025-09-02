@@ -3590,6 +3590,13 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
   return CreateValueObjectFromAPInt(target, v.bitcastToAPInt(), type, name);
 }
 
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
+    lldb::TargetSP target, Scalar &s, CompilerType type, llvm::StringRef name) {
+  ExecutionContext exe_ctx(target.get(), false);
+  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
+                                        type, s, ConstString(name));
+}
+
 lldb::ValueObjectSP
 ValueObject::CreateValueObjectFromBool(lldb::TargetSP target, bool value,
                                        llvm::StringRef name) {

@@ -13,7 +13,6 @@
 #include "check-omp-structure.h"
 
 #include "check-directive-structure.h"
-#include "openmp-utils.h"
 
 #include "flang/Common/idioms.h"
 #include "flang/Common/visit.h"
@@ -23,6 +22,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -196,7 +196,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   common::visit(
       common::visitors{
           // Allow `!$OMP ORDERED SIMD`
-          [&](const parser::OpenMPBlockConstruct &c) {
+          [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
             if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
               for (const auto &clause : beginSpec.Clauses().v) {

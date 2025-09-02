@@ -4,7 +4,7 @@
 define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK-LABEL: define void @loop_invariant_store(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
@@ -20,9 +20,8 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE8:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE8]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge <4 x i32> [[VEC_IND]], splat (i32 2)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
@@ -60,10 +59,9 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[ADD]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i32 [[IV]], 2
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 48
@@ -114,7 +112,7 @@ exit:                                             ; preds = %loop.latch
 define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-LABEL: define void @loop_invariant_srem(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
@@ -133,9 +131,8 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = add <4 x i32> [[BROADCAST_SPLAT4]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i32> [[VEC_IND]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge <4 x i8> [[VEC_IND1]], splat (i8 2)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i8> [[VEC_IND1]], splat (i8 2)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[PREDPHI]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP7]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = srem <4 x i8> [[VEC_IND1]], [[TMP8]]
@@ -178,10 +175,9 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i8 [[IV]], 2
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 48
@@ -236,7 +232,7 @@ exit:                                             ; preds = %loop.latch
 define void @loop_invariant_float_store(ptr %p, i32 %a) {
 ; CHECK-LABEL: define void @loop_invariant_float_store(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sitofp i32 [[A]] to float
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -250,10 +246,9 @@ define void @loop_invariant_float_store(ptr %p, i32 %a) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i32 [[IV]], 2
 ; CHECK-NEXT:    br i1 [[CMP_SLT]], label %[[COND_FALSE:.*]], label %[[LOOP_LATCH]]
@@ -292,7 +287,7 @@ exit:                                             ; preds = %loop.latch
 define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(ptr %dst) {
 ; CHECK-LABEL: define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -314,17 +309,16 @@ define void @test_store_to_invariant_address_needs_mask_due_to_low_trip_count(pt
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
