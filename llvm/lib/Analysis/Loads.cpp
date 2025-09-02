@@ -386,7 +386,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (Offset->getAPInt().urem(Alignment.value()) != 0)
       return false;
 
-    AccessSize = MaxPtrDiff + Offset->getAPInt();
+    bool Overflow = false;
+    AccessSize = MaxPtrDiff.uadd_ov(Offset->getAPInt(), Overflow);
+    if (Overflow)
+      return false;
     AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
     Base = NewBase->getValue();
   } else
