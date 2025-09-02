@@ -40,10 +40,7 @@ class OutputError : public ErrorInfo<OutputError, ECError> {
 
 public:
   StringRef getOutputPath() const { return OutputPath; }
-  void log(raw_ostream &OS) const override {
-    OS << getOutputPath() << ": ";
-    ECError::log(OS);
-  }
+  void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
   static char ID;
@@ -78,10 +75,7 @@ class OutputConfigError : public ErrorInfo<OutputConfigError, OutputError> {
 
 public:
   OutputConfig getConfig() const { return Config; }
-  void log(raw_ostream &OS) const override {
-    OutputError::log(OS);
-    OS << ": " << Config;
-  }
+  void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
   static char ID;
@@ -102,10 +96,7 @@ class TempFileOutputError : public ErrorInfo<TempFileOutputError, OutputError> {
 
 public:
   StringRef getTempPath() const { return TempPath; }
-  void log(raw_ostream &OS) const override {
-    OS << getTempPath() << " => ";
-    OutputError::log(OS);
-  }
+  void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
   static char ID;

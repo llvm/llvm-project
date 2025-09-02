@@ -24,6 +24,21 @@ char OutputError::ID = 0;
 char OutputConfigError::ID = 0;
 char TempFileOutputError::ID = 0;
 
+void OutputError::log(raw_ostream &OS) const {
+  OS << getOutputPath() << ": ";
+  ECError::log(OS);
+}
+
+void OutputConfigError::log(raw_ostream &OS) const {
+  OutputError::log(OS);
+  OS << ": " << Config;
+}
+
+void TempFileOutputError::log(raw_ostream &OS) const {
+  OS << getTempPath() << " => ";
+  OutputError::log(OS);
+}
+
 namespace {
 class OutputErrorCategory : public std::error_category {
 public:
