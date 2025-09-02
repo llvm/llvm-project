@@ -112,7 +112,7 @@ private:
                           const BugType &BT,
                           const ParmVarDecl *ParamDecl) const;
 
-  static void emitBadCall(const BugType *BT, CheckerContext &C,
+  static void emitBadCall(const BugType &BT, CheckerContext &C,
                           const Expr *BadE);
   void emitNilReceiverBug(CheckerContext &C, const ObjCMethodCall &msg,
                           ExplodedNode *N) const;
@@ -128,13 +128,13 @@ private:
 };
 } // end anonymous namespace
 
-void CallAndMessageChecker::emitBadCall(const BugType *BT, CheckerContext &C,
+void CallAndMessageChecker::emitBadCall(const BugType &BT, CheckerContext &C,
                                         const Expr *BadE) {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
   if (BadE) {
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
@@ -362,7 +362,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(State);
       return nullptr;
     }
-    emitBadCall(&CallUndefBug, C, Callee);
+    emitBadCall(CallUndefBug, C, Callee);
     return nullptr;
   }
 
@@ -374,7 +374,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
       C.addSink(StNull);
       return nullptr;
     }
-    emitBadCall(&CallNullBug, C, Callee);
+    emitBadCall(CallNullBug, C, Callee);
     return nullptr;
   }
 
@@ -424,7 +424,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(State);
       return nullptr;
     }
-    emitBadCall(&CXXCallUndefBug, C, CC->getCXXThisExpr());
+    emitBadCall(CXXCallUndefBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
@@ -436,7 +436,7 @@ ProgramStateRef CallAndMessageChecker::checkCXXMethodCall(
       C.addSink(StNull);
       return nullptr;
     }
-    emitBadCall(&CXXCallNullBug, C, CC->getCXXThisExpr());
+    emitBadCall(CXXCallNullBug, C, CC->getCXXThisExpr());
     return nullptr;
   }
 
