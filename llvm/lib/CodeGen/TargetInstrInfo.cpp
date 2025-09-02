@@ -993,7 +993,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
     MI = MRI.getUniqueVRegDef(MO.getReg());
   // And it needs to be in the trace (otherwise, it won't have a depth).
   if (!MI || MI->getParent() != &MBB ||
-      ((unsigned)MI->getOpcode() != CombineOpc && CombineOpc != 0))
+      (MI->getOpcode() != CombineOpc && CombineOpc != 0))
     return false;
   // Must only used by the user we combine with.
   if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
@@ -1406,7 +1406,7 @@ void TargetInstrInfo::reassociateOps(
                               const MCInstrDesc &MCID, Register DestReg) {
     return MachineInstrBuilder(
                MF, MF.CreateMachineInstr(MCID, MIMD.getDL(), /*NoImpl=*/true))
-        .setPCSections(MIMD.getPCSections())
+        .copyMIMetadata(MIMD)
         .addReg(DestReg, RegState::Define);
   };
 
@@ -1456,11 +1456,13 @@ void TargetInstrInfo::reassociateOps(
   MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB1->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   MIB2->setFlags(IntersectedFlags);
   MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB2->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 

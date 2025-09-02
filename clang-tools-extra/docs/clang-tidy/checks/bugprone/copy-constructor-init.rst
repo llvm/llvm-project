@@ -35,7 +35,9 @@ outcomes. The check ensures that the copy constructor of a derived class
 properly calls the copy constructor of the base class, helping to prevent bugs
 and improve code quality.
 
-Limitations:
+
+Limitations
+-----------
 
 * It won't generate warnings for empty classes, as there are no class members
   (including base class sub-objects) to worry about.

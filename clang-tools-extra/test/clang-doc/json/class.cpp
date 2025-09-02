@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/_ZTV7MyClass.json
+// RUN: FileCheck %s < %t/json/_ZTV7MyClass.json
 
 struct Foo;
 
@@ -33,33 +33,24 @@ protected:
 };
 
 // CHECK:       {
-// CHECK-NEXT:    "Description": [
-// CHECK-NEXT:      {
-// CHECK-NEXT:       "FullComment": {
-// CHECK-NEXT:         "Children": [
-// CHECK-NEXT:           {
-// CHECK-NEXT:             "ParagraphComment": {
-// CHECK-NEXT:               "Children": [
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": " This is a nice class."
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": ""
-// CHECK-NEXT:                 }
-// CHECK-NEXT:               ]
-// CHECK:               {
-// CHECK-NEXT:             "BlockCommandComment": {
-// CHECK-NEXT:               "Children": [
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "ParagraphComment": {
-// CHECK-NEXT:                     "Children": [
-// CHECK-NEXT:                       { 
-// CHECK-NEXT:                         "TextComment": " This is a brief description." 
-// CHECK-NEXT:                       }
-// CHECK:                   "Command": "brief"
+// CHECK-NEXT:    "Description": {
+// CHECK-NEXT:      "BriefComments": [
+// CHECK-NEXT:        [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " This is a brief description."
+// CHECK:           "HasBriefComments": true,
+// CHECK-NEXT:      "HasParagraphComments": true,
+// CHECK-NEXT:      "ParagraphComments": [
+// CHECK-NEXT:        [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " This is a nice class."
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": ""
+// CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
 // CHECK-NEXT:      {

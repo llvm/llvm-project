@@ -396,7 +396,7 @@ void ASTUnit::CacheCodeCompletionResults() {
 
       // Keep track of the type of this completion in an ASTContext-agnostic
       // way.
-      QualType UsageType = getDeclUsageType(*Ctx, R.Declaration);
+      QualType UsageType = getDeclUsageType(*Ctx, R.Qualifier, R.Declaration);
       if (UsageType.isNull()) {
         CachedResult.TypeClass = STC_Void;
         CachedResult.Type = 0;
@@ -831,11 +831,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
-  AST->FileMgr = new FileManager(FileSystemOpts, VFS);
+  AST->FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
-                                     AST->getFileManager(),
-                                     UserFilesAreVolatile);
+  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      AST->getDiagnostics(), AST->getFileManager(), UserFilesAreVolatile);
   AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = std::make_unique<HeaderSearchOptions>(HSOpts);
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
@@ -858,20 +857,20 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   Preprocessor &PP = *AST->PP;
 
   if (ToLoad >= LoadASTOnly)
-    AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
-                              PP.getIdentifierTable(), PP.getSelectorTable(),
-                              PP.getBuiltinInfo(),
-                              AST->getTranslationUnitKind());
+    AST->Ctx = llvm::makeIntrusiveRefCnt<ASTContext>(
+        *AST->LangOpts, AST->getSourceManager(), PP.getIdentifierTable(),
+        PP.getSelectorTable(), PP.getBuiltinInfo(),
+        AST->getTranslationUnitKind());
 
   DisableValidationForModuleKind disableValid =
       DisableValidationForModuleKind::None;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
-  AST->Reader = new ASTReader(PP, *AST->ModCache, AST->Ctx.get(),
-                              PCHContainerRdr, *AST->CodeGenOpts, {},
-                              /*isysroot=*/"",
-                              /*DisableValidationKind=*/disableValid,
-                              AllowASTWithCompilerErrors);
+  AST->Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
+      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, *AST->CodeGenOpts,
+      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+      /*isysroot=*/"",
+      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
@@ -1191,9 +1190,11 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // changed above in AddImplicitPreamble.  If VFS is nullptr, rely on
   // createFileManager to create one.
   if (VFS && FileMgr && &FileMgr->getVirtualFileSystem() == VFS)
-    Clang->setFileManager(&*FileMgr);
-  else
-    FileMgr = Clang->createFileManager(std::move(VFS));
+    Clang->setFileManager(FileMgr);
+  else {
+    Clang->createFileManager(std::move(VFS));
+    FileMgr = Clang->getFileManagerPtr();
+  }
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
@@ -1204,7 +1205,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&getDiagnostics());
+  Clang->setDiagnostics(getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -1226,15 +1227,15 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   ResetForParse();
 
-  SourceMgr = new SourceManager(getDiagnostics(), *FileMgr,
-                                UserFilesAreVolatile);
+  SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      getDiagnostics(), *FileMgr, +UserFilesAreVolatile);
   if (!OverrideMainBuffer) {
     checkAndRemoveNonDriverDiags(StoredDiagnostics);
     TopLevelDeclsInPreamble.clear();
   }
 
   // Create the source manager.
-  Clang->setSourceManager(&getSourceManager());
+  Clang->setSourceManager(getSourceManagerPtr());
 
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
@@ -1424,7 +1425,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies = true;
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
-        PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
+        PreambleInvocationIn, MainFileBuffer.get(), Bounds, Diagnostics, VFS,
         PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
         Callbacks);
 
@@ -1499,13 +1500,13 @@ void ASTUnit::transferASTDataFromCompilerInstance(CompilerInstance &CI) {
   TheSema = CI.takeSema();
   Consumer = CI.takeASTConsumer();
   if (CI.hasASTContext())
-    Ctx = &CI.getASTContext();
+    Ctx = CI.getASTContextPtr();
   if (CI.hasPreprocessor())
     PP = CI.getPreprocessorPtr();
   CI.setSourceManager(nullptr);
   CI.setFileManager(nullptr);
   if (CI.hasTarget())
-    Target = &CI.getTarget();
+    Target = CI.getTargetPtr();
   Reader = CI.getASTReader();
   HadModuleLoaderFatalFailure = CI.hadModuleLoaderFatalFailure();
   if (Invocation != CI.getInvocationPtr()) {
@@ -1555,10 +1556,11 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->Invocation = std::move(CI);
-  AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
+  AST->FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(AST->FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
-  AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
-                                     UserFilesAreVolatile);
+  AST->SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(
+      AST->getDiagnostics(), *AST->FileMgr, UserFilesAreVolatile);
   AST->ModCache = createCrossProcessModuleCache();
 
   return AST;
@@ -1624,7 +1626,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&AST->getDiagnostics());
+  Clang->setDiagnostics(AST->getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -1646,10 +1648,10 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   AST->Reader = nullptr;
 
   // Create a file manager object to provide access to and cache the filesystem.
-  Clang->setFileManager(&AST->getFileManager());
+  Clang->setFileManager(AST->getFileManagerPtr());
 
   // Create the source manager.
-  Clang->setSourceManager(&AST->getSourceManager());
+  Clang->setSourceManager(AST->getSourceManagerPtr());
 
   FrontendAction *Act = Action;
 
@@ -1743,8 +1745,9 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     std::shared_ptr<DiagnosticOptions> DiagOpts,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
-    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+    IntrusiveRefCntPtr<FileManager> FileMgr, bool OnlyLocalDecls,
+    CaptureDiagsKind CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool UserFilesAreVolatile) {
@@ -1773,7 +1776,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses,
-                                      &AST->FileMgr->getVirtualFileSystem()))
+                                      AST->FileMgr->getVirtualFileSystemPtr()))
     return nullptr;
   return AST;
 }
@@ -1849,7 +1852,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
-  AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
+  AST->FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
   AST->PreambleStoragePath = PreambleStoragePath;
   AST->ModCache = createCrossProcessModuleCache();
@@ -1895,7 +1899,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (!VFS) {
     assert(FileMgr && "FileMgr is null on Reparse call");
-    VFS = &FileMgr->getVirtualFileSystem();
+    VFS = FileMgr->getVirtualFileSystemPtr();
   }
 
   clearFileLevelDecls();
@@ -2209,8 +2213,10 @@ void ASTUnit::CodeComplete(
     bool IncludeCodePatterns, bool IncludeBriefComments,
     CodeCompleteConsumer &Consumer,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    DiagnosticsEngine &Diag, LangOptions &LangOpts, SourceManager &SourceMgr,
-    FileManager &FileMgr, SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
+    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag, LangOptions &LangOpts,
+    llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr,
+    llvm::IntrusiveRefCntPtr<FileManager> FileMgr,
+    SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
     std::unique_ptr<SyntaxOnlyAction> Act) {
   if (!Invocation)
@@ -2259,12 +2265,12 @@ void ASTUnit::CodeComplete(
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
   // Set up diagnostics, capturing any diagnostics produced.
-  Clang->setDiagnostics(&Diag);
+  Clang->setDiagnostics(Diag);
   CaptureDroppedDiagnostics Capture(CaptureDiagsKind::All,
                                     Clang->getDiagnostics(),
                                     &StoredDiagnostics, nullptr);
-  ProcessWarningOptions(Diag, Inv.getDiagnosticOpts(),
-                        FileMgr.getVirtualFileSystem());
+  ProcessWarningOptions(*Diag, Inv.getDiagnosticOpts(),
+                        FileMgr->getVirtualFileSystem());
 
   // Create the target instance.
   if (!Clang->createTarget()) {
@@ -2281,8 +2287,8 @@ void ASTUnit::CodeComplete(
          "IR inputs not support here!");
 
   // Use the source and file managers that we were given.
-  Clang->setFileManager(&FileMgr);
-  Clang->setSourceManager(&SourceMgr);
+  Clang->setFileManager(FileMgr);
+  Clang->setSourceManager(SourceMgr);
 
   // Remap files.
   PreprocessorOpts.clearRemappedFiles();
@@ -2300,7 +2306,7 @@ void ASTUnit::CodeComplete(
 
   auto getUniqueID =
       [&FileMgr](StringRef Filename) -> std::optional<llvm::sys::fs::UniqueID> {
-    if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
+    if (auto Status = FileMgr->getVirtualFileSystem().status(Filename))
       return Status->getUniqueID();
     return std::nullopt;
   };
@@ -2321,7 +2327,8 @@ void ASTUnit::CodeComplete(
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
   if (Preamble && Line > 1 && hasSameUniqueID(File, OriginalSourceFile)) {
     OverrideMainBuffer = getMainBufferWithPrecompiledPreamble(
-        PCHContainerOps, Inv, &FileMgr.getVirtualFileSystem(), false, Line - 1);
+        PCHContainerOps, Inv, FileMgr->getVirtualFileSystemPtr(), false,
+        Line - 1);
   }
 
   // If the main file has been overridden due to the use of a preamble,
@@ -2331,7 +2338,7 @@ void ASTUnit::CodeComplete(
            "No preamble was built, but OverrideMainBuffer is not null");
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        &FileMgr.getVirtualFileSystem();
+        FileMgr->getVirtualFileSystemPtr();
     Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
                                   OverrideMainBuffer.get());
     // FIXME: there is no way to update VFS if it was changed by

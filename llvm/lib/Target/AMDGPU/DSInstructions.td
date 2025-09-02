@@ -76,7 +76,6 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // encoding fields
   bits<10> vdst;
@@ -276,7 +275,6 @@ class DS_BVH_STACK<string opName,
    data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
-  let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
   // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
@@ -293,7 +291,6 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
   let has_data1 = 0;
 }
@@ -1396,6 +1393,9 @@ defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+defm DS_ADD_F64     : DS_Real_gfx12<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12<0x074>;
 
 let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;

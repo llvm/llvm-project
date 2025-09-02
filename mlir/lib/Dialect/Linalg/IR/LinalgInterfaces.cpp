@@ -476,10 +476,10 @@ inferContractionDimsImpl(ArrayRef<AffineMap> indexingMaps,
       SmallVector<unsigned, 2>(ac.begin(), ac.end()),
       SmallVector<unsigned, 2>(bc.begin(), bc.end()),
       SmallVector<unsigned, 2>(ra.begin(), ra.end())};
-  llvm::sort(dimensions.batch.begin(), dimensions.batch.end());
-  llvm::sort(dimensions.m.begin(), dimensions.m.end());
-  llvm::sort(dimensions.n.begin(), dimensions.n.end());
-  llvm::sort(dimensions.k.begin(), dimensions.k.end());
+  llvm::sort(dimensions.batch);
+  llvm::sort(dimensions.m);
+  llvm::sort(dimensions.n);
+  llvm::sort(dimensions.k);
   return dimensions;
 }
 
@@ -797,12 +797,12 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
       SmallVector<unsigned, 2>(depth.begin(), depth.end()),
       /*strides=*/SmallVector<int64_t, 2>{},
       /*dilations=*/SmallVector<int64_t, 2>{}};
-  llvm::sort(dimensions.batch.begin(), dimensions.batch.end());
-  llvm::sort(dimensions.outputImage.begin(), dimensions.outputImage.end());
-  llvm::sort(dimensions.outputChannel.begin(), dimensions.outputChannel.end());
-  llvm::sort(dimensions.filterLoop.begin(), dimensions.filterLoop.end());
-  llvm::sort(dimensions.inputChannel.begin(), dimensions.inputChannel.end());
-  llvm::sort(dimensions.depth.begin(), dimensions.depth.end());
+  llvm::sort(dimensions.batch);
+  llvm::sort(dimensions.outputImage);
+  llvm::sort(dimensions.outputChannel);
+  llvm::sort(dimensions.filterLoop);
+  llvm::sort(dimensions.inputChannel);
+  llvm::sort(dimensions.depth);
 
   // Use the op carried strides/dilations attribute if present.
   auto nativeStrides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
