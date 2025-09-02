@@ -361,6 +361,7 @@ __m128i test_mm_mullo_epi32(__m128i x, __m128i y) {
   // CHECK: mul <4 x i32>
   return _mm_mullo_epi32(x, y);
 }
+TEST_CONSTEXPR(match_v4si(_mm_mullo_epi32((__m128i)(__v4si){+1, -2, +3, -4}, (__m128i)(__v4si){-16, +14, +12, -10}), -16, -28, +36, +40));
 
 __m128i test_mm_packus_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_packus_epi32
