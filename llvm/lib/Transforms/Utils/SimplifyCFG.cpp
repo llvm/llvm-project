@@ -6466,6 +6466,9 @@ public:
   /// Return the default value of the switch.
   Constant *getDefaultValue();
 
+  /// Return true if the replacement is a lookup table.
+  bool isLookupTable();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6752,6 +6755,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
 }
 
 Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
+
+bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
