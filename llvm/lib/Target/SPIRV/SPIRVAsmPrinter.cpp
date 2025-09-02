@@ -696,7 +696,6 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
 }
 
 void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
-  SPIRVGlobalRegistry *GR = ST->getSPIRVGlobalRegistry();
   // Collect the SPIRVTypes that are OpTypeFloat and the constants of type
   // int32, that might be used as FP Fast Math Mode.
   std::vector<const MachineInstr *> SPIRVFloatTypes;
