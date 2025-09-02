@@ -43,7 +43,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "std::optional<int64_t>":$alignment,
-                            "std::optional<std::reference_wrapper<const ::mlir::DataLayout>>":$dataLayout,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -59,7 +59,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*args=*/        (ins "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "std::optional<int64_t>":$alignment,
-                            "std::optional<std::reference_wrapper<const ::mlir::DataLayout>>":$dataLayout,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -76,7 +76,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
                             "::mlir::Type":$type,
                             "::mlir::ptr::AtomicOrdering":$ordering,
                             "std::optional<int64_t>":$alignment,
-                            "std::optional<std::reference_wrapper<const ::mlir::DataLayout>>":$dataLayout,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<
@@ -94,7 +94,7 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
                             "::mlir::ptr::AtomicOrdering":$successOrdering,
                             "::mlir::ptr::AtomicOrdering":$failureOrdering,
                             "std::optional<int64_t>":$alignment,
-                            "std::optional<std::reference_wrapper<const ::mlir::DataLayout>>":$dataLayout,
+                            "const ::mlir::DataLayout *":$dataLayout,
                             "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
     InterfaceMethod<

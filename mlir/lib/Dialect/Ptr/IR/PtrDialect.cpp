@@ -141,7 +141,7 @@ LogicalResult LoadOp::verify() {
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidLoad(getResult().getType(), getOrdering(), getAlignment(),
-                      dataLayout, emitDiag))
+                      &dataLayout, emitDiag))
     return failure();
   if (failed(verifyAlignment(getAlignment(), emitDiag)))
     return failure();
@@ -184,7 +184,7 @@ LogicalResult StoreOp::verify() {
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidStore(getValue().getType(), getOrdering(), getAlignment(),
-                       dataLayout, emitDiag))
+                       &dataLayout, emitDiag))
     return failure();
   if (failed(verifyAlignment(getAlignment(), emitDiag)))
     return failure();

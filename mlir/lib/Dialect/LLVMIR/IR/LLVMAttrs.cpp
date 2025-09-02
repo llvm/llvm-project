@@ -57,10 +57,10 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 /// Checks whether the given type is an LLVM type that can be loaded or stored.
-static bool isValidLoadStoreImpl(
-    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
-    function_ref<InFlightDiagnostic()> emitError) {
+static bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
+                                 std::optional<int64_t> alignment,
+                                 const ::mlir::DataLayout *dataLayout,
+                                 function_ref<InFlightDiagnostic()> emitError) {
   if (!isLoadableType(type)) {
     if (emitError)
       emitError() << "type must be LLVM type with size, but got " << type;
@@ -70,12 +70,12 @@ static bool isValidLoadStoreImpl(
     return true;
 
   // To check atomic validity we need a datalayout.
-  if (!dataLayout.has_value()) {
+  if (!dataLayout) {
     if (emitError)
       emitError() << "expected a valid data layout";
     return false;
   }
-  if (!isTypeCompatibleWithAtomicOp(type, dataLayout->get())) {
+  if (!isTypeCompatibleWithAtomicOp(type, *dataLayout)) {
     if (emitError)
       emitError() << "unsupported type " << type << " for atomic access";
     return false;
@@ -85,22 +85,21 @@ static bool isValidLoadStoreImpl(
 
 bool AddressSpaceAttr::isValidLoad(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
 }
 
 bool AddressSpaceAttr::isValidStore(
     Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return isValidLoadStoreImpl(type, ordering, alignment, dataLayout, emitError);
 }
 
 bool AddressSpaceAttr::isValidAtomicOp(
     ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment,
-    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once `ptr.atomic_rmw` is implemented.
   assert(false && "unimplemented, see TODO in the source.");
@@ -110,7 +109,7 @@ bool AddressSpaceAttr::isValidAtomicOp(
 bool AddressSpaceAttr::isValidAtomicXchg(
     Type type, ptr::AtomicOrdering successOrdering,
     ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
-    std::optional<std::reference_wrapper<const ::mlir::DataLayout>> dataLayout,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
   assert(false && "unimplemented, see TODO in the source.");

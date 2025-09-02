@@ -32,10 +32,6 @@ def AtomicBinOpFMax : I32EnumCase<"fmax", 13, "fmax">;
 def AtomicBinOpFMin : I32EnumCase<"fmin", 14, "fmin">;
 def AtomicBinOpUIncWrap : I32EnumCase<"uinc_wrap", 15, "uinc_wrap">;
 def AtomicBinOpUDecWrap : I32EnumCase<"udec_wrap", 16, "udec_wrap">;
-def AtomicBinOpUSubCond : I32EnumCase<"usub_cond", 17, "usub_cond">;
-def AtomicBinOpUSubSat : I32EnumCase<"usub_sat", 18, "usub_sat">;
-def AtomicBinOpFMaximum : I32EnumCase<"fmaximum", 19, "fmaximum">;
-def AtomicBinOpFMinimum : I32EnumCase<"fminimum", 20, "fminimum">;
 
 def AtomicBinOp : I32Enum<
     "AtomicBinOp",
@@ -44,8 +40,7 @@ def AtomicBinOp : I32Enum<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
-     AtomicBinOpFMaximum, AtomicBinOpFMinimum]> {
+     AtomicBinOpUDecWrap]> {
   let cppNamespace = "::mlir::ptr";
 }
 
