@@ -2848,6 +2848,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_ABDS:
+  case TargetOpcode::G_ABDU:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
     widenScalarDst(MI, WideTy);

@@ -483,12 +483,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // TODO: Use libcall for sDoubleXLen.
   getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM}).lower();
 
-  getActionDefinitionsBuilder(G_ABS)
+  getActionDefinitionsBuilder({G_ABS, G_ABDS, G_ABDU})
       .customFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
-
-  getActionDefinitionsBuilder({G_ABDS, G_ABDU}).lower();
 
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
@@ -1339,6 +1337,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
+  case TargetOpcode::G_ABDS:
+  case TargetOpcode::G_ABDU:
+    return Helper.lowerAbsDiffToMinMax(MI);
   // TODO: G_FCONSTANT
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
