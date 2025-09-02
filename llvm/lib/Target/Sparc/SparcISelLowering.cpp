@@ -34,9 +34,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 using namespace llvm;
