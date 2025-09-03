@@ -1271,7 +1271,7 @@ const SymbolicRegion *MemRegionManager::getSymbolicHeapRegion(SymbolRef Sym) {
 const FieldRegion*
 MemRegionManager::getFieldRegion(const FieldDecl *d,
                                  const SubRegion* superRegion){
-  return getSubRegion<FieldRegion>(d, superRegion);
+  return getSubRegion<FieldRegion>(d->getCanonicalDecl(), superRegion);
 }
 
 const ObjCIvarRegion*
@@ -1704,16 +1704,23 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       if (SymbolicOffsetBase)
         continue;
 
-      // Get the field number.
-      unsigned idx = 0;
-      for (RecordDecl::field_iterator FI = RD->field_begin(),
-             FE = RD->field_end(); FI != FE; ++FI, ++idx) {
-        if (FR->getDecl() == *FI)
-          break;
+      auto MaybeFieldIdx = [FR, RD]() -> std::optional<unsigned> {
+        assert(FR->getDecl()->getCanonicalDecl() == FR->getDecl());
+        for (auto [Idx, Field] : llvm::enumerate(RD->fields())) {
+          if (FR->getDecl() == Field->getCanonicalDecl())
+            return Idx;
+        }
+        return std::nullopt;
+      }();
+
+      if (!MaybeFieldIdx.has_value()) {
+        assert(false && "Field not found");
+        goto Finish; // Invalid offset.
       }
+
       const ASTRecordLayout &Layout = R->getContext().getASTRecordLayout(RD);
       // This is offset in bits.
-      Offset += Layout.getFieldOffset(idx);
+      Offset += Layout.getFieldOffset(MaybeFieldIdx.value());
       break;
     }
     }
