@@ -1102,7 +1102,7 @@ _mm256_maskz_fnmsub_ps(__mmask8 __U, __m256 __A, __m256 __B, __m256 __C) {
                                              (__v8sf)_mm256_setzero_ps());
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+static __inline__ __m128d __DEFAULT_FN_ATTRS128
 _mm_mask_fmaddsub_pd(__m128d __A, __mmask8 __U, __m128d __B, __m128d __C) {
   return (__m128d) __builtin_ia32_selectpd_128((__mmask8) __U,
                     __builtin_ia32_vfmaddsubpd ((__v2df) __A,
