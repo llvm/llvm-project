@@ -37,8 +37,9 @@ body:             |
 
     ; GCN-LABEL: name: ds_read_b32_v_a
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: [[DS_READ_B32_gfx9_1:%[0-9]+]]:agpr_32 = DS_READ_B32_gfx9 [[DEF]], 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+    ; GCN-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64_align2 = DS_READ2_B32_gfx9 [[DEF]], 0, 2, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DS_READ2_B32_gfx9_]].sub0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:agpr_32 = COPY killed [[DS_READ2_B32_gfx9_]].sub1
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
     %2:agpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
@@ -51,8 +52,9 @@ body:             |
 
     ; GCN-LABEL: name: ds_read_b32_a_v
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:agpr_32 = DS_READ_B32_gfx9 [[DEF]], 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: [[DS_READ_B32_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+    ; GCN-NEXT: [[DS_READ2_B32_gfx9_:%[0-9]+]]:areg_64_align2 = DS_READ2_B32_gfx9 [[DEF]], 0, 2, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:agpr_32 = COPY [[DS_READ2_B32_gfx9_]].sub1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[DS_READ2_B32_gfx9_]].sub0
     %0:vgpr_32 = IMPLICIT_DEF
     %1:agpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
     %2:vgpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`)
