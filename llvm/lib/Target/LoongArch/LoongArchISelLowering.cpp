@@ -2811,12 +2811,16 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
         DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
                     VecHi, DAG.getConstant(0, DL, GRLenVT));
 
-    // Shuffle the origin Vec and the TmpVec. Each element of the low half of
-    // the ResVec will be the desired element.
-    SDValue SplatIdx = DAG.getSplatBuildVector(
-        (VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, DL, Idx);
+    // Shuffle the origin Vec and the TmpVec using MaskVec, the lowest element
+    // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
+    // desired element.
+    SDValue IdxCp =
+        DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
+    SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
+    SDValue MaskVec =
+        DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
     SDValue ResVec =
-        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, SplatIdx, TmpVec, Vec);
+        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, MaskVec, TmpVec, Vec);
 
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ResVec,
                        DAG.getConstant(0, DL, GRLenVT));
