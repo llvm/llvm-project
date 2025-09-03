@@ -44,18 +44,21 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
-  case 'l':
+  case 'l': {
     language = Language::GetLanguageTypeFromString(option_arg);
-    if (language == eLanguageTypeUnknown) {
+
+    if (const LanguageSet supported_languages =
+            Language::GetLanguagesSupportingTypeSystemsForExpressions();
+        !supported_languages[language]) {
       StreamString sstr;
-      sstr.Printf("unknown language type: '%s' for expression. "
+      sstr.Printf("invalid language '%s' for expression. "
                   "List of supported languages:\n",
                   option_arg.str().c_str());
 
       Language::PrintSupportedLanguagesForExpressions(sstr, "  ", "\n");
       error = Status(sstr.GetString().str());
     }
-    break;
+  } break;
 
   case 'a': {
     bool success;
