@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-cxx-compile-and-run | FileCheck %s
 // REQUIRES: ompt, linux
+// clang-format on
 
 #include <thread>
 #include "callback.h"
@@ -58,6 +60,7 @@ int main() {
   std::thread t1(f);
   t1.join();
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
@@ -87,6 +90,7 @@ int main() {
   // CHECK: {{^}}[[MASTER_ID]]: ompt_get_parallel_info()=0
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_get_task_info()=0
+  // clang-format on
 
   return 0;
 }

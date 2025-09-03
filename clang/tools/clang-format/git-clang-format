@@ -419,7 +419,7 @@ def compute_diff(commits, files, staged, diff_common_commit):
     if len(commits) == 2:
         git_tool = "diff-tree"
         if diff_common_commit:
-            commits = [f"{commits[0]}...{commits[1]}"]
+            extra_args += ["--merge-base"]
     elif staged:
         extra_args += ["--cached"]
 

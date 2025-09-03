@@ -716,10 +716,9 @@ define <4 x i64> @zext_chain(<4 x i16> %x) {
 
 define <4 x i32> @add_chain(<4 x i32> %x) {
 ; CHECK-LABEL: @add_chain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add <4 x i32> [[ADD]], [[ADD]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[ADD2]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[SHUF:%.*]], [[SHUF]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[SHUF]], [[SHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i32> [[ADD]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -731,10 +730,9 @@ define <4 x i32> @add_chain(<4 x i32> %x) {
 
 define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 ; CHECK-LABEL: @zext_add_chain(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i64> [[ZEXT]], [[ZEXT]]
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ADD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[SHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = add <4 x i64> [[ZEXT]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

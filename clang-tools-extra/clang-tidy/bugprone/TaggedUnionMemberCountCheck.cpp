@@ -105,11 +105,15 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
-  auto UnionField = fieldDecl(hasType(qualType(
-      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+  auto NotFromSystemHeaderOrStdNamespace =
+      unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto EnumField = fieldDecl(hasType(
-      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+  auto UnionField =
+      fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
+          recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
+
+  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+      enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
   auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
   auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
@@ -165,15 +169,8 @@ void TaggedUnionMemberCountCheck::check(
   if (!Root || !UnionField || !TagField)
     return;
 
-  const auto *UnionDef =
-      UnionField->getType().getCanonicalType().getTypePtr()->getAsRecordDecl();
-  const auto *EnumDef = llvm::dyn_cast<EnumDecl>(
-      TagField->getType().getCanonicalType().getTypePtr()->getAsTagDecl());
-
-  assert(UnionDef && "UnionDef is missing!");
-  assert(EnumDef && "EnumDef is missing!");
-  if (!UnionDef || !EnumDef)
-    return;
+  const auto *UnionDef = UnionField->getType()->castAsRecordDecl();
+  const auto *EnumDef = TagField->getType()->castAsEnumDecl();
 
   const std::size_t UnionMemberCount = llvm::range_size(UnionDef->fields());
   auto [TagCount, CountingEnumConstantDecl] = getNumberOfEnumValues(EnumDef);
