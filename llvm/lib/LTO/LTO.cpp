@@ -631,7 +631,7 @@ LTO::~LTO() = default;
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
                                unsigned Partition, bool InSummary) {
-  llvm::TimeTraceScope importScope("LTO add module to global resolution");
+  llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
@@ -732,7 +732,7 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
 
 Error LTO::add(std::unique_ptr<InputFile> Input,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope importScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
   assert(!CalledGetMaxTasks);
 
   if (Conf.ResolutionFile)
@@ -758,7 +758,7 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 Expected<ArrayRef<SymbolResolution>>
 LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                unsigned ModI, ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope importScope("LTO add module", Input.getName());
+  llvm::TimeTraceScope timeScope("LTO add module", Input.getName());
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -853,7 +853,7 @@ Expected<
 LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                    BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope importScope("LTO add regular LTO");
+  llvm::TimeTraceScope timeScope("LTO add regular LTO");
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
       BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true,
@@ -1028,7 +1028,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
 Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
                           bool LivenessFromIndex) {
-  llvm::TimeTraceScope importScope("LTO link regular LTO");
+  llvm::TimeTraceScope timeScope("LTO link regular LTO");
   std::vector<GlobalValue *> Keep;
   for (GlobalValue *GV : Mod.Keep) {
     if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
@@ -1068,7 +1068,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 Expected<ArrayRef<SymbolResolution>>
 LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope importScope("LTO add thin LTO");
+  llvm::TimeTraceScope timeScope("LTO add thin LTO");
   ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
@@ -1258,7 +1258,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
 
 void lto::updateMemProfAttributes(Module &Mod,
                                   const ModuleSummaryIndex &Index) {
-  llvm::TimeTraceScope importScope("LTO update memprof attributes");
+  llvm::TimeTraceScope timeScope("LTO update memprof attributes");
   if (Index.withSupportsHotColdNew())
     return;
 

@@ -684,7 +684,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
-    llvm::TimeTraceScope importScope("Module loader", Identifier);
+    llvm::TimeTraceScope moduleLoaderScope("Module loader", Identifier);
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
     if (ModuleMap) {

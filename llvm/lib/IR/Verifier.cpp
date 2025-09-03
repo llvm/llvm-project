@@ -2834,7 +2834,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
-  llvm::TimeTraceScope timeTraceScope("Verifier verify sibling funclet unwinds");
+  llvm::TimeTraceScope timeScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {

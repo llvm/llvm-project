@@ -870,7 +870,7 @@ void llvm::updateVCallVisibilityInModule(
 
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
-  llvm::TimeTraceScope importScope("Update public type test calls");
+  llvm::TimeTraceScope timeScope("Update public type test calls");
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
