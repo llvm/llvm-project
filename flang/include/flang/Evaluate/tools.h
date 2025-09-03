@@ -1531,6 +1531,12 @@ class Scope;
 // point to its subprogram.
 const Symbol *GetMainEntry(const Symbol *);
 
+inline bool IsAlternateEntry(const Symbol *symbol) {
+  // If symbol is not alternate entry symbol, GetMainEntry() returns the same
+  // symbol.
+  return symbol && GetMainEntry(symbol) != symbol;
+}
+
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
 // All of these apply GetUltimate() or ResolveAssociations() to their arguments.

@@ -2950,7 +2950,7 @@ static bool IsSubprogramDefinition(const Symbol &symbol) {
 
 static bool IsExternalProcedureDefinition(const Symbol &symbol) {
   return IsBlockData(symbol) ||
-      (IsSubprogramDefinition(symbol) &&
+      ((IsSubprogramDefinition(symbol) || IsAlternateEntry(&symbol)) &&
           (IsExternal(symbol) || symbol.GetBindName()));
 }
 
