@@ -30,7 +30,7 @@ define i32 @f(i1 %cond1) #0 !prof !0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LD_LCSSA]], 1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[LD_LCSSA]], 7
-; CHECK-NEXT:    br i1 [[TMP1]], label [[EXIT2_UNR_LCSSA:%.*]], label [[ENTRY2_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP2_EPIL_PREHEADER:%.*]], label [[ENTRY2_NEW:%.*]]
 ; CHECK:       entry2.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
@@ -40,18 +40,18 @@ define i32 @f(i1 %cond1) #0 !prof !0 {
 ; CHECK-NEXT:    [[INC_7]] = add i64 [[PHI]], 8
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[EXIT2_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP2]]
-; CHECK:       exit2.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[PHI_UNR_PH:%.*]] = phi i64 [ [[INC_7]], [[LOOP2]] ]
-; CHECK-NEXT:    br label [[EXIT2_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[EXIT2_UNR_LCSSA:%.*]], label [[LOOP2]]
 ; CHECK:       exit2.unr-lcssa:
-; CHECK-NEXT:    [[PHI_UNR:%.*]] = phi i64 [ 0, [[ENTRY2]] ], [ [[PHI_UNR_PH]], [[EXIT2_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[PHI_UNR:%.*]] = phi i64 [ [[INC_7]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP2_EPIL_PREHEADER:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP2_EPIL_PREHEADER]], label [[EXIT2:%.*]]
 ; CHECK:       loop2.epil.preheader:
+; CHECK-NEXT:    [[PHI_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY2]] ], [ [[PHI_UNR]], [[EXIT2_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; CHECK-NEXT:    br label [[LOOP2_EPIL:%.*]]
 ; CHECK:       loop2.epil:
-; CHECK-NEXT:    [[PHI_EPIL:%.*]] = phi i64 [ [[PHI_UNR]], [[LOOP2_EPIL_PREHEADER]] ], [ [[INC_EPIL:%.*]], [[LOOP2_EPIL]] ]
+; CHECK-NEXT:    [[PHI_EPIL:%.*]] = phi i64 [ [[PHI_EPIL_INIT]], [[LOOP2_EPIL_PREHEADER]] ], [ [[INC_EPIL:%.*]], [[LOOP2_EPIL]] ]
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, [[LOOP2_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[LOOP2_EPIL]] ]
 ; CHECK-NEXT:    [[INC_EPIL]] = add i64 [[PHI_EPIL]], 1
 ; CHECK-NEXT:    [[COND2_EPIL:%.*]] = icmp eq i64 [[LD_LCSSA]], [[PHI_EPIL]]

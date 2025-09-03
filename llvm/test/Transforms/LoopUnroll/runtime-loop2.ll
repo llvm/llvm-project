@@ -8,8 +8,8 @@
 ; This test makes sure we're not unrolling 'odd' counts
 
 ; EPILOG: for.body:
-; EPILOG: br i1 %niter.ncmp.3, label %for.end.loopexit.unr-lcssa.loopexit{{.*}}, label %for.body
-; EPILOG-NOT: br i1 %niter.ncmp.4, label %for.end.loopexit.unr-lcssa.loopexit{{.*}}, label %for.body
+; EPILOG: br i1 %niter.ncmp.3, label %for.end.loopexit.unr-lcssa{{.*}}, label %for.body
+; EPILOG-NOT: br i1 %niter.ncmp.4, label %for.end.loopexit.unr-lcssa{{.*}}, label %for.body
 ; EPILOG: for.body.epil:
 
 ; PROLOG: for.body.prol:
