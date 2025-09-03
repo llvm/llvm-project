@@ -4572,19 +4572,24 @@ static bool compareMachineOp(const MachineOperand &Op0,
   }
 }
 
-bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
-                                    const MachineOperand &MO) const {
-  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-
-  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
-
+bool SIInstrInfo::isLiteralOperandLegal(const MCInstrDesc &InstDesc,
+                                        const MCOperandInfo &OpInfo) const {
   if (OpInfo.OperandType == MCOI::OPERAND_IMMEDIATE)
     return true;
 
-  if (OpInfo.RegClass < 0)
+  if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
 
-  if (MO.isImm() && isInlineConstant(MO, OpInfo)) {
+  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(OpInfo))
+    return true;
+
+  return ST.hasVOP3Literal();
+}
+
+bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                                    int64_t ImmVal) const {
+  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
+  if (isInlineConstant(ImmVal, OpInfo.OperandType)) {
     if (isMAI(InstDesc) && ST.hasMFMAInlineLiteralBug() &&
         OpNo == (unsigned)AMDGPU::getNamedOperandIdx(InstDesc.getOpcode(),
                                                      AMDGPU::OpName::src2))
@@ -4592,13 +4597,18 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
   }
 
-  if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
-    return false;
+  return isLiteralOperandLegal(InstDesc, OpInfo);
+}
 
-  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(InstDesc, OpNo))
-    return true;
+bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                                    const MachineOperand &MO) const {
+  if (MO.isImm())
+    return isImmOperandLegal(InstDesc, OpNo, MO.getImm());
 
-  return ST.hasVOP3Literal();
+  assert((MO.isTargetIndex() || MO.isFI() || MO.isGlobal()) &&
+         "unexpected imm-like operand kind");
+  const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
+  return isLiteralOperandLegal(InstDesc, OpInfo);
 }
 
 bool SIInstrInfo::isLegalAV64PseudoImm(uint64_t Imm) const {
@@ -6268,7 +6278,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
               return false;
           }
         }
-      } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
+      } else if (AMDGPU::isSISrcOperand(InstDesc.operands()[i]) &&
                  !isInlineConstant(Op, InstDesc.operands()[i])) {
         // The same literal may be used multiple times.
         if (!UsedLiteral)
