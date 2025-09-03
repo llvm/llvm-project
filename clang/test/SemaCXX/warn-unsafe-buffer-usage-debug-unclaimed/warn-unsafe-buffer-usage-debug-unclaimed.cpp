@@ -32,6 +32,21 @@ void test_unclaimed_use(int *p) { // expected-warning{{'p' is an unsafe pointer 
   p[5] = 5;       // expected-note{{used in buffer access here}}
 }
 
+namespace std {
+inline namespace __1 {
+template <class T> class unique_ptr {
+public:
+  T &operator[](long long i) const;
+};
+} // namespace __1
+} // namespace std
+
+void basic_unique_ptr() {
+  std::unique_ptr<int[]> p1;
+  p1[0];  // expected-warning{{direct access using operator[] on
+          // std::unique_ptr<T[]> is unsafe due to lack of bounds checking}}
+}
+
 // CHECK: Root # 1
 // CHECK: |- DeclRefExpr # 4
 // CHECK: |-- UnaryOperator(++) # 1
