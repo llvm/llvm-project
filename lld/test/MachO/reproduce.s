@@ -1,4 +1,4 @@
-# REQUIRES: x86_64
+# REQUIRES: x86
 # Unsupported on Windows due to maximum path length limitations.
 # UNSUPPORTED: system-windows
 
