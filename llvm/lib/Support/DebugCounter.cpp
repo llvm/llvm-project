@@ -137,7 +137,7 @@ void DebugCounter::push_back(const std::string &Val) {
     handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
       errs() << "DebugCounter Error: " << E.getMessage() << "\n";
     });
-    return;
+    exit(1);
   }
   Counter->Chunks = std::move(*ExpectedChunks);
   Counter->Active = Counter->IsSet = true;
