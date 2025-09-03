@@ -939,22 +939,16 @@ define i128 @lshr_shl_mask(i128 %a0) {
   ret i128 %2
 }
 
-define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) {
+define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) nounwind {
 ; i686-LABEL: shift_i128_limited_shamt:
 ; i686:       # %bb.0: # %start
 ; i686-NEXT:    pushl %ebp
-; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    .cfi_offset %ebp, -8
 ; i686-NEXT:    movl %esp, %ebp
-; i686-NEXT:    .cfi_def_cfa_register %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $16, %esp
-; i686-NEXT:    .cfi_offset %esi, -20
-; i686-NEXT:    .cfi_offset %edi, -16
-; i686-NEXT:    .cfi_offset %ebx, -12
 ; i686-NEXT:    movl 28(%ebp), %esi
 ; i686-NEXT:    movl 32(%ebp), %eax
 ; i686-NEXT:    movb $6, %dl
@@ -988,7 +982,6 @@ define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) {
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
 ; i686-NEXT:    popl %ebp
-; i686-NEXT:    .cfi_def_cfa %esp, 4
 ; i686-NEXT:    retl $4
 ;
 ; x86_64-LABEL: shift_i128_limited_shamt:
@@ -1007,22 +1000,16 @@ start:
   ret i128 %res
 }
 
-define i128 @shift_i128_limited_shamt_no_nuw(i128 noundef %a, i32 noundef %b) {
+define i128 @shift_i128_limited_shamt_no_nuw(i128 noundef %a, i32 noundef %b) nounwind {
 ; i686-LABEL: shift_i128_limited_shamt_no_nuw:
 ; i686:       # %bb.0: # %start
 ; i686-NEXT:    pushl %ebp
-; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    .cfi_offset %ebp, -8
 ; i686-NEXT:    movl %esp, %ebp
-; i686-NEXT:    .cfi_def_cfa_register %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    .cfi_offset %esi, -20
-; i686-NEXT:    .cfi_offset %edi, -16
-; i686-NEXT:    .cfi_offset %ebx, -12
 ; i686-NEXT:    movzbl 40(%ebp), %eax
 ; i686-NEXT:    movl 24(%ebp), %ecx
 ; i686-NEXT:    movl 28(%ebp), %edx
@@ -1064,7 +1051,6 @@ define i128 @shift_i128_limited_shamt_no_nuw(i128 noundef %a, i32 noundef %b) {
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
 ; i686-NEXT:    popl %ebp
-; i686-NEXT:    .cfi_def_cfa %esp, 4
 ; i686-NEXT:    retl $4
 ;
 ; x86_64-LABEL: shift_i128_limited_shamt_no_nuw:
@@ -1086,22 +1072,16 @@ start:
   ret i128 %res
 }
 
-define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %b, i32 noundef %c) {
+define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %b, i32 noundef %c) nounwind {
 ; i686-LABEL: shift_i128_limited_shamt_unknown_lhs:
 ; i686:       # %bb.0: # %start
 ; i686-NEXT:    pushl %ebp
-; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    .cfi_offset %ebp, -8
 ; i686-NEXT:    movl %esp, %ebp
-; i686-NEXT:    .cfi_def_cfa_register %ebp
 ; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    .cfi_offset %esi, -20
-; i686-NEXT:    .cfi_offset %edi, -16
-; i686-NEXT:    .cfi_offset %ebx, -12
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %edx
 ; i686-NEXT:    movl 32(%ebp), %esi
@@ -1143,7 +1123,6 @@ define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %
 ; i686-NEXT:    popl %edi
 ; i686-NEXT:    popl %ebx
 ; i686-NEXT:    popl %ebp
-; i686-NEXT:    .cfi_def_cfa %esp, 4
 ; i686-NEXT:    retl $4
 ;
 ; x86_64-LABEL: shift_i128_limited_shamt_unknown_lhs:
