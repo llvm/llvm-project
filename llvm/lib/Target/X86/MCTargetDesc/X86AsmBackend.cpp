@@ -492,7 +492,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
       return;
     // We eagerly create an empty fragment when inserting a fragment
     // with a variable-size tail.
-    if (NextFragment->getKind() == MCFragment::FT_Relaxable)
+    if (NextFragment->getNext() == OS.getCurrentFragment())
       return;
 
     // Macro fusion actually happens and there is no other fragment inserted

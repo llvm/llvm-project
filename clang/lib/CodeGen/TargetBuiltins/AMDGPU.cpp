@@ -675,6 +675,27 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, Val});
   }
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+  case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
+      IID = Intrinsic::amdgcn_cluster_load_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
+      IID = Intrinsic::amdgcn_cluster_load_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
+      IID = Intrinsic::amdgcn_cluster_load_b128;
+      break;
+    }
+    SmallVector<Value *, 3> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID, {ConvertType(E->getType())});
+    return Builder.CreateCall(F, {Args});
+  }
   case AMDGPU::BI__builtin_amdgcn_load_to_lds: {
     // Should this have asan instrumentation?
     return emitBuiltinWithOneOverloadedType<5>(*this, E,

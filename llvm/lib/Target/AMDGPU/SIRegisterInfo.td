@@ -1107,6 +1107,14 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_6
   let Size = 64;
 }
 
+def VS_64_Align2 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
+                                   (add VReg_64_Align2, SReg_64)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 64;
+}
+
 def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_32)> {
   let HasVGPR = 1;
   let HasAGPR = 1;
@@ -1249,15 +1257,15 @@ class SrcReg9<RegisterClass regClass> : RegisterOperand<regClass> {
   let DecoderMethod = "decodeSrcReg9<" # regClass.Size # ">";
 }
 
-def VRegSrc_32 : SrcReg9<VGPR_32>;
-def VRegSrc_64 : SrcReg9<VReg_64>;
-def VRegSrc_96 : SrcReg9<VReg_96>;
-def VRegSrc_128: SrcReg9<VReg_128>;
-def VRegSrc_192: SrcReg9<VReg_192>;
-def VRegSrc_256: SrcReg9<VReg_256>;
-def VRegSrc_384: SrcReg9<VReg_384>;
-def VRegSrc_512: SrcReg9<VReg_512>;
-def VRegSrc_1024: SrcReg9<VReg_1024>;
+def VRegSrc_32   : SrcReg9<VGPR_32>;
+def VRegSrc_64   : SrcReg9<VReg_64>;
+def VRegSrc_96   : SrcReg9<VReg_96>;
+def VRegSrc_128  : SrcReg9<VReg_128>;
+def VRegSrc_192  : SrcReg9<VReg_192>;
+def VRegSrc_256  : SrcReg9<VReg_256>;
+def VRegSrc_384  : SrcReg9<VReg_384>;
+def VRegSrc_512  : SrcReg9<VReg_512>;
+def VRegSrc_1024 : SrcReg9<VReg_1024>;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;
 
 // True 16 Operands
