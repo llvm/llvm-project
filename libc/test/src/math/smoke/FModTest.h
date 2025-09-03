@@ -31,12 +31,22 @@ class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
+  static constexpr T one = T(1.0);
+  static constexpr T two = T(2.0);
+  static constexpr T neg_two = T(-2.0);
+  static constexpr T three = T(3.0);
+  static constexpr T val_neg_1_1 = T(-1.1);
+  static constexpr T val_6_5 = T(6.5);
+  static constexpr T val_neg_6_5 = T(-6.5);
+  static constexpr T val_2_25 = T(2.25);
+  static constexpr T val_neg_2_25 = T(-2.25);
+
 public:
   typedef T (*FModFunc)(T, T);
 
   void testSpecialNumbers(FModFunc f) {
     // fmod (+0, y) == +0 for y != 0.
-    TEST_SPECIAL(zero, T(3.0), zero, false, 0);
+    TEST_SPECIAL(zero, three, zero, false, 0);
     TEST_SPECIAL(zero, min_denormal, zero, false, 0);
     TEST_SPECIAL(zero, -min_denormal, zero, false, 0);
     TEST_SPECIAL(zero, min_normal, zero, false, 0);
@@ -45,7 +55,7 @@ public:
     TEST_SPECIAL(zero, -max_normal, zero, false, 0);
 
     // fmod (-0, y) == -0 for y != 0.
-    TEST_SPECIAL(neg_zero, T(3.0), neg_zero, false, 0);
+    TEST_SPECIAL(neg_zero, three, neg_zero, false, 0);
     TEST_SPECIAL(neg_zero, min_denormal, neg_zero, false, 0);
     TEST_SPECIAL(neg_zero, -min_denormal, neg_zero, false, 0);
     TEST_SPECIAL(neg_zero, min_normal, neg_zero, false, 0);
@@ -54,8 +64,8 @@ public:
     TEST_SPECIAL(neg_zero, -max_normal, neg_zero, false, 0);
 
     // fmod (+inf, y) == aNaN plus invalid exception.
-    TEST_SPECIAL(inf, T(3.0), aNaN, true, FE_INVALID);
-    TEST_SPECIAL(inf, T(-1.1), aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, three, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, val_neg_1_1, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, min_denormal, aNaN, true, FE_INVALID);
@@ -65,8 +75,8 @@ public:
     TEST_SPECIAL(inf, neg_inf, aNaN, true, FE_INVALID);
 
     // fmod (-inf, y) == aNaN plus invalid exception.
-    TEST_SPECIAL(neg_inf, T(3.0), aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, T(-1.1), aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, three, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, val_neg_1_1, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, min_denormal, aNaN, true, FE_INVALID);
@@ -76,8 +86,8 @@ public:
     TEST_SPECIAL(neg_inf, neg_inf, aNaN, true, FE_INVALID);
 
     // fmod (x, +0) == aNaN plus invalid exception.
-    TEST_SPECIAL(T(3.0), zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(T(-1.1), zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(three, zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(zero, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, zero, aNaN, true, FE_INVALID);
@@ -85,8 +95,8 @@ public:
     TEST_SPECIAL(max_normal, zero, aNaN, true, FE_INVALID);
 
     // fmod (x, -0) == aNaN plus invalid exception.
-    TEST_SPECIAL(T(3.0), neg_zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(T(-1.1), neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(three, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(val_neg_1_1, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, neg_zero, aNaN, true, FE_INVALID);
@@ -99,21 +109,21 @@ public:
     TEST_SPECIAL(min_denormal, inf, min_denormal, false, 0);
     TEST_SPECIAL(min_normal, inf, min_normal, false, 0);
     TEST_SPECIAL(max_normal, inf, max_normal, false, 0);
-    TEST_SPECIAL(T(3.0), inf, T(3.0), false, 0);
+    TEST_SPECIAL(three, inf, three, false, 0);
     // fmod (x, -inf) == x for x not infinite.
     TEST_SPECIAL(zero, neg_inf, zero, false, 0);
     TEST_SPECIAL(neg_zero, neg_inf, neg_zero, false, 0);
     TEST_SPECIAL(min_denormal, neg_inf, min_denormal, false, 0);
     TEST_SPECIAL(min_normal, neg_inf, min_normal, false, 0);
     TEST_SPECIAL(max_normal, neg_inf, max_normal, false, 0);
-    TEST_SPECIAL(T(3.0), neg_inf, T(3.0), false, 0);
+    TEST_SPECIAL(three, neg_inf, three, false, 0);
 
     TEST_SPECIAL(zero, aNaN, aNaN, false, 0);
     TEST_SPECIAL(zero, neg_aNaN, aNaN, false, 0);
     TEST_SPECIAL(neg_zero, aNaN, aNaN, false, 0);
     TEST_SPECIAL(neg_zero, neg_aNaN, aNaN, false, 0);
-    TEST_SPECIAL(T(1.0), aNaN, aNaN, false, 0);
-    TEST_SPECIAL(T(1.0), neg_aNaN, aNaN, false, 0);
+    TEST_SPECIAL(one, aNaN, aNaN, false, 0);
+    TEST_SPECIAL(one, neg_aNaN, aNaN, false, 0);
     TEST_SPECIAL(inf, aNaN, aNaN, false, 0);
     TEST_SPECIAL(inf, neg_aNaN, aNaN, false, 0);
     TEST_SPECIAL(neg_inf, aNaN, aNaN, false, 0);
@@ -122,8 +132,8 @@ public:
     TEST_SPECIAL(zero, neg_sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_zero, sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_zero, neg_sNaN, aNaN, false, FE_INVALID);
-    TEST_SPECIAL(T(1.0), sNaN, aNaN, false, FE_INVALID);
-    TEST_SPECIAL(T(1.0), neg_sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(one, sNaN, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(one, neg_sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(inf, sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(inf, neg_sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_inf, sNaN, aNaN, false, FE_INVALID);
@@ -132,8 +142,8 @@ public:
     TEST_SPECIAL(neg_aNaN, zero, aNaN, false, 0);
     TEST_SPECIAL(aNaN, neg_zero, aNaN, false, 0);
     TEST_SPECIAL(neg_aNaN, neg_zero, aNaN, false, 0);
-    TEST_SPECIAL(aNaN, T(1.0), aNaN, false, 0);
-    TEST_SPECIAL(neg_aNaN, T(1.0), aNaN, false, 0);
+    TEST_SPECIAL(aNaN, one, aNaN, false, 0);
+    TEST_SPECIAL(neg_aNaN, one, aNaN, false, 0);
     TEST_SPECIAL(aNaN, inf, aNaN, false, 0);
     TEST_SPECIAL(neg_aNaN, inf, aNaN, false, 0);
     TEST_SPECIAL(aNaN, neg_inf, aNaN, false, 0);
@@ -142,8 +152,8 @@ public:
     TEST_SPECIAL(neg_sNaN, zero, aNaN, false, FE_INVALID);
     TEST_SPECIAL(sNaN, neg_zero, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_sNaN, neg_zero, aNaN, false, FE_INVALID);
-    TEST_SPECIAL(sNaN, T(1.0), aNaN, false, FE_INVALID);
-    TEST_SPECIAL(neg_sNaN, T(1.0), aNaN, false, FE_INVALID);
+    TEST_SPECIAL(sNaN, one, aNaN, false, FE_INVALID);
+    TEST_SPECIAL(neg_sNaN, one, aNaN, false, FE_INVALID);
     TEST_SPECIAL(sNaN, inf, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_sNaN, inf, aNaN, false, FE_INVALID);
     TEST_SPECIAL(sNaN, neg_inf, aNaN, false, FE_INVALID);
@@ -165,10 +175,10 @@ public:
     TEST_SPECIAL(neg_sNaN, sNaN, aNaN, false, FE_INVALID);
     TEST_SPECIAL(neg_sNaN, neg_sNaN, aNaN, false, FE_INVALID);
 
-    TEST_SPECIAL(T(6.5), T(2.25), T(2.0), false, 0);
-    TEST_SPECIAL(T(-6.5), T(2.25), T(-2.0), false, 0);
-    TEST_SPECIAL(T(6.5), T(-2.25), T(2.0), false, 0);
-    TEST_SPECIAL(T(-6.5), T(-2.25), T(-2.0), false, 0);
+    TEST_SPECIAL(val_6_5, val_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_2_25, neg_two, false, 0);
+    TEST_SPECIAL(val_6_5, val_neg_2_25, two, false, 0);
+    TEST_SPECIAL(val_neg_6_5, val_neg_2_25, neg_two, false, 0);
 
     TEST_SPECIAL(max_normal, max_normal, zero, false, 0);
     TEST_SPECIAL(max_normal, -max_normal, zero, false, 0);

@@ -4016,6 +4016,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmodbf16
+  SRCS
+    fmodbf16.cpp
+  HDRS
+    ../fmodbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.fmod
+)
+
+add_entrypoint_object(
   fromfp
   SRCS
     fromfp.cpp
