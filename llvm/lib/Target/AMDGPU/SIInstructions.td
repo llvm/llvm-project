@@ -2480,6 +2480,22 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
+// (z & ~x)
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
+  (V_BFI_B32_e64 VSrc_b32:$x, (i32 0), VSrc_b32:$z)
+>;
+
+// 64-bit version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<and> i64:$z, (not_oneuse i64:$x)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+>;
+
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
 def : AMDGPUPatIgnoreCopies <
@@ -3106,9 +3122,7 @@ def : GCNPat<
 
 def : GCNPat<
   (i64 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VReg_64,
-    (INSERT_SUBREG (i32 (V_MOV_B32_e32 (i32 0))), VGPR_16:$src, lo16), sub0,
-    (S_MOV_B32 (i32 0)), sub1)
+  (REG_SEQUENCE VReg_64, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16, (V_MOV_B32_e32 (i32 0)), sub1)
 >;
 
 def : GCNPat<

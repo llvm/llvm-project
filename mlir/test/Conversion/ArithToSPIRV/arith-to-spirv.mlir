@@ -734,6 +734,31 @@ func.func @index_castui4(%arg0: index) {
   return
 }
 
+// CHECK-LABEL: index_castindexi1_1
+func.func @index_castindexi1_1(%arg0: index) {
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: spirv.INotEqual %[[ZERO]], %{{.+}} : i32
+  %0 = arith.index_cast %arg0 : index to i1
+  return
+}
+
+// CHECK-LABEL: index_castindexi1_2
+func.func @index_castindexi1_2(%arg0: vector<1xindex>) -> vector<1xi1> {
+  // Single-element vectors do not exist in SPIRV.
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: spirv.INotEqual %[[ZERO]], %{{.+}} : i32
+  %0 = arith.index_cast %arg0 : vector<1xindex> to vector<1xi1>
+  return %0 : vector<1xi1>
+}
+
+// CHECK-LABEL: index_castindexi1_3
+func.func @index_castindexi1_3(%arg0: vector<3xindex>) {
+  // CHECK: %[[ZERO:.+]] = spirv.Constant dense<0> : vector<3xi32>
+  // CHECK: spirv.INotEqual %[[ZERO]], %{{.+}} : vector<3xi32>
+  %0 = arith.index_cast %arg0 : vector<3xindex> to vector<3xi1>
+  return
+}
+
 // CHECK-LABEL: @bit_cast
 func.func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
   // CHECK: spirv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
