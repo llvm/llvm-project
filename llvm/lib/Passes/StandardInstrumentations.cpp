@@ -1918,7 +1918,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
       // drop initial '\n' if present
       SR[I].consume_front("\n");
       // drop predecessors as they can be big and are redundant
-      if(SR[I].str().find(Label) != std::string::npos)
+      if(SR[I].find(Label) != StringRef::npos)
         SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
     }
 
@@ -1958,7 +1958,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
   if (BS.front() == '\n')
     BS1 = BS1.drop_front(1);
   // drop predecessors as they can be big and are redundant
-  if (BS1.str().find(Label) != std::string::npos)
+  if (BS1.find(Label) != StringRef::npos)
     BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
 
   std::string S = "<FONT COLOR=\"" + Colour.str() + "\">" + Label.str() + ":";
