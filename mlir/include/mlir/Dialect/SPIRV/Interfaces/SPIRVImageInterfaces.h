@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_
 #define MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_
 
+#include "mlir/IR/OpDefinition.h"
+
 #include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_

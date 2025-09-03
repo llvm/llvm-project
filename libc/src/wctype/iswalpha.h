@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-bool iswalpha(wint_t c);
+int iswalpha(wint_t c);
 
 } // namespace LIBC_NAMESPACE_DECL
 

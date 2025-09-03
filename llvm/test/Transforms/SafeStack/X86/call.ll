@@ -152,8 +152,8 @@ define void @call_lifetime(ptr %p) {
   ; CHECK: ret void
 entry:
   %q = alloca [100 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 100, ptr %q)
-  call void @llvm.lifetime.end.p0(i64 100, ptr %q)
+  call void @llvm.lifetime.start.p0(ptr %q)
+  call void @llvm.lifetime.end.p0(ptr %q)
   ret void
 }
 
@@ -167,5 +167,5 @@ declare void @readnone0(ptr nocapture readnone, ptr nocapture)
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind argmemonly
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind argmemonly
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind argmemonly
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind argmemonly
