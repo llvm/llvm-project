@@ -83,3 +83,10 @@ TEST(LlvmLibcStrTokTest, SubsequentSearchesReturnNull) {
   ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, ":"), nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, ":"), nullptr);
 }
+
+TEST(LlvmLibcStrTokTest, TopBitSet) {
+  char top_bit_set_str[] = "hello\x80world";
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(top_bit_set_str, "\x80"), "hello");
+  ASSERT_STREQ(LIBC_NAMESPACE::strtok(nullptr, "\x80"), "world");
+  ASSERT_EQ(LIBC_NAMESPACE::strtok(nullptr, "\x80"), nullptr);
+}
