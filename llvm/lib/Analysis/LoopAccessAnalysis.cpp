@@ -264,8 +264,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!OffsetAtLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
+    MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
+    if (isa<SCEVCouldNotCompute>(MaxBTC))
+      return false;
     MaxBTC = SE.getNoopOrZeroExtend(
-        SE.getConstantMaxBackedgeTakenCount(AR->getLoop()), WiderTy);
+        MaxBTC, WiderTy);
     OffsetAtLastIter =
         mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
     if (!OffsetAtLastIter)

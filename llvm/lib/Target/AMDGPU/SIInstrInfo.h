@@ -1183,6 +1183,12 @@ public:
   bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
 
+  bool isLiteralOperandLegal(const MCInstrDesc &InstDesc,
+                             const MCOperandInfo &OpInfo) const;
+
+  bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
+                         int64_t ImmVal) const;
+
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const {
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
