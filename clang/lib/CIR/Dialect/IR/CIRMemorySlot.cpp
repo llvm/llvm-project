@@ -141,6 +141,7 @@ DeletionKind cir::CopyOp::removeBlockingUses(
     const DataLayout &dataLayout) {
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
+                         /*isVolatile=*/false,
                          /*alignment=*/mlir::IntegerAttr{},
                          /*mem-order=*/cir::MemOrderAttr());
   return DeletionKind::Delete;
