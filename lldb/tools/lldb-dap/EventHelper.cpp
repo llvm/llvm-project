@@ -230,9 +230,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
 // Send a "terminated" event to indicate the process is done being
 // debugged.
-void SendTerminatedEvent(DAP &dap) {
-  dap.SendTerminatedEvent();
-}
+void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
