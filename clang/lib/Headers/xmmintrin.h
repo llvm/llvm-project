@@ -2353,9 +2353,8 @@ void _mm_sfence(void);
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_max_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_max_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_max((__v4hi)__a, (__v4hi)__b);
 }
 
@@ -2391,9 +2390,8 @@ _mm_max_pu8(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_min_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_min_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_min((__v4hi)__a, (__v4hi)__b);
 }
 
