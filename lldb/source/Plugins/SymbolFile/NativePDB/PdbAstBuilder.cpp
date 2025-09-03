@@ -615,12 +615,14 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
+  // unions can't be dynamic
+  if (record.contextKind() != CompilerContextKind::ClassOrStruct)
+    metadata.SetIsDynamicCXXType(false);
   // If a class has a vtable, it is dynamic.
-  // Otherwise, we wait until the record is completed - it might have virtual
-  // bases.
-  if (record.contextKind() == CompilerContextKind::ClassOrStruct &&
-      !record.asClass().getVTableShape().isNoneType())
+  else if (!record.asClass().getVTableShape().isNoneType())
     metadata.SetIsDynamicCXXType(true);
+  // else
+  //   wait until the record is completed as it might have virtual bases
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
