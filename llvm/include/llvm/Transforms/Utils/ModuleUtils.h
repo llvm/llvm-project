@@ -159,6 +159,13 @@ LLVM_ABI bool
 lowerGlobalIFuncUsersAsGlobalCtor(Module &M,
                                   ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
+/// AIX specific lowering of ifuncs where we convert an ifunc to a regular
+/// function with the following implementation:
+///  Check if the function's descriptor still points to itself (true on first
+/// entry), if so then call the resolver function and atomically store the
+/// resulting function pointer into the descriptor. Make an indirect call
+/// through the function pointer in the descriptor.
+LLVM_ABI void lowerIFuncsOnAIX(Module &M);
 } // End llvm namespace
 
 #endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
