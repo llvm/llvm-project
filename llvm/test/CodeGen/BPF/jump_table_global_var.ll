@@ -1,4 +1,8 @@
-; RUN: llc -march=bpf -mcpu=v4 < %s | FileCheck %s
+; Checks generated using command:
+;    llvm/utils/update_test_body.py llvm/test/CodeGen/BPF/jump_table_global_var.ll
+
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: llc -march=bpf -mcpu=v4 < test.ll | FileCheck %s
 ;
 ; Source code:
 ;   int foo(unsigned a) {
@@ -15,6 +19,8 @@
 ; Compilation Flags:
 ;   clang --target=bpf -mcpu=v4 -O2 -emit-llvm -S test.c
 
+.ifdef GEN
+;--- test.ll
 @__const.foo.jt1 = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@foo, %l1), ptr blockaddress(@foo, %l2)], align 8
 
 define dso_local range(i32 3, 5) i32 @foo(i32 noundef %a) local_unnamed_addr {
@@ -33,24 +39,45 @@ l2:                                               ; preds = %l1, %entry
   ret i32 %ret.0
 }
 
-; CHECK:            w1 &= 1
-; CHECK-NEXT:       r1 <<= 3
-; CHECK-NEXT:       r2 = BPF.JT.0.0 ll
-; CHECK-NEXT:       r2 += r1
-; CHECK-NEXT:       r1 = *(u64 *)(r2 + 0)
-; CHECK-NEXT:       gotox r1
-; CHECK-NEXT:  .Ltmp0:                              # Block address taken
-; CHECK-NEXT:  LBB0_1:                              # %l1
-; CHECK-NEXT:       w0 = 4
-; CHECK-NEXT:       goto LBB0_3
-; CHECK-NEXT:  .Ltmp1:                              # Block address taken
-; CHECK-NEXT:  LBB0_2:                              # %l2
-; CHECK-NEXT:       w0 = 3
-; CHECK-NEXT:  LBB0_3:                              # %.split
-; CHECK-NEXT:       exit
+;--- gen
+echo ""
+echo "; Generated checks follow"
+echo ";"
+llc -march=bpf -mcpu=v4 < test.ll \
+  | awk '/# -- End function/ {p=0} /@function/ {p=1} p {print "; CHECK" ": " $0}'
+
+.endif
+
+; Generated checks follow
 ;
-; CHECK:            .section        .jumptables,"",@progbits
-; CHECK-NEXT:  BPF.JT.0.0:
-; CHECK-NEXT:       .quad   LBB0_1
-; CHECK-NEXT:       .quad   LBB0_2
-; CHECK-NEXT:       .size   BPF.JT.0.0, 16
+; CHECK: 	.type	foo,@function
+; CHECK: foo:                                    # @foo
+; CHECK: .Lfoo$local:
+; CHECK: 	.type	.Lfoo$local,@function
+; CHECK: 	.cfi_startproc
+; CHECK: # %bb.0:                                # %entry
+; CHECK:                                         # kill: def $w1 killed $w1 def $r1
+; CHECK: 	w1 &= 1
+; CHECK: 	r1 <<= 3
+; CHECK: 	r2 = BPF.JT.0.0 ll
+; CHECK: 	r2 += r1
+; CHECK: 	r1 = *(u64 *)(r2 + 0)
+; CHECK: 	gotox r1
+; CHECK: .Ltmp0:                                 # Block address taken
+; CHECK: LBB0_1:                                 # %l1
+; CHECK: 	w0 = 4
+; CHECK: 	goto LBB0_3
+; CHECK: .Ltmp1:                                 # Block address taken
+; CHECK: LBB0_2:                                 # %l2
+; CHECK: 	w0 = 3
+; CHECK: LBB0_3:                                 # %.split
+; CHECK: 	exit
+; CHECK: .Lfunc_end0:
+; CHECK: 	.size	foo, .Lfunc_end0-foo
+; CHECK: 	.size	.Lfoo$local, .Lfunc_end0-foo
+; CHECK: 	.cfi_endproc
+; CHECK: 	.section	.jumptables,"",@progbits
+; CHECK: BPF.JT.0.0:
+; CHECK: 	.quad	LBB0_1
+; CHECK: 	.quad	LBB0_2
+; CHECK: 	.size	BPF.JT.0.0, 16
