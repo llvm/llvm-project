@@ -1383,8 +1383,7 @@ IntrinsicInst *Ripple::rippleReduceIntrinsics(Instruction *I) {
 }
 
 IntrinsicInst *Ripple::rippleShuffleIntrinsics(Instruction *I) {
-  return intrinsicWithId(
-      I, {Intrinsic::ripple_ishuffle, Intrinsic::ripple_fshuffle});
+  return intrinsicWithId(I, {Intrinsic::ripple_shuffle});
 }
 
 IntrinsicInst *Ripple::rippleBroadcastIntrinsic(Instruction *I) {

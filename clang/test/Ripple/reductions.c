@@ -109,6 +109,72 @@ gen_reduce_test (128, add, ull, ull)
 
 // }}}
 
+// {{{ MUL
+
+gen_reduce_test (128, mul, uint8_t, u8)
+// CHECKALL: check_reduction_mul_u8
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i8(i64 1, i8
+// CHECKRIPPLEGEN-COUNT-2: call i8 @llvm.vector.reduce.mul.v128i8
+
+gen_reduce_test (128, mul, int8_t, i8)
+// CHECKALL: check_reduction_mul_i8
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i8(i64 1, i8
+// CHECKRIPPLEGEN-COUNT-2: call i8 @llvm.vector.reduce.mul.v128i8
+
+gen_reduce_test (64, mul, uint16_t, u16)
+// CHECKALL: check_reduction_mul_u16
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i16(i64 1, i16
+// CHECKRIPPLEGEN-COUNT-2: call i16 @llvm.vector.reduce.mul.v64i16
+
+gen_reduce_test (64, mul, int16_t, i16)
+// CHECKALL: check_reduction_mul_i16
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i16(i64 1, i16
+// CHECKRIPPLEGEN-COUNT-2: call i16 @llvm.vector.reduce.mul.v64i16
+
+gen_reduce_test (32, mul, uint32_t, u32)
+// CHECKALL: check_reduction_mul_u32
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i32(i64 1, i32
+// CHECKRIPPLEGEN-COUNT-2: call i32 @llvm.vector.reduce.mul.v32i32
+
+gen_reduce_test (32, mul, int32_t, i32)
+// CHECKALL: check_reduction_mul_i32
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i32(i64 1, i32
+// CHECKRIPPLEGEN-COUNT-2: call i32 @llvm.vector.reduce.mul.v32i32
+
+gen_reduce_test (16, mul, uint64_t, u64)
+// CHECKALL: check_reduction_mul_u64
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i64(i64 1, i64
+// CHECKRIPPLEGEN-COUNT-2: call i64 @llvm.vector.reduce.mul.v16i64
+
+gen_reduce_test (16, mul, int64_t, i64)
+// CHECKALL: check_reduction_mul_i64
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.mul.i64(i64 1, i64
+// CHECKRIPPLEGEN-COUNT-2: call i64 @llvm.vector.reduce.mul.v16i64
+
+gen_reduce_test (32, mul, float, f32)
+// CHECKALL: check_reduction_mul_f32
+// CHECKCLANGGEN-COUNT-2: call{{.*}}reassoc{{.*}}float @llvm.ripple.reduce.fmul.f32(i64 1, float
+// CHECKRIPPLEGEN-COUNT-2: call reassoc float @llvm.vector.reduce.fmul.v32f32
+
+gen_reduce_test (16, mul, double, f64)
+// CHECKALL: check_reduction_mul_f64
+// CHECKCLANGGEN-COUNT-2: call{{.*}}reassoc{{.*}}double @llvm.ripple.reduce.fmul.f64(i64 1, double
+// CHECKRIPPLEGEN-COUNT-2: call reassoc double @llvm.vector.reduce.fmul.v16f64
+
+gen_reduce_test (128, mul, char, c)
+gen_reduce_test (128, mul, sc, sc)
+gen_reduce_test (128, mul, uc, uc)
+gen_reduce_test (128, mul, ss, ss)
+gen_reduce_test (128, mul, us, us)
+gen_reduce_test (128, mul, si, si)
+gen_reduce_test (128, mul, ui, ui)
+gen_reduce_test (128, mul, sl, sl)
+gen_reduce_test (128, mul, ul, ul)
+gen_reduce_test (128, mul, sll, sll)
+gen_reduce_test (128, mul, ull, ull)
+
+// }}}
+
 // {{{ MAX
 
 gen_reduce_test (128, max, uint8_t, u8)
@@ -370,6 +436,62 @@ gen_reduce_test (128, or, sl, sl)
 gen_reduce_test (128, or, ul, ul)
 gen_reduce_test (128, or, sll, sll)
 gen_reduce_test (128, or, ull, ull)
+
+// }}}
+
+// {{{ XOR
+
+gen_reduce_test (128, xor, uint8_t, u8)
+// CHECKALL: check_reduction_xor_u8
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i8(i64 1, i8
+// CHECKRIPPLEGEN-COUNT-2: call i8 @llvm.vector.reduce.xor.v128i8(
+
+gen_reduce_test (128, xor, int8_t, i8)
+// CHECKALL: check_reduction_xor_i8
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i8(i64 1, i8
+// CHECKRIPPLEGEN-COUNT-2: call i8 @llvm.vector.reduce.xor.v128i8(
+
+gen_reduce_test (64, xor, uint16_t, u16)
+// CHECKALL: check_reduction_xor_u16
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i16(i64 1, i16
+// CHECKRIPPLEGEN-COUNT-2: call i16 @llvm.vector.reduce.xor.v64i16(
+
+gen_reduce_test (64, xor, int16_t, i16)
+// CHECKALL: check_reduction_xor_i16
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i16(i64 1, i16
+// CHECKRIPPLEGEN-COUNT-2: call i16 @llvm.vector.reduce.xor.v64i16(
+
+gen_reduce_test (32, xor, uint32_t, u32)
+// CHECKALL: check_reduction_xor_u32
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i32(i64 1, i32
+// CHECKRIPPLEGEN-COUNT-2: call i32 @llvm.vector.reduce.xor.v32i32(
+
+gen_reduce_test (32, xor, int32_t, i32)
+// CHECKALL: check_reduction_xor_i32
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i32(i64 1, i32
+// CHECKRIPPLEGEN-COUNT-2: call i32 @llvm.vector.reduce.xor.v32i32(
+
+gen_reduce_test (16, xor, uint64_t, u64)
+// CHECKALL: check_reduction_xor_u64
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i64(i64 1, i64
+// CHECKRIPPLEGEN-COUNT-2: call i64 @llvm.vector.reduce.xor.v16i64(
+
+gen_reduce_test (16, xor, int64_t, i64)
+// CHECKALL: check_reduction_xor_i64
+// CHECKCLANGGEN-COUNT-2: @llvm.ripple.reduce.xor.i64(i64 1, i64
+// CHECKRIPPLEGEN-COUNT-2: call i64 @llvm.vector.reduce.xor.v16i64(
+
+gen_reduce_test (128, xor, char, c)
+gen_reduce_test (128, xor, sc, sc)
+gen_reduce_test (128, xor, uc, uc)
+gen_reduce_test (128, xor, ss, ss)
+gen_reduce_test (128, xor, us, us)
+gen_reduce_test (128, xor, si, si)
+gen_reduce_test (128, xor, ui, ui)
+gen_reduce_test (128, xor, sl, sl)
+gen_reduce_test (128, xor, ul, ul)
+gen_reduce_test (128, xor, sll, sll)
+gen_reduce_test (128, xor, ull, ull)
 
 // }}}
 

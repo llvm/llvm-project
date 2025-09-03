@@ -555,15 +555,11 @@ only the **lane mapping** along the shuffled dimension is altered.
 .. code-block:: llvm
 
   ; Integer elements
-  declare T @llvm.ripple.ishuffle(T %x, T %y_or_ignored, i1 immarg %pair, ptr %fn)
-
-  ; Floating-point elements
-  declare F @llvm.ripple.fshuffle(F %x, F %y_or_ignored, i1 immarg %pair, ptr %fn)
+  declare T @llvm.ripple.shuffle(T %x, T %y_or_ignored, i1 immarg %pair, ptr %fn)
 
 Where:
 
-* ``T`` is any integer type (``llvm_anyint_ty``).
-* ``F`` is any floating-point type (``llvm_anyfloat_ty``).
+* ``T`` is any scalar integer, floating-point or pointer type.
 * The **first two operands** have the **same LLVM type** as the return
   (``LLVMMatchType<0>``).
 * ``%pair`` is an **immarg i1** (compile-time constant).

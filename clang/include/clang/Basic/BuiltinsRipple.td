@@ -62,6 +62,12 @@ def RippleReduceAdd : Builtin, RippleAllTypesTemplate {
   let Prototype = "T(uint64_t, T)";
 }
 
+def RippleReduceMul : Builtin, RippleAllTypesTemplate {
+  let Spellings = ["__builtin_ripple_reducemul_"];
+  let Attributes = [NoThrow];
+  let Prototype = "T(uint64_t, T)";
+}
+
 def RippleReduceMax : Builtin, RippleAllTypesTemplate {
   let Spellings = ["__builtin_ripple_reducemax_"];
   let Attributes = [NoThrow];
@@ -102,11 +108,10 @@ def RippleReduceOr : Builtin, RippleIntTypesTemplate {
   let Prototype = "T(uint64_t, T)";
 }
 
-// FIXME: Don't see how to allow a function-type to enter here.
-def RippleShuffle : Builtin, RippleAllTypesTemplate {
-  let Spellings = ["__builtin_ripple_shuffle_"];
+def RippleReduceXor : Builtin, RippleIntTypesTemplate {
+  let Spellings = ["__builtin_ripple_reducexor_"];
   let Attributes = [NoThrow];
-  let Prototype = "T(T, T, bool, ...)";
+  let Prototype = "T(uint64_t, T)";
 }
 
 class RippleSaturatedOpBuiltin<string name> : Builtin, RippleIntTypesTemplate {
@@ -172,6 +177,12 @@ class RippleAllTypesAndPtrTemplate : Template<
    "uint64_t", "_Float16", "__bf16", "float", "double", "void*"],
   ["i8",    "u8",           "i16",   "u16",             "i32",     "u32",      "i64",
    "u64",      "f16",      "bf16",   "f32",   "f64",  "p" ]>;
+
+def RippleShuffle : Builtin, RippleAllTypesAndPtrTemplate {
+  let Spellings = ["__builtin_ripple_shuffle_"];
+  let Attributes = [NoThrow];
+  let Prototype = "T(T, T, bool, ...)";
+}
 
 def RippleBroadcast : Builtin, RippleAllTypesAndPtrTemplate {
   let Spellings = ["__builtin_ripple_broadcast_"];

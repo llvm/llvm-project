@@ -29,42 +29,53 @@ size_t get_src_id(size_t id, size_t n) {
 
 gen_shuffle_test(128, uint8_t, u8);
 // CHECK: @check_shuffle_u8
-// CHECK: llvm.ripple.ishuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(128, int8_t, i8);
 // CHECK: @check_shuffle_i8
-// CHECK: llvm.ripple.ishuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(64, uint16_t, u16);
 // CHECK: @check_shuffle_u16
-// CHECK: llvm.ripple.ishuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(64, int16_t, i16);
 // CHECK: @check_shuffle_i16
-// CHECK: llvm.ripple.ishuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(32, uint32_t, u32);
 // CHECK: @check_shuffle_u32
-// CHECK: llvm.ripple.ishuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(32, int32_t, i32);
 // CHECK: @check_shuffle_i32
-// CHECK: llvm.ripple.ishuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(16, uint64_t, u64);
 // CHECK: @check_shuffle_u64
-// CHECK: llvm.ripple.ishuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(16, int64_t, i64);
 // CHECK: @check_shuffle_i64
-// CHECK: llvm.ripple.ishuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 false, ptr nonnull @get_src_id)
+// CHECK: ret
+
+void check_shuffle_ptr(char* in[32], char* out[32]) {
+  ripple_block_t BS = ripple_set_block_shape(0, 32);
+  int id = ripple_id(BS, 0);
+  char* tmp = in[id];
+  char* shuf_tmp = ripple_shuffle_p(tmp, get_src_id);
+  out[id] = shuf_tmp;
+}
+// CHECK: @check_shuffle_ptr
+// CHECK: llvm.ripple.shuffle.p0(ptr {{.*}}, ptr {{.*}}, i1 false, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_test(128, char, c);
@@ -92,42 +103,55 @@ gen_shuffle_test(128, ull, ull);
 
 gen_shuffle_pair_test(128, uint8_t, u8);
 // CHECK: @check_shuffle_pair_u8
-// CHECK: llvm.ripple.ishuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(128, int8_t, i8);
 // CHECK: @check_shuffle_pair_i8
-// CHECK: llvm.ripple.ishuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i8(i8 %{{[0-9]+}}, i8 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(64, uint16_t, u16);
 // CHECK: @check_shuffle_pair_u16
-// CHECK: llvm.ripple.ishuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(64, int16_t, i16);
 // CHECK: @check_shuffle_pair_i16
-// CHECK: llvm.ripple.ishuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i16(i16 %{{[0-9]+}}, i16 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(32, uint32_t, u32);
 // CHECK: @check_shuffle_pair_u32
-// CHECK: llvm.ripple.ishuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(32, int32_t, i32);
 // CHECK: @check_shuffle_pair_i32
-// CHECK: llvm.ripple.ishuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i32(i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(16, uint64_t, u64);
 // CHECK: @check_shuffle_pair_u64
-// CHECK: llvm.ripple.ishuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(16, int64_t, i64);
 // CHECK: @check_shuffle_pair_i64
-// CHECK: llvm.ripple.ishuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: llvm.ripple.shuffle.i64(i64 %{{[0-9]+}}, i64 %{{[0-9]+}}, i1 true, ptr nonnull @get_src_id)
+// CHECK: ret
+
+void check_shuffle_pair_ptr(char* in[16], char* in2[16],
+                                   char* out[16]) {
+  ripple_block_t BS = ripple_set_block_shape(0, 16);
+  int id = ripple_id(BS, 0);
+  char* tmp = in[id];
+  char* tmp2 = in2[id];
+  char* shuf_tmp = ripple_shuffle_pair_p(tmp, tmp2, get_src_id);
+  out[id] = shuf_tmp;
+}
+// CHECK: @check_shuffle_pair_ptr
+// CHECK: llvm.ripple.shuffle.p0(ptr %{{.*}}, ptr %{{.*}}, i1 true, ptr nonnull @get_src_id)
 // CHECK: ret
 
 gen_shuffle_pair_test(128, char, c);

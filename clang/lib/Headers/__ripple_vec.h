@@ -79,7 +79,8 @@ typedef struct ripple_block_shape *ripple_block_t;
 
 #if __STDCPP_BFLOAT16_T__ || __ARM_FEATURE_BF16 || __SSE2__ || __AVX10_2__ ||  \
     (defined(__hexagon__) && __HEXAGON_ARCH__ >= 81)
-#define __has_bf16__ 1
+// Pending backend bf16 patches
+#define __has_bf16__ 0
 #else
 #define __has_bf16__ 0
 #endif
@@ -257,6 +258,8 @@ vec_to_ripple_3d(ripple_block_t BS,
 #if __has_soft_bf16__
 #define __extra_bf16_ripple_reduceadd(bitmask, val)                            \
   , __bf16 : (__bf16)__builtin_ripple_reduceadd_f32((bitmask), (float)(val))
+#define __extra_bf16_ripple_reducemul(bitmask, val)                            \
+  , __bf16 : (__bf16)__builtin_ripple_reducemul_f32((bitmask), (float)(val))
 #define __extra_bf16_ripple_reducemin(bitmask, val)                            \
   , __bf16 : (__bf16)__builtin_ripple_reducemin_f32((bitmask), (float)(val))
 #define __extra_bf16_ripple_reducemax(bitmask, val)                            \
@@ -268,6 +271,8 @@ vec_to_ripple_3d(ripple_block_t BS,
 #else // !__has_soft_bf16__
 #define __extra_bf16_ripple_reduceadd(bitmask, val)                            \
   , __bf16 : __builtin_ripple_reduceadd_bf16((bitmask), (val))
+#define __extra_bf16_ripple_reducemul(bitmask, val)                            \
+  , __bf16 : __builtin_ripple_reducemul_bf16((bitmask), (val))
 #define __extra_bf16_ripple_reducemin(bitmask, val)                            \
   , __bf16 : __builtin_ripple_reducemin_bf16((bitmask), (val))
 #define __extra_bf16_ripple_reducemax(bitmask, val)                            \
@@ -279,6 +284,7 @@ vec_to_ripple_3d(ripple_block_t BS,
 #endif // __has_soft_bf16__
 #else
 #define __extra_bf16_ripple_reduceadd(bitmask, val)
+#define __extra_bf16_ripple_reducemul(bitmask, val)
 #define __extra_bf16_ripple_reducemin(bitmask, val)
 #define __extra_bf16_ripple_reducemax(bitmask, val)
 #define __extra_bf16_ripple_reduceminimum(bitmask, val)
@@ -288,6 +294,8 @@ vec_to_ripple_3d(ripple_block_t BS,
 #if __has_Float16__
 #define __extra_f16_ripple_reduceadd(bitmask, val)                             \
   , _Float16 : __builtin_ripple_reduceadd_f16((bitmask), (val))
+#define __extra_f16_ripple_reducemul(bitmask, val)                             \
+  , _Float16 : __builtin_ripple_reducemul_f16((bitmask), (val))
 #define __extra_f16_ripple_reducemin(bitmask, val)                             \
   , _Float16 : __builtin_ripple_reducemin_f16((bitmask), (val))
 #define __extra_f16_ripple_reducemax(bitmask, val)                             \
@@ -298,6 +306,7 @@ vec_to_ripple_3d(ripple_block_t BS,
   , _Float16 : __builtin_ripple_reducemaximum_f16((bitmask), (val))
 #else
 #define __extra_f16_ripple_reduceadd(bitmask, val)
+#define __extra_f16_ripple_reducemul(bitmask, val)
 #define __extra_f16_ripple_reducemin(bitmask, val)
 #define __extra_f16_ripple_reducemax(bitmask, val)
 #define __extra_f16_ripple_reduceminimum(bitmask, val)
@@ -345,6 +354,38 @@ vec_to_ripple_3d(ripple_block_t BS,
       double: __builtin_ripple_reduceadd_f64((bitmask), (val))                 \
           __extra_bf16_ripple_reduceadd((bitmask), (val))                      \
               __extra_f16_ripple_reduceadd((bitmask), (val)))                  \
+      RIPPLE_REENABLE_GENERIC_WARNING
+
+#define ripple_reducemul(bitmask, val)                                         \
+  RIPPLE_DISABLE_GENERIC_WARNING                                               \
+  _Generic((val),                                                              \
+      char: (__ripple_char_is_signed                                           \
+                 ? __ripple_reduce_any_int(mul, char, i, (bitmask), (val))     \
+                 : __ripple_reduce_any_int(mul, char, u, (bitmask), (val))),   \
+      signed char: __ripple_reduce_any_int(mul, signed char, i, (bitmask),     \
+                                           (val)),                             \
+      unsigned char: __ripple_reduce_any_int(mul, unsigned char, u, (bitmask), \
+                                             (val)),                           \
+      signed short: __ripple_reduce_any_int(mul, signed short, i, (bitmask),   \
+                                            (val)),                            \
+      unsigned short: __ripple_reduce_any_int(mul, unsigned short, u,          \
+                                              (bitmask), (val)),               \
+      signed int: __ripple_reduce_any_int(mul, signed int, i, (bitmask),       \
+                                          (val)),                              \
+      unsigned int: __ripple_reduce_any_int(mul, unsigned int, u, (bitmask),   \
+                                            (val)),                            \
+      signed long: __ripple_reduce_any_int(mul, signed long, i, (bitmask),     \
+                                           (val)),                             \
+      unsigned long: __ripple_reduce_any_int(mul, unsigned long, u, (bitmask), \
+                                             (val)),                           \
+      signed long long: __ripple_reduce_any_int(mul, signed long long, i,      \
+                                                (bitmask), (val)),             \
+      unsigned long long: __ripple_reduce_any_int(mul, unsigned long long, u,  \
+                                                  (bitmask), (val)),           \
+      float: __builtin_ripple_reducemul_f32((bitmask), (val)),                 \
+      double: __builtin_ripple_reducemul_f64((bitmask), (val))                 \
+          __extra_bf16_ripple_reducemul((bitmask), (val))                      \
+              __extra_f16_ripple_reducemul((bitmask), (val)))                  \
       RIPPLE_REENABLE_GENERIC_WARNING
 
 #define ripple_reducemin(bitmask, val)                                         \
@@ -485,6 +526,34 @@ vec_to_ripple_3d(ripple_block_t BS,
                                                   (bitmask), (val)))           \
       RIPPLE_REENABLE_GENERIC_WARNING
 
+#define ripple_reducexor(bitmask, val)                                         \
+  RIPPLE_DISABLE_GENERIC_WARNING                                               \
+  _Generic((val),                                                              \
+      char: (__ripple_char_is_signed                                           \
+                 ? __ripple_reduce_any_int(xor, char, i, (bitmask), (val))     \
+                 : __ripple_reduce_any_int(xor, char, u, (bitmask), (val))),   \
+      signed char: __ripple_reduce_any_int(xor, signed char, i, (bitmask),     \
+                                           (val)),                             \
+      unsigned char: __ripple_reduce_any_int(xor, unsigned char, u, (bitmask), \
+                                             (val)),                           \
+      signed short: __ripple_reduce_any_int(xor, signed short, i, (bitmask),   \
+                                            (val)),                            \
+      unsigned short: __ripple_reduce_any_int(xor, unsigned short, u,          \
+                                              (bitmask), (val)),               \
+      signed int: __ripple_reduce_any_int(xor, signed int, i, (bitmask),       \
+                                          (val)),                              \
+      unsigned int: __ripple_reduce_any_int(xor, unsigned int, u, (bitmask),   \
+                                            (val)),                            \
+      signed long: __ripple_reduce_any_int(xor, signed long, i, (bitmask),     \
+                                           (val)),                             \
+      unsigned long: __ripple_reduce_any_int(xor, unsigned long, u, (bitmask), \
+                                             (val)),                           \
+      signed long long: __ripple_reduce_any_int(xor, signed long long, i,      \
+                                                (bitmask), (val)),             \
+      unsigned long long: __ripple_reduce_any_int(xor, unsigned long long, u,  \
+                                                  (bitmask), (val)))           \
+      RIPPLE_REENABLE_GENERIC_WARNING
+
 #else // defined(_cplusplus)
 
 // We don't have <type_traits> in llvm, do a simple implementation for Ripple!
@@ -609,6 +678,8 @@ template <typename T> struct remove_reference<T &&> {
 
 spec_reduce_itypes(add);
 spec_reduce_ftypes(add);
+spec_reduce_itypes(mul);
+spec_reduce_ftypes(mul);
 spec_reduce_itypes(max);
 spec_reduce_ftypes(max);
 spec_reduce_ftypes(maximum);
@@ -618,15 +689,18 @@ spec_reduce_ftypes(minimum);
 
 spec_reduce_itypes(and);
 spec_reduce_itypes(or);
+spec_reduce_itypes(xor);
 
 // Expose the same API as C for all reductions
 #define ripple_reduceadd(mask, val) ripple_reduceadd<mask>(val)
+#define ripple_reducemul(mask, val) ripple_reducemul<mask>(val)
 #define ripple_reducemax(mask, val) ripple_reducemax<mask>(val)
 #define ripple_reducemin(mask, val) ripple_reducemin<mask>(val)
 #define ripple_reducemaximum(mask, val) ripple_reducemaximum<mask>(val)
 #define ripple_reduceminimum(mask, val) ripple_reduceminimum<mask>(val)
 #define ripple_reduceand(mask, val) ripple_reduceand<mask>(val)
 #define ripple_reduceor(mask, val) ripple_reduceor<mask>(val)
+#define ripple_reducexor(mask, val) ripple_reducexor<mask>(val)
 
 #undef spec_reduce
 #undef spec_reduce_char
@@ -715,6 +789,12 @@ spec_reduce_itypes(or);
 #define ripple_shuffle_pair(Val1, Val2, IdxFun)                                \
   __ripple_shuffle_impl((Val1), (Val2), 1, (IdxFun))
 
+#define ripple_shuffle_p(Val, IdxFun)                                          \
+  (__typeof__(Val))__builtin_ripple_shuffle_p((Val), (Val), 0, (IdxFun))
+
+#define ripple_shuffle_pair_p(Val1, Val2, IdxFun)                              \
+  (__typeof__(Val1))__builtin_ripple_shuffle_p((Val1), (Val2), 1, (IdxFun))
+
 #else // defined(__cplusplus)
 
 #if __has_soft_bf16__
@@ -741,6 +821,12 @@ ripple_shuffle(char x, size_t (*index_func)(size_t, size_t)) {
   return __ripple_char_is_signed
              ? __ripple_shuffle_impl_int(char, i, x, x, false, index_func)
              : __ripple_shuffle_impl_int(char, u, x, x, false, index_func);
+}
+
+template <typename T>
+static __attribute__((always_inline)) T *
+ripple_shuffle_p(T *x, size_t (*index_func)(size_t, size_t)) {
+  return static_cast<T *>(__builtin_ripple_shuffle_p(x, x, false, index_func));
 }
 
 __ripple_shuffle_impl_int_cpp(signed char, i);
@@ -786,8 +872,14 @@ ripple_shuffle(double x, size_t (*index_func)(size_t, size_t)) {
 static __attribute__((always_inline)) char
 ripple_shuffle_pair(char x, char y, size_t (*index_func)(size_t, size_t)) {
   return __ripple_char_is_signed
-             ? __ripple_shuffle_impl_int(char, i, x, y, false, index_func)
-             : __ripple_shuffle_impl_int(char, u, x, y, false, index_func);
+             ? __ripple_shuffle_impl_int(char, i, x, y, true, index_func)
+             : __ripple_shuffle_impl_int(char, u, x, y, true, index_func);
+}
+
+template <typename T>
+static __attribute__((always_inline)) T *
+ripple_shuffle_pair_p(T *x, T *y, size_t (*index_func)(size_t, size_t)) {
+  return static_cast<T *>(__builtin_ripple_shuffle_p(x, y, true, index_func));
 }
 
 __ripple_shuffle_pair_impl_int_cpp(signed char, i);

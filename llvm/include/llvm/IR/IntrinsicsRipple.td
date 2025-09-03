@@ -95,13 +95,9 @@ let IntrProperties = [IntrNoMem, IntrWillReturn, IntrSpeculatable,
 // The first and second operand are tensors whose values are shuffled, the third
 // operand is a pointer to a function that performs the index-mapping and
 // the boolean indicates if we shuffle 1 (false) or 2 (true) inputs.
-def int_ripple_ishuffle: DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                                               [LLVMMatchType<0>, LLVMMatchType<0>,
+def int_ripple_shuffle: DefaultAttrsIntrinsic<[llvm_any_ty],
+                                              [LLVMMatchType<0>, LLVMMatchType<0>,
                                                 llvm_i1_ty, llvm_ptr_ty],
-                                               [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
-def int_ripple_fshuffle: DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                                               [LLVMMatchType<0>, LLVMMatchType<0>,
-                                                llvm_i1_ty, llvm_ptr_ty],
-                                               [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+                                              [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 } // End TargetPrefix = "ripple"

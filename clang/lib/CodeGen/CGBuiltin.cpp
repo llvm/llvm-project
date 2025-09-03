@@ -6635,116 +6635,47 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Str.getPointer());
   }
 
-  // Ripple Builtins
+  // Ripple-specific begin
+#define CASE_RIPPLE_ALL_INT_BUILTIN(Name)                                      \
+  case Builtin::BI__builtin_ripple_##Name##_i8:                                \
+  case Builtin::BI__builtin_ripple_##Name##_u8:                                \
+  case Builtin::BI__builtin_ripple_##Name##_i16:                               \
+  case Builtin::BI__builtin_ripple_##Name##_u16:                               \
+  case Builtin::BI__builtin_ripple_##Name##_i32:                               \
+  case Builtin::BI__builtin_ripple_##Name##_u32:                               \
+  case Builtin::BI__builtin_ripple_##Name##_i64:                               \
+  case Builtin::BI__builtin_ripple_##Name##_u64:
+
+#define CASE_RIPPLE_ALL_FLOAT_BUILTIN(Name)                                    \
+  case Builtin::BI__builtin_ripple_##Name##_f16:                               \
+  case Builtin::BI__builtin_ripple_##Name##_bf16:                              \
+  case Builtin::BI__builtin_ripple_##Name##_f32:                               \
+  case Builtin::BI__builtin_ripple_##Name##_f64:
+
+#define CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(Name)                                \
+  CASE_RIPPLE_ALL_INT_BUILTIN(Name)                                            \
+  CASE_RIPPLE_ALL_FLOAT_BUILTIN(Name)
+
   case Builtin::BI__builtin_ripple_get_index:
   case Builtin::BI__builtin_ripple_get_size:
   case Builtin::BI__builtin_ripple_set_shape:
   case Builtin::BI__builtin_ripple_parallel_idx:
 
-  case Builtin::BI__builtin_ripple_reduceadd_i8:
-  case Builtin::BI__builtin_ripple_reduceadd_u8:
-  case Builtin::BI__builtin_ripple_reduceadd_i16:
-  case Builtin::BI__builtin_ripple_reduceadd_u16:
-  case Builtin::BI__builtin_ripple_reduceadd_i32:
-  case Builtin::BI__builtin_ripple_reduceadd_u32:
-  case Builtin::BI__builtin_ripple_reduceadd_i64:
-  case Builtin::BI__builtin_ripple_reduceadd_u64:
-  case Builtin::BI__builtin_ripple_reduceadd_f16:
-  case Builtin::BI__builtin_ripple_reduceadd_bf16:
-  case Builtin::BI__builtin_ripple_reduceadd_f32:
-  case Builtin::BI__builtin_ripple_reduceadd_f64:
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(reduceadd)
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(reducemul)
 
-  case Builtin::BI__builtin_ripple_reducemin_i8:
-  case Builtin::BI__builtin_ripple_reducemin_u8:
-  case Builtin::BI__builtin_ripple_reducemin_i16:
-  case Builtin::BI__builtin_ripple_reducemin_u16:
-  case Builtin::BI__builtin_ripple_reducemin_i32:
-  case Builtin::BI__builtin_ripple_reducemin_u32:
-  case Builtin::BI__builtin_ripple_reducemin_i64:
-  case Builtin::BI__builtin_ripple_reducemin_u64:
-  case Builtin::BI__builtin_ripple_reducemin_f16:
-  case Builtin::BI__builtin_ripple_reducemin_bf16:
-  case Builtin::BI__builtin_ripple_reducemin_f32:
-  case Builtin::BI__builtin_ripple_reducemin_f64:
-  case Builtin::BI__builtin_ripple_reduceminimum_f16:
-  case Builtin::BI__builtin_ripple_reduceminimum_bf16:
-  case Builtin::BI__builtin_ripple_reduceminimum_f32:
-  case Builtin::BI__builtin_ripple_reduceminimum_f64:
+    CASE_RIPPLE_ALL_INT_BUILTIN(reduceand)
+    CASE_RIPPLE_ALL_INT_BUILTIN(reduceor)
+    CASE_RIPPLE_ALL_INT_BUILTIN(reducexor)
 
-  case Builtin::BI__builtin_ripple_reducemax_i8:
-  case Builtin::BI__builtin_ripple_reducemax_u8:
-  case Builtin::BI__builtin_ripple_reducemax_i16:
-  case Builtin::BI__builtin_ripple_reducemax_u16:
-  case Builtin::BI__builtin_ripple_reducemax_i32:
-  case Builtin::BI__builtin_ripple_reducemax_u32:
-  case Builtin::BI__builtin_ripple_reducemax_i64:
-  case Builtin::BI__builtin_ripple_reducemax_u64:
-  case Builtin::BI__builtin_ripple_reducemax_f16:
-  case Builtin::BI__builtin_ripple_reducemax_bf16:
-  case Builtin::BI__builtin_ripple_reducemax_f32:
-  case Builtin::BI__builtin_ripple_reducemax_f64:
-  case Builtin::BI__builtin_ripple_reducemaximum_f16:
-  case Builtin::BI__builtin_ripple_reducemaximum_bf16:
-  case Builtin::BI__builtin_ripple_reducemaximum_f32:
-  case Builtin::BI__builtin_ripple_reducemaximum_f64:
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(reducemax)
+    CASE_RIPPLE_ALL_FLOAT_BUILTIN(reducemaximum)
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(reducemin)
+    CASE_RIPPLE_ALL_FLOAT_BUILTIN(reduceminimum)
 
-  case Builtin::BI__builtin_ripple_reduceand_i8:
-  case Builtin::BI__builtin_ripple_reduceand_u8:
-  case Builtin::BI__builtin_ripple_reduceand_i16:
-  case Builtin::BI__builtin_ripple_reduceand_u16:
-  case Builtin::BI__builtin_ripple_reduceand_i32:
-  case Builtin::BI__builtin_ripple_reduceand_u32:
-  case Builtin::BI__builtin_ripple_reduceand_i64:
-  case Builtin::BI__builtin_ripple_reduceand_u64:
-
-  case Builtin::BI__builtin_ripple_reduceor_i8:
-  case Builtin::BI__builtin_ripple_reduceor_u8:
-  case Builtin::BI__builtin_ripple_reduceor_i16:
-  case Builtin::BI__builtin_ripple_reduceor_u16:
-  case Builtin::BI__builtin_ripple_reduceor_i32:
-  case Builtin::BI__builtin_ripple_reduceor_u32:
-  case Builtin::BI__builtin_ripple_reduceor_i64:
-  case Builtin::BI__builtin_ripple_reduceor_u64:
-
-  case Builtin::BI__builtin_ripple_shuffle_i8:
-  case Builtin::BI__builtin_ripple_shuffle_u8:
-  case Builtin::BI__builtin_ripple_shuffle_i16:
-  case Builtin::BI__builtin_ripple_shuffle_u16:
-  case Builtin::BI__builtin_ripple_shuffle_i32:
-  case Builtin::BI__builtin_ripple_shuffle_u32:
-  case Builtin::BI__builtin_ripple_shuffle_i64:
-  case Builtin::BI__builtin_ripple_shuffle_u64:
-  case Builtin::BI__builtin_ripple_shuffle_f16:
-  case Builtin::BI__builtin_ripple_shuffle_bf16:
-  case Builtin::BI__builtin_ripple_shuffle_f32:
-  case Builtin::BI__builtin_ripple_shuffle_f64:
-
-  case Builtin::BI__builtin_ripple_add_sat_u8:
-  case Builtin::BI__builtin_ripple_add_sat_u16:
-  case Builtin::BI__builtin_ripple_add_sat_u32:
-  case Builtin::BI__builtin_ripple_add_sat_u64:
-  case Builtin::BI__builtin_ripple_add_sat_i8:
-  case Builtin::BI__builtin_ripple_add_sat_i16:
-  case Builtin::BI__builtin_ripple_add_sat_i32:
-  case Builtin::BI__builtin_ripple_add_sat_i64:
-
-  case Builtin::BI__builtin_ripple_sub_sat_u8:
-  case Builtin::BI__builtin_ripple_sub_sat_u16:
-  case Builtin::BI__builtin_ripple_sub_sat_u32:
-  case Builtin::BI__builtin_ripple_sub_sat_u64:
-  case Builtin::BI__builtin_ripple_sub_sat_i8:
-  case Builtin::BI__builtin_ripple_sub_sat_i16:
-  case Builtin::BI__builtin_ripple_sub_sat_i32:
-  case Builtin::BI__builtin_ripple_sub_sat_i64:
-
-  case Builtin::BI__builtin_ripple_shl_sat_u8:
-  case Builtin::BI__builtin_ripple_shl_sat_u16:
-  case Builtin::BI__builtin_ripple_shl_sat_u32:
-  case Builtin::BI__builtin_ripple_shl_sat_u64:
-  case Builtin::BI__builtin_ripple_shl_sat_i8:
-  case Builtin::BI__builtin_ripple_shl_sat_i16:
-  case Builtin::BI__builtin_ripple_shl_sat_i32:
-  case Builtin::BI__builtin_ripple_shl_sat_i64:
+    CASE_RIPPLE_ALL_INT_BUILTIN(add_sat)
+    CASE_RIPPLE_ALL_INT_BUILTIN(sub_sat)
+    CASE_RIPPLE_ALL_INT_BUILTIN(shl_sat)
 
 #define CASE_RIPPLE_MATH_BUILTIN(Name)                                         \
   case Builtin::BI__builtin_ripple_##Name##f16:                                \
@@ -6786,34 +6717,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
 #undef CASE_RIPPLE_MATH_BUILTIN
 
-  case Builtin::BI__builtin_ripple_broadcast_i8:
-  case Builtin::BI__builtin_ripple_broadcast_u8:
-  case Builtin::BI__builtin_ripple_broadcast_i16:
-  case Builtin::BI__builtin_ripple_broadcast_u16:
-  case Builtin::BI__builtin_ripple_broadcast_i32:
-  case Builtin::BI__builtin_ripple_broadcast_u32:
-  case Builtin::BI__builtin_ripple_broadcast_i64:
-  case Builtin::BI__builtin_ripple_broadcast_u64:
-  case Builtin::BI__builtin_ripple_broadcast_f16:
-  case Builtin::BI__builtin_ripple_broadcast_bf16:
-  case Builtin::BI__builtin_ripple_broadcast_f32:
-  case Builtin::BI__builtin_ripple_broadcast_f64:
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(broadcast)
   case Builtin::BI__builtin_ripple_broadcast_p:
 
-  case Builtin::BI__builtin_ripple_slice_i8:
-  case Builtin::BI__builtin_ripple_slice_u8:
-  case Builtin::BI__builtin_ripple_slice_i16:
-  case Builtin::BI__builtin_ripple_slice_u16:
-  case Builtin::BI__builtin_ripple_slice_i32:
-  case Builtin::BI__builtin_ripple_slice_u32:
-  case Builtin::BI__builtin_ripple_slice_i64:
-  case Builtin::BI__builtin_ripple_slice_u64:
-  case Builtin::BI__builtin_ripple_slice_f16:
-  case Builtin::BI__builtin_ripple_slice_bf16:
-  case Builtin::BI__builtin_ripple_slice_f32:
-  case Builtin::BI__builtin_ripple_slice_f64:
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(slice)
   case Builtin::BI__builtin_ripple_slice_p:
+
+    CASE_RIPPLE_ALL_INT_FLOAT_BUILTIN(shuffle)
+  case Builtin::BI__builtin_ripple_shuffle_p:
+
     return emitRippleBuiltin(E, BuiltinID);
+
+#undef CASE_RIPPLE_ALLINT_ALLFLOAT_BUILTIN
+#undef CASE_RIPPLE_ALLFLOAT_BUILTIN
+#undef CASE_RIPPLE_ALLINT_BUILTIN
+    // Ripple-specific end
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
