@@ -1574,3 +1574,208 @@ define i16 @sh_trunc_sh(i64 %x) {
   %r = lshr i16 %t, 12
   ret i16 %r
 }
+
+;==============================================================================;
+; Funnel shift (FSHL/FSHR) count canonicalizations
+; - Test that the same shift-amount transforms (negation, add/sub by bitwidth)
+;   are applied to funnel shifts on X86.
+;==============================================================================;
+
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+declare i64 @llvm.fshl.i64(i64, i64, i64)
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare i64 @llvm.fshr.i64(i64, i64, i64)
+
+; CHECK-LABEL: fshl32_by_negated:
+define i32 @fshl32_by_negated(i32 %x, i32 %shamt) {
+; X86-LABEL: fshl32_by_negated:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    roll %cl, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshl32_by_negated:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
+; X64-NEXT:    retq
+  %neg = sub i32 32, %shamt
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %neg)
+  ret i32 %r
+}
+
+; CHECK-LABEL: fshr32_by_negated:
+define i32 @fshr32_by_negated(i32 %x, i32 %shamt) {
+; X86-LABEL: fshr32_by_negated:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    rorl %cl, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshr32_by_negated:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorl %cl, %eax
+; X64-NEXT:    retq
+  %neg = sub i32 32, %shamt
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %neg)
+  ret i32 %r
+}
+
+; CHECK-LABEL: fshl64_by_negated:
+define i64 @fshl64_by_negated(i64 %x, i64 %shamt) {
+; X86-LABEL: fshl64_by_negated:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $64, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    jne .LBB53_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    jmp .LBB53_3
+; X86-NEXT:  .LBB53_1:
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:  .LBB53_3:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshl64_by_negated:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movl $64, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolq %cl, %rax
+; X64-NEXT:    retq
+  %neg = sub i64 64, %shamt
+  %r = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %neg)
+  ret i64 %r
+}
+
+; CHECK-LABEL: fshr64_by_negated:
+define i64 @fshr64_by_negated(i64 %x, i64 %shamt) {
+; X86-LABEL: fshr64_by_negated:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl $64, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    je .LBB54_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    jmp .LBB54_3
+; X86-NEXT:  .LBB54_1:
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:  .LBB54_3:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shrdl %cl, %edx, %eax
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    shrdl %cl, %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshr64_by_negated:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movl $64, %ecx
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorq %cl, %rax
+; X64-NEXT:    retq
+  %neg = sub i64 64, %shamt
+  %r = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %neg)
+  ret i64 %r
+}
+
+; CHECK-LABEL: fshl32_add_k:
+define i32 @fshl32_add_k(i32 %x, i32 %shamt) {
+; X86-LABEL: fshl32_add_k:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $32, %ecx
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    roll %cl, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshl32_add_k:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal 32(%rsi), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
+; X64-NEXT:    retq
+  %k = add i32 %shamt, 32
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %k)
+  ret i32 %r
+}
+
+; CHECK-LABEL: fshr64_sub_k:
+define i64 @fshr64_sub_k(i64 %x, i64 %shamt) {
+; X86-LABEL: fshr64_sub_k:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $-64, %ecx
+; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    je .LBB56_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    jmp .LBB56_3
+; X86-NEXT:  .LBB56_1:
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:  .LBB56_3:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shrdl %cl, %edx, %eax
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    shrdl %cl, %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: fshr64_sub_k:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    leal -64(%rsi), %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorq %cl, %rax
+; X64-NEXT:    retq
+  %k = sub i64 %shamt, 64
+  %r = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %k)
+  ret i64 %r
+}
