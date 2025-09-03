@@ -1341,16 +1341,19 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
                                    bool ReleaseQueue) {
+  if (!AsyncInfo)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
   SmallVector<void *> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
-    if (!AsyncInfo || !AsyncInfo->Queue)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "invalid async info queue");
-
-    if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
-      return Err;
+    // This can be false when no work has been added to the AsyncInfo. In which
+    // case, the device has nothing to synchronize.
+    if (AsyncInfo->Queue)
+      if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
+        return Err;
 
     std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
   }

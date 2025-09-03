@@ -728,6 +728,7 @@
 // RUN:     -fno-profile-instr-use \
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
+// RUN:     -fpseudo-probe-for-profiling \
 // RUN:     -ftime-trace \
 // RUN:     -fmodules \
 // RUN:     -fno-modules \

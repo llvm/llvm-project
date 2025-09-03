@@ -1026,8 +1026,10 @@ struct NVGPUTmaAsyncStoreOpLowering
       coords[index] = truncToI32(b, value);
     }
 
+    // TODO: Enhance the NVGPU Op for other modes too
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp>(
-        op, adaptor.getTensorMapDescriptor(), dest, coords,
+        op, adaptor.getTensorMapDescriptor(), dest, coords, Value{},
+        NVVM::TMAStoreMode::TILE, // default is TILE mode
         adaptor.getPredicate());
     return success();
   }
@@ -1693,8 +1695,10 @@ struct NVGPUTmaPrefetchOpLowering
   LogicalResult
   matchAndRewrite(nvgpu::TmaPrefetchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<NVVM::PrefetchTensorMapOp>(
-        op, adaptor.getTensorMapDescriptor(), adaptor.getPredicate());
+    rewriter.replaceOpWithNewOp<NVVM::PrefetchOp>(
+        op, /* CacheLevel */ nullptr, /* Cache Eviction Priority */ nullptr,
+        adaptor.getTensorMapDescriptor(), adaptor.getPredicate(),
+        /* Tensormap UnitAttr */ mlir::UnitAttr::get(op.getContext()));
     return success();
   }
 };
