@@ -15,7 +15,7 @@
 using namespace llvm;
 
 Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
-                                                       const char Separator) {
+                                                        const char Separator) {
   RangeList Ranges;
 
   if (Str.empty())
@@ -36,24 +36,27 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
     SmallVector<StringRef, 4> Matches;
     if (!RangeRegex.match(Part, &Matches)) {
       return createStringError(std::errc::invalid_argument,
-                              "Invalid range format: '%s'", Part.str().c_str());
+                               "Invalid range format: '%s'",
+                               Part.str().c_str());
     }
 
     int64_t Begin, End;
     if (Matches[1].getAsInteger(10, Begin)) {
       return createStringError(std::errc::invalid_argument,
-                              "Failed to parse number: '%s'", Matches[1].str().c_str());
+                               "Failed to parse number: '%s'",
+                               Matches[1].str().c_str());
     }
 
     if (!Matches[3].empty()) {
       // Range format "begin-end"
       if (Matches[3].getAsInteger(10, End)) {
         return createStringError(std::errc::invalid_argument,
-                                "Failed to parse number: '%s'", Matches[3].str().c_str());
+                                 "Failed to parse number: '%s'",
+                                 Matches[3].str().c_str());
       }
       if (Begin >= End) {
         return createStringError(std::errc::invalid_argument,
-                                "Invalid range: %lld >= %lld", Begin, End);
+                                 "Invalid range: %lld >= %lld", Begin, End);
       }
     } else {
       // Single number
@@ -62,9 +65,10 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
 
     // Check ordering constraint (ranges must be in increasing order)
     if (!Ranges.empty() && Begin <= Ranges.back().End) {
-      return createStringError(std::errc::invalid_argument,
-                              "Expected ranges to be in increasing order: %lld <= %lld",
-                              Begin, Ranges.back().End);
+      return createStringError(
+          std::errc::invalid_argument,
+          "Expected ranges to be in increasing order: %lld <= %lld", Begin,
+          Ranges.back().End);
     }
 
     Ranges.push_back(Range(Begin, End));

@@ -96,7 +96,6 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
-
 bool OptBisect::shouldRunPass(StringRef PassName,
                               StringRef IRDescription) const {
   assert(isEnabled());
