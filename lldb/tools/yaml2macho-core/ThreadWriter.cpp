@@ -9,9 +9,7 @@
 #include "ThreadWriter.h"
 #include "CoreSpec.h"
 #include "Utility.h"
-
 #include "llvm/BinaryFormat/MachO.h"
-
 #include <algorithm>
 #include <stdio.h>
 

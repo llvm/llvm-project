@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoreSpec.h"
-
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
-
 #include <stdio.h>
 #include <string>
 

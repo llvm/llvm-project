@@ -11,9 +11,7 @@
 #include "MemoryWriter.h"
 #include "ThreadWriter.h"
 #include "Utility.h"
-
 #include "llvm/BinaryFormat/MachO.h"
-
 #include <getopt.h>
 #include <stdio.h>
 #include <string>

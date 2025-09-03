@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+/// \file
+/// Functions to emit LC_THREAD bytes to the corefile's Mach-O load commands,
+/// specifying the threads, the register sets ("flavors") within those threads,
+/// and all of the registers within those register sets.
+//===----------------------------------------------------------------------===//
 
 #ifndef YAML2MACHOCOREFILE_THREADWRITER_H
 #define YAML2MACHOCOREFILE_THREADWRITER_H

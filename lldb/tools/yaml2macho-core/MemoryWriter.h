@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+/// \file
+/// Functions to emit the LC_SEGMENT load command, and to provide the bytes
+/// that appear later in the corefile.
+//===----------------------------------------------------------------------===//
 
 #ifndef YAML2MACHOCOREFILE_MEMORYWRITER_H
 #define YAML2MACHOCOREFILE_MEMORYWRITER_H

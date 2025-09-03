@@ -5,15 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "lldb/Utility/UUID.h"
 
 #include "LCNoteWriter.h"
 #include "Utility.h"
-
+#include "lldb/Utility/UUID.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include <ctype.h>
 #include <stdlib.h>
-
-#include "llvm/BinaryFormat/MachO.h"
 
 void create_lc_note_binary_load_cmd(const CoreSpec &spec,
                                     std::vector<uint8_t> &cmds,

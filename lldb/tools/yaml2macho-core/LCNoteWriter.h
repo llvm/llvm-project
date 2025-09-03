@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+/// \file
+/// Functions to add an LC_NOTE load command to the corefile's load commands,
+/// and supply the payload of that LC_NOTE separately.
+//===----------------------------------------------------------------------===//
 
 #ifndef YAML2MACHOCOREFILE_LCNOTEWRITER_H
 #define YAML2MACHOCOREFILE_LCNOTEWRITER_H

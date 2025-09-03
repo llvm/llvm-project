@@ -9,7 +9,6 @@
 #include "MemoryWriter.h"
 #include "CoreSpec.h"
 #include "Utility.h"
-
 #include "llvm/BinaryFormat/MachO.h"
 
 void create_lc_segment_cmd(const CoreSpec &spec, std::vector<uint8_t> &cmds,

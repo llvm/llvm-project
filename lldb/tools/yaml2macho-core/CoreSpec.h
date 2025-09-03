@@ -5,6 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// CoreSpec holds the internal representation of the data that will be
+/// written into the corefile.  Theads, register sets within threads, registers
+/// within register sets.  Block of memory.  Metadata about the CPU or binaries
+/// that were present.
+//===----------------------------------------------------------------------===//
 
 #ifndef YAML2MACHOCOREFILE_CORESPEC_H
 #define YAML2MACHOCOREFILE_CORESPEC_H
