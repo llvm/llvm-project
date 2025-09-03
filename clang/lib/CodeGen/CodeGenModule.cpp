@@ -8227,10 +8227,23 @@ public:
 
   // Reject if there is a nested OpenMP parallel directive
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
-    if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_parallel) {
+    switch (D->getDirectiveKind()) {
+    case llvm::omp::Directive::OMPD_parallel:
+    case llvm::omp::Directive::OMPD_parallel_do:
+    case llvm::omp::Directive::OMPD_parallel_do_simd:
+    case llvm::omp::Directive::OMPD_parallel_for:
+    case llvm::omp::Directive::OMPD_parallel_for_simd:
+    case llvm::omp::Directive::OMPD_parallel_master:
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop:
+    case llvm::omp::Directive::OMPD_parallel_master_taskloop_simd:
+    case llvm::omp::Directive::OMPD_parallel_sections:
+    case llvm::omp::Directive::OMPD_parallel_workshare: {
       NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
       // No need to continue visiting any more
       return;
+    }
+    default:
+      break;
     }
     for (const Stmt *Child : D->children())
       if (Child)
