@@ -536,23 +536,19 @@ static void SetupLangOpts(CompilerInstance &compiler,
   lldb::StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
   lldb::ProcessSP process_sp = exe_scope.CalculateProcess();
 
-  // Defaults to lldb::eLanguageTypeUnknown.
-  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
-
-  // Make sure the user hasn't provided a preferred execution language with
-  // `expression --language X -- ...`
-  if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage().AsLanguageType();
-
-  if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
-    LLDB_LOGF(log, "Frame has language of type %s",
-              lldb_private::Language::GetNameForLanguageType(frame_lang));
-  }
-
   lldb::LanguageType language = expr.Language().AsLanguageType();
+
+  if (process_sp)
+    LLDB_LOG(
+        log,
+        "Frame has language of type {0}\nPicked {1} for expression evaluation.",
+        lldb_private::Language::GetNameForLanguageType(
+            frame_sp ? frame_sp->GetLanguage().AsLanguageType()
+                     : lldb::eLanguageTypeUnknown),
+        lldb_private::Language::GetNameForLanguageType(language));
+
   LangOptions &lang_opts = compiler.getLangOpts();
 
-  // FIXME: should this switch on frame_lang?
   switch (language) {
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC89:

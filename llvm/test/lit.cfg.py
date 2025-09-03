@@ -377,14 +377,9 @@ def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
 
 
 def ptxas_supported_sms(ptxas_executable):
-    result = subprocess.run(
-        [ptxas_executable, "--help"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    output = subprocess.check_output([ptxas_executable, "--help"], text=True)
 
-    gpu_arch_section = re.search(r"--gpu-name(.*?)--", result.stdout, re.DOTALL)
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", output, re.DOTALL)
     allowed_values = gpu_arch_section.group(1)
     supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
 
@@ -394,17 +389,19 @@ def ptxas_supported_sms(ptxas_executable):
 
 
 def ptxas_supports_address_size_32(ptxas_executable):
+    # Linux outputs the error message to stderr, while Windows outputs to stdout.
+    # Pipe both to stdout to make sure we get the error message.
     result = subprocess.run(
         [ptxas_executable, "-m 32"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        check=False,
     )
-    if "is not defined for option 'machine'" in result.stderr:
+    if "is not defined for option 'machine'" in result.stdout:
         return False
-    if "Missing .version directive at start of file" in result.stderr:
+    if "Missing .version directive at start of file" in result.stdout:
         return True
-    raise RuntimeError(f"Unexpected ptxas output: {result.stderr}")
+    raise RuntimeError(f"Unexpected ptxas output: {result.stdout}")
 
 
 def enable_ptxas(ptxas_executable):
