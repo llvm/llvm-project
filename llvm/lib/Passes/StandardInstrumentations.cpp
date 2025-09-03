@@ -1808,8 +1808,6 @@ public:
   // The label of the basic block
   StringRef getLabel() const {
     assert(Data[0] && "Expected Data[0] to be set.");
-    assert((Data[0]->getLabel().empty() || Data[0]->getLabel() == Label) &&
-           "Unexpected label");
     return Data[0]->getLabel();
   }
   // Return the colour for this block
