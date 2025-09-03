@@ -2402,8 +2402,8 @@ template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
   }
 };
 
-/// Match a specific mask \p in, or a combination of it (logical-and in, out).
-/// Returns the remaining part \p out if so, or nullptr otherwise.
+/// Match a specific mask \p In, or a combination of it (logical-and In, Out).
+/// Returns the remaining part \p Out if so, or nullptr otherwise.
 template <typename Op0_t, typename Op1_t>
 static inline RemoveMask_match<Op0_t, Op1_t> m_RemoveMask(const Op0_t &In,
                                                           Op1_t &Out) {
