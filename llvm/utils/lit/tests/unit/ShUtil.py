@@ -28,7 +28,8 @@ class TestShLexer(unittest.TestCase):
         self.assertEqual(self.lex(""" a\\ b a\\\\b """), ["a b", "a\\b"])
         self.assertEqual(self.lex(""" "" "" """), ["", ""])
         self.assertEqual(self.lex(""" a\\ b """, win32Escapes=True), ["a\\", "b"])
-
+        self.assertEqual(self.lex('"\\$y = 11"'), ["$y = 11"])
+        self.assertEqual(self.lex('"expr \\$y = 11"'), ["expr $y = 11"])
 
 class TestShParse(unittest.TestCase):
     def parse(self, str):
