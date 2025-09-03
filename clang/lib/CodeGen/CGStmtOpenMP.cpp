@@ -2332,7 +2332,7 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
 
   // On a continue in the body, jump to the end.
   JumpDest Continue = getJumpDestInCurrentScope("omp.body.continue");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(D, LoopExit, Continue));
   for (const Expr *E : D.finals_conditions()) {
     if (!E)
       continue;
@@ -2396,7 +2396,9 @@ void CodeGenFunction::EmitOMPXteamScanNoLoopBody(const OMPLoopDirective &D) {
   RunCleanupsScope BodyScope(*this);
   JumpDest Continue = getJumpDestInCurrentScope("omp.body.continue");
   JumpDest LoopExit = getJumpDestInCurrentScope("omp.loop.exit");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  const Stmt *BodyL =
+      D.getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
+  BreakContinueStack.push_back(BreakContinue(cast<ForStmt>(*BodyL), LoopExit, Continue));
   OMPPrivateScope InscanScope(*this);
   EmitOMPReductionClauseInit(D, InscanScope, /*ForInscan=*/true);
 
@@ -2608,7 +2610,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
 
   // Create a block for the increment.
   JumpDest Continue = getJumpDestInCurrentScope("omp.inner.for.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   BodyGen(*this);
 
@@ -2680,7 +2682,7 @@ void CodeGenFunction::EmitOMPMultiDeviceInnerLoop(
 
   // Create a block for the increment.
   JumpDest Continue = getJumpDestInCurrentScope("omp.inner.for.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(*SS, LoopExit, Continue));
 
   BodyGen(*this);
 
@@ -3525,7 +3527,7 @@ void CodeGenFunction::EmitOMPOuterLoop(
 
   // Create a block for the increment.
   JumpDest Continue = getJumpDestInCurrentScope("omp.dispatch.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
+  BreakContinueStack.push_back(BreakContinue(S, LoopExit, Continue));
 
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
   emitCommonSimdLoop(
