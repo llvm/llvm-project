@@ -1039,7 +1039,12 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from module");
+    return llvm::createStringError("Failed to get symbol file from executable");
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        "Failed to resolve SDK for target: executable's symbol file has no "
+        "compile units");
 
   XcodeSDK merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
@@ -1396,6 +1401,12 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
         llvm::inconvertibleErrorCode(),
         llvm::formatv("No symbol file available for module '{0}'",
                       module.GetFileSpec().GetFilename().AsCString("")));
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
 
   bool found_public_sdk = false;
   bool found_internal_sdk = false;

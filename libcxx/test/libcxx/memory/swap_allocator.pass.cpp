@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <memory>
 
 // template <typename _Alloc>

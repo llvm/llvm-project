@@ -1163,7 +1163,7 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 163840;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
-  return 0;
+  return 32768;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
@@ -1375,6 +1375,9 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   bool IsWave32 = EnableWavefrontSize32
                       ? *EnableWavefrontSize32
                       : STI->getFeatureBits().test(FeatureWavefrontSize32);
+
+  if (STI->getFeatureBits().test(Feature1024AddressableVGPRs))
+    return IsWave32 ? 16 : 8;
 
   return IsWave32 ? 8 : 4;
 }
@@ -2719,13 +2722,6 @@ bool isInlineValue(unsigned Reg) {
 #undef CASE_GFXPRE11_GFX11PLUS
 #undef CASE_GFXPRE11_GFX11PLUS_TO
 #undef MAP_REG2REG
-
-bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
-         OpType <= AMDGPU::OPERAND_SRC_LAST;
-}
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);

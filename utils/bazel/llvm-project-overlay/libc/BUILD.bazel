@@ -524,6 +524,7 @@ libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
     ],
 )
@@ -673,6 +674,18 @@ libc_support_library(
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [
         ":__support_cpp_utility",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_cpp_simd",
+    hdrs = ["src/__support/CPP/simd.h"],
+    deps = [
+        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
         ":hdr_stdint_proxy",
     ],
 )
@@ -1230,6 +1243,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_basic_operations",
+        ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
@@ -2393,6 +2407,33 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cospif",
+    hdrs = ["src/__support/math/cospif.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
+        ":common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_cospif16",
+    hdrs = ["src/__support/math/cospif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3220,23 +3261,14 @@ libc_math_function(
 libc_math_function(
     name = "cospif",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_sincosf_utils",
-        ":common_constants",
+        ":__support_math_cospif",
     ],
 )
 
 libc_math_function(
     name = "cospif16",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_math_sincosf16_utils",
+        ":__support_math_cospif16",
     ],
 )
 
@@ -4919,6 +4951,7 @@ libc_support_library(
         "src/string/memory_utils/arm/inline_memset.h",
         "src/string/memory_utils/generic/aligned_access.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
+        "src/string/memory_utils/generic/inline_strlen.h",
         "src/string/memory_utils/inline_bcmp.h",
         "src/string/memory_utils/inline_bzero.h",
         "src/string/memory_utils/inline_memcmp.h",
@@ -4945,6 +4978,7 @@ libc_support_library(
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
+        ":__support_cpp_simd",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_optimization",
@@ -5136,6 +5170,19 @@ libc_function(
     hdrs = ["src/string/strrchr.h"],
     deps = [
         ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strsep",
+    srcs = ["src/string/strsep.cpp"],
+    hdrs = ["src/string/strsep.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":hdr_signal_macros",
+        ":string_memory_utils",
         ":string_utils",
     ],
 )

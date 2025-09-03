@@ -1007,7 +1007,7 @@ public:
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
-    return [=](){ return P(*this); };
+    return [this, P]() { return P(*this); };
   }
 
   StringRef getToken() const {
@@ -1886,6 +1886,7 @@ private:
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
+  bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -5542,6 +5543,22 @@ bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  if (Inst.getOpcode() != AMDGPU::S_SET_VGPR_MSB_gfx12)
+    return true;
+
+  int Simm16Pos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::simm16);
+  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 255) {
+    SMLoc Loc = Operands[1]->getStartLoc();
+    Error(Loc, "s_set_vgpr_msb accepts values in range [0..255]");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
                                    const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
@@ -5704,6 +5721,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateTFE(Inst, Operands)) {
+    return false;
+  }
+  if (!validateSetVgprMSB(Inst, Operands)) {
     return false;
   }
   if (!validateWMMA(Inst, Operands)) {
@@ -6410,12 +6430,24 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "
                     "enabled user SGPRs");
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc2, MCConstantExpr::create(UserSGPRCount, getContext()),
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, getContext());
+  if (isGFX1250()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
+            UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc2,
+        MCConstantExpr::create(UserSGPRCount, getContext()),
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, getContext());
+  }
 
   int64_t IVal = 0;
   if (!KD.kernarg_size->evaluateAsAbsolute(IVal))

@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #ifdef EXPENSIVE_CHECKS
@@ -2083,6 +2084,23 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrCPol(SDNode *N, SDValue Addr,
   // We are assuming CPol is always the last operand of the intrinsic.
   auto PassedCPol =
       N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrCPolM0(SDNode *N, SDValue Addr,
+                                                 SDValue &SAddr,
+                                                 SDValue &VOffset,
+                                                 SDValue &Offset,
+                                                 SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 2) & ~AMDGPU::CPol::SCAL;
   CPol = CurDAG->getTargetConstant(
       (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
   return true;

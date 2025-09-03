@@ -643,6 +643,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       return LT.first * Instrs;
+
+    TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
+    uint64_t VectorSize = TS.getKnownMinValue();
+
+    if (ST->isSVEAvailable() && VectorSize >= 128 && isPowerOf2_64(VectorSize))
+      return LT.first * Instrs;
+
     break;
   }
   case Intrinsic::abs: {
@@ -5479,13 +5486,14 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
-                                       VectorType *VecTy,
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
+                                       Type *ResTy, VectorType *VecTy,
                                        TTI::TargetCostKind CostKind) const {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
-  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple()) {
+  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple() &&
+      RedOpcode == Instruction::Add) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases with dotprod are
@@ -5496,7 +5504,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return LT.first + 2;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, VecTy,
+                                       CostKind);
 }
 
 InstructionCost

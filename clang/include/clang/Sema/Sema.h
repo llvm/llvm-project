@@ -5404,7 +5404,7 @@ public:
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
   /// constructed variable.
-  void FinalizeVarWithDestructor(VarDecl *VD, const RecordType *DeclInitType);
+  void FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *DeclInit);
 
   /// Helper class that collects exception specifications for
   /// implicitly-declared special member functions.
@@ -8065,8 +8065,8 @@ public:
                                         ExprResult &RHS);
 
   QualType CheckMultiplyDivideOperands( // C99 6.5.5
-      ExprResult &LHS, ExprResult &RHS, SourceLocation Loc, bool IsCompAssign,
-      bool IsDivide);
+      ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
+      BinaryOperatorKind Opc);
   QualType CheckRemainderOperands( // C99 6.5.5
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       bool IsCompAssign = false);
@@ -8075,7 +8075,7 @@ public:
       BinaryOperatorKind Opc, QualType *CompLHSTy = nullptr);
   QualType CheckSubtractionOperands( // C99 6.5.6
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
-      QualType *CompLHSTy = nullptr);
+      BinaryOperatorKind Opc, QualType *CompLHSTy = nullptr);
   QualType CheckShiftOperands( // C99 6.5.7
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       BinaryOperatorKind Opc, bool IsCompAssign = false);
@@ -9487,6 +9487,10 @@ public:
   /// or use.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
                                  SourceLocation GnuLabelLoc = SourceLocation());
+
+  /// Perform a name lookup for a label with the specified name; this does not
+  /// create a new label if the lookup fails.
+  LabelDecl *LookupExistingLabel(IdentifierInfo *II, SourceLocation IdentLoc);
 
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
@@ -11042,8 +11046,10 @@ public:
                            LabelDecl *TheDecl);
   StmtResult ActOnIndirectGotoStmt(SourceLocation GotoLoc,
                                    SourceLocation StarLoc, Expr *DestExp);
-  StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope);
-  StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope);
+  StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
+                               LabelDecl *Label, SourceLocation LabelLoc);
+  StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
+                            LabelDecl *Label, SourceLocation LabelLoc);
 
   struct NamedReturnInfo {
     const VarDecl *Candidate;

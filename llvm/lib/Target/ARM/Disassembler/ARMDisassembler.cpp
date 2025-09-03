@@ -13,6 +13,7 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -31,6 +32,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "arm-disassembler"
 
@@ -38,94 +40,80 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-  // Handles the condition code status of instructions in IT blocks
-  class ITStatus
-  {
-    public:
-      // Returns the condition code for instruction in IT block
-      unsigned getITCC() {
-        unsigned CC = ARMCC::AL;
-        if (instrInITBlock())
-          CC = ITStates.back();
-        return CC;
-      }
+// Handles the condition code status of instructions in IT blocks
+class ITStatus {
+public:
+  // Returns the condition code for instruction in IT block
+  unsigned getITCC() {
+    unsigned CC = ARMCC::AL;
+    if (instrInITBlock())
+      CC = ITStates.back();
+    return CC;
+  }
 
-      // Advances the IT block state to the next T or E
-      void advanceITState() {
-        ITStates.pop_back();
-      }
+  // Advances the IT block state to the next T or E
+  void advanceITState() { ITStates.pop_back(); }
 
-      // Returns true if the current instruction is in an IT block
-      bool instrInITBlock() {
-        return !ITStates.empty();
-      }
+  // Returns true if the current instruction is in an IT block
+  bool instrInITBlock() { return !ITStates.empty(); }
 
-      // Returns true if current instruction is the last instruction in an IT block
-      bool instrLastInITBlock() {
-        return ITStates.size() == 1;
-      }
+  // Returns true if current instruction is the last instruction in an IT block
+  bool instrLastInITBlock() { return ITStates.size() == 1; }
 
-      // Called when decoding an IT instruction. Sets the IT state for
-      // the following instructions that for the IT block. Firstcond
-      // corresponds to the field in the IT instruction encoding; Mask
-      // is in the MCOperand format in which 1 means 'else' and 0 'then'.
-      void setITState(char Firstcond, char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
-        assert(NumTZ <= 3 && "Invalid IT mask!");
-        // push condition codes onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          unsigned Else = (Mask >> Pos) & 1;
-          ITStates.push_back(CCBits ^ Else);
-        }
-        ITStates.push_back(CCBits);
-      }
+  // Called when decoding an IT instruction. Sets the IT state for
+  // the following instructions that for the IT block. Firstcond
+  // corresponds to the field in the IT instruction encoding; Mask
+  // is in the MCOperand format in which 1 means 'else' and 0 'then'.
+  void setITState(char Firstcond, char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
+    assert(NumTZ <= 3 && "Invalid IT mask!");
+    // push condition codes onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      unsigned Else = (Mask >> Pos) & 1;
+      ITStates.push_back(CCBits ^ Else);
+    }
+    ITStates.push_back(CCBits);
+  }
 
-    private:
-      std::vector<unsigned char> ITStates;
-  };
+private:
+  std::vector<unsigned char> ITStates;
+};
 
-  class VPTStatus
-  {
-    public:
-      unsigned getVPTPred() {
-        unsigned Pred = ARMVCC::None;
-        if (instrInVPTBlock())
-          Pred = VPTStates.back();
-        return Pred;
-      }
+class VPTStatus {
+public:
+  unsigned getVPTPred() {
+    unsigned Pred = ARMVCC::None;
+    if (instrInVPTBlock())
+      Pred = VPTStates.back();
+    return Pred;
+  }
 
-      void advanceVPTState() {
-        VPTStates.pop_back();
-      }
+  void advanceVPTState() { VPTStates.pop_back(); }
 
-      bool instrInVPTBlock() {
-        return !VPTStates.empty();
-      }
+  bool instrInVPTBlock() { return !VPTStates.empty(); }
 
-      bool instrLastInVPTBlock() {
-        return VPTStates.size() == 1;
-      }
+  bool instrLastInVPTBlock() { return VPTStates.size() == 1; }
 
-      void setVPTState(char Mask) {
-        // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
-        assert(NumTZ <= 3 && "Invalid VPT mask!");
-        // push predicates onto the stack the correct order for the pops
-        for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
-          bool T = ((Mask >> Pos) & 1) == 0;
-          if (T)
-            VPTStates.push_back(ARMVCC::Then);
-          else
-            VPTStates.push_back(ARMVCC::Else);
-        }
+  void setVPTState(char Mask) {
+    // (3 - the number of trailing zeros) is the number of then / else.
+    unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
+    assert(NumTZ <= 3 && "Invalid VPT mask!");
+    // push predicates onto the stack the correct order for the pops
+    for (unsigned Pos = NumTZ + 1; Pos <= 3; ++Pos) {
+      bool T = ((Mask >> Pos) & 1) == 0;
+      if (T)
         VPTStates.push_back(ARMVCC::Then);
-      }
+      else
+        VPTStates.push_back(ARMVCC::Else);
+    }
+    VPTStates.push_back(ARMVCC::Then);
+  }
 
-    private:
-      SmallVector<unsigned char, 4> VPTStates;
-  };
+private:
+  SmallVector<unsigned char, 4> VPTStates;
+};
 
 /// ARM disassembler for all ARM platforms.
 class ARMDisassembler : public MCDisassembler {
@@ -704,6 +692,42 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
 
+/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
+/// immediate Value in the MCInst.  The immediate Value has had any PC
+/// adjustment made by the caller.  If the instruction is a branch instruction
+/// then isBranch is true, else false.  If the getOpInfo() function was set as
+/// part of the setupForSymbolicDisassembly() call then that function is called
+/// to get any symbolic information at the Address for this instruction.  If
+/// that returns non-zero then the symbolic information it returns is used to
+/// create an MCExpr and that is added as an operand to the MCInst.  If
+/// getOpInfo() returns zero and isBranch is true then a symbol look up for
+/// Value is done and if a symbol is found an MCExpr is created with that, else
+/// an MCExpr with Value is created.  This function returns true if it adds an
+/// operand to the MCInst and false otherwise.
+static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
+                                     bool isBranch, uint64_t InstSize,
+                                     MCInst &MI,
+                                     const MCDisassembler *Decoder) {
+  // FIXME: Does it make sense for value to be negative?
+  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
+                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
+                                           InstSize);
+}
+
+/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
+/// referenced by a load instruction with the base register that is the Pc.
+/// These can often be values in a literal pool near the Address of the
+/// instruction.  The Address of the instruction and its immediate Value are
+/// used as a possible literal pool entry.  The SymbolLookUp call back will
+/// return the name of a symbol referenced by the literal pool's entry if
+/// the referenced address is that of a symbol.  Or it will return a pointer to
+/// a literal 'C' string if the referenced address of the literal pool's entry
+/// is an address into a section with 'C' string literals.
+static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
+                                            const MCDisassembler *Decoder) {
+  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
+}
+
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -842,42 +866,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
 
   Size = 4;
   return MCDisassembler::Fail;
-}
-
-/// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
-/// immediate Value in the MCInst.  The immediate Value has had any PC
-/// adjustment made by the caller.  If the instruction is a branch instruction
-/// then isBranch is true, else false.  If the getOpInfo() function was set as
-/// part of the setupForSymbolicDisassembly() call then that function is called
-/// to get any symbolic information at the Address for this instruction.  If
-/// that returns non-zero then the symbolic information it returns is used to
-/// create an MCExpr and that is added as an operand to the MCInst.  If
-/// getOpInfo() returns zero and isBranch is true then a symbol look up for
-/// Value is done and if a symbol is found an MCExpr is created with that, else
-/// an MCExpr with Value is created.  This function returns true if it adds an
-/// operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(uint64_t Address, int32_t Value,
-                                     bool isBranch, uint64_t InstSize,
-                                     MCInst &MI,
-                                     const MCDisassembler *Decoder) {
-  // FIXME: Does it make sense for value to be negative?
-  return Decoder->tryAddingSymbolicOperand(MI, (uint32_t)Value, Address,
-                                           isBranch, /*Offset=*/0, /*OpSize=*/0,
-                                           InstSize);
-}
-
-/// tryAddingPcLoadReferenceComment - trys to add a comment as to what is being
-/// referenced by a load instruction with the base register that is the Pc.
-/// These can often be values in a literal pool near the Address of the
-/// instruction.  The Address of the instruction and its immediate Value are
-/// used as a possible literal pool entry.  The SymbolLookUp call back will
-/// return the name of a symbol referenced by the literal pool's entry if
-/// the referenced address is that of a symbol.  Or it will return a pointer to
-/// a literal 'C' string if the referenced address of the literal pool's entry
-/// is an address into a section with 'C' string literals.
-static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
-                                            const MCDisassembler *Decoder) {
-  Decoder->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
 // Thumb1 instructions don't have explicit S bits.  Rather, they
@@ -1028,260 +1016,6 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   }
 
   return S;
-}
-
-// Thumb VFP instructions are a special case.  Because we share their
-// encodings between ARM and Thumb modes, and they are predicable in ARM
-// mode, the auto-generated decoder will give them an (incorrect)
-// predicate operand.  We need to rewrite these operands based on the IT
-// context as a post-pass.
-void ARMDisassembler::UpdateThumbVFPPredicate(
-  DecodeStatus &S, MCInst &MI) const {
-  unsigned CC;
-  CC = ITBlock.getITCC();
-  if (CC == 0xF)
-    CC = ARMCC::AL;
-  if (ITBlock.instrInITBlock())
-    ITBlock.advanceITState();
-  else if (VPTBlock.instrInVPTBlock()) {
-    CC = VPTBlock.getVPTPred();
-    VPTBlock.advanceVPTState();
-  }
-
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
-  MCInst::iterator I = MI.begin();
-  unsigned short NumOps = MCID.NumOperands;
-  for (unsigned i = 0; i < NumOps; ++i, ++I) {
-    if (OpInfo[i].isPredicate() ) {
-      if (CC != ARMCC::AL && !MCID.isPredicable())
-        Check(S, SoftFail);
-      I->setImm(CC);
-      ++I;
-      if (CC == ARMCC::AL)
-        I->setReg(ARM::NoRegister);
-      else
-        I->setReg(ARM::CPSR);
-      return;
-    }
-  }
-}
-
-DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
-                                                  ArrayRef<uint8_t> Bytes,
-                                                  uint64_t Address,
-                                                  raw_ostream &CS) const {
-  CommentStream = &CS;
-
-  assert(STI.hasFeature(ARM::ModeThumb) &&
-         "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
-
-  // We want to read exactly 2 bytes of data.
-  if (Bytes.size() < 2) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
-      Bytes.data(), InstructionEndianness);
-  DecodeStatus Result =
-      decodeInstruction(DecoderTableThumb16, MI, Insn16, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 2;
-    Check(Result, AddThumbPredicate(MI));
-    return Result;
-  }
-
-  Result = decodeInstruction(DecoderTableThumbSBit16, MI, Insn16, Address, this,
-                             STI);
-  if (Result) {
-    Size = 2;
-    bool InITBlock = ITBlock.instrInITBlock();
-    Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb216, MI, Insn16, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 2;
-
-    // Nested IT blocks are UNPREDICTABLE.  Must be checked before we add
-    // the Thumb predicate.
-    if (MI.getOpcode() == ARM::t2IT && ITBlock.instrInITBlock())
-      Result = MCDisassembler::SoftFail;
-
-    Check(Result, AddThumbPredicate(MI));
-
-    // If we find an IT instruction, we need to parse its condition
-    // code and mask operands so that we can apply them correctly
-    // to the subsequent instructions.
-    if (MI.getOpcode() == ARM::t2IT) {
-      unsigned Firstcond = MI.getOperand(0).getImm();
-      unsigned Mask = MI.getOperand(1).getImm();
-      ITBlock.setITState(Firstcond, Mask);
-
-      // An IT instruction that would give a 'NV' predicate is unpredictable.
-      if (Firstcond == ARMCC::AL && !isPowerOf2_32(Mask))
-        CS << "unpredictable IT predicate sequence";
-    }
-
-    return Result;
-  }
-
-  // We want to read exactly 4 bytes of data.
-  if (Bytes.size() < 4) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  uint32_t Insn32 =
-      (uint32_t(Insn16) << 16) | llvm::support::endian::read<uint16_t>(
-                                     Bytes.data() + 2, InstructionEndianness);
-
-  Result =
-      decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-
-    // Nested VPT blocks are UNPREDICTABLE. Must be checked before we add
-    // the VPT predicate.
-    if (isVPTOpcode(MI.getOpcode()) && VPTBlock.instrInVPTBlock())
-      Result = MCDisassembler::SoftFail;
-
-    Check(Result, AddThumbPredicate(MI));
-
-    if (isVPTOpcode(MI.getOpcode())) {
-      unsigned Mask = MI.getOperand(0).getImm();
-      VPTBlock.setVPTState(Mask);
-    }
-
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    bool InITBlock = ITBlock.instrInITBlock();
-    Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableThumb232, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    Check(Result, AddThumbPredicate(MI));
-    return checkDecodedInstruction(MI, Size, Address, CS, Insn32, Result);
-  }
-
-  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
-    Result =
-        decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      UpdateThumbVFPPredicate(Result, MI);
-      return Result;
-    }
-  }
-
-  Result =
-      decodeInstruction(DecoderTableVFPV832, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
-
-  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
-    Result = decodeInstruction(DecoderTableNEONDup32, MI, Insn32, Address, this,
-                               STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
-      return Result;
-    }
-  }
-
-  if (fieldFromInstruction(Insn32, 24, 8) == 0xF9) {
-    uint32_t NEONLdStInsn = Insn32;
-    NEONLdStInsn &= 0xF0FFFFFF;
-    NEONLdStInsn |= 0x04000000;
-    Result = decodeInstruction(DecoderTableNEONLoadStore32, MI, NEONLdStInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
-      return Result;
-    }
-  }
-
-  if (fieldFromInstruction(Insn32, 24, 4) == 0xF) {
-    uint32_t NEONDataInsn = Insn32;
-    NEONDataInsn &= 0xF0FFFFFF; // Clear bits 27-24
-    NEONDataInsn |= (NEONDataInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
-    NEONDataInsn |= 0x12000000; // Set bits 28 and 25
-    Result = decodeInstruction(DecoderTableNEONData32, MI, NEONDataInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      Check(Result, AddThumbPredicate(MI));
-      return Result;
-    }
-
-    uint32_t NEONCryptoInsn = Insn32;
-    NEONCryptoInsn &= 0xF0FFFFFF; // Clear bits 27-24
-    NEONCryptoInsn |= (NEONCryptoInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
-    NEONCryptoInsn |= 0x12000000; // Set bits 28 and 25
-    Result = decodeInstruction(DecoderTablev8Crypto32, MI, NEONCryptoInsn,
-                               Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      return Result;
-    }
-
-    uint32_t NEONv8Insn = Insn32;
-    NEONv8Insn &= 0xF3FFFFFF; // Clear bits 27-26
-    Result = decodeInstruction(DecoderTablev8NEON32, MI, NEONv8Insn, Address,
-                               this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
-      return Result;
-    }
-  }
-
-  uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
-  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
-                                    ? DecoderTableThumb2CDE32
-                                    : DecoderTableThumb2CoProc32;
-  Result =
-      decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    Check(Result, AddThumbPredicate(MI));
-    return Result;
-  }
-
-  // Advance IT state to prevent next instruction inheriting
-  // the wrong IT state.
-  if (ITBlock.instrInITBlock())
-    ITBlock.advanceITState();
-  Size = 0;
-  return MCDisassembler::Fail;
-}
-
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
-LLVMInitializeARMDisassembler() {
-  TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
-                                         createARMDisassembler);
-  TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
-                                         createARMDisassembler);
 }
 
 static const uint16_t GPRDecoderTable[] = {
@@ -7080,4 +6814,258 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
   Inst.addOperand(MCOperand::createImm(0)); // Arbitrary value, has no effect.
 
   return S;
+}
+
+// Thumb VFP instructions are a special case.  Because we share their
+// encodings between ARM and Thumb modes, and they are predicable in ARM
+// mode, the auto-generated decoder will give them an (incorrect)
+// predicate operand.  We need to rewrite these operands based on the IT
+// context as a post-pass.
+void ARMDisassembler::UpdateThumbVFPPredicate(
+  DecodeStatus &S, MCInst &MI) const {
+  unsigned CC;
+  CC = ITBlock.getITCC();
+  if (CC == 0xF)
+    CC = ARMCC::AL;
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+  else if (VPTBlock.instrInVPTBlock()) {
+    CC = VPTBlock.getVPTPred();
+    VPTBlock.advanceVPTState();
+  }
+
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
+  MCInst::iterator I = MI.begin();
+  unsigned short NumOps = MCID.NumOperands;
+  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+    if (OpInfo[i].isPredicate() ) {
+      if (CC != ARMCC::AL && !MCID.isPredicable())
+        Check(S, SoftFail);
+      I->setImm(CC);
+      ++I;
+      if (CC == ARMCC::AL)
+        I->setReg(ARM::NoRegister);
+      else
+        I->setReg(ARM::CPSR);
+      return;
+    }
+  }
+}
+
+DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address,
+                                                  raw_ostream &CS) const {
+  CommentStream = &CS;
+
+  assert(STI.hasFeature(ARM::ModeThumb) &&
+         "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
+
+  // We want to read exactly 2 bytes of data.
+  if (Bytes.size() < 2) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint16_t Insn16 = llvm::support::endian::read<uint16_t>(
+      Bytes.data(), InstructionEndianness);
+  DecodeStatus Result =
+      decodeInstruction(DecoderTableThumb16, MI, Insn16, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 2;
+    Check(Result, AddThumbPredicate(MI));
+    return Result;
+  }
+
+  Result = decodeInstruction(DecoderTableThumbSBit16, MI, Insn16, Address, this,
+                             STI);
+  if (Result) {
+    Size = 2;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(Result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb216, MI, Insn16, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 2;
+
+    // Nested IT blocks are UNPREDICTABLE.  Must be checked before we add
+    // the Thumb predicate.
+    if (MI.getOpcode() == ARM::t2IT && ITBlock.instrInITBlock())
+      Result = MCDisassembler::SoftFail;
+
+    Check(Result, AddThumbPredicate(MI));
+
+    // If we find an IT instruction, we need to parse its condition
+    // code and mask operands so that we can apply them correctly
+    // to the subsequent instructions.
+    if (MI.getOpcode() == ARM::t2IT) {
+      unsigned Firstcond = MI.getOperand(0).getImm();
+      unsigned Mask = MI.getOperand(1).getImm();
+      ITBlock.setITState(Firstcond, Mask);
+
+      // An IT instruction that would give a 'NV' predicate is unpredictable.
+      if (Firstcond == ARMCC::AL && !isPowerOf2_32(Mask))
+        CS << "unpredictable IT predicate sequence";
+    }
+
+    return Result;
+  }
+
+  // We want to read exactly 4 bytes of data.
+  if (Bytes.size() < 4) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  uint32_t Insn32 =
+      (uint32_t(Insn16) << 16) | llvm::support::endian::read<uint16_t>(
+                                     Bytes.data() + 2, InstructionEndianness);
+
+  Result =
+      decodeInstruction(DecoderTableMVE32, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+
+    // Nested VPT blocks are UNPREDICTABLE. Must be checked before we add
+    // the VPT predicate.
+    if (isVPTOpcode(MI.getOpcode()) && VPTBlock.instrInVPTBlock())
+      Result = MCDisassembler::SoftFail;
+
+    Check(Result, AddThumbPredicate(MI));
+
+    if (isVPTOpcode(MI.getOpcode())) {
+      unsigned Mask = MI.getOperand(0).getImm();
+      VPTBlock.setVPTState(Mask);
+    }
+
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    bool InITBlock = ITBlock.instrInITBlock();
+    Check(Result, AddThumbPredicate(MI));
+    AddThumb1SBit(MI, InITBlock);
+    return Result;
+  }
+
+  Result =
+      decodeInstruction(DecoderTableThumb232, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(Result, AddThumbPredicate(MI));
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn32, Result);
+  }
+
+  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
+    Result =
+        decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      UpdateThumbVFPPredicate(Result, MI);
+      return Result;
+    }
+  }
+
+  Result =
+      decodeInstruction(DecoderTableVFPV832, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    return Result;
+  }
+
+  if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {
+    Result = decodeInstruction(DecoderTableNEONDup32, MI, Insn32, Address, this,
+                               STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+  }
+
+  if (fieldFromInstruction(Insn32, 24, 8) == 0xF9) {
+    uint32_t NEONLdStInsn = Insn32;
+    NEONLdStInsn &= 0xF0FFFFFF;
+    NEONLdStInsn |= 0x04000000;
+    Result = decodeInstruction(DecoderTableNEONLoadStore32, MI, NEONLdStInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+  }
+
+  if (fieldFromInstruction(Insn32, 24, 4) == 0xF) {
+    uint32_t NEONDataInsn = Insn32;
+    NEONDataInsn &= 0xF0FFFFFF; // Clear bits 27-24
+    NEONDataInsn |= (NEONDataInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
+    NEONDataInsn |= 0x12000000; // Set bits 28 and 25
+    Result = decodeInstruction(DecoderTableNEONData32, MI, NEONDataInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      Check(Result, AddThumbPredicate(MI));
+      return Result;
+    }
+
+    uint32_t NEONCryptoInsn = Insn32;
+    NEONCryptoInsn &= 0xF0FFFFFF; // Clear bits 27-24
+    NEONCryptoInsn |= (NEONCryptoInsn & 0x10000000) >> 4; // Move bit 28 to bit 24
+    NEONCryptoInsn |= 0x12000000; // Set bits 28 and 25
+    Result = decodeInstruction(DecoderTablev8Crypto32, MI, NEONCryptoInsn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      return Result;
+    }
+
+    uint32_t NEONv8Insn = Insn32;
+    NEONv8Insn &= 0xF3FFFFFF; // Clear bits 27-26
+    Result = decodeInstruction(DecoderTablev8NEON32, MI, NEONv8Insn, Address,
+                               this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      return Result;
+    }
+  }
+
+  uint32_t Coproc = fieldFromInstruction(Insn32, 8, 4);
+  const uint8_t *DecoderTable = ARM::isCDECoproc(Coproc, STI)
+                                    ? DecoderTableThumb2CDE32
+                                    : DecoderTableThumb2CoProc32;
+  Result =
+      decodeInstruction(DecoderTable, MI, Insn32, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
+    Check(Result, AddThumbPredicate(MI));
+    return Result;
+  }
+
+  // Advance IT state to prevent next instruction inheriting
+  // the wrong IT state.
+  if (ITBlock.instrInITBlock())
+    ITBlock.advanceITState();
+  Size = 0;
+  return MCDisassembler::Fail;
+}
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMDisassembler() {
+  TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheThumbLETarget(),
+                                         createARMDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheThumbBETarget(),
+                                         createARMDisassembler);
 }

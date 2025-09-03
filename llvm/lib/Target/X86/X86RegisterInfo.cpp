@@ -204,15 +204,7 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
     // we can still use 64-bit register as long as we know the high bits
     // are zeros.
     // Reflect that in the returned register class.
-    if (Is64Bit) {
-      // When the target also allows 64-bit frame pointer and we do have a
-      // frame, this is fine to use it for the address accesses as well.
-      const X86FrameLowering *TFI = getFrameLowering(MF);
-      return TFI->hasFP(MF) && TFI->Uses64BitFramePtr
-                 ? &X86::LOW32_ADDR_ACCESS_RBPRegClass
-                 : &X86::LOW32_ADDR_ACCESSRegClass;
-    }
-    return &X86::GR32RegClass;
+    return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
   case 1: // Normal GPRs except the stack pointer (for encoding reasons).
     if (Subtarget.isTarget64BitLP64())
       return &X86::GR64_NOSPRegClass;

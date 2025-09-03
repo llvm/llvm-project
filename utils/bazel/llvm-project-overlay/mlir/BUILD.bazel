@@ -398,6 +398,8 @@ cc_library(
         ":SymbolInterfacesIncGen",
         ":TensorEncodingIncGen",
         ":config",
+        "//llvm:Core",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:config",
     ],
@@ -482,6 +484,24 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+    ],
+)
+
+cc_library(
+    name = "RemarkStreamer",
+    srcs = glob([
+        "lib/Remark/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Remark/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        "//llvm:BitstreamReader",
+        "//llvm:Core",
+        "//llvm:Remarks",
+        "//llvm:Support",
     ],
 )
 
@@ -3727,6 +3747,7 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":IndexDialect",
         ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
@@ -4146,6 +4167,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
+        ":XeGPUToXeVM",
         ":XeVMToLLVM",
     ],
 )
@@ -5194,6 +5216,7 @@ cc_library(
         ":LLVMTypesIncGen",
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -5583,6 +5606,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUUtils",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5632,6 +5656,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":PtrTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
@@ -5718,6 +5743,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":TransformUtils",
+        ":VectorTransforms",
     ],
 )
 
@@ -6567,6 +6593,25 @@ cc_library(
         ":SideEffectInterfaces",
         ":ViewLikeInterface",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PtrToLLVM",
+    srcs = glob([
+        "lib/Conversion/PtrToLLVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/PtrToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":PtrDialect",
     ],
 )
 
@@ -8818,6 +8863,18 @@ cc_library(
 )
 
 cc_library(
+    name = "PtrToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/Ptr/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/Ptr/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":PtrDialect",
+        ":ToLLVMIRTranslation",
+    ],
+)
+
+cc_library(
     name = "XeVMToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/XeVM/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/XeVM/*.h"]),
@@ -8850,6 +8907,7 @@ cc_library(
         ":NVVMToLLVMIRTranslation",
         ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
+        ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
         ":VCIXToLLVMIRTranslation",
@@ -9253,6 +9311,7 @@ cc_library(
         ":NVGPUTransformOps",
         ":NVVMToLLVM",
         ":OpenMPToLLVM",
+        ":PtrToLLVM",
         ":ROCDLToLLVMIRTranslation",
         ":SCFToEmitC",
         ":SCFTransformOps",
@@ -11231,6 +11290,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -13918,6 +13978,37 @@ cc_library(
         "//llvm:SPIRVCodeGen",
         "//llvm:SPIRVUtilsAndDesc",
     ] if "SPIRV" in llvm_targets else []),
+)
+
+cc_library(
+    name = "XeGPUToXeVM",
+    srcs = glob([
+        "lib/Conversion/XeGPUToXeVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/XeGPUToXeVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
+        ":GPUDialect",
+        ":IR",
+        ":IndexDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":SCFTransforms",
+        ":Support",
+        ":TransformUtils",
+        ":VectorDialect",
+        ":XeGPUDialect",
+        ":XeVMDialect",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
