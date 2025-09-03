@@ -42,7 +42,7 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                      } else if (Limit > 0) {
                                        // Convert limit to range 1-Limit
                                        std::string RangeStr = "1-" + llvm::utostr(Limit);
-                                       if (getOptBisector().parseRanges(RangeStr)) {
+                                       if (!getOptBisector().parseRanges(RangeStr)) {
                                          errs() << "Error: Invalid limit for -opt-bisect-limit: " 
                                                 << Limit << "\n";
                                          exit(1);
@@ -54,7 +54,7 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
 static cl::opt<std::string> OptBisectRanges(
     "opt-bisect", cl::Hidden, cl::Optional,
     cl::cb<void, const std::string &>([](const std::string &RangeStr) {
-      if (getOptBisector().parseRanges(RangeStr)) {
+      if (!getOptBisector().parseRanges(RangeStr)) {
         errs() << "Error: Invalid range specification for -opt-bisect: " 
                << RangeStr << "\n";
         exit(1);
@@ -88,7 +88,6 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
 }
 
 bool OptBisect::parseRanges(StringRef RangeStr) {
-  LastBisectNum = 0;
   return RangeUtils::parseRanges(RangeStr, BisectRanges);
 }
 

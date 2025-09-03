@@ -55,7 +55,7 @@ public:
   using RangeList = SmallVector<Range, 8>;
 
   /// Parse a range specification string like "1-10,20-30,45" or "1-10:20-30:45"
-  /// Returns true on error, false on success
+  /// Returns false on error, true on success
   /// \param RangeStr The string to parse
   /// \param Ranges Output list of parsed ranges
   /// \param Separator The separator character to use (',' or ':')
