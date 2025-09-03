@@ -66,7 +66,7 @@ public:
   static Expected<RangeList> parseRanges(const StringRef RangeStr,
                                          const char Separator = ',');
 
-  /// Legacy interface for backward compatibility. 
+  /// Legacy interface for backward compatibility.
   /// \deprecated Use the Expected<RangeList> version instead
   static bool parseRanges(const StringRef RangeStr, RangeList &Ranges,
                           const char Separator = ',');
