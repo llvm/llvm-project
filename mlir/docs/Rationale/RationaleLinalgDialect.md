@@ -411,6 +411,20 @@ and is used as a lowering target for Linalg, enabling further transformations
 and combination of semantically-loaded and lower-level inputs. As such, Linalg
 is intended to complement Affine rather than replace it.
 
+### Summary of Existing Alternatives a Picture<a name="observationssummary"></a>
+Lastly, we summarize our observations of lessons from [Prior
+Art](#prior-art)---when viewed under the lense of our [Core Guiding
+Principles](#guiding_principles)---with the following picture.
+
+<img width="1200" alt="MLIR Codegen Flow"
+src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-11ea-8265-1c856c02525b.png">
+
+This figure is not meant to be perfectly accurate but a rough map of how we view
+the distribution of structural information in existing systems, from a
+codegen-friendly angle. Unsurprisingly, the
+[Linalg Dialect](../Dialects/Linalg/_index.md) and its future evolutions aspire
+to a position in the top-right of this map.
+
 ## Core Guiding Principles<a name="guiding_principles"></a>
 
 ### Transformations and Simplicity First<a name="transformations_first"></a>
@@ -505,6 +519,65 @@ ops and dialects. Then each transformation application reduces the
 potential by introducing lower-level IR ops and *smaller* Linalg ops.
 This gradually reduces the potential, all the way to Loops + VectorOps
 and LLVMIR.
+
+### Interchangeability of Forms<a name="forms"></a>
+
+Linalg's various forms (named, generic) also carry information, and that
+information should be preserved as much as possible during the progressive
+lowering. A `matmul` operation is a special case of a `contract` operation,
+which in turn is a special case of `generic` operation. Transformations on
+the more special forms should not be converted to the more generic ones
+unnecessarily, in the same way that they should not be broken down into
+loops + arithmetic if they can still be represented as a Linalg op.
+
+#### Generic, Category, Named<a name="generic_category_named"></a>
+
+The core Linalg operation tree has three forms:
+* **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
+loop operations.
+* **Category:** Represented by `linalg.contract` and `linalg.elementwise`,
+which are special (einsum) forms of the `generic` operation.
+* **Named:** All _named_ forms that can lower to either _category_ or
+_generic_ forms. For example, `linalg.matmul`, `linalg.add`, etc.
+
+Unlike lowering to loops, the different Linalg forms that are derived from
+`linalg.generic` are *equivalent*. It should always be possible to convert
+a named operation into a generic and back to named, if the semantics is
+preserved. The various forms in the Linalg dialect are meant to facilitate
+pattern matching (single operations or DAGs) and to be able to consider
+different forms as *canonical* for different transforms.
+
+#### Special Operations<a name="special_ops"></a>
+
+Not all Linalg operations represent perfectly nested loops, and therefore
+cannot be represented as a `linalg.generic`. There are two kinds of Linalg
+operations that fall into this category:
+* **Composite:** Operations that compose multiple Linalg operations, for
+example `linalg.softmax`. These can be converted to a DAG of Linalg operations
+(in any form).
+* **Special Named:** Operations that are usually matched against library calls
+or special lowering, but can only be lowered to a combination of Linalg and
+non-Linalg operations, for example `linalg.*conv*`, `linalg.winograd*`,
+`linalg.pooling*`, etc.
+
+#### Canonical Forms<a name="canonical_forms"></a>
+
+With multiple (often exchangeable) forms, and with transformation simplicity
+in mind, compilers should aim for reducing matching and replacing complexity
+as much as possible. When matching a single operation with a complex pattern,
+having all the information from a `generic` is useful to iteratively match
+different patterns in turn. However, when assembling a DAG of operations to
+form a pattern, it's much simpler to match against named operations (like
+`max` + `div` + `reduce` + `broadcast`) than their generic counterparts.
+
+This is where the interchangeability of forms comes in handy. Linalg has the
+ability to specialize and generalize in order to convert the IR to a form that
+is easier for a particular type of transform. With forms being semantically
+equivalent, one can convert back-and-forth throughout the various transforms
+to match the needs of each transform. For that particular transform, such
+form can be considered _canonical_ and therefore "expected" for the pattern
+to _match_. This reduces complexity of pattern matchers and simplifies compiler
+pipelines.
 
 ### Composable and Declarative Transformations<a name="declarative_transformations"></a>
 Complex and impactful transformations need not be hard to manipulate, write or
@@ -606,17 +679,3 @@ Considering the *potential* described during the discussion on
 transformation would dictate that the potential remains constant.
 In contrast, Linalg advocates for ***monotonicity*** under
 transformations.
-
-### Summary of Existing Alternatives a Picture<a name="observationssummary"></a>
-Lastly, we summarize our observations of lessons from [Prior
-Art](#prior-art)---when viewed under the lense of our [Core Guiding
-Principles](#guiding_principles)---with the following picture.
-
-<img width="1200" alt="MLIR Codegen Flow"
-src="https://user-images.githubusercontent.com/10148468/73613904-2f720a00-45c8-11ea-8265-1c856c02525b.png">
-
-This figure is not meant to be perfectly accurate but a rough map of how we view
-the distribution of structural information in existing systems, from a
-codegen-friendly angle. Unsurprisingly, the
-[Linalg Dialect](../Dialects/Linalg/_index.md) and its future evolutions aspire
-to a position in the top-right of this map.
