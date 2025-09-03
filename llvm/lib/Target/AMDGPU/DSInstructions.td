@@ -469,6 +469,56 @@ class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity 
   let AddedComplexity = complexity;
 }
 
+multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+  }
+}
+
+multiclass DSAtomicRetNoRetPat_NoM0_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                       ValueType vt, string frag> {
+  def : DSAtomicRetPat<inst, vt,
+                       !cast<PatFrag>(frag#"_local_"#vt)>;
+  def : DSAtomicRetPat<noRetInst, vt,
+                       !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
+}
+
+multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                  ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    defm : DSAtomicRetNoRetPat_NoM0_mc<
+      !cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"),
+      !cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"),
+      vt, frag>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
+                         /* complexity */ 1, /* gds */ 1>;
+  }
+}
+
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
 defm DS_SUB_U32       : DS_1A1D_NORET_mc<"ds_sub_u32">;
 defm DS_RSUB_U32      : DS_1A1D_NORET_mc<"ds_rsub_u32">;
@@ -519,10 +569,10 @@ let SubtargetPredicate = HasLdsAtomicAddF64 in {
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
-  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc<"ds_pk_add_rtn_f16", VGPR_32>;
-  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc<"ds_pk_add_bf16">;
-  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc<"ds_pk_add_rtn_bf16", VGPR_32>;
+  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
+  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16", VGPR_32>;
+  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
+  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16", VGPR_32>;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
@@ -1089,50 +1139,6 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 
 } // End AddedComplexity = 100
 
-multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-  }
-}
-
-multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
-                         /* complexity */ 1, /* gds */ 1>;
-  }
-}
-
-
-
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
 class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
@@ -1210,8 +1216,8 @@ defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax
 
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
@@ -1263,7 +1269,7 @@ class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in
