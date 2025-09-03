@@ -9339,7 +9339,11 @@ multiclass St1LanePost128Pat<SDPatternOperator scalar_store, Operand VecIndex,
 
 defm : St1LanePost128Pat<post_truncsti8, VectorIndexB, v16i8, i32, ST1i8_POST,
                          1>;
+defm : St1LanePost128Pat<post_truncsti8, VectorIndexB, v16i8, i64, ST1i8_POST,
+                         1>;
 defm : St1LanePost128Pat<post_truncsti16, VectorIndexH, v8i16, i32, ST1i16_POST,
+                         2>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndexH, v8i16, i64, ST1i16_POST,
                          2>;
 defm : St1LanePost128Pat<post_store, VectorIndexS, v4i32, i32, ST1i32_POST, 4>;
 defm : St1LanePost128Pat<post_store, VectorIndexS, v4f32, f32, ST1i32_POST, 4>;

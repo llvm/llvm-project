@@ -24370,9 +24370,6 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         SelectionDAG &DAG,
                                         const AArch64Subtarget *Subtarget) {
-  // Limit to post-legalization in order to avoid peeling truncating stores.
-  if (DCI.isBeforeLegalize())
-    return SDValue();
   if (!Subtarget->isNeonAvailable())
     return SDValue();
   // Source operand is already a vector.
@@ -24408,6 +24405,13 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   SDLoc DL(ST);
   SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
   SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
+
+  if (ST->isTruncatingStore()) {
+    EVT NewVecDstVT = EVT::getVectorVT(
+        *DAG.getContext(), ST->getMemoryVT(),
+        VecDstVT.getFixedSizeInBits() / ST->getMemoryVT().getFixedSizeInBits());
+    VecConv = DAG.getNode(AArch64ISD::NVCAST, DL, NewVecDstVT, VecConv);
+  }
 
   SDValue Zero = DAG.getVectorIdxConstant(0, DL);
   SDValue Extracted =
