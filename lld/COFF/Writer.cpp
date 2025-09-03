@@ -1420,23 +1420,22 @@ void Writer::layoutSections() {
   if (ctx.config.sectionOrder.empty())
     return;
 
-  llvm::stable_sort(
-      ctx.outputSections,
-      [this](const OutputSection *a, const OutputSection *b) {
-        auto itA = ctx.config.sectionOrder.find(a->name.str());
-        auto itB = ctx.config.sectionOrder.find(b->name.str());
-        bool aInOrder = itA != ctx.config.sectionOrder.end();
-        bool bInOrder = itB != ctx.config.sectionOrder.end();
+  llvm::stable_sort(ctx.outputSections,
+                    [this](const OutputSection *a, const OutputSection *b) {
+                      auto itA = ctx.config.sectionOrder.find(a->name.str());
+                      auto itB = ctx.config.sectionOrder.find(b->name.str());
+                      bool aInOrder = itA != ctx.config.sectionOrder.end();
+                      bool bInOrder = itB != ctx.config.sectionOrder.end();
 
-        // Put unspecified sections after all specified sections
-        if (aInOrder && bInOrder) {
-          return itA->second < itB->second;
-        } else if (aInOrder && !bInOrder) {
-          return true;
-        } else {
-          return false;
-        }
-      });
+                      // Put unspecified sections after all specified sections
+                      if (aInOrder && bInOrder) {
+                        return itA->second < itB->second;
+                      } else if (aInOrder && !bInOrder) {
+                        return true;
+                      } else {
+                        return false;
+                      }
+                    });
 }
 
 // The Windows loader doesn't seem to like empty sections,
