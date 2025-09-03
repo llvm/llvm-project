@@ -9,11 +9,11 @@ define ptr @phi_prot_ptr(i1 %sel, ptr %p1, ptr %p2) {
 ; CHECK-SAME: i1 [[SEL:%.*]], ptr readonly [[P1:%.*]], ptr readonly [[P2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br i1 [[SEL]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[PROTP1:%.*]] = tail call ptr @llvm.protected.field.ptr(ptr [[P1]], i64 1, i1 true)
+; CHECK-NEXT:    [[PROTP1:%.*]] = tail call ptr @llvm.protected.field.ptr.p0(ptr [[P1]], i64 1, i1 true)
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[PROTP1]], align 8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[F]]:
-; CHECK-NEXT:    [[PROTP2:%.*]] = tail call ptr @llvm.protected.field.ptr(ptr [[P2]], i64 2, i1 true)
+; CHECK-NEXT:    [[PROTP2:%.*]] = tail call ptr @llvm.protected.field.ptr.p0(ptr [[P2]], i64 2, i1 true)
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load ptr, ptr [[PROTP2]], align 8
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -23,12 +23,12 @@ define ptr @phi_prot_ptr(i1 %sel, ptr %p1, ptr %p2) {
   br i1 %sel, label %t, label %f
 
 t:
-  %protp1 = call ptr @llvm.protected.field.ptr(ptr %p1, i64 1, i1 true)
+  %protp1 = call ptr @llvm.protected.field.ptr.p0(ptr %p1, i64 1, i1 true)
   %load1 = load ptr, ptr %protp1
   br label %exit
 
 f:
-  %protp2 = call ptr @llvm.protected.field.ptr(ptr %p2, i64 2, i1 true)
+  %protp2 = call ptr @llvm.protected.field.ptr.p0(ptr %p2, i64 2, i1 true)
   %load2 = load ptr, ptr %protp2
   br label %exit
 

@@ -697,7 +697,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
 Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   LoadInst *FirstLI = cast<LoadInst>(PN.getIncomingValue(0));
 
-  if (!shouldFoldOperandThroughPhi(FirstLI->getOperand(0)))
+  if (!canReplaceOperandWithVariable(FirstLI, 0))
     return nullptr;
 
   // FIXME: This is overconservative; this transform is allowed in some cases
@@ -736,7 +736,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
         LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
-    if (!shouldFoldOperandThroughPhi(LI->getOperand(0)))
+    if (!canReplaceOperandWithVariable(LI, 0))
       return nullptr;
 
     // We can't sink the load if the loaded value could be modified between

@@ -1540,22 +1540,25 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
             }
         )
     )
+
+    crashlog_sd = lldb.SBStructuredData()
+    crashlog_sd.SetGenericValue(
+        lldb.SBScriptObject(crashlog, lldb.eScriptLanguagePython)
+    )
+    structured_data.SetValueForKey("crashlog", crashlog_sd)
+
     launch_info = lldb.SBLaunchInfo(None)
     launch_info.SetProcessPluginName("ScriptedProcess")
     launch_info.SetScriptedProcessClassName(
         "crashlog_scripted_process.CrashLogScriptedProcess"
     )
     launch_info.SetScriptedProcessDictionary(structured_data)
-    launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
 
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
-
-    process.GetScriptedImplementation().set_crashlog(crashlog)
-    process.Continue()
 
     if not options.skip_status:
 

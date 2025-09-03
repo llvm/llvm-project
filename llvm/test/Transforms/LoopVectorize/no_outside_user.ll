@@ -169,7 +169,7 @@ define i32 @test3(i32 %N)  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -183,12 +183,11 @@ define i32 @test3(i32 %N)  {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i32> [[VEC_IND]], splat (i32 10)
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <2 x i32> [[VEC_IND]], splat (i32 10)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP5]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 2)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP3]], <2 x i32> splat (i32 1), <2 x i32> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[PREDPHI]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -196,12 +195,12 @@ define i32 @test3(i32 %N)  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[PREDPHI1]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
+; CHECK:       [[_LR_PH_I]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I:.*:]]
-; CHECK-NEXT:    [[UNNAMEDTMP8:%.*]] = phi i32 [ [[UNNAMEDTMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK:       [[_LR_PH_I1:.*:]]
+; CHECK-NEXT:    [[UNNAMEDTMP8:%.*]] = phi i32 [ [[UNNAMEDTMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
 ; CHECK-NEXT:    [[UNNAMEDTMP2:%.*]] = icmp sgt i32 [[UNNAMEDTMP8]], 10
 ; CHECK-NEXT:    br i1 [[UNNAMEDTMP2]], label %[[BB16]], label %[[UNNAMEDBB10:.*]]
 ; CHECK:       [[UNNAMEDBB10]]:

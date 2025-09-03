@@ -30,6 +30,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
@@ -1484,18 +1485,34 @@ public:
   }
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
-  bool Pre(const parser::OmpBeginBlockDirective &x) {
+  bool Pre(const parser::OmpBeginDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives. This is because these
+    // names do not denote Fortran objects, and the CRITICAL directive causes
+    // them to be "auto-declared", i.e. inserted into the global scope.
+    // More specifically, they are not expected to have explicit declarations,
+    // and if they do the behavior is unspeficied.
+    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
+      for (const parser::OmpArgument &arg : x.Arguments().v) {
+        ResolveCriticalName(arg);
+      }
+    }
     return true;
   }
-  void Post(const parser::OmpBeginBlockDirective &) {
+  void Post(const parser::OmpBeginDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
-  bool Pre(const parser::OmpEndBlockDirective &x) {
+  bool Pre(const parser::OmpEndDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives.
+    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
+      for (const parser::OmpArgument &arg : x.Arguments().v) {
+        ResolveCriticalName(arg);
+      }
+    }
     return true;
   }
-  void Post(const parser::OmpEndBlockDirective &) {
+  void Post(const parser::OmpEndDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
@@ -1589,20 +1606,6 @@ public:
     return true;
   }
   void Post(const parser::OmpEndSectionsDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OmpCriticalDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OmpCriticalDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OmpEndCriticalDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OmpEndCriticalDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPThreadprivate &) {
@@ -1720,14 +1723,14 @@ private:
       const std::optional<parser::OmpClauseList> &clauses,
       const T &wholeConstruct);
 
+  void ResolveCriticalName(const parser::OmpArgument &arg);
+
   int metaLevel_{0};
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  switch (beginDir.v) {
+  switch (x.BeginDir().DirId()) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
     return false;
@@ -1946,6 +1949,34 @@ void OmpVisitor::ProcessReductionSpecifier(
   }
   if (name) {
     name->symbol = symbol;
+  }
+}
+
+void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
+  auto &globalScope{[&]() -> Scope & {
+    for (Scope *s{&currScope()};; s = &s->parent()) {
+      if (s->IsTopLevel()) {
+        return *s;
+      }
+    }
+    llvm_unreachable("Cannot find global scope");
+  }()};
+
+  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
+    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+      if (auto *name{getDesignatorNameIfDataRef(*desg)}) {
+        if (auto *symbol{FindInScope(globalScope, *name)}) {
+          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+            SayWithDecl(*name, *symbol,
+                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+                name->ToString());
+          }
+        } else {
+          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
+          name->symbol->set(Symbol::Flag::OmpCriticalLock);
+        }
+      }
+    }
   }
 }
 
@@ -7882,7 +7913,7 @@ void ConstructVisitor::Post(const parser::AssociateStmt &x) {
       if (ExtractCoarrayRef(expr)) { // C1103
         Say("Selector must not be a coindexed object"_err_en_US);
       }
-      if (evaluate::IsAssumedRank(expr)) {
+      if (IsAssumedRank(expr)) {
         Say("Selector must not be assumed-rank"_err_en_US);
       }
       SetTypeFromAssociation(*symbol);

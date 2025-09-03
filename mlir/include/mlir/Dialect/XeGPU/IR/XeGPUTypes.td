@@ -16,13 +16,17 @@ include "mlir/IR/BuiltinTypes.td"
 def XeGPU_IntType: AnyTypeOf<[I1, I8, I16, I32, I64, SI1, SI8, SI16, SI32, SI64, UI1, UI8, UI16, UI32, UI64]>;
 def XeGPU_FloatType: AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
 def XeGPU_ScalarType: AnyTypeOf<[XeGPU_IntType, XeGPU_FloatType]>;
-def XeGPU_BaseAddrType: AnyTypeOf<[Non0RankedMemRefOf<[XeGPU_ScalarType]>, UI64, UI32, I64, I32]>;
+def XeGPU_PointerType : AnyTypeOf<[UI64, UI32, I64, I32]>;
+def XeGPU_BaseAddrType
+    : AnyTypeOf<[Non0RankedMemRefOf<[XeGPU_ScalarType]>, XeGPU_PointerType]>;
 def XeGPU_DpasOprType: FixedVectorOfRankAndType<[1, 2, 3], [XeGPU_ScalarType]>;
 def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
 def XeGPU_ValueType: FixedVectorOfNonZeroRankOf<[XeGPU_ScalarType]>;
 def XeGPU_VectorType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
+def XeGPU_GatherScatterBaseAddrType
+    : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
 // common base class for types in XeGPU dialect
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
@@ -189,7 +193,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   let genVerifyDecl = 1;
 }
 
-def XeGPU_GatherScatterSourceType : AnyTypeOf<[XeGPU_TensorDesc,Non0RankedMemRefOf<[XeGPU_ScalarType]>, UI64]>;
+def XeGPU_GatherScatterSourceType
+    : AnyTypeOf<[XeGPU_TensorDesc, XeGPU_GatherScatterBaseAddrType]>;
 
 def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
   let summary = "!xegpu.nbarrier a custom XeGPU type representing a barrier.";
@@ -199,6 +204,55 @@ def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
       return Base::get(context);
     };
   }];
+}
+
+def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "mlir::Type"> {
+  let summary = "MemDesc describing the data in SLM";
+  let description = [{
+    MemDesc represents a block of data stored in shared local memory.
+    By default, unless a layout attribute is provided, the data is stored
+    contiguously in row-major order within the region.
+
+    Examples:
+    ```mlir
+    // A multi-dimensional array stored in column-major order.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
+
+    // A multi-dimensional array stored in a blocked layout. Elements within the same block
+    // are stored contiguously in memory. Blocks are stored in row-major order.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
+
+    // A multi-dimensional array stored in column-major order with blocked layout.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
+    ```
+  }];
+  let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
+                        "mlir::Type": $elementType,
+                        OptionalParameter<"MemLayoutAttr">: $mem_layout);
+
+  let extraClassDeclaration = [{
+    bool hasRank() const { return true; }
+
+    MemDescType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, Type elementType) const {
+      return MemDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
+    }
+
+    ArrayAttr getStrides() {
+      auto layout = getMemLayout();
+      if (layout && layout.hasAttr("stride")) {
+        return layout.getStrides();
+      }
+
+      // derive and return default strides
+      SmallVector<int64_t> defaultStrides;
+      llvm::append_range(defaultStrides, getShape().drop_front());
+      llvm::append_values(defaultStrides, 1);
+      Builder builder(getContext());
+      return builder.getI64ArrayAttr(defaultStrides);
+    }
+  }];
+
+  let hasCustomAssemblyFormat = true;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD
