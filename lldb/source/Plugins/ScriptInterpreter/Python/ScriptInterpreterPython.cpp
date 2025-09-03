@@ -829,9 +829,12 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
                   PyRefType::Owned,
                   PyObject_CallObject(m_run_one_line_function.get(),
                                       pargs.get()));
-              if (return_value.IsValid())
+              if (return_value.IsValid()) {
                 success = true;
-              else if (options.GetMaskoutErrors() && PyErr_Occurred()) {
+                PythonString repr = return_value.Repr();
+                if (repr && repr.GetSize())
+                  result->AppendMessage(repr.GetString());
+              } else if (options.GetMaskoutErrors() && PyErr_Occurred()) {
                 PyErr_Print();
                 PyErr_Clear();
               }
