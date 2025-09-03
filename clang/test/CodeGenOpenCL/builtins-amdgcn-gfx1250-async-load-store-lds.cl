@@ -5,6 +5,46 @@
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 
+// CHECK-GFX1250-LABEL: @test_amdgcn_cluster_load_async_to_lds_b8(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0, i32 [[MASK:%.*]])
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_cluster_load_async_to_lds_b8(global char* gaddr, local char* laddr, int mask)
+{
+  __builtin_amdgcn_cluster_load_async_to_lds_b8(gaddr, laddr, 16, 0, mask);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_cluster_load_async_to_lds_b32(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0, i32 [[MASK:%.*]])
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_cluster_load_async_to_lds_b32(global int* gaddr, local int* laddr, int mask)
+{
+  __builtin_amdgcn_cluster_load_async_to_lds_b32(gaddr, laddr, 16, 0, mask);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_cluster_load_async_to_lds_b64(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.cluster.load.async.to.lds.b64(ptr addrspace(1) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0, i32 [[MASK:%.*]])
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_cluster_load_async_to_lds_b64(global v2i* gaddr, local v2i* laddr, int mask)
+{
+  __builtin_amdgcn_cluster_load_async_to_lds_b64(gaddr, laddr, 16, 0, mask);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_cluster_load_async_to_lds_b128(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.cluster.load.async.to.lds.b128(ptr addrspace(1) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0, i32 [[MASK:%.*]])
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_cluster_load_async_to_lds_b128(global v4i* gaddr, local v4i* laddr, int mask)
+{
+  __builtin_amdgcn_cluster_load_async_to_lds_b128(gaddr, laddr, 16, 0, mask);
+}
+
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_async_to_lds_b8(
 // CHECK-GFX1250-NEXT:  entry:
 // CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.global.load.async.to.lds.b8(ptr addrspace(1) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0)

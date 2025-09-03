@@ -12,6 +12,7 @@ let WantsRoot = true in {
   def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [], -10>;
 
   def GlobalSAddrNoIOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffset", [], [], -3>;
+  def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetM0", [], [], -3>;
   def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
   def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
   def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [], -10>;
@@ -1192,6 +1193,12 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let SubtargetPredicate = isGFX1250Plus in {
 
+let Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32 in {
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b32",  1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64     :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b64",  1>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128    :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b128", 1>;
+} // End Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B8       :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8",    1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B32      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b32",   1>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b64",   1>;
@@ -1366,6 +1373,16 @@ class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType 
 class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
+  (inst $dsaddr, $vaddr, $offset, $cpol)
+>;
+
+class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node (GlobalSAddrNoIOffsetM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), CPol:$cpol), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm), M0),
+  (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatLoadLDSSignedPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
@@ -1607,6 +1624,16 @@ class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Va
   (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
   (inst $vaddr, $saddr, $offset, $cpol)
 >;
+
+multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
+  def : FlatLoadLDSSignedPat_M0 <inst, node> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadLDSSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node> {
+    let AddedComplexity = 11;
+  }
+}
 
 multiclass GlobalLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
   def : FlatLoadLDSSignedPat <inst, node> {
@@ -2208,6 +2235,11 @@ let OtherPredicates = [isGFX1250Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
+
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B8,   int_amdgcn_cluster_load_async_to_lds_b8>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B32,  int_amdgcn_cluster_load_async_to_lds_b32>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B64,  int_amdgcn_cluster_load_async_to_lds_b64>;
+  defm : GlobalLoadLDSPats_M0 <CLUSTER_LOAD_ASYNC_TO_LDS_B128, int_amdgcn_cluster_load_async_to_lds_b128>;
 
   defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B8,      int_amdgcn_global_load_async_to_lds_b8>;
   defm : GlobalLoadLDSPats  <GLOBAL_LOAD_ASYNC_TO_LDS_B32,     int_amdgcn_global_load_async_to_lds_b32>;
@@ -3507,6 +3539,10 @@ defm CLUSTER_LOAD_B32                 : VFLAT_Real_AllAddr_gfx1250<0x067>;
 defm CLUSTER_LOAD_B64                 : VFLAT_Real_AllAddr_gfx1250<0x068>;
 defm CLUSTER_LOAD_B128                : VFLAT_Real_AllAddr_gfx1250<0x069>;
 
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B8     : VFLAT_Real_AllAddr_gfx1250<0x6a>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B32    : VFLAT_Real_AllAddr_gfx1250<0x6b>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B64    : VFLAT_Real_AllAddr_gfx1250<0x6c>;
+defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx1250<0x6d>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B8      : VFLAT_Real_AllAddr_gfx1250<0x5f>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B32     : VFLAT_Real_AllAddr_gfx1250<0x60>;
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B64     : VFLAT_Real_AllAddr_gfx1250<0x61>;

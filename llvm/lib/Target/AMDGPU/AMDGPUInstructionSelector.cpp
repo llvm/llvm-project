@@ -5735,6 +5735,17 @@ AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffsetM0(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 2).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   Register Addr = Root.getReg();
   Register PtrBase;
