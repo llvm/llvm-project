@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=i686-linux-gnu | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel | FileCheck %s --check-prefixes=X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X64
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=X86
 
 define float @ceil_f32(float %a) nounwind readnone {
 ; DAG-X64-LABEL: ceil_f32:
