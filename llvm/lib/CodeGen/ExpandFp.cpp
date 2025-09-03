@@ -282,6 +282,7 @@ Value *FRemExpander::buildApproxFRem(Value *X, Value *Y) const {
   // Propagating the approximate functions flag to the
   // division leads to an unacceptable drop in precision
   // on AMDGPU.
+  // TODO Find out if any flags might be worth propagating.
   B.clearFastMathFlags();
 
   Value *Quot = B.CreateFDiv(X, Y);

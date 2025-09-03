@@ -3,7 +3,7 @@
 
 define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_f16(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr half, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load half, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load half, ptr addrspace(1) [[GEP2]], align 4
@@ -74,7 +74,7 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CHECK-NEXT:    [[TMP25]] = call half @llvm.copysign.f16(half [[TMP24]], half [[R0]])
 ; CHECK-NEXT:    br label %[[BB2]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
   %r0 = load half, ptr addrspace(1) %in1, align 4
   %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -85,7 +85,7 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 
 define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @fast_frem_f16(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr half, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load half, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load half, ptr addrspace(1) [[GEP2]], align 4
@@ -96,7 +96,7 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; CHECK-NEXT:    store half [[R2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
   %r0 = load half, ptr addrspace(1) %in1, align 4
   %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -107,7 +107,7 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 
 define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @unsafe_frem_f16(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr half, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load half, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load half, ptr addrspace(1) [[GEP2]], align 4
@@ -118,7 +118,7 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; CHECK-NEXT:    store half [[R2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #1 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
   %r0 = load half, ptr addrspace(1) %in1, align 4
   %r1 = load half, ptr addrspace(1) %gep2, align 4
@@ -129,7 +129,7 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 
 define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_f32(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load float, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load float, ptr addrspace(1) [[GEP2]], align 4
@@ -197,7 +197,7 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CHECK-NEXT:    [[TMP24]] = call float @llvm.copysign.f32(float [[AX11]], float [[R0]])
 ; CHECK-NEXT:    br label %[[BB2]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
   %r0 = load float, ptr addrspace(1) %in1, align 4
   %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -208,7 +208,7 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 
 define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @fast_frem_f32(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load float, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load float, ptr addrspace(1) [[GEP2]], align 4
@@ -219,7 +219,7 @@ define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1)
 ; CHECK-NEXT:    store float [[R2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
   %r0 = load float, ptr addrspace(1) %in1, align 4
   %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -230,7 +230,7 @@ define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1)
 
 define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @unsafe_frem_f32(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load float, ptr addrspace(1) [[IN1]], align 4
 ; CHECK-NEXT:    [[R1:%.*]] = load float, ptr addrspace(1) [[GEP2]], align 4
@@ -241,7 +241,7 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 ; CHECK-NEXT:    store float [[R2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #1 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
   %r0 = load float, ptr addrspace(1) %in1, align 4
   %r1 = load float, ptr addrspace(1) %gep2, align 4
@@ -252,7 +252,7 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 
 define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_f64(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[R0:%.*]] = load double, ptr addrspace(1) [[IN1]], align 8
 ; CHECK-NEXT:    [[R1:%.*]] = load double, ptr addrspace(1) [[IN2]], align 8
 ; CHECK-NEXT:    [[AX:%.*]] = call double @llvm.fabs.f64(double [[R0]])
@@ -319,7 +319,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CHECK-NEXT:    [[TMP24]] = call double @llvm.copysign.f64(double [[AX11]], double [[R0]])
 ; CHECK-NEXT:    br label %[[BB2]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %r0 = load double, ptr addrspace(1) %in1, align 8
   %r1 = load double, ptr addrspace(1) %in2, align 8
   %r2 = frem double %r0, %r1
@@ -329,7 +329,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 
 define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @fast_frem_f64(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[R0:%.*]] = load double, ptr addrspace(1) [[IN1]], align 8
 ; CHECK-NEXT:    [[R1:%.*]] = load double, ptr addrspace(1) [[IN2]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[R0]], [[R1]]
@@ -339,7 +339,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; CHECK-NEXT:    store double [[R2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %r0 = load double, ptr addrspace(1) %in1, align 8
   %r1 = load double, ptr addrspace(1) %in2, align 8
   %r2 = frem fast double %r0, %r1
@@ -349,7 +349,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 
 define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @unsafe_frem_f64(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[R0:%.*]] = load double, ptr addrspace(1) [[IN1]], align 8
 ; CHECK-NEXT:    [[R1:%.*]] = load double, ptr addrspace(1) [[IN2]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[R0]], [[R1]]
@@ -359,7 +359,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; CHECK-NEXT:    store double [[R2]], ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  ptr addrspace(1) %in2) #1 {
+  ptr addrspace(1) %in2) {
   %r0 = load double, ptr addrspace(1) %in1, align 8
   %r1 = load double, ptr addrspace(1) %in2, align 8
   %r2 = frem afn double %r0, %r1
@@ -369,7 +369,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 
 define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_v2f16(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <2 x half>, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load <2 x half>, ptr addrspace(1) [[IN1]], align 8
 ; CHECK-NEXT:    [[R1:%.*]] = load <2 x half>, ptr addrspace(1) [[GEP2]], align 8
@@ -510,7 +510,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP57]] = call half @llvm.copysign.f16(half [[TMP56]], half [[TMP11]])
 ; CHECK-NEXT:    br label %[[BB14]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x half>, ptr addrspace(1) %in2, i32 4
   %r0 = load <2 x half>, ptr addrspace(1) %in1, align 8
   %r1 = load <2 x half>, ptr addrspace(1) %gep2, align 8
@@ -521,7 +521,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_v4f16(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <4 x half>, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load <4 x half>, ptr addrspace(1) [[IN1]], align 16
 ; CHECK-NEXT:    [[R1:%.*]] = load <4 x half>, ptr addrspace(1) [[GEP2]], align 16
@@ -796,7 +796,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP115]] = call half @llvm.copysign.f16(half [[TMP114]], half [[TMP31]])
 ; CHECK-NEXT:    br label %[[BB34]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr <4 x half>, ptr addrspace(1) %in2, i32 4
   %r0 = load <4 x half>, ptr addrspace(1) %in1, align 16
   %r1 = load <4 x half>, ptr addrspace(1) %gep2, align 16
@@ -807,7 +807,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_v2f32(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <2 x float>, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load <2 x float>, ptr addrspace(1) [[IN1]], align 8
 ; CHECK-NEXT:    [[R1:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP2]], align 8
@@ -942,7 +942,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP55]] = call float @llvm.copysign.f32(float [[AX42]], float [[TMP11]])
 ; CHECK-NEXT:    br label %[[BB14]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x float>, ptr addrspace(1) %in2, i32 4
   %r0 = load <2 x float>, ptr addrspace(1) %in1, align 8
   %r1 = load <2 x float>, ptr addrspace(1) %gep2, align 8
@@ -953,7 +953,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_v4f32(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <4 x float>, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load <4 x float>, ptr addrspace(1) [[IN1]], align 16
 ; CHECK-NEXT:    [[R1:%.*]] = load <4 x float>, ptr addrspace(1) [[GEP2]], align 16
@@ -1216,7 +1216,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP111]] = call float @llvm.copysign.f32(float [[AX104]], float [[TMP31]])
 ; CHECK-NEXT:    br label %[[BB34]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr <4 x float>, ptr addrspace(1) %in2, i32 4
   %r0 = load <4 x float>, ptr addrspace(1) %in1, align 16
   %r1 = load <4 x float>, ptr addrspace(1) %gep2, align 16
@@ -1227,7 +1227,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CHECK-LABEL: define amdgpu_kernel void @frem_v2f64(
-; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN1:%.*]], ptr addrspace(1) [[IN2:%.*]]) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <2 x double>, ptr addrspace(1) [[IN2]], i32 4
 ; CHECK-NEXT:    [[R0:%.*]] = load <2 x double>, ptr addrspace(1) [[IN1]], align 16
 ; CHECK-NEXT:    [[R1:%.*]] = load <2 x double>, ptr addrspace(1) [[GEP2]], align 16
@@ -1362,7 +1362,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CHECK-NEXT:    [[TMP55]] = call double @llvm.copysign.f64(double [[AX42]], double [[TMP11]])
 ; CHECK-NEXT:    br label %[[BB14]]
 ;
-  ptr addrspace(1) %in2) #0 {
+  ptr addrspace(1) %in2) {
   %gep2 = getelementptr <2 x double>, ptr addrspace(1) %in2, i32 4
   %r0 = load <2 x double>, ptr addrspace(1) %in1, align 16
   %r1 = load <2 x double>, ptr addrspace(1) %gep2, align 16
@@ -1370,6 +1370,3 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
   store <2 x double> %r2, ptr addrspace(1) %out, align 16
   ret void
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
