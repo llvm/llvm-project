@@ -625,7 +625,6 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     if (!op->hasAttr("cache_control"))
       return failure();
     constexpr bool isLoad = std::is_same_v<OpType, LLVM::LoadOp>;
-    auto loc = op.getLoc();
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata<isLoad>(rewriter, op);
     op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
@@ -648,14 +647,8 @@ struct ConvertXeVMToLLVMPass
 
   void runOnOperation() override {
     ConversionTarget target(getContext());
-    target.addLegalDialect<LLVM::LLVMDialect>();
-    target.addDynamicallyLegalOp<LLVM::LoadOp>(
-        [](LLVM::LoadOp op) { return !op->hasAttr("cache_control"); });
-    target.addDynamicallyLegalOp<LLVM::StoreOp>(
-        [](LLVM::StoreOp op) { return !op->hasAttr("cache_control"); });
-    target.addIllegalDialect<XeVMDialect>();
     RewritePatternSet patterns(&getContext());
-    populateXeVMToLLVMConversionPatterns(patterns);
+    populateXeVMToLLVMConversionPatterns(target, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -680,7 +673,7 @@ struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
-    populateXeVMToLLVMConversionPatterns(patterns);
+    populateXeVMToLLVMConversionPatterns(target, patterns);
   }
 };
 } // namespace
@@ -689,7 +682,11 @@ struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
-void ::mlir::populateXeVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
+void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
+                                                  RewritePatternSet &patterns) {
+  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>(
+      [](Operation *op) { return !op->hasAttr("cache_control"); });
+  target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
                LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
                LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
