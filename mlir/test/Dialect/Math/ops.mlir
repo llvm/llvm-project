@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func @atan(
@@ -336,4 +336,17 @@ func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) 
   math.isnormal %v : vector<4xf32>
   math.isnormal %t : tensor<4x?xf32>
   return
+}
+
+// CHECK-LABEL: func @clampf(
+func.func @clampf(%av: vector<3x4xf32>, %mv: vector<3x4xf32>, %Mv: vector<3x4xf32>,
+                  %as: f32, %ms: f32, %Ms: f32,
+                  %at: tensor<?xf80>, %mt: tensor<?xf80>, %Mt: tensor<?xf80>) {
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] fastmath<fast> : vector<3x4xf32>
+  %rv = math.clampf %av to [%mv, %Mv] fastmath<fast> : vector<3x4xf32>
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] : f32
+  %rs = math.clampf %as to [%ms, %Ms] fastmath<none> : f32
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] : tensor<?xf80>
+  %rt = math.clampf %at to [%mt, %Mt] : tensor<?xf80>
+  return 
 }

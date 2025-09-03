@@ -4604,6 +4604,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanpif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atanpif16_test.cpp
+  DEPENDS
+    libc.src.math.atanpif16
+    libc.src.errno.errno
+)
+
+add_fp_unittest(
   asinhf_test
   SUITE
     libc-math-smoke-tests

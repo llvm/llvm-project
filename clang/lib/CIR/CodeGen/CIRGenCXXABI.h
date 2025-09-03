@@ -107,6 +107,10 @@ public:
   virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
                                      const CXXRecordDecl *rd) = 0;
 
+  /// Emit any tables needed to implement virtual inheritance.  For Itanium,
+  /// this emits virtual table tables.
+  virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.
