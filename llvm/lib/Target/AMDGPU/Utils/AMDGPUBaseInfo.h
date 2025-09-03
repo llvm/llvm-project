@@ -353,6 +353,13 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
                                       unsigned MaxWaves,
                                       unsigned TotalNumVGPRs);
 
+/// \returns Maximum number of AGPRs that meets given number of waves per
+/// execution unit requirement for given subtarget \p STI.
+unsigned getMaxNumAGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+
+/// \returns Addressable number of AGPRs for a given subtarget \p STI.
+unsigned getAddressableNumAGPRs(const MCSubtargetInfo *STI);
+
 /// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
 /// Gen.
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,

@@ -1855,12 +1855,14 @@ entry:
 define amdgpu_ps double @dyn_extract_v16f64_v_s(<16 x double> %vec, i32 inreg %sel) {
 ; GPRIDX-LABEL: dyn_extract_v16f64_v_s:
 ; GPRIDX:       ; %bb.0: ; %entry
-; GPRIDX-NEXT:    s_lshl_b32 s0, s2, 1
-; GPRIDX-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
+; GPRIDX-NEXT:    s_lshl_b32 s1, s2, 1
+; GPRIDX-NEXT:    s_set_gpr_idx_on s1, gpr_idx(SRC0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v32, v0
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s0, v32
+; GPRIDX-NEXT:    s_set_gpr_idx_on s1, gpr_idx(SRC0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s1, v0
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;

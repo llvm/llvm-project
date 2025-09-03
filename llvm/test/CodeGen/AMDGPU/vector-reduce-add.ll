@@ -2927,9 +2927,9 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX7-SDAG:       ; %bb.0: ; %entry
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v10, vcc, v10, v26
+; GFX7-SDAG-NEXT:    buffer_load_dword v26, off, s[0:3], s32
 ; GFX7-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, v11, v27, vcc
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, v2, v18
-; GFX7-SDAG-NEXT:    buffer_load_dword v18, off, s[0:3], s32
 ; GFX7-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, v3, v19, vcc
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, v6, v22
 ; GFX7-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, v7, v23, vcc
@@ -2949,7 +2949,7 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX7-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, v3, v11, vcc
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, v14, v30
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, v15, v18, vcc
+; GFX7-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, v15, v26, vcc
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, v6, v8
 ; GFX7-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, v7, v9, vcc
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, v2, v6
@@ -3001,9 +3001,9 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX8-SDAG:       ; %bb.0: ; %entry
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v10, vcc, v10, v26
+; GFX8-SDAG-NEXT:    buffer_load_dword v26, off, s[0:3], s32
 ; GFX8-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, v11, v27, vcc
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v2, vcc, v2, v18
-; GFX8-SDAG-NEXT:    buffer_load_dword v18, off, s[0:3], s32
 ; GFX8-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, v3, v19, vcc
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v6, vcc, v6, v22
 ; GFX8-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, v7, v23, vcc
@@ -3023,7 +3023,7 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX8-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, v3, v11, vcc
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v8, vcc, v14, v30
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, v15, v18, vcc
+; GFX8-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, v15, v26, vcc
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v6, vcc, v6, v8
 ; GFX8-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, v7, v9, vcc
 ; GFX8-SDAG-NEXT:    v_add_u32_e32 v2, vcc, v2, v6
