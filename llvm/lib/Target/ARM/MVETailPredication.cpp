@@ -457,5 +457,4 @@ Pass *llvm::createMVETailPredicationPass() {
 
 char MVETailPredication::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MVETailPredication, DEBUG_TYPE, DESC, false, false)
-INITIALIZE_PASS_END(MVETailPredication, DEBUG_TYPE, DESC, false, false)
+INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)
