@@ -2251,7 +2251,7 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   // size_t strxfrm(char *dest, const char *src, size_t n);
   CurrentFunctionDescription = "locale transformation function";
 
-  ProgramStateRef state = C.getState();
+  ProgramStateRef State = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
   SValBuilder &SVB = C.getSValBuilder();
 
@@ -2261,32 +2261,32 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   SizeArgExpr Size = {{Call.getArgExpr(2), 2}};
 
   // `src` can never be null
-  SVal SrcVal = state->getSVal(Source.Expression, LCtx);
-  state = checkNonNull(C, state, Source, SrcVal);
-  if (!state)
+  SVal SrcVal = State->getSVal(Source.Expression, LCtx);
+  State = checkNonNull(C, State, Source, SrcVal);
+  if (!State)
     return;
 
   // Check overlaps
-  state = CheckOverlap(C, state, Size, Dest, Source, CK_Regular);
-  if (!state)
+  State = CheckOverlap(C, State, Size, Dest, Source, CK_Regular);
+  if (!State)
     return;
 
   // The function returns an implementation-defined length needed for
   // transformation
-  SVal retVal = SVB.conjureSymbolVal(Call, C.blockCount());
+  SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
 
-  state = state->BindExpr(Call.getOriginExpr(), LCtx, retVal);
+  State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
 
   // Check if size is zero
-  SVal sizeVal = state->getSVal(Size.Expression, LCtx);
-  QualType sizeTy = Size.Expression->getType();
+  SVal SizeVal = State->getSVal(Size.Expression, LCtx);
+  QualType SizeTy = Size.Expression->getType();
 
-  auto [stateZeroSize, StateSizeNonZero] =
-      assumeZero(C, state, sizeVal, sizeTy);
+  auto [StateZeroSize, StateSizeNonZero] =
+      assumeZero(C, State, SizeVal, SizeTy);
 
   // If `n` is 0, we just return the implementation defined length
-  if (stateZeroSize && !StateSizeNonZero) {
-    C.addTransition(stateZeroSize);
+  if (StateZeroSize && !StateSizeNonZero) {
+    C.addTransition(StateZeroSize);
     return;
   }
 
@@ -2294,8 +2294,8 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
     return;
 
   // If `n` is not 0, `dest` can not be null.
-  SVal destVal = state->getSVal(Dest.Expression, LCtx);
-  StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, destVal);
+  SVal DestVal = State->getSVal(Dest.Expression, LCtx);
+  StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, DestVal);
   if (!StateSizeNonZero)
     return;
 
@@ -2307,27 +2307,27 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
 
   // Success: return value < `n`
   // Failure: return value >= `n`
-  auto comparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, retVal, sizeVal,
+  auto ComparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, RetVal, SizeVal,
                                      SVB.getConditionType())
                            .getAs<DefinedOrUnknownSVal>();
 
-  if (comparisonVal) {
+  if (ComparisonVal) {
     auto [StateSuccess, StateFailure] =
-        StateSizeNonZero->assume(*comparisonVal);
+        StateSizeNonZero->assume(*ComparisonVal);
 
     if (StateSuccess) {
       // In this case, the transformation invalidated the buffer.
       StateSuccess = invalidateDestinationBufferBySize(
-          C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), destVal,
-          sizeVal, Size.Expression->getType());
+          C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
+          SizeVal, Size.Expression->getType());
 
       C.addTransition(StateSuccess);
     }
 
     if (StateFailure) {
       // In this case, dest buffer content is undefined
-      if (std::optional<Loc> destLoc = destVal.getAs<Loc>()) {
-        StateFailure = StateFailure->bindLoc(*destLoc, UndefinedVal{}, LCtx);
+      if (std::optional<Loc> DestLoc = DestVal.getAs<Loc>()) {
+        StateFailure = StateFailure->bindLoc(*DestLoc, UndefinedVal{}, LCtx);
       }
 
       C.addTransition(StateFailure);
@@ -2335,8 +2335,8 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   } else {
     // Fallback: invalidate the buffer.
     StateSizeNonZero = invalidateDestinationBufferBySize(
-        C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), destVal,
-        sizeVal, Size.Expression->getType());
+        C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
 
     C.addTransition(StateSizeNonZero);
   }
