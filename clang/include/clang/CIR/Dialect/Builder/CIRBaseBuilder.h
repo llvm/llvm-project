@@ -19,7 +19,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
@@ -161,16 +160,15 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         uint64_t alignment = 0) {
+                         bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
-    assert(!cir::MissingFeatures::opLoadStoreVolatile());
-    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
                                alignmentAttr, cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
                                 uint64_t alignment) {
-    return createLoad(loc, ptr, alignment);
+    return createLoad(loc, ptr, /*isVolatile=*/false, alignment);
   }
 
   mlir::Value createNot(mlir::Value value) {
@@ -251,7 +249,7 @@ public:
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
@@ -275,7 +273,8 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
-                               alignmentAttr, /*mem_order=*/{});
+                               /*isVolatile=*/false, alignmentAttr,
+                               /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -311,6 +310,25 @@ public:
     resOperands.append(operands.begin(), operands.end());
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
                         resOperands, attrs);
+  }
+
+  cir::CallOp createTryCallOp(
+      mlir::Location loc, mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
+      mlir::Type returnType = cir::VoidType(),
+      mlir::ValueRange operands = mlir::ValueRange(),
+      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
+    assert(!cir::MissingFeatures::opCallCallConv());
+    assert(!cir::MissingFeatures::opCallSideEffect());
+    return createCallOp(loc, callee, returnType, operands);
+  }
+
+  cir::CallOp createTryCallOp(
+      mlir::Location loc, cir::FuncOp callee, mlir::ValueRange operands,
+      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
+    assert(!cir::MissingFeatures::opCallCallConv());
+    assert(!cir::MissingFeatures::opCallSideEffect());
+    return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
+                           callee.getFunctionType().getReturnType(), operands);
   }
 
   //===--------------------------------------------------------------------===//
