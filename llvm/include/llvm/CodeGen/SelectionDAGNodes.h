@@ -3338,6 +3338,14 @@ namespace ISD {
     return St && St->getAddressingMode() == ISD::UNINDEXED;
   }
 
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked load.
+  inline bool isNormalMaskedLoad(const SDNode *N) {
+    auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
+           Ld->getAddressingMode() == ISD::UNINDEXED;
+  }
+
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
