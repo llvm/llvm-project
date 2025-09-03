@@ -332,8 +332,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x:
-; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
 ; FIXEDABI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
+; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
 define void @too_many_args_use_workitem_id_x(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
@@ -464,10 +464,11 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_x_byval:
 
+; FIXEDABI: buffer_load_dword v32, off, s[0:3], s32{{$}}
+
 ; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
 ; FIXEDABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v31
 
-; FIXEDABI: buffer_load_dword v31, off, s[0:3], s32{{$}}
 ; FIXEDABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; FIXEDABI: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
 ; FIXEDABI: s_setpc_b64

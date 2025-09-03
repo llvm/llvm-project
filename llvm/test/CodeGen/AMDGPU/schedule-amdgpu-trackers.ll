@@ -44,7 +44,7 @@ entry:
 ; CHECK-LABEL: {{^}}global_extload_v16f16_to_v16f64:
 ; TONGA:    NumSgprs: 96
 ; TONGA-GCNTRACKERS:    NumSgprs: 96
-; TONGA:    NumVgprs: 21
+; TONGA:    NumVgprs: 26
 ; TONGA-GCNTRACKERS:    NumVgprs: 23
 ; TONGA:    Occupancy: 8
 ; TONGA-GCNTRACKERS:    Occupancy: 8
@@ -59,9 +59,9 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 
 ; CHECK-LABEL: {{^}}constant_zextload_v64i16_to_v64i32:
 ; GENERIC:    NumSgprs: 71
-; GENERIC-GCNTRACKERS:    NumSgprs: 45
-; GENERIC:    NumVgprs: 20
-; GENERIC-GCNTRACKERS:    NumVgprs: 20
+; GENERIC-GCNTRACKERS:    NumSgprs: 35
+; GENERIC:    NumVgprs: 24
+; GENERIC-GCNTRACKERS:    NumVgprs: 34
 ; GENERIC:    Occupancy: 7
 ; GENERIC-GCNTRACKERS:    Occupancy: 10
 
