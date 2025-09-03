@@ -205,16 +205,9 @@ void LLLexer::advancePositionTo(const char *Ptr) {
 lltok::Kind LLLexer::LexToken() {
   // Set token end to next location, since the end is
   // exclusive
-  std::tie(PrevTokEndLineNum, PrevTokEndColNum) =
-      SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
-  --PrevTokEndLineNum;
-  --PrevTokEndColNum;
+  PrevTokEnd = CurPtr;
   while (true) {
     TokStart = CurPtr;
-    std::tie(CurTokLineNum, CurTokColNum) =
-        SM.getLineAndColumn(SMLoc::getFromPointer(CurPtr));
-    --CurTokLineNum;
-    --CurTokColNum;
     int CurChar = getNextChar();
 
     switch (CurChar) {

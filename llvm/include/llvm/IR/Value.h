@@ -68,6 +68,7 @@ struct FileLoc {
   }
 
   FileLoc(unsigned L, unsigned C) : Line(L), Col(C) {}
+  FileLoc(std::pair<unsigned, unsigned> LC) : Line(LC.first), Col(LC.second) {}
 };
 
 struct FileLocRange {

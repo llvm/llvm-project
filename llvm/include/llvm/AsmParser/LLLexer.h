@@ -17,27 +17,20 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SourceMgr.h"
 #include <string>
 
 namespace llvm {
   class Type;
   class SMDiagnostic;
-  class SourceMgr;
   class LLVMContext;
 
   class LLLexer {
     const char *CurPtr;
     StringRef CurBuf;
 
-    // The line number of the start of the current token, zero-indexed
-    unsigned CurTokLineNum = 0;
-    // The column number of the start of the current token, zero-indexed
-    unsigned CurTokColNum = 0;
-    // The line number of the end of the current token, zero-indexed
-    unsigned PrevTokEndLineNum = -1;
-    // The column number of the end (exclusive) of the current token,
-    // zero-indexed
-    unsigned PrevTokEndColNum = -1;
+    // The the end (exclusive) of the current token
+    const char *PrevTokEnd = nullptr;
 
     enum class ErrorPriority {
       None,   // No error message present.
@@ -87,16 +80,22 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
-    // Get the line number of the start of the current token, zero-indexed
-    unsigned getTokLineNum() { return CurTokLineNum; }
-    // Get the column number of the start of the current token, zero-indexed
-    unsigned getTokColNum() { return CurTokColNum; }
-    // Get the line number of the end of the previous token, zero-indexed,
-    // exclusive
-    unsigned getPrevTokEndLineNum() { return PrevTokEndLineNum; }
-    // Get the column number of the end of the previous token, zero-indexed,
-    // exclusive
-    unsigned getPrevTokEndColNum() { return PrevTokEndColNum; }
+    // Get the line, column position of the start of the current token,
+    // zero-indexed
+    std::pair<unsigned, unsigned> getTokLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(TokStart));
+      --LC.first;
+      --LC.second;
+      return LC;
+    }
+    // Get the line, column position of the end of the previous token,
+    // zero-indexed exclusive
+    std::pair<unsigned, unsigned> getPrevTokEndLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(PrevTokEnd));
+      --LC.first;
+      --LC.second;
+      return LC;
+    }
 
     // This returns true as a convenience for the parser functions that return
     // true on error.

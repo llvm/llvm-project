@@ -740,7 +740,7 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
-  FileLoc FunctionStart(Lex.getTokLineNum(), Lex.getTokColNum());
+  FileLoc FunctionStart(Lex.getTokLineColumnPos());
   Lex.Lex();
 
   Function *F;
@@ -752,8 +752,7 @@ bool LLParser::parseDefine() {
       parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
   if (ParserContext)
     ParserContext->addFunctionLocation(
-        F, FileLocRange(FunctionStart, {Lex.getPrevTokEndLineNum(),
-                                        Lex.getPrevTokEndColNum()}));
+        F, FileLocRange(FunctionStart, Lex.getPrevTokEndLineColumnPos()));
 
   return RetValue;
 }
@@ -6959,7 +6958,7 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
-  FileLoc BBStart(Lex.getTokLineNum(), Lex.getTokColNum());
+  FileLoc BBStart(Lex.getTokLineColumnPos());
 
   // If this basic block starts out with a name, remember it.
   std::string Name;
@@ -7002,7 +7001,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
-    FileLoc InstStart(Lex.getTokLineNum(), Lex.getTokColNum());
+    FileLoc InstStart(Lex.getTokLineColumnPos());
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -7054,15 +7053,13 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     TrailingDbgRecord.clear();
     if (ParserContext) {
       ParserContext->addInstructionLocation(
-          Inst, FileLocRange(InstStart, {Lex.getPrevTokEndLineNum(),
-                                         Lex.getPrevTokEndColNum()}));
+          Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
     }
   } while (!Inst->isTerminator());
 
   if (ParserContext)
     ParserContext->addBlockLocation(
-        BB, FileLocRange(BBStart, {Lex.getPrevTokEndLineNum(),
-                                   Lex.getPrevTokEndColNum()}));
+        BB, FileLocRange(BBStart, Lex.getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");
