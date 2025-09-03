@@ -1081,17 +1081,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // (x && y) || (x && z) -> x && (y || z)
-  VPBuilder Builder(Def);
-  if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
-      // Simplify only if one of the operands has one use to avoid creating an
-      // extra recipe.
-      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
-       !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
-    return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
-
   // x | 1 -> 1
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
     return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
@@ -1107,6 +1096,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // x && false -> false
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
     return Def->replaceAllUsesWith(Def->getOperand(1));
+
+  // (x && y) || (x && z) -> x && (y || z)
+  VPBuilder Builder(Def);
+  if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
+      // Simplify only if one of the operands has one use to avoid creating an
+      // extra recipe.
+      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
+       !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
+    return Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
