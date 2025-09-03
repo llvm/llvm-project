@@ -24960,12 +24960,13 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     unsigned VectorWidth = VT.getSizeInBits();
     MVT EltVT = VT.getVectorElementType();
 
-    // dont support 512-bit vectors yet; report error??
+    // don't support 512-bit vectors yet; report error??
     if (VectorWidth == 512)
       return SDValue();
 
     if (VectorWidth == 256 && !Subtarget.hasAVX())
       return SDValue();
+
     if (VectorWidth == 128 && !Subtarget.hasSSE1())
       return SDValue();
 
@@ -25075,8 +25076,8 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);
     FalseOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseOp);
     SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
-    SDValue Cmov = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
-    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
+    SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
+    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
   }
 
   if (isScalarFPTypeInSSEReg(VT)) {

@@ -557,12 +557,25 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
       llvm_unreachable("Integer vector operations require SSE2");
     }
     break;
+  case X86::CTSELECT_V8F16:
+    if (Subtarget.hasSSE2()) {
+      Instructions.PAndOpc = X86::PANDrr;
+      Instructions.PAndnOpc = X86::PANDNrr;
+      Instructions.POrOpc = X86::PORrr;
+      Instructions.BroadcastOpc = X86::PSHUFDri;
+      Instructions.IntMoveOpc = X86::MOVDI2PDIrr;
+      Instructions.MoveOpc = X86::MOVDQArr;
+    } else {
+      llvm_unreachable("FP16 vector operations require SSE2");
+    }
+    break;
   case X86::CTSELECT_V4F32X:
   case X86::CTSELECT_V4I32X:
   case X86::CTSELECT_V2F64X:
   case X86::CTSELECT_V2I64X:
   case X86::CTSELECT_V8I16X:
   case X86::CTSELECT_V16I8X:
+  case X86::CTSELECT_V8F16X:
     if (Subtarget.hasAVX()) {
       Instructions.PAndOpc = X86::VPANDrr;
       Instructions.PAndnOpc = X86::VPANDNrr;
@@ -609,6 +622,7 @@ getCtSelectInstructions(unsigned Opcode, const X86Subtarget &Subtarget) {
     break;
   case X86::CTSELECT_V16I16:
   case X86::CTSELECT_V32I8:
+  case X86::CTSELECT_V16F16:
     if (Subtarget.hasAVX2()) {
       Instructions.PAndOpc = X86::VPANDYrr;
       Instructions.PAndnOpc = X86::VPANDNYrr;

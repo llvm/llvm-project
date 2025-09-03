@@ -189,6 +189,11 @@ let Predicates = [HasSSE2] in {
   def CTSELECT_V16I8 : CTSELECT_VEC128 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
+
+  // If your build has v8f16, keep this; otherwise comment it out.
+  def CTSELECT_V8F16 : CTSELECT_VEC128 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
 }
 
 let Predicates = [HasAVX] in {
@@ -209,6 +214,11 @@ let Predicates = [HasAVX] in {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
   def CTSELECT_V16I8X : CTSELECT_VEC128X {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+
+  // If your build has v8f16, keep this; otherwise comment it out.
+  def CTSELECT_V8F16X : CTSELECT_VEC128X {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
 }
@@ -234,6 +244,11 @@ let Predicates = [HasAVX] in {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
   def CTSELECT_V32I8  : CTSELECT_VEC256 {
+    let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
+  }
+
+  // If your build has v16f16, keep this; otherwise comment it out.
+  def CTSELECT_V16F16 : CTSELECT_VEC256 {
     let Constraints = "@earlyclobber $dst,@earlyclobber $tmpx,@earlyclobber $tmpg";
   }
 }
@@ -267,6 +282,10 @@ let Predicates = [HasSSE2] in {
             (CTSELECT_V16I8 VR128:$t, VR128:$f, timm:$cc)>;
   def : Pat<(v2f64 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
             (CTSELECT_V2F64 VR128:$t, VR128:$f, timm:$cc)>;
+
+  // 128-bit f16 (optional)
+  def : Pat<(v8f16 (X86ctselect VR128:$t, VR128:$f, (i8 timm:$cc), EFLAGS)),
+            (CTSELECT_V8F16 VR128:$t, VR128:$f, timm:$cc)>;
 }
 
 let Predicates = [HasAVX] in {
@@ -286,6 +305,10 @@ let Predicates = [HasAVX] in {
             (CTSELECT_V8F32 VR256:$t, VR256:$f, timm:$cc)>;
   def : Pat<(v4f64 (X86ctselect VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
             (CTSELECT_V4F64 VR256:$t, VR256:$f, timm:$cc)>;
+
+  // 256-bit f16 (optional)
+  def : Pat<(v16f16 (X86ctselect VR256:$t, VR256:$f, (i8 timm:$cc), EFLAGS)),
+            (CTSELECT_V16F16 VR256:$t, VR256:$f, timm:$cc)>;
 }
 
 let Predicates = [HasCMOV, HasCF] in {
