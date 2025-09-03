@@ -35,13 +35,6 @@ DirectoryEntry &FileSystemCache::getRoot(StringRef root_path,
   return *Root;
 }
 
-StringRef FileSystemCache::getRootPathFor(StringRef Path) const {
-  if (is_absolute(Path, PathStyle))
-    return sys::path::root_path(Path, PathStyle);
-  else
-    return sys::path::root_path(WorkingDirectory.Path, PathStyle);
-}
-
 StringRef
 FileSystemCache::canonicalizeWorkingDirectory(sys::path::Style PathStyle,
                                               StringRef WorkingDirectory,
@@ -111,11 +104,11 @@ static DirectoryEntry &makeLazyEntry(
     DirectoryEntry &Parent, FileSystemCache::Directory &D, StringRef TreePath,
     DirectoryEntry::EntryKind Kind, std::optional<ObjectRef> Ref,
     sys::path::Style PathStyle) {
-#ifndef _WIN32
-  assert(sys::path::parent_path(TreePath, PathStyle) == Parent.getTreePath());
-#else
-  assert(sys::path::parent_path(TreePath, PathStyle).equals_insensitive(Parent.getTreePath()));
-#endif
+  if (!is_style_windows(PathStyle)) {
+    assert(sys::path::parent_path(TreePath, PathStyle) == Parent.getTreePath());
+  } else {
+    assert(sys::path::parent_path(TreePath, PathStyle).equals_insensitive(Parent.getTreePath()));
+  }
   assert(!D.lookup(sys::path::filename(TreePath, PathStyle)));
   assert(!D.isComplete());
 
@@ -283,9 +276,14 @@ FileSystemCache::lookupPath(DiscoveryInstance &DI, StringRef Path,
   // Start at the current working directory, unless the path is absolute.
   DirectoryEntry *Current = &WorkingDirectory;
   if (is_absolute(Path, PathStyle)) {
-    StringRef root_path = sys::path::root_path(Path, PathStyle);
-    Current = &getRoot(root_path);
-    Path.consume_front(root_path);
+    if (is_style_windows(PathStyle)) {
+      Current = &getRoot(get_separator(PathStyle));
+      // Pretend that we consumed the dummy root "\"
+    } else {
+      StringRef root_path = sys::path::root_path(Path, PathStyle);
+      Current = &getRoot(root_path);
+      Path.consume_front(root_path);
+    }
   }
 
   pushWork(Path);
@@ -327,9 +325,14 @@ FileSystemCache::lookupPath(DiscoveryInstance &DI, StringRef Path,
         return createFileError(Path, std::move(E));
     StringRef Target = Current->asSymlink().getTarget();
     if (is_absolute(Target, PathStyle)) {
-      StringRef root_path = sys::path::root_path(Target, PathStyle);
-      Current = &getRoot(root_path);
-      Target.consume_front(root_path);
+      if (is_style_windows(PathStyle)) {
+        Current = &getRoot(get_separator(PathStyle));
+        // Pretend that we consumed the dummy root "\"
+      } else {
+        StringRef root_path = sys::path::root_path(Target, PathStyle);
+        Current = &getRoot(root_path);
+        Target.consume_front(root_path);
+      }
     } else
       Current = Current->getParent();
     pushWork(Target, SymlinkDepth);

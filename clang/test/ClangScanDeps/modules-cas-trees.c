@@ -59,7 +59,7 @@
 // CACHE-MISS: remark: compile job cache miss
 
 // Check specifics of the command-line
-// RUN: cat %t/deps.json | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -74,7 +74,7 @@
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[LEFT_ROOT_ID]]"
 // CHECK:              "-o"
@@ -87,8 +87,8 @@
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Left.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}Left.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Left"
 // CHECK:          }
@@ -103,7 +103,7 @@
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[RIGHT_ROOT_ID]]"
 // CHECK:              "-o"
@@ -116,8 +116,8 @@
 // CHECK:              "-fmodule-file={{(Top=)?}}[[TOP_PCM]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Right.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}Right.h"
 // CHECK:            ]
 // CHECK:            "name": "Right"
 // CHECK:          }
@@ -128,7 +128,7 @@
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[TOP_ROOT_ID]]"
 // CHECK:              "-o"
@@ -137,8 +137,8 @@
 // CHECK:              "-emit-module"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}Top.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}Top.h"
 // CHECK:            ]
 // CHECK:            "name": "Top"
 // CHECK:          }
@@ -160,7 +160,7 @@
 // CHECK:                "command-line": [
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
-// CHECK-NEXT:             "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}cas"
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fcache-compile-job"
@@ -174,7 +174,7 @@
 // CHECK:                  "-fmodule-file={{(Right=)?}}[[RIGHT_PCM]]"
 // CHECK:                ]
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]{{.}}tu.c"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}tu.c"
 // CHECK-NEXT:           ]
 // CHECK:              }
 
