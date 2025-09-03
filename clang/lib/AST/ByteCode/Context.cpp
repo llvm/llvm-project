@@ -91,7 +91,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
 
   return true;
 }
@@ -121,7 +121,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
@@ -153,7 +153,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 

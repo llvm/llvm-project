@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/common/clc_smoothstep.h>
 #include <clc/opencl/common/smoothstep.h>
 

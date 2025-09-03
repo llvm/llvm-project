@@ -38,6 +38,7 @@
 #include "orc-rt/bit.h"
 #include "orc-rt/span.h"
 
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>

@@ -513,8 +513,9 @@ LogicalResult shard::detail::defaultAddShardingAnnotations(
 }
 
 #ifndef NDEBUG
-static bool isValueCompatibleWithFullReplicationSharding(Value value,
-                                                         Sharding sharding) {
+static bool
+isValueCompatibleWithFullReplicationSharding(Value value,
+                                             const Sharding &sharding) {
   if (isa<RankedTensorType>(value.getType())) {
     return isFullReplication(sharding);
   }
