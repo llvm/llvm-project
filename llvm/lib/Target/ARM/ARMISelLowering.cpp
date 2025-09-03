@@ -647,11 +647,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
-  if (!Subtarget->isThumb1Only())
+  if (!Subtarget->isThumb1Only()) {
     setOperationAction(ISD::ABS, MVT::i32, Custom);
-
-  if (Subtarget->isThumb1Only())
-    setOperationAction(ISD::ABDU, MVT::i32, Custom);
+    setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  }
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
@@ -5556,7 +5556,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   return Result;
 }
 
-SDValue ARMTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
+SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDLoc DL(Op);
@@ -5564,30 +5564,52 @@ SDValue ARMTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
 
   // If the subtract doesn't overflow then just use abs(sub())
   bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
-  if (DAG.willNotOverflowSub(IsNonNegative, LHS, RHS))
-    return SDValue();
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
 
-  if (DAG.willNotOverflowSub(IsNonNegative, RHS, LHS))
-    return SDValue();
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
 
-  // abdu: subs; sbcs r1,r1,r1(mask from borrow); eors; subs
-  EVT FlagsVT = MVT::i32;
+  if (Subtarget->isThumb1Only()) {
+    assert(!IsSigned && "Signed ABS not supported on Thumb1");
+    // abdu: subs; sbcs r1,r1,r1(mask from borrow); eors; subs
 
-  // First subtraction: LHS - RHS
-  SDValue Sub1WithFlags =
-      DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
-  SDValue Sub1Result = Sub1WithFlags.getValue(0);
-  SDValue Flags1 = Sub1WithFlags.getValue(1);
+    // First subtraction: LHS - RHS
+    SDValue Sub1WithFlags =
+        DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+    SDValue Sub1Result = Sub1WithFlags.getValue(0);
+    SDValue Flags1 = Sub1WithFlags.getValue(1);
 
-  // sbcs r1,r1,r1 (mask from borrow)
-  SDValue Sbc1 = DAG.getNode(ARMISD::SUBE, DL, DAG.getVTList(VT, FlagsVT), RHS,
-                             RHS, Flags1);
+    // sbcs r1,r1,r1 (mask from borrow)
+    SDValue Sbc1 = DAG.getNode(ARMISD::SUBE, DL, DAG.getVTList(VT, FlagsVT),
+                               RHS, RHS, Flags1);
 
-  // eors (XOR)
-  SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, Sub1Result, Sbc1.getValue(0));
+    // eors (XOR)
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, Sub1Result, Sbc1.getValue(0));
 
-  // subs (final subtraction)
-  return DAG.getNode(ISD::SUB, DL, VT, Xor, Sbc1.getValue(0));
+    // subs (final subtraction)
+    return DAG.getNode(ISD::SUB, DL, VT, Xor, Sbc1.getValue(0));
+  }
+
+  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp =
+      DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                            DAG.getConstant(0, DL, MVT::i32), Cmp.getValue(0));
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  ARMCC::CondCodes CC = IsSigned ? ARMCC::LT : ARMCC::LO;
+
+  // CSEL: if a > b, select a-b, otherwise b-a
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Cmp.getValue(0), Neg,
+                     DAG.getConstant(CC, DL, MVT::i32), Cmp.getValue(1));
 }
 
 /// canChangeToInt - Given the fp compare operand, return true if it is suitable
@@ -10680,7 +10702,9 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalTLSAddress: return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:        return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:     return LowerSELECT_CC(Op, DAG);
-  case ISD::ABDU:          return LowerABDU(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU:
+    return LowerABD(Op, DAG);
   case ISD::BRCOND:        return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:         return LowerBR_CC(Op, DAG);
   case ISD::BR_JT:         return LowerBR_JT(Op, DAG);
