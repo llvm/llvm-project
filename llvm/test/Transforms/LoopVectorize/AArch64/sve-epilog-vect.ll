@@ -55,7 +55,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 3
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP22]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vscale.i64()
@@ -69,7 +69,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    store <vscale x 8 x i8> splat (i8 1), ptr [[TMP28]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 1024, [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -109,7 +109,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-VF8:       vec.epilog.iter.check:
 ; CHECK-VF8-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 1024, [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.ph:
 ; CHECK-VF8-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VF8-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -119,7 +119,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-VF8-NEXT:    store <8 x i8> splat (i8 1), ptr [[TMP20]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
-; CHECK-VF8-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -162,7 +162,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -195,14 +195,14 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP9]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK-VF8:       vec.epilog.iter.check:
 ; CHECK-VF8-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 1024, [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK-VF8:       vec.epilog.ph:
 ; CHECK-VF8-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VF8-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -212,7 +212,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP11]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 1024
-; CHECK-VF8-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP14]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -275,14 +275,14 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[SCALAR_PH]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 8
@@ -294,7 +294,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -328,14 +328,14 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <vscale x 2 x i64> splat (i64 1), ptr [[TMP17]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK-VF8:       vec.epilog.iter.check:
 ; CHECK-VF8-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK-VF8:       vec.epilog.ph:
 ; CHECK-VF8-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VF8-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 8
@@ -347,7 +347,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    store <8 x i64> splat (i64 1), ptr [[TMP20]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 8
 ; CHECK-VF8-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC3]]
-; CHECK-VF8-NEXT:    br i1 [[TMP19]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP19]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -401,7 +401,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -411,7 +411,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 3
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP22]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vscale.i64()
@@ -426,7 +426,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    store <vscale x 8 x i8> zeroinitializer, ptr [[TMP28]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX7]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 10000, [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -460,7 +460,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP17]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -468,7 +468,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 10000, [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK-VF8:       vec.epilog.ph:
 ; CHECK-VF8-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-VF8-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 10000
@@ -479,7 +479,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    store <8 x i8> zeroinitializer, ptr [[TMP20]], align 1
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX3]], 8
 ; CHECK-VF8-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 10000
-; CHECK-VF8-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF8:       vec.epilog.middle.block:
 ; CHECK-VF8-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-VF8:       vec.epilog.scalar.ph:
@@ -535,19 +535,16 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP21:%.*]] = shl nuw i64 [[TMP20]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[TMP21]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP18]], ptr [[TMP13]], align 4
-; CHECK-NEXT:    store <vscale x 4 x float> [[TMP19]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    store <vscale x 4 x float> [[TMP19]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -556,7 +553,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 1
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP25]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
@@ -574,7 +571,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP34]], ptr [[TMP32]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX7]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC6]]
-; CHECK-NEXT:    br i1 [[TMP35]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP35]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[CMP_N11]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -605,19 +602,16 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-VF8-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-VF8-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 2
-; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP14]]
+; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[TMP14]]
 ; CHECK-VF8-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP11]], align 4
 ; CHECK-VF8-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP15]], align 4
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD1]], [[WIDE_LOAD3]]
-; CHECK-VF8-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF8-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 2
-; CHECK-VF8-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP19]]
 ; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP16]], ptr [[TMP11]], align 4
-; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP20]], align 4
+; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP15]], align 4
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -679,19 +673,16 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP21:%.*]] = shl nuw i64 [[TMP20]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw float, ptr [[TMP13]], i64 [[TMP21]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP18]], ptr [[TMP13]], align 4
-; CHECK-NEXT:    store <vscale x 4 x float> [[TMP19]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    store <vscale x 4 x float> [[TMP19]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -700,7 +691,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 1
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP25]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF15]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
@@ -718,7 +709,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP34]], ptr [[TMP32]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX7]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC6]]
-; CHECK-NEXT:    br i1 [[TMP35]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP35]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[CMP_N11]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -749,19 +740,16 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-VF8-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-VF8-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 2
-; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP14]]
+; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[TMP14]]
 ; CHECK-VF8-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP11]], align 4
 ; CHECK-VF8-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP15]], align 4
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD1]], [[WIDE_LOAD3]]
-; CHECK-VF8-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF8-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 2
-; CHECK-VF8-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 [[TMP19]]
 ; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP16]], ptr [[TMP11]], align 4
-; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP20]], align 4
+; CHECK-VF8-NEXT:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP15]], align 4
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-VF8-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-VF8:       middle.block:
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]

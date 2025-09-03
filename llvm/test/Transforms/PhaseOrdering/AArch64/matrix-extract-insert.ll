@@ -133,7 +133,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[WIDE_LOAD]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <2 x double> [[WIDE_LOAD21]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i64 16
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP22]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24:%.*]] = load <2 x double>, ptr [[TMP22]], align 8, !alias.scope [[META5:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <2 x double>, ptr [[TMP23]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = fsub <2 x double> [[WIDE_LOAD24]], [[TMP20]]
@@ -209,7 +209,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP50:%.*]] = fmul <2 x double> [[WIDE_LOAD_1]], [[BROADCAST_SPLAT23_1]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = fmul <2 x double> [[WIDE_LOAD21_1]], [[BROADCAST_SPLAT23_1]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[TMP33]]
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP52]], i64 16
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr i8, ptr [[TMP52]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_1:%.*]] = load <2 x double>, ptr [[TMP52]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_1:%.*]] = load <2 x double>, ptr [[TMP53]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = fsub <2 x double> [[WIDE_LOAD24_1]], [[TMP50]]
@@ -286,7 +286,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP81:%.*]] = fmul <2 x double> [[WIDE_LOAD_2]], [[BROADCAST_SPLAT23_2]]
 ; CHECK-NEXT:    [[TMP82:%.*]] = fmul <2 x double> [[WIDE_LOAD21_2]], [[BROADCAST_SPLAT23_2]]
 ; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[TMP64]]
-; CHECK-NEXT:    [[TMP84:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP83]], i64 16
+; CHECK-NEXT:    [[TMP84:%.*]] = getelementptr i8, ptr [[TMP83]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_2:%.*]] = load <2 x double>, ptr [[TMP83]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_2:%.*]] = load <2 x double>, ptr [[TMP84]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP85:%.*]] = fsub <2 x double> [[WIDE_LOAD24_2]], [[TMP81]]
@@ -363,7 +363,7 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP112:%.*]] = fmul <2 x double> [[WIDE_LOAD_3]], [[BROADCAST_SPLAT23_3]]
 ; CHECK-NEXT:    [[TMP113:%.*]] = fmul <2 x double> [[WIDE_LOAD21_3]], [[BROADCAST_SPLAT23_3]]
 ; CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[TMP95]]
-; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP114]], i64 16
+; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr i8, ptr [[TMP114]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD24_3:%.*]] = load <2 x double>, ptr [[TMP114]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD25_3:%.*]] = load <2 x double>, ptr [[TMP115]], align 8, !alias.scope [[META5]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP116:%.*]] = fsub <2 x double> [[WIDE_LOAD24_3]], [[TMP112]]

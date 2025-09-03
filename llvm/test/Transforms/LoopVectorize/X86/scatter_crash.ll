@@ -70,7 +70,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[IND_END12:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP6]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 8, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -104,7 +104,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT16]] = add <8 x i64> [[VEC_IND15]], splat (i64 16)
 ; CHECK-NEXT:    [[VEC_IND_NEXT21]] = add <8 x i64> [[VEC_IND20]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT22]], [[N_VEC7]]
-; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[TMP6]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label [[FOR_COND_CLEANUP_LOOPEXIT99]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -142,7 +142,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> [[TMP33]], i32 16, <16 x i1> [[TMP34]])
 ; CHECK-NEXT:    [[TMP49:%.*]] = or <16 x i64> [[VEC_IND37]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP36:%.*]] = add <16 x i64> [[TMP30]], [[TMP49]]
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP31]], <16 x i64> [[TMP36]], i64 0
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr [10 x i32], <16 x ptr> [[TMP31]], <16 x i64> [[TMP36]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> [[TMP37]], i32 8, <16 x i1> [[TMP34]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> [[TMP33]], i32 16, <16 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> [[TMP37]], i32 8, <16 x i1> [[BROADCAST_SPLAT]])
@@ -150,7 +150,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT36]] = add <16 x i64> [[VEC_IND35]], splat (i64 32)
 ; CHECK-NEXT:    [[VEC_IND_NEXT38]] = add <16 x i64> [[VEC_IND37]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT39]], [[N_VEC32]]
-; CHECK-NEXT:    br i1 [[TMP41]], label [[MIDDLE_BLOCK37:%.*]], label [[VECTOR_BODY29]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP41]], label [[MIDDLE_BLOCK37:%.*]], label [[VECTOR_BODY29]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block37:
 ; CHECK-NEXT:    [[CMP_N40:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    br i1 [[CMP_N40]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK43:%.*]]
@@ -160,7 +160,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[IND_END58:%.*]] = mul i64 [[N_VEC32]], 2
 ; CHECK-NEXT:    [[N_VEC_REMAINING49:%.*]] = sub i64 [[TMP28]], [[N_VEC32]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_VEC_REMAINING49]], 8
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label [[VEC_EPILOG_SCALAR_PH40]], label [[VEC_EPILOG_PH42]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label [[VEC_EPILOG_SCALAR_PH40]], label [[VEC_EPILOG_PH42]], !prof [[PROF3]]
 ; CHECK:       vec.epilog.ph43:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL51:%.*]] = phi i64 [ [[N_VEC32]], [[VEC_EPILOG_ITER_CHECK43]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL42:%.*]] = phi i64 [ [[IND_END41]], [[VEC_EPILOG_ITER_CHECK43]] ], [ 8, [[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
@@ -191,7 +191,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> [[TMP47]], i32 16, <8 x i1> [[TMP48]])
 ; CHECK-NEXT:    [[TMP54:%.*]] = or <8 x i64> [[VEC_IND70]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP50:%.*]] = add <8 x i64> [[TMP44]], [[TMP54]]
-; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP45]], <8 x i64> [[TMP50]], i64 0
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr [10 x i32], <8 x ptr> [[TMP45]], <8 x i64> [[TMP50]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> [[TMP51]], i32 8, <8 x i1> [[TMP48]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> [[TMP47]], i32 16, <8 x i1> [[BROADCAST_SPLAT73]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> [[TMP51]], i32 8, <8 x i1> [[BROADCAST_SPLAT73]])
@@ -199,7 +199,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT66]] = add <8 x i64> [[VEC_IND65]], splat (i64 16)
 ; CHECK-NEXT:    [[VEC_IND_NEXT71]] = add <8 x i64> [[VEC_IND70]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP55:%.*]] = icmp eq i64 [[INDEX_NEXT74]], [[N_VEC53]]
-; CHECK-NEXT:    br i1 [[TMP55]], label [[VEC_EPILOG_MIDDLE_BLOCK40:%.*]], label [[VEC_EPILOG_VECTOR_BODY49]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP55]], label [[VEC_EPILOG_MIDDLE_BLOCK40:%.*]], label [[VEC_EPILOG_VECTOR_BODY49]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block64:
 ; CHECK-NEXT:    [[CMP_N65:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC53]]
 ; CHECK-NEXT:    br i1 [[CMP_N65]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH40]]
@@ -233,7 +233,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT79]] = add nuw nsw i64 [[INDVARS_IV78]], 2
 ; CHECK-NEXT:    [[CMP_US:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT79]], [[TMP3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT71]] = add nuw nsw i64 [[INDVARS_IV70]], 2
-; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_BODY_US]], label [[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_US]], label [[FOR_BODY_US]], label [[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup.loopexit99:
@@ -255,7 +255,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT96]] = add nuw nsw i64 [[INDVARS_IV95]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT96]], [[TMP3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT88]] = add nuw nsw i64 [[INDVARS_IV87]], 2
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT99]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT99]], !llvm.loop [[LOOP8:![0-9]+]]
 ;
 entry:
   %0 = load i32, ptr @c, align 4

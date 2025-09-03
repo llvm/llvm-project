@@ -22,7 +22,7 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT27]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[DCT]], i64 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DCT]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[DCT]], align 2, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD29:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
