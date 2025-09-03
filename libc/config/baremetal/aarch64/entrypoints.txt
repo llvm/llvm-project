@@ -269,6 +269,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.difftime
     libc.src.time.gmtime
     libc.src.time.gmtime_r
+    libc.src.time.localtime
+    libc.src.time.localtime_r
     libc.src.time.mktime
     libc.src.time.strftime
     libc.src.time.strftime_l
@@ -788,6 +790,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fminimum_magbf16
   libc.src.math.fminimum_mag_numbf16
   libc.src.math.fminimum_numbf16
+  libc.src.math.fmodbf16
   libc.src.math.frexpbf16
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
@@ -814,9 +817,13 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.rintbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
+  libc.src.math.scalblnbf16
+  libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.truncbf16
+  libc.src.math.totalorderbf16
+  libc.src.math.totalordermagbf16
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )

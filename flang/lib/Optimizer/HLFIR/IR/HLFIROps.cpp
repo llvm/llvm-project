@@ -279,7 +279,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
-        typeparams, dummy_scope, nameAttr, fortran_attrs, data_attr);
+        typeparams, dummy_scope, /*storage=*/nullptr, /*storage_offset=*/0,
+        nameAttr, fortran_attrs, data_attr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {

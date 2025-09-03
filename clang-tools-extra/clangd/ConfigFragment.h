@@ -361,6 +361,8 @@ struct Fragment {
   struct HoverBlock {
     /// Whether hover show a.k.a type.
     std::optional<Located<bool>> ShowAKA;
+    /// Limit the number of characters returned when hovering a macro.
+    std::optional<Located<uint32_t>> MacroContentsLimit;
   };
   HoverBlock Hover;
 
