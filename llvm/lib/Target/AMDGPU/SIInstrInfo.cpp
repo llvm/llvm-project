@@ -3444,12 +3444,8 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
-    return true;
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
-    // TODO: We could fold this, but it's a strange case. The immediate value
-    // can't be directly folded into any real use. We would have to spread new
-    // immediate legality checks around and only accept subregister extracts for
-    // profitability.
+    return true;
   default:
     return false;
   }
