@@ -40,6 +40,23 @@ void PtrDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Common helper functions.
+//===----------------------------------------------------------------------===//
+
+/// Verifies that the alignment attribute is a power of 2 if present.
+static LogicalResult
+verifyAlignment(std::optional<int64_t> alignment,
+                function_ref<InFlightDiagnostic()> emitError) {
+  if (!alignment)
+    return success();
+  if (alignment.value() <= 0)
+    return emitError() << "alignment must be positive";
+  if (!llvm::isPowerOf2_64(alignment.value()))
+    return emitError() << "alignment must be a power of 2";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FromPtrOp
 //===----------------------------------------------------------------------===//
 
@@ -85,6 +102,39 @@ LogicalResult FromPtrOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+void GatherOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // Gather performs reads from multiple memory locations specified by ptrs
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrsMutable());
+}
+
+LogicalResult GatherOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows loads.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
+                      getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void GatherOp::build(OpBuilder &builder, OperationState &state, Type resultType,
+                     Value ptrs, Value mask, Value passthrough,
+                     unsigned alignment) {
+  build(builder, state, resultType, ptrs, mask, passthrough,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
@@ -104,19 +154,6 @@ verifyAtomicMemOp(OpTy memOp, ArrayRef<AtomicOrdering> unsupportedOrderings) {
     return memOp.emitOpError(
         "expected syncscope to be null for non-atomic access");
   }
-  return success();
-}
-
-/// Verifies that the alignment attribute is a power of 2 if present.
-static LogicalResult
-verifyAlignment(std::optional<int64_t> alignment,
-                function_ref<InFlightDiagnostic()> emitError) {
-  if (!alignment)
-    return success();
-  if (alignment.value() <= 0)
-    return emitError() << "alignment must be positive";
-  if (!llvm::isPowerOf2_64(alignment.value()))
-    return emitError() << "alignment must be a power of 2";
   return success();
 }
 
@@ -157,6 +194,99 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? std::optional<int64_t>(alignment) : std::nullopt,
         isVolatile, isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope));
+}
+//===----------------------------------------------------------------------===//
+// MaskedLoadOp
+//===----------------------------------------------------------------------===//
+
+void MaskedLoadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // MaskedLoad performs reads from the memory location specified by ptr.
+  effects.emplace_back(MemoryEffects::Read::get(), &getPtrMutable());
+}
+
+LogicalResult MaskedLoadOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  // Verify that the pointer type's memory space allows loads.
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
+                      getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void MaskedLoadOp::build(OpBuilder &builder, OperationState &state,
+                         Type resultType, Value ptr, Value mask,
+                         Value passthrough, unsigned alignment) {
+  build(builder, state, resultType, ptr, mask, passthrough,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedStoreOp
+//===----------------------------------------------------------------------===//
+
+void MaskedStoreOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // MaskedStore performs writes to the memory location specified by ptr
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrMutable());
+}
+
+LogicalResult MaskedStoreOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+  // Verify that the pointer type's memory space allows stores.
+  MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
+                       getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void MaskedStoreOp::build(OpBuilder &builder, OperationState &state,
+                          Value value, Value ptr, Value mask,
+                          unsigned alignment) {
+  build(builder, state, value, ptr, mask,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+void ScatterOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // Scatter performs writes to multiple memory locations specified by ptrs
+  effects.emplace_back(MemoryEffects::Write::get(), &getPtrsMutable());
+}
+
+LogicalResult ScatterOp::verify() {
+  auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
+
+  // Verify that the pointer type's memory space allows stores.
+  MemorySpaceAttrInterface ms =
+      cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
+                       getAlignment(), &dataLayout, emitDiag))
+    return failure();
+
+  // Verify the alignment.
+  return verifyAlignment(getAlignment(), emitDiag);
+}
+
+void ScatterOp::build(OpBuilder &builder, OperationState &state, Value value,
+                      Value ptrs, Value mask, unsigned alignment) {
+  build(builder, state, value, ptrs, mask,
+        alignment ? std::optional<int64_t>(alignment) : std::nullopt);
 }
 
 //===----------------------------------------------------------------------===//

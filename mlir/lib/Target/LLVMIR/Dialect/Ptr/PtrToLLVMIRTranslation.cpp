@@ -204,6 +204,102 @@ convertTypeOffsetOp(TypeOffsetOp typeOffsetOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Convert ptr.gather operation
+static LogicalResult
+convertGatherOp(GatherOp gatherOp, llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *ptrs = moduleTranslation.lookupValue(gatherOp.getPtrs());
+  llvm::Value *mask = moduleTranslation.lookupValue(gatherOp.getMask());
+  llvm::Value *passthrough =
+      moduleTranslation.lookupValue(gatherOp.getPassthrough());
+
+  if (!ptrs || !mask || !passthrough)
+    return gatherOp.emitError("Failed to lookup operands");
+
+  // Convert result type to LLVM type.
+  llvm::Type *resultType =
+      moduleTranslation.convertType(gatherOp.getResult().getType());
+  if (!resultType)
+    return gatherOp.emitError("Failed to convert result type");
+
+  // Get the alignment.
+  llvm::MaybeAlign alignment(gatherOp.getAlignment().value_or(0));
+
+  // Create the masked gather intrinsic call.
+  llvm::Value *result = builder.CreateMaskedGather(
+      resultType, ptrs, alignment.valueOrOne(), mask, passthrough);
+
+  moduleTranslation.mapValue(gatherOp.getResult(), result);
+  return success();
+}
+
+/// Convert ptr.masked_load operation
+static LogicalResult
+convertMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *ptr = moduleTranslation.lookupValue(maskedLoadOp.getPtr());
+  llvm::Value *mask = moduleTranslation.lookupValue(maskedLoadOp.getMask());
+  llvm::Value *passthrough =
+      moduleTranslation.lookupValue(maskedLoadOp.getPassthrough());
+
+  if (!ptr || !mask || !passthrough)
+    return maskedLoadOp.emitError("Failed to lookup operands");
+
+  // Convert result type to LLVM type.
+  llvm::Type *resultType =
+      moduleTranslation.convertType(maskedLoadOp.getResult().getType());
+  if (!resultType)
+    return maskedLoadOp.emitError("Failed to convert result type");
+
+  // Get the alignment.
+  llvm::MaybeAlign alignment(maskedLoadOp.getAlignment().value_or(0));
+
+  // Create the masked load intrinsic call.
+  llvm::Value *result = builder.CreateMaskedLoad(
+      resultType, ptr, alignment.valueOrOne(), mask, passthrough);
+
+  moduleTranslation.mapValue(maskedLoadOp.getResult(), result);
+  return success();
+}
+
+/// Convert ptr.masked_store operation
+static LogicalResult
+convertMaskedStoreOp(MaskedStoreOp maskedStoreOp, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *value = moduleTranslation.lookupValue(maskedStoreOp.getValue());
+  llvm::Value *ptr = moduleTranslation.lookupValue(maskedStoreOp.getPtr());
+  llvm::Value *mask = moduleTranslation.lookupValue(maskedStoreOp.getMask());
+
+  if (!value || !ptr || !mask)
+    return maskedStoreOp.emitError("Failed to lookup operands");
+
+  // Get the alignment.
+  llvm::MaybeAlign alignment(maskedStoreOp.getAlignment().value_or(0));
+
+  // Create the masked store intrinsic call.
+  builder.CreateMaskedStore(value, ptr, alignment.valueOrOne(), mask);
+  return success();
+}
+
+/// Convert ptr.scatter operation
+static LogicalResult
+convertScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *value = moduleTranslation.lookupValue(scatterOp.getValue());
+  llvm::Value *ptrs = moduleTranslation.lookupValue(scatterOp.getPtrs());
+  llvm::Value *mask = moduleTranslation.lookupValue(scatterOp.getMask());
+
+  if (!value || !ptrs || !mask)
+    return scatterOp.emitError("Failed to lookup operands");
+
+  // Get the alignment.
+  llvm::MaybeAlign alignment(scatterOp.getAlignment().value_or(0));
+
+  // Create the masked scatter intrinsic call.
+  builder.CreateMaskedScatter(value, ptrs, alignment.valueOrOne(), mask);
+  return success();
+}
+
 /// Implementation of the dialect interface that converts operations belonging
 /// to the `ptr` dialect to LLVM IR.
 class PtrDialectLLVMIRTranslationInterface
@@ -229,6 +325,19 @@ public:
         })
         .Case([&](TypeOffsetOp typeOffsetOp) {
           return convertTypeOffsetOp(typeOffsetOp, builder, moduleTranslation);
+        })
+        .Case<GatherOp>([&](GatherOp gatherOp) {
+          return convertGatherOp(gatherOp, builder, moduleTranslation);
+        })
+        .Case<MaskedLoadOp>([&](MaskedLoadOp maskedLoadOp) {
+          return convertMaskedLoadOp(maskedLoadOp, builder, moduleTranslation);
+        })
+        .Case<MaskedStoreOp>([&](MaskedStoreOp maskedStoreOp) {
+          return convertMaskedStoreOp(maskedStoreOp, builder,
+                                      moduleTranslation);
+        })
+        .Case<ScatterOp>([&](ScatterOp scatterOp) {
+          return convertScatterOp(scatterOp, builder, moduleTranslation);
         })
         .Default([&](Operation *op) {
           return op->emitError("Translation for operation '")

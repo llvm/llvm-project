@@ -18,6 +18,38 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/OpAsmInterface.td"
 
 //===----------------------------------------------------------------------===//
+// Common props
+//===----------------------------------------------------------------------===//
+
+def AlignmentProp : OptionalProp<I64Prop>;
+
+//===----------------------------------------------------------------------===//
+// Common types
+//===----------------------------------------------------------------------===//
+
+// A shaped value type with value semantics and rank.
+class Ptr_ShapedValueType<list<Type> allowedTypes, list<Pred> preds = []> :
+  ShapedContainerType<allowedTypes,
+    /*containerPred=*/And<[HasValueSemanticsPred] # preds>,
+    /*descr=*/[{A shaped type with value semantics and rank.}],
+    /*cppType=*/"::mlir::ShapedType">;
+
+// A shaped pointer type with value semantics and rank.
+class Ptr_ShapedPtrType : Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>;
+
+// A shaped value type of rank 1 of any element type.
+def Ptr_Any1DType :
+  Ptr_ShapedValueType<[AnyType], [HasAnyRankOfPred<[1]>]>;
+
+// A shaped value type of rank 1 of `i1` element type.
+def Ptr_Mask1DType :
+  Ptr_ShapedValueType<[I1], [HasAnyRankOfPred<[1]>]>;
+
+// A shaped value type of rank 1 of `i1` element type.
+def Ptr_Ptr1DType :
+  Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
+
+//===----------------------------------------------------------------------===//
 // FromPtrOp
 //===----------------------------------------------------------------------===//
 
@@ -53,6 +85,58 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     $ptr (`metadata` $metadata^)? attr-dict `:` type($ptr) `->` type($result)
   }];
   let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_GatherOp : Pointer_Op<"gather", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    TypesMatchWith<"result and mask must be compatible", "result", "mask", [{
+      ::llvm::cast<ShapedType>($_self).clone(
+        IntegerType::get($_self.getContext(), 1))
+    }]>,
+    AllTypesMatch<["result", "passthrough"]>,
+    // Check the shapes are compatible and both use the same shaped container
+    // type.
+    AllShapesMatch<["result", "ptrs"]>, AllTypeIDsMatch<["result", "ptrs"]>
+  ]> {
+  let summary = "Gather operation";
+  let description = [{
+    The `gather` operation performs conditional loads from multiple memory
+    locations specified by `ptrs` based on a mask `mask`. Elements of the
+    result corresponding to masked-off lanes are taken from the passthrough
+    operand.
+
+    The mask operand is a shaped type of `i1` elements that must have the same
+    shape as the result type.
+
+    Examples:
+    ```mlir
+    // Gather values from multiple memory locations
+    %result = ptr.gather %ptrs, %mask, %passthrough :
+      vector<4x!ptr.ptr<#ptr.generic_space>> -> vector<4xf32>
+
+    // Gather with alignment
+    %result = ptr.gather %ptrs, %mask, %passthrough alignment = 8 :
+      vector<4x!ptr.ptr<#ptr.generic_space>> -> vector<4xf32>
+    ```
+  }];
+  let arguments = (ins Ptr_Ptr1DType:$ptrs,
+                       Ptr_Mask1DType:$mask,
+                       Ptr_Any1DType:$passthrough,
+                       AlignmentProp:$alignment);
+  let results = (outs Ptr_Any1DType:$result);
+  let assemblyFormat = [{
+    $ptrs `,` $mask `,` $passthrough (`alignment` `=` $alignment^)?
+    attr-dict `:` type($ptrs) `->` type($result)
+  }];
+  let builders = [
+  OpBuilder<(ins "Type":$resultType, "Value":$ptrs, "Value":$mask,
+      "Value":$passthrough, CArg<"unsigned", "0">:$alignment)>
+  ];
   let hasVerifier = 1;
 }
 
@@ -122,8 +206,6 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-def AlignmentProp : OptionalProp<I64Prop>;
-
 def Ptr_LoadOp : Pointer_Op<"load", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]> {
@@ -180,6 +262,150 @@ def Ptr_LoadOp : Pointer_Op<"load", [
       CArg<"bool", "false">:$isInvariantGroup,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedLoadOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_MaskedLoadOp : Pointer_Op<"masked_load", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    TypesMatchWith<"result and mask must be compatible", "result", "mask", [{
+      ::llvm::cast<ShapedType>($_self).clone(
+        IntegerType::get($_self.getContext(), 1))
+    }]>,
+    AllTypesMatch<["result", "passthrough"]>
+  ]> {
+  let summary = "Masked load operation";
+  let description = [{
+    The `masked_load` operation performs a conditional load from memory based
+    on  a mask. Elements of the result corresponding to masked-off lanes are
+    taken from the passthrough operand.
+
+    The mask operand is a shaped type of `i1` elements that must have the same
+    shape as the result type.
+
+    Examples:
+    ```mlir
+    // Masked load with passthrough on vectors
+    %result = ptr.masked_load %ptr, %mask, %passthrough :
+      !ptr.ptr<#ptr.generic_space> -> vector<4xf32>
+
+    // Masked load with passthrough on tensors
+    %result = ptr.masked_load %ptr, %mask, %passthrough :
+      !ptr.ptr<#ptr.generic_space> -> tensor<4xf32>
+    ```
+  }];
+  let arguments = (ins Ptr_PtrType:$ptr,
+                       Ptr_Mask1DType:$mask,
+                       Ptr_Any1DType:$passthrough,
+                       AlignmentProp:$alignment);
+  let results = (outs Ptr_Any1DType:$result);
+  let assemblyFormat = [{
+    $ptr `,` $mask `,` $passthrough (`alignment` `=` $alignment^)?
+    attr-dict `:` qualified(type($ptr)) `->` type($result)
+  }];
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$ptr, "Value":$mask,
+      "Value":$passthrough, CArg<"unsigned", "0">:$alignment)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedStoreOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_MaskedStoreOp : Pointer_Op<"masked_store", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    TypesMatchWith<"value and mask must be compatible", "value", "mask", [{
+      ::llvm::cast<ShapedType>($_self).clone(
+        IntegerType::get($_self.getContext(), 1))
+    }]>
+  ]> {
+  let summary = "Masked store operation";
+  let description = [{
+    The `masked_store` operation performs a conditional store to memory based
+    on  a mask. Only elements corresponding to set bits in the mask are written
+    to memory.
+
+    The mask operand is a shaped type of `i1` elements that must have the same
+    shape as the value being stored.
+
+    Examples:
+    ```mlir
+    // Masked store
+    ptr.masked_store %value, %ptr, %mask :
+      vector<4xf32>, !ptr.ptr<#ptr.generic_space>
+
+    // Masked store with alignment
+    ptr.masked_store %value, %ptr, %mask alignment = 8 :
+      vector<4xf32>, !ptr.ptr<#ptr.generic_space>
+    ```
+  }];
+
+  let arguments = (ins Ptr_Any1DType:$value,
+                       Ptr_PtrType:$ptr,
+                       Ptr_Mask1DType:$mask,
+                       AlignmentProp:$alignment);
+  let assemblyFormat = [{
+    $value `,` $ptr `,` $mask (`alignment` `=` $alignment^)? attr-dict `:`
+    type($value) `,` qualified(type($ptr))
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask,
+      CArg<"unsigned", "0">:$alignment)>
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_ScatterOp : Pointer_Op<"scatter", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    TypesMatchWith<"value and mask must be compatible", "value", "mask", [{
+      ::llvm::cast<ShapedType>($_self).clone(
+        IntegerType::get($_self.getContext(), 1))
+    }]>,
+    // Check the shapes are compatible and both use the same shaped container
+    // type.
+    AllShapesMatch<["value", "ptrs"]>, AllTypeIDsMatch<["value", "ptrs"]>
+  ]> {
+  let summary = "Scatter operation";
+  let description = [{
+    The `scatter` operation performs a conditional store of a value `value` to
+    multiple memory locations specified by `ptrs` based on a mask `mask`.
+
+    Only elements corresponding to set bits in the mask are written to memory.
+    The mask operand is a shaped type of `i1` elements that must have the same
+    shape as the value being stored.
+
+    Examples:
+    ```mlir
+    // Scatter values to multiple memory locations
+    ptr.scatter %value, %ptrs, %mask :
+      vector<4xf32>, vector<4x!ptr.ptr<#ptr.generic_space>>
+    
+    // Scatter with alignment
+    ptr.scatter %value, %ptrs, %mask alignment = 8 :
+      vector<4xf32>, vector<4x!ptr.ptr<#ptr.generic_space>>
+    ```
+  }];
+  let arguments = (ins Ptr_Any1DType:$value,
+                       Ptr_Ptr1DType:$ptrs,
+                       Ptr_Mask1DType:$mask,
+                       AlignmentProp:$alignment);
+  let assemblyFormat = [{
+    $value `,` $ptrs `,` $mask  (`alignment` `=` $alignment^)?
+    attr-dict `:` type($value) `,` type($ptrs)
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$ptrs, "Value":$mask,
+      CArg<"unsigned", "0">:$alignment)>
   ];
   let hasVerifier = 1;
 }
