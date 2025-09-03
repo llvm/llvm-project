@@ -3047,15 +3047,15 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   // Do tiling.
   if (const auto &tiles = loopOp.getTileSizes()) {
     llvm::Type *ivType = loopInfos.front()->getIndVarType();
-    SmallVector<llvm::Value *> TileSizes;
+    SmallVector<llvm::Value *> tileSizes;
 
     for (auto tile : tiles.value()) {
-      llvm::Value *TileVal = llvm::ConstantInt::get(ivType, tile);
-      TileSizes.push_back(TileVal);
+      llvm::Value *tileVal = llvm::ConstantInt::get(ivType, tile);
+      tileSizes.push_back(tileVal);
     }
 
     std::vector<llvm::CanonicalLoopInfo *> newLoops =
-        ompBuilder->tileLoops(ompLoc.DL, loopInfos, TileSizes);
+        ompBuilder->tileLoops(ompLoc.DL, loopInfos, tileSizes);
 
     // Update afterIP to get the correct insertion point after
     // tiling.
