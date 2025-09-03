@@ -2692,16 +2692,7 @@ with an ``assert``).
 Debugging
 =========
 
-A handful of `GDB pretty printers
-<https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html>`__ are
-provided for some of the core LLVM libraries. To use them, execute the
-following (or add it to your ``~/.gdbinit``)::
-
-  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
-
-It also might be handy to enable the `print pretty
-<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
-avoid data structures being printed as a big block of text.
+See :doc:`Debugging LLVM <DebuggingLLVM>`.
 
 .. _common:
 
