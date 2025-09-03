@@ -6,13 +6,11 @@
 
 namespace llvm {
 
-template<class T = void *>
-bool shouldReverseIterate() {
-#if LLVM_ENABLE_REVERSE_ITERATION
-  return detail::IsPointerLike<T>::value;
-#else
-  return false;
-#endif
+template <class T = void *> constexpr bool shouldReverseIterate() {
+  if constexpr (LLVM_ENABLE_REVERSE_ITERATION)
+    return detail::IsPointerLike<T>::value;
+  else
+    return false;
 }
 
 } // namespace llvm
