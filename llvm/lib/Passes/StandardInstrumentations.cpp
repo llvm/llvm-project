@@ -1920,7 +1920,8 @@ std::string DotCfgDiffNode::getBodyContent() const {
       // drop initial '\n' if present
       SR[I].consume_front("\n");
       // drop predecessors as they can be big and are redundant
-      SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
+      if(SR[I].str().find(Label) != std::string::npos)
+        SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
     }
 
     SmallString<80> OldLineFormat = formatv(
