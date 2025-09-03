@@ -62,7 +62,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -183,7 +183,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -245,7 +245,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -308,7 +308,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -429,7 +429,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -550,7 +550,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -671,7 +671,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -792,7 +792,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -854,7 +854,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>), !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_HasOperatorsOutline>, %[[SIZE]] : !u64i), !cir.ptr<!rec_HasOperatorsOutline>
@@ -901,7 +901,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -931,7 +931,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -961,7 +961,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -991,7 +991,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -1021,7 +1021,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -1051,7 +1051,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -1081,7 +1081,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -1111,7 +1111,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -1141,7 +1141,7 @@ HasOperatorsOutline &operator<(HasOperatorsOutline &, HasOperatorsOutline &);
 // TODO OpenACC: Expecting combination operation here
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
