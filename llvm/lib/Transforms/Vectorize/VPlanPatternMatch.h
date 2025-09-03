@@ -715,7 +715,7 @@ inline loop_invariant_vpvalue m_LoopInvVPValue() {
 }
 
 template <typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, VPInstruction::AnyOf>
+inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
 m_AnyOf(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::AnyOf>(Op0);
 }

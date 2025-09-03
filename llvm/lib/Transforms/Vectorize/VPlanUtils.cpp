@@ -143,16 +143,19 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
 }
 
 std::optional<VPValue *>
-vputils::getRecipesForUncountedExit(VPlan &Plan,
-                                    SmallVectorImpl<VPRecipeBase *> &Recipes,
-                                    SmallVectorImpl<VPRecipeBase *> &GEPs) {
+vputils::getRecipesForUncountableExit(VPlan &Plan,
+                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
+                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
   using namespace llvm::VPlanPatternMatch;
-  // Given a vplan like the following (just including the recipes contributing
+  // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
-  // the recipes contributing to the uncounted exit condition comparison
+  // the recipes contributing to the uncountable exit condition comparison
   // (here, vp<%4>) back to the canonical induction for the vector body so that
   // we can copy them to a preheader and rotate the address in the loop to the
   // next vector iteration.
+  //
+  // Currently, the address of the load is restricted to a GEP with 2 terms and
+  // a loop invariant base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
   // Live-in vp<%0> = VF
@@ -187,18 +190,16 @@ vputils::getRecipesForUncountedExit(VPlan &Plan,
   // No successors
   // }
 
-  // Find the uncounted loop exit condition.
+  // Find the uncountable loop exit condition.
   auto *Region = Plan.getVectorLoopRegion();
-  VPValue *UncountedCondition = nullptr;
-  if (!match(
-          Region->getExitingBasicBlock()->getTerminator(),
-          m_BranchOnCond(m_OneUse(m_c_BinaryOr(
-              m_OneUse(m_AnyOf(m_VPValue(UncountedCondition))), m_VPValue())))))
+  VPValue *UncountableCondition = nullptr;
+  if (!match(Region->getExitingBasicBlock()->getTerminator(),
+             m_BranchOnCond(m_OneUse(m_c_BinaryOr(
+                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue())))))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
-  SmallVector<VPWidenLoadRecipe *, 1> Loads;
-  Worklist.push_back(UncountedCondition);
+  Worklist.push_back(UncountableCondition);
   while (!Worklist.empty()) {
     VPValue *V = Worklist.pop_back_val();
 
@@ -212,39 +213,28 @@ vputils::getRecipesForUncountedExit(VPlan &Plan,
     if (V->getNumUsers() > 1)
       return std::nullopt;
 
+    VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
-    if (auto *Cmp = dyn_cast<VPWidenRecipe>(V)) {
-      if (Cmp->getOpcode() != Instruction::ICmp)
-        return std::nullopt;
-      Worklist.push_back(Cmp->getOperand(0));
-      Worklist.push_back(Cmp->getOperand(1));
-      Recipes.push_back(Cmp);
+    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+      Worklist.push_back(Op1);
+      Worklist.push_back(Op2);
+      Recipes.push_back(V->getDefiningRecipe());
     } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
       // Reject masked loads for the time being; they make the exit condition
       // more complex.
       if (Load->isMasked())
         return std::nullopt;
-      Loads.push_back(Load);
+
+      VPValue *GEP = Load->getAddr();
+      if (!match(GEP, m_GetElementPtr(m_LoopInvVPValue(), m_VPValue())))
+        return std::nullopt;
+
+      Recipes.push_back(Load);
+      Recipes.push_back(GEP->getDefiningRecipe());
+      GEPs.push_back(GEP->getDefiningRecipe());
     } else
       return std::nullopt;
   }
 
-  // Check the loads for exact patterns; for now we only support a contiguous
-  // load based directly on the canonical IV with a step of 1.
-  for (VPWidenLoadRecipe *Load : Loads) {
-    Recipes.push_back(Load);
-    VPValue *GEP = Load->getAddr();
-
-    if (!match(GEP, m_GetElementPtr(
-                        m_LoopInvVPValue(),
-                        m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
-                                        m_SpecificInt(1),
-                                        m_Specific(&Plan.getVF())))))
-      return std::nullopt;
-
-    Recipes.push_back(GEP->getDefiningRecipe());
-    GEPs.push_back(GEP->getDefiningRecipe());
-  }
-
-  return UncountedCondition;
+  return UncountableCondition;
 }
