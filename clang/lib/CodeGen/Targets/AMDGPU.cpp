@@ -342,6 +342,9 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
+  llvm::StringMap<bool> TargetFetureMap;
+  M.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
+
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
@@ -402,6 +405,29 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
+
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    uint32_t X =
+        Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    uint32_t Y =
+        Attr->getY()
+            ? Attr->getY()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+    uint32_t Z =
+        Attr->getZ()
+            ? Attr->getZ()->EvaluateKnownConstInt(M.getContext()).getExtValue()
+            : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
+  }
+
+  // OpenCL doesn't support cluster feature.
+  if ((IsOpenCLKernel && TargetFetureMap.lookup("gfx1250-insts")) ||
+      FD->getAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(

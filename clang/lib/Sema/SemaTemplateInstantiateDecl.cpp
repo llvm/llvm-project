@@ -707,6 +707,38 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
     S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
+static void instantiateDependentCUDAClusterDimsAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const CUDAClusterDimsAttr &Attr, Decl *New) {
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  Expr *XExpr = nullptr;
+  Expr *YExpr = nullptr;
+  Expr *ZExpr = nullptr;
+
+  if (Attr.getX()) {
+    ExprResult ResultX = S.SubstExpr(Attr.getX(), TemplateArgs);
+    if (ResultX.isUsable())
+      XExpr = ResultX.getAs<Expr>();
+  }
+
+  if (Attr.getY()) {
+    ExprResult ResultY = S.SubstExpr(Attr.getY(), TemplateArgs);
+    if (ResultY.isUsable())
+      YExpr = ResultY.getAs<Expr>();
+  }
+
+  if (Attr.getZ()) {
+    ExprResult ResultZ = S.SubstExpr(Attr.getZ(), TemplateArgs);
+    if (ResultZ.isUsable())
+      ZExpr = ResultZ.getAs<Expr>();
+  }
+
+  if (XExpr)
+    S.addClusterDimsAttr(New, Attr, XExpr, YExpr, ZExpr);
+}
+
 // This doesn't take any template parameters, but we have a custom action that
 // needs to happen when the kernel itself is instantiated. We need to run the
 // ItaniumMangler to mark the names required to name this kernel.
@@ -919,6 +951,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<AMDGPUMaxNumWorkGroupsAttr>(TmplAttr)) {
       instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
           *this, TemplateArgs, *AMDGPUMaxNumWorkGroups, New);
+    }
+
+    if (const auto *CUDAClusterDims = dyn_cast<CUDAClusterDimsAttr>(TmplAttr)) {
+      instantiateDependentCUDAClusterDimsAttr(*this, TemplateArgs,
+                                              *CUDAClusterDims, New);
     }
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
