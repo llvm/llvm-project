@@ -1918,7 +1918,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
       // drop initial '\n' if present
       SR[I].consume_front("\n");
       // drop predecessors as they can be big and are redundant
-      if(SR[I].find(Label) != StringRef::npos)
+      if (SR[I].find(Label) != StringRef::npos)
         SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
     }
 
