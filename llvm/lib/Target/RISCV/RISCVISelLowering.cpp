@@ -18837,6 +18837,10 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   if (Cond->getOperand(0) != CountZeroesArgument)
     return SDValue();
 
+  unsigned BitWidth = CountZeroes.getValueSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return SDValue();
+
   if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
     CountZeroes = DAG.getNode(ISD::CTTZ, SDLoc(CountZeroes),
                               CountZeroes.getValueType(), CountZeroesArgument);
@@ -18845,7 +18849,6 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
                               CountZeroes.getValueType(), CountZeroesArgument);
   }
 
-  unsigned BitWidth = CountZeroes.getValueSizeInBits();
   SDValue BitWidthMinusOne =
       DAG.getConstant(BitWidth - 1, SDLoc(N), CountZeroes.getValueType());
 
