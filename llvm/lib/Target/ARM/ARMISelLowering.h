@@ -534,8 +534,6 @@ class VectorType;
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
 
-    bool ExpandInlineAsm(CallInst *CI) const override;
-
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.
