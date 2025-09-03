@@ -667,7 +667,7 @@ body: |
   bb.0:
     liveins: $v8, $v9, $v10
 
-    ; We should not peekthrough an INSERT_SUBREG if its user is not a segmented store or another INSERT_SUBREG.
+    ; We should not peekthrough an INSERT_SUBREG if any of its users is not a segmented store or another INSERT_SUBREG.
     ; CHECK-LABEL: name: insert_subreg_bitcast_no_peekthru
     ; CHECK: liveins: $v8, $v9, $v10
     ; CHECK-NEXT: {{  $}}
@@ -682,6 +682,9 @@ body: |
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:vrn4m1 = INSERT_SUBREG [[INSERT_SUBREG2]], [[COPY2]], %subreg.sub_vrm1_3
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vrm4 = COPY [[INSERT_SUBREG3]]
     ; CHECK-NEXT: PseudoVSE32_V_M4 [[COPY3]], $noreg, 1, 5 /* e32 */
+    ; CHECK-NEXT: [[PseudoVADD_VV_M1_1:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, [[PseudoVADD_VV_M1_]], $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: $v10 = COPY [[PseudoVADD_VV_M1_1]]
+    ; CHECK-NEXT: PseudoRET implicit $v10
     %0:vr = COPY $v8
     %1:vr = COPY $v9
     %2:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 3 /* ta, ma */
@@ -693,3 +696,6 @@ body: |
     %9:vrn4m1 = INSERT_SUBREG %8, %3, %subreg.sub_vrm1_3
     %10:vrm4 = COPY %9
     PseudoVSE32_V_M4 %10:vrm4, $noreg, 1, 5 /* e32 */
+    %11:vr = PseudoVADD_VV_M1 $noreg, %2, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
+    $v10 = COPY %11
+    PseudoRET implicit $v10

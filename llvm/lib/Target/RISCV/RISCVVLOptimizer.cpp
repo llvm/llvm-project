@@ -1510,9 +1510,10 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
         // or another INSERT_SUBREG, since VL just works differently
         // between segmented operations (per-field) v.s. other RVV ops (on the
         // whole register group).
-        if (isTupleInsertInstr(CandidateMI, *MRI) ||
-            isSegmentedStoreInstr(CandidateMI))
-          Worklist.insert(&UseOp);
+        if (!isTupleInsertInstr(CandidateMI, *MRI) &&
+            !isSegmentedStoreInstr(CandidateMI))
+          return std::nullopt;
+        Worklist.insert(&UseOp);
       }
       continue;
     }
