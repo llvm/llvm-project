@@ -1764,7 +1764,7 @@ static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
                   CR.getSignedMax().getNumSignBits());
 }
 
-unsigned GISelValueTracking::computeNumSignBits(Register R,
+unsigned GISelValueTracking::computeNumSignBitsImpl(Register R,
                                                 const APInt &DemandedElts,
                                                 unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
@@ -2076,14 +2076,20 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   return std::max(FirstAnswer, Mask.countl_one());
 }
 
+unsigned GISelValueTracking::computeNumSignBits(Register R,
+                                                const APInt &DemandedElts,
+                                                unsigned Depth) {
+  assert(ComputeKnownBitsCache.empty() && "Cache should be empty");
+  unsigned NumSignBits = computeNumSignBitsImpl(R, DemandedElts, Depth);
+  ComputeKnownBitsCache.clear();
+  return NumSignBits;
+}
+
 unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
-  assert(ComputeKnownBitsCache.empty() && "Cache should be empty");
-  unsigned numSignBits = computeNumSignBits(R, DemandedElts, Depth);
-  ComputeKnownBitsCache.clear();
-  return numSignBits;
+  return computeNumSignBits(R, DemandedElts, Depth);
 }
 
 std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(
