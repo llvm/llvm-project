@@ -22,10 +22,9 @@ define void @d() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr float, ptr @d, i64 [[I]]
 ; CHECK-NEXT:    [[I5:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[I3]], i32 0)

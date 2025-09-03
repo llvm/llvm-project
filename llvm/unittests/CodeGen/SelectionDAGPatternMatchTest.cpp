@@ -859,3 +859,35 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     EXPECT_TRUE(sd_match(Vec, DAG.get(), m_AllOnes(true)));
   }
 }
+
+TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
+  using namespace SDPatternMatch;
+
+  SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
+  SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
+
+  ISD::CondCode CC = ISD::SETLT;
+  EXPECT_TRUE(sd_match(
+      Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
+                             m_Specific(FVal), m_CondCode(CC))));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
+  using namespace SDPatternMatch;
+
+  SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
+  SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
+
+  ISD::CondCode CC = ISD::SETLT;
+  EXPECT_TRUE(sd_match(Select, m_SelectCC(m_Specific(LHS), m_Specific(RHS),
+                                          m_Specific(TVal), m_Specific(FVal),
+                                          m_CondCode(CC))));
+}
