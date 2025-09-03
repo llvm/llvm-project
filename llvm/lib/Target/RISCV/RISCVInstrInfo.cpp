@@ -4814,14 +4814,14 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS,
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
+  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == 0)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+    return false;
   std::optional<int64_t> LHSImm = getEffectiveImm(LHS, MRI),
                          RHSImm = getEffectiveImm(RHS, MRI);
-  if (RHSImm == RISCV::VLMaxSentinel)
-    return true;
-  if (LHSImm == 0)
-    return true;
-  if (LHSImm == RISCV::VLMaxSentinel)
-    return false;
   if (!LHSImm || !RHSImm)
     return false;
   return LHSImm <= RHSImm;
