@@ -224,7 +224,7 @@ private:
 
   std::string ValueDataToString(const Value &V) const;
 
-  llvm::Expected<Expr *> convertExprToValue(Expr *E, bool IsOOP = true);
+  llvm::Expected<Expr *> convertExprToValue(Expr *E, bool IsOOP = false);
 
   // When we deallocate clang::Value we need to run the destructor of the type.
   // This function forces emission of the needed dtor.
