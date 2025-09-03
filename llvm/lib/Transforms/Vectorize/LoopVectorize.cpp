@@ -7186,6 +7186,86 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
 }
 
+static void updateLoopMetadata(Loop *L, Loop *OrigLoop, ScalarEvolution &SE,
+                               OptimizationRemarkEmitter *ORE,
+                               VPBasicBlock *HeaderVPBB, VPlan &Plan,
+                               const TargetTransformInfo &TTI,
+                               bool VectorizingEpilogue, MDNode *LID,
+                               std::optional<MDNode *> VectorizedLoopID,
+                               std::optional<unsigned> OrigAverageTripCount,
+                               unsigned OrigLoopInvocationWeight,
+                               ElementCount BestVF,
+                               std::optional<unsigned> VScaleForTuning) {
+  if (L) {
+    if (VectorizedLoopID) {
+      L->setLoopID(*VectorizedLoopID);
+    } else {
+      // Keep all loop hints from the original loop on the vector loop (we'll
+      // replace the vectorizer-specific hints below).
+      if (LID)
+        L->setLoopID(LID);
+
+      LoopVectorizeHints Hints(L, true, *ORE);
+      Hints.setAlreadyVectorized();
+
+      // Check if it's EVL-vectorized and mark the corresponding metadata.
+      bool IsEVLVectorized =
+          llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
+            // Looking for the ExplictVectorLength VPInstruction.
+            if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
+              return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
+            return false;
+          });
+      if (IsEVLVectorized) {
+        LLVMContext &Context = L->getHeader()->getContext();
+        MDNode *LoopID = L->getLoopID();
+        auto *IsEVLVectorizedMD = MDNode::get(
+            Context,
+            {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
+             MDString::get(Context, "evl")});
+        MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
+                                                           {IsEVLVectorizedMD});
+        L->setLoopID(NewLoopID);
+      }
+    }
+    TargetTransformInfo::UnrollingPreferences UP;
+    TTI.getUnrollingPreferences(L, SE, UP, ORE);
+    if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
+      addRuntimeUnrollDisableMetaData(L);
+  }
+
+  // Set/update profile weights for the vector and remainder loops as original
+  // loop iterations are now distributed among them. Note that original loop
+  // becomes the scalar remainder loop after vectorization.
+  //
+  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
+  // end up getting slightly roughened result but that should be OK since
+  // profile is not inherently precise anyway. Note also possible bypass of
+  // vector code caused by legality checks is ignored, assigning all the weight
+  // to the vector loop, optimistically.
+  //
+  // For scalable vectorization we can't know at compile time how many
+  // iterations of the loop are handled in one vector iteration, so instead
+  // use the value of vscale used for tuning.
+  if (OrigAverageTripCount) {
+    unsigned EstimatedVFxUF =
+        estimateElementCount(BestVF * Plan.getUF(), VScaleForTuning);
+    // Calculate number of iterations in unrolled loop.
+    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+
+    if (HeaderVPBB) {
+      setLoopEstimatedTripCount(L, AverageVectorTripCount,
+                                OrigLoopInvocationWeight);
+    }
+    if (Plan.getScalarPreheader()->hasPredecessors()) {
+      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                                OrigLoopInvocationWeight);
+    }
+  }
+}
+
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT, bool VectorizingEpilogue) {
@@ -7318,76 +7398,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
   VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
-  if (HeaderVPBB) {
-    Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-    if (VectorizedLoopID) {
-      L->setLoopID(*VectorizedLoopID);
-    } else {
-      // Keep all loop hints from the original loop on the vector loop (we'll
-      // replace the vectorizer-specific hints below).
-      if (LID)
-        L->setLoopID(LID);
-
-      LoopVectorizeHints Hints(L, true, *ORE);
-      Hints.setAlreadyVectorized();
-
-      // Check if it's EVL-vectorized and mark the corresponding metadata.
-      bool IsEVLVectorized =
-          llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
-            // Looking for the ExplictVectorLength VPInstruction.
-            if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
-              return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
-            return false;
-          });
-      if (IsEVLVectorized) {
-        LLVMContext &Context = L->getHeader()->getContext();
-        MDNode *LoopID = L->getLoopID();
-        auto *IsEVLVectorizedMD = MDNode::get(
-            Context,
-            {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
-             MDString::get(Context, "evl")});
-        MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
-                                                           {IsEVLVectorizedMD});
-        L->setLoopID(NewLoopID);
-      }
-    }
-    TargetTransformInfo::UnrollingPreferences UP;
-    TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
-    if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
-      addRuntimeUnrollDisableMetaData(L);
-  }
-
-  // Set/update profile weights for the vector and remainder loops as original
-  // loop iterations are now distributed among them. Note that original loop
-  // becomes the scalar remainder loop after vectorization.
-  //
-  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
-  // end up getting slightly roughened result but that should be OK since
-  // profile is not inherently precise anyway. Note also possible bypass of
-  // vector code caused by legality checks is ignored, assigning all the weight
-  // to the vector loop, optimistically.
-  //
-  // For scalable vectorization we can't know at compile time how many
-  // iterations of the loop are handled in one vector iteration, so instead
-  // use the value of vscale used for tuning.
-  if (OrigAverageTripCount) {
-    unsigned EstimatedVFxUF =
-        estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning());
-    // Calculate number of iterations in unrolled loop.
-    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-    // Calculate number of iterations for remainder loop.
-    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
-    if (HeaderVPBB) {
-      Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
-      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
-                                OrigLoopInvocationWeight);
-    }
-    if (BestVPlan.getScalarPreheader()->hasPredecessors()) {
-      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
-                                OrigLoopInvocationWeight);
-    }
-  }
+  updateLoopMetadata(
+      HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
+                 : nullptr,
+      OrigLoop, *PSE.getSE(), ORE, HeaderVPBB, BestVPlan, TTI,
+      VectorizingEpilogue, LID, VectorizedLoopID, OrigAverageTripCount,
+      OrigLoopInvocationWeight, BestVF, CM.getVScaleForTuning());
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
