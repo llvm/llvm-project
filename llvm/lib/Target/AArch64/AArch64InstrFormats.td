@@ -1327,6 +1327,8 @@ def move_vec_shift : Operand<i32> {
   let PrintMethod = "printShifter";
   let EncoderMethod = "getMoveVecShifterOpValue";
   let ParserMatchClass = MoveVecShifterOperand;
+  let OperandType = "OPERAND_SHIFT_MSL";
+  let OperandNamespace = "AArch64";
 }
 
 let DiagnosticType = "AddSubSecondSource" in {

@@ -198,7 +198,9 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; CHECK-NEXT:    [[BROADCAST_SPLAT57:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT56]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> [[BROADCAST_SPLAT57]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP33:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT57]], splat (i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> [[TMP33]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE55:.*]] ]
@@ -231,8 +233,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; CHECK-NEXT:    store i64 0, ptr [[DST_3]], align 8, !alias.scope [[META15]], !noalias [[META16]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE47]]
 ; CHECK:       [[PRED_STORE_CONTINUE47]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP5]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP19]], <2 x i1> [[BROADCAST_SPLAT57]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP5]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i1> [[TMP47]], [[TMP21]]
 ; CHECK-NEXT:    [[PREDPHI58:%.*]] = select <2 x i1> [[TMP21]], <2 x i64> zeroinitializer, <2 x i64> splat (i64 1)
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i1> [[TMP23]], i32 0
@@ -249,7 +250,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; CHECK-NEXT:    store i64 [[TMP31]], ptr [[DST_2]], align 8, !alias.scope [[META17]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE51]]
 ; CHECK:       [[PRED_STORE_CONTINUE51]]:
-; CHECK-NEXT:    [[TMP35:%.*]] = select <2 x i1> [[TMP19]], <2 x i1> [[TMP33]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP35:%.*]] = select <2 x i1> [[TMP5]], <2 x i1> [[TMP6]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP37:%.*]] = or <2 x i1> [[TMP23]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <2 x i1> [[TMP37]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP42]], label %[[PRED_STORE_IF52:.*]], label %[[PRED_STORE_CONTINUE53:.*]]

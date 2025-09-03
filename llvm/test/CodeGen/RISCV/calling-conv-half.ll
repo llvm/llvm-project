@@ -7,10 +7,18 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64F
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+zfhmin -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32ZFHMIN
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zfhmin -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64ZFHMIN
+; RUN: llc -mtriple=riscv32 -mattr=+f -mattr=+zfh -verify-machineinstrs -target-abi ilp32 -O1 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32-ZFH-ILP32
+; RUN: llc -mtriple=riscv32 -mattr=+f -mattr=+zfh -verify-machineinstrs -target-abi ilp32f -O1 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32-ZFH-ILP32F
+; RUN: llc -mtriple=riscv64 -mattr=+f -mattr=+zfh -verify-machineinstrs -target-abi lp64 -O1 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64-ZFH-LP64
+; RUN: llc -mtriple=riscv64 -mattr=+f -mattr=+zfh -verify-machineinstrs -target-abi lp64f -O1 < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64-ZFH-LP64F
 
-; Tests passing half arguments and returns without Zfh.
-; Covers with and without F extension and ilp32f/ilp64f
-; calling conventions.
+; Tests passing half arguments and returns.
+; Covers with and without F extension, with and without Zfhmin/Zfh extensions,
+; and ilp32f/ilp64f calling conventions.
 
 define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV32I-LABEL: callee_half_in_regs:
@@ -118,6 +126,32 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV64-LP64ZFHMIN-NEXT:    fcvt.w.s a1, fa5, rtz
 ; RV64-LP64ZFHMIN-NEXT:    addw a0, a0, a1
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: callee_half_in_regs:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    fmv.h.x fa5, a1
+; RV32-ZFH-ILP32-NEXT:    fcvt.w.h a1, fa5, rtz
+; RV32-ZFH-ILP32-NEXT:    add a0, a0, a1
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: callee_half_in_regs:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    fcvt.w.h a1, fa0, rtz
+; RV32-ZFH-ILP32F-NEXT:    add a0, a0, a1
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: callee_half_in_regs:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    fmv.h.x fa5, a1
+; RV64-ZFH-LP64-NEXT:    fcvt.w.h a1, fa5, rtz
+; RV64-ZFH-LP64-NEXT:    addw a0, a0, a1
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: callee_half_in_regs:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    fcvt.w.h a1, fa0, rtz
+; RV64-ZFH-LP64F-NEXT:    addw a0, a0, a1
+; RV64-ZFH-LP64F-NEXT:    ret
   %b_fptosi = fptosi half %b to i32
   %1 = add i32 %a, %b_fptosi
   ret i32 %1
@@ -215,6 +249,52 @@ define i32 @caller_half_in_regs() nounwind {
 ; RV64-LP64ZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64ZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: caller_half_in_regs:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32-NEXT:    li a0, 1
+; RV32-ZFH-ILP32-NEXT:    lui a1, 4
+; RV32-ZFH-ILP32-NEXT:    call callee_half_in_regs
+; RV32-ZFH-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: caller_half_in_regs:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32F-NEXT:    lui a0, 4
+; RV32-ZFH-ILP32F-NEXT:    fmv.h.x fa0, a0
+; RV32-ZFH-ILP32F-NEXT:    li a0, 1
+; RV32-ZFH-ILP32F-NEXT:    call callee_half_in_regs
+; RV32-ZFH-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: caller_half_in_regs:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64-NEXT:    li a0, 1
+; RV64-ZFH-LP64-NEXT:    lui a1, 4
+; RV64-ZFH-LP64-NEXT:    call callee_half_in_regs
+; RV64-ZFH-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: caller_half_in_regs:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64F-NEXT:    lui a0, 4
+; RV64-ZFH-LP64F-NEXT:    fmv.h.x fa0, a0
+; RV64-ZFH-LP64F-NEXT:    li a0, 1
+; RV64-ZFH-LP64F-NEXT:    call callee_half_in_regs
+; RV64-ZFH-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64F-NEXT:    ret
   %1 = call i32 @callee_half_in_regs(i32 1, half 2.0)
   ret i32 %1
 }
@@ -323,6 +403,32 @@ define i32 @callee_half_on_stack(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f,
 ; RV64-LP64ZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64-LP64ZFHMIN-NEXT:    addw a0, a7, a0
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: callee_half_on_stack:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    flh fa5, 0(sp)
+; RV32-ZFH-ILP32-NEXT:    fcvt.w.h a0, fa5, rtz
+; RV32-ZFH-ILP32-NEXT:    add a0, a7, a0
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: callee_half_on_stack:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV32-ZFH-ILP32F-NEXT:    add a0, a7, a0
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: callee_half_on_stack:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    flh fa5, 0(sp)
+; RV64-ZFH-LP64-NEXT:    fcvt.w.h a0, fa5, rtz
+; RV64-ZFH-LP64-NEXT:    addw a0, a7, a0
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: callee_half_on_stack:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV64-ZFH-LP64F-NEXT:    addw a0, a7, a0
+; RV64-ZFH-LP64F-NEXT:    ret
   %1 = fptosi half %i to i32
   %2 = add i32 %h, %1
   ret i32 %2
@@ -484,6 +590,84 @@ define i32 @caller_half_on_stack() nounwind {
 ; RV64-LP64ZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64ZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: caller_half_on_stack:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32-NEXT:    lui a4, %hi(.LCPI3_0)
+; RV32-ZFH-ILP32-NEXT:    li a0, 1
+; RV32-ZFH-ILP32-NEXT:    li a1, 2
+; RV32-ZFH-ILP32-NEXT:    li a2, 3
+; RV32-ZFH-ILP32-NEXT:    li a3, 4
+; RV32-ZFH-ILP32-NEXT:    flh fa5, %lo(.LCPI3_0)(a4)
+; RV32-ZFH-ILP32-NEXT:    li a4, 5
+; RV32-ZFH-ILP32-NEXT:    li a5, 6
+; RV32-ZFH-ILP32-NEXT:    li a6, 7
+; RV32-ZFH-ILP32-NEXT:    li a7, 8
+; RV32-ZFH-ILP32-NEXT:    fsh fa5, 0(sp)
+; RV32-ZFH-ILP32-NEXT:    call callee_half_on_stack
+; RV32-ZFH-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: caller_half_on_stack:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32F-NEXT:    lui a4, %hi(.LCPI3_0)
+; RV32-ZFH-ILP32F-NEXT:    li a0, 1
+; RV32-ZFH-ILP32F-NEXT:    li a1, 2
+; RV32-ZFH-ILP32F-NEXT:    li a2, 3
+; RV32-ZFH-ILP32F-NEXT:    li a3, 4
+; RV32-ZFH-ILP32F-NEXT:    flh fa0, %lo(.LCPI3_0)(a4)
+; RV32-ZFH-ILP32F-NEXT:    li a4, 5
+; RV32-ZFH-ILP32F-NEXT:    li a5, 6
+; RV32-ZFH-ILP32F-NEXT:    li a6, 7
+; RV32-ZFH-ILP32F-NEXT:    li a7, 8
+; RV32-ZFH-ILP32F-NEXT:    call callee_half_on_stack
+; RV32-ZFH-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: caller_half_on_stack:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64-NEXT:    lui a4, %hi(.LCPI3_0)
+; RV64-ZFH-LP64-NEXT:    li a0, 1
+; RV64-ZFH-LP64-NEXT:    li a1, 2
+; RV64-ZFH-LP64-NEXT:    li a2, 3
+; RV64-ZFH-LP64-NEXT:    li a3, 4
+; RV64-ZFH-LP64-NEXT:    flh fa5, %lo(.LCPI3_0)(a4)
+; RV64-ZFH-LP64-NEXT:    li a4, 5
+; RV64-ZFH-LP64-NEXT:    li a5, 6
+; RV64-ZFH-LP64-NEXT:    li a6, 7
+; RV64-ZFH-LP64-NEXT:    li a7, 8
+; RV64-ZFH-LP64-NEXT:    fsh fa5, 0(sp)
+; RV64-ZFH-LP64-NEXT:    call callee_half_on_stack
+; RV64-ZFH-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: caller_half_on_stack:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64F-NEXT:    lui a4, %hi(.LCPI3_0)
+; RV64-ZFH-LP64F-NEXT:    li a0, 1
+; RV64-ZFH-LP64F-NEXT:    li a1, 2
+; RV64-ZFH-LP64F-NEXT:    li a2, 3
+; RV64-ZFH-LP64F-NEXT:    li a3, 4
+; RV64-ZFH-LP64F-NEXT:    flh fa0, %lo(.LCPI3_0)(a4)
+; RV64-ZFH-LP64F-NEXT:    li a4, 5
+; RV64-ZFH-LP64F-NEXT:    li a5, 6
+; RV64-ZFH-LP64F-NEXT:    li a6, 7
+; RV64-ZFH-LP64F-NEXT:    li a7, 8
+; RV64-ZFH-LP64F-NEXT:    call callee_half_on_stack
+; RV64-ZFH-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64F-NEXT:    ret
   %1 = call i32 @callee_half_on_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, half 10.0)
   ret i32 %1
 }
@@ -536,6 +720,30 @@ define half @callee_half_ret() nounwind {
 ; RV64-LP64ZFHMIN-NEXT:    lui a0, %hi(.LCPI4_0)
 ; RV64-LP64ZFHMIN-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: callee_half_ret:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    li a0, 15
+; RV32-ZFH-ILP32-NEXT:    slli a0, a0, 10
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: callee_half_ret:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    lui a0, %hi(.LCPI4_0)
+; RV32-ZFH-ILP32F-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: callee_half_ret:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    li a0, 15
+; RV64-ZFH-LP64-NEXT:    slli a0, a0, 10
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: callee_half_ret:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    lui a0, %hi(.LCPI4_0)
+; RV64-ZFH-LP64F-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
+; RV64-ZFH-LP64F-NEXT:    ret
   ret half 1.0
 }
 
@@ -633,6 +841,48 @@ define i32 @caller_half_ret() nounwind {
 ; RV64-LP64ZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64ZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64-LP64ZFHMIN-NEXT:    ret
+;
+; RV32-ZFH-ILP32-LABEL: caller_half_ret:
+; RV32-ZFH-ILP32:       # %bb.0:
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32-NEXT:    call callee_half_ret
+; RV32-ZFH-ILP32-NEXT:    fmv.h.x fa5, a0
+; RV32-ZFH-ILP32-NEXT:    fcvt.w.h a0, fa5, rtz
+; RV32-ZFH-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32-NEXT:    ret
+;
+; RV32-ZFH-ILP32F-LABEL: caller_half_ret:
+; RV32-ZFH-ILP32F:       # %bb.0:
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, -16
+; RV32-ZFH-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZFH-ILP32F-NEXT:    call callee_half_ret
+; RV32-ZFH-ILP32F-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV32-ZFH-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZFH-ILP32F-NEXT:    addi sp, sp, 16
+; RV32-ZFH-ILP32F-NEXT:    ret
+;
+; RV64-ZFH-LP64-LABEL: caller_half_ret:
+; RV64-ZFH-LP64:       # %bb.0:
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64-NEXT:    call callee_half_ret
+; RV64-ZFH-LP64-NEXT:    fmv.h.x fa5, a0
+; RV64-ZFH-LP64-NEXT:    fcvt.w.h a0, fa5, rtz
+; RV64-ZFH-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64-NEXT:    ret
+;
+; RV64-ZFH-LP64F-LABEL: caller_half_ret:
+; RV64-ZFH-LP64F:       # %bb.0:
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, -16
+; RV64-ZFH-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZFH-LP64F-NEXT:    call callee_half_ret
+; RV64-ZFH-LP64F-NEXT:    fcvt.w.h a0, fa0, rtz
+; RV64-ZFH-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZFH-LP64F-NEXT:    addi sp, sp, 16
+; RV64-ZFH-LP64F-NEXT:    ret
   %1 = call half @callee_half_ret()
   %2 = fptosi half %1 to i32
   ret i32 %2
