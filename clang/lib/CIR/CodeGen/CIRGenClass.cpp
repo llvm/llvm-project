@@ -844,8 +844,7 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   if (cgm.getCXXABI().needsVTTParameter(curGD)) {
     // A VTT parameter was passed to the constructor, use it.
     mlir::Value vtt = loadCXXVTT();
-    return builder.createVTTAddrPoint(loc, vtt.getType(), vtt,
-                                               subVTTIndex);
+    return builder.createVTTAddrPoint(loc, vtt.getType(), vtt, subVTTIndex);
   } else {
     // We're the complete constructor, so get the VTT by name.
     cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);

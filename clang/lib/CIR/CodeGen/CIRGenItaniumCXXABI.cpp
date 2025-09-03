@@ -658,16 +658,14 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     const CXXRecordDecl *classDecl, const CXXRecordDecl *baseClassDecl) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value vtablePtr = cgf.getVTablePtr(loc, thisAddr, classDecl);
-  mlir::Value vtableBytePtr =
-      builder.createBitcast(vtablePtr, cgm.UInt8PtrTy);
+  mlir::Value vtableBytePtr = builder.createBitcast(vtablePtr, cgm.UInt8PtrTy);
   CharUnits vbaseOffsetOffset =
       cgm.getItaniumVTableContext().getVirtualBaseOffsetOffset(classDecl,
                                                                baseClassDecl);
   mlir::Value offsetVal =
       builder.getSInt64(vbaseOffsetOffset.getQuantity(), loc);
-  auto vbaseOffsetPtr =
-      cir::PtrStrideOp::create(builder, loc, cgm.UInt8PtrTy,
-                               vtableBytePtr, offsetVal); // vbase.offset.ptr
+  auto vbaseOffsetPtr = cir::PtrStrideOp::create(builder, loc, cgm.UInt8PtrTy,
+                                                 vtableBytePtr, offsetVal);
 
   mlir::Value vbaseOffset;
   if (cgm.getItaniumVTableContext().isRelativeLayout()) {
@@ -677,8 +675,7 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     mlir::Value offsetPtr = builder.createBitcast(
         vbaseOffsetPtr, builder.getPointerTo(cgm.PtrDiffTy));
     vbaseOffset = builder.createLoad(
-        loc, Address(offsetPtr, cgm.PtrDiffTy,
-                     cgf.getPointerAlign())); // vbase.offset
+        loc, Address(offsetPtr, cgm.PtrDiffTy, cgf.getPointerAlign()));
   }
   return vbaseOffset;
 }
