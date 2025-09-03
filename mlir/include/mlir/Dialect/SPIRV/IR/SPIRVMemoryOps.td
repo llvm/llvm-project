@@ -220,7 +220,7 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
   let arguments = (ins
     SPIRV_AnyPtr:$ptr,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs
@@ -345,7 +345,7 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
     SPIRV_AnyPtr:$ptr,
     SPIRV_Type:$value,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs);

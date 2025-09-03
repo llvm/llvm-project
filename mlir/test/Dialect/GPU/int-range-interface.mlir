@@ -329,3 +329,22 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @broadcast
+func.func @broadcast(%idx: i32) {
+  %0 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+  %1 = gpu.subgroup_broadcast %0, first_active_lane : index
+  %2 = gpu.subgroup_broadcast %0, any_lane : index
+  %3 = gpu.subgroup_broadcast %0, specific_lane %idx : index
+
+  // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
+  // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
+  // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
+
+  %4 = test.reflect_bounds %1 : index
+  %5 = test.reflect_bounds %2 : index
+  %6 = test.reflect_bounds %3 : index
+  return
+}

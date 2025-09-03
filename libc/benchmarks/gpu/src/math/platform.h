@@ -11,6 +11,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -41,17 +42,27 @@ extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
 // Forward declarations for the vendor math libraries.
 extern "C" {
 #ifdef AMDGPU_MATH_FOUND
-double __ocml_sin_f64(double);
-float __ocml_sin_f32(float);
 double __ocml_atan2_f64(double, double);
 float __ocml_atan2_f32(float, float);
+double __ocml_exp_f64(double);
+float __ocml_exp_f32(float);
+float16 __ocml_exp_f16(float16);
+double __ocml_log_f64(double);
+float __ocml_log_f32(float);
+float16 __ocml_log_f16(float16);
+double __ocml_sin_f64(double);
+float __ocml_sin_f32(float);
 #endif
 
 #ifdef NVPTX_MATH_FOUND
-double __nv_sin(double);
-float __nv_sinf(float);
 double __nv_atan2(double, double);
 float __nv_atan2f(float, float);
+double __nv_exp(double);
+float __nv_expf(float);
+double __nv_log(double);
+float __nv_logf(float);
+double __nv_sin(double);
+float __nv_sinf(float);
 #endif
 }
 

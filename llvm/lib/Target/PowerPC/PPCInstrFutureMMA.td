@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the instructions introduced for the Future CPU for MMA.
+// Please reference "PPCInstrVSX.td" for file structure.
 //
 //===----------------------------------------------------------------------===//
 
@@ -167,7 +168,7 @@ multiclass DMR_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
   def PP :
     XX3Form_AT3_XAp5B6<opcode, xo, (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
                      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -189,7 +190,7 @@ multiclass DMR_UM_M448_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
            !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -203,7 +204,7 @@ multiclass DMR_BF16_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
   def PP :
     XX3Form_AT3_XAp5B6<opcode, xo, (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
                      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -224,7 +225,7 @@ multiclass DMR_BF16_UM_M284_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asm
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -245,7 +246,7 @@ multiclass DMR_F16_UM_M284_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmb
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -256,15 +257,15 @@ multiclass DMR_NEG_UM_M284_XOXORf939a0<bits<6> opcode, bits<8> xo, dag IOL,
   def PN : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0xF9), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NP : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0x39), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NN : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0xA0), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
    def PM#NAME#PN :
@@ -273,21 +274,21 @@ multiclass DMR_NEG_UM_M284_XOXORf939a0<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NP :
     MMIRR_XX3Form_X8Y4P2_XAp5B6<
       opcode, !xor(xo, 0x39), (outs dmr:$AT),
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NN :
     MMIRR_XX3Form_X8Y4P2_XAp5B6<
       opcode, !xor(xo, 0xA0), (outs dmr:$AT),
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -298,15 +299,15 @@ multiclass DMR_NEG_UM_M284_XOXORd11188<bits<6> opcode, bits<8> xo, dag IOL,
   def PN : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0xD1), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NP : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0x11), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   def NN : XX3Form_AT3_XAp5B6<
              opcode, !xor(xo, 0x88), (outs dmr:$AT), !con((ins dmr:$ATi), IOL),
              !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
-           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+           RegConstraint<"$ATi = $AT">;
   }
   let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
    def PM#NAME#PN :
@@ -315,21 +316,21 @@ multiclass DMR_NEG_UM_M284_XOXORd11188<bits<6> opcode, bits<8> xo, dag IOL,
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NP :
     MMIRR_XX3Form_X8Y4P2_XAp5B6<
       opcode, !xor(xo, 0x11), (outs dmr:$AT),
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   def PM#NAME#NN :
     MMIRR_XX3Form_X8Y4P2_XAp5B6<
       opcode, !xor(xo, 0x88), (outs dmr:$AT),
       !con((ins dmr:$ATi), !con(IOL, (ins u8imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
       !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
       IIC_VecFP, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+    RegConstraint<"$ATi = $AT">;
   }
 }
 
@@ -390,7 +391,12 @@ class XX2Form_AT3_XB6_ID2_E1_BL2<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
   let Inst{31} = 0;
 }
 
-let Predicates = [IsISAFuture] in {
+//-------------------------- Instruction definitions -------------------------//
+// Predicate combinations available:
+// [MMA, IsISAFuture]
+// [MMA, PrefixInstrs, IsISAFuture]
+
+let Predicates = [MMA, IsISAFuture] in {
   def DMXXEXTFDMR512 : XX3Form_AT3_XABp5_P1<60, 226,
                                             (outs vsrprc:$XAp, vsrprc:$XBp),
                                             (ins wacc:$AT),
@@ -432,193 +438,192 @@ let Predicates = [IsISAFuture] in {
   def DMXOR : XForm_ATB3<31, 7, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB),
                          "dmxor $AT, $AB",
                          [(set v1024i1:$AT, (int_ppc_mma_dmxor v1024i1:$ATi, v1024i1:$AB))]>,
-                         RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+                         RegConstraint<"$ATi = $AT">;
 
   def DMSETDMRZ : XForm_AT3<31, 2, 177, (outs dmr:$AT), (ins),
                             "dmsetdmrz $AT", NoItinerary,
                             [(set v1024i1:$AT, (int_ppc_mma_dmsetdmrz))]>;
-}
 
-// MMA+ accumulating/non-accumulating instructions.
+  // DMXVI8GERX4, DMXVI8GERX4PP, PMDMXVI8GERX4,  PMDMXVI8GERX4PP
+  defm DMXVI8GERX4 : DMR_UM_M448_XOEO<59, 10, (ins vsrprc:$XAp, vsrc:$XB),
+                                      "dmxvi8gerx4", "$AT, $XAp, $XB">;
 
-// DMXVI8GERX4, DMXVI8GERX4PP, PMDMXVI8GERX4,  PMDMXVI8GERX4PP
-defm DMXVI8GERX4 : DMR_UM_M448_XOEO<59, 10, (ins vsrprc:$XAp, vsrc:$XB),
-                               "dmxvi8gerx4", "$AT, $XAp, $XB">;
+  // DMXVBF16GERX2, DMXVBF16GERX2PP, DMXVBF16GERX2PN, dMXVBF16GERX2NP,
+  // DMXVBF16GERX2NN PMDMXVBF16GERX2, PMDMXVBF16GERX2PP, PMDMXVBF16GERX2PN,
+  // PMDMXVBF16GERX2NP, PMDMXVBF16GERX2NN
+  defm DMXVBF16GERX2
+      : DMR_NEG_UM_M284_XOXORf939a0<59, 74, (ins vsrprc:$XAp, vsrc:$XB),
+                                    "dmxvbf16gerx2", "$AT, $XAp, $XB">;
 
-let Predicates = [MMA, IsISAFuture] in {
-  def DMXVI8GERX4SPP :
-    XX3Form_AT3_XAp5B6<59, 98, (outs dmr:$AT), (ins dmr:$ATi, vsrprc:$XAp, vsrc:$XB),
-                     "dmxvi8gerx4spp $AT, $XAp, $XB", IIC_VecGeneral, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
-}
+  // DMXVF16GERX2, DMXVF16GERX2PP, DMXVF16GERX2PN, dMXVF16GERX2NP,
+  // DMXVF16GERX2NN PMDMXVF16GERX2, PMDMXVF16GERX2PP, PMDMXVF16GERX2PN,
+  // PMDMXVF16GERX2NP, PMDMXVF16GERX2NN
+  defm DMXVF16GERX2
+      : DMR_NEG_UM_M284_XOXORd11188<59, 66, (ins vsrprc:$XAp, vsrc:$XB),
+                                    "dmxvf16gerx2", "$AT, $XAp, $XB">;
+
+  // DMF cryptography [support] Instructions
+  def DMSHA2HASH
+      : XForm_AT3_T1_AB3<
+            31, 14, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB, u1imm:$T),
+            "dmsha2hash $AT, $AB, $T",
+            [(set v1024i1:$AT, (int_ppc_mma_dmsha2hash v1024i1:$ATi,
+                                   v1024i1:$AB, timm:$T))]>,
+        RegConstraint<"$ATi = $AT">;
+  def DMSHA3HASH
+      : XForm_ATp2_SR5<31, 15, 177, (outs dmrp:$ATp),
+                       (ins dmrp:$ATpi, u5imm:$SR), "dmsha3hash $ATp, $SR",
+                       [(set v2048i1:$ATp,
+                           (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
+        RegConstraint<"$ATpi = $ATp">;
+  def DMXXSHAPAD
+      : XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
+                                   (ins dmr:$ATi, vsrc:$XB, u2imm:$ID, u1imm:$E,
+                                       u2imm:$BL),
+                                   "dmxxshapad $AT, $XB, $ID, $E, $BL", []>,
+        RegConstraint<"$ATi = $AT">;
+
+  // MMA+ accumulating/non-accumulating instructions.
+  def DMXVI8GERX4SPP
+      : XX3Form_AT3_XAp5B6<59, 98, (outs dmr:$AT),
+                           (ins dmr:$ATi, vsrprc:$XAp, vsrc:$XB),
+                           "dmxvi8gerx4spp $AT, $XAp, $XB", IIC_VecGeneral, []>,
+        RegConstraint<"$ATi = $AT">;
+
+} // End of [MMA, IsISAFuture]
 
 let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
-  def PMDMXVI8GERX4SPP :
-    MMIRR_XX3Form_X8YP4_XAp5B6<59, 98, (outs dmr:$AT),
-                            (ins dmr:$ATi, vsrprc:$XAp,vsrc:$XB, u8imm:$XMSK,
-                             u4imm:$YMSK, u4imm:$PMSK),
-                            "pmdmxvi8gerx4spp $AT, $XAp, $XB, $XMSK, $YMSK, $PMSK",
-                            IIC_VecGeneral, []>,
-    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PMDMXVI8GERX4SPP
+      : MMIRR_XX3Form_X8YP4_XAp5B6<
+            59, 98, (outs dmr:$AT),
+            (ins dmr:$ATi, vsrprc:$XAp, vsrc:$XB, u8imm:$XMSK, u4imm:$YMSK,
+                u4imm:$PMSK),
+            "pmdmxvi8gerx4spp $AT, $XAp, $XB, $XMSK, $YMSK, $PMSK",
+            IIC_VecGeneral, []>,
+        RegConstraint<"$ATi = $AT">;
 }
 
-// DMXVBF16GERX2, DMXVBF16GERX2PP, DMXVBF16GERX2PN, dMXVBF16GERX2NP, DMXVBF16GERX2NN
-// PMDMXVBF16GERX2, PMDMXVBF16GERX2PP, PMDMXVBF16GERX2PN, PMDMXVBF16GERX2NP, PMDMXVBF16GERX2NN
-defm DMXVBF16GERX2 : DMR_NEG_UM_M284_XOXORf939a0<59, 74, (ins vsrprc:$XAp, vsrc:$XB),
-                                         "dmxvbf16gerx2", "$AT, $XAp, $XB">;
+//---------------------------- Anonymous Patterns ----------------------------//
+// Predicate combinations available:
+// [MMA, IsISAFuture]
+// [MMA, PrefixInstrs, IsISAFuture]
 
-// DMXVF16GERX2, DMXVF16GERX2PP, DMXVF16GERX2PN, dMXVF16GERX2NP, DMXVF16GERX2NN
-// PMDMXVF16GERX2, PMDMXVF16GERX2PP, PMDMXVF16GERX2PN, PMDMXVF16GERX2NP, PMDMXVF16GERX2NN
-defm DMXVF16GERX2 : DMR_NEG_UM_M284_XOXORd11188<59, 66, (ins vsrprc:$XAp, vsrc:$XB),
-                                         "dmxvf16gerx2", "$AT, $XAp, $XB">;
-
-// DMF cryptography [support] Instructions
-let Predicates = [IsISAFuture] in {
-  def DMSHA2HASH :
-    XForm_AT3_T1_AB3<31, 14, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB, u1imm:$T),
-                     "dmsha2hash $AT, $AB, $T",
-                     [(set v1024i1:$AT, (int_ppc_mma_dmsha2hash v1024i1:$ATi, v1024i1:$AB, timm:$T))]>,
-                     RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
-
-  def DMSHA3HASH :
-    XForm_ATp2_SR5<31, 15, 177, (outs dmrp:$ATp), (ins dmrp:$ATpi , u5imm:$SR),
-                   "dmsha3hash $ATp, $SR",
-                   [(set v2048i1:$ATp, (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
-                   RegConstraint<"$ATpi = $ATp">, NoEncode<"$ATpi">;
-
-  def DMXXSHAPAD :
-    XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
-                               (ins dmr:$ATi, vsrc:$XB, u2imm:$ID, u1imm:$E, u2imm:$BL),
-                               "dmxxshapad $AT, $XB, $ID, $E, $BL", []>,
-                               RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
-}
-
-// MMA+ Intrinsics
 let Predicates = [MMA, IsISAFuture] in {
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvi8gerx4 v256i1:$XAp, v16i8:$XB)),
+  // MMA+ Intrinsics
+  def : Pat<(v1024i1(int_ppc_mma_dmxvi8gerx4 v256i1:$XAp, v16i8:$XB)),
             (DMXVI8GERX4 $XAp, RCCp.BToVSRC)>;
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvi8gerx4pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvi8gerx4pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVI8GERX4PP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvi8gerx4spp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvi8gerx4spp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVI8GERX4SPP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvbf16gerx2 v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvbf16gerx2 v256i1:$XAp, v16i8:$XB)),
             (DMXVBF16GERX2 $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvbf16gerx2pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvbf16gerx2pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVBF16GERX2PP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvbf16gerx2pn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvbf16gerx2pn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVBF16GERX2PN $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvbf16gerx2np v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvbf16gerx2np v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVBF16GERX2NP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvbf16gerx2nn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvbf16gerx2nn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVBF16GERX2NN $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvf16gerx2 v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2 v256i1:$XAp, v16i8:$XB)),
             (DMXVF16GERX2 $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvf16gerx2pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVF16GERX2PP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvf16gerx2pn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2pn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVF16GERX2PN $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvf16gerx2np v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2np v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVF16GERX2NP $ATi, $XAp, RCCp.BToVSRC)>;
-
-  def : Pat<(v1024i1 (int_ppc_mma_dmxvf16gerx2nn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB)),
+  def : Pat<(v1024i1(int_ppc_mma_dmxvf16gerx2nn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB)),
             (DMXVF16GERX2NN $ATi, $XAp, RCCp.BToVSRC)>;
+
+  // Cryptography Intrinsic
+  def : Pat<(v1024i1(int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
+                timm:$E, timm:$BL)),
+            (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
 }
 
 let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvi8gerx4 v256i1:$XAp, v16i8:$XB, Msk8Imm:$XMSK,
-                                            Msk4Imm:$YMSK, Msk4Imm:$PMSK)),
-            (PMDMXVI8GERX4 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                        Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvi8gerx4 v256i1:$XAp, v16i8:$XB,
+                Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk4Imm:$PMSK)),
+            (PMDMXVI8GERX4 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK, Msk4Imm:$YMSK,
+                Msk4Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvi8gerx4pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                              Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                              Msk4Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvi8gerx4pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk4Imm:$PMSK)),
             (PMDMXVI8GERX4PP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvi8gerx4spp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                               Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk4Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvi8gerx4spp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk4Imm:$PMSK)),
             (PMDMXVI8GERX4SPP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvbf16gerx2 v256i1:$XAp, v16i8:$XB, Msk8Imm:$XMSK,
-                                            Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
-            (PMDMXVBF16GERX2 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                        Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvbf16gerx2 v256i1:$XAp, v16i8:$XB,
+                Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMDMXVBF16GERX2 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK, Msk4Imm:$YMSK,
+                Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvbf16gerx2pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                              Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                              Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvbf16gerx2pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVBF16GERX2PP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvbf16gerx2pn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                               Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvbf16gerx2pn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVBF16GERX2PN $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvbf16gerx2np v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                              Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                              Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvbf16gerx2np v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVBF16GERX2NP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvbf16gerx2nn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                               Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvbf16gerx2nn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVBF16GERX2NN $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvf16gerx2 v256i1:$XAp, v16i8:$XB, Msk8Imm:$XMSK,
-                                             Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
-            (PMDMXVF16GERX2 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvf16gerx2 v256i1:$XAp, v16i8:$XB,
+                Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
+            (PMDMXVF16GERX2 $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK, Msk4Imm:$YMSK,
+                Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvf16gerx2pp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                              Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                              Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvf16gerx2pp v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVF16GERX2PP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvf16gerx2pn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                               Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvf16gerx2pn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVF16GERX2PN $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvf16gerx2np v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                              Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                              Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvf16gerx2np v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVF16GERX2NP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                          Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 
-  def : Pat<(v1024i1 (int_ppc_mma_pmdmxvf16gerx2nn v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
-                                               Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
+  def : Pat<(v1024i1(int_ppc_mma_pmdmxvf16gerx2nn v1024i1:$ATi, v256i1:$XAp,
+                v16i8:$XB, Msk8Imm:$XMSK, Msk4Imm:$YMSK, Msk2Imm:$PMSK)),
             (PMDMXVF16GERX2NN $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
 }
 
-// Cryptography Intrinsic
-let Predicates = [IsISAFuture] in {
-  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
-                      timm:$E, timm:$BL)), (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
-}
 
-// MMA+ Instruction aliases
-let Predicates = [IsISAFuture] in {
+//---------------------------- Instruction aliases ---------------------------//
+
+let Predicates = [MMA, IsISAFuture] in {
   def : InstAlias<"dmsha256hash $AT, $AB",
                   (DMSHA2HASH dmr:$AT, dmr:$AB, 0)>;
 

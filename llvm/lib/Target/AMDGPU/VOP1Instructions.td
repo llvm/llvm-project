@@ -71,7 +71,6 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let isCodeGenOnly = 0;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -80,7 +79,6 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -584,7 +582,6 @@ def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
 let SubtargetPredicate = isGFX9Plus in {
   def V_SWAP_B32 : VOP1_Pseudo<"v_swap_b32", VOP_SWAP_I32, [], 1> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
-    let DisableEncoding = "$vdst1,$src1";
     let SchedRW = [Write64Bit, Write64Bit];
   }
 
@@ -802,7 +799,6 @@ let SubtargetPredicate = isGFX10Plus in {
 
     def V_SWAPREL_B32 : VOP1_Pseudo<"v_swaprel_b32", VOP_SWAP_I32, [], 1> {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
-      let DisableEncoding = "$vdst1,$src1";
       let SchedRW = [Write64Bit, Write64Bit];
     }
   } // End Uses = [M0]
@@ -831,7 +827,6 @@ def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
 let SubtargetPredicate = isGFX11Plus in {
   def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
-    let DisableEncoding = "$vdst1, $src1";
     let SchedRW = [Write64Bit, Write64Bit];
     let True16Predicate = UseRealTrue16Insts;
   }
@@ -849,7 +844,6 @@ let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
-     DisableEncoding="$vdst_in,$src0_out",
      SchedRW = [Write32Bit, Write32Bit],
      isConvergent = 1 in {
 let SubtargetPredicate = HasPermlane16Swap in {

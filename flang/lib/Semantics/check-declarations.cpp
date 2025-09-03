@@ -130,21 +130,14 @@ private:
   }
   template <typename FeatureOrUsageWarning, typename... A>
   parser::Message *Warn(FeatureOrUsageWarning warning, A &&...x) {
-    if (!context_.ShouldWarn(warning) || InModuleFile()) {
-      return nullptr;
-    } else {
-      return messages_.Say(warning, std::forward<A>(x)...);
-    }
+    return messages_.Warn(InModuleFile(), context_.languageFeatures(), warning,
+        std::forward<A>(x)...);
   }
   template <typename FeatureOrUsageWarning, typename... A>
   parser::Message *Warn(
       FeatureOrUsageWarning warning, parser::CharBlock source, A &&...x) {
-    if (!context_.ShouldWarn(warning) ||
-        FindModuleFileContaining(context_.FindScope(source))) {
-      return nullptr;
-    } else {
-      return messages_.Say(warning, source, std::forward<A>(x)...);
-    }
+    return messages_.Warn(FindModuleFileContaining(context_.FindScope(source)),
+        context_.languageFeatures(), warning, source, std::forward<A>(x)...);
   }
   bool IsResultOkToDiffer(const FunctionResult &);
   void CheckGlobalName(const Symbol &);
@@ -326,7 +319,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       !IsDummy(symbol)) {
     if (context_.IsEnabled(
             common::LanguageFeature::IgnoreIrrelevantAttributes)) {
-      context_.Warn(common::LanguageFeature::IgnoreIrrelevantAttributes,
+      Warn(common::LanguageFeature::IgnoreIrrelevantAttributes,
           "Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute"_warn_en_US);
     } else {
       messages_.Say(
@@ -3141,16 +3134,14 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
                        *dyType, &context_.languageFeatures())
                         .value_or(false)) {
           if (type->category() == DeclTypeSpec::Logical) {
-            if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
-              msgs.Say(common::UsageWarning::LogicalVsCBool, component.name(),
-                  "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
-            }
+            context().Warn(msgs, common::UsageWarning::LogicalVsCBool,
+                component.name(),
+                "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
           } else if (type->category() == DeclTypeSpec::Character && dyType &&
               dyType->kind() == 1) {
-            if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
-              msgs.Say(common::UsageWarning::BindCCharLength, component.name(),
-                  "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
-            }
+            context().Warn(msgs, common::UsageWarning::BindCCharLength,
+                component.name(),
+                "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
           } else {
             msgs.Say(component.name(),
                 "Each component of an interoperable derived type must have an interoperable type"_err_en_US);
@@ -3165,10 +3156,9 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       }
     }
     if (derived->componentNames().empty()) { // F'2023 C1805
-      if (context_.ShouldWarn(common::LanguageFeature::EmptyBindCDerivedType)) {
-        msgs.Say(common::LanguageFeature::EmptyBindCDerivedType, symbol.name(),
-            "A derived type with the BIND attribute should not be empty"_warn_en_US);
-      }
+      context().Warn(msgs, common::LanguageFeature::EmptyBindCDerivedType,
+          symbol.name(),
+          "A derived type with the BIND attribute should not be empty"_warn_en_US);
     }
   }
   if (msgs.AnyFatalError()) {
@@ -3218,7 +3208,7 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
       if (allowNonInteroperableType) { // portability warning only
         evaluate::AttachDeclaration(
-            context_.Warn(common::UsageWarning::Portability, symbol.name(),
+            Warn(common::UsageWarning::Portability, symbol.name(),
                 "The derived type of this interoperable object should be BIND(C)"_port_en_US),
             derived->typeSymbol());
       } else if (!context_.IsEnabled(
@@ -3260,10 +3250,10 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
         if (IsDummy(symbol)) {
-          msgs.Say(common::UsageWarning::LogicalVsCBool, symbol.name(),
+          Warn(common::UsageWarning::LogicalVsCBool, symbol.name(),
               "A BIND(C) LOGICAL dummy argument should have the interoperable KIND=C_BOOL"_port_en_US);
         } else {
-          msgs.Say(common::UsageWarning::LogicalVsCBool, symbol.name(),
+          Warn(common::UsageWarning::LogicalVsCBool, symbol.name(),
               "A BIND(C) LOGICAL object should have the interoperable KIND=C_BOOL"_port_en_US);
         }
       }
