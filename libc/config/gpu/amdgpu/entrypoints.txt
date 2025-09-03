@@ -670,6 +670,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.roundevenbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sqrtbf16
   libc.src.math.truncbf16
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
