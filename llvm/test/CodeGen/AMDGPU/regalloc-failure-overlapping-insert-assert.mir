@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
 # Make sure there's no machine verifier error after failure.
 
