@@ -99,9 +99,8 @@ define amdgpu_ps float @and_not_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: and_not_and_and:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v1, v1
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-LABEL: and_not_and_and:
@@ -111,10 +110,9 @@ define amdgpu_ps float @and_not_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-GISEL-LABEL: and_not_and_and:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_not_b32_e32 v1, v1
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %notb = xor i32 %b, -1
   %and1 = and i32 %a, %c
@@ -268,9 +266,8 @@ define amdgpu_ps float @test_12_src_overflow(i32 %a, i32 %b, i32 %c) {
 ; GFX950-GISEL-LABEL: test_12_src_overflow:
 ; GFX950-GISEL:       ; %bb.0:
 ; GFX950-GISEL-NEXT:    v_not_b32_e32 v3, v0
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v4, v2
 ; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v2, v3, v4
+; GFX950-GISEL-NEXT:    v_bfi_b32 v2, v2, 0, v3
 ; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc8
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -282,10 +279,9 @@ define amdgpu_ps float @test_12_src_overflow(i32 %a, i32 %b, i32 %c) {
 ; GFX1250-GISEL-LABEL: test_12_src_overflow:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_not_b32_e32 v3, v0
-; GFX1250-GISEL-NEXT:    v_not_b32_e32 v4, v2
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v2, v3, v4
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v2, v2, 0, v3
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc8
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
@@ -312,13 +308,12 @@ define amdgpu_ps float @test_100_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: test_100_src_overflow:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v3, v2, v0, v2 bitop3:3
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v3, v1, v3
+; GFX950-GISEL-NEXT:    v_or_b32_e32 v3, v2, v0
 ; GFX950-GISEL-NEXT:    v_bitop3_b32 v4, v0, v1, v0 bitop3:0x30
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v1, v0
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v1, v2
+; GFX950-GISEL-NEXT:    v_bfi_b32 v3, v3, 0, v1
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v4, v4, v2
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v2, 0, v0
 ; GFX950-GISEL-NEXT:    v_or3_b32 v0, v3, v4, v0
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -333,16 +328,15 @@ define amdgpu_ps float @test_100_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-GISEL-LABEL: test_100_src_overflow:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_bitop3_b32 v3, v2, v0, v2 bitop3:3
+; GFX1250-GISEL-NEXT:    v_or_b32_e32 v3, v2, v0
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v4, v0, v1, v0 bitop3:0x30
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v1, v0
-; GFX1250-GISEL-NEXT:    v_not_b32_e32 v5, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, v1, v3
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v2, v4, v2
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v1, v3, 0, v1
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v3, v4, v2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v5
-; GFX1250-GISEL-NEXT:    v_or3_b32 v0, v1, v2, v0
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v2, 0, v0
+; GFX1250-GISEL-NEXT:    v_or3_b32 v0, v1, v3, v0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %or1 = or i32 %c, %a
   %not1 = xor i32 %or1, -1
