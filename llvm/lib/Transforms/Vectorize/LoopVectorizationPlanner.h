@@ -568,6 +568,16 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
+void updateLoopMetadata(Loop *VectorLoop, Loop *OrigLoop, ScalarEvolution &SE,
+                               OptimizationRemarkEmitter *ORE,
+                               VPBasicBlock *HeaderVPBB, VPlan &Plan,
+                               const TargetTransformInfo &TTI,
+                               bool VectorizingEpilogue, MDNode *LID,
+                               std::optional<unsigned> OrigAverageTripCount,
+                               unsigned OrigLoopInvocationWeight,
+                               ElementCount BestVF,
+                               unsigned EstimatedVFxUF , bool DisableRuntimeUnroll);
+
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is

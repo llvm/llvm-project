@@ -168,6 +168,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[META32]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META33]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
-; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META31]], [[META32]]}
+; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META31]], [[META33]], [[META32]]}
 ; CHECK: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
 ;.

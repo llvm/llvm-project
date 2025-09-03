@@ -165,15 +165,6 @@ using namespace SCEVPatternMatch;
 const char VerboseDebug[] = DEBUG_TYPE "-verbose";
 #endif
 
-/// @{
-/// Metadata attribute names
-const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
-const char LLVMLoopVectorizeFollowupVectorized[] =
-    "llvm.loop.vectorize.followup_vectorized";
-const char LLVMLoopVectorizeFollowupEpilogue[] =
-    "llvm.loop.vectorize.followup_epilogue";
-/// @}
-
 STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
@@ -7080,40 +7071,6 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   return BestFactor;
 }
 
-static void addRuntimeUnrollDisableMetaData(Loop *L) {
-  SmallVector<Metadata *, 4> MDs;
-  // Reserve first location for self reference to the LoopID metadata node.
-  MDs.push_back(nullptr);
-  bool IsUnrollMetadata = false;
-  MDNode *LoopID = L->getLoopID();
-  if (LoopID) {
-    // First find existing loop unrolling disable metadata.
-    for (unsigned I = 1, IE = LoopID->getNumOperands(); I < IE; ++I) {
-      auto *MD = dyn_cast<MDNode>(LoopID->getOperand(I));
-      if (MD) {
-        const auto *S = dyn_cast<MDString>(MD->getOperand(0));
-        IsUnrollMetadata =
-            S && S->getString().starts_with("llvm.loop.unroll.disable");
-      }
-      MDs.push_back(LoopID->getOperand(I));
-    }
-  }
-
-  if (!IsUnrollMetadata) {
-    // Add runtime unroll disable metadata.
-    LLVMContext &Context = L->getHeader()->getContext();
-    SmallVector<Metadata *, 1> DisableOperands;
-    DisableOperands.push_back(
-        MDString::get(Context, "llvm.loop.unroll.runtime.disable"));
-    MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-    MDs.push_back(DisableNode);
-    MDNode *NewLoopID = MDNode::get(Context, MDs);
-    // Set operand 0 to refer to the loop id itself.
-    NewLoopID->replaceOperandWith(0, NewLoopID);
-    L->setLoopID(NewLoopID);
-  }
-}
-
 static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   using namespace VPlanPatternMatch;
   assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
@@ -7184,86 +7141,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // over the incoming values correctly.
   EpiResumePhi.setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
-}
-
-static void updateLoopMetadata(Loop *L, Loop *OrigLoop, ScalarEvolution &SE,
-                               OptimizationRemarkEmitter *ORE,
-                               VPBasicBlock *HeaderVPBB, VPlan &Plan,
-                               const TargetTransformInfo &TTI,
-                               bool VectorizingEpilogue, MDNode *LID,
-                               std::optional<MDNode *> VectorizedLoopID,
-                               std::optional<unsigned> OrigAverageTripCount,
-                               unsigned OrigLoopInvocationWeight,
-                               ElementCount BestVF,
-                               std::optional<unsigned> VScaleForTuning) {
-  if (L) {
-    if (VectorizedLoopID) {
-      L->setLoopID(*VectorizedLoopID);
-    } else {
-      // Keep all loop hints from the original loop on the vector loop (we'll
-      // replace the vectorizer-specific hints below).
-      if (LID)
-        L->setLoopID(LID);
-
-      LoopVectorizeHints Hints(L, true, *ORE);
-      Hints.setAlreadyVectorized();
-
-      // Check if it's EVL-vectorized and mark the corresponding metadata.
-      bool IsEVLVectorized =
-          llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
-            // Looking for the ExplictVectorLength VPInstruction.
-            if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
-              return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
-            return false;
-          });
-      if (IsEVLVectorized) {
-        LLVMContext &Context = L->getHeader()->getContext();
-        MDNode *LoopID = L->getLoopID();
-        auto *IsEVLVectorizedMD = MDNode::get(
-            Context,
-            {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
-             MDString::get(Context, "evl")});
-        MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
-                                                           {IsEVLVectorizedMD});
-        L->setLoopID(NewLoopID);
-      }
-    }
-    TargetTransformInfo::UnrollingPreferences UP;
-    TTI.getUnrollingPreferences(L, SE, UP, ORE);
-    if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
-      addRuntimeUnrollDisableMetaData(L);
-  }
-
-  // Set/update profile weights for the vector and remainder loops as original
-  // loop iterations are now distributed among them. Note that original loop
-  // becomes the scalar remainder loop after vectorization.
-  //
-  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
-  // end up getting slightly roughened result but that should be OK since
-  // profile is not inherently precise anyway. Note also possible bypass of
-  // vector code caused by legality checks is ignored, assigning all the weight
-  // to the vector loop, optimistically.
-  //
-  // For scalable vectorization we can't know at compile time how many
-  // iterations of the loop are handled in one vector iteration, so instead
-  // use the value of vscale used for tuning.
-  if (OrigAverageTripCount) {
-    unsigned EstimatedVFxUF =
-        estimateElementCount(BestVF * Plan.getUF(), VScaleForTuning);
-    // Calculate number of iterations in unrolled loop.
-    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-    // Calculate number of iterations for remainder loop.
-    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
-    if (HeaderVPBB) {
-      setLoopEstimatedTripCount(L, AverageVectorTripCount,
-                                OrigLoopInvocationWeight);
-    }
-    if (Plan.getScalarPreheader()->hasPredecessors()) {
-      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
-                                OrigLoopInvocationWeight);
-    }
-  }
 }
 
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
@@ -7386,8 +7263,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Retrieve loop information before executing the plan, which may remove the original loop, if it becomes unreachable.
   MDNode *LID = OrigLoop->getLoopID();
-  std::optional<MDNode *> VectorizedLoopID = makeFollowupLoopID(
-      LID, {LLVMLoopVectorizeFollowupAll, LLVMLoopVectorizeFollowupVectorized});
   unsigned OrigLoopInvocationWeight = 0;
   std::optional<unsigned> OrigAverageTripCount =
       getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
@@ -7398,12 +7273,17 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
   VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
+
+  // Add metadata to disable runtime unrolling a scalar loop when there
+  // are no runtime checks about strides and memory. A scalar loop that is
+  // rarely used is not worth unrolling.
+  bool DisableRuntimeUnroll = !ILV.RTChecks.hasChecks() && !BestVF.isScalar();
   updateLoopMetadata(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
       OrigLoop, *PSE.getSE(), ORE, HeaderVPBB, BestVPlan, TTI,
-      VectorizingEpilogue, LID, VectorizedLoopID, OrigAverageTripCount,
-      OrigLoopInvocationWeight, BestVF, CM.getVScaleForTuning());
+      VectorizingEpilogue, LID, OrigAverageTripCount,
+      OrigLoopInvocationWeight, BestVF, estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()), DisableRuntimeUnroll);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
@@ -9421,8 +9301,6 @@ static bool processLoopInVPlanNativePath(
 
   reportVectorization(ORE, L, VF, 1);
 
-  // Mark the loop as already vectorized to avoid vectorizing again.
-  Hints.setAlreadyVectorized();
   assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
   return true;
 }
@@ -10235,10 +10113,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
   }
 
-  bool DisableRuntimeUnroll = false;
-  bool LoopRemoved = false;
-  MDNode *OrigLoopID = L->getLoopID();
-
   // Report the vectorization decision.
   if (VF.Width.isScalar()) {
     using namespace ore;
@@ -10294,9 +10168,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                     BestEpiPlan, LVL, ExpandedSCEVs,
                                     EPI.VectorTripCount);
     ++LoopsEpilogueVectorized;
-
-    if (!Checks.hasChecks())
-      DisableRuntimeUnroll = true;
   } else {
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, &CM, BFI, PSI,
                            Checks, BestPlan);
@@ -10310,35 +10181,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
     ++LoopsVectorized;
-
-    // Add metadata to disable runtime unrolling a scalar loop when there
-    // are no runtime checks about strides and memory. A scalar loop that is
-    // rarely used is not worth unrolling.
-    if (!Checks.hasChecks() && !VF.Width.isScalar())
-      DisableRuntimeUnroll = true;
-    LoopRemoved = BestPlan.getScalarPreheader()->getNumPredecessors() == 0;
   }
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
   assert(!verifyFunction(*F, &dbgs()));
-
-  // The original loop has been removed, no need to update its metadata.
-  if (LoopRemoved)
-    return true;
-
-  std::optional<MDNode *> RemainderLoopID =
-      makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
-                                      LLVMLoopVectorizeFollowupEpilogue});
-  if (RemainderLoopID) {
-    L->setLoopID(*RemainderLoopID);
-  } else {
-    if (DisableRuntimeUnroll)
-      addRuntimeUnrollDisableMetaData(L);
-
-    // Mark the loop as already vectorized to avoid vectorizing again.
-    Hints.setAlreadyVectorized();
-  }
 
   return true;
 }

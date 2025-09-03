@@ -63,7 +63,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF2-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; VF8UF2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 0
-; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    ret void
 ;
@@ -81,7 +81,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF16UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; VF16UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 0
-; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    ret void
 ;
@@ -560,7 +560,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    store i8 [[L]], ptr [[GEP_DST]], align 1
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add i64 [[INNER_IV]], 1
 ; VF8UF2-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; VF8UF2-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF8UF2-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8UF2:       [[OUTER_LATCH]]:
 ; VF8UF2-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; VF8UF2-NEXT:    [[C_2:%.*]] = call i1 @cond()
@@ -598,7 +598,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:    store i8 [[L]], ptr [[GEP_DST]], align 1
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add i64 [[INNER_IV]], 1
 ; VF16UF1-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; VF16UF1-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF16UF1-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF16UF1:       [[OUTER_LATCH]]:
 ; VF16UF1-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[TMP1]], i64 1
 ; VF16UF1-NEXT:    [[C_2:%.*]] = call i1 @cond()
@@ -1205,7 +1205,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP3]], ptr [[TMP1]], align 1
 ; VF8UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    br label %[[SCALAR_PH:.*]]
 ; VF8UF2:       [[SCALAR_PH]]:
@@ -1219,7 +1219,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF8UF2-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF8UF2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
-; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    ret void
 ;
@@ -1238,7 +1238,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF16UF1-NEXT:    store <16 x i8> [[TMP1]], ptr [[NEXT_GEP]], align 1
 ; VF16UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF16UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF16UF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
 ; VF16UF1-NEXT:    br label %[[SCALAR_PH:.*]]
 ; VF16UF1:       [[SCALAR_PH]]:
@@ -1252,7 +1252,7 @@ define void @test_vector_tc_eq_16(ptr %A) {
 ; VF16UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF16UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
-; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    ret void
 ;
@@ -1286,14 +1286,12 @@ exit:
 ; VF8UF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF8UF2: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; VF8UF2: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF8UF2: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; VF8UF2: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
-; VF8UF2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; VF8UF2: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; VF8UF2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ;.
 ; VF16UF1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF16UF1: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; VF16UF1: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF16UF1: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
-; VF16UF1: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
-; VF16UF1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; VF16UF1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; VF16UF1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ;.

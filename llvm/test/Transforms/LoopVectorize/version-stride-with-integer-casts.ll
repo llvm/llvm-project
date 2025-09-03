@@ -474,7 +474,7 @@ define void @sext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    store i16 [[G_16]], ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], [[G_64]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -511,5 +511,4 @@ exit:
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
 ;.
