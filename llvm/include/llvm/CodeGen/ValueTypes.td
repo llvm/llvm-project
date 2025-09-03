@@ -362,8 +362,10 @@ def amdgpuBufferStridedPointer : ValueType<192, 252>;
 
 def aarch64mfp8 : ValueType<8,  253>;  // 8-bit value in FPR (AArch64)
 
-def c64 : VTCapability<64, 254>;   // 64-bit capability value
-def c128 : VTCapability<128, 255>; // 128-bit capability value
+// CHERI capabilities. Pointer-like values that carry additional metadata
+// for enforcing safety guarantees on CHERI-enabled targets.
+def c64 : VTCapability<64, 254>;   // 64-bit CHERI capability value
+def c128 : VTCapability<128, 255>; // 128-bit CHERI capability value
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy
