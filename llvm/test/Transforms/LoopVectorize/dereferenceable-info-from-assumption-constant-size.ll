@@ -681,12 +681,10 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i32> [ [[TMP10]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[TMP12]], <2 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP28]], i64 4), "dereferenceable"(ptr [[TMP20]], i64 4) ]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP20]], i64 4), "dereferenceable"(ptr [[TMP20]], i64 4) ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP29]], i64 4), "dereferenceable"(ptr [[TMP19]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP19]], i64 4), "dereferenceable"(ptr [[TMP19]], i64 4) ]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2

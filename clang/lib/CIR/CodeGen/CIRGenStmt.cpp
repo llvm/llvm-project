@@ -508,7 +508,7 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
-  builder.createContinue(getLoc(s.getContinueLoc()));
+  builder.createContinue(getLoc(s.getKwLoc()));
 
   // Insert the new block to continue codegen after the continue statement.
   builder.createBlock(builder.getBlock()->getParent());
@@ -543,7 +543,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
-  builder.createBreak(getLoc(s.getBreakLoc()));
+  builder.createBreak(getLoc(s.getKwLoc()));
 
   // Insert the new block to continue codegen after the break statement.
   builder.createBlock(builder.getBlock()->getParent());

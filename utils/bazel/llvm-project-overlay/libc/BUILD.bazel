@@ -524,6 +524,7 @@ libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
     ],
 )
@@ -673,6 +674,18 @@ libc_support_library(
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [
         ":__support_cpp_utility",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_cpp_simd",
+    hdrs = ["src/__support/CPP/simd.h"],
+    deps = [
+        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_macros_attributes",
         ":hdr_stdint_proxy",
     ],
 )
@@ -4938,6 +4951,7 @@ libc_support_library(
         "src/string/memory_utils/arm/inline_memset.h",
         "src/string/memory_utils/generic/aligned_access.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
+        "src/string/memory_utils/generic/inline_strlen.h",
         "src/string/memory_utils/inline_bcmp.h",
         "src/string/memory_utils/inline_bzero.h",
         "src/string/memory_utils/inline_memcmp.h",
@@ -4964,6 +4978,7 @@ libc_support_library(
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
+        ":__support_cpp_simd",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_optimization",

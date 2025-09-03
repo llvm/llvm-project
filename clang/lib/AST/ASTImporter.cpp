@@ -7337,18 +7337,28 @@ ExpectedStmt ASTNodeImporter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
       ToGotoLoc, ToStarLoc, ToTarget);
 }
 
+template <typename StmtClass>
+static ExpectedStmt ImportLoopControlStmt(ASTNodeImporter &NodeImporter,
+                                          ASTImporter &Importer, StmtClass *S) {
+  Error Err = Error::success();
+  auto ToLoc = NodeImporter.importChecked(Err, S->getKwLoc());
+  auto ToLabelLoc = S->hasLabelTarget()
+                        ? NodeImporter.importChecked(Err, S->getLabelLoc())
+                        : SourceLocation();
+  auto ToDecl = S->hasLabelTarget()
+                    ? NodeImporter.importChecked(Err, S->getLabelDecl())
+                    : nullptr;
+  if (Err)
+    return std::move(Err);
+  return new (Importer.getToContext()) StmtClass(ToLoc, ToLabelLoc, ToDecl);
+}
+
 ExpectedStmt ASTNodeImporter::VisitContinueStmt(ContinueStmt *S) {
-  ExpectedSLoc ToContinueLocOrErr = import(S->getContinueLoc());
-  if (!ToContinueLocOrErr)
-    return ToContinueLocOrErr.takeError();
-  return new (Importer.getToContext()) ContinueStmt(*ToContinueLocOrErr);
+  return ImportLoopControlStmt(*this, Importer, S);
 }
 
 ExpectedStmt ASTNodeImporter::VisitBreakStmt(BreakStmt *S) {
-  auto ToBreakLocOrErr = import(S->getBreakLoc());
-  if (!ToBreakLocOrErr)
-    return ToBreakLocOrErr.takeError();
-  return new (Importer.getToContext()) BreakStmt(*ToBreakLocOrErr);
+  return ImportLoopControlStmt(*this, Importer, S);
 }
 
 ExpectedStmt ASTNodeImporter::VisitReturnStmt(ReturnStmt *S) {

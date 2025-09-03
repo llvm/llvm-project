@@ -2027,9 +2027,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   }
 
   if (OneUse) {
-    replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
-                          const_cast<PHINode &>(*NewPN),
-                          const_cast<PHINode &>(*PN), DT);
+    replaceAllDbgUsesWith(*PN, *NewPN, *PN, DT);
   }
   return replaceInstUsesWith(I, NewPN);
 }

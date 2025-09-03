@@ -11,7 +11,7 @@ body:             |
 
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
     ; CHECK: - instruction: $vcc = V_CMP_NE_U64_e64 0, $vgpr1_vgpr2, implicit $exec
-
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
     $vcc = V_CMP_NE_U64_e64 0, $vgpr1_vgpr2, implicit $exec
 
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***

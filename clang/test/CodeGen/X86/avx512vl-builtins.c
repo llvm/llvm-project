@@ -834,6 +834,7 @@ __m256i test_mm256_maskz_mullo_epi32 (__mmask8 __M, __m256i __A, __m256i __B) {
   //CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_mullo_epi32(__M, __A, __B);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_mullo_epi32(0x0F, (__m256i)(__v8si){+1, -2, +3, -4, +5, -6, +7, -8}, (__m256i)(__v8si){-2, +3, +4, +5, -6, +7, +8, +9}), -2, -6, +12, -20, 0, 0, 0, 0));
 
 __m256i test_mm256_mask_mullo_epi32 (__m256i __W, __mmask8 __M, __m256i __A,
        __m256i __B) {
@@ -842,6 +843,7 @@ __m256i test_mm256_mask_mullo_epi32 (__m256i __W, __mmask8 __M, __m256i __A,
   //CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_mullo_epi32(__W, __M, __A, __B);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_mullo_epi32((__m256i)(__v8si){-100, +200, -300, +400, -500, +600, -700, +800}, 0x0F, (__m256i)(__v8si){+1, -2, +3, -4, +5, -6, +7, -8}, (__m256i)(__v8si){-2, +3, +4, +5, -6, +7, +8, +9}), -2, -6, +12, -20, -500, +600, -700, +800));
 
 __m256i test_mm256_and_epi32 (__m256i __A, __m256i __B) {
   //CHECK-LABEL: test_mm256_and_epi32

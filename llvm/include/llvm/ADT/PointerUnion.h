@@ -88,9 +88,6 @@ namespace pointer_union_detail {
   };
 }
 
-// This is a forward declaration of CastInfoPointerUnionImpl
-// Refer to its definition below for further details
-template <typename... PTs> struct CastInfoPointerUnionImpl;
 /// A discriminated union of two or more pointer types, with the discriminator
 /// in the low bit of the pointer.
 ///

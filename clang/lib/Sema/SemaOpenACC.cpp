@@ -2589,6 +2589,63 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
+/// Loops through a type and generates an appropriate InitListExpr to generate
+/// type initialization.
+static Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
+                                             SourceRange ExprRange,
+                                             QualType Ty) {
+  Ty = Ty.getCanonicalType();
+  llvm::SmallVector<Expr *> Exprs;
+
+  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    for (auto *F : RD->fields()) {
+      if (Expr *NewExpr =
+              GenerateReductionInitRecipeExpr(Context, ExprRange, F->getType()))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+  } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
+    for (uint64_t Idx = 0; Idx < AT->getZExtSize(); ++Idx) {
+      if (Expr *NewExpr = GenerateReductionInitRecipeExpr(Context, ExprRange,
+                                                          AT->getElementType()))
+        Exprs.push_back(NewExpr);
+      else
+        return nullptr;
+    }
+
+  } else if (Ty->isPointerType()) {
+    // For now, we are going to punt/not initialize pointer types, as
+    // discussions/designs are ongoing on how to express this behavior,
+    // particularly since they probably need the 'bounds' passed to them
+    // correctly.  A future patch/patch set will go through all of the pointer
+    // values for all of the recipes to make sure we have a sane behavior.
+
+    // For now, this will result in a NYI during code generation for
+    // no-initializer.
+    return nullptr;
+  } else {
+    assert(Ty->isScalarType());
+
+    // TODO:  OpenACC: This currently only works for '1', but we need to figure
+    // out a way to do least/largest/all-1s.
+    if (Ty->isFloatingType()) {
+      Exprs.push_back(FloatingLiteral::Create(
+          Context, llvm::APFloat::getOne(Context.getFloatTypeSemantics(Ty)),
+          /*isExact=*/true, Ty, ExprRange.getBegin()));
+    } else {
+      Exprs.push_back(IntegerLiteral::Create(
+          Context, llvm::APInt(Context.getTypeSize(Ty), 1), Ty,
+          ExprRange.getBegin()));
+    }
+  }
+
+  Expr *InitExpr = new (Context)
+      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  InitExpr->setType(Ty);
+  return InitExpr;
+}
+
 std::pair<VarDecl *, VarDecl *>
 SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
                               OpenACCReductionOperator ReductionOperator,
@@ -2637,13 +2694,24 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
     Sema::TentativeAnalysisScope Trap{SemaRef};
     InitializedEntity Entity = InitializedEntity::InitializeVariable(Recipe);
 
+    auto FinishValueInit = [&](Expr *InitExpr) {
+      if (InitExpr) {
+        InitializationKind Kind = InitializationKind::CreateForInit(
+            Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
+        InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, InitExpr,
+                                       /*TopLevelOfInitList=*/false,
+                                       /*TreatUnavailableAsInvalid=*/false);
+        return InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+      }
+      return ExprEmpty();
+    };
+
     if (CK == OpenACCClauseKind::Private) {
       InitializationKind Kind =
           InitializationKind::CreateDefault(Recipe->getLocation());
 
       InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
       Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
-
     } else if (CK == OpenACCClauseKind::FirstPrivate) {
       // Create a VarDecl to be the 'copied-from' for the copy section of the
       // recipe. This allows us to make the association so that we can use the
@@ -2717,12 +2785,7 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         InitExpr = TemporaryDRE;
       }
 
-      InitializationKind Kind = InitializationKind::CreateForInit(
-          Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
-      InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, InitExpr,
-                                     /*TopLevelOfInitList=*/false,
-                                     /*TreatUnavailableAsInvalid=*/false);
-      Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+      Init = FinishValueInit(InitExpr);
     } else if (CK == OpenACCClauseKind::Reduction) {
       // How we initialize the reduction variable depends on the operator used,
       // according to the chart in OpenACC 3.3 section 2.6.15.
@@ -2733,14 +2796,24 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // are used for code generation, we can just ignore/not bother doing any
         // initialization here.
         break;
-      case OpenACCReductionOperator::Multiplication:
       case OpenACCReductionOperator::Max:
       case OpenACCReductionOperator::Min:
       case OpenACCReductionOperator::BitwiseAnd:
-      case OpenACCReductionOperator::And:
         // TODO: OpenACC: figure out init for these.
         break;
 
+      case OpenACCReductionOperator::Multiplication:
+      case OpenACCReductionOperator::And: {
+        // '&&' initializes every field to 1.  However, we need to loop through
+        // every field/element and generate an initializer for each of the
+        // elements.
+
+        Expr *InitExpr = GenerateReductionInitRecipeExpr(
+            getASTContext(), VarExpr->getSourceRange(), VarTy);
+
+        Init = FinishValueInit(InitExpr);
+        break;
+      }
       case OpenACCReductionOperator::Addition:
       case OpenACCReductionOperator::BitwiseOr:
       case OpenACCReductionOperator::BitwiseXOr:
@@ -2754,12 +2827,7 @@ SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
         // will get this type correct/etc.
         InitExpr->setType(getASTContext().VoidTy);
 
-        InitializationKind Kind = InitializationKind::CreateForInit(
-            Recipe->getLocation(), /*DirectInit=*/true, InitExpr);
-        InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, InitExpr,
-                                       /*TopLevelOfInitList=*/false,
-                                       /*TreatUnavailableAsInvalid=*/false);
-        Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, InitExpr, &VarTy);
+        Init = FinishValueInit(InitExpr);
         break;
       }
       }

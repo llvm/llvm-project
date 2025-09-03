@@ -9,12 +9,11 @@ define <2 x float> @redundant_vfmv(<2 x float> %arg0, <64 x float> %arg1, <64 x 
 ; CHECK-NEXT:    vfredusum.vs v9, v12, v8
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vfmv.f.s fa5, v9
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfredusum.vs v8, v16, v8
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfredusum.vs v9, v16, v8
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vi v8, v9, 0
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    vfslide1up.vf v8, v9, fa5
 ; CHECK-NEXT:    ret
   %s0 = extractelement <2 x float> %arg0, i64 0
   %r0 = tail call reassoc float @llvm.vector.reduce.fadd.v64f32(float %s0, <64 x float> %arg1)

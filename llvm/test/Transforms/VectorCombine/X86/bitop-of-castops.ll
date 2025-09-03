@@ -260,3 +260,163 @@ define <4 x i32> @or_zext_nneg(<4 x i16> %a, <4 x i16> %b) {
   %or = or <4 x i32> %z1, %z2
   ret <4 x i32> %or
 }
+
+; Test bitwise operations with integer-to-integer bitcast with one constant
+define <2 x i32> @or_bitcast_v4i16_to_v2i32_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_bitcast_v4i16_to_v2i32_constant(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i16> [[A1:%.*]], <i16 16960, i16 15, i16 -31616, i16 30>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC1]]
+;
+  %bc1 = bitcast <4 x i16> %a to <2 x i32>
+  %or = or <2 x i32> %bc1, <i32 1000000, i32 2000000>
+  ret <2 x i32> %or
+}
+
+define <2 x i32> @or_bitcast_v4i16_to_v2i32_constant_commuted(<4 x i16> %a) {
+; CHECK-LABEL: @or_bitcast_v4i16_to_v2i32_constant_commuted(
+; CHECK-NEXT:    [[A:%.*]] = or <4 x i16> [[A1:%.*]], <i16 16960, i16 15, i16 -31616, i16 30>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC1]]
+;
+  %bc1 = bitcast <4 x i16> %a to <2 x i32>
+  %or = or <2 x i32> <i32 1000000, i32 2000000>, %bc1
+  ret <2 x i32> %or
+}
+
+; Test bitwise operations with truncate and one constant
+define <4 x i16> @or_trunc_v4i32_to_v4i16_constant(<4 x i32> %a) {
+; CHECK-LABEL: @or_trunc_v4i32_to_v4i16_constant(
+; CHECK-NEXT:    [[T1:%.*]] = trunc <4 x i32> [[A:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i16> [[T1]], <i16 1, i16 2, i16 3, i16 4>
+; CHECK-NEXT:    ret <4 x i16> [[OR]]
+;
+  %t1 = trunc <4 x i32> %a to <4 x i16>
+  %or = or <4 x i16> %t1, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %or
+}
+
+; Test bitwise operations with zero extend and one constant
+define <4 x i32> @or_zext_v4i16_to_v4i32_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_zext_v4i16_to_v4i32_constant(
+; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext <4 x i16> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_v4i8_to_v4i32_constant_with_loss(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_v4i8_to_v4i32_constant_with_loss(
+; CHECK-NEXT:    [[Z1:%.*]] = zext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 1024, i32 129, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1024, i32 129, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+; Test bitwise operations with sign extend and one constant
+define <4 x i32> @or_sext_v4i8_to_v4i32_positive_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_positive_constant(
+; CHECK-NEXT:    [[S1:%.*]] = sext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[S1]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %s1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %s1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_sext_v4i8_to_v4i32_minus_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_minus_constant(
+; CHECK-NEXT:    [[S1:%.*]] = sext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[S1]], <i32 -1, i32 -2, i32 -3, i32 -4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %s1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %s1, <i32 -1, i32 -2, i32 -3, i32 -4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_sext_v4i8_to_v4i32_constant_with_loss(<4 x i8> %a) {
+; CHECK-LABEL: @or_sext_v4i8_to_v4i32_constant_with_loss(
+; CHECK-NEXT:    [[Z1:%.*]] = sext <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 -10000, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = sext <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 -10000, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+; Test truncate with flag preservation and one constant
+define <4 x i16> @and_trunc_nuw_nsw_constant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_constant(
+; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw <4 x i32> [[A:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[T1]], <i16 1, i16 2, i16 3, i16 4>
+; CHECK-NEXT:    ret <4 x i16> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i16>
+  %and = and <4 x i16> %t1, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %and
+}
+
+define <4 x i8> @and_trunc_nuw_nsw_minus_constant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_minus_constant(
+; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw <4 x i32> [[A:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i8> [[T1]], <i8 -16, i8 -15, i8 -14, i8 -13>
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
+  %and = and <4 x i8> %t1, <i8 240, i8 241, i8 242, i8 243>
+  ret <4 x i8> %and
+}
+
+define <4 x i8> @and_trunc_nuw_nsw_multiconstant(<4 x i32> %a) {
+; CHECK-LABEL: @and_trunc_nuw_nsw_multiconstant(
+; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw <4 x i32> [[A:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i8> [[T1]], <i8 -16, i8 1, i8 -14, i8 3>
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
+  %and = and <4 x i8> %t1, <i8 240, i8 1, i8 242, i8 3>
+  ret <4 x i8> %and
+}
+
+; Test sign extend with nneg flag and one constant
+define <4 x i32> @or_zext_nneg_constant(<4 x i16> %a) {
+; CHECK-LABEL: @or_zext_nneg_constant(
+; CHECK-NEXT:    [[Z1:%.*]] = zext nneg <4 x i16> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i16> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_nneg_minus_constant(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant(
+; CHECK-NEXT:    [[Z1:%.*]] = zext nneg <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 240, i32 241, i32 242, i32 243>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 240, i32 241, i32 242, i32 243>
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @or_zext_nneg_multiconstant(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_multiconstant(
+; CHECK-NEXT:    [[Z1:%.*]] = zext nneg <4 x i8> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[Z1]], <i32 240, i32 1, i32 242, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %z1 = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %z1, <i32 240, i32 1, i32 242, i32 3>
+  ret <4 x i32> %or
+}

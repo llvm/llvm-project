@@ -103,13 +103,20 @@ void test_amdgcn_load_monitor(global int* b32gaddr, global v2i* b64gaddr, global
   *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, cpol); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
 }
 
+void test_amdgcn_cluster_load(global int* addr32, global v2i* addr64, global v4i* addr128, global int* b32out, global v2i* b64out, global v4i* b128out, int cpol, int mask)
+{
+  *b32out  = __builtin_amdgcn_cluster_load_b32(addr32, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_cluster_load_b64(addr64, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_cluster_load_b128(addr128, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_b128' must be a constant integer}}
+}
+
 void test_amdgcn_async_load_store_lds_offset(global char* gaddr8, global int *gaddr32, global v2i* gaddr64, global v4i* gaddr128, local char* laddr8,
                                              local int *laddr32, local v2i* laddr64, local v4i* laddr128, int offset, int mask)
 {
-  __builtin_amdgcn_global_store_async_from_lds_b8(gaddr8, laddr8, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b8' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b32(gaddr32, laddr32, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b32' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b64(gaddr64, laddr64, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b64' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b128(gaddr128, laddr128, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b128' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b8(gaddr8, laddr8, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b8' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b32(gaddr32, laddr32, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b32' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b64(gaddr64, laddr64, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b64' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b128(gaddr128, laddr128, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b128' must be a constant integer}}
 
   __builtin_amdgcn_global_store_async_from_lds_b8(gaddr8, laddr8, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b8' must be a constant integer}}
   __builtin_amdgcn_global_store_async_from_lds_b32(gaddr32, laddr32, offset, 0); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b32' must be a constant integer}}
@@ -120,10 +127,10 @@ void test_amdgcn_async_load_store_lds_offset(global char* gaddr8, global int *ga
 void test_amdgcn_async_load_store_lds_cpol(global char* gaddr8, global int *gaddr32, global v2i* gaddr64, global v4i* gaddr128, local char* laddr8,
                                            local int *laddr32, local v2i* laddr64, local v4i* laddr128, int cpol, int mask)
 {
-  __builtin_amdgcn_global_store_async_from_lds_b8(gaddr8, laddr8, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b8' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b32(gaddr32, laddr32, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b32' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b64(gaddr64, laddr64, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b64' must be a constant integer}}
-  __builtin_amdgcn_global_store_async_from_lds_b128(gaddr128, laddr128, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b128' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b8(gaddr8, laddr8, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b8' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b32(gaddr32, laddr32, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b32' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b64(gaddr64, laddr64, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b64' must be a constant integer}}
+  __builtin_amdgcn_global_load_async_to_lds_b128(gaddr128, laddr128, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b128' must be a constant integer}}
 
   __builtin_amdgcn_global_store_async_from_lds_b8(gaddr8, laddr8, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b8' must be a constant integer}}
   __builtin_amdgcn_global_store_async_from_lds_b32(gaddr32, laddr32, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b32' must be a constant integer}}

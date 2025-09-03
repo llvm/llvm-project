@@ -17,6 +17,7 @@ __m256i test_mm256_mullo_epi64 (__m256i __A, __m256i __B) {
   // CHECK: mul <4 x i64>
   return _mm256_mullo_epi64(__A, __B);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mullo_epi64((__m256i)(__v4di){+1, -2, +3, -4}, (__m256i)(__v4di){-2, +3, +4, -5}), -2, -6, +12, +20));
 
 __m256i test_mm256_mask_mullo_epi64 (__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_mullo_epi64
@@ -24,6 +25,7 @@ __m256i test_mm256_mask_mullo_epi64 (__m256i __W, __mmask8 __U, __m256i __A, __m
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return (__m256i) _mm256_mask_mullo_epi64 ( __W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_mullo_epi64((__m256i)(__v4di){-100, +200, -300, +400}, 0x03, (__m256i)(__v4di){+1, -2, +3, -4}, (__m256i)(__v4di){-2, +3, +4, -5}), -2, -6, -300, +400));
 
 __m256i test_mm256_maskz_mullo_epi64 (__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_maskz_mullo_epi64
@@ -31,12 +33,14 @@ __m256i test_mm256_maskz_mullo_epi64 (__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return (__m256i) _mm256_maskz_mullo_epi64 (__U, __A, __B);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_mullo_epi64(0x03, (__m256i)(__v4di){+1, -2, +3, -4}, (__m256i)(__v4di){-2, +3, +4, -5}), -2, -6, 0, 0));
 
 __m128i test_mm_mullo_epi64 (__m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mullo_epi64
   // CHECK: mul <2 x i64>
   return (__m128i) _mm_mullo_epi64(__A, __B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_mullo_epi64((__m128i)(__v2di){+1, -2}, (__m128i)(__v2di){-3, +4}), -3, -8));
 
 __m128i test_mm_mask_mullo_epi64 (__m128i __W, __mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_mullo_epi64
@@ -44,6 +48,7 @@ __m128i test_mm_mask_mullo_epi64 (__m128i __W, __mmask8 __U, __m128i __A, __m128
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return (__m128i) _mm_mask_mullo_epi64 ( __W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_mask_mullo_epi64((__m128i)(__v2di){-100, +200}, 0x01, (__m128i)(__v2di){+1, -2}, (__m128i)(__v2di){-3, +4}), -3, +200));
 
 __m128i test_mm_maskz_mullo_epi64 (__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_maskz_mullo_epi64
@@ -51,6 +56,7 @@ __m128i test_mm_maskz_mullo_epi64 (__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return (__m128i) _mm_maskz_mullo_epi64 (__U, __A, __B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_maskz_mullo_epi64(0x01, (__m128i)(__v2di){+1, -2}, (__m128i)(__v2di){-3, +4}), -3, 0));
 
 __m256d test_mm256_mask_andnot_pd (__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: test_mm256_mask_andnot_pd

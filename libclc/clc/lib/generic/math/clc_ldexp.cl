@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/integer/clc_add_sat.h>
 #include <clc/internal/clc.h>
 #include <clc/math/clc_subnormal_config.h>

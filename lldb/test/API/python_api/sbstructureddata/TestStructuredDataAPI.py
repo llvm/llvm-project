@@ -51,7 +51,6 @@ class TestStructuredDataAPI(TestBase):
         if not "key_float" in s.GetData():
             self.fail("FAILED: could not find key_float in description output")
 
-        dict_struct = lldb.SBStructuredData()
         dict_struct = example.GetValueForKey("key_dict")
 
         # Tests for dictionary data type
@@ -113,21 +112,26 @@ class TestStructuredDataAPI(TestBase):
         self.assertSuccess(example.SetFromJSON("1"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeInteger)
         self.assertEqual(example.GetIntegerValue(), 1)
+        self.assertEqual(int(example), 1)
 
         self.assertSuccess(example.SetFromJSON("4.19"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeFloat)
         self.assertEqual(example.GetFloatValue(), 4.19)
+        self.assertEqual(float(example), 4.19)
 
         self.assertSuccess(example.SetFromJSON('"Bonjour, 123!"'))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
         self.assertEqual(example.GetStringValue(42), "Bonjour, 123!")
+        self.assertEqual(str(example), "Bonjour, 123!")
 
         self.assertSuccess(example.SetFromJSON("true"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeBoolean)
         self.assertTrue(example.GetBooleanValue())
+        self.assertTrue(example)
 
         self.assertSuccess(example.SetFromJSON("null"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeNull)
+        self.assertFalse(example)
 
         example = lldb.SBStructuredData()
         example.SetUnsignedIntegerValue(1)
@@ -187,38 +191,35 @@ class TestStructuredDataAPI(TestBase):
         self.assertEqual(sb_data, example_arr)
 
     def invalid_struct_test(self, example):
-        invalid_struct = lldb.SBStructuredData()
         invalid_struct = example.GetValueForKey("invalid_key")
         if invalid_struct.IsValid():
             self.fail("An invalid object should have been returned")
 
         # Check Type API
-        if not invalid_struct.GetType() == lldb.eStructuredDataTypeInvalid:
+        if invalid_struct.GetType() != lldb.eStructuredDataTypeInvalid:
             self.fail("Wrong type returned: " + str(invalid_struct.GetType()))
 
     def dictionary_struct_test(self, example):
         # Check API returning a valid SBStructuredData of 'dictionary' type
-        dict_struct = lldb.SBStructuredData()
         dict_struct = example.GetValueForKey("key_dict")
         if not dict_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not dict_struct.GetType() == lldb.eStructuredDataTypeDictionary:
+        if dict_struct.GetType() != lldb.eStructuredDataTypeDictionary:
             self.fail("Wrong type returned: " + str(dict_struct.GetType()))
 
         # Check Size API for 'dictionary' type
-        if not dict_struct.GetSize() == 6:
+        if dict_struct.GetSize() != 6:
             self.fail("Wrong no of elements returned: " + str(dict_struct.GetSize()))
 
     def string_struct_test(self, dict_struct):
-        string_struct = lldb.SBStructuredData()
         string_struct = dict_struct.GetValueForKey("key_string")
         if not string_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not string_struct.GetType() == lldb.eStructuredDataTypeString:
+        if string_struct.GetType() != lldb.eStructuredDataTypeString:
             self.fail("Wrong type returned: " + str(string_struct.GetType()))
 
         # Check API returning 'string' value
@@ -238,18 +239,17 @@ class TestStructuredDataAPI(TestBase):
         # Check a valid SBStructuredData containing an unsigned integer.
         # We intentionally make this larger than what an int64_t can hold but
         # still small enough to fit a uint64_t
-        uint_struct = lldb.SBStructuredData()
         uint_struct = dict_struct.GetValueForKey("key_uint")
         if not uint_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not uint_struct.GetType() == lldb.eStructuredDataTypeInteger:
+        if uint_struct.GetType() != lldb.eStructuredDataTypeInteger:
             self.fail("Wrong type returned: " + str(uint_struct.GetType()))
 
         # Check API returning unsigned integer value
         output = uint_struct.GetUnsignedIntegerValue()
-        if not output == 0xFFFFFFFF00000000:
+        if output != 0xFFFFFFFF00000000:
             self.fail("wrong output: " + str(output))
 
         # Calling wrong API on a SBStructuredData
@@ -262,18 +262,17 @@ class TestStructuredDataAPI(TestBase):
         # Check a valid SBStructuredData containing an signed integer.
         # We intentionally make this smaller than what an uint64_t can hold but
         # still small enough to fit a int64_t
-        sint_struct = lldb.SBStructuredData()
         sint_struct = dict_struct.GetValueForKey("key_sint")
         if not sint_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not sint_struct.GetType() == lldb.eStructuredDataTypeSignedInteger:
+        if sint_struct.GetType() != lldb.eStructuredDataTypeSignedInteger:
             self.fail("Wrong type returned: " + str(sint_struct.GetType()))
 
         # Check API returning signed integer value
         output = sint_struct.GetSignedIntegerValue()
-        if not output == -42:
+        if output != -42:
             self.fail("wrong output: " + str(output))
 
         # Calling wrong API on a SBStructuredData
@@ -283,28 +282,26 @@ class TestStructuredDataAPI(TestBase):
             self.fail("Valid string " + output + " returned for an integer object")
 
     def double_struct_test(self, dict_struct):
-        floating_point_struct = lldb.SBStructuredData()
         floating_point_struct = dict_struct.GetValueForKey("key_float")
         if not floating_point_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not floating_point_struct.GetType() == lldb.eStructuredDataTypeFloat:
+        if floating_point_struct.GetType() != lldb.eStructuredDataTypeFloat:
             self.fail("Wrong type returned: " + str(floating_point_struct.GetType()))
 
         # Check API returning 'double' value
         output = floating_point_struct.GetFloatValue()
-        if not output == 2.99:
+        if output != 2.99:
             self.fail("wrong output: " + str(output))
 
     def bool_struct_test(self, dict_struct):
-        bool_struct = lldb.SBStructuredData()
         bool_struct = dict_struct.GetValueForKey("key_bool")
         if not bool_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not bool_struct.GetType() == lldb.eStructuredDataTypeBoolean:
+        if bool_struct.GetType() != lldb.eStructuredDataTypeBoolean:
             self.fail("Wrong type returned: " + str(bool_struct.GetType()))
 
         # Check API returning 'bool' value
@@ -314,17 +311,16 @@ class TestStructuredDataAPI(TestBase):
 
     def array_struct_test(self, dict_struct):
         # Check API returning a valid SBStructuredData of 'array' type
-        array_struct = lldb.SBStructuredData()
         array_struct = dict_struct.GetValueForKey("key_array")
         if not array_struct.IsValid():
             self.fail("A valid object should have been returned")
 
         # Check Type API
-        if not array_struct.GetType() == lldb.eStructuredDataTypeArray:
+        if array_struct.GetType() != lldb.eStructuredDataTypeArray:
             self.fail("Wrong type returned: " + str(array_struct.GetType()))
 
         # Check Size API for 'array' type
-        if not array_struct.GetSize() == 2:
+        if array_struct.GetSize() != 2:
             self.fail("Wrong no of elements returned: " + str(array_struct.GetSize()))
 
         # Check API returning a valid SBStructuredData for different 'array'
@@ -332,17 +328,98 @@ class TestStructuredDataAPI(TestBase):
         string_struct = array_struct.GetItemAtIndex(0)
         if not string_struct.IsValid():
             self.fail("A valid object should have been returned")
-        if not string_struct.GetType() == lldb.eStructuredDataTypeString:
+        if string_struct.GetType() != lldb.eStructuredDataTypeString:
             self.fail("Wrong type returned: " + str(string_struct.GetType()))
         output = string_struct.GetStringValue(5)
-        if not output == "23":
+        if output != "23":
             self.fail("wrong output: " + str(output))
 
         string_struct = array_struct.GetItemAtIndex(1)
         if not string_struct.IsValid():
             self.fail("A valid object should have been returned")
-        if not string_struct.GetType() == lldb.eStructuredDataTypeString:
+        if string_struct.GetType() != lldb.eStructuredDataTypeString:
             self.fail("Wrong type returned: " + str(string_struct.GetType()))
         output = string_struct.GetStringValue(5)
-        if not output == "arr":
+        if output != "arr":
             self.fail("wrong output: " + str(output))
+
+    def test_round_trip_scalars(self):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, "", "dirk", True, False):
+            constructor = type(original)
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            round_tripped = constructor(data)
+            self.assertEqual(round_tripped, original)
+
+    def test_dynamic(self):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, "", "dirk", True, False):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(data.dynamic, original)
+
+    def test_round_trip_string(self):
+        # No 0.0, it inherently does not round trip.
+        for original in (0, 11, -1, 4.5, -0.25, "", "dirk"):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(str(data), str(original))
+
+    def test_round_trip_int(self):
+        for original in (0, 11, -1):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(int(data), int(original))
+
+    def test_round_trip_float(self):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(float(data), float(original))
+
+    def test_round_trip_bool(self):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, "0.0", "4.5", "-0.25"):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(bool(data), bool(original))
+
+        for original in ([], {}, [1], {1: 1}):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(bool(data), bool(original))
+
+    def test_assert_false(self):
+        self.assertFalse(lldb.SBStructuredData())
+        for original in ("0", "0.0", '""', "[]", "{}"):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(original)
+            self.assertFalse(data)
+
+    def test_iterate_array(self):
+        array = [0, 1, 2]
+        data = lldb.SBStructuredData()
+        data.SetFromJSON(json.dumps(array))
+        for value in data:
+            self.assertEqual(value, array.pop(0))
+
+    def test_iterate_dictionary(self):
+        dictionary = {"0": 0, "1": 1, "2": 2}
+        keys = set(dictionary.keys())
+        data = lldb.SBStructuredData()
+        data.SetFromJSON(json.dumps(dictionary))
+        for key in data:
+            self.assertIn(key, keys)
+            keys.remove(key)
+
+    def test_getitem_array(self):
+        array = [1, 2, 3]
+        data = lldb.SBStructuredData()
+        data.SetFromJSON(json.dumps(array))
+        for i in range(len(array)):
+            self.assertEqual(data[i], array[i])
+
+    def test_getitem_dictionary(self):
+        dictionary = {"one": 1, "two": 2, "three": 3}
+        data = lldb.SBStructuredData()
+        data.SetFromJSON(json.dumps(dictionary))
+        for key in dictionary:
+            self.assertEqual(data[key], dictionary[key])
