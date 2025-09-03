@@ -87,11 +87,7 @@ define <vscale x 4 x i32> @diff_avl_non_uimm5(<vscale x 4 x i32> %passthru, <vsc
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 42
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
-; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vadd.vv v14, v10, v12
-; CHECK-NEXT:    li a0, 123
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v14
+; CHECK-NEXT:    vadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 42)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen 123)

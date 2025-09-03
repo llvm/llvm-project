@@ -4796,20 +4796,35 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
+static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO,
+                                              const MachineRegisterInfo *MRI) {
+  assert(MO.isImm() || MO.getReg().isVirtual());
+  if (MO.isImm())
+    return MO.getImm();
+  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+  if (Def->getOpcode() == RISCV::ADDI &&
+      Def->getOperand(1).getReg() == RISCV::X0)
+    return Def->getOperand(2).getImm();
+  return std::nullopt;
+}
+
 /// Given two VL operands, do we know that LHS <= RHS?
-bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS,
+                        const MachineRegisterInfo *MRI) {
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
-  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+  std::optional<int64_t> LHSImm = getEffectiveImm(LHS, MRI),
+                         RHSImm = getEffectiveImm(RHS, MRI);
+  if (RHSImm == RISCV::VLMaxSentinel)
     return true;
-  if (LHS.isImm() && LHS.getImm() == 0)
+  if (LHSImm == 0)
     return true;
-  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
+  if (LHSImm == RISCV::VLMaxSentinel)
     return false;
-  if (!LHS.isImm() || !RHS.isImm())
+  if (!LHSImm || !RHSImm)
     return false;
-  return LHS.getImm() <= RHS.getImm();
+  return LHSImm <= RHSImm;
 }
 
 namespace {
