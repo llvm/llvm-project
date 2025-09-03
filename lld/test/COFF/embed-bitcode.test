@@ -1,0 +1,30 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj
+# RUN: llvm-readobj -S %t.exe | FileCheck %s
+
+# CHECK-NOT: Name: .llvmbc
+# CHECK-NOT: Name: .llvmcmd
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    SectionData:     "C3"
+  - Name:           .llvmbc
+    Characteristics: [ IMAGE_SCN_MEM_DISCARDABLE ]
+    SectionData:     "4243C0DE"
+  - Name:           .llvmcmd
+    Characteristics: [ IMAGE_SCN_MEM_DISCARDABLE ]
+    SectionData:     "2D63633100"
+
+symbols:
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

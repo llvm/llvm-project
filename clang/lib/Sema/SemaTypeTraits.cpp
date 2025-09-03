@@ -32,8 +32,7 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   RD = RD->getDefinition();
   SourceLocation LookupLoc = RD->getLocation();
 
-  CanQualType CanTy = SemaRef.getASTContext().getCanonicalType(
-      SemaRef.getASTContext().getTagDeclType(RD));
+  CanQualType CanTy = SemaRef.getASTContext().getCanonicalTagType(RD);
   DeclarationName Name;
   Expr *Arg = nullptr;
   unsigned NumArgs;
@@ -557,12 +556,11 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   }
 }
 
-static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
+static bool HasNoThrowOperator(CXXRecordDecl *RD, OverloadedOperatorKind Op,
                                Sema &Self, SourceLocation KeyLoc, ASTContext &C,
                                bool (CXXRecordDecl::*HasTrivial)() const,
                                bool (CXXRecordDecl::*HasNonTrivial)() const,
                                bool (CXXMethodDecl::*IsDesiredOp)() const) {
-  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
   if ((RD->*HasTrivial)() && !(RD->*HasNonTrivial)())
     return true;
 
@@ -599,6 +597,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   if (Decl->isLambda())
     return Decl->isCapturelessLambda();
 
+  CanQualType T = S.Context.getCanonicalTagType(Decl);
   {
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -606,10 +605,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     // const ClassT& obj;
-    OpaqueValueExpr Operand(
-        KeyLoc,
-        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
-        ExprValueKind::VK_LValue);
+    OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
     S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
@@ -628,8 +624,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
       return false;
     if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
       return false;
-    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
-        Decl->getTypeForDecl())
+    if (!S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T))
       return false;
   }
 
@@ -1010,8 +1005,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isObjCLifetimeType())
       return true;
 
-    if (const RecordType *RT = T->getAs<RecordType>())
-      return HasNoThrowOperator(RT, OO_Equal, Self, KeyLoc, C,
+    if (auto *RD = T->getAsCXXRecordDecl())
+      return HasNoThrowOperator(RD, OO_Equal, Self, KeyLoc, C,
                                 &CXXRecordDecl::hasTrivialCopyAssignment,
                                 &CXXRecordDecl::hasNonTrivialCopyAssignment,
                                 &CXXMethodDecl::isCopyAssignmentOperator);
@@ -1023,8 +1018,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C))
       return true;
 
-    if (const RecordType *RT = C.getBaseElementType(T)->getAs<RecordType>())
-      return HasNoThrowOperator(RT, OO_Equal, Self, KeyLoc, C,
+    if (auto *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
+      return HasNoThrowOperator(RD, OO_Equal, Self, KeyLoc, C,
                                 &CXXRecordDecl::hasTrivialMoveAssignment,
                                 &CXXRecordDecl::hasNonTrivialMoveAssignment,
                                 &CXXMethodDecl::isMoveAssignmentOperator);
@@ -1588,8 +1583,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
   // Base and Derived are not unions and name the same class type without
   // regard to cv-qualifiers.
 
-  const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-  const RecordType *rhsRecord = RhsT->getAs<RecordType>();
+  const RecordType *lhsRecord = LhsT->getAsCanonical<RecordType>();
+  const RecordType *rhsRecord = RhsT->getAsCanonical<RecordType>();
   if (!rhsRecord || !lhsRecord) {
     const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
     const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
@@ -1613,9 +1608,9 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
 
   // Unions are never base classes, and never have base classes.
   // It doesn't matter if they are complete or not. See PR#41843
-  if (lhsRecord && lhsRecord->getDecl()->isUnion())
+  if (lhsRecord && lhsRecord->getOriginalDecl()->isUnion())
     return false;
-  if (rhsRecord && rhsRecord->getDecl()->isUnion())
+  if (rhsRecord && rhsRecord->getOriginalDecl()->isUnion())
     return false;
 
   if (lhsRecord == rhsRecord)
@@ -1629,8 +1624,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
                           diag::err_incomplete_type_used_in_type_trait_expr))
     return false;
 
-  return cast<CXXRecordDecl>(rhsRecord->getDecl())
-      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+  return cast<CXXRecordDecl>(rhsRecord->getOriginalDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getOriginalDecl()));
 }
 
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
@@ -1648,8 +1643,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
     return Self.BuiltinIsBaseOf(Rhs->getTypeLoc().getBeginLoc(), LhsT, RhsT);
 
   case BTT_IsVirtualBaseOf: {
-    const RecordType *BaseRecord = LhsT->getAs<RecordType>();
-    const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
+    const RecordType *BaseRecord = LhsT->getAsCanonical<RecordType>();
+    const RecordType *DerivedRecord = RhsT->getAsCanonical<RecordType>();
 
     if (!BaseRecord || !DerivedRecord) {
       DiagnoseVLAInCXXTypeTrait(Self, Lhs,
@@ -1670,8 +1665,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                  diag::err_incomplete_type))
       return false;
 
-    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
-        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
+    return cast<CXXRecordDecl>(DerivedRecord->getOriginalDecl())
+        ->isVirtuallyDerivedFrom(
+            cast<CXXRecordDecl>(BaseRecord->getOriginalDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);
@@ -1768,7 +1764,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
       // Objective-C lifetime, this is a non-trivial assignment.
       if (LhsT.getNonReferenceType().hasNonTrivialObjCLifetime())
         return false;
-
+      const ASTContext &Context = Self.getASTContext();
+      if (Context.containsAddressDiscriminatedPointerAuth(LhsT) ||
+          Context.containsAddressDiscriminatedPointerAuth(RhsT))
+        return false;
       return !Result.get()->hasNonTrivialCall(Self.Context);
     }
 
@@ -1825,6 +1824,51 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
         Self, Rhs, tok::kw___builtin_hlsl_is_scalarized_layout_compatible);
 
     return Self.HLSL().IsScalarizedLayoutCompatible(LhsT, RhsT);
+  }
+  case BTT_LtSynthesisesFromSpaceship:
+  case BTT_LeSynthesisesFromSpaceship:
+  case BTT_GtSynthesisesFromSpaceship:
+  case BTT_GeSynthesisesFromSpaceship: {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        Self, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
+    Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
+
+    OpaqueValueExpr LHS(KeyLoc, LhsT.getNonReferenceType(),
+                        LhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : LhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+    OpaqueValueExpr RHS(KeyLoc, RhsT.getNonReferenceType(),
+                        RhsT->isLValueReferenceType() ? ExprValueKind::VK_LValue
+                        : RhsT->isRValueReferenceType()
+                            ? ExprValueKind::VK_XValue
+                            : ExprValueKind::VK_PRValue);
+
+    auto OpKind = [&] {
+      switch (BTT) {
+      case BTT_LtSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_LT;
+      case BTT_LeSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_LE;
+      case BTT_GtSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_GT;
+      case BTT_GeSynthesisesFromSpaceship:
+        return BinaryOperatorKind::BO_GE;
+      default:
+        llvm_unreachable("Trying to Synthesize non-comparison operator?");
+      }
+    }();
+
+    UnresolvedSet<16> Functions;
+    Self.LookupBinOp(Self.TUScope, KeyLoc, OpKind, Functions);
+
+    ExprResult Result =
+        Self.CreateOverloadedBinOp(KeyLoc, OpKind, Functions, &LHS, &RHS);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    return isa<CXXRewrittenBinaryOperator>(Result.get());
   }
   default:
     llvm_unreachable("not a BTT");
@@ -1966,6 +2010,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
+      .Case("is_final", TypeTrait::UTT_IsFinal)
       .Default(std::nullopt);
 }
 
@@ -2018,11 +2063,10 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   // std::is_xxx<>::value
   if (const auto *VD = dyn_cast<VarDecl>(Ref->getDecl());
       Ref->hasQualifier() && VD && VD->getIdentifier()->isStr("value")) {
-    const Type *T = Ref->getQualifier()->getAsType();
-    if (!T)
+    NestedNameSpecifier Qualifier = Ref->getQualifier();
+    if (Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
       return std::nullopt;
-    const TemplateSpecializationType *Ts =
-        T->getAs<TemplateSpecializationType>();
+    const auto *Ts = Qualifier.getAsType()->getAs<TemplateSpecializationType>();
     if (!Ts)
       return std::nullopt;
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();
@@ -2451,6 +2495,52 @@ static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
   }
 }
 
+static void DiagnoseIsFinalReason(Sema &S, SourceLocation Loc,
+                                  const CXXRecordDecl *D) {
+  if (!D || D->isInvalidDecl())
+    return;
+
+  // Complete record but not 'final'.
+  if (!D->isEffectivelyFinal()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotMarkedFinal;
+    S.Diag(D->getLocation(), diag::note_defined_here) << D;
+    return;
+  }
+}
+
+static void DiagnoseIsFinalReason(Sema &S, SourceLocation Loc, QualType T) {
+  // Primary: “%0 is not final”
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Final;
+  if (T->isReferenceType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  // Arrays / functions / non-records → not a class/union.
+  if (S.Context.getAsArrayType(T)) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (T->isFunctionType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (!T->isRecordType()) {
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotClassOrUnion;
+    return;
+  }
+  if (const auto *D = T->getAsCXXRecordDecl())
+    DiagnoseIsFinalReason(S, Loc, D);
+}
+
 static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
   int NumBasesWithFields = 0;
   for (const CXXBaseSpecifier &Base : D->bases()) {
@@ -2627,6 +2717,15 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
+  case UTT_IsFinal: {
+    QualType QT = Args[0];
+    if (QT->isDependentType())
+      break;
+    const auto *RD = QT->getAsCXXRecordDecl();
+    if (!RD || !RD->isEffectivelyFinal())
+      DiagnoseIsFinalReason(*this, E->getBeginLoc(), QT); // unsatisfied
+    break;
+  }
   default:
     break;
   }

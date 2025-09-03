@@ -247,6 +247,8 @@ void Reference::merge(Reference &&Other) {
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool FriendInfo::mergeable(const FriendInfo &Other) {
@@ -500,13 +502,13 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces.begin(), Namespaces.end());
-  llvm::sort(Records.begin(), Records.end());
-  llvm::sort(Functions.begin(), Functions.end());
-  llvm::sort(Enums.begin(), Enums.end());
-  llvm::sort(Typedefs.begin(), Typedefs.end());
-  llvm::sort(Concepts.begin(), Concepts.end());
-  llvm::sort(Variables.begin(), Variables.end());
+  llvm::sort(Namespaces);
+  llvm::sort(Records);
+  llvm::sort(Functions);
+  llvm::sort(Enums);
+  llvm::sort(Typedefs);
+  llvm::sort(Concepts);
+  llvm::sort(Variables);
 }
 } // namespace doc
 } // namespace clang

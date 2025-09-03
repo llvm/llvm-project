@@ -25,10 +25,7 @@ LLVM_LIBC_FUNCTION(int, mbtowc,
   if (s == nullptr)
     return 0;
   internal::mbstate internal_mbstate;
-  // temp ptr to use if pwc is nullptr
-  wchar_t buf[1];
-  auto ret =
-      internal::mbrtowc(pwc == nullptr ? buf : pwc, s, n, &internal_mbstate);
+  auto ret = internal::mbrtowc(pwc, s, n, &internal_mbstate);
   if (!ret.has_value() || static_cast<int>(ret.value()) == -2) {
     // Encoding failure
     libc_errno = EILSEQ;

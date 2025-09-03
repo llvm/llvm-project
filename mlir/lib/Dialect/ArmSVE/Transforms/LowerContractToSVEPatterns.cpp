@@ -12,7 +12,7 @@
 // TODO: There may be opportunities to unify this with a similar pattern
 // for Neon. See:
 //   https://github.com/llvm/llvm-project/issues/145559
-//   LowerContractionToNeonI8MMPattern.cpp
+//   LowerContractToNeonPatterns.cpp
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,7 +50,7 @@ std::optional<Value> getExtOperand(Value v) {
 
   // If the operand is not defined by an explicit extend operation of the
   // accepted operation type allow for an implicit sign-extension.
-  auto extOp = dyn_cast_or_null<Op>(v.getDefiningOp());
+  auto extOp = v.getDefiningOp<Op>();
   if (!extOp) {
     if constexpr (std::is_same<Op, arith::ExtSIOp>::value) {
       auto vTy = cast<VectorType>(v.getType());
@@ -183,9 +183,9 @@ protected:
   Value acc;
 
   // Conventional names for matrix dimensions.
-  int64_t M = 0;
-  int64_t N = 0;
-  int64_t K = 0;
+  int64_t m = 0;
+  int64_t n = 0;
+  int64_t k = 0;
 
   // Create the matrix mulitply and accumulate operation according to
   // `mmlaOp`.
@@ -214,13 +214,13 @@ Value VectorContractRewriter::createMMLA(PatternRewriter &rewriter,
 
   switch (mmlaOp) {
   case MMLA::SignedInt:
-    return rewriter.create<arm_sve::SmmlaOp>(loc, resTy, acc, lhs, rhs);
+    return arm_sve::SmmlaOp::create(rewriter, loc, resTy, acc, lhs, rhs);
   case MMLA::UnsignedInt:
-    return rewriter.create<arm_sve::UmmlaOp>(loc, resTy, acc, lhs, rhs);
+    return arm_sve::UmmlaOp::create(rewriter, loc, resTy, acc, lhs, rhs);
   case MMLA::MixedInt:
-    return rewriter.create<arm_sve::UsmmlaOp>(loc, resTy, acc, lhs, rhs);
+    return arm_sve::UsmmlaOp::create(rewriter, loc, resTy, acc, lhs, rhs);
   case MMLA::Bfloat:
-    return rewriter.create<arm_sve::BfmmlaOp>(loc, resTy, acc, lhs, rhs);
+    return arm_sve::BfmmlaOp::create(rewriter, loc, resTy, acc, lhs, rhs);
   default:
     llvm_unreachable("Uninitialized operation kind");
   }
@@ -286,111 +286,112 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
 
   // Single-dimension vector type for the entire RHS tile.
 
-  auto flatRhsTileType = VectorType::get(/*shape=*/K * N, operandEltType,
+  auto flatRhsTileType = VectorType::get(/*shape=*/k * n, operandEltType,
                                          /*scalableDims=*/{true});
 
   // Vector type having the same number of elements as a row in the
   // accumulator/output tile and the same element type.
-  auto accRowTy = VectorType::get(/*shape=*/N, resultEltType,
+  auto accRowTy = VectorType::get(/*shape=*/n, resultEltType,
                                   /*scalableDims=*/{true});
 
   // Vector type having twice the number of elements as a row in the
   // accumulator/output tile the same element type.
-  auto accRowX2Ty = VectorType::get(/*shape=*/2 * N, resultEltType,
+  auto accRowX2Ty = VectorType::get(/*shape=*/2 * n, resultEltType,
                                     /*scalableDims=*/{true});
   // Vector type having half the number of elements as a row in the
   // accumulator/output tile and an integer element type with twice the bit
   // width.
-  auto accRow64Ty = VectorType::get(/*shape=*/N / 2, rewriter.getI64Type(),
+  auto accRow64Ty = VectorType::get(/*shape=*/n / 2, rewriter.getI64Type(),
                                     /*scalableDims=*/{true});
   // Vector type having the same the number of elements as a row in the
   // accumulator/output tile and an integer element type with twice the bit
   // width.
-  auto accRowX264Ty = VectorType::get(/*shape=*/N, rewriter.getI64Type(),
+  auto accRowX264Ty = VectorType::get(/*shape=*/n, rewriter.getI64Type(),
                                       /*scalableDims=*/{true});
 
   Location loc = op.getLoc();
 
   // Extract LHS sub-tiles with logical shape <2xK>.
   SmallVector<Value> lhsTile;
-  for (int64_t i = 0; i < M; i += 2) {
+  for (int64_t i = 0; i < m; i += 2) {
     // Extract two consecutive rows of the LHS tile.
     auto r0 =
-        rewriter.create<vector::ExtractOp>(loc, lhs, ArrayRef<int64_t>{i});
+        vector::ExtractOp::create(rewriter, loc, lhs, ArrayRef<int64_t>{i});
     auto r1 =
-        rewriter.create<vector::ExtractOp>(loc, lhs, ArrayRef<int64_t>{i + 1});
+        vector::ExtractOp::create(rewriter, loc, lhs, ArrayRef<int64_t>{i + 1});
     // Concatenate to obtain a 2 x K x <input-type> flattened sub-tile.
-    SmallVector<int64_t> shuffleIdx(2 * K);
+    SmallVector<int64_t> shuffleIdx(2 * k);
     std::iota(shuffleIdx.begin(), shuffleIdx.end(), 0);
-    auto t = rewriter.create<vector::ShuffleOp>(loc, r0, r1, shuffleIdx);
+    auto t = vector::ShuffleOp::create(rewriter, loc, r0, r1, shuffleIdx);
     // Turn it into a scalable vector.
-    auto s = rewriter.create<vector::ScalableInsertOp>(
-        loc, t, rewriter.create<ub::PoisonOp>(loc, flatLhsType), 0);
+    auto s = vector::ScalableInsertOp::create(
+        rewriter, loc, t, ub::PoisonOp::create(rewriter, loc, flatLhsType), 0);
     // Replicate the sub-tile VSCALE times to fill the entire vector.
-    auto r = rewriter.create<arm_sve::DupQLaneOp>(loc, s, 0);
+    auto r = arm_sve::DupQLaneOp::create(rewriter, loc, s, 0);
     lhsTile.push_back(r);
   }
 
   // "Flatten" the RHS tile from <[N]xK> to <[N*K]>.
-  auto rhs = rewriter.create<vector::ShapeCastOp>(this->rhs.getLoc(),
-                                                  flatRhsTileType, this->rhs);
+  auto rhs = vector::ShapeCastOp::create(rewriter, this->rhs.getLoc(),
+                                         flatRhsTileType, this->rhs);
 
   // Extract the RHS sub-tiles with logical shape <Kx[2]>.
   SmallVector<Value> rhsTile;
-  for (int64_t j = 0; j < N; j += 2)
-    rhsTile.push_back(rewriter.create<vector::ScalableExtractOp>(
-        loc, flatRhsType, rhs, j * K));
+  for (int64_t j = 0; j < n; j += 2)
+    rhsTile.push_back(vector::ScalableExtractOp::create(
+        rewriter, loc, flatRhsType, rhs, j * k));
 
   // Extract and pack the ACC sub-tiles.
   SmallVector<Value> accTile;
-  for (int64_t i = 0; i < M; i += 2) {
+  for (int64_t i = 0; i < m; i += 2) {
     // Extract two consecutive rows of the accumulator tile.
-    auto r0 = rewriter.create<vector::ExtractOp>(loc, op.getAcc(),
-                                                 ArrayRef<int64_t>{i});
-    auto r1 = rewriter.create<vector::ExtractOp>(loc, op.getAcc(),
-                                                 ArrayRef<int64_t>{i + 1});
+    auto r0 = vector::ExtractOp::create(rewriter, loc, op.getAcc(),
+                                        ArrayRef<int64_t>{i});
+    auto r1 = vector::ExtractOp::create(rewriter, loc, op.getAcc(),
+                                        ArrayRef<int64_t>{i + 1});
     Value accTileVec;
     if (swapOperands) {
       // We are performing the operation with swapped LHS and RHS we need to
       // transpose each individual 2x2 tile of the accumulator and (later) the
       // final result.
-      accTileVec = rewriter.create<vector::InterleaveOp>(loc, r0, r1);
+      accTileVec = vector::InterleaveOp::create(rewriter, loc, r0, r1);
     } else {
       // Bitcast accumulator rows to double-width integer elements, so
       // subsequent interleave/deinterleave work on pairs of elements.
-      auto r0I64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r0);
-      auto r1I64 = rewriter.create<vector::BitCastOp>(loc, accRow64Ty, r1);
+      auto r0I64 = vector::BitCastOp::create(rewriter, loc, accRow64Ty, r0);
+      auto r1I64 = vector::BitCastOp::create(rewriter, loc, accRow64Ty, r1);
 
       // Interleave the rows, effectively flattening each 2x2 tile into 4
       // consecutive elements.
-      auto intrI64 = rewriter.create<vector::InterleaveOp>(loc, r0I64, r1I64);
+      auto intrI64 = vector::InterleaveOp::create(rewriter, loc, r0I64, r1I64);
 
       // Bitcast back to original element type.
-      accTileVec = rewriter.create<vector::BitCastOp>(loc, accRowX2Ty, intrI64);
+      accTileVec =
+          vector::BitCastOp::create(rewriter, loc, accRowX2Ty, intrI64);
     }
     // Extract ACC sub-tiles.
-    for (int64_t j = 0; j < N; j += 2)
-      accTile.push_back(rewriter.create<vector::ScalableExtractOp>(
-          loc, flatAccType, accTileVec, j * 2));
+    for (int64_t j = 0; j < n; j += 2)
+      accTile.push_back(vector::ScalableExtractOp::create(
+          rewriter, loc, flatAccType, accTileVec, j * 2));
   }
 
   // Emit sub-tile matrix multiplications.
   SmallVector<Value> outTile;
-  for (int64_t i = 0; i < M / 2; ++i)
-    for (int64_t j = 0; j < N / 2; ++j) {
-      Value mmla = createMMLA(rewriter, loc, accTile[i * N / 2 + j], lhsTile[i],
+  for (int64_t i = 0; i < m / 2; ++i)
+    for (int64_t j = 0; j < n / 2; ++j) {
+      Value mmla = createMMLA(rewriter, loc, accTile[i * n / 2 + j], lhsTile[i],
                               rhsTile[j]);
       outTile.push_back(mmla);
     }
 
   // Unpack the OUT sub-tiles and insert into the result.
-  Value result = rewriter.create<ub::PoisonOp>(loc, op.getResultType());
-  for (int64_t i = 0; i < M / 2; ++i) {
+  Value result = ub::PoisonOp::create(rewriter, loc, op.getResultType());
+  for (int64_t i = 0; i < m / 2; ++i) {
     // Collect a number of sub-tiles in a row.
-    Value row = rewriter.create<ub::PoisonOp>(loc, accRowX2Ty);
-    for (int64_t j = 0; j < N / 2; ++j)
-      row = rewriter.create<vector::ScalableInsertOp>(
-          loc, outTile[i * N / 2 + j], row, j * 4);
+    Value row = ub::PoisonOp::create(rewriter, loc, accRowX2Ty);
+    for (int64_t j = 0; j < n / 2; ++j)
+      row = vector::ScalableInsertOp::create(
+          rewriter, loc, outTile[i * n / 2 + j], row, j * 4);
 
     // Unpack the row to obtain two rows of the output. If we have the out
     // sub-tiles transposed we obtain two consecutive output rows by
@@ -398,22 +399,22 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
     // Otherwise, the interleave is by pairs.
     Value out0, out1;
     if (swapOperands) {
-      auto tmp = rewriter.create<vector::DeinterleaveOp>(loc, row);
+      auto tmp = vector::DeinterleaveOp::create(rewriter, loc, row);
       out0 = tmp.getRes1();
       out1 = tmp.getRes2();
     } else {
       // Deinterleave by pairs.
-      auto row64 = rewriter.create<vector::BitCastOp>(loc, accRowX264Ty, row);
-      auto deintr64 = rewriter.create<vector::DeinterleaveOp>(loc, row64);
+      auto row64 = vector::BitCastOp::create(rewriter, loc, accRowX264Ty, row);
+      auto deintr64 = vector::DeinterleaveOp::create(rewriter, loc, row64);
 
       // Bitcast back into original element type and insert into the result.
-      out0 =
-          rewriter.create<vector::BitCastOp>(loc, accRowTy, deintr64.getRes1());
-      out1 =
-          rewriter.create<vector::BitCastOp>(loc, accRowTy, deintr64.getRes2());
+      out0 = vector::BitCastOp::create(rewriter, loc, accRowTy,
+                                       deintr64.getRes1());
+      out1 = vector::BitCastOp::create(rewriter, loc, accRowTy,
+                                       deintr64.getRes2());
     }
-    result = rewriter.create<vector::InsertOp>(loc, out0, result, i * 2);
-    result = rewriter.create<vector::InsertOp>(loc, out1, result, i * 2 + 1);
+    result = vector::InsertOp::create(rewriter, loc, out0, result, i * 2);
+    result = vector::InsertOp::create(rewriter, loc, out1, result, i * 2 + 1);
   }
 
   return result;
@@ -431,9 +432,9 @@ public:
     VectorType lhsType = op.getLhsType();
     VectorType rhsType = op.getRhsType();
 
-    M = lhsType.getDimSize(0);
-    N = rhsType.getDimSize(0);
-    K = rhsType.getDimSize(1);
+    m = lhsType.getDimSize(0);
+    n = rhsType.getDimSize(0);
+    k = rhsType.getDimSize(1);
 
     // Check the operands have the expected shape:
     //  * for LHS: fixed vector MxK
@@ -441,8 +442,8 @@ public:
     //  * K == 8
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
-        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != K || K != 8 ||
-        M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
+        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 8 ||
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
         !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
@@ -503,9 +504,9 @@ public:
     VectorType lhsType = op.getLhsType();
     VectorType rhsType = op.getRhsType();
 
-    M = lhsType.getDimSize(0);
-    N = rhsType.getDimSize(0);
-    K = rhsType.getDimSize(1);
+    m = lhsType.getDimSize(0);
+    n = rhsType.getDimSize(0);
+    k = rhsType.getDimSize(1);
 
     // Check the operands have the expected shape:
     //  * for LHS: fixed vector MxK
@@ -513,8 +514,8 @@ public:
     //  * K == 4
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
-        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != K || K != 4 ||
-        M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
+        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 4 ||
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
         !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
@@ -580,7 +581,7 @@ public:
 
 } // namespace
 
-void mlir::populateLowerContractionToSVEI8MMPatternPatterns(
+void mlir::populateLowerContractionToSVEI8MMPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEI8MMPattern>(context, /*benefit=*/2);

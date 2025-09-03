@@ -24,14 +24,14 @@ void test1() {
   // CHECK-NEXT: |     |-<<<NULL>>>
   // CHECK-NEXT: |     |-DeclStmt {{.*}}
   // CHECK-NEXT: |     | `-VarDecl {{.*}} implicit used __range1 'const A &' cinit
-  // CHECK-NEXT: |     |   `-ExprWithCleanups {{.*}} 'const A':'const P2718R0::A' lvalue
-  // CHECK-NEXT: |     |     `-CallExpr {{.*}} 'const A':'const P2718R0::A' lvalue
+  // CHECK-NEXT: |     |   `-ExprWithCleanups {{.*}} 'const A' lvalue
+  // CHECK-NEXT: |     |     `-CallExpr {{.*}} 'const A' lvalue
   // CHECK-NEXT: |     |       |-ImplicitCastExpr {{.*}} 'const A &(*)(const A &)' <FunctionToPointerDecay>
   // CHECK-NEXT: |     |       | `-DeclRefExpr {{.*}} 'const A &(const A &)' lvalue Function {{.*}} 'f1' 'const A &(const A &)'
-  // CHECK-NEXT: |     |       `-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'const A &'
-  // CHECK-NEXT: |     |         `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT: |     |           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT: |     |             `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT: |     |       `-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'const A &'
+  // CHECK-NEXT: |     |         `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT: |     |           `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT: |     |             `-CallExpr {{.*}} 'A'
   // CHECK-NEXT: |     |               `-ImplicitCastExpr {{.*}} 'A (*)()' <FunctionToPointerDecay>
   // CHECK-NEXT: |     |                 `-DeclRefExpr {{.*}} 'A ()' lvalue Function {{.*}} 'g' 'A ()'
   for (auto e : f1(g()))
@@ -56,11 +56,11 @@ void test2() {
   // CHECK-NEXT: |     |       `-CallExpr {{.*}} 'const A *'
   // CHECK-NEXT: |     |         |-ImplicitCastExpr {{.*}} 'const A *(*)(const A &)' <FunctionToPointerDecay>
   // CHECK-NEXT: |     |         | `-DeclRefExpr {{.*}} 'const A *(const A &)' lvalue Function {{.*}} 'g' 'const A *(const A &)'
-  // CHECK-NEXT: |     |         `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' lvalue <DerivedToBase (A)>
-  // CHECK-NEXT: |     |           `-MaterializeTemporaryExpr {{.*}} 'const B':'const P2718R0::B' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT: |     |             `-ImplicitCastExpr {{.*}} 'const B':'const P2718R0::B' <NoOp>
-  // CHECK-NEXT: |     |               `-CXXBindTemporaryExpr {{.*}} 'B':'P2718R0::B' (CXXTemporary {{.*}})
-  // CHECK-NEXT: |     |                 `-CXXTemporaryObjectExpr {{.*}} 'B':'P2718R0::B' 'void () noexcept(false)' zeroing
+  // CHECK-NEXT: |     |         `-ImplicitCastExpr {{.*}} 'const A' lvalue <DerivedToBase (A)>
+  // CHECK-NEXT: |     |           `-MaterializeTemporaryExpr {{.*}} 'const B' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT: |     |             `-ImplicitCastExpr {{.*}} 'const B' <NoOp>
+  // CHECK-NEXT: |     |               `-CXXBindTemporaryExpr {{.*}} 'B' (CXXTemporary {{.*}})
+  // CHECK-NEXT: |     |                 `-CXXTemporaryObjectExpr {{.*}} 'B' 'void () noexcept(false)' zeroing
   for (auto e : f(g(B())))
     bar(e);
 }
@@ -82,9 +82,9 @@ void test3() {
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
   // CHECK-NEXT:  |       |-CXXStaticCastExpr {{.*}} 'void' static_cast<void> <ToVoid>
-  // CHECK-NEXT:  |       | `-MaterializeTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       |   `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |     `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       | `-MaterializeTemporaryExpr {{.*}} 'LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       |   `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |     `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : static_cast<void>(LockGuard()), v)
     LockGuard guard;
@@ -96,9 +96,9 @@ void test3() {
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
   // CHECK-NEXT:  |       |-CStyleCastExpr {{.*}} 'void' <ToVoid>
-  // CHECK-NEXT:  |       | `-MaterializeTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       |   `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |     `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       | `-MaterializeTemporaryExpr {{.*}} 'LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       |   `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |     `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : (void)LockGuard(), v)
     LockGuard guard;
@@ -109,9 +109,9 @@ void test3() {
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'int (&)[3]' cinit
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
-  // CHECK-NEXT:  |       |-MaterializeTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       | `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |   `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       |-MaterializeTemporaryExpr {{.*}} 'LockGuard' xvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       | `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |   `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : LockGuard(), v)
     LockGuard guard;
@@ -130,12 +130,12 @@ void test4() {
   // CHECK-NEXT:  |     `-CallExpr {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'int (&(*)(const A &))[3]' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'int (&(const A &))[3]' lvalue Function {{.*}} 'default_arg_fn' 'int (&(const A &))[3]'
-  // CHECK-NEXT:  |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const A':'const P2718R0::A' lvalue has rewritten init
-  // CHECK-NEXT:  |         `-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |           `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |             `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |               `-CXXTemporaryObjectExpr {{.*}} 'A':'P2718R0::A' 'void ()'
-  for (auto e : default_arg_fn()) 
+  // CHECK-NEXT:  |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const A' lvalue has rewritten init
+  // CHECK-NEXT:  |         `-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |           `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT:  |             `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               `-CXXTemporaryObjectExpr {{.*}} 'A' 'void ()'
+  for (auto e : default_arg_fn())
     bar(e);
 }
 
@@ -158,43 +158,43 @@ void test5() {
   // CHECK-NEXT:  |     `-CallExpr {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'int (&(*)(const A &))[3]' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'int (&(const A &))[3]' lvalue Function {{.*}} 'default_arg_fn' 'int (&(const A &))[3]'
-  // CHECK-NEXT:  |       `-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A'
-  // CHECK-NEXT:  |             `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |       `-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT:  |           `-CXXBindTemporaryExpr {{.*}} 'A'
+  // CHECK-NEXT:  |             `-CallExpr {{.*}} 'A'
   // CHECK-NEXT:  |               |-ImplicitCastExpr {{.*}} 'A (*)(const A &, const DefaultA &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |               | `-DeclRefExpr {{.*}} 'A (const A &, const DefaultA &)' lvalue Function {{.*}} 'foo' 'A (const A &, const DefaultA &)'
-  // CHECK-NEXT:  |               |-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |               | `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |               |   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A'
-  // CHECK-NEXT:  |               |     `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |               |-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               | `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT:  |               |   `-CXXBindTemporaryExpr {{.*}} 'A'
+  // CHECK-NEXT:  |               |     `-CallExpr {{.*}} 'A'
   // CHECK-NEXT:  |               |       |-ImplicitCastExpr {{.*}} 'A (*)(const A &, const DefaultA &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |               |       | `-DeclRefExpr {{.*}} 'A (const A &, const DefaultA &)' lvalue Function {{.*}} 'foo' 'A (const A &, const DefaultA &)'
-  // CHECK-NEXT:  |               |       |-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |               |       | `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |               |       |   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A'
-  // CHECK-NEXT:  |               |       |     `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |               |       |-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |       | `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT:  |               |       |   `-CXXBindTemporaryExpr {{.*}} 'A'
+  // CHECK-NEXT:  |               |       |     `-CallExpr {{.*}} 'A'
   // CHECK-NEXT:  |               |       |       |-ImplicitCastExpr {{.*}} 'A (*)(const A &, const DefaultA &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |               |       |       | `-DeclRefExpr {{.*}} 'A (const A &, const DefaultA &)' lvalue Function {{.*}} 'foo' 'A (const A &, const DefaultA &)'
-  // CHECK-NEXT:  |               |       |       |-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |               |       |       | `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |               |       |       |   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A'
-  // CHECK-NEXT:  |               |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'A':'P2718R0::A' 'void ()'
-  // CHECK-NEXT:  |               |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |               |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |               |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |               |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |               |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
-  // CHECK-NEXT:  |               |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |               |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |               |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |               |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |               |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
-  // CHECK-NEXT:  |               `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |                     `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                       `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
+  // CHECK-NEXT:  |               |       |       |-MaterializeTemporaryExpr {{.*}} 'const A' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |       |       | `-ImplicitCastExpr {{.*}} 'const A' <NoOp>
+  // CHECK-NEXT:  |               |       |       |   `-CXXBindTemporaryExpr {{.*}} 'A'
+  // CHECK-NEXT:  |               |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'A' 'void ()'
+  // CHECK-NEXT:  |               |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |               |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |               |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
+  // CHECK-NEXT:  |               |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |               |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |               |           `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |               |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |               |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
+  // CHECK-NEXT:  |               `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |                     `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                       `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
   for (auto e : default_arg_fn(foo(foo(foo(A())))))
     bar(e);
 }
@@ -210,40 +210,40 @@ void test6() {
   // CHECK-NEXT:  |-<<<NULL>>>
   // CHECK-NEXT:  |-DeclStmt {{.*}}
   // CHECK-NEXT:  | `-VarDecl {{.*}} col:17 implicit used __range1 'C &&' cinit
-  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'C':'P2718R0::C' xvalue
-  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'C':'P2718R0::C' xvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'C':'P2718R0::C'
-  // CHECK-NEXT:  |         `-CXXTemporaryObjectExpr {{.*}} 'C':'P2718R0::C' 'void (int, const C &, const DefaultA &)'
+  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'C' xvalue
+  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'C' xvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'C'
+  // CHECK-NEXT:  |         `-CXXTemporaryObjectExpr {{.*}} 'C' 'void (int, const C &, const DefaultA &)'
   // CHECK-NEXT:  |           |-IntegerLiteral {{.*}}'int' 0
-  // CHECK-NEXT:  |           |-MaterializeTemporaryExpr {{.*}} 'const C':'const P2718R0::C' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |           | `-ImplicitCastExpr {{.*}} 'const C':'const P2718R0::C' <NoOp>
-  // CHECK-NEXT:  |           |   `-CXXBindTemporaryExpr {{.*}} 'C':'P2718R0::C'
-  // CHECK-NEXT:  |           |     `-CXXTemporaryObjectExpr {{.*}} 'C':'P2718R0::C' 'void (int, const C &, const DefaultA &)'
+  // CHECK-NEXT:  |           |-MaterializeTemporaryExpr {{.*}} 'const C' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           | `-ImplicitCastExpr {{.*}} 'const C' <NoOp>
+  // CHECK-NEXT:  |           |   `-CXXBindTemporaryExpr {{.*}} 'C'
+  // CHECK-NEXT:  |           |     `-CXXTemporaryObjectExpr {{.*}} 'C' 'void (int, const C &, const DefaultA &)'
   // CHECK-NEXT:  |           |       |-IntegerLiteral {{.*}} 'int' 0
-  // CHECK-NEXT:  |           |       |-MaterializeTemporaryExpr {{.*}} 'const C':'const P2718R0::C' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |           |       | `-ImplicitCastExpr {{.*}} 'const C':'const P2718R0::C' <NoOp>
-  // CHECK-NEXT:  |           |       |   `-CXXBindTemporaryExpr {{.*}} 'C':'P2718R0::C'
-  // CHECK-NEXT:  |           |       |     `-CXXTemporaryObjectExpr {{.*}} 'C':'P2718R0::C' 'void (int, const C &, const DefaultA &)'
+  // CHECK-NEXT:  |           |       |-MaterializeTemporaryExpr {{.*}} 'const C' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |       | `-ImplicitCastExpr {{.*}} 'const C' <NoOp>
+  // CHECK-NEXT:  |           |       |   `-CXXBindTemporaryExpr {{.*}} 'C'
+  // CHECK-NEXT:  |           |       |     `-CXXTemporaryObjectExpr {{.*}} 'C' 'void (int, const C &, const DefaultA &)'
   // CHECK-NEXT:  |           |       |       |-IntegerLiteral {{.*}} 'int' 0
-  // CHECK-NEXT:  |           |       |       |-MaterializeTemporaryExpr {{.*}} 'const C':'const P2718R0::C' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |           |       |       | `-ImplicitCastExpr {{.*}} 'const C':'const P2718R0::C' <NoOp>
-  // CHECK-NEXT:  |           |       |       |   `-CXXBindTemporaryExpr {{.*}} 'C':'P2718R0::C'
-  // CHECK-NEXT:  |           |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'C':'P2718R0::C' 'void ()'
-  // CHECK-NEXT:  |           |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |           |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |           |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |           |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |           |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
-  // CHECK-NEXT:  |           |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |           |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |           |           `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |           |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |           |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
-  // CHECK-NEXT:  |           `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA':'const P2718R0::DefaultA' lvalue has rewritten init
-  // CHECK-NEXT:  |             `-MaterializeTemporaryExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
-  // CHECK-NEXT:  |               `-ImplicitCastExpr {{.*}} 'const DefaultA':'const P2718R0::DefaultA' <NoOp>
-  // CHECK-NEXT:  |                 `-CXXBindTemporaryExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                   `-CXXTemporaryObjectExpr {{.*}} 'DefaultA':'P2718R0::DefaultA' 'void ()'
+  // CHECK-NEXT:  |           |       |       |-MaterializeTemporaryExpr {{.*}} 'const C' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |       |       | `-ImplicitCastExpr {{.*}} 'const C' <NoOp>
+  // CHECK-NEXT:  |           |       |       |   `-CXXBindTemporaryExpr {{.*}} 'C'
+  // CHECK-NEXT:  |           |       |       |     `-CXXTemporaryObjectExpr {{.*}} 'C' 'void ()'
+  // CHECK-NEXT:  |           |       |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |           |       |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |       |           `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |           |       |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |           |       |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
+  // CHECK-NEXT:  |           |       `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |           |         `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |           |           `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |           |             `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |           |               `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
+  // CHECK-NEXT:  |           `-CXXDefaultArgExpr {{.*}} <<invalid sloc>> 'const DefaultA' lvalue has rewritten init
+  // CHECK-NEXT:  |             `-MaterializeTemporaryExpr {{.*}} 'const DefaultA' lvalue extended by Var {{.*}} '__range1' 'C &&'
+  // CHECK-NEXT:  |               `-ImplicitCastExpr {{.*}} 'const DefaultA' <NoOp>
+  // CHECK-NEXT:  |                 `-CXXBindTemporaryExpr {{.*}} 'DefaultA' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                   `-CXXTemporaryObjectExpr {{.*}} 'DefaultA' 'void ()'
   for (auto e : C(0, C(0, C(0, C()))))
     bar(e);
 }
@@ -255,28 +255,28 @@ void test7() {
   // CHECK-NEXT:  |-<<<NULL>>>
   // CHECK-NEXT:  |-DeclStmt {{.*}}
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'A &&' cinit
-  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'A':'P2718R0::A' xvalue
-  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'A' xvalue
+  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |         `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |           `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |               `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |                       `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |                           `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |                                   `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |                                       `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'A'
   // CHECK-NEXT:  |                                               `-ImplicitCastExpr {{.*}} 'A (*)()' <FunctionToPointerDecay>
   // CHECK-NEXT:  |                                                 `-DeclRefExpr {{.*}} 'A ()' lvalue Function {{.*}} 'g' 'A ()'
   for (auto e : g().r().g().r().g().r().g())
@@ -324,11 +324,11 @@ void test9() {
   // CHECK-NEXT:  |       `-CallExpr {{.*}} 'const A *'
   // CHECK-NEXT:  |         |-ImplicitCastExpr {{.*}} 'const A *(*)(const A &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |         | `-DeclRefExpr {{.*}} 'const A *(const A &)' lvalue Function {{.*}} 'dg2' 'const A *(const A &)'
-  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' lvalue <DerivedToBase (A)>
-  // CHECK-NEXT:  |           `-MaterializeTemporaryExpr {{.*}} 'const B':'const P2718R0::B' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |             `-ImplicitCastExpr {{.*}} 'const B':'const P2718R0::B' <NoOp>
-  // CHECK-NEXT:  |               `-CXXBindTemporaryExpr {{.*}} 'B':'P2718R0::B' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                 `-CXXTemporaryObjectExpr {{.*}} 'B':'P2718R0::B' 'void () noexcept(false)' zeroing
+  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const A' lvalue <DerivedToBase (A)>
+  // CHECK-NEXT:  |           `-MaterializeTemporaryExpr {{.*}} 'const B' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |             `-ImplicitCastExpr {{.*}} 'const B' <NoOp>
+  // CHECK-NEXT:  |               `-CXXBindTemporaryExpr {{.*}} 'B' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                 `-CXXTemporaryObjectExpr {{.*}} 'B' 'void () noexcept(false)' zeroing
   for (auto e : df2(dg2(B())))
     bar(e);
 }
@@ -348,10 +348,10 @@ void test10() {
   // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
   // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
-  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
-  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard' <NoOp>
+  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : static_cast<void>(df1(LockGuard())), v)
     LockGuard guard;
@@ -366,10 +366,10 @@ void test10() {
   // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
   // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
-  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
-  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard' <NoOp>
+  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : (void)df1(LockGuard()), v)
     LockGuard guard;
@@ -384,17 +384,17 @@ void test10() {
   // CHECK-NEXT:  |       | |-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
   // CHECK-NEXT:  |       | | |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       | | | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
-  // CHECK-NEXT:  |       | | `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       | |   `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
-  // CHECK-NEXT:  |       | |     `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       | |       `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       | | `-MaterializeTemporaryExpr {{.*}} 'const LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       | |   `-ImplicitCastExpr {{.*}} 'const LockGuard' <NoOp>
+  // CHECK-NEXT:  |       | |     `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       | |       `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
   // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
-  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
-  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
-  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
+  // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
+  // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard' <NoOp>
+  // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |       |         `-CXXTemporaryObjectExpr {{.*}} 'LockGuard' 'void ()'
   // CHECK-NEXT:  |       `-DeclRefExpr {{.*}} 'int[3]' lvalue Var {{.*}} 'v' 'int[3]'
   for ([[maybe_unused]] int x : df1(LockGuard()), df1(LockGuard()), v)
     LockGuard guard;
@@ -403,7 +403,7 @@ void test10() {
 // Test default argument && dependent context
 template <typename T> int (&default_arg_fn2(const T & = T()))[3];
 void test11() {
-  for (auto e : default_arg_fn2<A>()) 
+  for (auto e : default_arg_fn2<A>())
     bar(e);
 }
 
@@ -422,24 +422,24 @@ void test13() {
   // CHECK-NEXT:  |-<<<NULL>>>
   // CHECK-NEXT:  |-DeclStmt {{.*}}
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'A &&' cinit
-  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'A':'P2718R0::A' xvalue
-  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'A' xvalue
+  // CHECK-NEXT:  |     `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |       `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |         `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |           `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |               `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |                       `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |                           `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A'
   // CHECK-NEXT:  |                                   `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
-  // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
+  // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A' lvalue
   // CHECK-NEXT:  |                                       `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
   // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'P2718R0::A' (CXXTemporary {{.*}})
@@ -474,17 +474,17 @@ void test14() {
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'const int (&)[1]' cinit
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'const int[1]' lvalue
   // CHECK-NEXT:  |     `-MemberExpr {{.*}} 'const int[1]' lvalue .arr {{.*}}
-  // CHECK-NEXT:  |       `-MemberExpr {{.*}} 'const A14':'const P2718R0::A14' lvalue .a {{.*}}
-  // CHECK-NEXT:  |         `-MaterializeTemporaryExpr {{.*}} 'B14':'P2718R0::B14' xvalue extended by Var {{.*}} '__range1' 'const int (&)[1]'
-  // CHECK-NEXT:  |           `-CXXFunctionalCastExpr {{.*}} 'B14':'P2718R0::B14' functional cast to B14 <NoOp>
-  // CHECK-NEXT:  |             `-InitListExpr {{.*}} 'B14':'P2718R0::B14'
+  // CHECK-NEXT:  |       `-MemberExpr {{.*}} 'const A14' lvalue .a {{.*}}
+  // CHECK-NEXT:  |         `-MaterializeTemporaryExpr {{.*}} 'B14' xvalue extended by Var {{.*}} '__range1' 'const int (&)[1]'
+  // CHECK-NEXT:  |           `-CXXFunctionalCastExpr {{.*}} 'B14' functional cast to B14 <NoOp>
+  // CHECK-NEXT:  |             `-InitListExpr {{.*}} 'B14'
   // CHECK-NEXT:  |               |-IntegerLiteral {{.*}} 'int' 0
-  // CHECK-NEXT:  |               `-CXXDefaultInitExpr {{.*}} 'const A14':'const P2718R0::A14' lvalue has rewritten init
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'const A14':'const P2718R0::A14' lvalue extended by Var {{.*}} '__range1' 'const int (&)[1]'
-  // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const A14':'const P2718R0::A14' <NoOp>
-  // CHECK-NEXT:  |                     `-CXXFunctionalCastExpr {{.*}} 'A14':'P2718R0::A14' functional cast to A14 <NoOp>
-  // CHECK-NEXT:  |                       `-CXXBindTemporaryExpr {{.*}} 'A14':'P2718R0::A14' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                         `-InitListExpr {{.*}} 'A14':'P2718R0::A14'
+  // CHECK-NEXT:  |               `-CXXDefaultInitExpr {{.*}} 'const A14' lvalue has rewritten init
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'const A14' lvalue extended by Var {{.*}} '__range1' 'const int (&)[1]'
+  // CHECK-NEXT:  |                   `-ImplicitCastExpr {{.*}} 'const A14' <NoOp>
+  // CHECK-NEXT:  |                     `-CXXFunctionalCastExpr {{.*}} 'A14' functional cast to A14 <NoOp>
+  // CHECK-NEXT:  |                       `-CXXBindTemporaryExpr {{.*}} 'A14' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                         `-InitListExpr {{.*}} 'A14'
   // CHECK-NEXT:  |                           `-InitListExpr {{.*}} 'int[1]'
   // CHECK-NEXT:  |                             `-IntegerLiteral {{.*}} 'int' 0
   for (auto &&x : B14{0}.a.arr) { exit(0); }
@@ -493,17 +493,17 @@ void test14() {
   // CHECK-NEXT: |-<<<NULL>>>
   // CHECK-NEXT: |-DeclStmt {{.*}}
   // CHECK-NEXT: | `-VarDecl {{.*}} col:19 implicit used __range1 'B14 &&' cinit
-  // CHECK-NEXT: |   `-ExprWithCleanups {{.*}} 'B14':'P2718R0::B14' xvalue
-  // CHECK-NEXT: |     `-MaterializeTemporaryExpr {{.*}} 'B14':'P2718R0::B14' xvalue extended by Var {{.*}} '__range1' 'B14 &&'
-  // CHECK-NEXT: |       `-CXXFunctionalCastExpr {{.*}} 'B14':'P2718R0::B14' functional cast to B14 <NoOp>
-  // CHECK-NEXT: |         `-InitListExpr {{.*}} 'B14':'P2718R0::B14'
+  // CHECK-NEXT: |   `-ExprWithCleanups {{.*}} 'B14' xvalue
+  // CHECK-NEXT: |     `-MaterializeTemporaryExpr {{.*}} 'B14' xvalue extended by Var {{.*}} '__range1' 'B14 &&'
+  // CHECK-NEXT: |       `-CXXFunctionalCastExpr {{.*}} 'B14' functional cast to B14 <NoOp>
+  // CHECK-NEXT: |         `-InitListExpr {{.*}} 'B14'
   // CHECK-NEXT: |           |-IntegerLiteral {{.*}} 'int' 0
-  // CHECK-NEXT: |           `-CXXDefaultInitExpr {{.*}} 'const A14':'const P2718R0::A14' lvalue has rewritten init
-  // CHECK-NEXT: |             `-MaterializeTemporaryExpr {{.*}} 'const A14':'const P2718R0::A14' lvalue extended by Var {{.*}} '__range1' 'B14 &&'
-  // CHECK-NEXT: |               `-ImplicitCastExpr {{.*}} 'const A14':'const P2718R0::A14' <NoOp>
-  // CHECK-NEXT: |                 `-CXXFunctionalCastExpr {{.*}} 'A14':'P2718R0::A14' functional cast to A14 <NoOp>
-  // CHECK-NEXT: |                   `-CXXBindTemporaryExpr {{.*}} 'A14':'P2718R0::A14' (CXXTemporary {{.*}})
-  // CHECK-NEXT: |                     `-InitListExpr {{.*}} 'A14':'P2718R0::A14'
+  // CHECK-NEXT: |           `-CXXDefaultInitExpr {{.*}} 'const A14' lvalue has rewritten init
+  // CHECK-NEXT: |             `-MaterializeTemporaryExpr {{.*}} 'const A14' lvalue extended by Var {{.*}} '__range1' 'B14 &&'
+  // CHECK-NEXT: |               `-ImplicitCastExpr {{.*}} 'const A14' <NoOp>
+  // CHECK-NEXT: |                 `-CXXFunctionalCastExpr {{.*}} 'A14' functional cast to A14 <NoOp>
+  // CHECK-NEXT: |                   `-CXXBindTemporaryExpr {{.*}} 'A14' (CXXTemporary {{.*}})
+  // CHECK-NEXT: |                     `-InitListExpr {{.*}} 'A14'
   // CHECK-NEXT: |                       `-InitListExpr {{.*}} 'int[1]'
   // CHECK-NEXT: |                         `-IntegerLiteral {{.*}} 'int' 0
   for (auto &&x : B14{0}) { exit(0); }

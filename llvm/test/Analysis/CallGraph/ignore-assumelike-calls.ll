@@ -29,7 +29,7 @@
 define internal void @used_by_lifetime() {
 entry:
   %a = alloca i8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   ret void
 }
 
@@ -55,6 +55,6 @@ define internal void @other_cast_intrinsic_use() {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1 immarg)
 declare void @llvm.memset.p1.i64(ptr addrspace(1), i8, i64, i1 immarg)

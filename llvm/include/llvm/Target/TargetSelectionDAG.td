@@ -833,6 +833,14 @@ def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
+def SDTLoopDepMask : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<1>,
+                                   SDTCisSameAs<2, 1>, SDTCisInt<3>,
+                                   SDTCVecEltisVT<0,i1>]>;
+def loop_dependence_war_mask : SDNode<"ISD::LOOP_DEPENDENCE_WAR_MASK",
+                                      SDTLoopDepMask, []>;
+def loop_dependence_raw_mask : SDNode<"ISD::LOOP_DEPENDENCE_RAW_MASK",
+                                      SDTLoopDepMask, []>;
+
 // vector_extract/vector_insert are similar to extractelt/insertelt but allow
 // types that require promotion (a 16i8 extract where i8 is not a legal type so
 // uses i32 for example). extractelt/insertelt are preferred where the element
@@ -1147,6 +1155,9 @@ def fadd_contract : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
   return N->getFlags().hasAllowContract();
 }]>;
 
+def fsub_contract : PatFrag<(ops node:$a, node:$b), (fsub node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
 
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;

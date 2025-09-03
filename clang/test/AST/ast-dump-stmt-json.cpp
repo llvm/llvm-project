@@ -224,7 +224,55 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   "type": {
 // CHECK-NEXT:    "qualType": "void ()"
 // CHECK-NEXT:   }
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "FunctionDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 125,
+// CHECK-NEXT:     "line": 4,
+// CHECK-NEXT:     "col": 6,
+// CHECK-NEXT:     "tokLen": 8
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 120,
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "tokLen": 4
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 137,
+// CHECK-NEXT:      "col": 18,
+// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isUsed": true,
+// CHECK-NEXT:    "name": "function",
+// CHECK-NEXT:    "mangledName": "_ZN1n8functionEv",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "void ()"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "CompoundStmt",
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 136,
+// CHECK-NEXT:        "col": 17,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 137,
+// CHECK-NEXT:        "col": 18,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       }
+// CHECK-NEXT:      }
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
@@ -279,7 +327,37 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   "type": {
 // CHECK-NEXT:    "qualType": "int"
 // CHECK-NEXT:   }
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "VarDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 143,
+// CHECK-NEXT:     "line": 5,
+// CHECK-NEXT:     "col": 5,
+// CHECK-NEXT:     "tokLen": 8
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 139,
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "tokLen": 3
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 143,
+// CHECK-NEXT:      "col": 5,
+// CHECK-NEXT:      "tokLen": 8
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isUsed": true,
+// CHECK-NEXT:    "name": "Variable",
+// CHECK-NEXT:    "mangledName": "_ZN1n8VariableE",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    }
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
@@ -1869,6 +1947,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
+
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {},
@@ -1935,6 +2014,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
+
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
@@ -2086,6 +2166,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
+
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {},
@@ -2152,6 +2233,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
+
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionTemplateDecl",

@@ -805,7 +805,7 @@ define amdgpu_kernel void @atomic_and_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -879,7 +879,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -962,7 +962,7 @@ define amdgpu_kernel void @atomic_and_i32_addr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1054,7 +1054,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1114,7 +1114,7 @@ define amdgpu_kernel void @atomic_and_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile and ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1183,7 +1183,7 @@ define amdgpu_kernel void @atomic_and_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile and ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1261,7 +1261,7 @@ define amdgpu_kernel void @atomic_and_i32_addr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile and ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1348,7 +1348,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile and ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile and ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1413,7 +1413,7 @@ define amdgpu_kernel void @atomic_sub_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1487,7 +1487,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1570,7 +1570,7 @@ define amdgpu_kernel void @atomic_sub_i32_addr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1662,7 +1662,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1722,7 +1722,7 @@ define amdgpu_kernel void @atomic_sub_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile sub ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1791,7 +1791,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile sub ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -1869,7 +1869,7 @@ define amdgpu_kernel void @atomic_sub_i32_addr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile sub ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -1956,7 +1956,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile sub ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile sub ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2017,7 +2017,7 @@ define amdgpu_kernel void @atomic_max_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2090,7 +2090,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2169,7 +2169,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2260,7 +2260,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2316,7 +2316,7 @@ define amdgpu_kernel void @atomic_max_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile max ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2384,7 +2384,7 @@ define amdgpu_kernel void @atomic_max_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile max ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2458,7 +2458,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile max ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2544,7 +2544,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile max ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile max ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2605,7 +2605,7 @@ define amdgpu_kernel void @atomic_umax_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2678,7 +2678,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr %out, ptr %out2, i32 %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2757,7 +2757,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr %out, i32 %in, i64 
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2848,7 +2848,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr %out, ptr %out2
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -2904,7 +2904,7 @@ define amdgpu_kernel void @atomic_umax_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile umax ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -2972,7 +2972,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile umax ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3046,7 +3046,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64(ptr %out, i32 %in, i64 %index)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile umax ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3132,7 +3132,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr %out, ptr %out2, i32 %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile umax ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umax ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3193,7 +3193,7 @@ define amdgpu_kernel void @atomic_min_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3266,7 +3266,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3345,7 +3345,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3436,7 +3436,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3492,7 +3492,7 @@ define amdgpu_kernel void @atomic_min_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile min ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3560,7 +3560,7 @@ define amdgpu_kernel void @atomic_min_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile min ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3634,7 +3634,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile min ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3720,7 +3720,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile min ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile min ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3781,7 +3781,7 @@ define amdgpu_kernel void @atomic_umin_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -3854,7 +3854,7 @@ define amdgpu_kernel void @atomic_umin_i32_ret_offset(ptr %out, ptr %out2, i32 %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -3933,7 +3933,7 @@ define amdgpu_kernel void @atomic_umin_i32_addr64_offset(ptr %out, i32 %in, i64 
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4024,7 +4024,7 @@ define amdgpu_kernel void @atomic_umin_i32_ret_addr64_offset(ptr %out, ptr %out2
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %gep, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4080,7 +4080,7 @@ define amdgpu_kernel void @atomic_umin_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile umin ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4148,7 +4148,7 @@ define amdgpu_kernel void @atomic_umin_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile umin ptr %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %out, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4222,7 +4222,7 @@ define amdgpu_kernel void @atomic_umin_i32_addr64(ptr %out, i32 %in, i64 %index)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile umin ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4308,7 +4308,7 @@ define amdgpu_kernel void @atomic_umin_i32_ret_addr64(ptr %out, ptr %out2, i32 %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile umin ptr %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw volatile umin ptr %ptr, i32 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4373,7 +4373,7 @@ define amdgpu_kernel void @atomic_or_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4447,7 +4447,7 @@ define amdgpu_kernel void @atomic_or_i32_ret_offset(ptr %out, ptr %out2, i32 %in
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4530,7 +4530,7 @@ define amdgpu_kernel void @atomic_or_i32_addr64_offset(ptr %out, i32 %in, i64 %i
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4622,7 +4622,7 @@ define amdgpu_kernel void @atomic_or_i32_ret_addr64_offset(ptr %out, ptr %out2, 
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4682,7 +4682,7 @@ define amdgpu_kernel void @atomic_or_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile or ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4751,7 +4751,7 @@ define amdgpu_kernel void @atomic_or_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile or ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -4829,7 +4829,7 @@ define amdgpu_kernel void @atomic_or_i32_addr64(ptr %out, i32 %in, i64 %index) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile or ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -4916,7 +4916,7 @@ define amdgpu_kernel void @atomic_or_i32_ret_addr64(ptr %out, ptr %out2, i32 %in
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile or ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile or ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -5653,7 +5653,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i32_offset(ptr %out, i32 %in, i32 %old
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
+  %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -6297,7 +6297,7 @@ define amdgpu_kernel void @atomic_xor_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -6371,7 +6371,7 @@ define amdgpu_kernel void @atomic_xor_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -6454,7 +6454,7 @@ define amdgpu_kernel void @atomic_xor_i32_addr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -6546,7 +6546,7 @@ define amdgpu_kernel void @atomic_xor_i32_ret_addr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -6606,7 +6606,7 @@ define amdgpu_kernel void @atomic_xor_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile xor ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -6675,7 +6675,7 @@ define amdgpu_kernel void @atomic_xor_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile xor ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -6753,7 +6753,7 @@ define amdgpu_kernel void @atomic_xor_i32_addr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile xor ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -6840,7 +6840,7 @@ define amdgpu_kernel void @atomic_xor_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile xor ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile xor ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -9126,7 +9126,7 @@ define amdgpu_kernel void @atomic_inc_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9190,7 +9190,7 @@ define amdgpu_kernel void @atomic_inc_i32_max_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 1023
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9258,7 +9258,7 @@ define amdgpu_kernel void @atomic_inc_i32_max_offset_p1(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 1024
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9332,7 +9332,7 @@ define amdgpu_kernel void @atomic_inc_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -9415,7 +9415,7 @@ define amdgpu_kernel void @atomic_inc_i32_incr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9507,7 +9507,7 @@ define amdgpu_kernel void @atomic_inc_i32_ret_incr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -9567,7 +9567,7 @@ define amdgpu_kernel void @atomic_inc_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile uinc_wrap ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9636,7 +9636,7 @@ define amdgpu_kernel void @atomic_inc_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile uinc_wrap ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -9714,7 +9714,7 @@ define amdgpu_kernel void @atomic_inc_i32_incr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile uinc_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9801,7 +9801,7 @@ define amdgpu_kernel void @atomic_inc_i32_ret_incr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile uinc_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile uinc_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -9866,7 +9866,7 @@ define amdgpu_kernel void @atomic_dec_i32_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9930,7 +9930,7 @@ define amdgpu_kernel void @atomic_dec_i32_max_offset(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 1023
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -9998,7 +9998,7 @@ define amdgpu_kernel void @atomic_dec_i32_max_offset_p1(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 1024
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -10072,7 +10072,7 @@ define amdgpu_kernel void @atomic_dec_i32_ret_offset(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -10155,7 +10155,7 @@ define amdgpu_kernel void @atomic_dec_i32_decr64_offset(ptr %out, i32 %in, i64 %
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -10247,7 +10247,7 @@ define amdgpu_kernel void @atomic_dec_i32_ret_decr64_offset(ptr %out, ptr %out2,
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %gep, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -10307,7 +10307,7 @@ define amdgpu_kernel void @atomic_dec_i32(ptr %out, i32 %in) {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile udec_wrap ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -10376,7 +10376,7 @@ define amdgpu_kernel void @atomic_dec_i32_ret(ptr %out, ptr %out2, i32 %in) {
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 entry:
-  %val = atomicrmw volatile udec_wrap ptr %out, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %out, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -10454,7 +10454,7 @@ define amdgpu_kernel void @atomic_dec_i32_decr64(ptr %out, i32 %in, i64 %index) 
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile udec_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
 
@@ -10541,7 +10541,7 @@ define amdgpu_kernel void @atomic_dec_i32_ret_decr64(ptr %out, ptr %out2, i32 %i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i64 %index
-  %val = atomicrmw volatile udec_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst
+  %val = atomicrmw volatile udec_wrap ptr %ptr, i32 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i32 %val, ptr %out2
   ret void
 }
@@ -10851,3 +10851,5 @@ define amdgpu_kernel void @atomic_load_bf16(ptr %in, ptr %out) {
   store bfloat %val, ptr %out
   ret void
 }
+
+!0 = !{}

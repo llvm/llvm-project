@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -show-mc-encoding < %s | FileCheck %s
 
 ;;;==========================================================================;;;
 ;;; MUBUF LOAD TESTS
