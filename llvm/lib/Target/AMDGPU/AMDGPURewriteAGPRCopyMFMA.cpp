@@ -14,6 +14,10 @@
 /// MFMA opcode.
 ///
 /// TODO:
+/// - Handle rewrites of phis. This must be more careful than normal about the
+///   reassignment. We do not want to introduce an AGPR-to-AGPR copy inside of a
+///   loop, so it depends on the exact assignment of the copy.
+///
 ///  - Update LiveIntervals incrementally instead of recomputing from scratch
 ///
 //===----------------------------------------------------------------------===//
@@ -60,6 +64,25 @@ public:
     return TII.isMAI(MI) && AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode()) != -1;
   }
 
+  /// Find AV_* registers assigned to AGPRs (or virtual registers which were
+  /// already required to be AGPR).
+  ///
+  /// \return the assigned physical register that \p VReg is assigned to if it
+  /// is an AGPR, otherwise MCRegister().
+  MCRegister getAssignedAGPR(Register VReg) const {
+    MCRegister PhysReg = VRM.getPhys(VReg);
+    if (!PhysReg)
+      return MCRegister();
+
+    // If this is an AV register, we have to check if the actual assignment is
+    // to an AGPR
+    const TargetRegisterClass *AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
+    return TRI.isAGPRClass(AssignedRC) ? PhysReg : MCRegister();
+  }
+
+  bool tryReassigningMFMAChain(MachineInstr &MFMA, Register MFMAHintReg,
+                               MCPhysReg PhysRegHint) const;
+
   /// Compute the register class constraints based on the uses of \p Reg,
   /// excluding MFMA uses from which can be rewritten to change the register
   /// class constraint. This should be nearly identical to
@@ -74,6 +97,8 @@ public:
       Register Reg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
       SmallSetVector<Register, 4> &RewriteRegs) const;
 
+  bool tryFoldCopiesToAGPR(Register VReg, MCRegister AssignedAGPR) const;
+  bool tryFoldCopiesFromAGPR(Register VReg, MCRegister AssignedAGPR) const;
   bool run(MachineFunction &MF) const;
 };
 
@@ -154,6 +179,87 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
   return true;
 }
 
+bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
+    MachineInstr &MFMA, Register MFMAHintReg, MCPhysReg PhysRegHint) const {
+  // src2 and dst have the same physical class constraint; try to preserve
+  // the original src2 subclass if one were to exist.
+  SmallVector<MachineInstr *, 4> RewriteCandidates = {&MFMA};
+  SmallSetVector<Register, 4> RewriteRegs;
+
+  // Make sure we reassign the MFMA we found the copy from first. We want
+  // to ensure dst ends up in the physreg we were originally copying to.
+  RewriteRegs.insert(MFMAHintReg);
+
+  // We've found av = COPY (MFMA) (or MFMA (v = COPY av)) and need to verify
+  // that we can trivially rewrite src2 to use the new AGPR. If we can't
+  // trivially replace it, we're going to induce as many copies as we would have
+  // emitted in the first place, as well as need to assign another register, and
+  // need to figure out where to put them. The live range splitting is smarter
+  // than anything we're doing here, so trust it did something reasonable.
+  //
+  // Note recomputeRegClassExceptRewritable will consider the constraints of
+  // this MFMA's src2 as well as the src2/dst of any transitive MFMA users.
+  if (!recomputeRegClassExceptRewritable(MFMAHintReg, RewriteCandidates,
+                                         RewriteRegs)) {
+    LLVM_DEBUG(dbgs() << "Could not recompute the regclass of dst reg "
+                      << printReg(MFMAHintReg, &TRI) << '\n');
+    return false;
+  }
+
+  // If src2 and dst are different registers, we need to also reassign the
+  // input to an available AGPR if it is compatible with all other uses.
+  //
+  // If we can't reassign it, we'd need to introduce a different copy
+  // which is likely worse than the copy we'd be saving.
+  //
+  // It's likely that the MFMA is used in sequence with other MFMAs; if we
+  // cannot migrate the full use/def chain of MFMAs, we would need to
+  // introduce intermediate copies somewhere. So we only make the
+  // transform if all the interfering MFMAs can also be migrated. Collect
+  // the set of rewritable MFMAs and check if we can assign an AGPR at
+  // that point.
+  //
+  // If any of the MFMAs aren't reassignable, we give up and rollback to
+  // the original register assignments.
+
+  using RecoloringStack =
+      SmallVector<std::pair<const LiveInterval *, MCRegister>, 8>;
+  RecoloringStack TentativeReassignments;
+
+  for (Register RewriteReg : RewriteRegs) {
+    LiveInterval &LI = LIS.getInterval(RewriteReg);
+    TentativeReassignments.push_back({&LI, VRM.getPhys(RewriteReg)});
+    LRM.unassign(LI);
+  }
+
+  if (!attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
+    // Roll back the register assignments to the original state.
+    for (auto [LI, OldAssign] : TentativeReassignments) {
+      if (VRM.hasPhys(LI->reg()))
+        LRM.unassign(*LI);
+      LRM.assign(*LI, OldAssign);
+    }
+
+    return false;
+  }
+
+  // Fixup the register classes of the virtual registers now that we've
+  // committed to the reassignments.
+  for (Register InterferingReg : RewriteRegs) {
+    const TargetRegisterClass *EquivalentAGPRRegClass =
+        TRI.getEquivalentAGPRClass(MRI.getRegClass(InterferingReg));
+    MRI.setRegClass(InterferingReg, EquivalentAGPRRegClass);
+  }
+
+  for (MachineInstr *RewriteCandidate : RewriteCandidates) {
+    int NewMFMAOp =
+        AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
+    RewriteCandidate->setDesc(TII.get(NewMFMAOp));
+  }
+
+  return true;
+}
+
 /// Attempt to reassign the registers in \p InterferingRegs to be AGPRs, with a
 /// preference to use \p PhysReg first. Returns false if the reassignments
 /// cannot be trivially performed.
@@ -206,6 +312,77 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::attemptReassignmentsToAGPR(
   return true;
 }
 
+/// Identify copies that look like:
+/// %vdst:vgpr = V_MFMA_.. %src0:av, %src1:av, %src2:vgpr
+/// %agpr = COPY %vgpr
+///
+/// Then try to replace the transitive uses of %src2 and %vdst with the AGPR
+/// versions of the MFMA. This should cover the common case.
+bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesToAGPR(
+    Register VReg, MCRegister AssignedAGPR) const {
+  bool MadeChange = false;
+  for (MachineInstr &UseMI : MRI.def_instructions(VReg)) {
+    if (!UseMI.isCopy())
+      continue;
+
+    Register CopySrcReg = UseMI.getOperand(1).getReg();
+    if (!CopySrcReg.isVirtual())
+      continue;
+
+    // TODO: Handle loop phis copied to AGPR. e.g.
+    //
+    // loop:
+    //   %phi:vgpr = COPY %mfma:vgpr
+    //   %mfma:vgpr = V_MFMA_xxx_vgprcd_e64 %a, %b, %phi
+    //   s_cbranch_vccnz loop
+    //
+    // endloop:
+    //   %agpr = mfma
+    //
+    // We need to be sure that %phi is assigned to the same physical register as
+    // %mfma, or else we will just be moving copies into the loop.
+
+    for (MachineInstr &CopySrcDefMI : MRI.def_instructions(CopySrcReg)) {
+      if (isRewriteCandidate(CopySrcDefMI) &&
+          tryReassigningMFMAChain(
+              CopySrcDefMI, CopySrcDefMI.getOperand(0).getReg(), AssignedAGPR))
+        MadeChange = true;
+    }
+  }
+
+  return MadeChange;
+}
+
+/// Identify copies that look like:
+/// %src:vgpr = COPY %src:agpr
+/// %vdst:vgpr = V_MFMA_... %src0:av, %src1:av, %src:vgpr
+///
+/// Then try to replace the transitive uses of %src2 and %vdst with the AGPR
+/// versions of the MFMA. This should cover rarer cases, and will generally be
+/// redundant with tryFoldCopiesToAGPR.
+bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
+    Register VReg, MCRegister AssignedAGPR) const {
+  bool MadeChange = false;
+  for (MachineInstr &UseMI : MRI.use_instructions(VReg)) {
+    if (!UseMI.isCopy())
+      continue;
+
+    Register CopyDstReg = UseMI.getOperand(0).getReg();
+    if (!CopyDstReg.isVirtual())
+      continue;
+
+    for (MachineInstr &CopyUseMI : MRI.use_instructions(CopyDstReg)) {
+      if (isRewriteCandidate(CopyUseMI)) {
+        if (tryReassigningMFMAChain(CopyUseMI, CopyDstReg,
+                                    VRM.getPhys(CopyDstReg)))
+          MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
@@ -222,124 +399,14 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register VReg = Register::index2VirtReg(I);
-    Register PhysReg = VRM.getPhys(VReg);
-    if (!PhysReg)
+    MCRegister AssignedAGPR = getAssignedAGPR(VReg);
+    if (!AssignedAGPR)
       continue;
 
-    // Find AV_* registers assigned to AGPRs.
-    const TargetRegisterClass *VirtRegRC = MRI.getRegClass(VReg);
-    if (!TRI.hasAGPRs(VirtRegRC))
-      continue;
-
-    const TargetRegisterClass *AssignedRC = VirtRegRC;
-    if (TRI.hasVGPRs(VirtRegRC)) {
-      // If this is an AV register, we have to check if the actual assignment is
-      // to an AGPR
-      AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
-      if (!TRI.isAGPRClass(AssignedRC))
-        continue;
-    }
-
-    LiveInterval &LI = LIS.getInterval(VReg);
-
-    for (VNInfo *VNI : LI.vnis()) {
-      if (VNI->isPHIDef() || VNI->isUnused())
-        continue;
-
-      MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
-      if (!DefMI || !DefMI->isCopy())
-        continue;
-
-      Register MFMADstReg = DefMI->getOperand(1).getReg();
-      if (!MFMADstReg.isVirtual())
-        continue;
-
-      LiveInterval &CopySrcLI = LIS.getInterval(MFMADstReg);
-      LiveQueryResult LRQ = CopySrcLI.Query(VNI->def.getRegSlot());
-      MachineInstr *MFMA = LIS.getInstructionFromIndex(LRQ.valueIn()->def);
-      if (!MFMA || !isRewriteCandidate(*MFMA))
-        continue;
-
-      // src2 and dst have the same physical class constraint; try to preserve
-      // the original src2 subclass if one were to exist.
-      SmallVector<MachineInstr *, 4> RewriteCandidates = {MFMA};
-      SmallSetVector<Register, 4> RewriteRegs;
-
-      // Make sure we reassign the MFMA we found the copy from first. We want
-      // to ensure dst ends up in the physreg we were originally copying to.
-      RewriteRegs.insert(MFMADstReg);
-
-      // We've found av = COPY (MFMA), and need to verify that we can trivially
-      // rewrite src2 to use the new AGPR. If we can't trivially replace it,
-      // we're going to induce as many copies as we would have emitted in the
-      // first place, as well as need to assign another register, and need to
-      // figure out where to put them. The live range splitting is smarter than
-      // anything we're doing here, so trust it did something reasonable.
-      //
-      // Note recomputeRegClassExceptRewritable will consider the constraints of
-      // this MFMA's src2 as well as the src2/dst of any transitive MFMA users.
-      if (!recomputeRegClassExceptRewritable(MFMADstReg, RewriteCandidates,
-                                             RewriteRegs)) {
-        LLVM_DEBUG(dbgs() << "Could not recompute the regclass of dst reg "
-                          << printReg(MFMADstReg, &TRI) << '\n');
-        continue;
-      }
-
-      // If src2 and dst are different registers, we need to also reassign the
-      // input to an available AGPR if it is compatible with all other uses.
-      //
-      // If we can't reassign it, we'd need to introduce a different copy
-      // which is likely worse than the copy we'd be saving.
-      //
-      // It's likely that the MFMA is used in sequence with other MFMAs; if we
-      // cannot migrate the full use/def chain of MFMAs, we would need to
-      // introduce intermediate copies somewhere. So we only make the
-      // transform if all the interfering MFMAs can also be migrated. Collect
-      // the set of rewritable MFMAs and check if we can assign an AGPR at
-      // that point.
-      //
-      // If any of the MFMAs aren't reassignable, we give up and rollback to
-      // the original register assignments.
-
-      using RecoloringStack =
-          SmallVector<std::pair<const LiveInterval *, MCRegister>, 8>;
-      RecoloringStack TentativeReassignments;
-
-      for (Register RewriteReg : RewriteRegs) {
-        LiveInterval &LI = LIS.getInterval(RewriteReg);
-        TentativeReassignments.push_back({&LI, VRM.getPhys(RewriteReg)});
-        LRM.unassign(LI);
-      }
-
-      if (!attemptReassignmentsToAGPR(RewriteRegs, PhysReg)) {
-        // Roll back the register assignments to the original state.
-        for (auto [LI, OldAssign] : TentativeReassignments) {
-          if (VRM.hasPhys(LI->reg()))
-            LRM.unassign(*LI);
-          LRM.assign(*LI, OldAssign);
-        }
-
-        continue;
-      }
-
-      // Fixup the register classes of the virtual registers now that we've
-      // committed to the reassignments.
-      for (Register InterferingReg : RewriteRegs) {
-        const TargetRegisterClass *EquivalentAGPRRegClass =
-            TRI.getEquivalentAGPRClass(MRI.getRegClass(InterferingReg));
-        MRI.setRegClass(InterferingReg, EquivalentAGPRRegClass);
-      }
-
-      for (MachineInstr *RewriteCandidate : RewriteCandidates) {
-        int NewMFMAOp =
-            AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
-        RewriteCandidate->setDesc(TII.get(NewMFMAOp));
-      }
-
-      // We likely left an identity copy behind after assignment; let
-      // VirtRegRewriter deal with it later.
+    if (tryFoldCopiesToAGPR(VReg, AssignedAGPR))
       MadeChange = true;
-    }
+    if (tryFoldCopiesFromAGPR(VReg, AssignedAGPR))
+      MadeChange = true;
   }
 
   return MadeChange;
