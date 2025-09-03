@@ -2732,10 +2732,13 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
                                    const VariableGroupsManager &, FixItList &&,
                                    const Decl *,
                                    const FixitStrategy &) override {}
-    bool isSafeBufferOptOut(const SourceLocation &) const override {
+    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
-    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
       return false;
     }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
@@ -2746,10 +2749,6 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
       return "";
     }
   };
-
-  void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
-                                          bool IsRelatedToDecl,
-                                          ASTContext &Ctx) override {}
 
   FixableGadgetList FixableGadgets;
   WarningGadgetList WarningGadgets;

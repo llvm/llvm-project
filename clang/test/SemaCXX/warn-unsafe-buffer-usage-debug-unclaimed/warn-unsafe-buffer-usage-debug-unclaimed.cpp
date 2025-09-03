@@ -43,8 +43,7 @@ public:
 
 void basic_unique_ptr() {
   std::unique_ptr<int[]> p1;
-  p1[0];  // expected-warning{{direct access using operator[] on
-          // std::unique_ptr<T[]> is unsafe due to lack of bounds checking}}
+  p1[0];  // expected-warning{{direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking}}
 }
 
 // CHECK: Root # 1
