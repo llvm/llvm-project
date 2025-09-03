@@ -7,12 +7,52 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
 
-; FIXME: crash
-; define i32 @testmswh(half %x) nounwind {
-; entry:
-;   %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
-;   ret i32 %0
-; }
+define i32 @testmswh(half %x) nounwind {
+; X86-NOSSE-LABEL: testmswh:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    pushl %eax
+; X86-NOSSE-NEXT:    calll __extendhfsf2
+; X86-NOSSE-NEXT:    addl $4, %esp
+; X86-NOSSE-NEXT:    fistpl (%esp)
+; X86-NOSSE-NEXT:    movl (%esp), %eax
+; X86-NOSSE-NEXT:    popl %ecx
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: testmswh:
+; X86-SSE2:       # %bb.0: # %entry
+; X86-SSE2-NEXT:    subl $8, %esp
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstps (%esp)
+; X86-SSE2-NEXT:    calll rintf
+; X86-SSE2-NEXT:    fstps (%esp)
+; X86-SSE2-NEXT:    calll __truncsfhf2
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    cvttss2si {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    addl $8, %esp
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE-LABEL: testmswh:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    pushq %rax
+; X64-SSE-NEXT:    callq __extendhfsf2@PLT
+; X64-SSE-NEXT:    callq rintf@PLT
+; X64-SSE-NEXT:    callq __truncsfhf2@PLT
+; X64-SSE-NEXT:    callq __extendhfsf2@PLT
+; X64-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X64-SSE-NEXT:    popq %rcx
+; X64-SSE-NEXT:    retq
+entry:
+  %0 = tail call i32 @llvm.lrint.i32.f16(half %x)
+  ret i32 %0
+}
 
 define i32 @testmsws(float %x) nounwind {
 ; X86-NOSSE-LABEL: testmsws:
