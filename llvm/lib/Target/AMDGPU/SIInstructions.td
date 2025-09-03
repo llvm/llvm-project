@@ -2496,6 +2496,22 @@ def : AMDGPUPatIgnoreCopies <
                    (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
+// (y | ~x)
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<or> i32:$y, (not_oneuse i32:$x)),
+  (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, (i32 -1))
+>;
+
+// 64-bit version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<or> i64:$y, (not_oneuse i64:$x)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
+                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)), (i32 -1)), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
+                   (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)), (i32 -1)), sub1)
+>;
+
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
 def : AMDGPUPatIgnoreCopies <
