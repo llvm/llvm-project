@@ -1752,7 +1752,7 @@ def EmitC_WhileOp : EmitC_Op<"while",
     ```mlir
     emitc.while {
       // Condition region (must yield i1)
-      %condition = emitc.expression : i1 {
+      %condition = emitc.expression : () -> i1 {
         // Condition computation...
         %result = ... : i1  // Last operation must produce i1
         emitc.yield %result : i1
@@ -1774,7 +1774,7 @@ def EmitC_WhileOp : EmitC_Op<"while",
       %step = emitc.literal "1" : i32
 
       emitc.while {
-        %condition = emitc.expression : i1 {
+        %condition = emitc.expression %counter, %end : (!emitc.lvalue<i32>, i32) -> i1 {
           %current = emitc.load %counter : !emitc.lvalue<i32>
           %cmp_res = emitc.cmp lt, %current, %end : (i32, i32) -> i1
           emitc.yield %cmp_res : i1
@@ -1857,7 +1857,7 @@ def EmitC_DoOp : EmitC_Op<"do",
       // Loop body operations...
     } while {
       // Condition region (must yield i1)
-      %condition = emitc.expression : i1 {
+      %condition = emitc.expression : () -> i1 {
         // Condition computation...
         %result = ... : i1  // Last operation must produce i1
         emitc.yield %result : i1
@@ -1884,7 +1884,7 @@ def EmitC_DoOp : EmitC_Op<"do",
         %new_val = emitc.add %val, %step : (i32, i32) -> i32
         "emitc.assign"(%counter, %new_val) : (!emitc.lvalue<i32>, i32) -> ()
       } while {
-        %condition = emitc.expression : i1 {
+        %condition = emitc.expression %counter, %end : (!emitc.lvalue<i32>, i32) -> i1 {
           %current = emitc.load %counter : !emitc.lvalue<i32>
           %cmp_res = emitc.cmp lt, %current, %end : (i32, i32) -> i1
           emitc.yield %cmp_res : i1
