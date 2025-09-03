@@ -1545,7 +1545,7 @@ void __kmp_fini_memkind() {
 #endif
 }
 
-#if KMP_USE_HWLOC
+#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
 static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
 #if HWLOC_API_VERSION >= 0x00020300
   const hwloc_topology_support *support;
@@ -1563,6 +1563,7 @@ static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
   return false;
 #endif
 }
+#endif
 
 void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
                                 hwloc_membind_policy_t policy) {
