@@ -64,6 +64,8 @@ print(
 //--- import_std.compile.pass.mm
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
+// REQUIRES: clang-modules-build
+
 @import std;
 """
 )
