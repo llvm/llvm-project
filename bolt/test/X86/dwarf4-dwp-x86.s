@@ -12,7 +12,7 @@ int main() { return callee(0); }
 #--- callee.cpp
 int callee(int x) { return x; }
 #--- gen
-clang++ -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-main.dwo -S main.cpp -v -o -
+clang++ -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-main.dwo -S main.cpp -o -
 echo '#--- callee.s'
 clang++ -c -g -gdwarf-4 -gsplit-dwarf -fdebug-compilation-dir=. -Xclang -split-dwarf-file -Xclang main.exe-callee.dwo -S callee.cpp -o -
 #--- main.s
