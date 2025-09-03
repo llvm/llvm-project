@@ -121,7 +121,7 @@ void DebugCounter::push_back(const std::string &Val) {
   auto CounterPair = StringRef(Val).split('=');
   if (CounterPair.second.empty()) {
     errs() << "DebugCounter Error: " << Val << " does not have an = in it\n";
-    return;
+    exit(1);
   }
   StringRef CounterName = CounterPair.first;
 
