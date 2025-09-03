@@ -1799,7 +1799,7 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   // type may provide more information to later folds, and the smaller logic
   // instruction may be cheaper (particularly in the case of vectors).
   Value *X;
-  auto& DL = IC.getDataLayout();
+  auto &DL = IC.getDataLayout();
   if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
     if (Constant *TruncC =
             getLosslessInvCast(C, SrcTy, Instruction::ZExt, DL)) {
