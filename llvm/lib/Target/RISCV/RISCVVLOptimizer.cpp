@@ -1413,44 +1413,21 @@ static bool isTupleInsertInstr(const MachineInstr &MI,
     return false;
 
   const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
-  // Check whether it was lowered with the correct subreg index.
+  if (!RISCVRI::isVRegClass(DstRC->TSFlags))
+    return false;
+  unsigned NF = RISCVRI::getNF(DstRC->TSFlags);
+  if (NF < 2)
+    return false;
+
+  // Check whether INSERT_SUBREG was lowered with the correct subreg index.
+  auto VLMul = RISCVRI::getLMul(DstRC->TSFlags);
+  [[maybe_unused]] auto [LMul, IsFractional] = RISCVVType::decodeVLMUL(VLMul);
+  assert(!IsFractional && "unexpected LMUL for tuple register classes");
   [[maybe_unused]] const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   [[maybe_unused]] unsigned SubRegIdx = MI.getOperand(3).getImm();
-  switch (DstRC->getID()) {
-  case RISCV::VRN2M1RegClassID:
-  case RISCV::VRN2M1NoV0RegClassID:
-  case RISCV::VRN3M1RegClassID:
-  case RISCV::VRN3M1NoV0RegClassID:
-  case RISCV::VRN4M1RegClassID:
-  case RISCV::VRN4M1NoV0RegClassID:
-  case RISCV::VRN5M1RegClassID:
-  case RISCV::VRN5M1NoV0RegClassID:
-  case RISCV::VRN6M1RegClassID:
-  case RISCV::VRN6M1NoV0RegClassID:
-  case RISCV::VRN7M1RegClassID:
-  case RISCV::VRN7M1NoV0RegClassID:
-  case RISCV::VRN8M1RegClassID:
-  case RISCV::VRN8M1NoV0RegClassID:
-    assert(TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock &&
-           "unexpected subreg index for VRM1 sub-register");
-    return true;
-  case RISCV::VRN2M2RegClassID:
-  case RISCV::VRN2M2NoV0RegClassID:
-  case RISCV::VRN3M2RegClassID:
-  case RISCV::VRN3M2NoV0RegClassID:
-  case RISCV::VRN4M2RegClassID:
-  case RISCV::VRN4M2NoV0RegClassID:
-    assert(TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * 2 &&
-           "unexpected subreg index for VRM2 sub-register");
-    return true;
-  case RISCV::VRN2M4RegClassID:
-  case RISCV::VRN2M4NoV0RegClassID:
-    assert(TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * 4 &&
-           "unexpected subreg index for VRM4 sub-register");
-    return true;
-  default:
-    return false;
-  }
+  assert(TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * LMul &&
+         "unexpected subreg index of tuple register class");
+  return true;
 }
 
 static bool isSegmentedStoreInstr(const MachineInstr &MI) {
