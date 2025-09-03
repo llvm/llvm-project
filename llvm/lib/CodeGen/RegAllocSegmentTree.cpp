@@ -29,6 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/STLExtras.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -80,6 +81,11 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   // 初始化RegAllocBase
   auto &LRM = getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   init(*VRM, *LIS, LRM);
+
+  // 防呆：此時 MRI 已在 init() 裡設為成員指標
+  assert(this->MF && LIS && VRM && MRI &&
+       "RA pointers must be initialized before allocation");
+  assert(VRegSpiller && "Spiller must be created before allocation");
 
   // 找到需要分配的虚拟寄存器区间
   std::vector<LiveInterval*> VRegsToAlloc;
@@ -221,7 +227,16 @@ void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
   PhysRegSegmentTrees.clear();
   PhysRegSegmentTrees.resize(NumPhysRegs);
 
-  MachineRegisterInfo &MRI = MF->getRegInfo();
+  PhysRegIntervals.clear();
+  PhysRegIntervals.assign(NumPhysRegs, {});
+
+  // ★ 初始化座標與 lazy 線段樹容器（每個 physreg 一份）
+  PRCoords.clear();
+  PRCoords.assign(NumPhysRegs, {});
+  PRTree.clear();
+  PRTree.assign(NumPhysRegs, {});
+
+  this->MRI = &MF->getRegInfo();
 
   // 2. 為每個暫存器類別初始化線段樹
   //    這是一個簡化的示例。實際實現中，您需要遍歷所有可分配的物理暫存器
@@ -274,6 +289,9 @@ void RegAllocSegmentTree::allocatePhysRegs() {
 }
 
 unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
+  assert(MF && LIS && VRM && MRI &&
+         "RA pointers must be initialized before allocation (tryAllocateRegister)");
+  
   LLVM_DEBUG(dbgs() << "Trying to allocate register for virtreg " << VirtReg.reg() << "\n");
   
   // 1. 獲取此虛擬暫存器的暫存器類別
@@ -317,24 +335,68 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
 }
 
 bool RegAllocSegmentTree::isPhysRegAvailable(unsigned PhysReg,
-                                                      const LiveInterval &VirtReg) {
-  // 检查物理寄存器编号是否有效
-  if (PhysReg == 0 || PhysReg >= PhysRegSegmentTrees.size()) {
-    return false;
-  }
-  
-  // 使用線段樹查詢：對於VirtReg的每個段，查詢PhysReg的線段樹是否有重疊
-  // 這是一個簡化的實現思路
-  for (const LiveInterval::Segment &Seg : VirtReg) {
-    SlotIndex Start = Seg.start;
-    SlotIndex End = Seg.end;
+                                             const LiveInterval &LI) {
+  if (PhysReg == 0) return false;
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
 
-    // 查詢線段樹：在[Start, End)區間內，該物理暫存器是否已被占用
-    if (!querySegmentTreeForRange(PhysReg, Start, End)) {
-      return false; // 發現重疊，該物理暫存器不可用
+  for (MCRegAliasIterator AI(PhysReg, TRI, /*IncludeSelf=*/true); AI.isValid(); ++AI) {
+    unsigned A = *AI;
+    // 對每個待查 segment 先確保座標，避免端點不在 coords 造成誤判
+    for (const auto &Seg : LI) {
+      ensureCoordsAndTree(A, Seg.start, Seg.end);
+      const auto &coords = PRCoords[A];
+      const auto &tree   = PRTree[A];
+      if (coords.size() < 2 || tree.empty()) continue;
+
+      unsigned l = coordIndex(A, Seg.start);
+      unsigned r = coordIndex(A, Seg.end);
+      if (l >= r) continue;
+
+      int mx = segtreeQueryMax(A, 1, 0, (unsigned)coords.size()-2, l, r-1);
+      if (mx > 0) return false;   // 任一段已有占用 → 不可放
     }
   }
-  return true; // 所有段都沒有重疊，可用
+  return true;
+}
+
+int RegAllocSegmentTree::segtreeQueryMax(unsigned PhysReg, unsigned idx,
+                                         unsigned L, unsigned R,
+                                         unsigned ql, unsigned qr) {
+  auto &Tree = PRTree[PhysReg];
+  
+  // 如果当前节点区间完全包含在查询区间内，直接返回最大值
+  if (ql <= L && R <= qr) {
+    return Tree[idx].maxCover;
+  }
+  
+  unsigned Mid = (L + R) / 2;
+  unsigned LeftChild = 2 * idx;
+  unsigned RightChild = 2 * idx + 1;
+  
+  // 处理懒标记下推
+  if (Tree[idx].lazyAdd != 0) {
+    Tree[LeftChild].maxCover += Tree[idx].lazyAdd;
+    Tree[LeftChild].lazyAdd += Tree[idx].lazyAdd;
+    Tree[RightChild].maxCover += Tree[idx].lazyAdd;
+    Tree[RightChild].lazyAdd += Tree[idx].lazyAdd;
+    Tree[idx].lazyAdd = 0;
+  }
+  
+  int leftMax = std::numeric_limits<int>::min();
+  int rightMax = std::numeric_limits<int>::min();
+  
+  // 递归查询左子树
+  if (ql <= Mid) {
+    leftMax = segtreeQueryMax(PhysReg, LeftChild, L, Mid, ql, std::min(qr, Mid));
+  }
+  
+  // 递归查询右子树
+  if (qr > Mid) {
+    rightMax = segtreeQueryMax(PhysReg, RightChild, Mid + 1, R, std::max(ql, Mid + 1), qr);
+  }
+  
+  // 返回左右子树的最大值
+  return std::max(leftMax, rightMax);
 }
 
 void RegAllocSegmentTree::buildSegmentTreeForPhysReg(unsigned PhysReg, const std::vector<SlotIndex>& intervals) {
@@ -368,46 +430,141 @@ bool RegAllocSegmentTree::querySegmentTreeForRange(unsigned PhysReg, SlotIndex S
 }
 
 void RegAllocSegmentTree::updateSegmentTreeForPhysReg(unsigned PhysReg, SlotIndex Start, SlotIndex End) {
-  // 确保物理寄存器的线段树存在
-  if (PhysReg >= PhysRegSegmentTrees.size()) {
-    PhysRegSegmentTrees.resize(PhysReg + 1);
+  
+  assert(Register::isPhysicalRegister(PhysReg) && "expected physreg");
+  assert(PhysReg < PRCoords.size() && PhysReg < PRTree.size() &&
+         "physreg index out of range");
+  assert(Start.isValid() && End.isValid() && Start < End && "invalid segment");
+  
+  // 确保物理寄存器的坐标包含这个区间
+  ensureCoordsAndTree(PhysReg, Start, End);
+  
+  // 获取坐标索引
+  unsigned startIdx = coordIndex(PhysReg, Start);
+  unsigned endIdx = coordIndex(PhysReg, End);
+  
+  // 更新线段树
+  const unsigned pts = PRCoords[PhysReg].size();
+  if (pts >= 2 && startIdx < endIdx) {
+    const unsigned segN = pts - 1;              // 段數
+    segtreeUpdate(PhysReg, 1, 0, segN - 1, startIdx, endIdx - 1, +1);
   }
   
-  // 这里需要实现实际的线段树更新逻辑
-  // 将区间 [Start, End) 添加到物理寄存器的线段树中
-  
-  LLVM_DEBUG(dbgs() << "Updating segment tree for physreg " << PhysReg 
-                    << " with interval [" << Start << ", " << End << ")\n");
-  
-  // 实际实现应该包括：
-  // 1. 获取或创建物理寄存器的线段树
-  // 2. 将新区间插入线段树
-  // 3. 更新线段树节点的最大结束时间等信息
-  
-  // 获取或创建线段树
-  auto &tree = PhysRegSegmentTrees[PhysReg];
-  if (tree.empty()) {
-    // 初始化线段树
-    tree.resize(4); // 最小大小
-  }
-  
-  // 这里需要实现实际的线段树更新逻辑
-  // 将新区间 [Start, End) 添加到物理寄存器的线段树中
-  // 这可能需要重新构建整个线段树
-  
-  // 临时实现：简单地将新区间添加到列表中，然后重新构建线段树
-  static std::vector<SlotIndex> intervals;
-  intervals.push_back(Start);
-  intervals.push_back(End);
-  
-  // 重新构建线段树
-  buildSegmentTreeForPhysReg(PhysReg, intervals);
+  // 记录这个区间
+  PhysRegIntervals[PhysReg].emplace_back(Start, End);
   
   LLVM_DEBUG(dbgs() << "Updated segment tree for physreg " << PhysReg 
                     << " with interval [" << Start << ", " << End << ")\n");
 }
 
+void RegAllocSegmentTree::ensureCoordsAndTree(unsigned PhysReg, SlotIndex S, SlotIndex E) {
+  auto &Coords = PRCoords[PhysReg];
+  auto &Tree = PRTree[PhysReg];
+  
+  // 检查是否需要添加新的坐标点
+  bool changed = false;
+  
+  // 检查起点 S
+  auto it = std::lower_bound(Coords.begin(), Coords.end(), S);
+  if (it == Coords.end() || *it != S) {
+    Coords.insert(it, S);
+    changed = true;
+  }
+  
+  // 检查终点 E
+  it = std::lower_bound(Coords.begin(), Coords.end(), E);
+  if (it == Coords.end() || *it != E) {
+    Coords.insert(it, E);
+    changed = true;
+  }
+  
+  // 如果坐标发生了变化，需要重建线段树
+  if (changed) {
+    // 重建线段树
+    segtreeBuild(PhysReg);
+    
+    // 重新应用所有已记录的区间
+    const auto &Intervals = PhysRegIntervals[PhysReg];
+    for (const auto &Interval : Intervals) {
+      SlotIndex Start = Interval.first;
+      SlotIndex End = Interval.second;
+      
+      // 获取坐标索引
+      unsigned l = coordIndex(PhysReg, Start);
+      unsigned r = coordIndex(PhysReg, End) - 1; // 线段树区间是 [l, r-1]
+      
+      // 更新线段树
+      segtreeUpdate(PhysReg, 1, 0, Coords.size() - 2, l, r, 1);
+    }
+  }
+}
+
+unsigned RegAllocSegmentTree::coordIndex(unsigned PhysReg, SlotIndex X) const {
+  const auto &Coords = PRCoords[PhysReg];
+  auto It = std::lower_bound(Coords.begin(), Coords.end(), X);
+  assert(It != Coords.end() && *It == X && "SlotIndex not found in coordinates");
+  return It - Coords.begin();
+}
+
+void RegAllocSegmentTree::segtreeUpdate(unsigned PhysReg, unsigned idx,
+                                        unsigned L, unsigned R,
+                                        unsigned ql, unsigned qr, int add) {
+  auto &Tree = PRTree[PhysReg];
+  if (ql > R || qr < L)
+    return;
+
+  if (ql <= L && R <= qr) {
+    Tree[idx].maxCover += add;
+    Tree[idx].lazyAdd += add;
+    return;
+  }
+
+  unsigned Mid = (L + R) / 2;
+  unsigned LeftChild = 2 * idx;
+  unsigned RightChild = 2 * idx + 1;
+
+  // Push lazy value to children
+  if (Tree[idx].lazyAdd != 0) {
+    Tree[LeftChild].maxCover += Tree[idx].lazyAdd;
+    Tree[LeftChild].lazyAdd += Tree[idx].lazyAdd;
+    Tree[RightChild].maxCover += Tree[idx].lazyAdd;
+    Tree[RightChild].lazyAdd += Tree[idx].lazyAdd;
+    Tree[idx].lazyAdd = 0;
+  }
+
+  segtreeUpdate(PhysReg, LeftChild, L, Mid, ql, qr, add);
+  segtreeUpdate(PhysReg, RightChild, Mid + 1, R, ql, qr, add);
+
+  Tree[idx].maxCover = std::max(Tree[LeftChild].maxCover, Tree[RightChild].maxCover);
+}
+
+void RegAllocSegmentTree::segtreeBuild(unsigned PhysReg) {
+  auto &Coords = PRCoords[PhysReg];
+  auto &Tree = PRTree[PhysReg];
+  
+  // 确定线段树大小（n个坐标点对应n-1个区间）
+  unsigned n = Coords.size();
+  if (n < 2) {
+    // 没有足够的坐标点构建线段树
+    Tree.clear();
+    return;
+  }
+  
+  // 线段树需要4*(n-1)的大小（标准线段树大小）
+  unsigned treeSize = 4 * (n - 1);
+  Tree.resize(treeSize);
+  
+  // 初始化所有节点
+  for (auto &node : Tree) {
+    node.maxCover = 0;
+    node.lazyAdd = 0;
+  }
+}
+
 void RegAllocSegmentTree::spillVirtReg(LiveInterval &VirtReg) {
+  assert(MF && LIS && VRM &&
+         "RA pointers must be initialized before spilling");
+
   LLVM_DEBUG(dbgs() << "Spilling virtual register: " << VirtReg.reg() << '\n');
 
   // Create a LiveRangeEdit object for the virtual register
@@ -518,6 +675,9 @@ void RegAllocSegmentTree::finalizeAlloc(MachineFunction &MF,
 void RegAllocSegmentTree::resetAllocatorState() {
   // 重置分配器状态，为下一个函数做准备
   PhysRegSegmentTrees.clear();
+  PhysRegIntervals.clear();
+  PRCoords.clear();
+  PRTree.clear();
   DeadRemats.clear();
   FailedVRegs.clear();
 }
@@ -596,19 +756,23 @@ void RegAllocSegmentTree::buildSegmentTree(SegmentTreeNode *tree, unsigned idx,
 bool RegAllocSegmentTree::querySegmentTree(const SegmentTreeNode *tree, unsigned idx,
                                            unsigned tree_l, unsigned tree_r,
                                            SlotIndex query_start, SlotIndex query_end) const {
-  // 標準的線段樹區間查詢
-  if (query_end < tree[tree_l].MaxEnd || tree[tree_r].MaxEnd < query_start)
-    return true; // 區間無交集，表示可用
-
-  if (query_start <= tree[tree_l].MaxEnd && tree[tree_r].MaxEnd <= query_end) {
-    // 當前節點區間完全包含在查詢區間內
-    // 檢查該區間內的最大結束時間是否小於查詢的開始時間
+  if (tree_r < tree_l) return true;
+  
+  // 如果当前节点区间与查询区间无重叠，返回 true（可用）
+  if (query_end < tree[tree_l].MaxEnd || query_start > tree[tree_r].MaxEnd)
+    return true;
+  
+  // 如果当前节点区间完全在查询区间内，检查是否冲突
+  if (query_start <= tree[tree_l].MaxEnd && query_end >= tree[tree_r].MaxEnd) {
     return tree[idx].MaxEnd < query_start;
   }
-
+  
+  // 递归检查左右子树
   unsigned mid = (tree_l + tree_r) / 2;
-  return querySegmentTree(tree, 2*idx, tree_l, mid, query_start, query_end) &&
-         querySegmentTree(tree, 2*idx+1, mid+1, tree_r, query_start, query_end);
+  bool left_available = querySegmentTree(tree, 2*idx, tree_l, mid, query_start, query_end);
+  bool right_available = querySegmentTree(tree, 2*idx+1, mid+1, tree_r, query_start, query_end);
+  
+  return left_available && right_available;
 }
 
 // 創建Pass實例的函數

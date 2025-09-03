@@ -29,6 +29,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
 #include <memory>
+#include <utility>
+#include <algorithm>
 
 namespace llvm {
 
@@ -71,6 +73,8 @@ public:
   /// 獲取分析依賴
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<LiveStacksWrapperLegacy>();
@@ -120,10 +124,41 @@ private:
 
   std::unique_ptr<Spiller> VRegSpiller;  // Add this line
 
-  // 改为动态分配或使用其他数据结构
+  // Legacy demo per-physreg trees (kept for compatibility paths).
   SmallVector<std::vector<SegmentTreeNode>> PhysRegSegmentTrees;
 
-  // 或者，更高效的實現可能使用一個大的線段樹數組，並通過索引來訪問不同暫存器的樹
+  // Bookkeeping of allocated intervals per physical register (for rebuild).
+  std::vector<std::vector<std::pair<SlotIndex, SlotIndex>>> PhysRegIntervals;
+
+  //===------------------------------------------------------------------===//
+  // Lazy segment tree (range add / range max) with coordinate compression
+  //===------------------------------------------------------------------===//
+  struct SegNode {
+    int maxCover = 0;  // 節點覆蓋區間內的最大覆蓋次數
+    int lazyAdd  = 0;  // lazy 累加（尚未下推）
+  };
+
+  // 每個 PhysReg 的座標壓縮點（遞增），點數 m → 段數 m-1
+  std::vector<std::vector<SlotIndex>> PRCoords;
+
+  // 每個 PhysReg 的 lazy 線段樹
+  std::vector<std::vector<SegNode>> PRTree;
+
+  // —— 內部工具 —— //
+  // 確保 PR 的座標包含 [S,E) 的端點；必要時重建樹並回放既有區間
+  void ensureCoordsAndTree(unsigned PhysReg, SlotIndex S, SlotIndex E);
+  // 把 SlotIndex 映射成座標索引（必須已存在於 PRCoords[PR]）
+  unsigned coordIndex(unsigned PhysReg, SlotIndex X) const;
+
+  // 線段樹操作
+  void segtreeBuild(unsigned PhysReg);
+  void segtreeUpdate(unsigned PhysReg, unsigned idx, unsigned L, unsigned R,
+                     unsigned ql, unsigned qr, int add);
+  int  segtreeQueryMax(unsigned PhysReg, unsigned idx, unsigned L, unsigned R,
+                       unsigned ql, unsigned qr);
+
+  // 可放檢查（含別名）：任一段 maxCover>0 就不可放
+  bool canPlaceOnPhysReg(unsigned PhysReg, const LiveInterval &LI) const;
 
   // 线段树构建辅助函数（递归）
   void buildSegmentTree(SegmentTreeNode *tree, unsigned idx,
