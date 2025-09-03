@@ -16119,11 +16119,8 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   if (!CMask.isShiftedMask(ShAmt, Width))
     return SDValue();
 
-  KnownBits Known = DAG.computeKnownBits(Inserted);
-
   // Check if all zero bits in CMask are also zero in Inserted
-  APInt CMaskZeroBits = ~CMask;
-  if (!CMaskZeroBits.isSubsetOf(Known.Zero))
+  if (!DAG.MaskedValueIsZero(Inserted, ~CMask))
     return SDValue();
 
   SDLoc DL(N);
