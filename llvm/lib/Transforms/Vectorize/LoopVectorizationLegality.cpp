@@ -1781,8 +1781,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
       return false;
     }
-    FaultOnlyFirstLoads.insert(LI);
-    LLVM_DEBUG(dbgs() << "LV: Found fault-only-first load: " << *LI << "\n");
+    PotentiallyFaultingLoads.insert(LI);
+    LLVM_DEBUG(dbgs() << "LV: Found potentially faulting load: " << *LI
+                      << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =

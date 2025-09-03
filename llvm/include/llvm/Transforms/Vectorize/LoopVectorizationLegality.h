@@ -445,9 +445,10 @@ public:
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
 
-  /// Returns the loads that need to be fault-only-first.
-  const SmallPtrSetImpl<const Instruction *> &getFaultOnlyFirstLoads() const {
-    return FaultOnlyFirstLoads;
+  /// Returns potentially faulting loads.
+  const SmallPtrSetImpl<const Instruction *> &
+  getPotentiallyFaultingLoads() const {
+    return PotentiallyFaultingLoads;
   }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
@@ -636,7 +637,7 @@ private:
   SmallVector<HistogramInfo, 1> Histograms;
 
   /// Hold all loads that need to be fault-only-first.
-  SmallPtrSet<const Instruction *, 4> FaultOnlyFirstLoads;
+  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
