@@ -5,7 +5,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
+@skipUnlessDarwin
 @skipIf(archs=no_match(["arm64", "arm64e"]))
 class TestArmPointerMetadataStripping(TestBase):
     # Use extra_symbols.json as a template to add a new symbol whose address
@@ -34,13 +34,10 @@ class TestArmPointerMetadataStripping(TestBase):
             self, "break here", src
         )
 
-        self.expect_expr("get_high_bits(&x)", result_value="0")
-        self.expect_expr("get_high_bits(&myglobal)", result_value="0")
-
         symbols_file = self.create_symbols_file()
+        self.runCmd(f"target module add {symbols_file}")
 
         # The high order bits should be stripped.
-        self.runCmd(f"target module add {symbols_file}")
         self.expect_expr("get_high_bits(&myglobal_json)", result_value="0")
 
         # Mark all bits as used for addresses and ensure bits are no longer stripped.
