@@ -455,7 +455,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::LoadOp loadOp) {
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::LiteralOp literalOp) {
-  // If literalOp is used inside an expression, we treat it as an embedded one.
+  // If literalOp is used inside an expression, we treat it as an inlined one.
   if (emitter.isPartOfCurrentExpression(literalOp.getResult()))
     return emitter.ostream() << literalOp.getValue(), success();
 
