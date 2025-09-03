@@ -12,8 +12,8 @@
 #include <clc/atomic/clc_atomic_fetch_sub.h>
 #include <clc/opencl/atomic/atomic_fetch_sub.h>
 
-#define FUNCTION atomic_fetch_sub
-#define __IMPL_FUNCTION __clc_atomic_fetch_sub
+#define __CLC_FUNCTION atomic_fetch_sub
+#define __CLC_IMPL_FUNCTION __clc_atomic_fetch_sub
 
 #define __CLC_BODY <atomic_def.inc>
 #include <clc/integer/gentype.inc>

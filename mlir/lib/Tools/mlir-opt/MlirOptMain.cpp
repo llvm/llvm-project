@@ -501,8 +501,7 @@ performActions(raw_ostream &os,
            << "bytecode version while not emitting bytecode";
   AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
                     &fallbackResourceMap);
-  op.get()->print(os, asmState);
-  os << '\n';
+  os << OpWithState(op.get(), asmState) << '\n';
   return success();
 }
 

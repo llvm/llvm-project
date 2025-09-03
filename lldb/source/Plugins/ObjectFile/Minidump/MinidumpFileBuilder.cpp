@@ -308,23 +308,13 @@ Status MinidumpFileBuilder::AddModuleList() {
   // the llvm::minidump::Module's structures into helper data
   size_t size_before = GetCurrentDataEndOffset();
 
-  // This is the size of the main part of the ModuleList stream.
-  // It consists of a module number and corresponding number of
-  // structs describing individual modules
-  size_t module_stream_size =
-      sizeof(llvm::support::ulittle32_t) + modules_count * minidump_module_size;
-
-  // Adding directory describing this stream.
-  error = AddDirectory(StreamType::ModuleList, module_stream_size);
-  if (error.Fail())
-    return error;
-
-  m_data.AppendData(&modules_count, sizeof(llvm::support::ulittle32_t));
-
   // Temporary storage for the helper data (of variable length)
   // as these cannot be dumped to m_data before dumping entire
   // array of module structures.
   DataBufferHeap helper_data;
+
+  // Vector to store modules that pass validation.
+  std::vector<std::pair<ModuleSP, uint64_t>> valid_modules;
 
   for (size_t i = 0; i < modules_count; ++i) {
     ModuleSP mod = modules.GetModuleAtIndex(i);
@@ -332,16 +322,35 @@ Status MinidumpFileBuilder::AddModuleList() {
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
-      llvm::handleAllErrors(std::move(mod_size_err),
-                            [&](const llvm::ErrorInfoBase &E) {
-                              error = Status::FromErrorStringWithFormat(
-                                  "Unable to get the size of module %s: %s.",
-                                  module_name.c_str(), E.message().c_str());
-                            });
-      return error;
+      Log *log = GetLog(LLDBLog::Object);
+      llvm::handleAllErrors(
+          std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
+            if (log) {
+              LLDB_LOGF(log, "Unable to get the size of module %s: %s",
+                        module_name.c_str(), E.message().c_str());
+            }
+          });
+      continue;
     }
+    valid_modules.emplace_back(mod, *maybe_mod_size);
+  }
 
-    uint64_t mod_size = std::move(*maybe_mod_size);
+  size_t module_stream_size = sizeof(llvm::support::ulittle32_t) +
+                              valid_modules.size() * minidump_module_size;
+
+  error = AddDirectory(StreamType::ModuleList, module_stream_size);
+  if (error.Fail())
+    return error;
+
+  // Setting the header with the number of modules.
+  llvm::support::ulittle32_t count =
+      static_cast<llvm::support::ulittle32_t>(valid_modules.size());
+  m_data.AppendData(&count, sizeof(llvm::support::ulittle32_t));
+
+  for (const auto &valid_module : valid_modules) {
+    ModuleSP mod = valid_module.first;
+    uint64_t module_size = valid_module.second;
+    std::string module_name = mod->GetSpecificationDescription();
 
     llvm::support::ulittle32_t signature =
         static_cast<llvm::support::ulittle32_t>(
@@ -381,7 +390,7 @@ Status MinidumpFileBuilder::AddModuleList() {
     llvm::minidump::Module m{};
     m.BaseOfImage = static_cast<llvm::support::ulittle64_t>(
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
-    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(mod_size);
+    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(module_size);
     m.Checksum = static_cast<llvm::support::ulittle32_t>(0);
     m.TimeDateStamp =
         static_cast<llvm::support::ulittle32_t>(std::time(nullptr));

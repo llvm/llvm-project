@@ -93,7 +93,7 @@ public:
   void AddQualType(QualType T);
   void AddStmt(const Stmt *S);
   void AddIdentifierInfo(const IdentifierInfo *II);
-  void AddNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS);
   void AddDependentTemplateName(const DependentTemplateStorage &Name);
   void AddTemplateName(TemplateName Name);
   void AddDeclarationNameInfo(DeclarationNameInfo NameInfo,

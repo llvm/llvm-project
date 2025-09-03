@@ -50,7 +50,6 @@ using namespace NVVM;
 
 // This verifier is shared among the following Ops:
 // CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
-// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
 // CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
 static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
                                                      bool isIm2Col,
@@ -98,11 +97,45 @@ LogicalResult CpAsyncOp::verify() {
   return success();
 }
 
+// This verify params can be shared across TMA Load and Prefetch Ops.
+static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
+                                         TMALoadMode mode, Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
+
+  auto checkTMALoadParams = [&](TMALoadMode mode, bool isIm2col,
+                                size_t expectedIm2colOff) -> LogicalResult {
+    if (isIm2col && (tensorDims < 3))
+      return emitError(loc)
+             << "to use " << stringifyEnum(mode)
+             << " mode, the tensor has to be at least 3-dimensional";
+
+    if (numIm2colOff != expectedIm2colOff)
+      return emitError(loc) << " im2col offsets expected " << expectedIm2colOff
+                            << " (provided " << numIm2colOff << ")";
+
+    return success();
+  };
+
+  switch (mode) {
+  case TMALoadMode::TILE:
+    return checkTMALoadParams(mode, false, 0);
+  case TMALoadMode::IM2COL:
+    return checkTMALoadParams(mode, true, tensorDims - 2);
+  case TMALoadMode::IM2COL_W:
+  case TMALoadMode::IM2COL_W_128:
+    return checkTMALoadParams(mode, true, 2);
+  case TMALoadMode::TILE_GATHER4:
+    return (tensorDims == 5)
+               ? checkTMALoadParams(mode, false, 0)
+               : emitError(loc, "Gather4 mode expects 5 coordinates");
+  }
+  return success();
+}
+
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
+  return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
+                             getMode(), getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorReduceOp::verify() {
@@ -187,6 +220,26 @@ LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
   return success();
+}
+
+LogicalResult PMEventOp::verify() {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (maskedEventId && eventId) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -791,36 +844,81 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
-  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
-    return emitOpError("expected num attribute to be 1, 2 or 4");
+  uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x8 "
+                         "matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be b16 for 8x8 matrix");
+    }
+  } else if (m == 8 && n == 16) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::row) {
+      return emitOpError("expected layout to be row for 8x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 8x16 matrix");
+    }
+  } else if (m == 16 && n == 16) {
+    if (num != 1 && num != 2) {
+      return emitOpError("expected num attribute to be 1 or 2 for 16x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8 &&
+        getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8, b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 16x16 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8, 8x16 or 16x16");
+  }
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t numElements = (m == 16 && n == 16 ? num * 2 : num);
+  if (numElements == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (numElements == 2 || numElements == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(numElements, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << numElements << " elements of type i32";
   }
+
   return success();
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }
@@ -1058,7 +1156,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   return ptx;
 }
 
-void NVVM::WgmmaMmaAsyncOp::getAsmValues(
+bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {
@@ -1089,7 +1187,9 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, 1 - static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+  return true; // Has manual mapping
 }
+
 LogicalResult NVVM::FenceProxyOp::verify() {
   if (getKind() == NVVM::ProxyKind::TENSORMAP)
     return emitOpError() << "tensormap proxy is not a supported proxy kind";
@@ -1368,28 +1468,57 @@ mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
-llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
-                                                                bool isIm2Col) {
-  switch (tensorDims) {
-  case 1:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
-  case 2:
-    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
-  case 3:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
-  case 4:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
-  case 5:
-    return isIm2Col
-               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
-               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
-  default:
-    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
-  }
+mlir::NVVM::IDArgPair CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  for (auto v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+  for (auto v : thisOp.getIm2colOffsets())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const unsigned NI = llvm::Intrinsic::not_intrinsic;
+  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
+      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_5d},
+      {NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_3d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_4d,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_w_128_5d},
+      {NI, NI, NI, NI, NI,
+       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d}};
+
+  static_assert(getMaxEnumValForTMALoadMode() == std::size(IDTable) - 1,
+                "TMALoadModes must match number of rows in IDTable");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  if (id == llvm::Intrinsic::not_intrinsic)
+    llvm_unreachable("Invalid intrinsic for CpAsyncBulkTensorPrefetchOp.");
+
+  return {id, std::move(args)};
 }
 
 #define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
@@ -1805,6 +1934,21 @@ llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(NVVM::PrefetchOp &op) {
   }
 }
 
+bool NVVM::InlinePtxOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  for (auto arg : getReadWriteArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::ReadWrite});
+  for (auto arg : getResults())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Write});
+  for (auto arg : getReadOnlyArgs())
+    asmValues.push_back({arg, mlir::NVVM::PTXRegisterMod::Read});
+  if (getPredicate())
+    asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
+  return false; // No manual mapping needed
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
@@ -1843,19 +1987,31 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
       attrName == NVVMDialect::getReqntidAttrName() ||
       attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
-    if (!values || values.empty() || values.size() > 3)
+    if (!values || values.empty() || values.size() > 3) {
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
+    }
   }
   // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
   // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName() ||
       attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
-    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+    }
+  }
+  // blocksareclusters must be used along with reqntid and cluster_dim
+  if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
+    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+      return op->emitError()
+             << "'" << attrName << "' attribute must be used along with "
+             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
+             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+    }
   }
 
   return success();
