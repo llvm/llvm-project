@@ -261,6 +261,8 @@ private:
   selectGlobalSAddrGLC(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
