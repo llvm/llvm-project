@@ -1799,6 +1799,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
 
+  /// This recipe generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 
@@ -1900,6 +1903,9 @@ public:
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  /// This recipe primarily generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
 
   void execute(VPTransformState &State) override;
 

@@ -1978,7 +1978,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     return TypeSwitch<const VPSingleDefRecipe *,
                       std::optional<std::pair<bool, unsigned>>>(R)
         .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-              VPWidenSelectRecipe, VPReplicateRecipe>(
+              VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
+              VPVectorPointerRecipe>(
             [](auto *I) { return std::make_pair(false, I->getOpcode()); })
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
