@@ -4980,12 +4980,6 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
 #endif
     __kmpc_taskgroup(loc, gtid);
   }
-
-#if OMPX_TASKGRAPH
-  if (taskdata->is_taskgraph && taskdata->tdg)
-    KMP_ATOMIC_DEC(&taskdata->tdg->tdg_task_id_next);
-    /* KMP_ATOMIC_DEC(&__kmp_tdg_task_id); */
-#endif
   // =========================================================================
   // calculate loop parameters
   kmp_taskloop_bounds_t task_bounds(task, lb, ub);
@@ -5266,6 +5260,7 @@ void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   kmp_safe_raii_file_t tdg_file(file_name, "w");
 
   kmp_int32 num_tasks = KMP_ATOMIC_LD_RLX(&tdg->num_tasks);
+  kmp_int32 map_size = tdg->map_size;
   fprintf(tdg_file,
           "digraph TDG {\n"
           "   compound=true\n"
@@ -5276,7 +5271,11 @@ void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
     fprintf(tdg_file, "      %d[style=bold]\n", i);
   }
   fprintf(tdg_file, "   }\n");
-  for (kmp_int32 i = 0; i < num_tasks; i++) {
+  kmp_int32 tasks = 0;
+  for (kmp_int32 i = 0; tasks < num_tasks && i < map_size; i++) {
+    if (tdg->record_map[i].task == nullptr)
+      continue;
+    tasks++;
     kmp_int32 nsuccessors = tdg->record_map[i].nsuccessors;
     kmp_int32 *successors = tdg->record_map[i].successors;
     if (nsuccessors > 0) {
@@ -5300,6 +5299,7 @@ void __kmp_exec_tdg(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
   kmp_int32 *this_root_tasks = tdg->root_tasks;
   kmp_int32 this_num_roots = tdg->num_roots;
   kmp_int32 this_num_tasks = KMP_ATOMIC_LD_RLX(&tdg->num_tasks);
+  kmp_int32 tasks = 0;
 
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *parent_task = thread->th.th_current_task;
@@ -5308,7 +5308,10 @@ void __kmp_exec_tdg(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
     __kmpc_taskred_init(gtid, tdg->rec_num_taskred, tdg->rec_taskred_data);
   }
 
-  for (kmp_int32 j = 0; j < this_num_tasks; j++) {
+  for (kmp_int32 j = 0; j < tdg->map_size && tasks < this_num_tasks; j++) {
+    if (this_record_map[j].task == nullptr)
+      continue;
+    tasks++;
     kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(this_record_map[j].task);
 
     td->td_parent = parent_task;
@@ -5432,8 +5435,13 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
   kmp_int32 this_map_size = tdg->map_size;
   kmp_int32 this_num_roots = 0;
   kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_int32 tasks = 0;
 
-  for (kmp_int32 i = 0; i < this_num_tasks; i++) {
+  for (kmp_int32 i = 0; tasks < this_num_tasks && i < this_map_size; i++) {
+    if (this_record_map[i].task == nullptr) {
+      continue;
+    }
+    tasks++;
     if (this_record_map[i].npredecessors == 0) {
       this_root_tasks[this_num_roots++] = i;
     }
