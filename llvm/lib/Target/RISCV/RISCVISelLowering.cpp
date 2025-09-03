@@ -16156,6 +16156,48 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
   return DAG.getNode(ISD::XOR, DL, VT, NewOr, TrueV.getOperand(1));
 }
 
+// (xor X, (xor (and X, C2), Y))
+// ->(qc_insb X, (sra Y, ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width = Width and shift = ShAmt
+// qc_insb might become qc.insb or qc.insbi depending on the operands.
+static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue Base, Inserted;
+  APInt CMask;
+  if (!sd_match(N, m_Xor(m_Value(Base),
+                         m_OneUse(m_Xor(m_OneUse(m_And(m_Deferred(Base),
+                                                       m_ConstInt(CMask))),
+                                        m_Value(Inserted))))))
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return SDValue();
+
+  // Check if all zero bits in CMask are also zero in Inserted
+  if (!DAG.MaskedValueIsZero(Inserted, ~CMask))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // `Inserted` needs to be right shifted before it is put into the
+  // instruction.
+  Inserted = DAG.getNode(ISD::SRA, DL, MVT::i32, Inserted,
+                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+
+  SDValue Ops[] = {Base, Inserted, DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16227,6 +16269,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                             DAG.getConstant(Imm + 1, DL, VT), CC);
     }
   }
+
+  if (SDValue V = combineXorToBitfieldInsert(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
@@ -18837,6 +18882,10 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   if (Cond->getOperand(0) != CountZeroesArgument)
     return SDValue();
 
+  unsigned BitWidth = CountZeroes.getValueSizeInBits();
+  if (!isPowerOf2_32(BitWidth))
+    return SDValue();
+
   if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
     CountZeroes = DAG.getNode(ISD::CTTZ, SDLoc(CountZeroes),
                               CountZeroes.getValueType(), CountZeroesArgument);
@@ -18845,7 +18894,6 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
                               CountZeroes.getValueType(), CountZeroesArgument);
   }
 
-  unsigned BitWidth = CountZeroes.getValueSizeInBits();
   SDValue BitWidthMinusOne =
       DAG.getConstant(BitWidth - 1, SDLoc(N), CountZeroes.getValueType());
 
