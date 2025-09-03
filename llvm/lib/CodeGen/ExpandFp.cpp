@@ -1131,7 +1131,7 @@ public:
 } // namespace
 
 ExpandFpPass::ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel)
-    : TM(TM), OptLevel(OptLevel) {};
+    : TM(TM), OptLevel(OptLevel) {}
 
 void ExpandFpPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
