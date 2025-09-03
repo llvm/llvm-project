@@ -294,197 +294,6 @@ void Value::print(llvm::raw_ostream &Out) const {
   Out << Str;
 }
 
-class BuiltinValueBuffer : public ValueBuffer {
-public:
-  std::vector<char> raw;
-  BuiltinValueBuffer(QualType _Ty) { Ty = _Ty; }
-  template <typename T> T as() const {
-    T v{};
-    assert(raw.size() >= sizeof(T) && "Buffer too small for type!");
-    memcpy(&v, raw.data(), sizeof(T));
-    return v;
-  }
-  std::string toString() const override {
-    if (Ty->isCharType()) {
-      unsigned char c = as<unsigned char>();
-      switch (c) {
-      case '\n':
-        return "'\\n'";
-      case '\t':
-        return "'\\t'";
-      case '\r':
-        return "'\\r'";
-      case '\'':
-        return "'\\''";
-      case '\\':
-        return "'\\'";
-      default:
-        if (std::isprint(c))
-          return std::string("'") + static_cast<char>(c) + "'";
-        else {
-          return llvm::formatv("'\\x{0:02X}'", c).str();
-        }
-      }
-    }
-    if (auto *BT = Ty.getCanonicalType()->getAs<BuiltinType>()) {
-
-      auto formatFloating = [](auto Val, char Suffix = '\0') -> std::string {
-        std::string Out;
-        llvm::raw_string_ostream SS(Out);
-
-        if (std::isnan(Val) || std::isinf(Val)) {
-          SS << llvm::format("%g", Val);
-          return SS.str();
-        }
-        if (Val == static_cast<decltype(Val)>(static_cast<int64_t>(Val)))
-          SS << llvm::format("%.1f", Val);
-        else if (std::abs(Val) < 1e-4 || std::abs(Val) > 1e6 || Suffix == 'f')
-          SS << llvm::format("%#.6g", Val);
-        else if (Suffix == 'L')
-          SS << llvm::format("%#.12Lg", Val);
-        else
-          SS << llvm::format("%#.8g", Val);
-
-        if (Suffix != '\0')
-          SS << Suffix;
-        return SS.str();
-      };
-
-      std::string Str;
-      llvm::raw_string_ostream SS(Str);
-      switch (BT->getKind()) {
-      default:
-        return "{ error: unknown builtin type '" +
-               std::to_string(BT->getKind()) + " '}";
-      case clang::BuiltinType::Bool:
-        SS << ((as<bool>()) ? "true" : "false");
-        return Str;
-      case clang::BuiltinType::Short:
-        SS << as<short>();
-        return Str;
-      case clang::BuiltinType::UShort:
-        SS << as<unsigned short>();
-        return Str;
-      case clang::BuiltinType::Int:
-        SS << as<int>();
-        return Str;
-      case clang::BuiltinType::UInt:
-        SS << as<unsigned int>();
-        return Str;
-      case clang::BuiltinType::Long:
-        SS << as<long>();
-        return Str;
-      case clang::BuiltinType::ULong:
-        SS << as<unsigned long>();
-        return Str;
-      case clang::BuiltinType::LongLong:
-        SS << as<long long>();
-        return Str;
-      case clang::BuiltinType::ULongLong:
-        SS << as<unsigned long long>();
-        return Str;
-      case clang::BuiltinType::Float:
-        return formatFloating(as<float>(), /*suffix=*/'f');
-
-      case clang::BuiltinType::Double:
-        return formatFloating(as<double>());
-
-      case clang::BuiltinType::LongDouble:
-        return formatFloating(as<long double>(), /*suffix=*/'L');
-      }
-    }
-
-    return "";
-  }
-
-  bool isValid() const override { return !raw.empty(); }
-};
-
-class ArrayValueBuffer : public ValueBuffer {
-public:
-  std::vector<std::unique_ptr<ValueBuffer>> Elements;
-  ArrayValueBuffer(QualType EleTy) { Ty = EleTy; }
-  std::string toString() const override {
-    std::ostringstream OS;
-    OS << "{";
-    for (size_t i = 0; i < Elements.size(); ++i) {
-      OS << Elements[i]->toString();
-      if (i + 1 < Elements.size())
-        OS << ",";
-    }
-    OS << "}";
-    return OS.str();
-  }
-
-  bool isValid() const override { return !Elements.empty(); }
-};
-
-static std::string escapeString(const std::vector<char> &Raw) {
-  std::string Out;
-  for (char c : Raw) {
-    switch (c) {
-    case '\n':
-      Out += "\\n";
-      break;
-    case '\t':
-      Out += "\\t";
-      break;
-    case '\r':
-      Out += "\\r";
-      break;
-    case '\"':
-      Out += "\\\"";
-      break;
-    case '\\':
-      Out += "\\\\";
-      break;
-    default:
-      if (std::isprint(static_cast<unsigned char>(c)))
-        Out.push_back(c);
-      else {
-        char buf[5];
-        snprintf(buf, sizeof(buf), "\\x%02X", static_cast<unsigned char>(c));
-        Out += buf;
-      }
-      break;
-    }
-  }
-  return Out;
-}
-
-class PointerValueBuffer : public ValueBuffer {
-public:
-  uint64_t Address = 0;
-  std::unique_ptr<ValueBuffer> Pointee; // optional, used only for char*
-
-  PointerValueBuffer(QualType _Ty, uint64_t Addr = 0) : Address(Addr) {
-    Ty = _Ty;
-  }
-
-  std::string toString() const override {
-    auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
-    if (!PtrTy)
-      return "";
-
-    auto PointeeTy = PtrTy->getPointeeType();
-
-    // char* -> print string literal
-    if (PointeeTy->isCharType() && Pointee) {
-      if (auto *BE = static_cast<BuiltinValueBuffer *>(Pointee.get()))
-        return "\"" + escapeString(BE->raw) + "\"";
-    }
-
-    if (Address == 0)
-      return "nullptr";
-
-    std::ostringstream OS;
-    OS << "0x" << std::hex << Address;
-    return OS.str();
-  }
-
-  bool isValid() const override { return Address != 0; }
-};
-
 class ReaderDispatcher {
 private:
   ASTContext &Ctx;
@@ -540,6 +349,11 @@ public:
   }
 
   llvm::Expected<std::unique_ptr<ValueBuffer>>
+  VisitEnumType(const EnumType *ET) {
+    return Dispatcher.readBuiltin(QualType(ET, 0), Addr);
+  }
+
+  llvm::Expected<std::unique_ptr<ValueBuffer>>
   VisitRecordType(const RecordType *RT) {
     return llvm::make_error<llvm::StringError>(
         "RecordType reading not yet implemented",
@@ -562,7 +376,7 @@ ReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
 
   auto Buf = std::make_unique<BuiltinValueBuffer>(Ty);
   const auto &Res = *ResOrErr;
-  std::vector<char> ElemBuf(Size);
+  std::vector<uint8_t> ElemBuf(Size);
   std::memcpy(ElemBuf.data(), Res.back().data(), Size);
   Buf->raw = std::move(ElemBuf);
   return std::move(Buf);
@@ -598,12 +412,20 @@ ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
   if (!PtrTy)
     return llvm::make_error<llvm::StringError>("Not a PointerType",
                                                llvm::inconvertibleErrorCode());
+  unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
+  uint64_t PtrValAddr = 0;
+  if (PtrWidth == 32) {
+    auto AddrOrErr = MA.readUInt32s({Addr});
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+    PtrValAddr = AddrOrErr->back();
+  } else {
+    auto AddrOrErr = MA.readUInt64s({Addr});
+    if (!AddrOrErr)
+      return AddrOrErr.takeError();
+    PtrValAddr = AddrOrErr->back();
+  }
 
-  auto AddrOrErr = MA.readUInt64s({Addr});
-  if (!AddrOrErr)
-    return AddrOrErr.takeError();
-
-  uint64_t PtrValAddr = AddrOrErr->back();
   if (PtrValAddr == 0)
     return std::make_unique<PointerValueBuffer>(Ty); // null pointer
 
@@ -624,6 +446,8 @@ ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
     }
     auto Buf = std::make_unique<BuiltinValueBuffer>(PointeeTy);
     Buf->raw.assign(S.begin(), S.end());
+    if (S.empty())
+      Buf->raw.push_back('\0'); // represent ""
     PtrBuf->Pointee = std::move(Buf);
   }
   // else {

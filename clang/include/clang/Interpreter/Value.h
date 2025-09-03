@@ -212,10 +212,68 @@ template <> inline void *Value::as() const {
 
 class ValueBuffer {
 public:
+  enum Kind { K_Builtin, K_Array, K_Pointer, K_Unknown };
   QualType Ty;
+  Kind K;
+  ValueBuffer(Kind K = K_Unknown) : K(K) {}
   virtual ~ValueBuffer() = default;
-  virtual std::string toString() const = 0;
-  virtual bool isValid() const = 0;
+  bool isUnknown() const { return K == K_Unknown; }
+  bool isBuiltin() const { return K == K_Builtin; }
+  bool isArray() const { return K == K_Array; }
+  bool isPointer() const { return K == K_Pointer; }
+  static bool classof(const ValueBuffer *) { return true; }
+};
+
+class BuiltinValueBuffer;
+class ArrayValueBuffer;
+class PointerValueBuffer;
+
+class BuiltinValueBuffer : public ValueBuffer {
+public:
+  std::vector<uint8_t> raw;
+  BuiltinValueBuffer(QualType _Ty) : ValueBuffer(K_Builtin) { Ty = _Ty; }
+  template <typename T> T as() const {
+    T v{};
+    // assert(raw.size() >= sizeof(T) && "Buffer too small for type!");
+    memcpy(&v, raw.data(), sizeof(T));
+    return v;
+  }
+  static bool classof(const ValueBuffer *B) { return B->isBuiltin(); }
+};
+
+class ArrayValueBuffer : public ValueBuffer {
+public:
+  std::vector<std::unique_ptr<ValueBuffer>> Elements;
+  ArrayValueBuffer(QualType EleTy) : ValueBuffer(K_Array) { Ty = EleTy; }
+
+  static bool classof(const ValueBuffer *B) { return B->isArray(); }
+};
+
+class PointerValueBuffer : public ValueBuffer {
+public:
+  uint64_t Address = 0;
+  std::unique_ptr<ValueBuffer> Pointee; // optional, used only for char*
+
+  PointerValueBuffer(QualType _Ty, uint64_t Addr = 0)
+      : ValueBuffer(K_Pointer), Address(Addr) {
+    Ty = _Ty;
+  }
+
+  static bool classof(const ValueBuffer *B) { return B->isPointer(); }
+};
+
+class ValueToString {
+private:
+  ASTContext &Ctx;
+
+public:
+  ValueToString(ASTContext &Ctx) : Ctx(Ctx) {}
+  std::string toString(const ValueBuffer *);
+
+private:
+  std::string BuiltinToString(const BuiltinValueBuffer &B);
+  std::string PointerToString(const PointerValueBuffer &P);
+  std::string ArrayToString(const ArrayValueBuffer &A);
 };
 
 class ValueResultManager {
@@ -226,7 +284,7 @@ public:
   explicit ValueResultManager(ASTContext &Ctx, llvm::orc::MemoryAccess &MemAcc);
 
   static std::unique_ptr<ValueResultManager>
-  Create(llvm::orc::LLJIT &EE, ASTContext &Ctx, bool IsOutOfProcess = true);
+  Create(llvm::orc::LLJIT &EE, ASTContext &Ctx, bool IsOutOfProcess = false);
 
   ValueId registerPendingResult(QualType QT) {
     ValueId NewID = NextID.fetch_add(1, std::memory_order_relaxed);
