@@ -1268,10 +1268,10 @@ const SymbolicRegion *MemRegionManager::getSymbolicHeapRegion(SymbolRef Sym) {
   return getSubRegion<SymbolicRegion>(Sym, getHeapRegion());
 }
 
-const FieldRegion*
-MemRegionManager::getFieldRegion(const FieldDecl *d,
-                                 const SubRegion* superRegion){
-  return getSubRegion<FieldRegion>(d->getCanonicalDecl(), superRegion);
+const FieldRegion *
+MemRegionManager::getFieldRegion(const FieldDecl *FD,
+                                 const SubRegion *SuperRegion) {
+  return getSubRegion<FieldRegion>(FD->getCanonicalDecl(), SuperRegion);
 }
 
 const ObjCIvarRegion*
