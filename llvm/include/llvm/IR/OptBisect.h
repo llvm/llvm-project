@@ -73,7 +73,7 @@ public:
 
   /// Parse range specification and set the ranges for bisection.
   /// Range format: "1-10,20-30,45" (runs passes 1-10, 20-30, and 45)
-  /// Returns true on parsing error.
+  /// Returns false on parsing error.
   bool parseRanges(StringRef RangeStr);
 
   /// Set ranges programmatically (for testing or other uses).

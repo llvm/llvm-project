@@ -17,7 +17,7 @@ bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
   Ranges.clear();
   
   if (Str.empty())
-    return false;
+    return true;
   
   // Split by the specified separator
   SmallVector<StringRef, 8> Parts;
@@ -34,24 +34,24 @@ bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
     SmallVector<StringRef, 4> Matches;
     if (!RangeRegex.match(Part, &Matches)) {
       errs() << "Invalid range format: '" << Part << "'\n";
-      return true;
+      return false;
     }
     
     int64_t Begin, End;
     if (Matches[1].getAsInteger(10, Begin)) {
       errs() << "Failed to parse number: '" << Matches[1] << "'\n";
-      return true;
+      return false;
     }
     
     if (!Matches[3].empty()) {
       // Range format "begin-end"
       if (Matches[3].getAsInteger(10, End)) {
         errs() << "Failed to parse number: '" << Matches[3] << "'\n";
-        return true;
+        return false;
       }
       if (Begin >= End) {
         errs() << "Invalid range: " << Begin << " >= " << End << "\n";
-        return true;
+        return false;
       }
     } else {
       // Single number
@@ -62,13 +62,13 @@ bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
     if (!Ranges.empty() && Begin <= Ranges.back().End) {
       errs() << "Expected ranges to be in increasing order: " << Begin
              << " <= " << Ranges.back().End << "\n";
-      return true;
+      return false;
     }
     
     Ranges.push_back(Range(Begin, End));
   }
   
-  return false;
+  return true;
 }
 
 bool RangeUtils::contains(const RangeList &Ranges, int64_t Value) {

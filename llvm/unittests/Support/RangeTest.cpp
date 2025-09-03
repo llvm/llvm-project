@@ -47,7 +47,7 @@ TEST(RangeTest, RangeOverlaps) {
 
 TEST(RangeUtilsTest, ParseSingleNumber) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("42", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("42", Ranges));
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 42);
   EXPECT_EQ(Ranges[0].End, 42);
@@ -55,7 +55,7 @@ TEST(RangeUtilsTest, ParseSingleNumber) {
 
 TEST(RangeUtilsTest, ParseSingleRange) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("10-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("10-20", Ranges));
   EXPECT_EQ(Ranges.size(), 1U);
   EXPECT_EQ(Ranges[0].Begin, 10);
   EXPECT_EQ(Ranges[0].End, 20);
@@ -63,7 +63,7 @@ TEST(RangeUtilsTest, ParseSingleRange) {
 
 TEST(RangeUtilsTest, ParseMultipleRanges) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
   EXPECT_EQ(Ranges.size(), 3U);
   
   // Ranges are in input order (DebugCounter style)
@@ -77,7 +77,7 @@ TEST(RangeUtilsTest, ParseMultipleRanges) {
 
 TEST(RangeUtilsTest, ParseColonSeparated) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5:10:15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", Ranges));
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);
@@ -89,7 +89,7 @@ TEST(RangeUtilsTest, ParseColonSeparated) {
 
 TEST(RangeUtilsTest, ParseEmptyString) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("", Ranges));
   EXPECT_TRUE(Ranges.empty());
 }
 
@@ -97,19 +97,19 @@ TEST(RangeUtilsTest, ParseInvalidRanges) {
   RangeUtils::RangeList Ranges;
   
   // Invalid number
-  EXPECT_TRUE(RangeUtils::parseRanges("abc", Ranges));
+  EXPECT_FALSE(RangeUtils::parseRanges("abc", Ranges));
   
   // Invalid range (begin > end)
-  EXPECT_TRUE(RangeUtils::parseRanges("10-5", Ranges));
+  EXPECT_FALSE(RangeUtils::parseRanges("10-5", Ranges));
   
   // Out of order ranges (DebugCounter constraint)
-  EXPECT_TRUE(RangeUtils::parseRanges("10,5", Ranges));
+  EXPECT_FALSE(RangeUtils::parseRanges("10,5", Ranges));
   EXPECT_TRUE(RangeUtils::parseRanges("1-5,3-7", Ranges)); // Overlapping
 }
 
 TEST(RangeUtilsTest, Contains) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
   
   EXPECT_TRUE(RangeUtils::contains(Ranges, 1));
   EXPECT_TRUE(RangeUtils::contains(Ranges, 3));
@@ -128,7 +128,7 @@ TEST(RangeUtilsTest, Contains) {
 
 TEST(RangeUtilsTest, RangesToString) {
   RangeUtils::RangeList Ranges;
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
   
   std::string Result = RangeUtils::rangesToString(Ranges);
   EXPECT_EQ(Result, "1-5,10,15-20");
@@ -138,7 +138,7 @@ TEST(RangeUtilsTest, SeparatorParameter) {
   RangeUtils::RangeList ColonRanges, CommaRanges;
   
   // Test explicit separator parameters
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5:10:15-20", ColonRanges, ':'));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", ColonRanges, ':'));
   EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", CommaRanges, ','));
   
   EXPECT_EQ(ColonRanges.size(), CommaRanges.size());
@@ -163,7 +163,7 @@ TEST(RangeUtilsTest, DefaultCommaSeparator) {
   RangeUtils::RangeList Ranges;
   
   // Test that comma is the default separator
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", Ranges));
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);

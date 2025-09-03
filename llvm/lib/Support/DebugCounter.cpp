@@ -127,7 +127,7 @@ void DebugCounter::push_back(const std::string &Val) {
   RangeUtils::RangeList TempRanges;
   SmallVector<Range> Chunks;
 
-  if (RangeUtils::parseRanges(CounterPair.second, TempRanges, ':')) {
+  if (!RangeUtils::parseRanges(CounterPair.second, TempRanges, ':')) {
     return;
   }
   Chunks.assign(TempRanges.begin(), TempRanges.end());

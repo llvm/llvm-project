@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
   RangeUtils::RangeList CurrChunks;
-  if (RangeUtils::parseRanges(StartChunks, CurrChunks, ','))
+  if (!RangeUtils::parseRanges(StartChunks, CurrChunks, ','))
     return 1;
 
   auto Program = sys::findProgramByName(ReproductionCmd);
