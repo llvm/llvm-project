@@ -890,6 +890,8 @@ public:
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }
 
+  bool hasParent() const { return getFunction() != nullptr; }
+
   /// Return true if the containing function is in CFG state.
   bool hasCFG() const;
 
