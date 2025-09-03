@@ -878,21 +878,16 @@ bool PMDataManager::preserveHigherLevelAnalysis(Pass *P) {
   return true;
 }
 
-/// verifyPreservedAnalysis -- Verify analysis preserved by pass P.
-void PMDataManager::verifyPreservedAnalysis(Pass *P) {
+/// verifyAvailableAnalyses -- Verify all available analyses.
+void PMDataManager::verifyAvailableAnalyses() {
   // Don't do this unless assertions are enabled.
 #ifdef NDEBUG
   return;
 #endif
-  AnalysisUsage *AnUsage = TPM->findAnalysisUsage(P);
-  const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-
-  // Verify preserved analysis
-  for (AnalysisID AID : PreservedSet) {
-    if (Pass *AP = findAnalysisPass(AID, true)) {
-      TimeRegion PassTimer(getPassTimer(AP));
-      AP->verifyAnalysis();
-    }
+  for (auto AA : AvailableAnalysis) {
+    Pass *AP = AA.second;
+    TimeRegion PassTimer(getPassTimer(AP));
+    AP->verifyAnalysis();
   }
 }
 
@@ -1427,9 +1422,9 @@ bool FPPassManager::runOnFunction(Function &F) {
     dumpPreservedSet(FP);
     dumpUsedSet(FP);
 
-    verifyPreservedAnalysis(FP);
     if (LocalChanged)
       removeNotPreservedAnalysis(FP);
+    verifyAvailableAnalyses();
     recordAvailableAnalysis(FP);
     removeDeadPasses(FP, Name, ON_FUNCTION_MSG);
   }
@@ -1537,9 +1532,9 @@ MPPassManager::runOnModule(Module &M) {
     dumpPreservedSet(MP);
     dumpUsedSet(MP);
 
-    verifyPreservedAnalysis(MP);
     if (LocalChanged)
       removeNotPreservedAnalysis(MP);
+    verifyAvailableAnalyses();
     recordAvailableAnalysis(MP);
     removeDeadPasses(MP, M.getModuleIdentifier(), ON_MODULE_MSG);
   }
