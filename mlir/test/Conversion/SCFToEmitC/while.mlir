@@ -48,7 +48,7 @@ func.func @one_result() -> i32 {
 // CHECK:               assign %[[VAL_9]] : i32 to %[[VAL_3]] : <i32>
 // CHECK:             }
 // CHECK:           } while {
-// CHECK:             %[[VAL_10:.*]] = expression : i1 {
+// CHECK:             %[[VAL_10:.*]] = expression %[[VAL_4]] : (!emitc.lvalue<i1>) -> i1 {
 // CHECK:               %[[VAL_11:.*]] = load %[[VAL_4]] : <i1>
 // CHECK:               yield %[[VAL_11]] : i1
 // CHECK:             }
@@ -111,7 +111,7 @@ func.func @two_results() -> i32 {
 // CHECK:               assign %[[VAL_10]] : i32 to %[[VAL_3]] : <i32>
 // CHECK:             }
 // CHECK:           } while {
-// CHECK:             %[[VAL_11:.*]] = expression : i1 {
+// CHECK:             %[[VAL_11:.*]] = expression %[[VAL_4]] : (!emitc.lvalue<i1>) -> i1 {
 // CHECK:               %[[VAL_12:.*]] = load %[[VAL_4]] : <i1>
 // CHECK:               yield %[[VAL_12]] : i1
 // CHECK:             }
@@ -191,7 +191,7 @@ func.func @double_use(%p : !emitc.ptr<i32>) -> i32 {
 // CHECK:               assign %[[VAL_10]] : i32 to %[[VAL_3]] : <i32>
 // CHECK:             }
 // CHECK:           } while {
-// CHECK:             %[[VAL_11:.*]] = expression : i1 {
+// CHECK:             %[[VAL_11:.*]] = expression %[[VAL_4]] : (!emitc.lvalue<i1>) -> i1 {
 // CHECK:               %[[VAL_12:.*]] = load %[[VAL_4]] : <i1>
 // CHECK:               yield %[[VAL_12]] : i1
 // CHECK:             }
