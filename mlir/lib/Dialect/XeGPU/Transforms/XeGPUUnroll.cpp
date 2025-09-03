@@ -686,12 +686,12 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
   using UnrollPattern<xegpu::LoadMatrixOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadMatrixOp op,
                                 PatternRewriter &rewriter) const override {
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape)
-      return failure();
-
     Location loc = op.getLoc();
     VectorType valueTy = op.getType();
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
+      return failure();
+
     Type elemTy = valueTy.getElementType();
     ArrayRef<int64_t> shape = valueTy.getShape();
     auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
@@ -702,17 +702,17 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
     SmallVector<SmallVector<OpFoldResult>> offsetsList;
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(shape, *targetShape)) {
-      auto adds = xegpu::addWithRightAligned(
+      auto adds = xegpu::addElementwise(
           rewriter, loc, mixedOffsets,
           getAsIndexOpFoldResult(op.getContext(), offsets));
       offsetsList.push_back(adds);
     }
 
     SmallVector<Value> newOps;
+    layout = layout.dropInstData();
     for (SmallVector<OpFoldResult> offsets : offsetsList) {
       auto newOp = rewriter.create<xegpu::LoadMatrixOp>(
-          op.getLoc(), newValueTy, op.getMemDesc(), offsets,
-          layout.dropInstData());
+          op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
       newOps.push_back(newOp);
     }
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
@@ -743,7 +743,7 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
     SmallVector<SmallVector<OpFoldResult>> offsetsList;
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(shape, *targetShape)) {
-      auto adds = xegpu::addWithRightAligned(
+      auto adds = xegpu::addElementwise(
           rewriter, loc, mixedOffsets,
           getAsIndexOpFoldResult(op.getContext(), offsets));
       offsetsList.push_back(adds);
