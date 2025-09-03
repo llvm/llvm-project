@@ -1,12 +1,6 @@
-## Bail out if a section consisting of symidx is invalid.
-## It includes both: an unexpected format for patching section data and
-## updating the checksum, as well as data validity.
-## Essentially, the expected format is a definitive symbol with a zero offset
-## linked to the section. Valid data consists of a sequence of symbol indices
-## that remain in the symbol table even after stripping.
+## Test that we bail out if a section consisting of symidx is invalid.
 
 ## In this case, the symbol .gfids$y is not present at all.
-
 # RUN: yaml2obj %s --docnum=1 -o %t1.in.o
 # RUN: not llvm-objcopy --strip-debug %t1.in.o %t1.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-NOSYM -DFILE=%t1.out.o
 
@@ -19,13 +13,6 @@ header:
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
-    SizeOfRawData:   28
-    Relocations:
-      - VirtualAddress:  3
-        SymbolName:      foo
-        Type:            IMAGE_REL_AMD64_REL32
   - Name:            '.gfids$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
@@ -39,10 +26,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          28
+      Length:          0
       NumberOfRelocations: 4
       NumberOfLinenumbers: 0
-      CheckSum:        3583480811
+      CheckSum:        0
       Number:          1
   - Name:            foo
     Value:           0
@@ -53,7 +40,6 @@ symbols:
 ...
 
 ## In this case, the symbol .giats$y has a non-zero offset.
-
 # RUN: yaml2obj %s --docnum=2 -o %t2.in.o
 # RUN: not llvm-objcopy --strip-debug %t2.in.o %t2.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-OFFSET -DFILE=%t2.out.o
 
@@ -66,13 +52,6 @@ header:
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
-    SizeOfRawData:   28
-    Relocations:
-      - VirtualAddress:  3
-        SymbolName:      foo
-        Type:            IMAGE_REL_AMD64_REL32
   - Name:            '.giats$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
@@ -86,10 +65,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          28
-      NumberOfRelocations: 4
+      Length:          0
+      NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        3583480811
+      CheckSum:        0
       Number:          1
   - Name:            '.giats$y'
     Value:           42
@@ -112,7 +91,6 @@ symbols:
 ...
 
 ## In this case, the symbol .gljmp$y has a non-static storage class.
-
 # RUN: yaml2obj %s --docnum=3 -o %t3.in.o
 # RUN: not llvm-objcopy --strip-debug %t3.in.o %t3.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-EXTERNAL -DFILE=%t3.out.o
 
@@ -125,13 +103,6 @@ header:
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
-    SizeOfRawData:   28
-    Relocations:
-      - VirtualAddress:  3
-        SymbolName:      foo
-        Type:            IMAGE_REL_AMD64_REL32
   - Name:            '.gljmp$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
@@ -145,10 +116,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          28
-      NumberOfRelocations: 4
+      Length:          0
+      NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        3583480811
+      CheckSum:        0
       Number:          1
   - Name:            '.gljmp$y'
     Value:           0
@@ -167,7 +138,6 @@ symbols:
 ## In this case, .gfids$y contains a symbol index that is not present in the
 ## symbol table. Generally the behavior should be the same for every section consisting
 ## of .symidx directives, e.g .giats$y, .gljmp$y and .gehcont$y.
-
 # RUN: yaml2obj %s --docnum=4 -o %t4.in.o
 # RUN: not llvm-objcopy --strip-debug %t4.in.o %t4.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-SYMIDX  -DFILE=%t4.out.o
 
@@ -179,13 +149,6 @@ header:
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
-    SizeOfRawData:   28
-    Relocations:
-      - VirtualAddress:  3
-        SymbolName:      foo
-        Type:            IMAGE_REL_AMD64_REL32
   - Name:            '.gfids$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
@@ -199,10 +162,10 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
     SectionDefinition:
-      Length:          28
-      NumberOfRelocations: 4
+      Length:          0
+      NumberOfRelocations: 0
       NumberOfLinenumbers: 0
-      CheckSum:        3583480811
+      CheckSum:        0
       Number:          1
   - Name:            '.gfids$y'
     Value:           0

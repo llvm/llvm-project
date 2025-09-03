@@ -1,7 +1,6 @@
 ## Check sections consisting only of .symidx directives. The test checks that
 ## indices in the sections are updated after stripping as the symbol table could
 ## be changed during stripping.
-
 # RUN: yaml2obj %s -o %t.in.o
 
 # RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
@@ -9,44 +8,37 @@
 
 # CHECK: Symbols [
 # CHECK:     Name: .text
-# CHECK:     Name: .data
-# CHECK:     Name: .bss
-# CHECK:     Name: .text
-# CHECK:     Name: ?foo@@YAXXZ
-# CHECK:     Name: .data
-# CHECK:     Name: .drectve
 # CHECK:     Name: .gehcont$y
 # CHECK:     AuxSectionDef {
-# CHECK:       Checksum: 0x20BA8B48
+# CHECK:       Checksum: 0x82EA2D2
 # CHECK:     }
-# CHECK:     Name: ?foo2@@YAXXZ
 # CHECK:     Name: $ehgcr_0_1
 # CHECK:     Name: .gfids$y
 # CHECK:     AuxSectionDef {
-# CHECK:       Checksum: 0x5B6F2027
+# CHECK:       Checksum: 0xAF00C48B
 # CHECK:     }
 # CHECK:     Name: .giats$y
 # CHECK:     AuxSectionDef {
-# CHECK:       Checksum: 0x95AD7F70
+# CHECK:       Checksum: 0x4AD6BFB8
 # CHECK:     }
 # CHECK:     Name: .gljmp$y
 # CHECK:     AuxSectionDef {
-# CHECK:       Checksum: 0xFACF36F8
+# CHECK:       Checksum: 0xD457699C
 # CHECK:     }
 # CHECK:     Name: foo
 # CHECK: ]
 
 # CHECK:      Hex dump of section '.gehcont$y':
-# CHECK-NEXT: 0x00000000 10000000 10000000 10000000
+# CHECK-NEXT: 0x00000000 04000000 04000000 04000000
 
 # CHECK:      Hex dump of section '.gfids$y':
-# CHECK-NEXT: 0x00000000 17000000 19000000
+# CHECK-NEXT: 0x00000000 0b000000 0d000000
 
 # CHECK:      Hex dump of section '.giats$y':
-# CHECK-NEXT: 0x00000000 18000000
+# CHECK-NEXT: 0x00000000 0c000000
 
 # CHECK:      Hex dump of section '.gljmp$y':
-# CHECK-NEXT: 0x00000000 17000000 18000000 19000000
+# CHECK-NEXT: 0x00000000 0b000000 0c000000 0d000000
 
 
 --- !COFF
@@ -56,44 +48,6 @@ header:
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       4
-    SectionData:     ''
-  - Name:            .data
-    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
-    Alignment:       4
-    SectionData:     ''
-  - Name:            .bss
-    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
-    Alignment:       4
-    SectionData:     ''
-  - Name:            .text
-    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       16
-    SectionData:     554883EC30488D6C243048C745F0FEFFFFFFE800000000904883C4305DC366904889542410554883EC20488D6A30488D05E2FFFFFF4883C4205DC3
-    SizeOfRawData:   59
-    Relocations:
-      - VirtualAddress:  3
-        SymbolName:      foo
-        Type:            IMAGE_REL_AMD64_REL32
-      - VirtualAddress:  10
-        SymbolName:      bar
-        Type:            IMAGE_REL_AMD64_REL32
-      - VirtualAddress:  17
-        SymbolName:      baz
-        Type:            IMAGE_REL_AMD64_REL32
-      - VirtualAddress:  24
-        SymbolName:      '?foo2@@YAXXZ'
-        Type:            IMAGE_REL_AMD64_REL32
-  - Name:            .data
-    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
-    Alignment:       16
-    SectionData:     '000000000000000000000000000000002E48000000000000'
-    SizeOfRawData:   24
-  - Name:            .drectve
-    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       1
-    SectionData:     202F44454641554C544C49423A6C6962636D742E6C6962202F44454641554C544C49423A6C69626972636D742E6C6962202F44454641554C544C49423A73766D6C5F646973706D742E6C6962202F44454641554C544C49423A6C69626D6D742E6C6962202F44454641554C544C49423A6F6C646E616D65732E6C6962
-    SizeOfRawData:   124
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
@@ -102,22 +56,22 @@ sections:
   - Name:            '.gehcont$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     '120000001200000012000000'
+    SectionData:     '060000000600000006000000'
     SizeOfRawData:   12
   - Name:            '.gfids$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     '190000001B000000'
+    SectionData:     '0d0000000f000000'
     SizeOfRawData:   8
   - Name:            '.giats$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     '1A000000'
+    SectionData:     '0e000000'
     SizeOfRawData:   4
   - Name:            '.gljmp$y'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     '190000001A0000001B000000'
+    SectionData:     '0d0000000e0000000f000000'
     SizeOfRawData:   12
 symbols:
   - Name:            .text
@@ -132,77 +86,9 @@ symbols:
       NumberOfLinenumbers: 0
       CheckSum:        0
       Number:          1
-  - Name:            .data
-    Value:           0
-    SectionNumber:   2
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          0
-      NumberOfRelocations: 0
-      NumberOfLinenumbers: 0
-      CheckSum:        0
-      Number:          2
-  - Name:            .bss
-    Value:           0
-    SectionNumber:   3
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          0
-      NumberOfRelocations: 0
-      NumberOfLinenumbers: 0
-      CheckSum:        0
-      Number:          3
-  - Name:            .text
-    Value:           0
-    SectionNumber:   4
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          59
-      NumberOfRelocations: 1
-      NumberOfLinenumbers: 0
-      CheckSum:        517419950
-      Number:          4
-      Selection:       IMAGE_COMDAT_SELECT_NODUPLICATES
-  - Name:            '?foo@@YAXXZ'
-    Value:           0
-    SectionNumber:   4
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
-    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
-  - Name:            .data
-    Value:           0
-    SectionNumber:   5
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          24
-      NumberOfRelocations: 1
-      NumberOfLinenumbers: 0
-      CheckSum:        2602060666
-      Number:          5
-      Selection:       IMAGE_COMDAT_SELECT_ANY
-  - Name:            .drectve
-    Value:           0
-    SectionNumber:   6
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          124
-      NumberOfRelocations: 0
-      NumberOfLinenumbers: 0
-      CheckSum:        1122646683
-      Number:          6
   - Name:            '.debug$S'
     Value:           0
-    SectionNumber:   7
+    SectionNumber:   2
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -211,10 +97,10 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        820498156
-      Number:          7
+      Number:          2
   - Name:            '.gehcont$y'
     Value:           0
-    SectionNumber:   8
+    SectionNumber:   3
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -223,22 +109,16 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        0x30E7CEEC
-      Number:          8
-  - Name:            '?foo2@@YAXXZ'
-    Value:           0
-    SectionNumber:   0
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+      Number:          3
   - Name:            '$ehgcr_0_1'
-    Value:           23
-    SectionNumber:   4
+    Value:           0
+    SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
   - Name:            '.gfids$y'
     Value:           0
-    SectionNumber:   9
+    SectionNumber:   4
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -247,10 +127,10 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        0x459345AD
-      Number:          9
+      Number:          4
   - Name:            '.giats$y'
     Value:           0
-    SectionNumber:   10
+    SectionNumber:   5
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -259,10 +139,10 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        0x31852256
-      Number:          10
+      Number:          5
   - Name:            '.gljmp$y'
     Value:           0
-    SectionNumber:   11
+    SectionNumber:   6
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
@@ -271,7 +151,7 @@ symbols:
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
       CheckSum:        0xC608680B
-      Number:          11
+      Number:          6
   - Name:            foo
     Value:           0
     SectionNumber:   0
