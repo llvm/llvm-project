@@ -1833,11 +1833,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *arg = args.getLastArg(OPT_read_workers)) {
     StringRef v(arg->getValue());
-    unsigned threads = 0;
-    if (!llvm::to_integer(v, threads, 0) || threads < 0)
-      error(arg->getSpelling() + ": expected a positive integer, but got '" +
-            arg->getValue() + "'");
-    config->readWorkers = threads;
+    unsigned workers = 0;
+    if (!llvm::to_integer(v, workers, 0))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + arg->getValue() +
+            "'");
+    config->readWorkers = workers;
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
