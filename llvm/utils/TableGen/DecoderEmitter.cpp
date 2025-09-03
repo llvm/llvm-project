@@ -2127,9 +2127,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     // Fail with a fatal error if decoder table's bitwidth does not match
     // `InsnType` bitwidth.
     OS << R"(
-  uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
-  if (InsnBitWidth<InsnType> != BitWidth)
-    llvm_unreachable("Table and instruction bitwidth mismatch");
+  [[maybe_unused]] uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
+  assert(InsnBitWidth<InsnType> == BitWidth &&
+         "Table and instruction bitwidth mismatch");
 )";
   }
 
