@@ -32,8 +32,6 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.1(0x80000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
-  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
   ; GFX9-NEXT:   undef [[COPY2:%[0-9]+]].sub15:vreg_512 = COPY $vgpr15
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub14:vreg_512 = COPY $vgpr14
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub13:vreg_512 = COPY $vgpr13
@@ -46,6 +44,8 @@ body:             |
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub6:vreg_512 = COPY $vgpr6
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub5:vreg_512 = COPY $vgpr5
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub4:vreg_512 = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub3:vreg_512 = COPY $vgpr3
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub2:vreg_512 = COPY $vgpr2
   ; GFX9-NEXT:   [[COPY2:%[0-9]+]].sub1:vreg_512 = COPY $vgpr1
