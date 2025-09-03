@@ -2247,7 +2247,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       // to properly handle function pointers args with a different signature
       // Due to opaque pointers, this can not be handled in LLVM
       // (WebAssemblyFixFunctionBitcast) anymore
-      if (CGM.getTriple().isWasm() && DestType->isFunctionPointerType()) {
+      if (CGM.getTriple().isWasm() &&
+        CGM.getLangOpts().WasmFixFunctionBitcasts &&
+        DestType->isFunctionPointerType()) {
         llvm::Function *Thunk =
             CGM.getTargetCodeGenInfo().getOrCreateWasmFunctionPointerThunk(
                 CGM, C, D->getType(), DestType);

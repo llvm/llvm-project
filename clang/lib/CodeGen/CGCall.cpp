@@ -4936,7 +4936,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // to properly handle function pointers args with a different signature.
   // Due to opaque pointers, this can not be handled in LLVM
   // (WebAssemblyFixFunctionBitcast) anymore
-  if (CGM.getTriple().isWasm() && type->isFunctionPointerType()) {
+  if (CGM.getTriple().isWasm() && CGM.getLangOpts().WasmFixFunctionBitcasts &&
+      type->isFunctionPointerType()) {
     if (const DeclRefExpr *DRE =
             CGM.getTargetCodeGenInfo().getWasmFunctionDeclRefExpr(
                 E, CGM.getContext())) {

@@ -495,6 +495,8 @@ LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
+LANGOPT(WasmFixFunctionBitcasts, 1, 0, Compatible, "Enable auto-generation of thunks for mismatched function pointer casts in WebAssembly")
+
 #undef LANGOPT
 #undef ENUM_LANGOPT
 #undef VALUE_LANGOPT

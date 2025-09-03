@@ -412,6 +412,10 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-wasm-enable-eh");
   }
 
+  if (DriverArgs.getLastArg(options::OPT_fwasm_fix_function_bitcasts)) {
+    CC1Args.push_back("-fwasm-fix-function-bitcasts");
+  }
+
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
     if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
