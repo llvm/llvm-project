@@ -166,11 +166,11 @@ body:             |
 ...
 
 ---
-name:            no_merge_global_load_dword_agpr_with_vgpr
+name:            merge_global_load_dword_agpr_with_vgpr
 body:             |
   bb.0.entry:
 
-    ; GCN-LABEL: name: no_merge_global_load_dword_agpr_with_vgpr
+    ; GCN-LABEL: name: merge_global_load_dword_agpr_with_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(1) poison`, align 4, addrspace 1)
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
@@ -597,11 +597,11 @@ body:             |
 ...
 
 ---
-name:            no_merge_global_store_dword_agpr_with_vgpr
+name:            merge_global_store_dword_agpr_with_vgpr
 body:             |
   bb.0.entry:
 
-    ; GCN-LABEL: name: no_merge_global_store_dword_agpr_with_vgpr
+    ; GCN-LABEL: name: merge_global_store_dword_agpr_with_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
