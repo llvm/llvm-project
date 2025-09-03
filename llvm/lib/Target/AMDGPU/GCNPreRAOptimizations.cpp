@@ -65,22 +65,39 @@ private:
   LiveIntervals *LIS;
 
   bool processReg(Register Reg);
+  // creates a list of packed instructions following an MFMA that are suitable
+  // for unpacking
   bool createListOfPackedInstr(MachineInstr &BeginMI,
                                SetVector<MachineInstr *> &InstrsToUnpack,
                                uint16_t NumMFMACycles);
+  // check if the machine instruction being processed is a supported packed
+  // instruction
   bool isUnpackingSupportedInstr(MachineInstr &MI) const;
+  // function to perform unpacking of F32 packed instructions with 2 source
+  // operands, such as V_PK_MUL and V_PK_ADD. Currently, only V_PK_MUL and
+  // V_PK_ADD are supported for this transformation
   void processF32Unpacking(MachineInstr &I);
+  // select corresponding unpacked instruction from packed instruction as input
   uint16_t mapToUnpackedOpcode(MachineInstr &I);
-
+  // inserts appropriate unpacked instructions into the BB
   void insertUnpackedF32MI(MachineInstr &I, MachineOperand &DstMO,
                            MachineOperand &LoSrcMO1, MachineOperand &LoSrcMO2,
                            MachineOperand &HiSrcMO1, MachineOperand &HiSrcMO2,
                            bool isVreg_64);
+  // function to perform unpacking of F32 packed instructions with 3 source
+  // operands, such as V_PK_FMA. Currently, only V_PK_FMA is supported for this
+  // transformation
   void processFMAF32Unpacking(MachineInstr &I);
+  // creates the unpacked instruction to be inserted. Adds source modifiers to
+  // the unpacked instructions based on the source modifiers in the packed
+  // instruction
   MachineInstrBuilder createUnpackedMI(MachineBasicBlock &MBB, MachineInstr &I,
                                        const DebugLoc &DL,
                                        uint16_t UnpackedOpcode, bool isHiBits,
                                        bool isFMA);
+  // checks if there are register dependencies between those used by the MFMA
+  // instruction and the following packed instructions. Conservatively ensures
+  // that we do not incorrectly read/write registers.
   bool hasReadWriteDependencies(const MachineInstr &PredMI,
                                 const MachineInstr &SuccMI);
 
@@ -312,8 +329,6 @@ bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
     MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
     uint16_t NumMFMACycles) {
   auto *BB = BeginMI.getParent();
-  auto *MF = BB->getParent();
-  int NumInst = 0;
   auto E = BB->end();
   int TotalCyclesBetweenCandidates = 0;
   auto SchedModel = TII->getSchedModel();
@@ -397,7 +412,7 @@ void GCNPreRAOptimizationsImpl::processFMAF32Unpacking(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   Register DstReg = I.getOperand(0).getReg();
   const DebugLoc &DL = I.getDebugLoc();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(I.getOperand(0).getReg());
+  const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
   bool IsVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
@@ -440,9 +455,6 @@ MachineInstrBuilder GCNPreRAOptimizationsImpl::createUnpackedMI(
   MachineOperand &SrcMO1 = I.getOperand(2);
   MachineOperand &SrcMO2 = I.getOperand(4);
   Register DstReg = DstMO.getReg();
-  Register SrcReg1 = SrcMO1.getReg();
-  Register SrcReg2 = SrcMO2.getReg();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(DstMO.getReg());
   unsigned DestSubIdx =
       isHiBits ? TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub1)
                : TRI->composeSubRegIndices(DstMO.getSubReg(), AMDGPU::sub0);
@@ -498,7 +510,6 @@ MachineInstrBuilder GCNPreRAOptimizationsImpl::createUnpackedMI(
 
   if (isFMA) {
     MachineOperand &SrcMO3 = I.getOperand(6);
-    Register SrcReg3 = SrcMO3.getReg();
     int Src2_modifiers_Idx = AMDGPU::getNamedOperandIdx(
         I.getOpcode(), AMDGPU::OpName::src2_modifiers);
     unsigned Src2_Mods = I.getOperand(Src2_modifiers_Idx).getImm();
@@ -538,14 +549,12 @@ void GCNPreRAOptimizationsImpl::processF32Unpacking(MachineInstr &I) {
     processFMAF32Unpacking(I);
     return;
   }
-  MachineBasicBlock &MBB = *I.getParent();
 
   MachineOperand &DstMO = I.getOperand(0);
   MachineOperand &SrcMO1 = I.getOperand(2);
   MachineOperand &SrcMO2 = I.getOperand(4);
 
-  const DebugLoc &DL = I.getDebugLoc();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(I.getOperand(0).getReg());
+  const TargetRegisterClass *DstRC = MRI->getRegClass(DstMO.getReg());
 
   bool IsVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
   insertUnpackedF32MI(I, DstMO, SrcMO1, SrcMO2, SrcMO1, SrcMO2, IsVReg64);
