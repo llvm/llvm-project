@@ -909,3 +909,46 @@ void foo33(__builtin_va_list a) {
 // OGCG:  %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
 // OGCG:  store float %[[RESULT_REAL]], ptr %[[B_REAL_PTR]], align 4
 // OGCG:  store float %[[RESULT_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+
+void foo34(float _Complex a) {}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } %{{.*}}, ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store <2 x float> %a.coerce, ptr %[[A_ADDR]], align 4
+
+void foo35() {
+  float _Complex a;
+  foo34(a);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_ARG:.*]] = cir.load{{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.call @_Z5foo34Cf(%[[TMP_ARG]]) : (!cir.complex<!cir.float>) -> ()
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: store { float, float } %[[TMP_A]], ptr %[[ARG_ADDR]], align 4
+// LLVM: %[[TMP_ARG:.*]] = load { float, float }, ptr %[[ARG_ADDR]], align 4
+// LLVM: call void @_Z5foo34Cf({ float, float } %[[TMP_ARG]])
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[ARG_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[ARG_ADDR]], i32 0, i32 0
+// OGCG: %[[ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[ARG_ADDR]], i32 0, i32 1
+// OGCG: store float %[[A_REAL]], ptr %[[ARG_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[ARG_IMAG_PTR]], align 4
+// OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
+// OGCG: call void @_Z5foo34Cf(<2 x float> noundef %[[TMP_ARG]])
