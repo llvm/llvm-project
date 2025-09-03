@@ -647,8 +647,7 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
   // NOTE: Functions that only use ZT0 don't need to zero ZA.
-  bool ZeroZA =
-      MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState();
+  bool ZeroZA = AFI->getSMEFnAttrs().hasZAState();
   auto CommitZASave =
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
           .addReg(TPIDR2EL0)
@@ -666,8 +665,7 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
 Register MachineSMEABI::getAgnosticZABufferPtr() {
   if (State.AgnosticZABufferPtr != AArch64::NoRegister)
     return State.AgnosticZABufferPtr;
-  if (auto BufferPtr =
-          MF->getInfo<AArch64FunctionInfo>()->getEarlyAllocSMESaveBuffer();
+  if (auto BufferPtr = AFI->getEarlyAllocSMESaveBuffer();
       BufferPtr != AArch64::NoRegister)
     State.AgnosticZABufferPtr = BufferPtr;
   else
@@ -762,10 +760,7 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
   // TODO: Avoid setting up the save buffer if there's no transition to
   // LOCAL_SAVED.
   if (From == ZAState::CALLER_DORMANT) {
-    assert(MBB.getParent()
-               ->getInfo<AArch64FunctionInfo>()
-               ->getSMEFnAttrs()
-               .hasPrivateZAInterface() &&
+    assert(AFI->getSMEFnAttrs().hasPrivateZAInterface() &&
            "CALLER_DORMANT state requires private ZA interface");
     assert(&MBB == &MBB.getParent()->front() &&
            "CALLER_DORMANT state only valid in entry block");
