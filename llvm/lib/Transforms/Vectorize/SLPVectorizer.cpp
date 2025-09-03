@@ -24669,21 +24669,23 @@ private:
                 FMF &= FPCI->getFastMathFlags();
               Ops.push_back(RdxVal->user_back());
             }
-            FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                      *TTI, TLI);
-            if (FMACost.isValid()) {
-              // Calculate actual FMAD cost.
-              IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
-                                          {RVecTy, RVecTy, RVecTy}, FMF);
-              FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+            if (!Ops.empty()) {
+              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
+                                        *TTI, TLI);
+              if (FMACost.isValid()) {
+                // Calculate actual FMAD cost.
+                IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
+                                            {RVecTy, RVecTy, RVecTy}, FMF);
+                FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
 
-              LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
-              // Also, exclude vector fmul cost.
-              InstructionCost FMulCost = TTI->getArithmeticInstrCost(
-                  Instruction::FMul, RVecTy, CostKind);
-              LLVM_DEBUG(dbgs()
-                         << "Minus vector FMul cost: " << FMulCost << "\n");
-              FMACost -= FMulCost;
+                LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
+                // Also, exclude vector fmul cost.
+                InstructionCost FMulCost = TTI->getArithmeticInstrCost(
+                    Instruction::FMul, RVecTy, CostKind);
+                LLVM_DEBUG(dbgs()
+                           << "Minus vector FMul cost: " << FMulCost << "\n");
+                FMACost -= FMulCost;
+              }
             }
           }
           if (FMACost.isValid())
