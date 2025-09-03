@@ -41,6 +41,15 @@ private:
   LogCallback m_log_callback;
 };
 
+/// Information about this instance of lldb's MCP server for lldb-mcp to use to
+/// coordinate connecting an lldb-mcp client.
+struct ServerInfo {
+  std::string connection_uri;
+  lldb::pid_t pid;
+};
+llvm::json::Value toJSON(const ServerInfo &);
+bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
+
 class Server : public MCPTransport::MessageHandler {
 public:
   Server(std::string name, std::string version,
