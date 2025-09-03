@@ -77,10 +77,9 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_32xi8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    srai.d $a0, $a2, 2
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvreplve.b $xr0, $xr0, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a2
+; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvstelm.b $xr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -93,11 +92,10 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_16xi16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    srai.d $a0, $a2, 1
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvreplve.h $xr0, $xr0, $a2
-; CHECK-NEXT:    xvstelm.h $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvreplgr2vr.h $xr2, $a2
+; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvstelm.h $xr2, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
   %e = extractelement <16 x i16> %v, i32 %idx
@@ -123,13 +121,10 @@ define void @extract_4xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xi64_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
-; CHECK-NEXT:    xvslli.w $xr1, $xr1, 1
-; CHECK-NEXT:    xvperm.w $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvaddi.wu $xr1, $xr1, 1
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvilvl.w $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvstelm.d $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvreplgr2vr.d $xr2, $a2
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvstelm.d $xr2, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x i64>, ptr %src
   %e = extractelement <4 x i64> %v, i32 %idx
@@ -155,13 +150,10 @@ define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xdouble_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
-; CHECK-NEXT:    xvslli.w $xr1, $xr1, 1
-; CHECK-NEXT:    xvperm.w $xr2, $xr0, $xr1
-; CHECK-NEXT:    xvaddi.wu $xr1, $xr1, 1
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvilvl.w $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvstelm.d $xr0, $a1, 0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    xvreplgr2vr.d $xr2, $a2
+; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvstelm.d $xr2, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x double>, ptr %src
   %e = extractelement <4 x double> %v, i32 %idx

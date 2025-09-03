@@ -2799,28 +2799,26 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   default:
     llvm_unreachable("Unexpected type");
   case MVT::v32i8:
-  case MVT::v16i16: {
-    // Consider the source vector as v8i32 type.
-    SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
+  case MVT::v16i16:
+  case MVT::v4i64:
+  case MVT::v4f64: {
+    // Extract the high half subvector and place it to the low half of a new
+    // vector. It doesn't matter what the high half of the new vector is.
+    EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
+    SDValue VecHi =
+        DAG.getExtractSubvector(DL, HalfTy, Vec, HalfTy.getVectorNumElements());
+    SDValue TmpVec =
+        DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
+                    VecHi, DAG.getConstant(0, DL, GRLenVT));
 
-    // Compute the adjusted index and use it to broadcast the vector.
-    // The original desired i8/i16 element is now replicated in each
-    // i32 lane of the splatted vector.
-    SDValue NewIdx = DAG.getNode(
-        ISD::SRA, DL, GRLenVT, Idx,
-        DAG.getConstant(((VecTy == MVT::v32i8) ? 2 : 1), DL, GRLenVT));
-    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, NewIdx);
-    SDValue SplatValue =
-        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdx);
-    SDValue SplatVec = DAG.getBitcast(VecTy, SplatValue);
+    // Shuffle the origin Vec and the TmpVec. Each element of the low half of
+    // the ResVec will be the desired element.
+    SDValue SplatIdx = DAG.getSplatBuildVector(
+        (VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, DL, Idx);
+    SDValue ResVec =
+        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, SplatIdx, TmpVec, Vec);
 
-    // The original i8/i16 elements in each i32 lane all share the same i32
-    // intra-element offset, use the original Idx to broadcast the vector.
-    // Each elements of the vector will be the desired element.
-    SDValue ExtractVec =
-        DAG.getNode(LoongArchISD::VREPLVE, DL, VecTy, SplatVec, Idx);
-
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ResVec,
                        DAG.getConstant(0, DL, GRLenVT));
   }
   case MVT::v8i32:
@@ -2830,37 +2828,6 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
         DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
 
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
-                       DAG.getConstant(0, DL, GRLenVT));
-  }
-  case MVT::v4i64:
-  case MVT::v4f64: {
-    // Consider the source vector as v8i32 type.
-    SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
-
-    // Split the original element index into low and high parts:
-    // Lo = Idx * 2, Hi = Idx * 2 + 1.
-    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
-    SDValue SplatIdxLo = DAG.getNode(LoongArchISD::VSLLI, DL, MVT::v8i32,
-                                     SplatIdx, DAG.getConstant(1, DL, GRLenVT));
-    SDValue SplatIdxHi =
-        DAG.getNode(ISD::ADD, DL, MVT::v8i32, SplatIdxLo,
-                    DAG.getSplatBuildVector(MVT::v8i32, DL,
-                                            DAG.getConstant(1, DL, GRLenVT)));
-
-    // Use the broadcasted index to broadcast the low and high parts of the
-    // vector separately.
-    SDValue SplatVecLo =
-        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxLo);
-    SDValue SplatVecHi =
-        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxHi);
-
-    // Combine the low and high i32 parts to reconstruct the original i64/f64
-    // element.
-    SDValue SplatValue = DAG.getNode(LoongArchISD::VILVL, DL, MVT::v8i32,
-                                     SplatVecHi, SplatVecLo);
-    SDValue ExtractVec = DAG.getBitcast(VecTy, SplatValue);
-
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
                        DAG.getConstant(0, DL, GRLenVT));
   }
   }
