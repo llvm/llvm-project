@@ -415,7 +415,7 @@ public:
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding and safe to operate simultaneously.
   uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
-    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
+    return LAI->getDepChecker().getPowerOf2StoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I

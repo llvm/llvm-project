@@ -1843,7 +1843,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
       std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
-               MaxStoreLoadForwardSafeDistanceInBits);
+               MaxPowerOf2StoreLoadForwardSafeDistanceInBits);
+  uint64_t MaxVFWithoutSLForwardIssuesNonPowerOf2 = 0;
 
   // Compute the smallest VF at which the store and load would be misaligned.
   for (uint64_t VF = 2 * TypeByteSize;
@@ -1855,24 +1856,68 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
       break;
     }
   }
+  // If target supports non-power-of-2 store-load forwarding distances, then it
+  // supports non-power-of-2 vector factor. So, we iterate in a backward order
+  // to find largest VF, which allows aligned stores-loads or the number of
+  // iterations between conflicting memory addresses is not less than 8
+  // (NumItersForStoreLoadThroughMemory). If the HW supports non-power-of-2
+  // store-load forwarding distance, we can choose any vector factor, which is
+  // the whole divider of the MaxVFWithoutSLForwardIssuesNonPowerOf2. Say, if
+  // MaxVFWithoutSLForwardIssuesNonPowerOf2 is 9, then we can use vector factors
+  // 3 and 9. If it is 6, we can use vector factors 2, 3, 6. All these are safe.
+  if (AllowNonPow2StoreLoadForwardDistance) {
+    MaxVFWithoutSLForwardIssuesNonPowerOf2 =
+        std::min(8 * VectorizerParams::MaxVectorWidth / TypeByteSize,
+                 MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits);
 
-  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize) {
+    const bool IsSafeForAnyStoreLoadForwardDistances =
+        isSafeForAnyStoreLoadForwardDistances();
+    for (uint64_t VF = MaxVFWithoutSLForwardIssuesNonPowerOf2;
+         VF > MaxVFWithoutSLForwardIssuesPowerOf2; VF -= TypeByteSize) {
+      if (Distance % VF == 0 ||
+          Distance / VF >= NumItersForStoreLoadThroughMemory) {
+        uint64_t GCD =
+            IsSafeForAnyStoreLoadForwardDistances
+                ? VF
+                : std::gcd(MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits,
+                           VF);
+        MaxVFWithoutSLForwardIssuesNonPowerOf2 = GCD;
+        break;
+      }
+    }
+  }
+
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize &&
+      MaxVFWithoutSLForwardIssuesNonPowerOf2 < 2 * TypeByteSize) {
     LLVM_DEBUG(
         dbgs() << "LAA: Distance " << Distance
                << " that could cause a store-load forwarding conflict\n");
     return true;
   }
 
+  // Handle non-power-2 store-load forwarding distance, power-of-2 distance can
+  // be calculated.
+  if (AllowNonPow2StoreLoadForwardDistance && CommonStride &&
+      MaxVFWithoutSLForwardIssuesNonPowerOf2 <
+          MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits &&
+      MaxVFWithoutSLForwardIssuesNonPowerOf2 !=
+          8 * VectorizerParams::MaxVectorWidth / TypeByteSize) {
+    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesNonPowerOf2 / CommonStride;
+    uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+    MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits =
+        std::min(MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+  }
+
   if (CommonStride &&
       MaxVFWithoutSLForwardIssuesPowerOf2 <
-          MaxStoreLoadForwardSafeDistanceInBits &&
+          MaxPowerOf2StoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
     uint64_t MaxVF =
         bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-    MaxStoreLoadForwardSafeDistanceInBits =
-        std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+    MaxPowerOf2StoreLoadForwardSafeDistanceInBits =
+        std::min(MaxPowerOf2StoreLoadForwardSafeDistanceInBits, MaxVFInBits);
   }
   return false;
 }
@@ -3040,7 +3085,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector) * 2;
 
   DepChecker = std::make_unique<MemoryDepChecker>(
-      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits);
+      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits,
+      TTI && TTI->hasActiveVectorLength());
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop())
     CanVecMem = analyzeLoop(AA, LI, TLI, DT);
@@ -3054,7 +3100,9 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
       OS << " with a maximum safe vector width of "
          << DC.getMaxSafeVectorWidthInBits() << " bits";
     if (!DC.isSafeForAnyStoreLoadForwardDistances()) {
-      uint64_t SLDist = DC.getStoreLoadForwardSafeDistanceInBits();
+      uint64_t SLDist = DC.getNonPowerOf2StoreLoadForwardSafeDistanceInBits();
+      if (SLDist == std::numeric_limits<uint64_t>::max())
+        SLDist = DC.getPowerOf2StoreLoadForwardSafeDistanceInBits();
       OS << ", with a maximum safe store-load forward width of " << SLDist
          << " bits";
     }
