@@ -354,10 +354,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR = 1 << 8,
-  IS_AGPR = 1 << 9,
-  IS_HI16 = 1 << 10,
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
 };
 } // namespace HWEncoding
 

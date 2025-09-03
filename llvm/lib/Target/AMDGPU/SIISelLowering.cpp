@@ -16916,7 +16916,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       switch (BitWidth) {
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
-                                             : &AMDGPU::VGPR_32RegClass;
+                                             : &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);
@@ -16963,7 +16963,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
     if (Kind == 'v') {
-      RC = &AMDGPU::VGPR_32RegClass;
+      RC = &AMDGPU::VGPR_32_Lo256RegClass;
     } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
     } else if (Kind == 'a') {
@@ -17005,6 +17005,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         return std::pair(0U, nullptr);
       if (Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
+      return std::pair(0U, nullptr);
     }
   }
 

@@ -76,17 +76,17 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 //===----------------------------------------------------------------------===//
 //  Declarations that describe the SI registers
 //===----------------------------------------------------------------------===//
-class SIReg <string n, bits<8> regIdx = 0, bit isVGPR = 0,
+class SIReg <string n, bits<10> regIdx = 0, bit isVGPR = 0,
              bit isAGPR = 0, bit isHi16 = 0> : Register<n> {
   let Namespace = "AMDGPU";
 
   // These are generic helper values we use to form actual register
   // codes. They should not be assumed to match any particular register
   // encodings on any particular subtargets.
-  let HWEncoding{7-0} = regIdx;
-  let HWEncoding{8} = isVGPR;
-  let HWEncoding{9} = isAGPR;
-  let HWEncoding{10} = isHi16;
+  let HWEncoding{9-0} = regIdx;
+  let HWEncoding{10} = isVGPR;
+  let HWEncoding{11} = isAGPR;
+  let HWEncoding{12} = isHi16;
 
   int Index = !cast<int>(regIdx);
 }
@@ -128,7 +128,7 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 
 }
 
-multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
+multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
                         bit isVGPR = 0, bit isAGPR = 0,
                         list<int> DwarfEncodings = [-1, -1]> {
   def _LO16 : SIReg<n#".l", regIdx, isVGPR, isAGPR>;
@@ -142,9 +142,10 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
     let Namespace = "AMDGPU";
     let SubRegIndices = [lo16, hi16];
     let CoveredBySubRegs = !not(ArtificialHigh);
-    let HWEncoding{7-0} = regIdx;
-    let HWEncoding{8} = isVGPR;
-    let HWEncoding{9} = isAGPR;
+
+    let HWEncoding{9-0} = regIdx;
+    let HWEncoding{10} = isVGPR;
+    let HWEncoding{11} = isAGPR;
 
     int Index = !cast<int>(regIdx);
   }
@@ -225,7 +226,7 @@ def SGPR_NULL64 :
 // the high 32 bits. The lower 32 bits are always zero (for base) or
 // -1 (for limit). Since we cannot access the high 32 bits, when we
 // need them, we need to do a 64 bit load and extract the bits manually.
-multiclass ApertureRegister<string name, bits<8> regIdx> {
+multiclass ApertureRegister<string name, bits<10> regIdx> {
   let isConstant = true in {
     // FIXME: We shouldn't need to define subregisters for these (nor add them to any 16 bit
     //  register classes), but if we don't it seems to confuse the TableGen
@@ -313,7 +314,7 @@ foreach Index = 0...15 in {
   defm TTMP#Index           : SIRegLoHi16<"ttmp"#Index, 0>;
 }
 
-multiclass FLAT_SCR_LOHI_m <string n, bits<8> ci_e, bits<8> vi_e> {
+multiclass FLAT_SCR_LOHI_m <string n, bits<10> ci_e, bits<10> vi_e> {
   defm _ci : SIRegLoHi16<n, ci_e>;
   defm _vi : SIRegLoHi16<n, vi_e>;
   defm "" : SIRegLoHi16<n, 0>;
@@ -343,11 +344,12 @@ foreach Index = 0...105 in {
 }
 
 // VGPR registers
-foreach Index = 0...255 in {
+foreach Index = 0...1023 in {
   defm VGPR#Index :
     SIRegLoHi16 <"v"#Index, Index, /*ArtificialHigh=*/ 0,
                  /*isVGPR=*/ 1, /*isAGPR=*/ 0, /*DwarfEncodings=*/
-                 [!add(Index, 2560), !add(Index, 1536)]>;
+                [!if(!le(Index, 511), !add(Index, 2560), -1),
+                 !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
 }
 
 // AccVGPR registers
@@ -604,15 +606,15 @@ def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v
 def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
 
 let HasVGPR = 1 in {
-// VOP3 and VINTERP can access 256 lo and 256 hi registers.
+// VOP3 and VINTERP can access 1024 lo and 1024 hi registers.
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
-                            (add (interleave (sequence "VGPR%u_LO16", 0, 255),
-                                             (sequence "VGPR%u_HI16", 0, 255)))> {
+                            (add (interleave (sequence "VGPR%u_LO16", 0, 1023),
+                                             (sequence "VGPR%u_HI16", 0, 1023)))> {
   let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 16;
   let GeneratePressureSet = 0;
 
-  // This is the base class for VGPR{128..255}_{LO16,HI16}.
+  // This is the base class for VGPR{128..1023}_{LO16,HI16}.
   let BaseClassOrder = 17;
 }
 
@@ -633,7 +635,7 @@ def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 // VGPR 32-bit registers
 // i16/f16 only on VI+
 def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
-                            (add (sequence "VGPR%u", 0, 255))> {
+                            (add (sequence "VGPR%u", 0, 1023))> {
   let AllocationPriority = !add(0, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 32;
   let Weight = 1;
@@ -648,46 +650,55 @@ def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
   let Size = 32;
   let Weight = 1;
 }
+
+// Identical to VGPR_32 except it only contains the low 256 (Lo256) registers.
+def VGPR_32_Lo256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
+                                    (add (sequence "VGPR%u", 0, 255))> {
+  let AllocationPriority = 0;
+  let GeneratePressureSet = 0;
+  let Size = 32;
+  let Weight = 1;
+}
 } // End HasVGPR = 1
 
 // VGPR 64-bit registers
-def VGPR_64 : SIRegisterTuples<getSubRegs<2>.ret, VGPR_32, 255, 1, 2, "v">;
+def VGPR_64 : SIRegisterTuples<getSubRegs<2>.ret, VGPR_32, 1023, 1, 2, "v">;
 
 // VGPR 96-bit registers
-def VGPR_96 : SIRegisterTuples<getSubRegs<3>.ret, VGPR_32, 255, 1, 3, "v">;
+def VGPR_96 : SIRegisterTuples<getSubRegs<3>.ret, VGPR_32, 1023, 1, 3, "v">;
 
 // VGPR 128-bit registers
-def VGPR_128 : SIRegisterTuples<getSubRegs<4>.ret, VGPR_32, 255, 1, 4, "v">;
+def VGPR_128 : SIRegisterTuples<getSubRegs<4>.ret, VGPR_32, 1023, 1, 4, "v">;
 
 // VGPR 160-bit registers
-def VGPR_160 : SIRegisterTuples<getSubRegs<5>.ret, VGPR_32, 255, 1, 5, "v">;
+def VGPR_160 : SIRegisterTuples<getSubRegs<5>.ret, VGPR_32, 1023, 1, 5, "v">;
 
 // VGPR 192-bit registers
-def VGPR_192 : SIRegisterTuples<getSubRegs<6>.ret, VGPR_32, 255, 1, 6, "v">;
+def VGPR_192 : SIRegisterTuples<getSubRegs<6>.ret, VGPR_32, 1023, 1, 6, "v">;
 
 // VGPR 224-bit registers
-def VGPR_224 : SIRegisterTuples<getSubRegs<7>.ret, VGPR_32, 255, 1, 7, "v">;
+def VGPR_224 : SIRegisterTuples<getSubRegs<7>.ret, VGPR_32, 1023, 1, 7, "v">;
 
 // VGPR 256-bit registers
-def VGPR_256 : SIRegisterTuples<getSubRegs<8>.ret, VGPR_32, 255, 1, 8, "v">;
+def VGPR_256 : SIRegisterTuples<getSubRegs<8>.ret, VGPR_32, 1023, 1, 8, "v">;
 
 // VGPR 288-bit registers
-def VGPR_288 : SIRegisterTuples<getSubRegs<9>.ret, VGPR_32, 255, 1, 9, "v">;
+def VGPR_288 : SIRegisterTuples<getSubRegs<9>.ret, VGPR_32, 1023, 1, 9, "v">;
 
 // VGPR 320-bit registers
-def VGPR_320 : SIRegisterTuples<getSubRegs<10>.ret, VGPR_32, 255, 1, 10, "v">;
+def VGPR_320 : SIRegisterTuples<getSubRegs<10>.ret, VGPR_32, 1023, 1, 10, "v">;
 
 // VGPR 352-bit registers
-def VGPR_352 : SIRegisterTuples<getSubRegs<11>.ret, VGPR_32, 255, 1, 11, "v">;
+def VGPR_352 : SIRegisterTuples<getSubRegs<11>.ret, VGPR_32, 1023, 1, 11, "v">;
 
 // VGPR 384-bit registers
-def VGPR_384 : SIRegisterTuples<getSubRegs<12>.ret, VGPR_32, 255, 1, 12, "v">;
+def VGPR_384 : SIRegisterTuples<getSubRegs<12>.ret, VGPR_32, 1023, 1, 12, "v">;
 
 // VGPR 512-bit registers
-def VGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, VGPR_32, 255, 1, 16, "v">;
+def VGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, VGPR_32, 1023, 1, 16, "v">;
 
 // VGPR 1024-bit registers
-def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 255, 1, 32, "v">;
+def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 1023, 1, 32, "v">;
 
 let HasAGPR = 1 in {
 def AGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
@@ -1003,6 +1014,10 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
       let BaseClassOrder = !sub(!mul(numRegs, 32), 1);
       let RegTupleAlignUnits = 2;
     }
+
+    // Aligned register tuples starting with low 256 vgprs
+    def _Lo256_Align2 : VRegClassBase<numRegs, regTypes,
+        (trunc (decimate regList, 2), !div(!sub(258, numRegs), 2))>;
   }
 }
 
@@ -1100,6 +1115,14 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let Size = 32;
 }
 
+def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
+                                  (add VGPR_32_Lo256, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 32;
+}
+
 def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_64)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
@@ -1120,6 +1143,13 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
   let HasAGPR = 1;
   let BaseClassPriority = 0;
   let Size = 32;
+}
+
+def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_Lo256_Align2, SReg_64)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 64;
 }
 } // End GeneratePressureSet = 0
 
@@ -1287,9 +1317,20 @@ def VGPRSrc_32 : RegisterOperand<VGPR_32> {
 def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
+def VGPRSrc_64 : RegisterOperand<VReg_64> {
+  let DecoderMethod = "DecodeVReg_64RegisterClass";
+}
 
 def VGPRSrc_96 : RegisterOperand<VReg_96> {
   let DecoderMethod = "DecodeVReg_96RegisterClass";
+}
+
+def VGPRSrc_128 : RegisterOperand<VReg_128> {
+  let DecoderMethod = "DecodeVReg_128RegisterClass";
+}
+
+def VGPRSrc_192 : RegisterOperand<VReg_192> {
+  let DecoderMethod = "DecodeVReg_192RegisterClass";
 }
 
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
@@ -1329,7 +1370,9 @@ def VCSrc_f64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_FP64">;
 def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2INT16">;
 def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2BF16">;
 def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2FP16">;
+def VCSrc_b32_Lo256 : SrcRegOrImm9 <VS_32_Lo256, "OPERAND_REG_INLINE_C_INT32">;
 def VCSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_V2INT32">;
+def VCSrc_b64_Lo256 : SrcRegOrImm9 <VS_64_Lo256, "OPERAND_REG_INLINE_C_INT64">;
 
 // True 16 Operands
 def VCSrcT_b16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_INT16">;
