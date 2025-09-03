@@ -1335,7 +1335,7 @@ bool SemaHLSL::handleRootSignatureElements(
       bool HasNonSampler = false;
       uint32_t Offset = 0;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
-        SourceLocation Loc = RootSigElem.getLocation();
+        SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
           HasSampler = true;
         else
@@ -1356,19 +1356,20 @@ bool SemaHLSL::handleRootSignatureElements(
           Offset = Clause->Offset;
         }
 
-        uint64_t NextOffset =
-            llvm::hlsl::rootsig::nextOffset(Offset, Clause->NumDescriptors);
+        uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+            Offset, Clause->NumDescriptors);
 
         if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
           // Trying to append onto unbound offset
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
-        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(NextOffset -
-                                                                  1)) {
+        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
           // Upper bound overflows maximum offset
-          Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << NextOffset - 1;
+          Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
         }
 
-        Offset = uint32_t(NextOffset);
+        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
+                     ? uint32_t(RangeBound)
+                     : uint32_t(RangeBound + 1);
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
