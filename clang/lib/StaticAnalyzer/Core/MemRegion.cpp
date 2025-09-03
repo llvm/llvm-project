@@ -1704,8 +1704,8 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       if (SymbolicOffsetBase)
         continue;
 
+      assert(FR->getDecl()->getCanonicalDecl() == FR->getDecl());
       auto MaybeFieldIdx = [FR, RD]() -> std::optional<unsigned> {
-        assert(FR->getDecl()->getCanonicalDecl() == FR->getDecl());
         for (auto [Idx, Field] : llvm::enumerate(RD->fields())) {
           if (FR->getDecl() == Field->getCanonicalDecl())
             return Idx;
