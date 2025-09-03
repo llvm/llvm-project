@@ -621,8 +621,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s0, v0
 ; GCN-NEXT:    ds_read_b128 a[156:159], v1 offset:112
@@ -728,8 +728,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_MFMA_cluster:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
 ; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s0, v0
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[156:159], v1 offset:112
@@ -871,8 +871,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2.0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1005,8 +1005,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; EXACTCUTOFF-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
 ; EXACTCUTOFF:       ; %bb.0: ; %entry
 ; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v2, 1.0
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v3, 2.0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1202,7 +1202,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0x3fb8aa3b
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0x32a5705f
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v3, s0, v2
 ; GCN-NEXT:    v_rndne_f32_e32 v4, v3
@@ -1212,7 +1212,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_add_f32_e32 v3, v5, v3
 ; GCN-NEXT:    v_exp_f32_e32 v3, v3
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_add_u32_e32 v1, s6, v0
 ; GCN-NEXT:    ds_read_b128 a[28:31], v1 offset:112
 ; GCN-NEXT:    ds_read_b128 a[24:27], v1 offset:96
@@ -1398,7 +1398,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v2, 0x3fb8aa3b
 ; EXACTCUTOFF-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v6, 0x32a5705f
-; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v3, s0, v2
 ; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v4, v3
@@ -1408,7 +1408,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v3, v5, v3
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v3, v3
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; EXACTCUTOFF-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; EXACTCUTOFF-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; EXACTCUTOFF-NEXT:    v_add_u32_e32 v1, s6, v0
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v1 offset:112
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[24:27], v1 offset:96
