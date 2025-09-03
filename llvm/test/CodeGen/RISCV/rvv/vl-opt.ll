@@ -202,9 +202,8 @@ define void @fadd_fcmp_select_copy(<vscale x 4 x float> %v, <vscale x 4 x i1> %c
 define <vscale x 8 x i32> @vcompress_cmp(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c, iXLen %vl) {
 ; CHECK-LABEL: vcompress_cmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmseq.vv v20, v8, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vmseq.vv v20, v8, v12
 ; CHECK-NEXT:    vcompress.vm v8, v16, v20
 ; CHECK-NEXT:    ret
   %cmp = icmp eq <vscale x 8 x i32> %a, %b
