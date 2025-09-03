@@ -50,7 +50,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -21915,56 +21914,6 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
-// Transform the following:
-// - add(x, abs(y)) -> saba(x, y, 0)
-// - add(x, zext(abs(y))) -> sabal(x, y, 0)
-static SDValue performAddSABACombine(SDNode *N,
-                                     TargetLowering::DAGCombinerInfo &DCI) {
-  if (N->getOpcode() != ISD::ADD)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-  if (!VT.isFixedLengthVector())
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  auto MatchAbsOrZExtAbs = [](SDValue V0, SDValue V1, SDValue &AbsOp,
-                              SDValue &Other, bool &IsZExt) {
-    Other = V1;
-    if (sd_match(V0, m_Abs(SDPatternMatch::m_Value(AbsOp)))) {
-      IsZExt = false;
-      return true;
-    }
-    if (sd_match(V0, SDPatternMatch::m_ZExt(
-                         m_Abs(SDPatternMatch::m_Value(AbsOp))))) {
-      IsZExt = true;
-      return true;
-    }
-
-    return false;
-  };
-
-  SDValue AbsOp;
-  SDValue Other;
-  bool IsZExt;
-  if (!MatchAbsOrZExtAbs(N0, N1, AbsOp, Other, IsZExt) &&
-      !MatchAbsOrZExtAbs(N1, N0, AbsOp, Other, IsZExt))
-    return SDValue();
-
-  // Don't perform this on abs(sub), as this will become an ABD/ABA anyway.
-  if (AbsOp.getOpcode() == ISD::SUB)
-    return SDValue();
-
-  SDLoc DL(N);
-  SDValue Zero = DCI.DAG.getConstant(0, DL, MVT::i64);
-  SDValue Zeros = DCI.DAG.getSplatVector(AbsOp.getValueType(), DL, Zero);
-
-  unsigned Opcode = IsZExt ? AArch64ISD::SABAL : AArch64ISD::SABA;
-  return DCI.DAG.getNode(Opcode, DL, VT, Other, AbsOp, Zeros);
-}
-
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -21988,9 +21937,6 @@ static SDValue performAddSubCombine(SDNode *N,
     return Val;
 
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
-    return Val;
-
-  if (SDValue Val = performAddSABACombine(N, DCI))
     return Val;
 
   return performAddSubLongCombine(N, DCI);

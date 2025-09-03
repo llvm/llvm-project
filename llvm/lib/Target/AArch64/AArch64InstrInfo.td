@@ -1059,10 +1059,6 @@ def AArch64sdot     : SDNode<"AArch64ISD::SDOT", SDT_AArch64Dot>;
 def AArch64udot     : SDNode<"AArch64ISD::UDOT", SDT_AArch64Dot>;
 def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 
-// saba/sabal
-def AArch64neonsaba     : SDNode<"AArch64ISD::SABA", SDT_AArch64trivec>;
-def AArch64neonsabal    : SDNode<"AArch64ISD::SABAL", SDT_AArch64Dot>;
-
 // Vector across-lanes addition
 // Only the lower result lane is defined.
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
@@ -6125,19 +6121,6 @@ defm SQRDMLAH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10000,"sqrdmlah",
 defm SQRDMLSH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10001,"sqrdmlsh",
                                                     int_aarch64_neon_sqrdmlsh>;
 
-def : Pat<(AArch64neonsaba (v8i8 V64:$Rd), V64:$Rn, V64:$Rm),
-          (SABAv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64neonsaba (v4i16 V64:$Rd), V64:$Rn, V64:$Rm),
-          (SABAv4i16 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64neonsaba (v2i32 V64:$Rd), V64:$Rn, V64:$Rm),
-          (SABAv2i32 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64neonsaba (v16i8 V128:$Rd), V128:$Rn, V128:$Rm),
-          (SABAv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
-def : Pat<(AArch64neonsaba (v8i16 V128:$Rd), V128:$Rn, V128:$Rm),
-          (SABAv8i16 V128:$Rd, V128:$Rn, V128:$Rm)>;
-def : Pat<(AArch64neonsaba (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
-          (SABAv4i32 V128:$Rd, V128:$Rn, V128:$Rm)>;
-
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",
                                   BinOpFrag<(and node:$LHS, (vnot node:$RHS))> >;
@@ -7024,14 +7007,6 @@ defm : AddSubHNPatterns<ADDHNv4i32_v4i16, ADDHNv4i32_v8i16,
 defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
-
-// Patterns for SABAL
-def : Pat<(AArch64neonsabal (v8i16 V128:$Rd), (v8i8 V64:$Rn), (v8i8 V64:$Rm)),
-          (SABALv8i8_v8i16 V128:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64neonsabal (v4i32 V128:$Rd), (v4i16 V64:$Rn), (v4i16 V64:$Rm)),
-          (SABALv4i16_v4i32 V128:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64neonsabal (v2i64 V128:$Rd), (v2i32 V64:$Rn), (v2i32 V64:$Rm)),
-          (SABALv2i32_v2i64 V128:$Rd, V64:$Rn, V64:$Rm)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
