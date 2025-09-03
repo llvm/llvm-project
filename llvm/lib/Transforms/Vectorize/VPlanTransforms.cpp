@@ -1119,6 +1119,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
+  // tail folding it is likely that x is a header mask and can be simplified
+  // further.
+  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_VPValue(Z))) &&
+      X->hasMoreThanOneUniqueUser())
+    return Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 
@@ -1908,6 +1917,110 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
+  }
+}
+
+namespace {
+struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
+  static bool isSentinel(const VPSingleDefRecipe *Def) {
+    return Def == getEmptyKey() || Def == getTombstoneKey();
+  }
+
+  /// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+  /// Returns an optional pair, where the first element indicates whether it is
+  /// an intrinsic ID.
+  static std::optional<std::pair<bool, unsigned>>
+  getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+    return TypeSwitch<const VPSingleDefRecipe *,
+                      std::optional<std::pair<bool, unsigned>>>(R)
+        .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+              VPWidenSelectRecipe, VPReplicateRecipe>(
+            [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+        .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+          return std::make_pair(true, I->getVectorIntrinsicID());
+        })
+        .Default([](auto *) { return std::nullopt; });
+  }
+
+  /// Returns true if recipe \p Def can be safely handed for CSE.
+  static bool canHandle(const VPSingleDefRecipe *Def) {
+    // We can extend the list of handled recipes in the future,
+    // provided we account for the data embedded in them while checking for
+    // equality or hashing.
+    auto C = getOpcodeOrIntrinsicID(Def);
+
+    // The issue with (Insert|Extract)Value is that the index of the
+    // insert/extract is not a proper operand in LLVM IR, and hence also not in
+    // VPlan.
+    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
+                             C->second == Instruction::ExtractValue)))
+      return false;
+
+    // During CSE, we can only handle recipes that don't read from memory: if
+    // they read from memory, there could be an intervening write to memory
+    // before the next instance is CSE'd, leading to an incorrect result.
+    return !Def->mayReadFromMemory();
+  }
+
+  /// Hash the underlying data of \p Def.
+  static unsigned getHashValue(const VPSingleDefRecipe *Def) {
+    const VPlan *Plan = Def->getParent()->getPlan();
+    VPTypeAnalysis TypeInfo(*Plan);
+    hash_code Result = hash_combine(
+        Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
+        TypeInfo.inferScalarType(Def), vputils::isSingleScalar(Def),
+        hash_combine_range(Def->operands()));
+    if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
+      if (RFlags->hasPredicate())
+        return hash_combine(Result, RFlags->getPredicate());
+    return Result;
+  }
+
+  /// Check equality of underlying data of \p L and \p R.
+  static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
+    if (isSentinel(L) || isSentinel(R))
+      return L == R;
+    if (L->getVPDefID() != R->getVPDefID() ||
+        getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
+        vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||
+        !equal(L->operands(), R->operands()))
+      return false;
+    if (auto *LFlags = dyn_cast<VPRecipeWithIRFlags>(L))
+      if (LFlags->hasPredicate() &&
+          LFlags->getPredicate() !=
+              cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    const VPlan *Plan = L->getParent()->getPlan();
+    VPTypeAnalysis TypeInfo(*Plan);
+    return TypeInfo.inferScalarType(L) == TypeInfo.inferScalarType(R);
+  }
+};
+} // end anonymous namespace
+
+/// Perform a common-subexpression-elimination of VPSingleDefRecipes on the \p
+/// Plan.
+void VPlanTransforms::cse(VPlan &Plan) {
+  VPDominatorTree VPDT(Plan);
+  DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
+        continue;
+      if (VPSingleDefRecipe *V = CSEMap.lookup(Def)) {
+        // V must dominate Def for a valid replacement.
+        if (!VPDT.dominates(V->getParent(), VPBB))
+          continue;
+        // Drop poison-generating flags when reusing a value.
+        if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
+          RFlags->dropPoisonGeneratingFlags();
+        Def->replaceAllUsesWith(V);
+        continue;
+      }
+      CSEMap[Def] = Def;
+    }
   }
 }
 
@@ -3318,7 +3431,7 @@ static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  if (Opcode != Instruction::Add)
+  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
     return nullptr;
 
   Type *RedTy = Ctx.Types.inferScalarType(Red);
@@ -3333,8 +3446,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-          InstructionCost MulAccCost =
-              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
+              isZExt, Opcode, RedTy, SrcVecTy, CostKind);
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
