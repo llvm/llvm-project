@@ -36,4 +36,3 @@ constexpr S operator"" _baz(unsigned long long) {
   MyOtherLongDouble x;
   return S{};
 }
-

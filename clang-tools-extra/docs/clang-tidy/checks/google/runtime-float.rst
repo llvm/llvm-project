@@ -8,4 +8,3 @@ or 128-bit floating-point types.
 
 The corresponding style guide rule:
 https://google.github.io/styleguide/cppguide.html#Floating-Point_Types
-
