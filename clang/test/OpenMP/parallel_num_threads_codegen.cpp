@@ -83,7 +83,7 @@ int main() {
 // CHECK:       [[RES:%.+]] = sext i8 [[A_VAL]] to i32
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES]])
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
-// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], [[INTPTR_T_TY]] 0, [[INTPTR_T_TY]] 0
 // OMP60:       call void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 2, i32 2, ptr [[ARRDECAY]])
 // OMP60:       call void (ptr, i32, ptr, ...) @__kmpc_fork_call(
 // OMP60:       [[A_VAL1:%.+]] = load i8, ptr [[A_ADDR]]
@@ -102,7 +102,7 @@ int main() {
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23)
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
-// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], [[INTPTR_T_TY]] 0, [[INTPTR_T_TY]] 0
 // OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 5, i32 2, ptr [[ARRDECAY]])
 // OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23, i32 1, ptr [[STR1:%.+]])
@@ -120,7 +120,7 @@ int main() {
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES]])
 // CHECK:       {{(invoke|call)}} {{.*}} [[S_TY_DESTR]](ptr {{[^,]*}} [[S_TEMP]])
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
-// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], i64 0, i64 0
+// OMP60:       [[ARRDECAY:%.+]] = getelementptr inbounds [4 x i8], ptr [[STR:%.+]], [[INTPTR_T_TY]] 0, [[INTPTR_T_TY]] 0
 // OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 1, i32 2, ptr [[ARRDECAY]])
 // OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // OMP60:       {{(invoke|call)}} {{.*}} [[S_TY_CONSTR]](ptr {{[^,]*}} [[S_TEMP:%.+]], [[INTPTR_T_TY]] noundef [[INTPTR_T_TY_ATTR]]23)
