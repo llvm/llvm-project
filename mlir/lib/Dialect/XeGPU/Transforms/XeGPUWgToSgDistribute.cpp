@@ -830,7 +830,6 @@ struct WgToSgMultiDimReductionOp
   matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    // Only support reduction with layout and on a single dimension for now.
     VectorType srcType = dyn_cast<VectorType>(op.getSource().getType());
     VectorType accType = dyn_cast<VectorType>(op.getAcc().getType());
     VectorType resType = dyn_cast<VectorType>(op.getResult().getType());
@@ -838,8 +837,10 @@ struct WgToSgMultiDimReductionOp
     if (!srcType || !accType || !resType)
       return failure();
 
+    // Support only 2D vectors
+    if (srcType.getShape().size() != 2 && resType.getShape().size() != 1)
+      return failure();
     ArrayRef<int64_t> wgShape = resType.getShape();
-    // Handle both LayoutAttr and SliceAttr for the op result.
     auto layoutName = xegpu::getLayoutName(op->getResult(0));
     auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
     if (!sliceAttr || sliceAttr.getRank() != 1)
@@ -871,7 +872,6 @@ struct WgToSgMultiDimReductionOp
           VectorType::get(shapeCastShape, srcType.getElementType());
       auto shapeCast = rewriter.create<vector::ShapeCastOp>(
           op.getLoc(), shapeCastTy, sgReduce.getResult());
-      // TODO: Change it to shapeCast
       newReductions.push_back(shapeCast.getResult());
     }
 
@@ -889,23 +889,23 @@ struct WgToSgMultiDimReductionOp
     auto slmTy = MemRefType::get(slmSize, rewriter.getI8Type(), {}, 3);
     auto slm = rewriter.create<memref::AllocaOp>(loc, slmTy);
 
-    // Create a view for the SLM buffer using xegpu.create_mem_desc
-    SmallVector<int64_t> viewShape;
+    // Create a SLM buffer using xegpu.create_mem_desc
+    SmallVector<int64_t> memDescShape;
     auto srcVecType = dyn_cast<VectorType>(adaptor.getSource()[0].getType());
     ArrayRef<int64_t> srcShape =
         srcVecType ? srcVecType.getShape() : ArrayRef<int64_t>();
     for (size_t i = 0; i < srcShape.size(); ++i) {
       if (static_cast<int64_t>(i) == reduceDim) {
         // For the reduced dimension, use sgLayoutParent[i]
-        viewShape.push_back(sgLayoutParent[i]);
+        memDescShape.push_back(sgLayoutParent[i]);
       } else {
         // For other dimensions, multiply sgLayoutParent[i] by sgShape[i]
-        viewShape.push_back(sgLayoutParent[i] * srcShape[i]);
+        memDescShape.push_back(sgLayoutParent[i] * srcShape[i]);
       }
     }
 
-    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(), viewShape,
-                                               elemTy, nullptr);
+    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(),
+                                               memDescShape, elemTy, nullptr);
     auto memDesc =
         rewriter.create<xegpu::CreateMemDescOp>(loc, memDescType, slm);
 
@@ -951,16 +951,16 @@ struct WgToSgMultiDimReductionOp
     // Step 3: Load from SLM for the second reduction
     SmallVector<int64_t> slmLoadShape;
 
-    for (size_t i = 0; i < viewShape.size(); ++i) {
+    for (size_t i = 0; i < memDescShape.size(); ++i) {
       if (static_cast<int64_t>(i) == reduceDim) {
-        slmLoadShape.push_back(viewShape[i]);
+        slmLoadShape.push_back(memDescShape[i]);
       } else {
         int64_t divisor = computeProduct(sgLayoutParent);
-        slmLoadShape.push_back(viewShape[i] / divisor);
+        slmLoadShape.push_back(memDescShape[i] / divisor);
       }
     }
 
-    // Calculate offsets for create_nd_desc
+    // Calculate offsets for load_matrix op
     SmallVector<OpFoldResult> slmLoadOffsets;
     for (size_t i = 0; i < sgLayoutParent.size(); ++i) {
       Value offset = rewriter.createOrFold<index::MulOp>(
@@ -975,8 +975,8 @@ struct WgToSgMultiDimReductionOp
         /*layout=*/nullptr);
 
     // Step 4: Create a constant accumulator for the second reduction
-    // with same vallue as adaptor.getAcc()[0] and shape set to
-    // the non reduce dimension of shapeCastLoad
+    // with same value as adaptor.getAcc()[0] and shape set to
+    // the non reduce dimension of load
     auto accShape = load.getType().getShape();
     SmallVector<int64_t> accShapeWithoutReduceDim;
     for (size_t i = 0; i < accShape.size(); ++i) {
@@ -1180,10 +1180,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
       [=](vector::MultiDimReductionOp op) -> bool {
-        // Only allow MultiDimReductionOp with a single reduction dimension
-        if (op.getReductionDims().size() != 1)
-          return true;
-
         // Check if the layout is legal
         return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
