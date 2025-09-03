@@ -779,7 +779,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   };
 
   // The first entry when specializing decoders per bitwidth is the bitwidth.
-  // This will be used for early return in `decodeInstruction`.
+  // This will be used for additional checks in `decodeInstruction`.
   if (SpecializeDecodersPerBitwidth) {
     OS << "/* 0  */";
     OS.PadToColumn(14);
@@ -2124,16 +2124,13 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << "  const uint8_t *Ptr = DecodeTable;\n";
 
   if (SpecializeDecodersPerBitwidth) {
-    // Return early if the decoder table's bitwidth does not match `InsnType`
-    // bitwidth.
+    // Fail with a fatal error if decoder table's bitwidth does not match
+    // `InsnType` bitwidth.
     OS << R"(
   uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
-  if (InsnBitWidth<InsnType> != BitWidth) {
-    LLVM_DEBUG({
-      dbgs() << "Mismatch between table bitwidth and instruction bitwidth";
-    });
-    return MCDisassembler::Fail;
-  })";
+  if (InsnBitWidth<InsnType> != BitWidth)
+    llvm_unreachable("Table and instruction bitwidth mismatch");
+)";
   }
 
   OS << R"(
