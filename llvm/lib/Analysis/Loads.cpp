@@ -331,17 +331,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
-
-  if (isa<SCEVCouldNotCompute>(BECount)) {
-    // TODO: Support symbolic max backedge taken counts for loops without
-    // computable backedge taken counts.
-    MaxBECount =
-        Predicates
-            ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
-            : SE.getConstantMaxBackedgeTakenCount(L);
-  }
-  const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  const auto &[AccessStart, AccessEnd] =
+      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
+                              &SE, nullptr, &DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -350,7 +343,13 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
-  APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
+
+  if (!LoopGuards)
+    LoopGuards.emplace(
+        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
+
+  APInt MaxPtrDiff =
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
@@ -381,7 +380,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (Offset->getAPInt().urem(Alignment.value()) != 0)
       return false;
 
-    AccessSize = MaxPtrDiff + Offset->getAPInt();
+    bool Overflow = false;
+    AccessSize = MaxPtrDiff.uadd_ov(Offset->getAPInt(), Overflow);
+    if (Overflow)
+      return false;
     AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
     Base = NewBase->getValue();
   } else
@@ -390,9 +392,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment,
-             [&SE, AccessSizeSCEV](const RetainedKnowledge &RK) {
-               return SE.isKnownPredicate(CmpInst::ICMP_ULE, AccessSizeSCEV,
-                                          SE.getSCEV(RK.IRArgValue));
+             [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
+               return SE.isKnownPredicate(
+                   CmpInst::ICMP_ULE, AccessSizeSCEV,
+                   SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
              },
              DL, HeaderFirstNonPHI, AC, &DT) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,

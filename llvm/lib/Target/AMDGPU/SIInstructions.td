@@ -66,7 +66,7 @@ defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
   //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
 let OtherPredicates = [isNotGFX90APlus] in {
-let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
+let Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
   0x00000001,
@@ -77,7 +77,7 @@ defm V_INTERP_P2_F32 : VINTRP_m <
   [(set f32:$vdst, (int_amdgcn_interp_p2 f32:$src0, f32:$vsrc,
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
-} // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
+} // End Constraints = "$src0 = $vdst"
 
 defm V_INTERP_MOV_F32 : VINTRP_m <
   0x00000002,
@@ -2480,6 +2480,22 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
+// (z & ~x)
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<and> i32:$z, (not_oneuse i32:$x)),
+  (V_BFI_B32_e64 VSrc_b32:$x, (i32 0), VSrc_b32:$z)
+>;
+
+// 64-bit version
+def : AMDGPUPatIgnoreCopies <
+  (DivergentBinFrag<and> i64:$z, (not_oneuse i64:$x)),
+  (REG_SEQUENCE VReg_64,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+    (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)), (i32 0),
+                   (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+>;
+
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
 def : AMDGPUPatIgnoreCopies <
@@ -3106,9 +3122,7 @@ def : GCNPat<
 
 def : GCNPat<
   (i64 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VReg_64,
-    (INSERT_SUBREG (i32 (V_MOV_B32_e32 (i32 0))), VGPR_16:$src, lo16), sub0,
-    (S_MOV_B32 (i32 0)), sub1)
+  (REG_SEQUENCE VReg_64, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16, (V_MOV_B32_e32 (i32 0)), sub1)
 >;
 
 def : GCNPat<

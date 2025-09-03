@@ -307,7 +307,19 @@ void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
 
   // Move instructions to new block.
   BasicBlock *Old = IP.getBlock();
-  New->splice(New->begin(), Old, IP.getPoint(), Old->end());
+  // If the `Old` block is empty then there are no instructions to move. But in
+  // the new debug scheme, it could have trailing debug records which will be
+  // moved to `New` in `spliceDebugInfoEmptyBlock`. We dont want that for 2
+  // reasons:
+  // 1. If `New` is also empty, `BasicBlock::splice` crashes.
+  // 2. Even if `New` is not empty, the rationale to move those records to `New`
+  // (in `spliceDebugInfoEmptyBlock`) does not apply here. That function
+  // assumes that `Old` is optimized out and is going away. This is not the case
+  // here. The `Old` block is still being used e.g. a branch instruction is
+  // added to it later in this function.
+  // So we call `BasicBlock::splice` only when `Old` is not empty.
+  if (!Old->empty())
+    New->splice(New->begin(), Old, IP.getPoint(), Old->end());
 
   if (CreateBranch) {
     auto *NewBr = BranchInst::Create(New, Old);
@@ -5581,13 +5593,13 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Compute the trip counts of the floor loops.
   Builder.SetCurrentDebugLocation(DL);
   Builder.restoreIP(OutermostLoop->getPreheaderIP());
-  SmallVector<Value *, 4> FloorCount, FloorRems;
+  SmallVector<Value *, 4> FloorCompleteCount, FloorCount, FloorRems;
   for (int i = 0; i < NumLoops; ++i) {
     Value *TileSize = TileSizes[i];
     Value *OrigTripCount = OrigTripCounts[i];
     Type *IVType = OrigTripCount->getType();
 
-    Value *FloorTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
+    Value *FloorCompleteTripCount = Builder.CreateUDiv(OrigTripCount, TileSize);
     Value *FloorTripRem = Builder.CreateURem(OrigTripCount, TileSize);
 
     // 0 if tripcount divides the tilesize, 1 otherwise.
@@ -5601,11 +5613,12 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
         Builder.CreateICmpNE(FloorTripRem, ConstantInt::get(IVType, 0));
 
     FloorTripOverflow = Builder.CreateZExt(FloorTripOverflow, IVType);
-    FloorTripCount =
-        Builder.CreateAdd(FloorTripCount, FloorTripOverflow,
+    Value *FloorTripCount =
+        Builder.CreateAdd(FloorCompleteTripCount, FloorTripOverflow,
                           "omp_floor" + Twine(i) + ".tripcount", true);
 
     // Remember some values for later use.
+    FloorCompleteCount.push_back(FloorCompleteTripCount);
     FloorCount.push_back(FloorTripCount);
     FloorRems.push_back(FloorTripRem);
   }
@@ -5660,7 +5673,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     Value *TileSize = TileSizes[i];
 
     Value *FloorIsEpilogue =
-        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCount[i]);
+        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCompleteCount[i]);
     Value *TileTripCount =
         Builder.CreateSelect(FloorIsEpilogue, FloorRems[i], TileSize);
 
@@ -7369,9 +7382,8 @@ static void FixupDebugInfoForOutlinedFunction(
   // The location and scope of variable intrinsics and records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
-      UpdateDebugRecord(DDI);
-
+    assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
+           "Unexpected debug intrinsic");
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
       UpdateDebugRecord(&DVR);
   }

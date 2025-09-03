@@ -232,7 +232,7 @@ class LLDB(DebuggerBase):
                     ):
                         stepped_to_breakpoint = True
             if stepped_to_breakpoint:
-                self._thread.StepInto()
+                self._process.Continue()
 
     def go(self) -> ReturnCode:
         self._process.Continue()
@@ -441,7 +441,7 @@ class LLDBDAP(DAP):
                 # Step again now to get to the breakpoint.
                 step_req_id = self.send_message(
                     self.make_request(
-                        "stepIn", {"threadId": self._debugger_state.thread}
+                        "continue", {"threadId": self._debugger_state.thread}
                     )
                 )
                 response = self._await_response(step_req_id)
@@ -528,6 +528,16 @@ class LLDBDAP(DAP):
         manually check conditions here."""
         confirmed_breakpoint_ids = set()
         for dex_bp_id in dex_bp_ids:
+            # Function and instruction breakpoints don't use conditions.
+            # FIXME: That's not a DAP restriction, so they could in future.
+            if dex_bp_id not in self.bp_info:
+                assert (
+                    dex_bp_id in self.function_bp_info
+                    or dex_bp_id in self.instruction_bp_info
+                )
+                confirmed_breakpoint_ids.add(dex_bp_id)
+                continue
+
             _, _, cond = self.bp_info[dex_bp_id]
             if cond is None:
                 confirmed_breakpoint_ids.add(dex_bp_id)

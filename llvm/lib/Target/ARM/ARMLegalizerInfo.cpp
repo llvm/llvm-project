@@ -206,7 +206,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  if (ST.hasV5TOps()) {
+  if (ST.hasV5TOps() && !ST.isThumb1Only()) {
     getActionDefinitionsBuilder(G_CTLZ)
         .legalFor({s32, s32})
         .clampScalar(1, s32, s32)

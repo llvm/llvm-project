@@ -5486,13 +5486,14 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
-                                       VectorType *VecTy,
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
+                                       Type *ResTy, VectorType *VecTy,
                                        TTI::TargetCostKind CostKind) const {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
-  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple()) {
+  if (ST->hasDotProd() && VecVT.isSimple() && ResVT.isSimple() &&
+      RedOpcode == Instruction::Add) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases with dotprod are
@@ -5503,7 +5504,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return LT.first + 2;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, VecTy,
+                                       CostKind);
 }
 
 InstructionCost
@@ -5750,11 +5752,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  // A subvector extract can be implemented with an ext (or trivial extract, if
-  // from lane 0). This currently only handles low or high extracts to prevent
-  // SLP vectorizer regressions.
+  // A subvector extract can be implemented with a NEON/SVE ext (or trivial
+  // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.
+  // This currently only handles low or high extracts to prevent SLP vectorizer
+  // regressions.
+  // Note that SVE's ext instruction is destructive, but it can be fused with
+  // a movprfx to act like a constructive instruction.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
-    if (LT.second.is128BitVector() &&
+    if (LT.second.getFixedSizeInBits() >= 128 &&
         cast<FixedVectorType>(SubTp)->getNumElements() ==
             LT.second.getVectorNumElements() / 2) {
       if (Index == 0)
