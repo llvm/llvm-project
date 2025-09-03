@@ -628,7 +628,7 @@ struct IndexCastIndexI1Pattern final
 
     Location loc = op.getLoc();
     Value zeroIdx =
-       spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
+        spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, dstType, zeroIdx,
                                                     adaptor.getIn());
     return success();
