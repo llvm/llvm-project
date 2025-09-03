@@ -371,3 +371,21 @@ define i8 @load_from_null(i64 %idx) {
   %add = add i8 %load, %zext
   ret i8 %add
 }
+
+define i8 @load_global_non_canonical_gep(i32 %idx) {
+; CHECK-LABEL: define i8 @load_global_non_canonical_gep(
+; CHECK-SAME: i32 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr @g, i32 [[IDX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX]], 5
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[LOAD]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %gep = getelementptr nuw i8, ptr @g, i32 %idx
+  %load = load i8, ptr %gep
+  %cmp = icmp ult i32 %idx, 5
+  %zext = zext i1 %cmp to i8
+  %add = add i8 %load, %zext
+  ret i8 %add
+}
