@@ -240,8 +240,9 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_5]]) typeparams %[[VAL_2]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QMchar_elemFfoo6Ec"} : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<10x!fir.char<1,?>>>, !fir.ref<!fir.array<10x!fir.char<1,?>>>)
-! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_2]]#1 {uniq_name = "dummy.tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_7:.*]] = hlfir.designate %[[VAL_6:.*]]#0 (%c1)  typeparams %1#1 : (!fir.box<!fir.array<10x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_7B:.*]]:2 = fir.unboxchar %[[VAL_7]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7B]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "mock.dummy"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i64) -> i32
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
@@ -274,3 +275,48 @@ end subroutine
 ! CHECK:         }
 
 end module
+
+subroutine bug_145151(c, vector_subscript)
+  interface
+    elemental function f(c_dummy)
+      character(*), intent(in) :: c_dummy
+      character(len(c_dummy, KIND=8)) :: f
+    end
+  end interface
+  integer(8) :: vector_subscript(100)
+  character(*) :: c(100)
+  c = f(c(vector_subscript))
+end subroutine
+! CHECK-LABEL:   func.func @_QPbug_145151(
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.boxchar<1>
+! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,?>>>
+! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
+! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}"_QFbug_145151Ec"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>,
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}}"_QFbug_145151Evector_subscript"} : (!fir.ref<!fir.array<100xi64>>,
+! CHECK:           %[[VAL_11:.*]] = arith.constant 100 : index
+! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_14:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<100xi64>>, index) -> !fir.ref<i64>
+! CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i64>
+! CHECK:           %[[VAL_16:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_15]])  typeparams %[[VAL_1]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, i64, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_17:.*]]:2 = fir.unboxchar %[[VAL_16]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]]#0 typeparams %[[VAL_1]]#1 {uniq_name = "mock.dummy"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_1]]#1 : (index) -> i64
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_19]] : (i64) -> index
+! CHECK:           %[[VAL_23:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : index
+! CHECK:           %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_22]], %[[VAL_23]] : index
+! CHECK:           %[[VAL_26:.*]] = hlfir.elemental %[[VAL_12]] typeparams %[[VAL_25]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:           ^bb0(%[[VAL_27:.*]]: index):
+! CHECK:             %[[VAL_28:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_27]])  : (!fir.ref<!fir.array<100xi64>>, index) -> !fir.ref<i64>
+! CHECK:             %[[VAL_29:.*]] = fir.load %[[VAL_28]] : !fir.ref<i64>
+! CHECK:             %[[VAL_30:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_29]])  typeparams %[[VAL_1]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, i64, index) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_41:.*]] = fir.call @_QPf(
+! CHECK:             hlfir.yield_element %{{.*}} : !hlfir.expr<!fir.char<1,?>>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_26]] to %[[VAL_5]]#0 : !hlfir.expr<100x!fir.char<1,?>>, !fir.box<!fir.array<100x!fir.char<1,?>>>
+! CHECK:           hlfir.destroy %[[VAL_26]] : !hlfir.expr<100x!fir.char<1,?>>
+! CHECK:           return
+! CHECK:         }

@@ -50,8 +50,13 @@ struct PreparedActualArgument {
       : actual{actual}, isPresent{isPresent} {}
   PreparedActualArgument(hlfir::ElementalAddrOp vectorSubscriptedActual)
       : actual{vectorSubscriptedActual}, isPresent{std::nullopt} {}
+
   void setElementalIndices(mlir::ValueRange &indices) {
     oneBasedElementalIndices = &indices;
+  }
+  void resetElementalIndices() { oneBasedElementalIndices = nullptr; }
+  bool hasElementalIndices() const {
+    return oneBasedElementalIndices != nullptr;
   }
 
   /// Get the prepared actual. If this is an array argument in an elemental
