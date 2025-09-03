@@ -949,15 +949,14 @@ static bool isIIFE(const UnwrappedLine &Line,
 
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
                                    const FormatToken &InitialToken,
-                                   const FormatToken &NextToken) {
+                                   bool IsEmptyBlock) {
   tok::TokenKind Kind = InitialToken.Tok.getKind();
   if (InitialToken.is(TT_NamespaceMacro))
     Kind = tok::kw_namespace;
 
-  bool IsEmptyBlock = NextToken.is(tok::r_brace);
   bool WrapRecordAllowed =
-      !(IsEmptyBlock && Style.AllowShortRecordOnASingleLine >
-                            FormatStyle::SRS_EmptyIfAttached) ||
+      !IsEmptyBlock ||
+      Style.AllowShortRecordOnASingleLine < FormatStyle::SRS_Empty ||
       Style.BraceWrapping.SplitEmptyRecord;
 
   switch (Kind) {
@@ -3207,8 +3206,10 @@ void UnwrappedLineParser::parseNamespace() {
   if (FormatTok->is(tok::l_brace)) {
     FormatTok->setFinalizedType(TT_NamespaceLBrace);
 
-    if (ShouldBreakBeforeBrace(Style, InitialToken, *Tokens->peekNextToken()))
+    if (ShouldBreakBeforeBrace(Style, InitialToken,
+                               Tokens->peekNextToken()->is(tok::r_brace))) {
       addUnwrappedLine();
+    }
 
     unsigned AddLevels =
         Style.NamespaceIndentation == FormatStyle::NI_All ||
@@ -3872,7 +3873,8 @@ bool UnwrappedLineParser::parseEnum() {
   }
 
   if (!Style.AllowShortEnumsOnASingleLine &&
-      ShouldBreakBeforeBrace(Style, InitialToken, *Tokens->peekNextToken())) {
+      ShouldBreakBeforeBrace(Style, InitialToken,
+                             Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
   }
   // Parse enum body.
@@ -4167,8 +4169,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (ShouldBreakBeforeBrace(Style, InitialToken, *Tokens->peekNextToken()))
+      if (ShouldBreakBeforeBrace(Style, InitialToken,
+                                 Tokens->peekNextToken()->is(tok::r_brace))) {
         addUnwrappedLine();
+      }
 
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
