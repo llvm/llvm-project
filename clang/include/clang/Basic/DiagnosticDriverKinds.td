@@ -361,9 +361,6 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
-def err_drv_omp_host_ir_file_not_found : Error<
-  "provided host compiler IR file '%0' is required to generate code for OpenMP "
-  "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -580,6 +577,13 @@ def err_drv_reduced_module_output_overrided : Warning<
   "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
+def remark_found_cxx20_module_usage : Remark<
+  "found C++20 module usage in file '%0'">,
+  InGroup<ModulesDriver>;
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -878,4 +882,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_gcc_install_dir_libstdcxx : Warning<
+    "future releases of the clang compiler will prefer GCC installations "
+    "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
+    InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
 }

@@ -90,11 +90,11 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   CheckDirectAccess(handler);
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
-    std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
-        positionInRecord - furthestPositionInRecord);
+    runtime::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        ' ', positionInRecord - furthestPositionInRecord);
   }
   char *to{Frame() + recordOffsetInFrame_ + positionInRecord};
-  std::memcpy(to, data, bytes);
+  runtime::memcpy(to, data, bytes);
   if (swapEndianness_) {
     SwapEndianness(to, bytes, elementBytes);
   }
@@ -119,7 +119,8 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
   auto need{recordOffsetInFrame_ + furthestAfter};
   auto got{ReadFrame(frameOffsetInFile_, need, handler)};
   if (got >= need) {
-    std::memcpy(data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
+    runtime::memcpy(
+        data, Frame() + recordOffsetInFrame_ + positionInRecord, bytes);
     if (swapEndianness_) {
       SwapEndianness(data, bytes, elementBytes);
     }
@@ -310,7 +311,8 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         // Pad remainder of fixed length record
         WriteFrame(
             frameOffsetInFile_, recordOffsetInFrame_ + *openRecl, handler);
-        std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        runtime::memset(
+            Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
             isUnformatted.value_or(false) ? 0 : ' ',
             *openRecl - furthestPositionInRecord);
         furthestPositionInRecord = *openRecl;
@@ -839,7 +841,7 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
 std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
   std::uint32_t word;
   char *wordPtr{reinterpret_cast<char *>(&word)};
-  std::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
+  runtime::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
   if (swapEndianness_) {
     SwapEndianness(wordPtr, sizeof word, sizeof word);
   }

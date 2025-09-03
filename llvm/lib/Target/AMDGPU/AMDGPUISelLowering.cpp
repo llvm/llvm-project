@@ -367,6 +367,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
 
+  setTruncStoreAction(MVT::v5i32, MVT::v5i1, Expand);
+  setTruncStoreAction(MVT::v5i32, MVT::v5i8, Expand);
+  setTruncStoreAction(MVT::v5i32, MVT::v5i16, Expand);
+
+  setTruncStoreAction(MVT::v6i32, MVT::v6i1, Expand);
+  setTruncStoreAction(MVT::v6i32, MVT::v6i8, Expand);
+  setTruncStoreAction(MVT::v6i32, MVT::v6i16, Expand);
+
+  setTruncStoreAction(MVT::v7i32, MVT::v7i1, Expand);
+  setTruncStoreAction(MVT::v7i32, MVT::v7i8, Expand);
+  setTruncStoreAction(MVT::v7i32, MVT::v7i16, Expand);
+
   setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
@@ -1512,9 +1524,16 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
+    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+      if (IsNamedBarrier) {
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        MFI->recordNumNamedBarriers(Address.value(), BarCnt);
+      }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
+    } else if (IsNamedBarrier) {
+      llvm_unreachable("named barrier should have an assigned address");
     }
   }
 
@@ -1802,16 +1821,36 @@ std::pair<SDValue, SDValue>
 AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
                                   const EVT &LoVT, const EVT &HiVT,
                                   SelectionDAG &DAG) const {
+  EVT VT = N.getValueType();
   assert(LoVT.getVectorNumElements() +
                  (HiVT.isVector() ? HiVT.getVectorNumElements() : 1) <=
-             N.getValueType().getVectorNumElements() &&
+             VT.getVectorNumElements() &&
          "More vector elements requested than available!");
   SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N,
                            DAG.getVectorIdxConstant(0, DL));
-  SDValue Hi = DAG.getNode(
-      HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
-      HiVT, N, DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), DL));
-  return std::pair(Lo, Hi);
+
+  unsigned LoNumElts = LoVT.getVectorNumElements();
+
+  if (HiVT.isVector()) {
+    unsigned HiNumElts = HiVT.getVectorNumElements();
+    if ((VT.getVectorNumElements() % HiNumElts) == 0) {
+      // Avoid creating an extract_subvector with an index that isn't a multiple
+      // of the result type.
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, N,
+                               DAG.getConstant(LoNumElts, DL, MVT::i32));
+      return {Lo, Hi};
+    }
+
+    SmallVector<SDValue, 8> Elts;
+    DAG.ExtractVectorElements(N, Elts, /*Start=*/LoNumElts,
+                              /*Count=*/HiNumElts);
+    SDValue Hi = DAG.getBuildVector(HiVT, DL, Elts);
+    return {Lo, Hi};
+  }
+
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, HiVT, N,
+                           DAG.getVectorIdxConstant(LoNumElts, DL));
+  return {Lo, Hi};
 }
 
 SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
@@ -2608,10 +2647,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
 
 bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
                                            SDNodeFlags Flags) {
-  if (Flags.hasApproximateFuncs())
-    return true;
-  auto &Options = DAG.getTarget().Options;
-  return Options.ApproxFuncFPMath;
+  return Flags.hasApproximateFuncs();
 }
 
 bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
@@ -2733,8 +2769,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
   const auto &Options = getTargetMachine().Options;
-  if (VT == MVT::f16 || Flags.hasApproximateFuncs() ||
-      Options.ApproxFuncFPMath) {
+  if (VT == MVT::f16 || Flags.hasApproximateFuncs()) {
 
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       // Log and multiply in f32 is good enough for f16.
@@ -3987,7 +4022,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
   case Intrinsic::amdgcn_rsq_clamp:
-  case Intrinsic::amdgcn_tanh: {
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -6090,6 +6126,19 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   default:
     return 1;
   }
+}
+
+bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case AMDGPUISD::BFE_I32:
+  case AMDGPUISD::BFE_U32:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(

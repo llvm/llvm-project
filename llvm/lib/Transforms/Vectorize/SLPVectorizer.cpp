@@ -967,9 +967,7 @@ class BinOpSameOpcodeHelper {
       return false;
     }
     bool equal(unsigned Opcode) {
-      if (Opcode == I->getOpcode())
-        return trySet(MainOpBIT, MainOpBIT);
-      return false;
+      return Opcode == I->getOpcode() && trySet(MainOpBIT, MainOpBIT);
     }
     unsigned getOpcode() const {
       MaskType Candidate = Mask & SeenBefore;
@@ -8030,11 +8028,11 @@ void BoUpSLP::reorderTopToBottom() {
         // it is an attempt to reorder node with reused scalars but with
         // external uses.
         if (OpTE->getVectorFactor() != OpTE->Scalars.size()) {
-          OrdersUses.insert(std::make_pair(OrdersType(), 0)).first->second +=
+          OrdersUses.try_emplace(OrdersType(), 0).first->second +=
               ExternalUserReorderIndices.size();
         } else {
           for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
-            ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+            ++OrdersUses.try_emplace(ExtOrder, 0).first->second;
         }
         // No other useful reorder data in this entry.
         if (Order.empty())
@@ -8054,9 +8052,9 @@ void BoUpSLP::reorderTopToBottom() {
           return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
         });
         fixupOrderingIndices(CurrentOrder);
-        ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
+        ++OrdersUses.try_emplace(CurrentOrder, 0).first->second;
       } else {
-        ++OrdersUses.insert(std::make_pair(Order, 0)).first->second;
+        ++OrdersUses.try_emplace(Order, 0).first->second;
       }
     }
     if (OrdersUses.empty())
@@ -8480,12 +8478,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
           });
           fixupOrderingIndices(CurrentOrder);
-          OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second +=
-              NumOps;
+          OrdersUses.try_emplace(CurrentOrder, 0).first->second += NumOps;
         } else {
-          OrdersUses.insert(std::make_pair(Order, 0)).first->second += NumOps;
+          OrdersUses.try_emplace(Order, 0).first->second += NumOps;
         }
-        auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
+        auto Res = OrdersUses.try_emplace(OrdersType(), 0);
         const auto AllowsReordering = [&](const TreeEntry *TE) {
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
@@ -10639,8 +10636,19 @@ class InstructionsCompatibilityAnalysis {
         }
       }
     }
-    if (MainOp)
+    if (MainOp) {
+      // Do not match, if any copyable is a terminator from the same block as
+      // the main operation.
+      if (any_of(VL, [&](Value *V) {
+            auto *I = dyn_cast<Instruction>(V);
+            return I && I->getParent() == MainOp->getParent() &&
+                   I->isTerminator();
+          })) {
+        MainOp = nullptr;
+        return;
+      }
       MainOpcode = MainOp->getOpcode();
+    }
   }
 
   /// Returns the idempotent value for the \p MainOp with the detected \p
@@ -11013,7 +11021,10 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
       }
       SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
-            return isa<PoisonValue>(V) || Values.contains(V);
+            return isa<PoisonValue>(V) || Values.contains(V) ||
+                   (S.getOpcode() == Instruction::PHI && isa<PHINode>(V) &&
+                    LI->getLoopFor(S.getMainOp()->getParent()) &&
+                    isVectorized(V));
           })) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
         return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
@@ -17835,6 +17846,17 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
         IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
+  Value *getVectorizedValue(const TreeEntry &E) {
+    Value *Vec = E.VectorizedValue;
+    if (!Vec->getType()->isIntOrIntVectorTy())
+      return Vec;
+    return castToScalarTyElem(Vec, any_of(E.Scalars, [&](Value *V) {
+                                return !isa<PoisonValue>(V) &&
+                                       !isKnownNonNegative(
+                                           V, SimplifyQuery(*R.DL));
+                              }));
+  }
+
 public:
   ShuffleInstructionBuilder(Type *ScalarTy, IRBuilderBase &Builder, BoUpSLP &R)
       : BaseShuffleAnalysis(ScalarTy), Builder(Builder), R(R) {}
@@ -18001,35 +18023,14 @@ public:
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
-    Value *V2 = E2.VectorizedValue;
-    if (V2->getType()->isIntOrIntVectorTy())
-      V2 = castToScalarTyElem(V2, any_of(E2.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
+    Value *V2 = getVectorizedValue(E2);
     add(V1, V2, Mask);
   }
   /// Adds single input vector (in form of tree entry) and the mask for its
   /// shuffling.
   void add(const TreeEntry &E1, ArrayRef<int> Mask) {
-    Value *V1 = E1.VectorizedValue;
-    if (V1->getType()->isIntOrIntVectorTy())
-      V1 = castToScalarTyElem(V1, any_of(E1.Scalars, [&](Value *V) {
-                                if (isa<PoisonValue>(V))
-                                  return false;
-                                return !isKnownNonNegative(
-                                    V, SimplifyQuery(*R.DL));
-                              }));
+    Value *V1 = getVectorizedValue(E1);
     add(V1, Mask);
   }
   /// Adds 2 input vectors and the mask for their shuffling.
@@ -18178,14 +18179,7 @@ public:
       auto CreateSubVectors = [&](Value *Vec,
                                   SmallVectorImpl<int> &CommonMask) {
         for (auto [E, Idx] : SubVectors) {
-          Value *V = E->VectorizedValue;
-          if (V->getType()->isIntOrIntVectorTy())
-            V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
-                                     if (isa<PoisonValue>(V))
-                                       return false;
-                                     return !isKnownNonNegative(
-                                         V, SimplifyQuery(*R.DL));
-                                   }));
+          Value *V = getVectorizedValue(*E);
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
           // Use scalar version of the SCalarType to correctly handle shuffles
           // for revectorization. The revectorization mode operates by the
@@ -20519,7 +20513,9 @@ Value *BoUpSLP::vectorizeTree(
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
-            is_contained(VectorizableTree.front()->Scalars, I)))
+            is_contained(VectorizableTree.front()->Scalars, I)) &&
+          !(!VectorizableTree.front()->isGather() &&
+            VectorizableTree.front()->isCopyableElement(I)))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
@@ -20791,7 +20787,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (auto *Op = dyn_cast<Instruction>(U.get());
               Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
                                                          *SLP, NumOps)) {
-            if (ScheduleData *OpSD = getScheduleData(Op)) {
+            if (ScheduleData *OpSD = getScheduleData(Op);
+                OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
               if (RegionHasStackSave ||
                   !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
@@ -20977,7 +20974,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
         // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I)) {
+        if (ScheduleData *OpSD = getScheduleData(I);
+            OpSD && OpSD->hasValidDependencies()) {
           OpSD->clearDirectDependencies();
           if (RegionHasStackSave ||
               !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
@@ -23797,9 +23795,7 @@ public:
         size_t Key, Idx;
         std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                                /*AllowAlternate=*/false);
-        ++PossibleReducedVals[Key][Idx]
-              .insert(std::make_pair(V, 0))
-              .first->second;
+        ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
       }
       for (Instruction *I : reverse(PossibleReductionOps))
         Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
@@ -23820,21 +23816,20 @@ public:
       stable_sort(PossibleRedValsVect, [](const auto &P1, const auto &P2) {
         return P1.size() > P2.size();
       });
-      int NewIdx = -1;
+      bool First = true;
       for (ArrayRef<Value *> Data : PossibleRedValsVect) {
-        if (NewIdx < 0 ||
-            (!isGoodForReduction(Data) &&
-             (!isa<LoadInst>(Data.front()) ||
-              !isa<LoadInst>(ReducedVals[NewIdx].front()) ||
-              getUnderlyingObject(
-                  cast<LoadInst>(Data.front())->getPointerOperand()) !=
-                  getUnderlyingObject(
-                      cast<LoadInst>(ReducedVals[NewIdx].front())
-                          ->getPointerOperand())))) {
-          NewIdx = ReducedVals.size();
+        if (First) {
+          First = false;
           ReducedVals.emplace_back();
+        } else if (!isGoodForReduction(Data)) {
+          auto *LI = dyn_cast<LoadInst>(Data.front());
+          auto *LastLI = dyn_cast<LoadInst>(ReducedVals.back().front());
+          if (!LI || !LastLI ||
+              getUnderlyingObject(LI->getPointerOperand()) !=
+                  getUnderlyingObject(LastLI->getPointerOperand()))
+            ReducedVals.emplace_back();
         }
-        ReducedVals[NewIdx].append(Data.rbegin(), Data.rend());
+        ReducedVals.back().append(Data.rbegin(), Data.rend());
       }
     }
     // Sort the reduced values by number of same/alternate opcode and/or pointer
@@ -23847,7 +23842,8 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC,
+                     DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -24164,9 +24160,7 @@ public:
         // previous vectorization attempts.
         if (any_of(VL, [&V](Value *RedVal) {
               auto *RedValI = dyn_cast<Instruction>(RedVal);
-              if (!RedValI)
-                return false;
-              return V.isDeleted(RedValI);
+              return RedValI && V.isDeleted(RedValI);
             }))
           break;
         V.buildTree(VL, IgnoreList);
@@ -24248,7 +24242,7 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost =
-            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V);
+            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V, DT, DL, TLI);
         InstructionCost Cost = V.getTreeCost(VL, ReductionCost);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
@@ -24477,7 +24471,7 @@ public:
       // correct, replace internal uses with undef, and mark for eventual
       // deletion.
 #ifndef NDEBUG
-      SmallSet<Value *, 4> IgnoreSet;
+      SmallPtrSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
         IgnoreSet.insert_range(RdxOps);
 #endif
@@ -24553,7 +24547,9 @@ private:
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
                                    ArrayRef<Value *> ReducedVals,
                                    bool IsCmpSelMinMax, FastMathFlags FMF,
-                                   const BoUpSLP &R) {
+                                   const BoUpSLP &R, DominatorTree &DT,
+                                   const DataLayout &DL,
+                                   const TargetLibraryInfo &TLI) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -24578,6 +24574,22 @@ private:
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
+            if (RdxKind == RecurKind::FAdd) {
+              InstructionCost FMACost = canConvertToFMA(
+                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+              if (FMACost.isValid()) {
+                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
+                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
+                  // Also, exclude scalar fmul cost.
+                  InstructionCost FMulCost =
+                      TTI->getInstructionCost(I, CostKind);
+                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
+                  FMACost -= FMulCost;
+                }
+                ScalarCost += FMACost;
+                continue;
+              }
+            }
             ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
             continue;
           }
@@ -24642,8 +24654,45 @@ private:
           auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
               std::make_pair(RedTy, true));
           VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
-          VectorCost +=
-              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          InstructionCost FMACost = InstructionCost::getInvalid();
+          if (RdxKind == RecurKind::FAdd) {
+            // Check if the reduction operands can be converted to FMA.
+            SmallVector<Value *> Ops;
+            FastMathFlags FMF;
+            FMF.set();
+            for (Value *RdxVal : ReducedVals) {
+              if (!RdxVal->hasOneUse()) {
+                Ops.clear();
+                break;
+              }
+              if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
+                FMF &= FPCI->getFastMathFlags();
+              Ops.push_back(RdxVal->user_back());
+            }
+            if (!Ops.empty()) {
+              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
+                                        *TTI, TLI);
+              if (FMACost.isValid()) {
+                // Calculate actual FMAD cost.
+                IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
+                                            {RVecTy, RVecTy, RVecTy}, FMF);
+                FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+
+                LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
+                // Also, exclude vector fmul cost.
+                InstructionCost FMulCost = TTI->getArithmeticInstrCost(
+                    Instruction::FMul, RVecTy, CostKind);
+                LLVM_DEBUG(dbgs()
+                           << "Minus vector FMul cost: " << FMulCost << "\n");
+                FMACost -= FMulCost;
+              }
+            }
+          }
+          if (FMACost.isValid())
+            VectorCost += FMACost;
+          else
+            VectorCost +=
+                TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
           if (RType != RedTy) {
             unsigned Opcode = Instruction::Trunc;
             if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
@@ -25311,7 +25360,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -25456,7 +25505,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
@@ -25540,7 +25589,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
 template <typename T>
 static bool tryToVectorizeSequence(
     SmallVectorImpl<T *> &Incoming, function_ref<bool(T *, T *)> Comparator,
-    function_ref<bool(T *, T *)> AreCompatible,
+    function_ref<bool(ArrayRef<T *>, T *)> AreCompatible,
     function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
     bool MaxVFOnly, BoUpSLP &R) {
   bool Changed = false;
@@ -25562,7 +25611,7 @@ static bool tryToVectorizeSequence(
     auto *SameTypeIt = IncIt;
     while (SameTypeIt != E && (!isa<Instruction>(*SameTypeIt) ||
                                R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
-                               AreCompatible(*SameTypeIt, *IncIt))) {
+                               AreCompatible(VL, *SameTypeIt))) {
       auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
       if (I && !R.isDeleted(I))
@@ -25760,10 +25809,10 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
     return compareCmp<false>(V, V2, *TLI, *DT);
   };
 
-  auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatibleCompares = [&](ArrayRef<Value *> VL, Value *V1) {
+    if (VL.empty() || VL.back() == V1)
       return true;
-    return compareCmp<true>(V1, V2, *TLI, *DT);
+    return compareCmp<true>(V1, VL.back(), *TLI, *DT);
   };
 
   SmallVector<Value *> Vals;
@@ -25969,9 +26018,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return false;
   };
-  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](ArrayRef<Value *> VL,
+                                                     Value *V1) {
+    if (VL.empty() || V1 == VL.back())
       return true;
+    Value *V2 = VL.back();
     if (V1->getType() != V2->getType())
       return false;
     ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
@@ -26061,7 +26112,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
-  // Vectorizes Inserts in `PostProcessInserts` and if `VecctorizeCmps` is true
+  // Vectorizes Inserts in `PostProcessInserts` and if `VectorizeCmps` is true
   // also vectorizes `PostProcessCmps`.
   auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R);
@@ -26342,7 +26393,13 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
            V2->getValueOperand()->getValueID();
   };
 
-  auto &&AreCompatibleStores = [this](StoreInst *V1, StoreInst *V2) {
+  bool SameParent = true;
+  auto AreCompatibleStores = [&](ArrayRef<StoreInst *> VL, StoreInst *V1) {
+    if (VL.empty()) {
+      SameParent = true;
+      return true;
+    }
+    StoreInst *V2 = VL.back();
     if (V1 == V2)
       return true;
     if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
@@ -26353,15 +26410,34 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (isa<UndefValue>(V1->getValueOperand()) ||
         isa<UndefValue>(V2->getValueOperand()))
       return true;
-    if (auto *I1 = dyn_cast<Instruction>(V1->getValueOperand()))
-      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
-        if (I1->getParent() != I2->getParent())
-          return false;
-        return getSameOpcode({I1, I2}, *TLI).valid();
-      }
     if (isa<Constant>(V1->getValueOperand()) &&
         isa<Constant>(V2->getValueOperand()))
       return true;
+    // Check if the operands of the stores can be vectorized. They can be
+    // vectorized, if they have compatible operands or have operands, which can
+    // be vectorized as copyables.
+    auto *I1 = dyn_cast<Instruction>(V1->getValueOperand());
+    auto *I2 = dyn_cast<Instruction>(V2->getValueOperand());
+    if (I1 || I2) {
+      // Accept only tail-following non-compatible values for now.
+      // TODO: investigate if it is possible to vectorize incompatible values,
+      // if the copyables are first in the list.
+      if (I1 && !I2)
+        return false;
+      SameParent &= I1 && I2 && I1->getParent() == I2->getParent();
+      SmallVector<Value *> NewVL(VL.size() + 1);
+      for (auto [SI, V] : zip(VL, NewVL))
+        V = SI->getValueOperand();
+      NewVL.back() = V1->getValueOperand();
+      InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+      InstructionsState S = Analysis.buildInstructionsState(
+          NewVL, R, VectorizeCopyableElements, /*WithProfitabilityCheck=*/true,
+          /*SkipSameCodeCheck=*/!SameParent);
+      if (S)
+        return true;
+      if (!SameParent)
+        return false;
+    }
     return V1->getValueOperand()->getValueID() ==
            V2->getValueOperand()->getValueID();
   };

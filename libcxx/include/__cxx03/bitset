@@ -185,9 +185,9 @@ protected:
   __storage_type __first_[_N_words];
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
-  typedef __bit_iterator<__bitset, false> iterator;
-  typedef __bit_iterator<__bitset, true> const_iterator;
+  typedef __bit_const_reference<__bitset> __const_reference;
+  typedef __bit_iterator<__bitset, false> __iterator;
+  typedef __bit_iterator<__bitset, true> __const_iterator;
 
   _LIBCPP_HIDE_FROM_ABI __bitset() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI explicit __bitset(unsigned long long __v) _NOEXCEPT;
@@ -195,14 +195,14 @@ protected:
   _LIBCPP_HIDE_FROM_ABI reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
+    return __const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI iterator __make_iter(size_t __pos) _NOEXCEPT {
-    return iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI __iterator __make_iter(size_t __pos) _NOEXCEPT {
+    return __iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
-    return const_iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI __const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
+    return __const_iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
   }
 
   _LIBCPP_HIDE_FROM_ABI void operator&=(const __bitset& __v) _NOEXCEPT;
@@ -302,8 +302,8 @@ _LIBCPP_HIDE_FROM_ABI void __bitset<_N_words, _Size>::flip() _NOEXCEPT {
 
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI unsigned long __bitset<_N_words, _Size>::to_ulong(false_type) const {
-  const_iterator __e = __make_iter(_Size);
-  const_iterator __i = std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
+  __const_iterator __e = __make_iter(_Size);
+  __const_iterator __i = std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
   if (__i != __e)
     __throw_overflow_error("bitset to_ulong overflow error");
 
@@ -317,8 +317,8 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long __bitset<_N_words, _Size>::to_ulong(t
 
 template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI unsigned long long __bitset<_N_words, _Size>::to_ullong(false_type) const {
-  const_iterator __e = __make_iter(_Size);
-  const_iterator __i = std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
+  __const_iterator __e = __make_iter(_Size);
+  __const_iterator __i = std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
   if (__i != __e)
     __throw_overflow_error("bitset to_ullong overflow error");
 
@@ -410,9 +410,9 @@ protected:
   __storage_type __first_;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
-  typedef __bit_iterator<__bitset, false> iterator;
-  typedef __bit_iterator<__bitset, true> const_iterator;
+  typedef __bit_const_reference<__bitset> __const_reference;
+  typedef __bit_iterator<__bitset, false> __iterator;
+  typedef __bit_iterator<__bitset, true> __const_iterator;
 
   _LIBCPP_HIDE_FROM_ABI __bitset() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI explicit __bitset(unsigned long long __v) _NOEXCEPT;
@@ -420,14 +420,14 @@ protected:
   _LIBCPP_HIDE_FROM_ABI reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(&__first_, __storage_type(1) << __pos);
   }
-  _LIBCPP_HIDE_FROM_ABI const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return const_reference(&__first_, __storage_type(1) << __pos);
+  _LIBCPP_HIDE_FROM_ABI __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
+    return __const_reference(&__first_, __storage_type(1) << __pos);
   }
-  _LIBCPP_HIDE_FROM_ABI iterator __make_iter(size_t __pos) _NOEXCEPT {
-    return iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI __iterator __make_iter(size_t __pos) _NOEXCEPT {
+    return __iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
-    return const_iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI __const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
+    return __const_iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
   }
 
   _LIBCPP_HIDE_FROM_ABI void operator&=(const __bitset& __v) _NOEXCEPT;
@@ -522,17 +522,17 @@ protected:
   friend struct __bit_array<__bitset>;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
-  typedef __bit_iterator<__bitset, false> iterator;
-  typedef __bit_iterator<__bitset, true> const_iterator;
+  typedef __bit_const_reference<__bitset> __const_reference;
+  typedef __bit_iterator<__bitset, false> __iterator;
+  typedef __bit_iterator<__bitset, true> __const_iterator;
 
   _LIBCPP_HIDE_FROM_ABI __bitset() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI explicit __bitset(unsigned long long) _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI reference __make_ref(size_t) _NOEXCEPT { return reference(nullptr, 1); }
-  _LIBCPP_HIDE_FROM_ABI const_reference __make_ref(size_t) const _NOEXCEPT { return const_reference(nullptr, 1); }
-  _LIBCPP_HIDE_FROM_ABI iterator __make_iter(size_t) _NOEXCEPT { return iterator(nullptr, 0); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(size_t) const _NOEXCEPT { return const_iterator(nullptr, 0); }
+  _LIBCPP_HIDE_FROM_ABI __const_reference __make_ref(size_t) const _NOEXCEPT { return __const_reference(nullptr, 1); }
+  _LIBCPP_HIDE_FROM_ABI __iterator __make_iter(size_t) _NOEXCEPT { return __iterator(nullptr, 0); }
+  _LIBCPP_HIDE_FROM_ABI __const_iterator __make_iter(size_t) const _NOEXCEPT { return __const_iterator(nullptr, 0); }
 
   _LIBCPP_HIDE_FROM_ABI void operator&=(const __bitset&) _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI void operator|=(const __bitset&) _NOEXCEPT {}
@@ -563,15 +563,15 @@ class _LIBCPP_TEMPLATE_VIS bitset
     : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size> {
 public:
   static const unsigned __n_words = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;
-  typedef __bitset<__n_words, _Size> base;
+  typedef __bitset<__n_words, _Size> __base;
 
 public:
-  typedef typename base::reference reference;
-  typedef typename base::const_reference const_reference;
+  typedef typename __base::reference reference;
+  typedef typename __base::__const_reference __const_reference;
 
   // 23.3.5.1 constructors:
   _LIBCPP_HIDE_FROM_ABI bitset() _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI bitset(unsigned long long __v) _NOEXCEPT : base(__v) {}
+  _LIBCPP_HIDE_FROM_ABI bitset(unsigned long long __v) _NOEXCEPT : __base(__v) {}
   template <class _CharT, __enable_if_t<_IsCharLikeType<_CharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit bitset(
       const _CharT* __str,
@@ -613,11 +613,11 @@ public:
 
   // element access:
 #ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
-  _LIBCPP_HIDE_FROM_ABI bool operator[](size_t __p) const { return base::__make_ref(__p); }
+  _LIBCPP_HIDE_FROM_ABI bool operator[](size_t __p) const { return __base::__make_ref(__p); }
 #else
-  _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_t __p) const { return base::__make_ref(__p); }
+  _LIBCPP_HIDE_FROM_ABI __const_reference operator[](size_t __p) const { return __base::__make_ref(__p); }
 #endif
-  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __p) { return base::__make_ref(__p); }
+  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __p) { return __base::__make_ref(__p); }
   _LIBCPP_HIDE_FROM_ABI unsigned long to_ulong() const;
   _LIBCPP_HIDE_FROM_ABI unsigned long long to_ullong() const;
   template <class _CharT, class _Traits, class _Allocator>
@@ -656,51 +656,51 @@ private:
       _CharT __c   = __str[__mp - 1 - __i];
       (*this)[__i] = _Traits::eq(__c, __one);
     }
-    std::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
+    std::fill(__base::__make_iter(__i), __base::__make_iter(_Size), false);
   }
 
-  _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT { return base::__hash_code(); }
+  _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT { return __base::__hash_code(); }
 
   friend struct hash<bitset>;
 };
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::operator&=(const bitset& __rhs) _NOEXCEPT {
-  base::operator&=(__rhs);
+  __base::operator&=(__rhs);
   return *this;
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::operator|=(const bitset& __rhs) _NOEXCEPT {
-  base::operator|=(__rhs);
+  __base::operator|=(__rhs);
   return *this;
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::operator^=(const bitset& __rhs) _NOEXCEPT {
-  base::operator^=(__rhs);
+  __base::operator^=(__rhs);
   return *this;
 }
 
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::operator<<=(size_t __pos) _NOEXCEPT {
   __pos = std::min(__pos, _Size);
-  std::copy_backward(base::__make_iter(0), base::__make_iter(_Size - __pos), base::__make_iter(_Size));
-  std::fill_n(base::__make_iter(0), __pos, false);
+  std::copy_backward(__base::__make_iter(0), __base::__make_iter(_Size - __pos), __base::__make_iter(_Size));
+  std::fill_n(__base::__make_iter(0), __pos, false);
   return *this;
 }
 
 template <size_t _Size>
 _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::operator>>=(size_t __pos) _NOEXCEPT {
   __pos = std::min(__pos, _Size);
-  std::copy(base::__make_iter(__pos), base::__make_iter(_Size), base::__make_iter(0));
-  std::fill_n(base::__make_iter(_Size - __pos), __pos, false);
+  std::copy(__base::__make_iter(__pos), __base::__make_iter(_Size), __base::__make_iter(0));
+  std::fill_n(__base::__make_iter(_Size - __pos), __pos, false);
   return *this;
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::set() _NOEXCEPT {
-  std::fill_n(base::__make_iter(0), _Size, true);
+  std::fill_n(__base::__make_iter(0), _Size, true);
   return *this;
 }
 
@@ -715,7 +715,7 @@ _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::set(size_t __pos, bool __val
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::reset() _NOEXCEPT {
-  std::fill_n(base::__make_iter(0), _Size, false);
+  std::fill_n(__base::__make_iter(0), _Size, false);
   return *this;
 }
 
@@ -737,7 +737,7 @@ inline _LIBCPP_HIDE_FROM_ABI bitset<_Size> bitset<_Size>::operator~() const _NOE
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::flip() _NOEXCEPT {
-  base::flip();
+  __base::flip();
   return *this;
 }
 
@@ -746,19 +746,19 @@ _LIBCPP_HIDE_FROM_ABI bitset<_Size>& bitset<_Size>::flip(size_t __pos) {
   if (__pos >= _Size)
     __throw_out_of_range("bitset flip argument out of range");
 
-  reference __r = base::__make_ref(__pos);
+  reference __r = __base::__make_ref(__pos);
   __r           = ~__r;
   return *this;
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI unsigned long bitset<_Size>::to_ulong() const {
-  return base::to_ulong();
+  return __base::to_ulong();
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI unsigned long long bitset<_Size>::to_ullong() const {
-  return base::to_ullong();
+  return __base::to_ullong();
 }
 
 template <size_t _Size>
@@ -795,12 +795,12 @@ bitset<_Size>::to_string(char __zero, char __one) const {
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI size_t bitset<_Size>::count() const _NOEXCEPT {
-  return static_cast<size_t>(std::count(base::__make_iter(0), base::__make_iter(_Size), true));
+  return static_cast<size_t>(std::count(__base::__make_iter(0), __base::__make_iter(_Size), true));
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bool bitset<_Size>::operator==(const bitset& __rhs) const _NOEXCEPT {
-  return std::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
+  return std::equal(__base::__make_iter(0), __base::__make_iter(_Size), __rhs.__make_iter(0));
 }
 
 template <size_t _Size>
@@ -818,12 +818,12 @@ _LIBCPP_HIDE_FROM_ABI bool bitset<_Size>::test(size_t __pos) const {
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bool bitset<_Size>::all() const _NOEXCEPT {
-  return base::all();
+  return __base::all();
 }
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bool bitset<_Size>::any() const _NOEXCEPT {
-  return base::any();
+  return __base::any();
 }
 
 template <size_t _Size>

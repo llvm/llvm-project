@@ -57,12 +57,12 @@ endif(HAVE_LIB_RT)
 
 
 # We need extra libraries on Windows
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
   target_link_libraries(benchmark PRIVATE shlwapi)
 endif()
 
 # We need extra libraries on Solaris
-if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
   target_link_libraries(benchmark PRIVATE kstat)
 endif()
 

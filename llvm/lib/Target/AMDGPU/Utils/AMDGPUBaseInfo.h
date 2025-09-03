@@ -35,6 +35,7 @@ class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MDNode;
 class StringRef;
 class Triple;
 class raw_ostream;
@@ -1064,6 +1065,9 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
+/// Checks if \p Val is inside \p MD, a !range-like metadata.
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -1586,7 +1590,14 @@ bool isInlineValue(unsigned Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
-bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
+constexpr bool isSISrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType >= AMDGPU::OPERAND_SRC_FIRST &&
+         OpInfo.OperandType <= AMDGPU::OPERAND_SRC_LAST;
+}
+
+inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  return isSISrcOperand(Desc.operands()[OpNo]);
+}
 
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);

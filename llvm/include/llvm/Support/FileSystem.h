@@ -1171,6 +1171,12 @@ LLVM_ABI Expected<file_t>
 openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
                       SmallVectorImpl<char> *RealPath = nullptr);
 
+/// An enumeration for the lock kind.
+enum class LockKind {
+  Exclusive, // Exclusive/writer lock
+  Shared     // Shared/reader lock
+};
+
 /// Try to locks the file during the specified time.
 ///
 /// This function implements advisory locking on entire file. If it returns
@@ -1184,6 +1190,7 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// @param Timeout Time in milliseconds that the process should wait before
 ///                reporting lock failure. Zero value means try to get lock only
 ///                once.
+/// @param Kind    The kind of the lock used (exclusive/shared).
 /// @returns errc::success if lock is successfully obtained,
 /// errc::no_lock_available if the file cannot be locked, or platform-specific
 /// error_code otherwise.
@@ -1194,12 +1201,15 @@ openNativeFileForRead(const Twine &Name, OpenFlags Flags = OF_None,
 /// descriptor.
 LLVM_ABI std::error_code
 tryLockFile(int FD,
-            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0));
+            std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
+            LockKind Kind = LockKind::Exclusive);
 
 /// Lock the file.
 ///
 /// This function acts as @ref tryLockFile but it waits infinitely.
-LLVM_ABI std::error_code lockFile(int FD);
+/// \param FD file descriptor to use for locking.
+/// \param Kind of lock to used (exclusive/shared).
+LLVM_ABI std::error_code lockFile(int FD, LockKind Kind = LockKind::Exclusive);
 
 /// Unlock the file.
 ///

@@ -356,12 +356,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
                                   QualType returnType) {
   // We can't just discard the return value for a record type with a complex
   // destructor or a non-trivially copyable type.
-  if (const RecordType *recordType =
-          returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
-            recordType->getOriginalDecl()->getDefinitionOrSelf()))
-      return classDecl->hasTrivialDestructor();
-  }
+  if (const auto *classDecl = returnType->getAsCXXRecordDecl())
+    return classDecl->hasTrivialDestructor();
   return returnType.isTriviallyCopyableType(astContext);
 }
 
@@ -490,13 +486,10 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
   // We start with function level scope for variables.
   SymTableScopeTy varScope(symbolTable);
 
-  auto result = mlir::LogicalResult::success();
   if (const CompoundStmt *block = dyn_cast<CompoundStmt>(body))
-    emitCompoundStmtWithoutScope(*block);
-  else
-    result = emitStmt(body, /*useCurrentScope=*/true);
+    return emitCompoundStmtWithoutScope(*block);
 
-  return result;
+  return emitStmt(body, /*useCurrentScope=*/true);
 }
 
 static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
@@ -561,7 +554,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitImplicitAssignmentOperatorBody(args);
     } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
-        fn.erase();
         return nullptr;
       }
     } else {
@@ -833,14 +825,9 @@ std::string CIRGenFunction::getCounterAggTmpAsString() {
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
                                             QualType ty) {
   // Ignore empty classes in C++.
-  if (getLangOpts().CPlusPlus) {
-    if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getOriginalDecl())
-              ->getDefinitionOrSelf()
-              ->isEmpty())
-        return;
-    }
-  }
+  if (getLangOpts().CPlusPlus)
+    if (const auto *rd = ty->getAsCXXRecordDecl(); rd && rd->isEmpty())
+      return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
   if (builder.isInt8Ty(destPtr.getElementType())) {
@@ -1078,6 +1065,12 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
     }
   } while (type->isVariablyModifiedType());
+}
+
+Address CIRGenFunction::emitVAListRef(const Expr *e) {
+  if (getContext().getBuiltinVaListType()->isArrayType())
+    return emitPointerWithAlignment(e);
+  return emitLValue(e).getAddress();
 }
 
 } // namespace clang::CIRGen
