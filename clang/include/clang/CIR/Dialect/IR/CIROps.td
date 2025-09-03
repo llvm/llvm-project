@@ -3752,12 +3752,23 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
+def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
+  let summary = "Computes the arcus cosine of the specified value";
+  let description = [{
+    `cir.acos`computes the arcus cosine of a given value and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
     `cir.fabs` computes the absolute value of a floating-point operand
-    and returns a result of the same type, ignoring floating-point
-    exceptions. It does not set `errno`.
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
   }];
 }
 
