@@ -1928,7 +1928,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
         "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", AfterColour);
     SmallString<80> UnchangedLineFormat = formatv(
         "<FONT COLOR=\"{0}\">%l</FONT><BR align=\"left\"/>", CommonColour);
-    std::string Diff = Data[0]->getLabel().str();
+    std::string Diff = Label.str();
     Diff += ":\n<BR align=\"left\"/>" +
             doSystemDiff(makeHTMLReady(SR[0]), makeHTMLReady(SR[1]),
                          OldLineFormat, NewLineFormat, UnchangedLineFormat);
