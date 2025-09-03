@@ -39,11 +39,18 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
-                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64EntryPStateSM
+  : SDNode<"AArch64ISD::ENTRY_PSTATE_SM", SDTypeProfile<1, 0,
+    [SDTCisInt<0>]>, [SDNPHasChain, SDNPSideEffect]>;
 
-def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+let usesCustomInserter = 1 in {
+  def EntryPStateSM : Pseudo<(outs GPR64:$is_streaming), (ins), []>, Sched<[]> {}
+}
+def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
+
+//===----------------------------------------------------------------------===//
+// Old SME ABI lowering ISD nodes/pseudos (deprecated)
+//===----------------------------------------------------------------------===//
 
 def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
                               [SDTCisInt<0>, SDTCisInt<1>]>,
@@ -54,10 +61,10 @@ let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
 def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
           (AllocateZABuffer $size)>;
 
-def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
-                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 2,
+                              [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain, SDNPMayStore]>;
 let usesCustomInserter = 1 in {
-  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer, GPR64:$save_slices), [(AArch64InitTPIDR2Obj GPR64:$buffer, GPR64:$save_slices)]>, Sched<[WriteI]> {}
 }
 
 // Nodes to allocate a save buffer for SME.
@@ -76,6 +83,30 @@ let usesCustomInserter = 1, Defs = [SP] in {
 }
 def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
           (AllocateSMESaveBuffer $size)>;
+
+//===----------------------------------------------------------------------===//
+// New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 1, isMeta = 1 in {
+  def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
+def CommitZASavePseudo
+  : Pseudo<(outs),
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
+           Sched<[]>;
+
+def AArch64_inout_za_use
+  : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue]>;
+def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
+
+def AArch64_requires_za_save
+  : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue]>;
+def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -324,16 +355,6 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-
-
-// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
-// the streaming value of VG around streaming-mode changes in locally-streaming
-// functions.
-def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGSave), (VGSavePseudo)>;
-
-def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions

@@ -145,7 +145,7 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
 
   // FIXME: When RuntimeLibcalls is an analysis, check if the function is really
   // supported, and go through RTLIB::Libcall.
-  const char *NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
+  StringRef NewFnName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(NewFn);
 
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
@@ -587,12 +587,14 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);

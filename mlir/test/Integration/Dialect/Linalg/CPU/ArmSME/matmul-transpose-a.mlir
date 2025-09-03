@@ -9,7 +9,12 @@
 // RUN: FileCheck %s
 
 func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
-  %res = linalg.matmul_transpose_a ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
+  %res = linalg.matmul
+            indexing_maps = [
+                    affine_map<(d0, d1, d2) -> (d2, d0)>,
+                    affine_map<(d0, d1, d2) -> (d2, d1)>,
+                    affine_map<(d0, d1, d2) -> (d0, d1)>]
+            ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
                                    outs(%C: tensor<?x?xf32>) -> tensor<?x?xf32>
   %xf = tensor.cast %res : tensor<?x?xf32> to tensor<*xf32>
   call @printMemrefF32(%xf) : (tensor<*xf32>) -> ()
@@ -56,7 +61,7 @@ func.func @main() {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module : !transform.any_op {transform.readonly}) {
-    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul_transpose_a"]} in %module
+    %matmul_transpose_a = transform.structured.match ops{["linalg.matmul"]} in %module
       : (!transform.any_op) -> !transform.any_op
 
     // Step 1: Tile for size [4] x [4], which corresponds to SVLs x SVLs, where

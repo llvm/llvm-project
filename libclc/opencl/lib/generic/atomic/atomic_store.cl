@@ -12,8 +12,8 @@
 #include <clc/atomic/clc_atomic_store.h>
 #include <clc/opencl/atomic/atomic_store.h>
 
-#define FUNCTION atomic_store
-#define __IMPL_FUNCTION __clc_atomic_store
+#define __CLC_FUNCTION atomic_store
+#define __CLC_IMPL_FUNCTION __clc_atomic_store
 #define __CLC_RETURN_VOID
 
 #define __CLC_BODY <atomic_def.inc>

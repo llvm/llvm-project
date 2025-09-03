@@ -157,8 +157,7 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
-
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -318,9 +317,12 @@ void ConditionOp::getSuccessorRegions(
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, ValueRange initArgs,
-                  BodyBuilderFn bodyBuilder) {
+                  BodyBuilderFn bodyBuilder, bool unsignedCmp) {
   OpBuilder::InsertionGuard guard(builder);
 
+  if (unsignedCmp)
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
   result.addOperands({lb, ub, step});
   result.addOperands(initArgs);
   for (Value v : initArgs)
@@ -450,6 +452,9 @@ static void printInitializationList(OpAsmPrinter &p,
 }
 
 void ForOp::print(OpAsmPrinter &p) {
+  if (getUnsignedCmp())
+    p << " unsigned";
+
   p << " " << getInductionVar() << " = " << getLowerBound() << " to "
     << getUpperBound() << " step " << getStep();
 
@@ -462,7 +467,8 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elidedAttrs=*/getUnsignedCmpAttrName().strref());
 }
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -471,6 +477,10 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
   OpAsmParser::Argument inductionVariable;
   OpAsmParser::UnresolvedOperand lb, ub, step;
+
+  if (succeeded(parser.parseOptionalKeyword("unsigned")))
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
 
   // Parse the induction variable followed by '='.
   if (parser.parseOperand(inductionVariable.ssaName) || parser.parseEqual() ||
@@ -562,7 +572,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   inits.append(newInitOperands.begin(), newInitOperands.end());
   scf::ForOp newLoop = scf::ForOp::create(
       rewriter, getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
-      [](OpBuilder &, Location, Value, ValueRange) {});
+      [](OpBuilder &, Location, Value, ValueRange) {}, getUnsignedCmp());
   newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
   // Generate the new yield values and append them to the scf.yield operation.
@@ -806,7 +816,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   // 2. Create the new forOp shell.
   scf::ForOp newForOp = scf::ForOp::create(
       rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-      forOp.getStep(), newIterOperands);
+      forOp.getStep(), newIterOperands, /*bodyBuilder=*/nullptr,
+      forOp.getUnsignedCmp());
   newForOp->setAttrs(forOp->getAttrs());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
@@ -931,7 +942,8 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 
     scf::ForOp newForOp =
         scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
-                           forOp.getUpperBound(), forOp.getStep(), newIterArgs);
+                           forOp.getUpperBound(), forOp.getStep(), newIterArgs,
+                           /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
     newForOp->setAttrs(forOp->getAttrs());
     Block &newBlock = newForOp.getRegion().front();
 
@@ -989,12 +1001,12 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// Util function that tries to compute a constant diff between u and l.
 /// Returns std::nullopt when the difference between two AffineValueMap is
 /// dynamic.
-static std::optional<int64_t> computeConstDiff(Value l, Value u) {
+static std::optional<APInt> computeConstDiff(Value l, Value u) {
   IntegerAttr clb, cub;
   if (matchPattern(l, m_Constant(&clb)) && matchPattern(u, m_Constant(&cub))) {
     llvm::APInt lbValue = clb.getValue();
     llvm::APInt ubValue = cub.getValue();
-    return (ubValue - lbValue).getSExtValue();
+    return ubValue - lbValue;
   }
 
   // Else a simple pattern match for x + c or c + x
@@ -1003,7 +1015,7 @@ static std::optional<int64_t> computeConstDiff(Value l, Value u) {
           u, m_Op<arith::AddIOp>(matchers::m_Val(l), m_ConstantInt(&diff))) ||
       matchPattern(
           u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
-    return diff.getSExtValue();
+    return diff;
   return std::nullopt;
 }
 
@@ -1022,13 +1034,15 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    std::optional<int64_t> diff =
+    std::optional<APInt> diff =
         computeConstDiff(op.getLowerBound(), op.getUpperBound());
     if (!diff)
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    if (*diff <= 0) {
+    bool zeroOrLessIterations =
+        diff->isZero() || (!op.getUnsignedCmp() && diff->isNegative());
+    if (zeroOrLessIterations) {
       rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
@@ -3384,9 +3398,8 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands "
-           << "(expected " << operands.size() << " got "
-           << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands " << "(expected "
+           << operands.size() << " got " << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
@@ -4222,14 +4235,15 @@ LogicalResult scf::IndexSwitchOp::verify() {
              << "see yield operation here";
     }
     for (auto [idx, result, operand] :
-         llvm::zip(llvm::seq<unsigned>(0, getNumResults()), getResultTypes(),
-                   yield.getOperandTypes())) {
-      if (result == operand)
+         llvm::enumerate(getResultTypes(), yield.getOperands())) {
+      if (!operand)
+        return yield.emitOpError() << "operand " << idx << " is null\n";
+      if (result == operand.getType())
         continue;
       return (emitOpError("expected result #")
               << idx << " of each region to be " << result)
                  .attachNote(yield.getLoc())
-             << name << " returns " << operand << " here";
+             << name << " returns " << operand.getType() << " here";
     }
     return success();
   };

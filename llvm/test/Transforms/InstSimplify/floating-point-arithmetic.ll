@@ -213,7 +213,7 @@ define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
 
 define float @fmul_ninf_nnan_mul_zero_nsz(float nofpclass(inf nan) %f) {
 ; CHECK-LABEL: @fmul_ninf_nnan_mul_zero_nsz(
-; CHECK-NEXT:     ret float 0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %r = fmul nsz float %f, 0.0
   ret float %r
@@ -221,7 +221,7 @@ define float @fmul_ninf_nnan_mul_zero_nsz(float nofpclass(inf nan) %f) {
 
 define float @fmul_ninf_nnan_mul_nzero_nsz(float nofpclass(inf nan) %f) {
 ; CHECK-LABEL: @fmul_ninf_nnan_mul_nzero_nsz(
-; CHECK-NEXT:     ret float 0.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %r = fmul nsz float %f, -0.0
   ret float %r
@@ -1254,4 +1254,21 @@ define i1 @fptrunc_round_unknown_positive(double %unknown) {
   %op = call float @llvm.fptrunc.round.f32.f64(double %unknown, metadata !"round.downward")
   %cmp = fcmp nnan oge float %op, 0.0
   ret i1 %cmp
+}
+
+define half @fabs_select_fabs(half noundef %x) {
+; CHECK-LABEL: @fabs_select_fabs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ABS1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt half [[ABS1]], 0xH0000
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], half [[X]], half 0xH0000
+; CHECK-NEXT:    [[ABS2:%.*]] = call half @llvm.fabs.f16(half [[SEL]])
+; CHECK-NEXT:    ret half [[ABS2]]
+;
+entry:
+  %abs1 = call half @llvm.fabs.f16(half %x)
+  %cmp = fcmp ogt half %abs1, 0xH0000
+  %sel = select i1 %cmp, half %x, half 0xH0000
+  %abs2 = call half @llvm.fabs.f16(half %sel)
+  ret half %abs2
 }

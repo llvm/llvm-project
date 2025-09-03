@@ -70,7 +70,7 @@ defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPairRV64>;
 
 multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                      list<Predicate> ExtraPreds = []> {
-  let Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds) in {
+  let Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds) in {
     def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
                                                      (vt GPR:$cmp),
                                                      (vt GPR:$new)),
@@ -91,7 +91,7 @@ multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
               (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
-  } // Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds)
+  } // Predicates = !listconcat([HasStdExtZacas, NoStdExtZtso], ExtraPreds)
   let Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds) in {
     def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
                                                      (vt GPR:$cmp),
