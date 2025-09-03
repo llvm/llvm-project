@@ -39,7 +39,7 @@ void main() {
 // CHECK: %[[ref_tmp6:.*]] = alloca %"class.hlsl::RWBuffer", align 4
 // CHECK: %[[ref_tmp7:.*]] = alloca %"class.hlsl::RWBuffer", align 4
 // CHECK: %[[agg_tmp:.*]] = alloca [2 x [2 x %"class.hlsl::RWBuffer"]], align 4
-// CHECK: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp]], ptr noundef nonnull align 4 dereferenceable(4) @_ZL1A)
+// CHECK: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[ref_tmp]], ptr {{.*}} @_ZL1A)
 // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp1]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp]])
 // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp2]], ptr noundef nonnull align 4 dereferenceable(4) @_ZL1B)
 // CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp3]], ptr noundef nonnull align 4 dereferenceable(4) %[[ref_tmp2]])

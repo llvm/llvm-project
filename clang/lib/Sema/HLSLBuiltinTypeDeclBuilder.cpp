@@ -156,6 +156,9 @@ public:
   BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
+  BuiltinTypeMethodBuilder &getResourceHandle(PlaceHolder ResourceRecord);
+  BuiltinTypeMethodBuilder &returnThis();
+
 private:
   void createDecl();
 
@@ -332,7 +335,7 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
       DeclarationNameInfo(ParamDecl->getDeclName(), SourceLocation()),
-      ParamDecl->getType(), VK_PRValue);
+      ParamDecl->getType().getNonReferenceType(), VK_PRValue);
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
@@ -429,6 +432,29 @@ Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
   return MemberExpr::CreateImplicit(AST, This, false, HandleField,
                                     HandleField->getType(), VK_LValue,
                                     OK_Ordinary);
+}
+
+BuiltinTypeMethodBuilder &
+BuiltinTypeMethodBuilder::getResourceHandle(PlaceHolder ResourceRecord) {
+  ensureCompleteDecl();
+
+  Expr *ResourceExpr = convertPlaceholder(ResourceRecord);
+
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
+  MemberExpr *HandleExpr = MemberExpr::CreateImplicit(
+      AST, ResourceExpr, false, HandleField, HandleField->getType(), VK_LValue,
+      OK_Ordinary);
+  StmtsList.push_back(HandleExpr);
+  return *this;
+}
+
+BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
+  ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+  CXXThisExpr *ThisExpr = CXXThisExpr::Create(
+      AST, SourceLocation(), Method->getFunctionObjectParameterType(), true);
+  StmtsList.push_back(ThisExpr);
+  return *this;
 }
 
 template <typename... Ts>
@@ -687,23 +713,11 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  BuiltinTypeMethodBuilder Builder(*this, "", AST.VoidTy, false, true);
-  Builder.addParam("other", ConstRecordRefType);
-  Builder.ensureCompleteDecl();
-
-  ParmVarDecl *OtherParam = Builder.Method->getParamDecl(0);
-
-  Expr *OtherDeclRef = DeclRefExpr::Create(
-      AST, NestedNameSpecifierLoc(), SourceLocation(), OtherParam, false,
-      DeclarationNameInfo(OtherParam->getDeclName(), SourceLocation()),
-      ConstRecordType, VK_LValue);
-
-  FieldDecl *HandleField = getResourceHandleField();
-  Expr *OtherHandleMemberExpr = MemberExpr::CreateImplicit(
-      AST, OtherDeclRef, false, HandleField, HandleField->getType(), VK_LValue,
-      OK_Ordinary);
-
-  return Builder.assign(PH::Handle, OtherHandleMemberExpr).finalize();
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("other", ConstRecordRefType)
+      .getResourceHandle(PH::_0)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
@@ -717,32 +731,13 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
   QualType RecordRefType = AST.getLValueReferenceType(RecordType);
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-
   DeclarationName Name = AST.DeclarationNames.getCXXOperatorName(OO_Equal);
-  BuiltinTypeMethodBuilder Builder(*this, Name, RecordRefType, false, false);
-  Builder.addParam("other", ConstRecordRefType);
-  Builder.ensureCompleteDecl();
-
-  ParmVarDecl *OtherParam = Builder.Method->getParamDecl(0);
-  Expr *OtherDeclRef = DeclRefExpr::Create(
-      AST, NestedNameSpecifierLoc(), SourceLocation(), OtherParam, false,
-      DeclarationNameInfo(OtherParam->getDeclName(), SourceLocation()),
-      ConstRecordType, VK_LValue);
-
-  FieldDecl *HandleField = getResourceHandleField();
-  Expr *OtherHandleMemberExpr = MemberExpr::CreateImplicit(
-      AST, OtherDeclRef, false, HandleField, HandleField->getType(), VK_LValue,
-      OK_Ordinary);
-
-  Builder.assign(PH::Handle, OtherHandleMemberExpr);
-
-  // return *this;
-  CXXThisExpr *This = CXXThisExpr::Create(
-      AST, SourceLocation(), Builder.Method->getFunctionObjectParameterType(),
-      true);
-  Builder.StmtsList.push_back(This);
-
-  return Builder.finalize();
+  return BuiltinTypeMethodBuilder(*this, Name, RecordRefType, false, false)
+      .addParam("other", ConstRecordRefType)
+      .getResourceHandle(PH::_0)
+      .assign(PH::Handle, PH::LastStmt)
+      .returnThis()
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
