@@ -48,6 +48,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Range.h"
 #include <string>
 
 namespace llvm {
@@ -56,12 +57,8 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  struct Chunk {
-    int64_t Begin;
-    int64_t End;
-    LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
-  };
+  // For backward compatibility, alias Range as Chunk
+  using Chunk = Range;
 
   /// Struct to store counter info.
   class CounterInfo {
@@ -86,7 +83,7 @@ public:
     }
   };
 
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
+  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Range> Ranges);
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
@@ -170,8 +167,26 @@ public:
   }
 
 protected:
+<<<<<<< HEAD
   void addCounter(CounterInfo *Info) { Counters[Info->Name] = Info; }
   bool handleCounterIncrement(CounterInfo &Info);
+=======
+  unsigned addCounter(const std::string &Name, const std::string &Desc) {
+    unsigned Result = RegisteredCounters.insert(Name);
+    auto &C = Counters[Result];
+    C = {};
+    C.Desc = Desc;
+    return Result;
+  }
+  // Struct to store counter info.
+  struct CounterInfo {
+    int64_t Count = 0;
+    uint64_t CurrChunkIdx = 0;
+    bool IsSet = false;
+    std::string Desc;
+    SmallVector<Range> Chunks;
+  };
+>>>>>>> 0242e6f869bd (range support)
 
   MapVector<StringRef, CounterInfo *> Counters;
 

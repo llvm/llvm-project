@@ -14,11 +14,12 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
-#include <limits>
+#include "llvm/Support/Range.h"
 
 namespace llvm {
 
@@ -41,7 +42,7 @@ public:
 
 /// This class implements a mechanism to disable passes and individual
 /// optimizations at compile time based on a command line option
-/// (-opt-bisect-limit) in order to perform a bisecting search for
+/// (-opt-bisect) in order to perform a bisecting search for
 /// optimization-related problems.
 class LLVM_ABI OptBisect : public OptPassGate {
 public:
@@ -54,12 +55,12 @@ public:
 
   ~OptBisect() override = default;
 
-  /// Checks the bisect limit to determine if the specified pass should run.
+  /// Checks the bisect ranges to determine if the specified pass should run.
   ///
   /// The method prints the name of the pass, its assigned bisect number, and
   /// whether or not the pass will be executed. It returns true if the pass
-  /// should run, i.e. if the bisect limit is set to -1 or has not yet been
-  /// exceeded.
+  /// should run, i.e. if no ranges are specified or the current pass number
+  /// falls within one of the specified ranges.
   ///
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
@@ -68,27 +69,28 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override {
-    return BisectLimit != Disabled || !BisectSkipNumbers.empty();
-  }
+  bool isEnabled() const override { return !BisectRanges.empty(); }
 
-  /// Add pass at index Index to the list of passes to skip
-  /// during bisection.
-  void disablePassAtIndex(int Index) { BisectSkipNumbers.insert(Index); }
+  /// Parse range specification and set the ranges for bisection.
+  /// Range format: "1-10,20-30,45" (runs passes 1-10, 20-30, and 45)
+  /// Returns true on parsing error.
+  bool parseRanges(StringRef RangeStr);
 
-  /// Set the new optimization limit and reset the counter. Passing
-  /// OptBisect::Disabled disables the limiting.
-  void setLimit(int Limit) {
-    BisectLimit = Limit;
+  /// Set ranges programmatically (for testing or other uses).
+  void setRanges(ArrayRef<Range> Ranges) { 
+    BisectRanges.assign(Ranges.begin(), Ranges.end());
     LastBisectNum = 0;
   }
 
-  static constexpr int Disabled = std::numeric_limits<int>::max();
+  /// Clear all ranges, effectively disabling bisection.
+  void clearRanges() { 
+    BisectRanges.clear();
+    LastBisectNum = 0;
+  }
 
 private:
-  int BisectLimit = Disabled;
   mutable int LastBisectNum = 0;
-  SmallSet<int, 4> BisectSkipNumbers;
+  RangeUtils::RangeList BisectRanges;
 };
 
 /// This class implements a mechanism to disable passes and individual

@@ -10,77 +10,8 @@ using namespace llvm;
 
 namespace llvm {
 
-void DebugCounter::Chunk::print(llvm::raw_ostream &OS) {
-  if (Begin == End)
-    OS << Begin;
-  else
-    OS << Begin << "-" << End;
-}
-
-void DebugCounter::printChunks(raw_ostream &OS, ArrayRef<Chunk> Chunks) {
-  if (Chunks.empty()) {
-    OS << "empty";
-  } else {
-    bool IsFirst = true;
-    for (auto E : Chunks) {
-      if (!IsFirst)
-        OS << ':';
-      else
-        IsFirst = false;
-      E.print(OS);
-    }
-  }
-}
-
-bool DebugCounter::parseChunks(StringRef Str, SmallVector<Chunk> &Chunks) {
-  StringRef Remaining = Str;
-
-  auto ConsumeInt = [&]() -> int64_t {
-    StringRef Number =
-        Remaining.take_until([](char c) { return c < '0' || c > '9'; });
-    int64_t Res;
-    if (Number.getAsInteger(10, Res)) {
-      errs() << "Failed to parse int at : " << Remaining << "\n";
-      return -1;
-    }
-    Remaining = Remaining.drop_front(Number.size());
-    return Res;
-  };
-
-  while (1) {
-    int64_t Num = ConsumeInt();
-    if (Num == -1)
-      return true;
-    if (!Chunks.empty() && Num <= Chunks[Chunks.size() - 1].End) {
-      errs() << "Expected Chunks to be in increasing order " << Num
-             << " <= " << Chunks[Chunks.size() - 1].End << "\n";
-      return true;
-    }
-    if (Remaining.starts_with("-")) {
-      Remaining = Remaining.drop_front();
-      int64_t Num2 = ConsumeInt();
-      if (Num2 == -1)
-        return true;
-      if (Num >= Num2) {
-        errs() << "Expected " << Num << " < " << Num2 << " in " << Num << "-"
-               << Num2 << "\n";
-        return true;
-      }
-
-      Chunks.push_back({Num, Num2});
-    } else {
-      Chunks.push_back({Num, Num});
-    }
-    if (Remaining.starts_with(":")) {
-      Remaining = Remaining.drop_front();
-      continue;
-    }
-    if (Remaining.empty())
-      break;
-    errs() << "Failed to parse at : " << Remaining;
-    return true;
-  }
-  return false;
+void DebugCounter::printChunks(raw_ostream &OS, ArrayRef<Range> Ranges) {
+  RangeUtils::printRanges(OS, Ranges);
 }
 
 } // namespace llvm
@@ -193,11 +124,13 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
   StringRef CounterName = CounterPair.first;
-  SmallVector<Chunk> Chunks;
+  RangeUtils::RangeList TempRanges;
+  SmallVector<Range> Chunks;
 
-  if (parseChunks(CounterPair.second, Chunks)) {
+  if (RangeUtils::parseRanges(CounterPair.second, TempRanges, ':')) {
     return;
   }
+  Chunks.assign(TempRanges.begin(), TempRanges.end());
 
   CounterInfo *Counter = getCounterInfo(CounterName);
   if (!Counter) {
