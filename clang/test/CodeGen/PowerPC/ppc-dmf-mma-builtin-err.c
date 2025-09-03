@@ -30,15 +30,11 @@ void test_mma(unsigned char *vdmrp, unsigned char *vpp, vector unsigned char vc)
 // CHECK: error: '__builtin_mma_pmdmxvi8gerx4pp' needs target feature mma,paired-vector-memops
 // CHECK: error: '__builtin_mma_dmxvi8gerx4spp' needs target feature mma,paired-vector-memops
 // CHECK: error: '__builtin_mma_pmdmxvi8gerx4spp' needs target feature mma,paired-vector-memops
-// CHECK: error: '__builtin_mma_dmsetdmrz' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_dmmr' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_dmxor' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_build_dmr' needs target feature mma,isa-future-instructions
-// CHECK: error: '__builtin_mma_disassemble_dmr' needs target feature mma,isa-future-instructions
-
 // ISA_FUTURE: error: '__builtin_mma_dmsetdmrz' needs target feature mma,isa-future-instructions
 // ISA_FUTURE: error: '__builtin_mma_dmmr' needs target feature mma,isa-future-instructions
 // ISA_FUTURE: error: '__builtin_mma_dmxor' needs target feature mma,isa-future-instructions
+// ISA_FUTURE: error: '__builtin_mma_build_dmr' needs target feature mma,isa-future-instructions
+// ISA_FUTURE: error: '__builtin_mma_disassemble_dmr' needs target feature mma,isa-future-instructions
 
   // DMF VSX Vector bfloat16 GER 2x builtins.
 
