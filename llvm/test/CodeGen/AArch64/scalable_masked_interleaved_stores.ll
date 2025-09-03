@@ -4,12 +4,9 @@
 define void @foo_st2_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z2.b, z0.b, z1.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    st1b { z2.b }, p1, [x0, #1, mul vl]
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
@@ -20,12 +17,9 @@ define void @foo_st2_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1,
 define void @foo_st2_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z2.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    st1h { z2.h }, p1, [x0, #1, mul vl]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2h { z0.h, z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
   %interleaved.value = tail call <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2)
@@ -36,12 +30,9 @@ define void @foo_st2_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, 
 define void @foo_st2_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z2.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip2 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    st1w { z2.s }, p1, [x0, #1, mul vl]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
   %interleaved.value = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2)
@@ -52,12 +43,9 @@ define void @foo_st2_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, 
 define void @foo_st2_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    zip2 p1.d, p0.d, p0.d
-; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    st1d { z2.d }, p1, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2d { z0.d, z1.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %interleaved.value = tail call <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2)
@@ -68,24 +56,11 @@ define void @foo_st2_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, 
 define void @foo_st4_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, <vscale x 16 x i8> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z4.b, z1.b, z3.b
-; CHECK-NEXT:    zip2 z5.b, z0.b, z2.b
-; CHECK-NEXT:    zip1 z1.b, z1.b, z3.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z2.b
-; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    zip2 z2.b, z5.b, z4.b
-; CHECK-NEXT:    zip1 z3.b, z5.b, z4.b
-; CHECK-NEXT:    zip2 p2.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 z4.b, z0.b, z1.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    zip1 p1.b, p1.b, p1.b
-; CHECK-NEXT:    zip2 p3.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
-; CHECK-NEXT:    st1b { z2.b }, p2, [x0, #3, mul vl]
-; CHECK-NEXT:    st1b { z3.b }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1b { z4.b }, p3, [x0, #1, mul vl]
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %interleaved.value = tail call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, <vscale x 16 x i8> %val4)
@@ -96,24 +71,11 @@ define void @foo_st4_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1,
 define void @foo_st4_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3, <vscale x 8 x i16> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z4.h, z1.h, z3.h
-; CHECK-NEXT:    zip2 z5.h, z0.h, z2.h
-; CHECK-NEXT:    zip1 z1.h, z1.h, z3.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    zip2 z2.h, z5.h, z4.h
-; CHECK-NEXT:    zip1 z3.h, z5.h, z4.h
-; CHECK-NEXT:    zip2 p2.h, p1.h, p1.h
-; CHECK-NEXT:    zip2 z4.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 p1.h, p1.h, p1.h
-; CHECK-NEXT:    zip2 p3.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    st1h { z2.h }, p2, [x0, #3, mul vl]
-; CHECK-NEXT:    st1h { z3.h }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1h { z4.h }, p3, [x0, #1, mul vl]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
   %interleaved.value = tail call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3, <vscale x 8 x i16> %val4)
@@ -124,24 +86,11 @@ define void @foo_st4_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, 
 define void @foo_st4_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z4.s, z1.s, z3.s
-; CHECK-NEXT:    zip2 z5.s, z0.s, z2.s
-; CHECK-NEXT:    zip1 z1.s, z1.s, z3.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z2.s
-; CHECK-NEXT:    zip2 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    zip2 z2.s, z5.s, z4.s
-; CHECK-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-NEXT:    zip2 p2.s, p1.s, p1.s
-; CHECK-NEXT:    zip2 z4.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 p1.s, p1.s, p1.s
-; CHECK-NEXT:    zip2 p3.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
-; CHECK-NEXT:    st1w { z2.s }, p2, [x0, #3, mul vl]
-; CHECK-NEXT:    st1w { z3.s }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1w { z4.s }, p3, [x0, #1, mul vl]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    st4w { z0.s - z3.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 16 x i1> @llvm.vector.interleave4.nxv16i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
   %interleaved.value = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, <vscale x 4 x i32> %val4)
@@ -152,24 +101,11 @@ define void @foo_st4_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, 
 define void @foo_st4_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3, <vscale x 2 x i64> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z4.d, z1.d, z3.d
-; CHECK-NEXT:    zip2 z5.d, z0.d, z2.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    zip2 p1.d, p0.d, p0.d
-; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    zip2 z2.d, z5.d, z4.d
-; CHECK-NEXT:    zip1 z3.d, z5.d, z4.d
-; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
-; CHECK-NEXT:    zip2 z4.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 p1.d, p1.d, p1.d
-; CHECK-NEXT:    zip2 p3.d, p0.d, p0.d
-; CHECK-NEXT:    zip1 p0.d, p0.d, p0.d
-; CHECK-NEXT:    st1d { z2.d }, p2, [x0, #3, mul vl]
-; CHECK-NEXT:    st1d { z3.d }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1d { z4.d }, p3, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 8 x i1> @llvm.vector.interleave4.nxv4i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
   %interleaved.value = tail call <vscale x 8 x i64> @llvm.vector.interleave4.nxv8i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3, <vscale x 2 x i64> %val4)
@@ -181,13 +117,12 @@ define void @foo_st2_nxv16i8_mul_use_mask(<vscale x 16 x i1> %mask, <vscale x 16
 ; CHECK-LABEL: foo_st2_nxv16i8_mul_use_mask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip1 p1.b, p0.b, p0.b
-; CHECK-NEXT:    zip1 z2.b, z0.b, z1.b
-; CHECK-NEXT:    zip2 z0.b, z0.b, z1.b
-; CHECK-NEXT:    zip2 p0.b, p0.b, p0.b
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    zip2 p2.b, p0.b, p0.b
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    // fake_use: $p1
-; CHECK-NEXT:    // fake_use: $p0
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1b { z2.b }, p1, [x0]
+; CHECK-NEXT:    // fake_use: $p2
+; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
   %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
@@ -199,10 +134,10 @@ define void @foo_st2_nxv16i8_mul_use_mask(<vscale x 16 x i1> %mask, <vscale x 16
 define void @foo_st2_nxv16i8_mask_of_interleaved_ones(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, ptr %p) {
 ; CHECK-LABEL: foo_st2_nxv16i8_mask_of_interleaved_ones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    zip2 z2.b, z0.b, z1.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    str z2, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    st2b { z0.b, z1.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> splat(i1 1), <vscale x 16 x i1> splat(i1 1))
   %interleaved.value = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2)
