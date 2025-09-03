@@ -526,6 +526,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VASHR) {
   Known = DAG->computeKnownBits(Op1);
   EXPECT_EQ(Known.Zero, APInt(8, 0x00));
   EXPECT_EQ(Known.One, APInt(8, 0xFF));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x00));
+  EXPECT_EQ(Known.One, APInt(8, 0xFF));
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
@@ -546,6 +551,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VLSHR) {
   Known = DAG->computeKnownBits(Op1);
   EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
   EXPECT_EQ(Known.One, APInt(8, 0x1));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
 }
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
@@ -564,6 +574,11 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VSHL) {
   auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
   auto Op1 = DAG->getNode(AArch64ISD::VSHL, Loc, VecVT, Vec1, Shift1);
   Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x7F));
+  EXPECT_EQ(Known.One, APInt(8, 0x80));
+
+  auto Fr1 = DAG->getFreeze(Op1);
+  Known = DAG->computeKnownBits(Fr1);
   EXPECT_EQ(Known.Zero, APInt(8, 0x7F));
   EXPECT_EQ(Known.One, APInt(8, 0x80));
 }

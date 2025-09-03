@@ -30966,6 +30966,8 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
   case AArch64ISD::VASHR:
+  case AArch64ISD::VLSHR:
+  case AArch64ISD::VSHL:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
