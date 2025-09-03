@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
   }
 
   errs() << "Minimal Chunks = ";
-  RangeUtils::printRanges(llvm::errs(), RangeUtils::mergeAdjacentRanges(CurrChunks));
+  RangeUtils::printRanges(llvm::errs(),
+                          RangeUtils::mergeAdjacentRanges(CurrChunks));
   errs() << "\n";
 }
