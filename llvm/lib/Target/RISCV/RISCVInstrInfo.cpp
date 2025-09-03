@@ -4801,16 +4801,17 @@ static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO,
   assert(MO.isImm() || MO.getReg().isVirtual());
   if (MO.isImm())
     return MO.getImm();
-  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
-  if (Def->getOpcode() == RISCV::ADDI &&
-      Def->getOperand(1).getReg() == RISCV::X0)
-    return Def->getOperand(2).getImm();
+  const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+  int64_t Imm;
+  if (isLoadImm(Def, Imm))
+    return Imm;
   return std::nullopt;
 }
 
-/// Given two VL operands, do we know that LHS <= RHS?
+/// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
 bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS,
                         const MachineRegisterInfo *MRI) {
+  assert(MRI->isSSA());
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
