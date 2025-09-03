@@ -31,25 +31,25 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
                          .bind("callee")))));
   };
 
-  auto Condition = hasCondition(implicitCastExpr(
+  auto CondExpr = hasCondition(implicitCastExpr(
       has(callExpr(AnyCalleeName({"cast", "dyn_cast"})).bind("cond"))));
 
-  auto Any =
+  auto CondExprOrCondVar =
       anyOf(hasConditionVariableStatement(containsDeclaration(
                 0, varDecl(hasInitializer(callExpr(AnyCalleeName({"cast"}))))
                        .bind("var"))),
-            Condition);
+            CondExpr);
 
   auto CallWithBindedArg =
       callExpr(
-          AnyCalleeName({"isa", "cast", "cast_or_null", "cast_if_present",
-                         "dyn_cast", "dyn_cast_or_null",
-                         "dyn_cast_if_present"}),
+          AnyCalleeName(
+              {"isa", "cast", "cast_or_null", "dyn_cast", "dyn_cast_or_null"}),
           hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
           .bind("rhs");
 
   Finder->addMatcher(
-      stmt(anyOf(ifStmt(Any), forStmt(Any), whileStmt(Any), doStmt(Condition),
+      stmt(anyOf(ifStmt(CondExprOrCondVar), forStmt(CondExprOrCondVar),
+                 whileStmt(CondExprOrCondVar), doStmt(CondExpr),
                  binaryOperator(unless(isExpansionInFileMatching(
                                     "llvm/include/llvm/Support/Casting.h")),
                                 hasOperatorName("&&"),
@@ -63,9 +63,12 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Callee = Result.Nodes.getNodeAs<DeclRefExpr>("callee");
 
-  // Callee should be matched if anything is matched.
-  assert(Callee && "Callee is null");
+  assert(Callee && "Callee should be binded if anything is matched");
 
+  // The first and last letter of the identifier
+  //   llvm::cast<T>(x)
+  //         ^  ^
+  //  StartLoc  EndLoc
   SourceLocation StartLoc = Callee->getLocation();
   SourceLocation EndLoc = Callee->getNameInfo().getEndLoc();
 
@@ -102,6 +105,9 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
     if (ArgString != LHSString)
       return;
 
+    // It is not clear which is preferred between `isa_and_nonnull` and
+    // `isa_and_present`. See
+    // https://discourse.llvm.org/t/psa-swapping-out-or-null-with-if-present/65018
     const std::string Replacement = llvm::formatv(
         "{}isa_and_nonnull{}",
         GetText(Callee->getQualifierLoc().getSourceRange()),
@@ -112,6 +118,9 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
          "followed by calling isa<>")
         << FixItHint::CreateReplacement(
                SourceRange(LHS->getBeginLoc(), RHS->getEndLoc()), Replacement);
+  } else {
+    llvm_unreachable(
+        R"(One of "var", "cond" and "and" should be binded if anything is matched)");
   }
 }
 

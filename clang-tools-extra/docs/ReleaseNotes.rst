@@ -254,9 +254,6 @@ Changes in existing checks
 
   - ``for`` loops are supported.
 
-  - ``cast_if_present`` and ``dyn_cast_if_present`` are supported in the case
-    that ``isa_and_nonnull`` is preferred.
-
 Removed checks
 ^^^^^^^^^^^^^^
 

@@ -17,13 +17,9 @@ X *cast(Y *);
 template <class X, class Y>
 X *cast_or_null(Y *);
 template <class X, class Y>
-X *cast_if_present(Y *);
-template <class X, class Y>
 X *dyn_cast(Y *);
 template <class X, class Y>
 X *dyn_cast_or_null(Y *);
-template <class X, class Y>
-X *dyn_cast_if_present(Y *);
 } // namespace llvm
 
 using namespace llvm;
@@ -141,22 +137,12 @@ bool foo(Y *y, Z *z) {
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
   // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
 
-  if (z->bar() && cast_if_present<Y>(z->bar()))
-    return true;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
-  // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
-
   if (z->bar() && dyn_cast<Y>(z->bar()))
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
   // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
 
   if (z->bar() && dyn_cast_or_null<Y>(z->bar()))
-    return true;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
-  // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
-
-  if (z->bar() && dyn_cast_if_present<Y>(z->bar()))
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
   // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
