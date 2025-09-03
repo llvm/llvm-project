@@ -2168,12 +2168,12 @@ static ExprResult sharedGetConstructorDestructorAttrExpr(Sema &S,
       if (!E->isTypeDependent() && !E->getType()->isIntegerType()) {
         S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
             << AL << AANT_ArgumentIntegerConstant << E->getSourceRange();
-        return ExprResult(/*Invalid=*/true);
+        return ExprError();
       }
     } else {
       uint32_t priority;
       if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority)) {
-        return ExprResult(/*Invalid=*/true);
+        return ExprError();
       }
       return ConstantExpr::Create(S.Context, E,
                                   APValue(llvm::APSInt::getUnsigned(priority)));
@@ -2188,7 +2188,7 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   ExprResult E = sharedGetConstructorDestructorAttrExpr(S, AL);
-  if (!E.isUsable())
+  if (E.isInvalid())
     return;
   S.Diag(D->getLocation(), diag::warn_global_constructor)
       << D->getSourceRange();
@@ -2197,7 +2197,7 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   ExprResult E = sharedGetConstructorDestructorAttrExpr(S, AL);
-  if (!E.isUsable())
+  if (E.isInvalid())
     return;
   S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, E.get()));
