@@ -577,6 +577,15 @@ struct ConvertCIRToLLVMPass
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
+mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
+    cir::ACosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ACosOp>(op, resTy,
+                                                  adaptor.getOperands()[0]);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2396,6 +2405,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                              dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMACosOpLowering,
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,

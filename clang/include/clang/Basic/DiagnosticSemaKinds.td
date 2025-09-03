@@ -10698,7 +10698,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_loan_expires_permissive : Warning<
-   "object whose reference is captured does not live long enough">, 
+   "object whose reference is captured does not live long enough">,
    InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
