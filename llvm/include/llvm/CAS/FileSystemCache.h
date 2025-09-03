@@ -223,7 +223,6 @@ public:
 
   DirectoryEntry &getRoot(StringRef root_path,
                           std::optional<ObjectRef> RootRef = std::nullopt);
-  StringRef getRootPathFor(StringRef Path) const;
   sys::path::Style getPathStyle() const { return PathStyle; }
 
   using LookupSymlinkPathType =

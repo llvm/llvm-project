@@ -24,6 +24,31 @@ void CachingOnDiskFileSystem::anchor() {}
 
 namespace {
 
+// On Windows, prepend a dummy root backslash to tree paths internally
+// (\C:\foo) and distinguish them from normal file paths (C:\foo) that
+// come from and return to clients and are passed to sys::fs
+// functions. This is so that we can have a single root and CAS ID
+// representing the root of the filesystem (that may otherwise spread
+// across multiple trees / drives) and the path handling to be more
+// uniform with the Posix systems. These convert paths between them.
+// TODO: Reassess this way of handling multiple roots for Windows later.
+static std::string getTreePath(StringRef FilePath, sys::path::Style PathStyle) {
+  if (sys::path::is_style_windows(PathStyle)) {
+    assert(FilePath[0] != '\\');
+    std::string TreePath = "\\" + std::string(FilePath);
+    return TreePath;
+  }
+  return FilePath.str();
+}
+
+static StringRef getFilePath(StringRef TreePath, sys::path::Style PathStyle) {
+  if (sys::path::is_style_windows(PathStyle)) {
+    assert(TreePath[0] == '\\');
+    return TreePath.drop_front(1);
+  }
+  return TreePath;
+}
+
 class CachingOnDiskFileSystemImpl final : public CachingOnDiskFileSystem {
   struct WorkingDirectoryType {
     FileSystemCache::DirectoryEntry *Entry;
@@ -151,6 +176,8 @@ public:
     }
   }
 
+  sys::path::Style getPathStyle() { return Cache->getPathStyle(); }
+
 private:
   void initializeWorkingDirectory();
 
@@ -247,12 +274,7 @@ void CachingOnDiskFileSystemImpl::initializeWorkingDirectory() {
 
   // Start with root, and then initialize the current working directory to
   // match process state, ignoring errors if there's a problem.
-#ifndef _WIN32
   static std::string RootPath = get_separator(sys::path::Style::native).str();
-#else
-  static std::string RootPath = const_cast<const char *>(getenv("SYSTEMDRIVE")) +
-      get_separator(sys::path::Style::native).str();
-#endif
   WorkingDirectory.Entry = &Cache->getRoot(RootPath);
   WorkingDirectory.Path = WorkingDirectory.Entry->getTreePath().str();
 
@@ -315,7 +337,8 @@ CachingOnDiskFileSystemImpl::makeSymlink(DirectoryEntry &Parent,
                                          StringRef TreePath) {
   PathStorage TreePathStorage(TreePath);
   SmallString<128> Target;
-  if (auto Err = readLink(TreePathStorage.Path, Target))
+  if (auto Err = readLink(
+          getFilePath(TreePathStorage.Path, Cache->getPathStyle()), Target))
     return std::move(Err);
   return makeSymlinkTo(Parent, TreePathStorage.Path, Target);
 }
@@ -358,12 +381,13 @@ CachingOnDiskFileSystemImpl::makeEntry(
     std::optional<sys::fs::file_status> KnownStatus) {
   assert(Parent.isDirectory() && "Expected a directory");
   PathStorage TreePathStorage(TreePath);
+  StringRef FilePath = getFilePath(TreePathStorage.Path, Cache->getPathStyle());
 
   // lstat is extremely slow...
   sys::fs::file_status Status;
   if (KnownStatus) {
     Status = std::move(*KnownStatus);
-  } else if (auto EC = sys::fs::status(TreePathStorage.Path, Status,
+  } else if (auto EC = sys::fs::status(FilePath, Status,
                                        /*follow=*/false)) {
     return errorCodeToError(EC);
   }
@@ -374,7 +398,7 @@ CachingOnDiskFileSystemImpl::makeEntry(
   if (Status.type() == sys::fs::file_type::symlink_file)
     return makeSymlink(Parent, TreePathStorage.Path);
 
-  auto F = sys::fs::openNativeFile(TreePathStorage.Path,
+  auto F = sys::fs::openNativeFile(FilePath,
       sys::fs::CD_OpenExisting, sys::fs::FA_Read, sys::fs::OF_None);
   if (!F)
     return F.takeError();
@@ -428,9 +452,10 @@ CachingOnDiskFileSystemImpl::getRealPath(const Twine &Path,
           getDirectoryEntry(Path, /*FollowSymlinks=*/true).moveInto(Entry))
     return errorToErrorCode(std::move(E));
 
-  StringRef TreePath = Entry->getTreePath();
-  Output.resize(TreePath.size());
-  llvm::copy(TreePath, Output.begin());
+  StringRef RealFilePath = getFilePath(Entry->getTreePath(),
+      Cache->getPathStyle());
+  Output.resize(RealFilePath.size());
+  llvm::copy(RealFilePath, Output.begin());
   return std::error_code();
 }
 
@@ -485,9 +510,12 @@ CachingOnDiskFileSystemImpl::getDirectoryIterator(const Twine &Path) {
   // Walk the directory on-disk to discover entries.
   std::error_code EC;
   SmallVector<std::string> TreePaths;
-  for (sys::fs::directory_iterator I(Entry->getTreePath(), EC), E;
-       !EC && I != E; I.increment(EC))
-    TreePaths.emplace_back(I->path());
+  StringRef EntryFilePath = getFilePath(Entry->getTreePath(),
+      Cache->getPathStyle());
+  for (sys::fs::directory_iterator I(EntryFilePath, EC), E;
+       !EC && I != E; I.increment(EC)) {
+    TreePaths.emplace_back(getTreePath(I->path(), Cache->getPathStyle()));
+  }
   if (EC)
     return EC;
 
@@ -519,9 +547,11 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
                                              StringRef Remaining) {
   PathStorage RemainingStorage(Remaining);
-  SmallString<256> ExpectedRealPath;
-  ExpectedRealPath = From.getTreePath();
-  sys::path::append(ExpectedRealPath, RemainingStorage.Path);
+  SmallString<256> ExpectedRealTreePath;
+  ExpectedRealTreePath = From.getTreePath();
+  sys::path::append(ExpectedRealTreePath, RemainingStorage.Path);
+  SmallString<256> ExpectedRealPath = getFilePath(ExpectedRealTreePath.str(),
+                                                  Cache->getPathStyle());
 
   // Most paths don't exist. Start with a stat. Profiling says this is faster
   // on Darwin when running clang-scan-deps (looks like allocation traffic in
@@ -543,20 +573,21 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
       /* expand_tilde */false))
     return errorCodeToError(EC);
 
+  SmallString<256> RealTreePath = StringRef(getTreePath(RealPath,
+      Cache->getPathStyle()));
   FileSystemCache::LookupPathState State(Cache->getPathStyle(),
-      Cache->getRoot(Cache->getRootPathFor(RealPath)), RealPath);
+      Cache->getRoot(get_separator(Cache->getPathStyle())), RealTreePath);
 
   // Advance through the cached directories. Note: no need to pass through
   // TrackNonRealPathEntries because we're navigating a real path.
-  StringRef ExpectedPrefix =
-      StringRef(ExpectedRealPath).drop_back(RemainingStorage.Path.size());
-#ifndef _WIN32
-  if (RealPath.str().starts_with(ExpectedPrefix))
-#else
-  if (RealPath.str().starts_with_insensitive(ExpectedPrefix))
-#endif
-    State = FileSystemCache::LookupPathState(
-        Cache->getPathStyle(), From, RealPath.substr(ExpectedPrefix.size()));
+  StringRef ExpectedTreePrefix =
+      StringRef(ExpectedRealTreePath).drop_back(RemainingStorage.Path.size());
+  if (((!is_style_windows(Cache->getPathStyle())) &&
+       RealTreePath.str().starts_with(ExpectedTreePrefix)) ||
+      ((is_style_windows(Cache->getPathStyle())) &&
+       RealTreePath.str().starts_with_insensitive(ExpectedTreePrefix)))
+    State = FileSystemCache::LookupPathState(Cache->getPathStyle(), From,
+        RealTreePath.substr(ExpectedTreePrefix.size()));
   else
     State = Cache->lookupRealPathPrefixFromCached(
         State, /*TrackNonRealPathEntries=*/nullptr);
@@ -567,8 +598,8 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
 
   // All but the last component must be directories.
   while (!State.AfterName.empty()) {
-    DirectoryEntry &Entry = Cache->makeDirectory(
-        *State.Entry, RealPath.substr(0, State.Name.end() - RealPath.begin()));
+    DirectoryEntry &Entry = Cache->makeDirectory(*State.Entry,
+        RealTreePath.substr(0, State.Name.end() - RealTreePath.begin()));
 
     // If we don't get back a directory, the disk state must have changed and
     // another thread raced. Give up on this endeavour.
@@ -590,7 +621,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   const bool IsDir = sys::fs::is_directory(Status);
 
   if (IsDir)
-    return makeDirectory(*State.Entry, RealPath);
+    return makeDirectory(*State.Entry, RealTreePath);
 
   auto FD = sys::fs::openNativeFileForRead(ExpectedRealPath, sys::fs::OF_None,
                                            /*RealPath=*/nullptr);
@@ -600,7 +631,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   }
   auto CloseOnExit = make_scope_exit([&FD]() { sys::fs::closeFile(*FD); });
 
-  auto F = makeFile(*State.Entry, RealPath, *FD, Status);
+  auto F = makeFile(*State.Entry, RealTreePath, *FD, Status);
   if (F)
     return *F;
   llvm::consumeError(F.takeError());
@@ -757,10 +788,11 @@ DiscoveryInstanceImpl::requestDirectoryEntry(DirectoryEntry &Parent,
   assert(Parent.isDirectory() && "Expected a directory");
   SmallString<256> Path(Parent.getTreePath());
   sys::path::append(Path, Name);
+  StringRef FilePath = getFilePath(Path.str(), FS.getPathStyle());
 
   // lstat is extremely slow...
   sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(Path, Status, /*follow=*/false))
+  if (std::error_code EC = sys::fs::status(FilePath, Status, /*follow=*/false))
     return errorCodeToError(EC);
 
   DirectoryEntry *Next =
@@ -785,9 +817,11 @@ DiscoveryInstanceImpl::requestDirectoryEntry(DirectoryEntry &Parent,
     if (Name.equals_insensitive(NextName) || !isASCII(Name)) {
       // Might be a case-insensitive match, check if it's the same entity.
       // FIXME: put this unique id in the cache.
+      StringRef NextFilePath = getFilePath(Next->getTreePath(),
+          FS.getPathStyle());
       sys::fs::file_status StatNext;
       if (std::error_code EC =
-              sys::fs::status(Next->getTreePath(), StatNext, /*follow=*/false))
+              sys::fs::status(NextFilePath, StatNext, /*follow=*/false))
         return errorCodeToError(EC);
       if (Status.getUniqueID() == StatNext.getUniqueID()) {
         // Case-insensitive match! Create a fake symlink so that it will have

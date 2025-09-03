@@ -15,7 +15,7 @@
 // RUN:   > %t/deps_pch.json
 
 // == Check specifics of the command-line
-// RUN: cat %t/deps_pch.json | FileCheck %s -DPREFIX=%/t -check-prefix=PCH
+// RUN: cat %t/deps_pch.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s -check-prefix=PCH
 
 // == Build PCH
 // RUN: %deps-to-rsp %t/deps_pch.json --module-name A > %t/A.rsp
@@ -36,7 +36,7 @@
 // RUN:   > %t/deps.json
 
 // == Check specifics of the command-line
-// RUN: cat %t/deps.json | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
 
 // == Build TU, including PCH
 // RUN: %deps-to-rsp %t/deps.json --module-name C > %t/C.rsp
@@ -60,7 +60,7 @@
 // PCH:            "command-line": [
 // PCH-NEXT:         "-cc1"
 // PCH:              "-fcas-path"
-// PCH-NEXT:         "[[PREFIX]]{{.}}cas"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}cas"
 // PCH:              "-fcas-fs"
 // PCH-NEXT:         "[[A_ROOT_ID]]"
 // PCH:              "-o"
@@ -73,8 +73,8 @@
 // PCH:              "-fmodule-file={{(B=)?}}[[B_PCM]]"
 // PCH:            ]
 // PCH:            "file-deps": [
-// PCH-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// PCH-NEXT:         "[[PREFIX]]{{.}}A.h"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}A.h"
 // PCH-NEXT:       ]
 // PCH:            "name": "A"
 // PCH:          }
@@ -84,7 +84,7 @@
 // PCH:            "command-line": [
 // PCH-NEXT:         "-cc1"
 // PCH:              "-fcas-path"
-// PCH-NEXT:         "[[PREFIX]]{{.}}cas"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}cas"
 // PCH:              "-fcas-fs"
 // PCH-NEXT:         "[[B_ROOT_ID]]"
 // PCH:              "-o"
@@ -93,8 +93,8 @@
 // PCH:              "-emit-module"
 // PCH:            ]
 // PCH:            "file-deps": [
-// PCH-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// PCH-NEXT:         "[[PREFIX]]{{.}}B.h"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// PCH-NEXT:         "PREFIX{{/|\\\\}}B.h"
 // PCH-NEXT:       ]
 // PCH:            "name": "B"
 // PCH:          }
@@ -112,7 +112,7 @@
 // PCH:                "command-line": [
 // PCH-NEXT:             "-cc1"
 // PCH:                  "-fcas-path"
-// PCH-NEXT:             "[[PREFIX]]{{.}}cas"
+// PCH-NEXT:             "PREFIX{{/|\\\\}}cas"
 // PCH:                  "-fcas-fs"
 // PCH-NEXT:             "[[PCH_ROOT_ID]]"
 // PCH:                  "-fno-pch-timestamp"
@@ -124,7 +124,7 @@
 // PCH:                  "-fmodule-file={{(A=)?}}[[A_PCM]]"
 // PCH:                ]
 // PCH:                "file-deps": [
-// PCH-NEXT:             "[[PREFIX]]{{.}}prefix.h"
+// PCH-NEXT:             "PREFIX{{/|\\\\}}prefix.h"
 // PCH-NEXT:           ]
 // PCH:              }
 
@@ -136,7 +136,7 @@
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-fcas-fs"
 // CHECK-NEXT:         "[[C_ROOT_ID]]"
 // CHECK:              "-o"
@@ -149,8 +149,8 @@
 // CHECK:              "[[B_CACHE_KEY:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]{{.}}module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]{{.}}C.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}C.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "C"
 // CHECK:          }
@@ -168,7 +168,7 @@
 // CHECK:                "command-line": [
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
-// CHECK-NEXT:             "[[PREFIX]]{{.}}cas"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}cas"
 // CHECK:                  "-fcas-fs"
 // CHECK-NEXT:             "[[TU_ROOT_ID]]"
 // CHECK:                  "-fno-pch-timestamp"
@@ -179,8 +179,8 @@
 // CHECK:                  "-fmodule-file={{(C=)?}}[[C_PCM]]"
 // CHECK:                ]
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]{{.}}tu.c"
-// CHECK-NEXT:             "[[PREFIX]]{{.}}prefix.h.pch"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}tu.c"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}prefix.h.pch"
 // CHECK-NEXT:           ]
 // CHECK:              }
 
