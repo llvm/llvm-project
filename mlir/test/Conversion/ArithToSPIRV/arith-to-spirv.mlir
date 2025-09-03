@@ -759,6 +759,34 @@ func.func @index_castindexi1_3(%arg0: vector<3xindex>) {
   return
 }
 
+// CHECK-LABEL: index_casti1index_1
+func.func @index_casti1index_1(%arg0 : i1) {
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
+  // CHECK: spirv.Select %{{.+}}, %[[ONE]], %[[ZERO]] : i1, i32
+  %0 = arith.index_cast %arg0 : i1 to index
+  return
+}
+
+// CHECK-LABEL: index_casti1index_2
+func.func @index_casti1index_2(%arg0 : vector<1xi1>) -> vector<1xindex> {
+  // Single-element vectors do not exist in SPIRV.
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
+  // CHECK: spirv.Select %{{.+}}, %[[ONE]], %[[ZERO]] : i1, i32
+  %0 = arith.index_cast %arg0 : vector<1xi1> to vector<1xindex>
+  return %0 : vector<1xindex>
+}
+
+// CHECK-LABEL: index_casti1index_3
+func.func @index_casti1index_3(%arg0 : vector<3xi1>) {
+  // CHECK: %[[ZERO:.+]] = spirv.Constant dense<0> : vector<3xi32>
+  // CHECK: %[[ONE:.+]] = spirv.Constant dense<1> : vector<3xi32>
+  // CHECK: spirv.Select %{{.+}}, %[[ONE]], %[[ZERO]] : vector<3xi1>, vector<3xi32>
+  %0 = arith.index_cast %arg0 : vector<3xi1> to vector<3xindex>
+  return
+}
+
 // CHECK-LABEL: @bit_cast
 func.func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
   // CHECK: spirv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
