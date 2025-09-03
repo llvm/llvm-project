@@ -1127,6 +1127,9 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     if (IgnoreNonDecodableOperands)
       return;
     assert(!OpInfo.Decoder.empty());
+    // The operand has no encoding, so the corresponding argument is omitted.
+    // This avoids confusion and allows the function to be overloaded if the
+    // operand does have an encoding in other instructions.
     OS << Indent << "if (!Check(S, " << OpInfo.Decoder << "(MI, Decoder)))\n"
        << Indent << "  return MCDisassembler::Fail;\n";
     return;
@@ -1135,6 +1138,8 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
   if (OpInfo.Fields.empty() && OpInfo.InitValue && IgnoreFullyDefinedOperands)
     return;
 
+  // We need to construct the encoding of the operand from pieces if it is not
+  // encoded sequentially or has a non-zero constant part in the encoding.
   bool UseInsertBits = OpInfo.numFields() > 1 || OpInfo.InitValue.value_or(0);
 
   if (UseInsertBits) {
