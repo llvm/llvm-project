@@ -1445,6 +1445,49 @@ def : Pat<(v16i8 (wasm_narrow_u (v8i16 V128:$left), (v8i16 V128:$right))),
 def : Pat<(v8i16 (wasm_narrow_u (v4i32 V128:$left), (v4i32 V128:$right))),
           (NARROW_U_I16x8 $left, $right)>;
 
+// Recognize a saturating truncation and convert into the corresponding
+// narrow_TYPE_s or narrow_TYPE_u instruction.
+multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction narrow, int minval,
+                                    int maxval, int mask> {
+  def : Pat<
+    (output (wasm_narrow_u
+      (and (smin (smax (input V128:$a), (splat_vector (i32 minval))),
+           (splat_vector (i32 maxval))), (splat_vector (i32 mask))),
+      (and (smin (smax (input V128:$b), (splat_vector (i32 minval))),
+           (splat_vector (i32 maxval))), (splat_vector (i32 mask)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_u
+      (and (smax (smin (input V128:$a), (splat_vector (i32 maxval))),
+           (splat_vector (i32 minval))), (splat_vector (i32 mask))),
+      (and (smax (smin (input V128:$b), (splat_vector (i32 maxval))),
+           (splat_vector (i32 minval))), (splat_vector (i32 mask)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+}
+
+defm : SignedSaturatingTruncate<v8i16, v16i8, NARROW_S_I8x16, -128, 127, 0xFF>;
+defm : SignedSaturatingTruncate<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767, 0xFFFF>;
+
+multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction narrow, int maxval> {
+  def : Pat<
+    (output (wasm_narrow_u
+      (umin (input V128:$a), (splat_vector (i32 maxval))),
+      (umin (input V128:$b), (splat_vector (i32 maxval)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+}
+
+defm : UnsignedSaturatingTruncate<v8i16, v16i8, NARROW_U_I8x16, 0xFF>;
+defm : UnsignedSaturatingTruncate<v4i32, v8i16, NARROW_U_I16x8, 0xFFFF>;
+
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
 foreach t1 = AllVecs in
