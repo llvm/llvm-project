@@ -15,9 +15,9 @@ struct s1 {
 // OGCG-DAG: %struct.s1 = type { i32, i64 }
 
 struct s2 {
-    int  a : 24;
+    int a : 24;
     char b;
-    int  c : 30;
+    int c : 30;
 } Clip;
 
 // CIR-DAG: !rec_s2 = !cir.record<struct "s2" {!s32i, !s8i, !s32i}>
@@ -25,9 +25,9 @@ struct s2 {
 // OGCG-DAG: %struct.s2 = type { i32, i8, i32 }
 
 struct s3 {
-    int  a : 18;
-    int    :  0;
-    int  c : 14;
+    int a : 18;
+    int   :  0;
+    int c : 14;
 } zero_bit;
 
 // CIR-DAG:  !rec_s3 = !cir.record<struct "s3" {!s32i, !s32i}>
@@ -37,10 +37,10 @@ struct s3 {
 #pragma pack (push,1)
 
 struct Inner {
-  unsigned int    A    :  1;
-  unsigned int    B    :  1;
-  unsigned int    C    :  1;
-  unsigned int    D    : 30;
+  unsigned int A :  1;
+  unsigned int B :  1;
+  unsigned int C :  1;
+  unsigned int D : 30;
 } Inner;
 
 #pragma pack (pop)
