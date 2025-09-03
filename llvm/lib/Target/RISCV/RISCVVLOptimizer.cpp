@@ -1561,8 +1561,8 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   assert(DemandedVLs.empty());
 
-  // For each instruction that defines a vector, compute what VL its
-  // upstream uses demand.
+  // For each instruction that defines a vector, propagate the VL it
+  // uses to its inputs.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB))
