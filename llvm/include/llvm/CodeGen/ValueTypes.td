@@ -364,7 +364,6 @@ def aarch64mfp8 : ValueType<8,  253>;  // 8-bit value in FPR (AArch64)
 
 def c64 : VTCapability<64, 254>;   // 64-bit capability value
 def c128 : VTCapability<128, 255>; // 128-bit capability value
-def c256 : VTCapability<256, 256>; // 256-bit capability value
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy
