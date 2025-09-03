@@ -951,7 +951,8 @@ define i32 @select_sub_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_sub_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    sub a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = sub i32 %a, %b
@@ -1088,7 +1089,8 @@ define i32 @select_and_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_and_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    and a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = and i32 %a, %b
@@ -1132,7 +1134,8 @@ define i32 @select_and_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_and_2:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    and a2, a2, a1
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = and i32 %a, %b
@@ -1176,7 +1179,8 @@ define i32 @select_and_3(i1 zeroext %cond, i32 %a) {
 ; RV32IXQCI-LABEL: select_and_3:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    andi a2, a1, 42
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = and i32 %a, 42
@@ -1230,7 +1234,8 @@ define i32 @select_udiv_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_udiv_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    divu a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1284,7 +1289,8 @@ define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_udiv_2:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    divu a2, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1362,7 +1368,8 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ; RV32IXQCI-NEXT:    addi a3, a3, -975
 ; RV32IXQCI-NEXT:    mulhu a2, a2, a3
 ; RV32IXQCI-NEXT:    srli a2, a2, 2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, 42
@@ -1416,7 +1423,8 @@ define i32 @select_shl_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_shl_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    sll a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = shl i32 %a, %b
@@ -1531,7 +1539,8 @@ define i32 @select_ashr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_ashr_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    sra a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = ashr i32 %a, %b
@@ -1646,7 +1655,8 @@ define i32 @select_lshr_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ; RV32IXQCI-LABEL: select_lshr_1:
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    srl a1, a1, a2
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = lshr i32 %a, %b
@@ -2035,11 +2045,12 @@ define i32 @select_cst3(i1 zeroext %cond) {
 ;
 ; RV32IXQCI-LABEL: select_cst3:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    lui a1, 5
-; RV32IXQCI-NEXT:    lui a2, 7
-; RV32IXQCI-NEXT:    addi a1, a1, -480
-; RV32IXQCI-NEXT:    addi a2, a2, 1328
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a1
+; RV32IXQCI-NEXT:    lui a1, 7
+; RV32IXQCI-NEXT:    lui a2, 5
+; RV32IXQCI-NEXT:    addi a3, a1, 1328
+; RV32IXQCI-NEXT:    addi a1, a2, -480
+; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a3
+; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
   %ret = select i1 %cond, i32 30000, i32 20000
   ret i32 %ret
@@ -2103,7 +2114,8 @@ define i32 @select_cst5(i1 zeroext %cond) {
 ; RV32IXQCI-NEXT:    lui a1, 1
 ; RV32IXQCI-NEXT:    addi a1, a1, -2047
 ; RV32IXQCI-NEXT:    li a2, 2047
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a1
+; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
   %ret = select i1 %cond, i32 2047, i32 2049
   ret i32 %ret
@@ -2147,9 +2159,10 @@ define i32 @select_cst5_invert(i1 zeroext %cond) {
 ; RV32IXQCI-LABEL: select_cst5_invert:
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    lui a1, 1
-; RV32IXQCI-NEXT:    addi a1, a1, -2047
-; RV32IXQCI-NEXT:    li a2, 2047
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    addi a2, a1, -2047
+; RV32IXQCI-NEXT:    li a1, 2047
+; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
   %ret = select i1 %cond, i32 2049, i32 2047
   ret i32 %ret
@@ -2199,9 +2212,10 @@ define i32 @select_cst_diff2(i1 zeroext %cond) {
 ;
 ; RV32IXQCI-LABEL: select_cst_diff2:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    li a1, 122
 ; RV32IXQCI-NEXT:    li a2, 120
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a1
+; RV32IXQCI-NEXT:    li a1, 122
+; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
   %ret = select i1 %cond, i32 120, i32 122
   ret i32 %ret
@@ -2248,9 +2262,10 @@ define i32 @select_cst_diff2_invert(i1 zeroext %cond) {
 ;
 ; RV32IXQCI-LABEL: select_cst_diff2_invert:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    li a1, 120
 ; RV32IXQCI-NEXT:    li a2, 122
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a1
+; RV32IXQCI-NEXT:    li a1, 120
+; RV32IXQCI-NEXT:    qc.mvnei a1, a0, 0, a2
+; RV32IXQCI-NEXT:    mv a0, a1
 ; RV32IXQCI-NEXT:    ret
   %ret = select i1 %cond, i32 122, i32 120
   ret i32 %ret
@@ -2596,7 +2611,7 @@ define void @select_redundant_czero_eqz1(ptr %0, ptr %1) {
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV32IXQCI-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
-; RV32IXQCI-NEXT:    qc.selecteqi a0, 0, a2, a0
+; RV32IXQCI-NEXT:    qc.mveqi a0, a0, 0, a2
 ; RV32IXQCI-NEXT:    sw a0, 0(a1)
 ; RV32IXQCI-NEXT:    ret
 entry:
@@ -2658,8 +2673,8 @@ define void @select_redundant_czero_eqz2(ptr %0, ptr %1) {
 ; RV32IXQCI:       # %bb.0: # %entry
 ; RV32IXQCI-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
 ; RV32IXQCI-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a0, a2
-; RV32IXQCI-NEXT:    sw a0, 0(a1)
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a0
+; RV32IXQCI-NEXT:    sw a2, 0(a1)
 ; RV32IXQCI-NEXT:    ret
 entry:
   %3 = icmp ne ptr %0, null

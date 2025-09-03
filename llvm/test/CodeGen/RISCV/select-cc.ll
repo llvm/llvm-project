@@ -333,19 +333,20 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ;
 ; RV32IXQCI-LABEL: numsignbits:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    qc.selecteqi a0, 0, a3, a2
-; RV32IXQCI-NEXT:    beqz a1, .LBB1_2
-; RV32IXQCI-NEXT:  # %bb.1:
 ; RV32IXQCI-NEXT:    addi sp, sp, -16
 ; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    mv s0, a0
+; RV32IXQCI-NEXT:    mv s0, a2
+; RV32IXQCI-NEXT:    qc.mveqi s0, a0, 0, a3
+; RV32IXQCI-NEXT:    beqz a1, .LBB1_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    mv a0, s0
 ; RV32IXQCI-NEXT:    call bar
+; RV32IXQCI-NEXT:  .LBB1_2:
 ; RV32IXQCI-NEXT:    mv a0, s0
 ; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IXQCI-NEXT:    addi sp, sp, 16
-; RV32IXQCI-NEXT:  .LBB1_2:
 ; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: numsignbits:
@@ -469,10 +470,11 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ; RV32IXQCI-NEXT:    srli a6, a0, 31
 ; RV32IXQCI-NEXT:    srli a0, a1, 31
 ; RV32IXQCI-NEXT:    xori a0, a0, 1
-; RV32IXQCI-NEXT:    qc.selecteqi a1, -1, a6, a0
-; RV32IXQCI-NEXT:    mv a0, a1
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a4
-; RV32IXQCI-NEXT:    qc.selectnei a1, 0, a3, a5
+; RV32IXQCI-NEXT:    qc.mveqi a0, a1, -1, a6
+; RV32IXQCI-NEXT:    qc.mvnei a4, a0, 0, a2
+; RV32IXQCI-NEXT:    qc.mvnei a5, a0, 0, a3
+; RV32IXQCI-NEXT:    mv a0, a4
+; RV32IXQCI-NEXT:    mv a1, a5
 ; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: select_sge_int32min:

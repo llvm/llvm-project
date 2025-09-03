@@ -26,7 +26,8 @@ define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ; RV32IXQCI-LABEL: bare_select:
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    andi a0, a0, 1
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
   %1 = select i1 %a, i32 %b, i32 %c
   ret i32 %1
@@ -52,7 +53,8 @@ define float @bare_select_float(i1 %a, float %b, float %c) nounwind {
 ; RV32IXQCI-LABEL: bare_select_float:
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    andi a0, a0, 1
-; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
+; RV32IXQCI-NEXT:    qc.mvnei a2, a0, 0, a1
+; RV32IXQCI-NEXT:    mv a0, a2
 ; RV32IXQCI-NEXT:    ret
   %1 = select i1 %a, float %b, float %c
   ret float %1
