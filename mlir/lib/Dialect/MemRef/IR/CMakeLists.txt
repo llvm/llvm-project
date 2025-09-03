@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRMemRefDialect
+  MemRefAttrs.cpp
   MemRefDialect.cpp
   MemRefMemorySlot.cpp
   MemRefOps.cpp
@@ -8,6 +9,8 @@ add_mlir_dialect_library(MLIRMemRefDialect
   ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRefDialect
 
   DEPENDS
+  MLIRMemRefAttrsIncGen
+  MLIRMemRefInterfacesIncGen
   MLIRMemRefOpsIncGen
 
   LINK_LIBS PUBLIC

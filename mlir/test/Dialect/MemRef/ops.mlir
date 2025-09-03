@@ -624,3 +624,25 @@ func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affin
   %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
   return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
 }
+
+
+#alias_scope1 = #memref.alias_scope<id = distinct[0]<>, description = "scope">
+#alias_scope2 = #memref.alias_scope<id = distinct[1]<>>
+
+// CHECK-LABEL: func @memref_alias_scope
+func.func @memref_alias_scope(%arg1 : memref<?xf32>, %arg2 : memref<?xf32>, %arg3: index) -> f32 {
+  // CHECK: memref.alias_domain_scope "The Domain"
+  memref.alias_domain_scope "The Domain" {}
+
+  // CHECK: %[[RES:.*]] = memref.alias_domain_scope -> f32
+  %0 = memref.alias_domain_scope -> f32 {
+  // CHECK: %[[VAL:.*]] = memref.load %{{.*}}[%{{.*}}] {alias = #memref.aliasing<alias_scopes = [#[[SCOPE1:.*]]], noalias = [#[[SCOPE2:.*]]]>} : memref<?xf32>
+  // CHECK: memref.store %[[VAL]], %{{.*}}[%{{.*}}] {alias = #memref.aliasing<alias_scopes = [#[[SCOPE2]]], noalias = [#[[SCOPE1]]]>} : memref<?xf32>
+  // CHECK: memref.alias_domain_scope.return %[[VAL]] : f32
+    %val = memref.load %arg1[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope1], noalias=[#alias_scope2]> } : memref<?xf32>
+    memref.store %val, %arg2[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope2], noalias=[#alias_scope1]> } : memref<?xf32>
+    memref.alias_domain_scope.return %val: f32
+  }
+  // CHECK: return %[[RES]]
+  return %0 : f32
+}
