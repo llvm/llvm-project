@@ -21387,6 +21387,7 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // Restore the original width by sign extending.
     Known = Known.sext(BitWidth);
     break;
+  }
   case RISCVISD::SRAW: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
