@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Range.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 
 using namespace llvm;
 
-bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges,
-                             const char Separator) {
-  Ranges.clear();
+Expected<RangeUtils::RangeList> RangeUtils::parseRanges(const StringRef Str,
+                                                       const char Separator) {
+  RangeList Ranges;
 
   if (Str.empty())
-    return true;
+    return std::move(Ranges);
 
   // Split by the specified separator
   SmallVector<StringRef, 8> Parts;
@@ -34,25 +35,25 @@ bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges,
 
     SmallVector<StringRef, 4> Matches;
     if (!RangeRegex.match(Part, &Matches)) {
-      errs() << "Invalid range format: '" << Part << "'\n";
-      return false;
+      return createStringError(std::errc::invalid_argument,
+                              "Invalid range format: '%s'", Part.str().c_str());
     }
 
     int64_t Begin, End;
     if (Matches[1].getAsInteger(10, Begin)) {
-      errs() << "Failed to parse number: '" << Matches[1] << "'\n";
-      return false;
+      return createStringError(std::errc::invalid_argument,
+                              "Failed to parse number: '%s'", Matches[1].str().c_str());
     }
 
     if (!Matches[3].empty()) {
       // Range format "begin-end"
       if (Matches[3].getAsInteger(10, End)) {
-        errs() << "Failed to parse number: '" << Matches[3] << "'\n";
-        return false;
+        return createStringError(std::errc::invalid_argument,
+                                "Failed to parse number: '%s'", Matches[3].str().c_str());
       }
       if (Begin >= End) {
-        errs() << "Invalid range: " << Begin << " >= " << End << "\n";
-        return false;
+        return createStringError(std::errc::invalid_argument,
+                                "Invalid range: %lld >= %lld", Begin, End);
       }
     } else {
       // Single number
@@ -61,14 +62,28 @@ bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges,
 
     // Check ordering constraint (ranges must be in increasing order)
     if (!Ranges.empty() && Begin <= Ranges.back().End) {
-      errs() << "Expected ranges to be in increasing order: " << Begin
-             << " <= " << Ranges.back().End << "\n";
-      return false;
+      return createStringError(std::errc::invalid_argument,
+                              "Expected ranges to be in increasing order: %lld <= %lld",
+                              Begin, Ranges.back().End);
     }
 
     Ranges.push_back(Range(Begin, End));
   }
 
+  return std::move(Ranges);
+}
+
+bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges,
+                             const char Separator) {
+  auto ExpectedRanges = parseRanges(Str, Separator);
+  if (!ExpectedRanges) {
+    // For backward compatibility, print error to stderr
+    handleAllErrors(ExpectedRanges.takeError(), [](const StringError &E) {
+      errs() << E.getMessage() << "\n";
+    });
+    return false;
+  }
+  Ranges = std::move(*ExpectedRanges);
   return true;
 }
 
