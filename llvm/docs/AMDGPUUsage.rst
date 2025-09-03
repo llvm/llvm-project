@@ -15271,12 +15271,12 @@ the instruction in the code sequence that references the table.
                                - system       - generic
                                                             - If agent scope, omit.
 
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+                                                         2. | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
                                                             | ``s_wait_kmcnt 0x0``
+                                                            | ``s_wait_samplecnt 0x0``
+                                                            | ``s_wait_bvhcnt 0x0``
+                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If agent scope, omit ``s_wait_kmcnt 0x0``.
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
