@@ -30837,6 +30837,7 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case AArch64ISD::MOVIedit:
   case AArch64ISD::MOVImsl:
   case AArch64ISD::MOVIshift:
+  case AArch64ISD::MVNImsl:
   case AArch64ISD::MVNIshift:
     return false;
   }
