@@ -5819,6 +5819,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
   MCInst Inst;
+  Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
@@ -5842,7 +5843,6 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
-    Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
   }
