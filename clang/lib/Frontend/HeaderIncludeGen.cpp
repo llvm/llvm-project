@@ -112,11 +112,17 @@ public:
 /// an array of separate entries, one for each non-system source file used in
 /// the compilation showing only the direct includes and imports from that file.
 class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
+  struct HeaderIncludeInfo {
+    SourceLocation location;
+    FileEntryRef file;
+    const Module *importedModule;
+  };
+
   SourceManager &SM;
   HeaderSearch &HSI;
   raw_ostream *OutputFile;
   bool OwnsOutputFile;
-  using DependencyMap = llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef>>;
+  using DependencyMap = llvm::DenseMap<FileEntryRef, SmallVector<HeaderIncludeInfo>>;
   DependencyMap Dependencies;
 
 public:
@@ -390,18 +396,43 @@ void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   llvm::json::OStream JOS(OS);
-  JOS.array([&] {
-    for (auto S = SourceFiles.begin(), SE = SourceFiles.end(); S != SE; ++S) {
-      JOS.object([&] {
-        SmallVector<FileEntryRef> &Deps = Dependencies[*S];
-        JOS.attribute("source", S->getName().str());
-        JOS.attributeArray("includes", [&] {
-          for (unsigned I = 0, N = Deps.size(); I != N; ++I)
-            JOS.value(Deps[I].getName().str());
+  JOS.object([&] {
+    JOS.attribute("version", "2.0.0");
+    JOS.attributeArray("dependencies", [&] {
+      for (auto S = SourceFiles.begin(), SE = SourceFiles.end(); S != SE; ++S) {
+        JOS.object([&] {
+          SmallVector<HeaderIncludeInfo> &Deps = Dependencies[*S];
+          JOS.attribute("source", S->getName().str());
+          JOS.attributeArray("includes", [&] {
+            for (unsigned I = 0, N = Deps.size(); I != N; ++I) {
+              if (!Deps[I].importedModule) {
+                JOS.object([&] {
+                  PresumedLoc PLoc = SM.getPresumedLoc(Deps[I].location);
+                  std::string locationStr = PLoc.isInvalid() ? "<invalid>" : std::to_string(PLoc.getLine()) + ":" + std::to_string(PLoc.getColumn());
+                  JOS.attribute("location", locationStr);
+                  JOS.attribute("file", Deps[I].file.getName());
+                });
+              }
+            }
+          });
+          JOS.attributeArray("imports", [&] {
+            for (unsigned I = 0, N = Deps.size(); I != N; ++I) {
+              if (Deps[I].importedModule) {
+                JOS.object([&] {
+                  PresumedLoc PLoc = SM.getPresumedLoc(Deps[I].location);
+                  std::string locationStr = PLoc.isInvalid() ? "<invalid>" : std::to_string(PLoc.getLine()) + ":" + std::to_string(PLoc.getColumn());
+                  JOS.attribute("location", locationStr);
+                  JOS.attribute("module", Deps[I].importedModule->getTopLevelModuleName());
+                  JOS.attribute("file", Deps[I].file.getName());
+                });
+              }
+            }
+          });
         });
-      });
-    }
+      }
+    });
   });
+  
   OS << "\n";
 
   if (OutputFile->get_kind() == raw_ostream::OStreamKind::OK_FDStream) {
@@ -427,7 +458,19 @@ void HeaderIncludesDirectPerFileCallback::InclusionDirective(
   if (!FromFile)
     return;
 
-  Dependencies[*FromFile].push_back(*File);
+  FileEntryRef headerOrModule = *File;
+  if (ModuleImported && SuggestedModule) {
+    OptionalFileEntryRef ModuleMapFile = HSI.getModuleMap().getModuleMapFileForUniquing(SuggestedModule);
+    if (ModuleMapFile) {
+      headerOrModule = *ModuleMapFile;
+    }
+  }
+
+  Dependencies[*FromFile].push_back({
+    .location = Loc,
+    .file = headerOrModule,
+    .importedModule = (ModuleImported ? SuggestedModule : nullptr)
+  });
 }
 
 void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
@@ -448,5 +491,9 @@ void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
   if (!ModuleMapFile)
     return;
 
-  Dependencies[*FromFile].push_back(*ModuleMapFile);
+  Dependencies[*FromFile].push_back({
+    .location = Loc,
+    .file = *ModuleMapFile,
+    .importedModule = Imported
+  });
 }
