@@ -295,18 +295,19 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // EpilogPreHeader is the right incoming block for VPN, as set below?
     // TODO: Can we thus avoid the enclosing loop over successors?
     assert(Succ == L->getHeader() &&
-           "Expect only non-loop successor of latch to be header");
+           "Expect the only in-loop successor of latch to be the loop header");
 
     for (PHINode &PN : Succ->phis()) {
       // Add new PHI nodes to the loop exit block.
-      PHINode *NewPN0 = PHINode::Create(PN.getType(), 1, PN.getName() + ".unr");
+      PHINode *NewPN0 = PHINode::Create(PN.getType(), /*NumReservedValues=*/1,
+                                        PN.getName() + ".unr");
       NewPN0->insertBefore(NewExit->getFirstNonPHIIt());
       // Add value to the new PHI node from the unrolling loop latch.
       NewPN0->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
 
       // Add new PHI nodes to EpilogPreHeader.
-      PHINode *NewPN1 =
-          PHINode::Create(PN.getType(), 2, PN.getName() + ".epil.init");
+      PHINode *NewPN1 = PHINode::Create(PN.getType(), /*NumReservedValues=*/2,
+                                        PN.getName() + ".epil.init");
       NewPN1->insertBefore(EpilogPreHeader->getFirstNonPHIIt());
       // Add value to the new PHI node from the unrolling loop preheader.
       NewPN1->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
