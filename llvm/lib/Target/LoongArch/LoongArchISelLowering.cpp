@@ -287,7 +287,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UNDEF, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
       setOperationAction(ISD::SETCC, VT, Legal);
@@ -421,12 +421,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasExtLSX()) {
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
-  }
-
-  // Set DAG combine for 'LASX' feature.
-
-  if (Subtarget.hasExtLASX())
     setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -2834,37 +2830,47 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDLoc DL(Op);
   MVT GRLenVT = Subtarget.getGRLenVT();
 
-  assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
-
   if (isa<ConstantSDNode>(Idx))
     return Op;
 
   switch (VecTy.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Unexpected type");
+  case MVT::v4f32:
+  case MVT::v2f64:
+    return Op;
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32:
+  case MVT::v2i64:
   case MVT::v32i8:
   case MVT::v16i16:
   case MVT::v4i64:
   case MVT::v4f64: {
-    // Extract the high half subvector and place it to the low half of a new
-    // vector. It doesn't matter what the high half of the new vector is.
-    EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
-    SDValue VecHi =
-        DAG.getExtractSubvector(DL, HalfTy, Vec, HalfTy.getVectorNumElements());
-    SDValue TmpVec =
-        DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
-                    VecHi, DAG.getConstant(0, DL, GRLenVT));
+    SDValue TmpVec;
+    if (VecTy.is256BitVector()) {
+      // Extract the high half subvector and place it to the low half of a new
+      // vector. It doesn't matter what the high half of the new vector is.
+      EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
+      SDValue VecHi = DAG.getExtractSubvector(DL, HalfTy, Vec,
+                                              HalfTy.getVectorNumElements());
+      TmpVec =
+          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecTy, DAG.getUNDEF(VecTy),
+                      VecHi, DAG.getConstant(0, DL, GRLenVT));
+    }
 
     // Shuffle the origin Vec and the TmpVec using MaskVec, the lowest element
     // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
     // desired element.
     SDValue IdxCp =
         DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
-    SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
+    SDValue IdxVec =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                    (VecTy.is128BitVector() ? MVT::v4f32 : MVT::v8f32), IdxCp);
     SDValue MaskVec =
-        DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
-    SDValue ResVec =
-        DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, MaskVec, TmpVec, Vec);
+        DAG.getBitcast(VecTy.changeVectorElementTypeToInteger(), IdxVec);
+    SDValue ResVec = DAG.getNode(LoongArchISD::VSHUF, DL, VecTy, MaskVec,
+                                 (VecTy.is128BitVector() ? Vec : TmpVec), Vec);
 
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ResVec,
                        DAG.getConstant(0, DL, GRLenVT));
@@ -6254,12 +6260,11 @@ performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
 
   MVT EltVT = N->getSimpleValueType(0);
   SDValue Vec = N->getOperand(0);
-  EVT VecTy = Vec->getValueType(0);
   SDValue Idx = N->getOperand(1);
   unsigned IdxOp = Idx.getOpcode();
   SDLoc DL(N);
 
-  if (!VecTy.is256BitVector() || isa<ConstantSDNode>(Idx))
+  if (isa<ConstantSDNode>(Idx))
     return SDValue();
 
   // Combine:

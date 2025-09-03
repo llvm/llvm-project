@@ -77,11 +77,9 @@ define void @extract_16xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_16xi8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.b $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 24
-; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    movgr2fr.w $fa1, $a2
+; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i8>, ptr %src
   %e = extractelement <16 x i8> %v, i32 %idx
@@ -93,11 +91,9 @@ define void @extract_8xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_8xi16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.h $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    srai.w $a0, $a0, 16
-; CHECK-NEXT:    st.h $a0, $a1, 0
+; CHECK-NEXT:    movgr2fr.w $fa1, $a2
+; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
+; CHECK-NEXT:    vstelm.h $vr1, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <8 x i16>, ptr %src
   %e = extractelement <8 x i16> %v, i32 %idx
@@ -109,10 +105,9 @@ define void @extract_4xi32_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xi32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    movgr2fr.w $fa1, $a2
+; CHECK-NEXT:    vshuf.w $vr1, $vr0, $vr0
+; CHECK-NEXT:    vstelm.w $vr1, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x i32>, ptr %src
   %e = extractelement <4 x i32> %v, i32 %idx
@@ -124,10 +119,9 @@ define void @extract_2xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_2xi64_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.d $vr0, $vr0, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    st.d $a0, $a1, 0
+; CHECK-NEXT:    movgr2fr.w $fa1, $a2
+; CHECK-NEXT:    vshuf.d $vr1, $vr0, $vr0
+; CHECK-NEXT:    vstelm.d $vr1, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x i64>, ptr %src
   %e = extractelement <2 x i64> %v, i32 %idx
@@ -139,8 +133,7 @@ define void @extract_4xfloat_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xfloat_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a0
+; CHECK-NEXT:    vreplve.w $vr0, $vr0, $a2
 ; CHECK-NEXT:    fst.s $fa0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x float>, ptr %src
@@ -153,8 +146,7 @@ define void @extract_2xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_2xdouble_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    vreplve.d $vr0, $vr0, $a0
+; CHECK-NEXT:    vreplve.d $vr0, $vr0, $a2
 ; CHECK-NEXT:    fst.d $fa0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x double>, ptr %src
