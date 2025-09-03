@@ -90,7 +90,7 @@ LLVM_ABI bool isDereferenceableAndAlignedInLoop(
 LLVM_ABI bool
 isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                AssumptionCache *AC,
-               SmallVectorImpl<LoadInst *> *NonDereferenceableAndAlignedLoads,
+               SmallVectorImpl<LoadInst *> &NonDereferenceableAndAlignedLoads,
                SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Return true if we know that executing a load from this value cannot trap.

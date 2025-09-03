@@ -1762,7 +1762,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   Predicates.clear();
   SmallVector<LoadInst *, 4> NonDerefLoads;
-  if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, &NonDerefLoads,
+  if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, NonDerefLoads,
                       &Predicates)) {
     reportVectorizationFailure("Loop may fault",
                                "Cannot vectorize non-read-only early exit loop",
