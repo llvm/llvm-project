@@ -75,8 +75,8 @@ class TestSwiftAsyncBacktraceLocals(lldbtest.TestBase):
                     # The PC of a logical frame is stored in its "callee"
                     # AsyncContext as the second pointer field.
                     error = lldb.SBError()
-                    ret_addr = process.ReadPointerFromMemory(
-                        cfa[fibonacci_number-1] + target.addr_size, error)
+                    ret_addr = process.FixAddress(process.ReadPointerFromMemory(
+                        cfa[fibonacci_number-1] + target.addr_size, error))
                     prologue_to_skip = frame.GetFunction().GetPrologueByteSize()
                     self.assertSuccess(error, "Managed to read context memory")
                     self.assertEqual(ret_addr + prologue_to_skip, frame.GetPC())

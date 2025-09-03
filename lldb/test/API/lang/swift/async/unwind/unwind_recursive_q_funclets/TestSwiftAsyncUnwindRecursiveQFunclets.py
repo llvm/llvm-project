@@ -12,6 +12,7 @@ class TestCase(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=["windows", "linux"])
+    @skipIf(archs=["arm64e"])
     def test(self):
         """Test that the debugger can unwind at all instructions of all funclets"""
         self.build()
