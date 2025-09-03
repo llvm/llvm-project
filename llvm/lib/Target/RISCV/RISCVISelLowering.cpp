@@ -37,6 +37,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -24894,15 +24895,9 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::Freeze || Op == Instruction::Store)
     return false;
 
-  if (Op == Instruction::Call) {
-    const CallInst &CI = cast<CallInst>(Inst);
-    const Function *F = CI.getCalledFunction();
-    Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
-
-    const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
-        RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(ID);
-    // Mark RVV intrinsic is supported.
-    if (II)
+  if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+    // Mark RVV intrinsic as supported.
+    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID()))
       return false;
   }
 
