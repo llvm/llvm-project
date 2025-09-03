@@ -216,13 +216,9 @@ private:
 public:
   TGLexer(SourceMgr &SrcMgr, ArrayRef<std::string> Macros);
 
-  tgtok::TokKind Lex() {
-    return CurCode = LexToken(CurPtr == CurBuf.begin());
-  }
+  tgtok::TokKind Lex() { return CurCode = LexToken(CurPtr == CurBuf.begin()); }
 
-  const DependenciesSetTy &getDependencies() const {
-    return Dependencies;
-  }
+  const DependenciesSetTy &getDependencies() const { return Dependencies; }
 
   tgtok::TokKind getCode() const { return CurCode; }
 

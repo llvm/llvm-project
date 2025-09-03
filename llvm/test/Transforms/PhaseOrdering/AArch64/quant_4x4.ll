@@ -525,9 +525,9 @@ entry:
   store ptr %dct, ptr %dct.addr, align 8
   store ptr %mf, ptr %mf.addr, align 8
   store ptr %bias, ptr %bias.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %nz) #2
+  call void @llvm.lifetime.start.p0(ptr %nz) #2
   store i32 0, ptr %nz, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
   store i32 0, ptr %i, align 4
   br label %for.cond
 
@@ -537,7 +537,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -636,13 +636,13 @@ for.end:                                          ; preds = %for.cond.cleanup
   %lnot = xor i1 %tobool, true
   %lnot34 = xor i1 %lnot, true
   %lnot.ext = zext i1 %lnot34 to i32
-  call void @llvm.lifetime.end.p0(i64 4, ptr %nz) #2
+  call void @llvm.lifetime.end.p0(ptr %nz) #2
   ret i32 %lnot.ext
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 

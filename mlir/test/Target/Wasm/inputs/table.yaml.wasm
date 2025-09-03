@@ -1,0 +1,23 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Minimum:         0x2
+      - Index:           1
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x2
+          Maximum:         0x4
+      - Index:           2
+        ElemType:        EXTERNREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x2
+          Maximum:         0x4
+...

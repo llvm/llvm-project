@@ -35,9 +35,10 @@ class MCSymbolWasm : public MCSymbol {
 
 public:
   MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
-  static bool classof(const MCSymbol *S) { return S->isWasm(); }
+      : MCSymbol(Name, isTemporary) {}
 
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 

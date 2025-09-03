@@ -45,6 +45,7 @@ add_lldb_library(lldbDAP
   Handler/LaunchRequestHandler.cpp
   Handler/LocationsRequestHandler.cpp
   Handler/ModulesRequestHandler.cpp
+  Handler/ModuleSymbolsRequestHandler.cpp
   Handler/NextRequestHandler.cpp
   Handler/PauseRequestHandler.cpp
   Handler/ReadMemoryRequestHandler.cpp
@@ -66,7 +67,8 @@ add_lldb_library(lldbDAP
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
   Handler/WriteMemoryRequestHandler.cpp
-  
+
+  Protocol/DAPTypes.cpp
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolEvents.cpp
   Protocol/ProtocolTypes.cpp

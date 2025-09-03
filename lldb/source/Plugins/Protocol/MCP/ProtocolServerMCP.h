@@ -9,13 +9,11 @@
 #ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 #define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 
-#include "Protocol.h"
-#include "Resource.h"
-#include "Tool.h"
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Socket.h"
-#include "llvm/ADT/StringMap.h"
+#include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Protocol/MCP/Server.h"
 #include <thread>
 
 namespace lldb_private::mcp {
@@ -41,67 +39,23 @@ public:
   Socket *GetSocket() const override { return m_listener.get(); }
 
 protected:
-  using RequestHandler = std::function<llvm::Expected<protocol::Response>(
-      const protocol::Request &)>;
-  using NotificationHandler =
-      std::function<void(const protocol::Notification &)>;
-
-  void AddTool(std::unique_ptr<Tool> tool);
-  void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
-
-  void AddRequestHandler(llvm::StringRef method, RequestHandler handler);
-  void AddNotificationHandler(llvm::StringRef method,
-                              NotificationHandler handler);
+  // This adds tools and resource providers that
+  // are specific to this server. Overridable by the unit tests.
+  virtual void Extend(lldb_protocol::mcp::Server &server) const;
 
 private:
   void AcceptCallback(std::unique_ptr<Socket> socket);
 
-  llvm::Expected<std::optional<protocol::Message>>
-  HandleData(llvm::StringRef data);
-
-  llvm::Expected<protocol::Response> Handle(protocol::Request request);
-  void Handle(protocol::Notification notification);
-
-  llvm::Expected<protocol::Response>
-  InitializeHandler(const protocol::Request &);
-
-  llvm::Expected<protocol::Response>
-  ToolsListHandler(const protocol::Request &);
-  llvm::Expected<protocol::Response>
-  ToolsCallHandler(const protocol::Request &);
-
-  llvm::Expected<protocol::Response>
-  ResourcesListHandler(const protocol::Request &);
-  llvm::Expected<protocol::Response>
-  ResourcesReadHandler(const protocol::Request &);
-
-  protocol::Capabilities GetCapabilities();
-
-  llvm::StringLiteral kName = "lldb-mcp";
-  llvm::StringLiteral kVersion = "0.1.0";
-
   bool m_running = false;
 
-  MainLoop m_loop;
+  lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
+  std::mutex m_mutex;
 
   std::unique_ptr<Socket> m_listener;
+
   std::vector<MainLoopBase::ReadHandleUP> m_listen_handlers;
-
-  struct Client {
-    lldb::IOObjectSP io_sp;
-    MainLoopBase::ReadHandleUP read_handle_up;
-    std::string buffer;
-  };
-  llvm::Error ReadCallback(Client &client);
-  std::vector<std::unique_ptr<Client>> m_clients;
-
-  std::mutex m_server_mutex;
-  llvm::StringMap<std::unique_ptr<Tool>> m_tools;
-  std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;
-
-  llvm::StringMap<RequestHandler> m_request_handlers;
-  llvm::StringMap<NotificationHandler> m_notification_handlers;
+  std::vector<std::unique_ptr<lldb_protocol::mcp::Server>> m_instances;
 };
 } // namespace lldb_private::mcp
 

@@ -9,34 +9,34 @@ define void @test_cant_sink(i1 %c) {
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    store i64 1, ptr [[A]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    br label %[[JOIN:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    store i64 1, ptr [[B]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i8
   %b = alloca i8
-  call void @llvm.lifetime.start(i64 1, ptr %a)
-  call void @llvm.lifetime.start(i64 1, ptr %b)
+  call void @llvm.lifetime.start(ptr %a)
+  call void @llvm.lifetime.start(ptr %b)
   br i1 %c, label %if, label %else
 
 if:
   store i64 1, ptr %a
-  call void @llvm.lifetime.end(i64 1, ptr %a)
+  call void @llvm.lifetime.end(ptr %a)
   br label %join
 
 else:
   store i64 1, ptr %b
-  call void @llvm.lifetime.end(i64 1, ptr %b)
+  call void @llvm.lifetime.end(ptr %b)
   br label %join
 
 join:
@@ -47,7 +47,7 @@ define void @test_can_sink(i1 %c) {
 ; CHECK-LABEL: define void @test_can_sink(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[JOIN:.*]]
@@ -55,21 +55,21 @@ define void @test_can_sink(i1 %c) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    store i64 1, ptr [[A]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i8
-  call void @llvm.lifetime.start(i64 1, ptr %a)
+  call void @llvm.lifetime.start(ptr %a)
   br i1 %c, label %if, label %else
 
 if:
   store i64 1, ptr %a
-  call void @llvm.lifetime.end(i64 1, ptr %a)
+  call void @llvm.lifetime.end(ptr %a)
   br label %join
 
 else:
   store i64 1, ptr %a
-  call void @llvm.lifetime.end(i64 1, ptr %a)
+  call void @llvm.lifetime.end(ptr %a)
   br label %join
 
 join:
