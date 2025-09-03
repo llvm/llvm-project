@@ -572,10 +572,10 @@ func.func @elect_one_leader_sync() {
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "prefetch.tensormap [$0];", "l"
-  nvvm.prefetch.tensormap %desc : !llvm.ptr
+  //CHECK: nvvm.prefetch tensormap, %{{.*}}
+  nvvm.prefetch tensormap, %desc : !llvm.ptr
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$1 prefetch.tensormap [$0];", "l,b"
-  nvvm.prefetch.tensormap %desc, predicate = %pred : !llvm.ptr, i1
+  nvvm.prefetch tensormap, %desc, predicate = %pred : !llvm.ptr, i1
   llvm.return
 }
 
@@ -744,4 +744,39 @@ llvm.func @nvvm_pmevent() {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
   nvvm.pmevent id = 4
   llvm.return
+}
+
+// -----
+
+llvm.func @inline_ptx_pack_4i8(%src : vector<4xi8>,  %mask : i32, %zero: i32)  {
+// CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "dp4a.s32.s32 $0, $1, $2, $3;", "=r,r,r,r" %{{.*}}, %{{.*}}, %{{.*}} : (vector<4xi8>, i32, i32) -> i32
+ %wo0 = nvvm.inline_ptx "dp4a.s32.s32 {$w0}, {$r0}, {$r1}, {$r2};" 
+                        ro(%src, %mask, %zero : vector<4xi8>, i32, i32) 
+                        -> i32
+ llvm.return  
+}
+
+llvm.func @inline_ptx_pack_2bf16(%a : f32, %b : f32)  {
+ // CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "cvt.rn.satfinite.bf16x2.f32 $0, $1, $2;", "=f,f,f" %{{.*}}, %{{.*}} : (f32, f32) -> vector<2xbf16>
+ %wo0 = nvvm.inline_ptx "cvt.rn.satfinite.bf16x2.f32 {$w0}, {$r0}, {$r1};" 
+                        ro(%a, %b : f32, f32) 
+                        -> vector<2xbf16>
+ llvm.return  
+}
+
+llvm.func @inline_ptx_cvt_rn_e4m3x2_f16x2(%a : i16)  {
+// CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "cvt.rz.satfinite.ue8m0x2.bf16x2 $0, $1", "=f,h" %{{.*}} : (i16) -> vector<2xbf16>
+ %wo0 = nvvm.inline_ptx "cvt.rz.satfinite.ue8m0x2.bf16x2 {$w0}, {$r0}" 
+                        ro(%a : i16) 
+                        -> vector<2xbf16>
+ llvm.return  
+}
+
+llvm.func @cvt_i8_bf16(%a : i8)  {
+  // CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "{\0A\09.reg .b16 r;\0A\09.reg .b8 s;\0A\09mov.b16 {s,_}, $0;\0A\09cvt.rn.bf16.s8 r, s;\0A\09mov.b16 $1, r;\0A\09", "=h,h" %{{.*}} : (i16) -> i16
+  %za = llvm.zext %a : i8 to i16
+  %wo0 = nvvm.inline_ptx "{\n\t.reg .b16 r;\n\t.reg .b8 s;\n\tmov.b16 {s,_}, {$w0};\n\tcvt.rn.bf16.s8 r, s;\n\tmov.b16 {$r0}, r;\n\t" 
+                          ro(%za : i16) 
+                          -> i16
+  llvm.return  
 }

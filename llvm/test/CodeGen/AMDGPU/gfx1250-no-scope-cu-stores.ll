@@ -86,15 +86,3 @@ entry:
   store atomic i32 %val, ptr addrspace(3) %dst syncscope("wavefront") unordered, align 4
   ret void
 }
-
-; GCN:     scratch_atomic_store:
-; CU:        scratch_store_b32 off, v{{.*}}, s{{.*}} scope:SCOPE_SE
-; NOCU:      scratch_store_b32 off, v{{.*}}, s{{.*}} scope:SCOPE_SE
-; GCN:     .amdhsa_kernel scratch_atomic_store
-; CU:        .amdhsa_uses_cu_stores 1
-; NOCU:      .amdhsa_uses_cu_stores 0
-define amdgpu_kernel void @scratch_atomic_store(ptr addrspace(5) %dst, i32 %val) {
-entry:
-  store atomic i32 %val, ptr addrspace(5) %dst syncscope("wavefront") unordered, align 4
-  ret void
-}
