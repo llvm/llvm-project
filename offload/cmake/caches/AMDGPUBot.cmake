@@ -15,7 +15,7 @@ set(LLVM_ENABLE_RUNTIMES "compiler-rt;openmp;offload;flang-rt" CACHE STRING "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
 set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 set(LLVM_TARGETS_TO_BUILD "host;AMDGPU;SPIRV" CACHE STRING "")
-set(LLVM_LIT_ARGS "-v --show-unsupported --timeout 100 --show-xfail -j 32" CACHE STRING "")
+set(LLVM_LIT_ARGS "-v --show-unsupported --timeout 100 --show-xfail -j 16" CACHE STRING "")
 
 set(CLANG_DEFAULT_LINKER "lld" CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB "compiler-rt" STRING "")
