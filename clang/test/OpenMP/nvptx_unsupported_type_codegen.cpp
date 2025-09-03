@@ -34,15 +34,14 @@ struct T1 {
 #pragma omp declare target
 T a = T();
 T f = a;
-// CHECK: define{{ hidden | }}void @{{.+}}foo{{.+}}(ptr addrspace(5) noundef byval([[T]]) align {{.+}})
+// CHECK: define{{ hidden | }}void @{{.+}}foo{{.+}}(ptr noundef byval([[T]]) align {{.+}})
 void foo(T a = T()) {
   return;
 }
 // CHECK: define{{ hidden | }}[6 x i64] @{{.+}}bar{{.+}}()
 T bar() {
-// CHECK: [[RETVAL:%.+]] = alloca [[STRUCT_T:%.*]], align 16, addrspace(5)
-// CHECK: [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// CHECK: load [6 x i64], ptr [[RETVAL_ASCAST]]
+// CHECK: [[RETVAL:%.+]] = alloca [[T]]
+// CHECK: load [6 x i64], ptr [[RETVAL]]
 // CHECK-NEXT: ret [6 x i64]
   return T();
 }
@@ -54,7 +53,7 @@ void baz() {
 }
 T1 a1 = T1();
 T1 f1 = a1;
-// CHECK: define{{ hidden | }}void @{{.+}}foo1{{.+}}(ptr addrspace(5) noundef byval([[T1]]) align {{.+}})
+// CHECK: define{{ hidden | }}void @{{.+}}foo1{{.+}}(ptr noundef byval([[T1]]) align {{.+}})
 void foo1(T1 a = T1()) {
   return;
 }
