@@ -898,38 +898,12 @@ bool DAP::HandleObject(const Message &M) {
 }
 
 void DAP::SendTerminatedEvent() {
-  // The folloiwng is to prevent races between the request handler thread and
-  // the event thread, where we are being asked to disconnect while the debugee
-  // process exits.
-  //
-  // The request handler thread, when entering this method, would have already
-  // acquired the API mutex (in BaseRequestHandler::Run). The next thing it
-  // tries to do is to acquire the call_once() mutex below.
-  //
-  // A deadlock will happen if the event thread happens to acquire the
-  // call_once() mutex first, then go into SBDebugger::Destroy() and eventually
-  // Target::Destroy(), where it tries to acquire the API mutex.
-  //
-  // To avoid this deadlock, we require that both threads acquire the API mutex
-  // first. Whoever gets it can go through the call_once() without issue.
-  //
-  // This is during the termination of a debug session, so performance loss
-  // introduced by this additional lock are hopefully not too critical.
-  lldb::SBMutex lock = GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
   // Prevent races if the process exits while we're being asked to disconnect.
   llvm::call_once(terminated_event_flag, [&] {
     RunTerminateCommands();
-
     // Send a "terminated" event
     llvm::json::Object event(CreateTerminatedEventObject(target));
     SendJSON(llvm::json::Value(std::move(event)));
-
-    // Destroy the debugger when the session ends. This will trigger the
-    // debugger's destroy callbacks for earlier logging and clean-ups, rather
-    // than waiting for the termination of the lldb-dap process.
-    lldb::SBDebugger::Destroy(debugger);
   });
 }
 
@@ -1094,6 +1068,11 @@ llvm::Error DAP::Loop() {
     out.Stop();
     err.Stop();
     StopEventHandlers();
+
+    // Destroy the debugger when the session ends. This will trigger the
+    // debugger's destroy callbacks for earlier logging and clean-ups, rather
+    // than waiting for the termination of the lldb-dap process.
+    lldb::SBDebugger::Destroy(debugger);
   });
 
   while (true) {
