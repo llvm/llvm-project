@@ -5464,6 +5464,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     [[fallthrough]];
   case ISD::SRA:
   case ISD::SHL:
+  case ISD::ROTR:
+  case ISD::ROTL:
     if (tryShiftAmountMod(Node))
       return;
     break;

@@ -1047,19 +1047,19 @@ define i64 @rotl64_sub63(i64 %val, i64 %cnt) nounwind {
 ;
 ; X64-NOBMI2-LABEL: rotl64_sub63:
 ; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    movl $63, %ecx
-; X64-NOBMI2-NEXT:    subl %esi, %ecx
-; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI2-NEXT:    notl %ecx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    rolq %cl, %rax
 ; X64-NOBMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: rotl64_sub63:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movq %rsi, %rcx
 ; X64-BMI2-NEXT:    movq %rdi, %rax
-; X64-BMI2-NEXT:    movl $63, %ecx
-; X64-BMI2-NEXT:    subl %esi, %ecx
-; X64-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-BMI2-NEXT:    notl %ecx
+; X64-BMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-BMI2-NEXT:    rolq %cl, %rax
 ; X64-BMI2-NEXT:    retq
   %adj = sub i64 63, %cnt
@@ -1117,19 +1117,19 @@ define i64 @rotr64_sub63(i64 %val, i64 %cnt) nounwind {
 ;
 ; X64-NOBMI2-LABEL: rotr64_sub63:
 ; X64-NOBMI2:       # %bb.0:
+; X64-NOBMI2-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    movl $63, %ecx
-; X64-NOBMI2-NEXT:    subl %esi, %ecx
-; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI2-NEXT:    notl %ecx
+; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    rorq %cl, %rax
 ; X64-NOBMI2-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: rotr64_sub63:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movq %rsi, %rcx
 ; X64-BMI2-NEXT:    movq %rdi, %rax
-; X64-BMI2-NEXT:    movl $63, %ecx
-; X64-BMI2-NEXT:    subl %esi, %ecx
-; X64-BMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-BMI2-NEXT:    notl %ecx
+; X64-BMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-BMI2-NEXT:    rorq %cl, %rax
 ; X64-BMI2-NEXT:    retq
   %adj = sub i64 63, %cnt

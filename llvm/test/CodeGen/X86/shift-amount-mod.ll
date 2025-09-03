@@ -1591,7 +1591,7 @@ define i32 @fshl32_by_negated(i32 %x, i32 %shamt) {
 ; X86-LABEL: fshl32_by_negated:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    roll %cl, %eax
@@ -1599,9 +1599,9 @@ define i32 @fshl32_by_negated(i32 %x, i32 %shamt) {
 ;
 ; X64-LABEL: fshl32_by_negated:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $32, %ecx
-; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    negl %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
@@ -1615,7 +1615,7 @@ define i32 @fshr32_by_negated(i32 %x, i32 %shamt) {
 ; X86-LABEL: fshr32_by_negated:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $32, %ecx
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    rorl %cl, %eax
@@ -1623,9 +1623,9 @@ define i32 @fshr32_by_negated(i32 %x, i32 %shamt) {
 ;
 ; X64-LABEL: fshr32_by_negated:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $32, %ecx
-; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    negl %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    retq
@@ -1664,10 +1664,10 @@ define i64 @fshl64_by_negated(i64 %x, i64 %shamt) {
 ;
 ; X64-LABEL: fshl64_by_negated:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movl $64, %ecx
-; X64-NEXT:    subl %esi, %ecx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    rolq %cl, %rax
 ; X64-NEXT:    retq
   %neg = sub i64 64, %shamt
@@ -1705,10 +1705,10 @@ define i64 @fshr64_by_negated(i64 %x, i64 %shamt) {
 ;
 ; X64-LABEL: fshr64_by_negated:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movl $64, %ecx
-; X64-NEXT:    subl %esi, %ecx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    rorq %cl, %rax
 ; X64-NEXT:    retq
   %neg = sub i64 64, %shamt
@@ -1722,16 +1722,14 @@ define i32 @fshl32_add_k(i32 %x, i32 %shamt) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    roll %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fshl32_add_k:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    leal 32(%rsi), %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
@@ -1770,9 +1768,9 @@ define i64 @fshr64_sub_k(i64 %x, i64 %shamt) {
 ;
 ; X64-LABEL: fshr64_sub_k:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    leal -64(%rsi), %ecx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    rorq %cl, %rax
 ; X64-NEXT:    retq
   %k = sub i64 %shamt, 64
