@@ -10042,10 +10042,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (!LVL.getPotentiallyFaultingLoads().empty()) {
-    reportVectorizationFailure(
-        "Auto-vectorization of loops with fault-only-first "
-        "load is not supported",
-        "FaultOnlyFirstLoadsNotSupported", ORE, L);
+    reportVectorizationFailure("Auto-vectorization of loops with potentially "
+                               "faulting load is not supported",
+                               "PotentiallyFaultingLoadsNotSupported", ORE, L);
     return false;
   }
 
