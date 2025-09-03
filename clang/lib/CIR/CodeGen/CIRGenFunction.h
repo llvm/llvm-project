@@ -638,8 +638,8 @@ public:
       llvm::iterator_range<CastExpr::path_const_iterator> path,
       bool nullCheckValue, SourceLocation loc);
 
-  /// GetVTTParameter - Return the VTT parameter that should be passed to a
-  /// base constructor/destructor with virtual bases.
+  /// Return the VTT parameter that should be passed to a base
+  /// constructor/destructor with virtual bases.
   /// FIXME: VTTs are Itanium ABI-specific, so the definition should move
   /// to ItaniumCXXABI.cpp together with all the references to VTT.
   mlir::Value getVTTParameter(GlobalDecl gd, bool forVirtualBase,

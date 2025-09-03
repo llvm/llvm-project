@@ -339,12 +339,10 @@ static Address applyNonVirtualAndVirtualOffset(
 
   mlir::Value ptr = addr.getPointer();
   mlir::Type charPtrType = cgf.cgm.UInt8PtrTy;
-  mlir::Value charPtr =
-      cgf.getBuilder().createCast(cir::CastKind::bitcast, ptr, charPtrType);
+  mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
   mlir::Value adjusted = cir::PtrStrideOp::create(
       cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
-  ptr = cgf.getBuilder().createCast(cir::CastKind::bitcast, adjusted,
-                                    ptr.getType());
+  ptr = cgf.getBuilder().createBitcast(adjusted, ptr.getType());
 
   // If we have a virtual component, the alignment of the result will
   // be relative only to the known alignment of that vbase.
@@ -846,13 +844,13 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   if (cgm.getCXXABI().needsVTTParameter(curGD)) {
     // A VTT parameter was passed to the constructor, use it.
     mlir::Value vtt = loadCXXVTT();
-    return cgm.getBuilder().createVTTAddrPoint(loc, vtt.getType(), vtt,
+    return builder.createVTTAddrPoint(loc, vtt.getType(), vtt,
                                                subVTTIndex);
   } else {
     // We're the complete constructor, so get the VTT by name.
     cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);
-    return cgm.getBuilder().createVTTAddrPoint(
-        loc, cgm.getBuilder().getPointerTo(cgm.VoidPtrTy),
+    return builder.createVTTAddrPoint(
+        loc, builder.getPointerTo(cgm.VoidPtrTy),
         mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
   }
 }

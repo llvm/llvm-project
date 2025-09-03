@@ -289,7 +289,7 @@ public:
   }
   cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
     cir::IntType sInt64Ty = getSInt64Ty();
-    return create<cir::ConstantOp>(loc, cir::IntAttr::get(sInt64Ty, c));
+    return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
   }
 
   // Creates constant nullptr for pointer type ty.
@@ -401,7 +401,7 @@ public:
       ptr = createPtrBitcast(ptr, ty);
     uint64_t alignment = align ? align->value() : 0;
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
-    return create<cir::LoadOp>(loc, ptr, /*isDeref=*/false,
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignAttr,
                                /*mem_order=*/cir::MemOrderAttr{});
   }
