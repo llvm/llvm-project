@@ -17,7 +17,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   CStringChecker.cpp
   CStringSyntaxChecker.cpp
   CallAndMessageChecker.cpp
-  CastSizeChecker.cpp
   CastToStructChecker.cpp
   CastValueChecker.cpp
   CheckObjCDealloc.cpp
