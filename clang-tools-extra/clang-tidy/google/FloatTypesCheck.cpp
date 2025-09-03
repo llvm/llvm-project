@@ -28,7 +28,7 @@ AST_MATCHER(FloatingLiteral, isFLValidAndNotInMacro) {
 
 AST_MATCHER(TypeLoc, isLongDoubleType) {
   TypeLoc TL = Node;
-  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+  if (const auto QualLoc = Node.getAs<QualifiedTypeLoc>())
     TL = QualLoc.getUnqualifiedLoc();
 
   const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
@@ -39,7 +39,7 @@ AST_MATCHER(TypeLoc, isLongDoubleType) {
 }
 
 AST_MATCHER(FloatingLiteral, isLongDoubleLiteral) {
-  if (auto *BT = dyn_cast<BuiltinType>(Node.getType().getTypePtr()))
+  if (const auto *BT = dyn_cast<BuiltinType>(Node.getType().getTypePtr()))
     return BT->getKind() == BuiltinType::LongDouble;
   return false;
 }
@@ -57,7 +57,6 @@ void RuntimeFloatCheck::registerMatchers(MatchFinder *Finder) {
       floatLiteral(isFLValidAndNotInMacro(), isLongDoubleLiteral())
           .bind("longDoubleFloatLiteral"),
       this);
-  IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
 }
 
 void RuntimeFloatCheck::check(const MatchFinder::MatchResult &Result) {

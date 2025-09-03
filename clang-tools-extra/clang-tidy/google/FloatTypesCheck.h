@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,11 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-
-class IdentifierTable;
-
-namespace tidy::google::runtime {
+namespace clang::tidy::google::runtime {
 
 /// Finds usages of `long double` and suggests replacing them with other
 /// floating-point types.
@@ -32,13 +27,8 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus && !LangOpts.ObjC;
   }
-
-private:
-  std::unique_ptr<IdentifierTable> IdentTable;
 };
 
-} // namespace tidy::google::runtime
-
-} // namespace clang
+} // namespace clang::tidy::google::runtime
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_FLOATTYPESCHECK_H
