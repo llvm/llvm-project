@@ -26711,6 +26711,26 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return DAG.getNode(SOpc, DL, N->getValueType(0), Ext);
   }
 
+  // Sign extend of CSET -> CSETM.
+  if (Opc == AArch64ISD::CSEL &&
+      cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i1) {
+    EVT VT = N->getValueType(0);
+    SDValue TVal = Src.getOperand(0);
+    SDValue FVal = Src.getOperand(1);
+
+    // SIGN_EXTEND_INREG (CSEL 0, 1, cc, NZCV), i1 --> CSEL 0, -1, cc, NZCV
+    if (isNullConstant(TVal) && isOneConstant(FVal))
+      return DAG.getNode(AArch64ISD::CSEL, DL, VT, TVal,
+                         DAG.getAllOnesConstant(DL, VT), Src.getOperand(2),
+                         Src.getOperand(3));
+
+    // SIGN_EXTEND_INREG (CSEL 1, 0, cc, NZCV), i1 --> CSEL -1, 0, cc, NZCV
+    if (isOneConstant(TVal) && isNullConstant(FVal))
+      return DAG.getNode(AArch64ISD::CSEL, DL, VT,
+                         DAG.getAllOnesConstant(DL, VT), FVal,
+                         Src.getOperand(2), Src.getOperand(3));
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
