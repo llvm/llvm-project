@@ -981,15 +981,13 @@ struct WgToSgMultiDimReductionOp
 
     rewriter.setInsertionPoint(op);
 
-    // Get layout of the source tensor
-    SmallVector<int64_t> sgLayoutParent =
-        sliceAttr.getParent().getSgLayoutAsInt();
+    SmallVector<int64_t> sgLayout = sliceAttr.getParent().getSgLayoutAsInt();
 
     // Allocate SLM
     auto bitWidth = elemTy.getIntOrFloatBitWidth();
     auto flattenFactor = bitWidth / 8;
     auto slmSize =
-        resType.getNumElements() * sgLayoutParent[reduceDim] * flattenFactor;
+        resType.getNumElements() * sgLayout[reduceDim] * flattenFactor;
     auto slmTy = MemRefType::get(slmSize, rewriter.getI8Type(), {}, 3);
     auto slm = rewriter.create<memref::AllocaOp>(loc, slmTy);
 
@@ -1000,11 +998,11 @@ struct WgToSgMultiDimReductionOp
         srcVecType ? srcVecType.getShape() : ArrayRef<int64_t>();
     for (size_t i = 0; i < srcShape.size(); ++i) {
       if (static_cast<int64_t>(i) == reduceDim) {
-        // For the reduced dimension, use sgLayoutParent[i]
-        memDescShape.push_back(sgLayoutParent[i]);
+        // For the reduced dimension, use sgLayout[i]
+        memDescShape.push_back(sgLayout[i]);
       } else {
-        // For other dimensions, multiply sgLayoutParent[i] by sgShape[i]
-        memDescShape.push_back(sgLayoutParent[i] * srcShape[i]);
+        // For other dimensions, multiply sgLayout[i] by sgShape[i]
+        memDescShape.push_back(sgLayout[i] * srcShape[i]);
       }
     }
 
@@ -1021,11 +1019,11 @@ struct WgToSgMultiDimReductionOp
     auto sgId = rewriter.create<gpu::SubgroupIdOp>(loc, rewriter.getIndexType(),
                                                    nullptr);
 
-    SmallVector<Value> srcSgLayoutDim(sgLayoutParent.size());
+    SmallVector<Value> srcSgLayoutDim(sgLayout.size());
 
-    for (size_t i = 0; i < sgLayoutParent.size(); i++) {
+    for (size_t i = 0; i < sgLayout.size(); i++) {
       srcSgLayoutDim[i] =
-          arith::ConstantIndexOp::create(rewriter, loc, sgLayoutParent[i]);
+          arith::ConstantIndexOp::create(rewriter, loc, sgLayout[i]);
     }
 
     auto sgIdVec =
@@ -1036,7 +1034,7 @@ struct WgToSgMultiDimReductionOp
 
     // Calculate offsets for store_matrix
     SmallVector<OpFoldResult> slmStoreOffsets;
-    for (size_t i = 0; i < sgLayoutParent.size(); ++i) {
+    for (size_t i = 0; i < sgLayout.size(); ++i) {
       Value offset = rewriter.createOrFold<index::MulOp>(
           loc, sgIds[i],
           arith::ConstantIndexOp::create(rewriter, loc, slmSgData[i]));
@@ -1059,14 +1057,14 @@ struct WgToSgMultiDimReductionOp
       if (static_cast<int64_t>(i) == reduceDim) {
         slmLoadShape.push_back(memDescShape[i]);
       } else {
-        int64_t divisor = computeProduct(sgLayoutParent);
+        int64_t divisor = computeProduct(sgLayout);
         slmLoadShape.push_back(memDescShape[i] / divisor);
       }
     }
 
     // Calculate offsets for load_matrix op
     SmallVector<OpFoldResult> slmLoadOffsets;
-    for (size_t i = 0; i < sgLayoutParent.size(); ++i) {
+    for (size_t i = 0; i < sgLayout.size(); ++i) {
       Value offset = rewriter.createOrFold<index::MulOp>(
           loc, sgIds[i],
           arith::ConstantIndexOp::create(rewriter, loc, slmLoadShape[i]));
