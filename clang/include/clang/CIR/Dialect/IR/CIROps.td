@@ -2459,10 +2459,6 @@ def CIR_CopyOp : CIR_Op<"copy",[
   SameTypeOperands,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
-  let arguments = (ins
-      Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-      Arg<CIR_PointerType, "", [MemRead]>:$src
-  );
   let summary = "Copies contents from a CIR pointer to another";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.copy` will copy the memory
@@ -2480,6 +2476,11 @@ def CIR_CopyOp : CIR_Op<"copy",[
     ```
   }];
 
+  let arguments = (ins
+      Arg<CIR_PointerType, "", [MemWrite]>:$dst,
+      Arg<CIR_PointerType, "", [MemRead]>:$src
+  );
+
   let assemblyFormat = [{$src `to` $dst
                         attr-dict `:` qualified(type($dst))
   }];
@@ -2490,9 +2491,9 @@ def CIR_CopyOp : CIR_Op<"copy",[
     cir::PointerType getType() { return getSrc().getType(); }
 
     /// Returns the number of bytes to be copied.
-    unsigned getLength() {
-      return mlir::DataLayout::closest(*this).getTypeSize(getType().getPointee());
-    }
+    unsigned getLength(const mlir::DataLayout &dt) {
+      return dt.getTypeSize(getType().getPointee());
+    }    
   }];
 }
 
