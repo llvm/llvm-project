@@ -4608,10 +4608,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
   return false;
 }
 
-LLVM_ABI Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
-                                            unsigned CastOp,
-                                            const DataLayout &DL,
-                                            PreservedCastFlags *Flags) {
+Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                   unsigned CastOp, const DataLayout &DL,
+                                   PreservedCastFlags *Flags) {
   switch (CastOp) {
   case Instruction::BitCast:
     // Bitcast is always lossless.
@@ -4646,6 +4645,18 @@ LLVM_ABI Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
   default:
     return nullptr;
   }
+}
+
+Constant *llvm::getLosslessUnsignedTrunc(Constant *C, Type *DestTy,
+                                         const DataLayout &DL,
+                                         PreservedCastFlags *Flags) {
+  return getLosslessInvCast(C, DestTy, Instruction::ZExt, DL, Flags);
+}
+
+Constant *llvm::getLosslessSignedTrunc(Constant *C, Type *DestTy,
+                                       const DataLayout &DL,
+                                       PreservedCastFlags *Flags) {
+  return getLosslessInvCast(C, DestTy, Instruction::SExt, DL, Flags);
 }
 
 void TargetFolder::anchor() {}

@@ -238,6 +238,14 @@ struct PreservedCastFlags {
 LLVM_ABI Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
                                       unsigned CastOp, const DataLayout &DL,
                                       PreservedCastFlags *Flags = nullptr);
-}
+
+LLVM_ABI Constant *
+getLosslessUnsignedTrunc(Constant *C, Type *DestTy, const DataLayout &DL,
+                         PreservedCastFlags *Flags = nullptr);
+
+LLVM_ABI Constant *getLosslessSignedTrunc(Constant *C, Type *DestTy,
+                                          const DataLayout &DL,
+                                          PreservedCastFlags *Flags = nullptr);
+} // namespace llvm
 
 #endif

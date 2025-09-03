@@ -841,8 +841,7 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
       NumZexts++;
     } else if (auto *C = dyn_cast<Constant>(V)) {
       // Make sure that constants can fit in the new type.
-      Constant *Trunc =
-          getLosslessInvCast(C, NarrowType, Instruction::ZExt, DL);
+      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType, DL);
       if (!Trunc)
         return nullptr;
       NewIncoming.push_back(Trunc);
