@@ -178,7 +178,7 @@ private:
   /// marker in the line table program, but provides one to the DWARF generator
   /// when it needs it.
   void emitLineInfoEnd(const BinaryFunction &BF, MCSymbol *FunctionEndSymbol,
-                       DWARFUnit *Unit);
+                       const DWARFUnit &Unit);
 
   /// Emit debug line info for unprocessed functions from CUs that include
   /// emitted functions.
@@ -439,7 +439,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
 
   if (opts::UpdateDebugSections && !Function.getDWARFUnits().empty())
     for (const auto &[_, Unit] : Function.getDWARFUnits())
-      emitLineInfoEnd(Function, EndSymbol, Unit);
+      emitLineInfoEnd(Function, EndSymbol, *Unit);
 
   // Exception handling info for the function.
   emitLSDA(Function, FF);
@@ -707,13 +707,14 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                                CurrentRow.Discriminator);
     const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
     BC.Ctx->clearDwarfLocSeen();
-    auto &MapLineEntries = BC.getDwarfLineTable(TargetUnitIndex)
-                               .getMCLineSections()
-                               .getMCLineEntries();
+    const MCLineSection::MCLineDivisionMap &MapLineEntries =
+        BC.getDwarfLineTable(TargetUnitIndex)
+            .getMCLineSections()
+            .getMCLineEntries();
     const auto *It = MapLineEntries.find(Streamer.getCurrentSectionOnly());
-    auto NewLineEntry = MCDwarfLineEntry(&InstrLabel, DwarfLoc);
+    MCDwarfLineEntry NewLineEntry = MCDwarfLineEntry(&InstrLabel, DwarfLoc);
 
-    // Check if line table exists and has entries before doing comparison
+    // Check if line table exists and has entries before doing comparison.
     if (It != MapLineEntries.end() && !It->second.empty()) {
       // Check if the new line entry has the same debug info as the last one
       // to avoid duplicates. We don't compare labels since different
@@ -769,12 +770,11 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
 
 void BinaryEmitter::emitLineInfoEnd(const BinaryFunction &BF,
                                     MCSymbol *FunctionEndLabel,
-                                    DWARFUnit *Unit) {
-  assert(Unit && "DWARF unit expected");
+                                    const DWARFUnit &Unit) {
   BC.Ctx->setCurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_END_SEQUENCE, 0, 0);
   const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
   BC.Ctx->clearDwarfLocSeen();
-  BC.getDwarfLineTable(Unit->getOffset())
+  BC.getDwarfLineTable(Unit.getOffset())
       .getMCLineSections()
       .addLineEntry(MCDwarfLineEntry(FunctionEndLabel, DwarfLoc),
                     Streamer.getCurrentSectionOnly());

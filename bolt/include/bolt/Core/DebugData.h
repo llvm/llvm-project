@@ -858,7 +858,14 @@ public:
   ArrayRef<DebugLineTableRowRef> getRows() const {
     return ArrayRef<DebugLineTableRowRef>(beginPtrConst(), Size);
   }
+
+  /// Returns the number of elements in the array.
   uint64_t size() const { return Size; }
+
+  /// We re-purpose SMLoc inside MCInst to store the pointer
+  /// to ClusteredRows. fromSMLoc() and toSMLoc() are helper
+  /// functions to convert between SMLoc and ClusteredRows.
+
   static const ClusteredRows *fromSMLoc(const SMLoc &Loc) {
     return reinterpret_cast<const ClusteredRows *>(Loc.getPointer());
   }
@@ -866,6 +873,8 @@ public:
     return SMLoc::getFromPointer(reinterpret_cast<const char *>(this));
   }
 
+  /// Given a vector of DebugLineTableRowRef, this method
+  /// copies the elements into pre-allocated memory.
   template <typename T> void populate(const T Vec) {
     assert(Vec.size() == Size && "Sizes must match");
     DebugLineTableRowRef *CurRawPtr = beginPtr();
@@ -880,6 +889,8 @@ private:
   DebugLineTableRowRef Rows;
 
   ClusteredRows(uint64_t Size) : Size(Size) {}
+
+  /// Total size of the object including the array.
   static uint64_t getTotalSize(uint64_t Size) {
     assert(Size > 0 && "Size must be greater than 0");
     return sizeof(ClusteredRows) + (Size - 1) * sizeof(DebugLineTableRowRef);

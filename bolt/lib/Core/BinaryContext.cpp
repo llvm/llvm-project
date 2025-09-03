@@ -1698,7 +1698,7 @@ void BinaryContext::preprocessDebugInfo() {
     }
     Function.addDWARFUnit(It->Unit);
 
-    // Go forward and add all units from ranges that cover the function
+    // Go forward and add all units from ranges that cover the function.
     while (++It != AllRanges.end()) {
       if (It->LowPC > FunctionAddress || FunctionAddress >= It->HighPC)
         break;
