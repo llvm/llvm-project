@@ -203,3 +203,33 @@ llvm.func @mixed_masked_ops_address_spaces(%ptr: !ptr.ptr<#llvm.address_space<3>
   ptr.masked_store %value, %ptr, %mask alignment = 8 : vector<4xf64>, !ptr.ptr<#llvm.address_space<3>>
   llvm.return
 }
+
+// CHECK-LABEL: define <4 x ptr> @ptr_add_vector
+// CHECK-SAME: (<4 x ptr> %[[PTRS:.*]], <4 x i32> %[[OFFSETS:.*]]) {
+// CHECK-NEXT:   %[[RES:.*]] = getelementptr i8, <4 x ptr> %[[PTRS]], <4 x i32> %[[OFFSETS]]
+// CHECK-NEXT:   ret <4 x ptr> %[[RES]]
+// CHECK-NEXT: }
+llvm.func @ptr_add_vector(%ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %offsets: vector<4xi32>) -> vector<4x!ptr.ptr<#llvm.address_space<0>>> {
+  %res = ptr.ptr_add %ptrs, %offsets : vector<4x!ptr.ptr<#llvm.address_space<0>>>, vector<4xi32>
+  llvm.return %res : vector<4x!ptr.ptr<#llvm.address_space<0>>>
+}
+
+// CHECK-LABEL: define <4 x ptr> @ptr_add_scalar_base_vector_offsets
+// CHECK-SAME: (ptr %[[PTR:.*]], <4 x i32> %[[OFFSETS:.*]]) {
+// CHECK-NEXT:   %[[RES:.*]] = getelementptr i8, ptr %[[PTR]], <4 x i32> %[[OFFSETS]]
+// CHECK-NEXT:   ret <4 x ptr> %[[RES]]
+// CHECK-NEXT: }
+llvm.func @ptr_add_scalar_base_vector_offsets(%ptr: !ptr.ptr<#llvm.address_space<0>>, %offsets: vector<4xi32>) -> vector<4x!ptr.ptr<#llvm.address_space<0>>> {
+  %res = ptr.ptr_add %ptr, %offsets : !ptr.ptr<#llvm.address_space<0>>, vector<4xi32>
+  llvm.return %res : vector<4x!ptr.ptr<#llvm.address_space<0>>>
+}
+
+// CHECK-LABEL: define <4 x ptr> @ptr_add_vector_base_scalar_offset
+// CHECK-SAME: (<4 x ptr> %[[PTRS:.*]], i32 %[[OFFSET:.*]]) {
+// CHECK-NEXT:   %[[RES:.*]] = getelementptr i8, <4 x ptr> %[[PTRS]], i32 %[[OFFSET]]
+// CHECK-NEXT:   ret <4 x ptr> %[[RES]]
+// CHECK-NEXT: }
+llvm.func @ptr_add_vector_base_scalar_offset(%ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %offset: i32) -> vector<4x!ptr.ptr<#llvm.address_space<0>>> {
+  %res = ptr.ptr_add %ptrs, %offset : vector<4x!ptr.ptr<#llvm.address_space<0>>>, i32
+  llvm.return %res : vector<4x!ptr.ptr<#llvm.address_space<0>>>
+}

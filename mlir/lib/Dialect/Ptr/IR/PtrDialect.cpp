@@ -346,6 +346,45 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   return nullptr;
 }
 
+LogicalResult PtrAddOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  // Get the base pointer and offset types.
+  Type baseType = operands[0].getType();
+  Type offsetType = operands[1].getType();
+
+  auto offTy = dyn_cast<ShapedType>(offsetType);
+  if (!offTy) {
+    // If the offset isn't shaped, the result is always the base type.
+    inferredReturnTypes.push_back(baseType);
+    return success();
+  }
+  auto baseTy = dyn_cast<ShapedType>(baseType);
+  if (!baseTy) {
+    // Base isn't shaped, but offset is, use the ShapedType from offset with the
+    // base pointer as element type.
+    inferredReturnTypes.push_back(offTy.clone(baseType));
+    return success();
+  }
+
+  // Both are shaped, their shape must match.
+  if (offTy.getShape() != baseTy.getShape()) {
+    if (location)
+      mlir::emitError(*location) << "shapes of base and offset must match";
+    return failure();
+  }
+
+  // Make sure they are the same kind of shaped type.
+  if (baseType.getTypeID() != offsetType.getTypeID()) {
+    if (location)
+      mlir::emitError(*location) << "the shaped containers type must match";
+    return failure();
+  }
+  inferredReturnTypes.push_back(baseType);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // ToPtrOp
 //===----------------------------------------------------------------------===//

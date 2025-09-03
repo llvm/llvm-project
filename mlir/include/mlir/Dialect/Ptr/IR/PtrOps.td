@@ -13,6 +13,7 @@ include "mlir/Dialect/Ptr/IR/PtrDialect.td"
 include "mlir/Dialect/Ptr/IR/PtrAttrDefs.td"
 include "mlir/Dialect/Ptr/IR/PtrEnums.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -34,8 +35,15 @@ class Ptr_ShapedValueType<list<Type> allowedTypes, list<Pred> preds = []> :
     /*descr=*/[{A shaped type with value semantics and rank.}],
     /*cppType=*/"::mlir::ShapedType">;
 
-// A shaped pointer type with value semantics and rank.
-class Ptr_ShapedPtrType : Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>;
+// A ptr-like type, either scalar or shaped type with value semantics.
+def Ptr_PtrLikeType : 
+  AnyTypeOf<[Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>, Ptr_PtrType]>;
+
+// An int-like type, either scalar or shaped type with value semantics.
+def Ptr_IntLikeType :AnyTypeOf<[
+  Ptr_ShapedValueType<[AnySignlessIntegerOrIndex], [HasRankPred]>,
+  AnySignlessIntegerOrIndex
+]>;
 
 // A shaped value type of rank 1 of any element type.
 def Ptr_Any1DType :
@@ -164,41 +172,6 @@ def Ptr_GetMetadataOp : Pointer_Op<"get_metadata", [
   let results = (outs Ptr_PtrMetadata:$result);
   let assemblyFormat = [{
     $ptr attr-dict `:` type($ptr)
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// PtrAddOp
-//===----------------------------------------------------------------------===//
-
-def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
-    Pure, AllTypesMatch<["base", "result"]>, ViewLikeOpInterface
-  ]> {
-  let summary = "Pointer add operation";
-  let description = [{
-    The `ptr_add` operation adds an integer offset to a pointer to produce a new
-    pointer. The input and output pointer types are always the same.
-
-    Example:
-
-    ```mlir
-    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<#ptr.generic_space>, i32
-    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<#ptr.generic_space>, i32
-    ```
-  }];
-
-  let arguments = (ins
-    Ptr_PtrType:$base,
-    AnySignlessIntegerOrIndex:$offset,
-    DefaultValuedProp<EnumProp<Ptr_PtrAddFlags>, "PtrAddFlags::none">:$flags);
-  let results = (outs Ptr_PtrType:$result);
-  let assemblyFormat = [{
-    ($flags^)? $base `,` $offset attr-dict `:` type($base) `,` type($offset)
-  }];
-  let hasFolder = 1;
-  let extraClassDeclaration = [{
-    /// `ViewLikeOp::getViewSource` method. 
-    Value getViewSource() { return getBase(); }
   }];
 }
 
@@ -359,6 +332,62 @@ def Ptr_MaskedStoreOp : Pointer_Op<"masked_store", [
       CArg<"unsigned", "0">:$alignment)>
   ];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// PtrAddOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
+    Pure, ViewLikeOpInterface,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>
+  ]> {
+  let summary = "Pointer add operation";
+  let description = [{
+    The `ptr_add` operation adds an int-like offset to one or more pointers to produce one or more new pointers.
+
+    The operation supports both scalar and shaped types with value semantics:
+    - When both base and offset are scalar: produces a single new pointer
+    - When base is shaped and offset is scalar: adds the same offset to each
+    pointer in the base
+    - When base is scalar and offset is shaped: adds the single pointer to each
+    offset in the shaped value
+    - When both are shaped: performs element-wise addition (shapes must be
+    compatible)
+
+    Example:
+
+    ```mlir
+    // Scalar base and offset
+    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<#ptr.generic_space>, i32
+    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<#ptr.generic_space>, i32
+    
+    // Shaped base with scalar offset
+    %ptrs_off = ptr.ptr_add %ptrs, %off : vector<4x!ptr.ptr<#ptr.generic_space>>, i32
+    
+    // Scalar base with shaped offset
+    %x_offs = ptr.ptr_add %x, %offs : !ptr.ptr<#ptr.generic_space>, vector<4xi32>
+    
+    // Both base and offset are shaped
+    %ptrs_offs = ptr.ptr_add %ptrs, %offs : vector<4x!ptr.ptr<#ptr.generic_space>>, vector<4xi32>
+    ```
+  }];
+  let arguments = (ins
+    Ptr_PtrLikeType:$base,
+    Ptr_IntLikeType:$offset,
+    DefaultValuedProp<EnumProp<Ptr_PtrAddFlags>, "PtrAddFlags::none">:$flags);
+  let results = (outs Ptr_PtrLikeType:$result);
+  let assemblyFormat = [{
+    ($flags^)? $base `,` $offset attr-dict `:` type($base) `,` type($offset)
+  }];
+  let hasFolder = 1;
+  let extraClassDeclaration = [{
+    /// `ViewLikeOp::getViewSource` method. 
+    Value getViewSource() { return getBase(); }
+
+    /// Returns the ptr type of the operation.
+    ptr::PtrType getPtrType();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
