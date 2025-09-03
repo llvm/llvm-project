@@ -127,11 +127,12 @@ multiclass DS_1A1D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
   }
 }
 
-multiclass DS_1A1D_NORET_t16<string opName, RegisterClass rc = VGPR_32> 
+multiclass DS_1A1D_NORET_t16<string opName, RegisterClass rc = VGPR_32>
 : DS_1A1D_NORET_mc<opName, rc> {
   let has_m0_read = 0 in {
     let True16Predicate = UseRealTrue16Insts in {
-      def "_t16" : DS_1A1D_NORET<opName#"_t16", VGPR_16>, True16D16Table<NAME#"_D16_HI", NAME>;
+      def "_t16" : DS_1A1D_NORET<opName#"_t16", VGPR_16>,
+        True16D16Table<NAME#"_D16_HI", NAME#"_gfx9">;
     }
   }
 }
