@@ -3186,6 +3186,15 @@ struct FieldConsumer {
 
 /// Check if a record type has smart owning pointer fields (directly or in base
 /// classes). When FC is provided, also collect the field regions.
+///
+/// This function has dual behavior:
+/// - When FC is nullopt: Returns true if smart pointer fields are found
+/// - When FC is provided: Always returns false, but collects field regions
+///   as a side effect through the FieldConsumer
+///
+/// Note: When FC is provided, the return value should be ignored since the
+/// function performs full traversal for collection and always returns false
+/// to avoid early termination.
 static bool hasSmartPtrField(const CXXRecordDecl *CRD,
                              std::optional<FieldConsumer> FC = std::nullopt) {
   // Check direct fields
