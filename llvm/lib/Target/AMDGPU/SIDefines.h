@@ -237,15 +237,15 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
 
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants. Does not accept registers.
+  OPERAND_INLINE_C_AV64_PSEUDO,
+
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
 
   // Operand for SDWA instructions
   OPERAND_SDWA_VOPC_DST,
-
-  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
-  // constants.
-  OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
@@ -254,7 +254,7 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
   OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_FP64,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
@@ -572,7 +572,17 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
-  CSP_MASK = 0x7u << 29 // Bits 29..31
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1250
+  DST_VGPR_MSB = 1 << 12,
+  SRC0_VGPR_MSB = 1 << 13,
+  SRC1_VGPR_MSB = 1 << 14,
+  SRC2_VGPR_MSB = 1 << 15,
+  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
 };
 
 } // namespace Hwreg
