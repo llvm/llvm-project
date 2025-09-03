@@ -720,6 +720,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
         for (kmp_int i = old_size; i < new_size; i++) {
           new_record[i].task = nullptr;
+          new_record[i].parent_task = nullptr;
           new_record[i].successors = nullptr;
           new_record[i].nsuccessors = 0;
           new_record[i].npredecessors = 0;
