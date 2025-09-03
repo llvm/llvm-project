@@ -139,8 +139,9 @@ void LoadOp::getEffects(
 LogicalResult LoadOp::verify() {
   auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidLoad(getResult().getType(), getOrdering(), getAlignment(),
-                      emitDiag))
+                      &dataLayout, emitDiag))
     return failure();
   if (failed(verifyAlignment(getAlignment(), emitDiag)))
     return failure();
@@ -181,8 +182,9 @@ void StoreOp::getEffects(
 LogicalResult StoreOp::verify() {
   auto emitDiag = [&]() -> InFlightDiagnostic { return emitError(); };
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
+  DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidStore(getValue().getType(), getOrdering(), getAlignment(),
-                       emitDiag))
+                       &dataLayout, emitDiag))
     return failure();
   if (failed(verifyAlignment(getAlignment(), emitDiag)))
     return failure();
@@ -267,10 +269,6 @@ llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
-
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.cpp.inc"
-
-#include "mlir/Dialect/Ptr/IR/MemorySpaceAttrInterfaces.cpp.inc"
 
 #include "mlir/Dialect/Ptr/IR/PtrOpsEnums.cpp.inc"
 

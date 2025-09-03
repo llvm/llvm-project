@@ -2479,6 +2479,14 @@ void DecoderEmitter::run(raw_ostream &o) const {
 #include <assert.h>
 
 namespace {
+
+// InsnBitWidth is essentially a type trait used by the decoder emitter to query
+// the supported bitwidth for a given type. But default, the value is 0, making
+// it an invalid type for use as `InsnType` when instantiating the decoder.
+// Individual targets are expected to provide specializations for these based
+// on their usage.
+template <typename T> constexpr uint32_t InsnBitWidth = 0;
+
 )";
 
   // Do extra bookkeeping for variable-length encodings.

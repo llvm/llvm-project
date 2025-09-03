@@ -48,8 +48,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_andn2_i32_s_v_one_use
-; GCN: v_not_b32
-; GCN: v_and_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_andn2_i32_s_v_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:
@@ -61,8 +60,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}vector_andn2_i32_v_s_one_use
-; GCN: s_not_b32
-; GCN: v_and_b32
+; GCN: v_bfi_b32
 define amdgpu_kernel void @vector_andn2_i32_v_s_one_use(
     ptr addrspace(1) %r0, i32 %s) {
 entry:

@@ -13,13 +13,17 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+
+namespace mlir::math {
+#define GEN_PASS_DEF_MATHEXPANDOPSPASS
+#include "mlir/Dialect/Math/Transforms/Passes.h.inc"
+} // namespace mlir::math
 
 /// Create a float constant.
 static Value createFloatConst(Location loc, Type type, APFloat value,
@@ -661,66 +665,77 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
   return success();
 }
 
-void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
-  patterns.add(convertCtlzOp);
+// Convert `math.clampf` into `arith.minimumf` + `arith.maximumf`
+static LogicalResult convertClampfOp(math::ClampFOp op,
+                                     PatternRewriter &rewriter) {
+  auto minOp = arith::MinimumFOp::create(rewriter, op.getLoc(), op.getValue(),
+                                         op.getMin(), op.getFastmath());
+  rewriter.replaceOpWithNewOp<arith::MaximumFOp>(op, minOp, op.getMax(),
+                                                 op.getFastmath());
+  return success();
 }
 
-void mlir::populateExpandSinhPattern(RewritePatternSet &patterns) {
-  patterns.add(convertSinhOp);
+void mlir::math::populateExpansionPatterns(RewritePatternSet &patterns,
+                                           ArrayRef<StringRef> opMnemonics) {
+  auto filter = [&](StringRef name) {
+    // This should be a static assert and `consume_front` take a twine, but none
+    // is currently possible. TODO: augment `StringRef::consume_front` and make
+    // `getDialectNamespace` use `std::string_view`.
+    assert("math" == MathDialect::getDialectNamespace());
+    name.consume_front("math.");
+    return opMnemonics.empty() || (llvm::count(opMnemonics, name) > 0);
+  };
+  if (filter(CountLeadingZerosOp::getOperationName()))
+    patterns.add(convertCtlzOp);
+  if (filter(SinhOp::getOperationName()))
+    patterns.add(convertSinhOp);
+  if (filter(CoshOp::getOperationName()))
+    patterns.add(convertCoshOp);
+  if (filter(TanOp::getOperationName()))
+    patterns.add(convertTanOp);
+  if (filter(TanhOp::getOperationName()))
+    patterns.add(convertTanhOp);
+  if (filter(AsinhOp::getOperationName()))
+    patterns.add(convertAsinhOp);
+  if (filter(AcoshOp::getOperationName()))
+    patterns.add(convertAcoshOp);
+  if (filter(AtanhOp::getOperationName()))
+    patterns.add(convertAtanhOp);
+  if (filter(FmaOp::getOperationName()))
+    patterns.add(convertFmaFOp);
+  if (filter(CeilOp::getOperationName()))
+    patterns.add(convertCeilOp);
+  if (filter(Exp2Op::getOperationName()))
+    patterns.add(convertExp2fOp);
+  if (filter(PowFOp::getOperationName()))
+    patterns.add(convertPowfOp);
+  if (filter(FPowIOp::getOperationName()))
+    patterns.add(convertFPowIOp);
+  if (filter(RoundOp::getOperationName()))
+    patterns.add(convertRoundOp);
+  if (filter(RoundEvenOp::getOperationName()))
+    patterns.add(convertRoundEvenOp);
+  if (filter(RsqrtOp::getOperationName()))
+    patterns.add(convertRsqrtOp);
+  if (filter(ClampFOp::getOperationName()))
+    patterns.add(convertClampfOp);
 }
 
-void mlir::populateExpandCoshPattern(RewritePatternSet &patterns) {
-  patterns.add(convertCoshOp);
-}
+//===----------------------------------------------------------------------===//
+// MathExpandOpsPass pass
+//===----------------------------------------------------------------------===//
+namespace {
+struct MathExpandOpsPass final
+    : math::impl::MathExpandOpsPassBase<MathExpandOpsPass> {
+  using MathExpandOpsPassBase::MathExpandOpsPassBase;
 
-void mlir::populateExpandTanPattern(RewritePatternSet &patterns) {
-  patterns.add(convertTanOp);
-}
-
-void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {
-  patterns.add(convertTanhOp);
-}
-
-void mlir::populateExpandAsinhPattern(RewritePatternSet &patterns) {
-  patterns.add(convertAsinhOp);
-}
-
-void mlir::populateExpandAcoshPattern(RewritePatternSet &patterns) {
-  patterns.add(convertAcoshOp);
-}
-
-void mlir::populateExpandAtanhPattern(RewritePatternSet &patterns) {
-  patterns.add(convertAtanhOp);
-}
-
-void mlir::populateExpandFmaFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertFmaFOp);
-}
-
-void mlir::populateExpandCeilFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertCeilOp);
-}
-
-void mlir::populateExpandExp2FPattern(RewritePatternSet &patterns) {
-  patterns.add(convertExp2fOp);
-}
-
-void mlir::populateExpandPowFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertPowfOp);
-}
-
-void mlir::populateExpandFPowIPattern(RewritePatternSet &patterns) {
-  patterns.add(convertFPowIOp);
-}
-
-void mlir::populateExpandRoundFPattern(RewritePatternSet &patterns) {
-  patterns.add(convertRoundOp);
-}
-
-void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {
-  patterns.add(convertRoundEvenOp);
-}
-
-void mlir::populateExpandRsqrtPattern(RewritePatternSet &patterns) {
-  patterns.add(convertRsqrtOp);
-}
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    SmallVector<StringRef> mnemonics =
+        llvm::to_vector_of<StringRef>(opMnemonics);
+    math::populateExpansionPatterns(patterns, mnemonics);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      return signalPassFailure();
+  }
+};
+} // namespace
