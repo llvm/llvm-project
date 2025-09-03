@@ -1344,6 +1344,22 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 
+// TODO: These cases should use default target alignment
+def VGPROp_16 : RegisterOperand<VGPR_16>;
+def VGPROp_32 : RegisterOperand<VGPR_32>;
+def VGPROp_64 : RegisterOperand<VReg_64>;
+def VGPROp_96 : RegisterOperand<VReg_96>;
+def VGPROp_128 : RegisterOperand<VReg_128>;
+def VGPROp_256 : RegisterOperand<VReg_256>;
+
+def VGPROp_64_Align1 : RegisterOperand<VReg_64>;
+def VGPROp_96_Align1 : RegisterOperand<VReg_96>;
+def VGPROp_128_Align1 : RegisterOperand<VReg_128>;
+
+def VGPROp_64_Align2 : RegisterOperand<VReg_64_Align2>;
+def VGPROp_128_Align2 : RegisterOperand<VReg_128_Align2>;
+
+
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
@@ -1422,12 +1438,16 @@ def AVDst_512 : AVDstOperand<AV_512>;
 class AVLdStOperand<RegisterClass regClass>
   : AVOperand<regClass, "decodeAVLdSt">;
 
+// TODO: These cases should use target align variant
 def AVLdSt_32 : AVLdStOperand<AV_32>;
 def AVLdSt_64 : AVLdStOperand<AV_64>;
 def AVLdSt_96 : AVLdStOperand<AV_96>;
 def AVLdSt_128 : AVLdStOperand<AV_128>;
 def AVLdSt_160 : AVLdStOperand<AV_160>;
 def AVLdSt_1024 : AVLdStOperand<AV_1024>;
+
+def AVLdSt_96_Align1 : AVLdStOperand<AV_96>;
+def AVLdSt_96_Align2 : AVLdStOperand<AV_96_Align2>;
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
