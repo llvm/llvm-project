@@ -12042,6 +12042,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case clang::X86__builtin_ia32_pslldqi128:
+  case clang::X86__builtin_ia32_psrldqi128:
+  case clang::X86__builtin_ia32_pslldqi256:
+  case clang::X86__builtin_ia32_psrldqi256: {
+    
+  }
+
   }
 }
 
