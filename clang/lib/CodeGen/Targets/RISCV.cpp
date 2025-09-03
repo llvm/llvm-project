@@ -683,7 +683,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
       // FIXME: Maybe we should treat 32 as a special case and wait for
       // the SPEC to decide.
-      if (EIT->getNumBits() <= 2*XLen)
+      if (EIT->getNumBits() <= 2 * XLen)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
