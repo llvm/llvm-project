@@ -48,6 +48,8 @@ class TestStructuredDataAPI(TestBase):
         s.Clear()
         error = example.GetDescription(s)
         self.assertSuccess(error, "GetDescription works")
+        # Ensure str() doesn't raise an exception.
+        self.assertTrue(str(example))
         if not "key_float" in s.GetData():
             self.fail("FAILED: could not find key_float in description output")
 
@@ -344,7 +346,7 @@ class TestStructuredDataAPI(TestBase):
             self.fail("wrong output: " + str(output))
 
     def test_round_trip_scalars(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, "", "dirk", True, False):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, True, False):
             constructor = type(original)
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
@@ -356,13 +358,6 @@ class TestStructuredDataAPI(TestBase):
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
             self.assertEqual(data.dynamic, original)
-
-    def test_round_trip_string(self):
-        # No 0.0, it inherently does not round trip.
-        for original in (0, 11, -1, 4.5, -0.25, "", "dirk"):
-            data = lldb.SBStructuredData()
-            data.SetFromJSON(json.dumps(original))
-            self.assertEqual(str(data), str(original))
 
     def test_round_trip_int(self):
         for original in (0, 11, -1):
