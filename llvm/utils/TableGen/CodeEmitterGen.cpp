@@ -447,16 +447,6 @@ void CodeEmitterGen::emitCaseMap(
   }
 }
 
-static void ReportError(raw_ostream &O, indent Indent) {
-  static constexpr char ReportErrorCode[] = R"(
-{0}std::string msg;
-{0}raw_string_ostream Msg(msg);
-{0}Msg << "Unsupported instruction: " << MI;
-{0}report_fatal_error(Msg.str().c_str());
-)";
-  O << formatv(ReportErrorCode, Indent);
-}
-
 void CodeEmitterGen::run(raw_ostream &O) {
   emitSourceFileHeader("Machine Code Emitter", O);
 
@@ -540,12 +530,16 @@ void CodeEmitterGen::run(raw_ostream &O) {
   unsigned FirstSupportedOpcode = EncodedInstructions.front()->EnumVal;
   O << "  constexpr unsigned FirstSupportedOpcode = " << FirstSupportedOpcode
     << ";\n";
-
-  O << "  const unsigned opcode = MI.getOpcode();\n";
-  O << "  if (opcode < FirstSupportedOpcode) {";
-  ReportError(O, indent(4));
-  O << "  }\n";
-  O << "  unsigned TableIndex = opcode - FirstSupportedOpcode;\n";
+  O << R"(
+  const unsigned opcode = MI.getOpcode();
+  if (opcode < FirstSupportedOpcode) {
+    std::string msg;
+    raw_string_ostream Msg(msg);
+    Msg << "Unsupported instruction: " << MI;
+    report_fatal_error(Msg.str().c_str());
+  }
+  unsigned TableIndex = opcode - FirstSupportedOpcode;
+)";
 
   // Emit initial function code
   if (UseAPInt) {
@@ -567,10 +561,13 @@ void CodeEmitterGen::run(raw_ostream &O) {
   // Emit each case statement
   emitCaseMap(O, CaseMap);
 
-  // Default case: unhandled opcode
-  O << "  default:";
-  ReportError(O, indent(4));
-  O << "  }\n";
+  // Default case: unhandled opcode.
+  O << "  default:\n"
+    << "    std::string msg;\n"
+    << "    raw_string_ostream Msg(msg);\n"
+    << "    Msg << \"Not supported instr: \" << MI;\n"
+    << "    report_fatal_error(Msg.str().c_str());\n"
+    << "  }\n";
   if (UseAPInt)
     O << "  Inst = Value;\n";
   else
@@ -585,9 +582,13 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
   emitCaseMap(O, BitOffsetCaseMap);
-  O << "  }\n";
-  ReportError(O, indent(2));
-  O << "}\n\n"
+  O << "  }\n"
+    << "  std::string msg;\n"
+    << "  raw_string_ostream Msg(msg);\n"
+    << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
+       "<< \"]\";\n"
+    << "  report_fatal_error(Msg.str().c_str());\n"
+    << "}\n\n"
     << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
 }
 
