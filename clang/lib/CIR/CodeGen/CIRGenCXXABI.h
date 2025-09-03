@@ -37,6 +37,12 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
 
+  /// Emit the code to initialize hidden members required to handle virtual
+  /// inheritance, if needed by the ABI.
+  virtual void
+  initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
+                                            const CXXRecordDecl *rd) {}
+
   /// Emit a single constructor/destructor with the gen type from a C++
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
@@ -47,8 +53,10 @@ public:
   }
 
   /// Emit the ABI-specific prolog for the function
-  virtual void emitInstanceFunctionProlog(SourceLocation Loc,
+  virtual void emitInstanceFunctionProlog(SourceLocation loc,
                                           CIRGenFunction &cgf) = 0;
+
+  virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
 
   /// Get the type of the implicit "this" parameter used by a method. May return
   /// zero if no specific type is applicable, e.g. if the ABI expects the "this"
@@ -98,6 +106,10 @@ public:
   /// Emits the VTable definitions required for the given record type.
   virtual void emitVTableDefinitions(CIRGenVTables &cgvt,
                                      const CXXRecordDecl *rd) = 0;
+
+  /// Emit any tables needed to implement virtual inheritance.  For Itanium,
+  /// this emits virtual table tables.
+  virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;
 
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or

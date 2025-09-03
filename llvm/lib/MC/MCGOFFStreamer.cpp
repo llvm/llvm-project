@@ -45,3 +45,9 @@ MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
       new MCGOFFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   return S;
 }
+llvm::MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> MAB,
+                                     std::unique_ptr<MCObjectWriter> OW,
+                                     std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
+                       std::move(Emitter)) {}
