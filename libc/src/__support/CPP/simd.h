@@ -15,8 +15,8 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -126,6 +126,55 @@ LIBC_INLINE constexpr simd<T, N> min(simd<T, N> x, simd<T, N> y) {
 template <typename T, size_t N>
 LIBC_INLINE constexpr simd<T, N> max(simd<T, N> x, simd<T, N> y) {
   return __builtin_elementwise_max(x, y);
+}
+
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> abs(simd<T, N> x) {
+  return __builtin_elementwise_abs(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> fma(simd<T, N> x, simd<T, N> y, simd<T, N> z) {
+  return __builtin_elementwise_fma(x, y, z);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> ceil(simd<T, N> x) {
+  return __builtin_elementwise_ceil(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> floor(simd<T, N> x) {
+  return __builtin_elementwise_floor(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> roundeven(simd<T, N> x) {
+  return __builtin_elementwise_roundeven(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> round(simd<T, N> x) {
+  return __builtin_elementwise_round(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> trunc(simd<T, N> x) {
+  return __builtin_elementwise_trunc(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> nearbyint(simd<T, N> x) {
+  return __builtin_elementwise_nearbyint(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> rint(simd<T, N> x) {
+  return __builtin_elementwise_rint(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> canonicalize(simd<T, N> x) {
+  return __builtin_elementwise_canonicalize(x);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> copysign(simd<T, N> x, simd<T, N> y) {
+  return __builtin_elementwise_copysign(x, y);
+}
+template <typename T, size_t N>
+LIBC_INLINE constexpr simd<T, N> fmod(simd<T, N> x, simd<T, N> y) {
+  return __builtin_elementwise_fmod(x, y);
 }
 
 // Reduction operations.
