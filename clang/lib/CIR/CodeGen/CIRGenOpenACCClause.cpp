@@ -595,6 +595,20 @@ class OpenACCClauseCIREmitter final
                              OpenACCReductionOperator reductionOp,
                              DeclContext *dc, QualType baseType,
                              mlir::Value mainOp) {
+
+    if (baseType->isPointerType() ||
+        (baseType->isArrayType() && !baseType->isConstantArrayType())) {
+      // It is clear that the use of pointers/VLAs in a recipe are not properly
+      // generated/don't do what they are supposed to do.  In the case where we
+      // have 'bounds', we can actually figure out what we want to
+      // initialize/copy/destroy/compare/etc, but we haven't figured out how
+      // that looks yet, both between the IR and generation code.  For now, we
+      // will do an NYI error no it.
+      cgf.cgm.errorNYI(
+          varRef->getSourceRange(),
+          "OpenACC recipe generation for pointer/non-constant arrays");
+    }
+
     mlir::ModuleOp mod = builder.getBlock()
                              ->getParent()
                              ->template getParentOfType<mlir::ModuleOp>();

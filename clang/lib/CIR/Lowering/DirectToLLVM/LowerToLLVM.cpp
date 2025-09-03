@@ -1214,10 +1214,10 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
   // TODO: nontemporal, syncscope.
-  assert(!cir::MissingFeatures::opLoadStoreVolatile());
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
-      /*isVolatile=*/false, /*isNonTemporal=*/false,
+      op.getIsVolatile(), /*isNonTemporal=*/false,
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering);
 
   // Convert adapted result to its original type if needed.
@@ -1244,10 +1244,11 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
   // TODO: nontemporal, syncscope.
-  assert(!cir::MissingFeatures::opLoadStoreVolatile());
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
-      /*isVolatile=*/false,
+      op.getIsVolatile(),
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());

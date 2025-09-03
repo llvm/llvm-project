@@ -38,8 +38,7 @@ define void @foo(i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i32>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP1]], <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true))
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP8]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[FOR_BODY31:.*]]
 ; CHECK:       [[FOR_BODY31]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[FOR_BODY31]] ]
