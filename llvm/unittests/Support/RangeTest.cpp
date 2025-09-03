@@ -77,7 +77,7 @@ TEST(RangeUtilsTest, ParseMultipleRanges) {
 
 TEST(RangeUtilsTest, ParseColonSeparated) {
   RangeUtils::RangeList Ranges;
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", Ranges));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", Ranges, ':'));
   EXPECT_EQ(Ranges.size(), 3U);
   EXPECT_EQ(Ranges[0].Begin, 1);
   EXPECT_EQ(Ranges[0].End, 5);
@@ -104,7 +104,7 @@ TEST(RangeUtilsTest, ParseInvalidRanges) {
   
   // Out of order ranges (DebugCounter constraint)
   EXPECT_FALSE(RangeUtils::parseRanges("10,5", Ranges));
-  EXPECT_TRUE(RangeUtils::parseRanges("1-5,3-7", Ranges)); // Overlapping
+  EXPECT_FALSE(RangeUtils::parseRanges("1-5,3-7", Ranges)); // Overlapping not allowed
 }
 
 TEST(RangeUtilsTest, Contains) {
@@ -139,7 +139,7 @@ TEST(RangeUtilsTest, SeparatorParameter) {
   
   // Test explicit separator parameters
   EXPECT_TRUE(RangeUtils::parseRanges("1-5:10:15-20", ColonRanges, ':'));
-  EXPECT_FALSE(RangeUtils::parseRanges("1-5,10,15-20", CommaRanges, ','));
+  EXPECT_TRUE(RangeUtils::parseRanges("1-5,10,15-20", CommaRanges, ','));
   
   EXPECT_EQ(ColonRanges.size(), CommaRanges.size());
   for (size_t I = 0; I < ColonRanges.size(); ++I) {
