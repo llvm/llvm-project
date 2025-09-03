@@ -1333,21 +1333,45 @@ bool SemaHLSL::handleRootSignatureElements(
              "Number of unbound elements must match the number of clauses");
       bool HasSampler = false;
       bool HasNonSampler = false;
+      uint32_t Offset = 0;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
+        SourceLocation Loc = RootSigElem.getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
           HasSampler = true;
         else
           HasNonSampler = true;
 
         if (HasSampler && HasNonSampler)
-          Diag(ClauseElem->getLocation(),
-               diag::err_hlsl_invalid_mixed_resources);
+          Diag(Loc, diag::err_hlsl_invalid_mixed_resources);
 
-        uint32_t LowerBound(Clause->Reg.Number);
         // Relevant error will have already been reported above and needs to be
-        // fixed before we can conduct range analysis, so shortcut error return
+        // fixed before we can conduct further analysis, so shortcut error
+        // return
         if (Clause->NumDescriptors == 0)
           return true;
+
+        if (Clause->Offset !=
+            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
+          // Manually specified the offset
+          Offset = Clause->Offset;
+        }
+
+        uint64_t NextOffset =
+            llvm::hlsl::rootsig::nextOffset(Offset, Clause->NumDescriptors);
+
+        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
+          // Trying to append onto unbound offset
+          Diag(Loc, diag::err_hlsl_appending_onto_unbound);
+        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(NextOffset -
+                                                                  1)) {
+          // Upper bound overflows maximum offset
+          Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << NextOffset - 1;
+        }
+
+        Offset = uint32_t(NextOffset);
+
+        // Compute the register bounds and track resource binding
+        uint32_t LowerBound(Clause->Reg.Number);
         uint32_t UpperBound = Clause->NumDescriptors == ~0u
                                   ? ~0u
                                   : LowerBound + Clause->NumDescriptors - 1;
