@@ -1345,17 +1345,31 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // FP16 often need to be promoted to call lib functions
+  // clang-format off
   if (Subtarget->hasFullFP16()) {
-    for (auto Op : {ISD::FREM,           ISD::FSIN,             ISD::FCOS,           
-                    ISD::FTAN,           ISD::FSINCOS,          ISD::FPOWI,
-                    ISD::FPOW,           ISD::FEXP,             ISD::FEXP2,
-                    ISD::FEXP10,         ISD::FLOG,             ISD::FLOG10,
-                    ISD::FLOG2,          ISD::STRICT_FREM,      ISD::STRICT_FSIN,
-                    ISD::STRICT_FCOS,    ISD::STRICT_FTAN,      ISD::STRICT_FPOWI,
-                    ISD::STRICT_FPOW,    ISD::STRICT_FEXP,      ISD::STRICT_FEXP2,
-                    ISD::STRICT_FLOG,    ISD::STRICT_FLOG10,    ISD::STRICT_FLOG2}) {
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                  ISD::STRICT_FTAN}) {
         setOperationAction(Op, MVT::f16, Promote);
     }
+
+    // Round-to-integer need custom lowering for fp16, as Promote doesn't work
+    // because the result type is integer.
+    for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
+                    ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT,
+                    ISD::STRICT_LLRINT})
+      setOperationAction(Op, MVT::f16, Custom);
   
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
                     ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
@@ -1364,6 +1378,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
       setOperationAction(Op, MVT::f16, Legal);
     }
+    // clang-format on
 
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   }
@@ -10716,6 +10731,30 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UCMP:
   case ISD::SCMP:
     return LowerCMP(Op, DAG);
+  case ISD::LRINT:
+  case ISD::LLRINT:
+  case ISD::LROUND:
+  case ISD::LLROUND: {
+    assert((Op.getOperand(0).getValueType() == MVT::f16 ||
+            Op.getOperand(1).getValueType() == MVT::bf16) &&
+           "Expected custom lowering of rounding operations only for f16");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Ext);
+  }
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT: {
+    assert((Op.getOperand(1).getValueType() == MVT::f16 ||
+            Op.getOperand(1).getValueType() == MVT::bf16) &&
+           "Expected custom lowering of rounding operations only for f16");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                              {Op.getOperand(0), Op.getOperand(1)});
+    return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                       {Ext.getValue(1), Ext.getValue(0)});
+  }
   }
 }
 
