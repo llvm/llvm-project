@@ -7886,6 +7886,12 @@ void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
   Record.AddSourceLocation(C->getDefaultKindKwLoc());
 }
 
+void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getThreadsetKindLoc());
+  Record.writeEnum(C->getThreadsetKind());
+}
+
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
   Record.push_back(unsigned(C->getProcBindKind()));
   Record.AddSourceLocation(C->getLParenLoc());

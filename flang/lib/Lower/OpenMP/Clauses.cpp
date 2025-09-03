@@ -1416,6 +1416,21 @@ ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
   return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
 }
 
+Threadset make(const parser::OmpClause::Threadset &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpThreadsetClause
+  using wrapped = parser::OmpThreadsetClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ThreadsetPolicy, Threadset::ThreadsetPolicy,
+      // clang-format off
+      MS(omp_pool, omp_pool)
+      MS(omp_team, omp_team)
+      // clang-format on
+  );
+  return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
+}
+
 // Threadprivate: empty
 // Threads: empty
 
