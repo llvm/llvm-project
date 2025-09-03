@@ -13,6 +13,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
@@ -1317,6 +1318,105 @@ static bool isSupportedVariable(const DeclRefExpr &Node) {
   const Decl *D = Node.getDecl();
   return D != nullptr && isa<VarDecl>(D);
 }
+
+static bool isUniquePtrArray(const CXXRecordDecl *RecordDecl) {
+  if (!RecordDecl || !RecordDecl->isInStdNamespace() ||
+      RecordDecl->getNameAsString() != "unique_ptr") {
+    return false;
+  }
+
+  const ClassTemplateSpecializationDecl *class_template_specialization_decl =
+      dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
+  if (!class_template_specialization_decl) {
+    return false;
+  }
+
+  const TemplateArgumentList &template_args =
+      class_template_specialization_decl->getTemplateArgs();
+
+  if (template_args.size() == 0) {
+    return false;
+  }
+
+  const TemplateArgument &first_arg = template_args[0];
+
+  if (first_arg.getKind() != TemplateArgument::Type) {
+    return false;
+  }
+
+  QualType referred_type = first_arg.getAsType();
+
+  if (referred_type->isArrayType()) {
+    return true;
+  }
+
+  return false;
+}
+
+class UniquePtrArrayAccessGadget : public WarningGadget {
+  static constexpr const char *const AccessorTag = "unique_ptr_array_access";
+  const CXXOperatorCallExpr *TheAccessorExpr;
+
+public:
+  UniquePtrArrayAccessGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UniquePtrArrayAccess),
+        TheAccessorExpr(Result.getNodeAs<CXXOperatorCallExpr>(AccessorTag)) {
+    assert(TheAccessorExpr &&
+           "UniquePtrArrayAccessGadget requires a matched CXXOperatorCallExpr");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UniquePtrArrayAccess;
+  }
+
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+
+    const CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(S);
+    if (!OpCall || OpCall->getOperator() != OO_Subscript) {
+      return false;
+    }
+
+    const Expr *Callee = OpCall->getCallee()->IgnoreParenImpCasts();
+    if (!Callee) {
+      return false;
+    }
+
+    const CXXMethodDecl *Method =
+        dyn_cast_or_null<CXXMethodDecl>(OpCall->getDirectCallee());
+    if (!Method) {
+      return false;
+    }
+
+    if (Method->getNameAsString() != "operator[]") {
+      return false;
+    }
+
+    const CXXRecordDecl *RecordDecl = Method->getParent();
+    if (!isUniquePtrArray(RecordDecl)) {
+      return false;
+    }
+
+    Result.addNode(AccessorTag, DynTypedNode::create(*OpCall));
+    return true;
+  }
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeUniquePtrArrayAccess(
+        DynTypedNode::create(*TheAccessorExpr), IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override {
+    if (TheAccessorExpr) {
+      return TheAccessorExpr->getOperatorLoc();
+    }
+    return SourceLocation();
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
@@ -2646,6 +2746,10 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
       return "";
     }
   };
+
+  void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
 
   FixableGadgetList FixableGadgets;
   WarningGadgetList WarningGadgets;
