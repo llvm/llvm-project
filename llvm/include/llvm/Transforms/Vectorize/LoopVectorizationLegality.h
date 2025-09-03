@@ -636,7 +636,7 @@ private:
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
 
-  /// Hold all loads that need to be fault-only-first.
+  /// Hold potentially faulting loads.
   SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
