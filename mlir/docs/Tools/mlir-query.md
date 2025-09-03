@@ -1,87 +1,117 @@
-`mlir-query` is an interactive tool designed to simplify IR exploration. It provides a REPL interface and supports an interactive query language for MLIR, enabling developers to query the MLIR IR dynamically.  
-The tool uses matchers as its core mechanism for performing queries over the MLIR IR, relying on simple matchers from `Matchers.h` and slicing-related matchers from `SliceMatchers.h`.  
+`mlir-query` is an interactive tool designed to simplify IR exploration. It provides a REPL interface and supports an interactive query language for MLIR, enabling developers to query the MLIR IR dynamically.
+The tool uses matchers as the mechanism for performing queries over the MLIR IR, relying on simple matchers from `Matchers.h` and slicing-related matchers from `SliceMatchers.h`.
 
-Through its IR exploration capabilities and the interactive query language, `mlir-query` serves both as a prototyping environment for pattern matchers and as a good debugging tool.
+Through its IR exploration capabilities and the interactive query language, `mlir-query` serves both as a prototyping environment for pattern matchers and as a useful debugging tool.
 
 ## Usage
 
 ### Query modes
+
 In order to prototype matchers, explore, test, or debug the MLIR IR, the tool provides two main usage modes:
 
-* **Run queries directly from the CLI:**
-    ```shell
-    ./mlir-query input.mlir -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
-    ```
-    The commands are executed and the program exits immediately.
+- **Run queries directly from the CLI:**
 
-* **Launch an interactive session:**
-    ```shell
-    ./mlir-query input.mlir
-    ```
-    Opens a REPL-like interface where you can type queries interactively.
+  ```shell
+  ./mlir-query input.mlir -c '<your_query_1>' -c '<your_query_2>' ... -c '<your_query_N>'
+  ```
+
+  The commands are executed and the program exits immediately.
+
+- **Launch an interactive session:**
+
+  ```shell
+  ./mlir-query input.mlir
+  ```
+
+  Opens a REPL-like interface where you can type queries interactively.
 
 ### Use with `mlir-opt`
 
 The tool can easily be used with the MLIR pass pipeline infrastructure by running a pass pipeline and passing the result as input to `mlir-query`. A command example is shown below:
 
 ```shell
-./mlir-opt input.mlir -canonicalize | ./mlir-query - -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
+./mlir-opt input.mlir -canonicalize | ./mlir-query -c '<your_query_1>' -c '<your_query_2>' ... -c '<your_query_N>'
+```
+
+This workflow can be particularly useful for reproducing a certain def-use chain of values. For instance, the following demonstrates running the canonicalizer pass, then computing the backward slice from the root operation `memref.dealloc` up to two depth levels and isolating the results using the [function extraction](#function-extraction) feature.
+
+```shell
+./mlir-opt slice-function-extraction.mlir -canonicalize -split-input-file | ./mlir-query -c 'match getDefinitions(hasOpName("memref.dealloc"),2,false,true,true).extract("backward_slice")' > backward_slice.mlir
+```
+
+The resulting function in `backward_slice.mlir` is:
+
+```mlir
+func.func @backward_slice(%arg0: memref<10xf32>) -> (f32, index, f32) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  memref.store %cst, %arg0[%c0] : memref<10xf32>
+  memref.store %cst, %arg0[%c0] : memref<10xf32>
+  %0 = memref.load %arg0[%c0] : memref<10xf32>
+  memref.store %0, %arg0[%c0] : memref<10xf32>
+  return %cst, %c0, %0 : f32, index, f32
+}
 ```
 
 ## Register custom matchers
 
-To register a custom matcher with `mlir-query`, define a structure that implements one of the following signatures: `bool match(Operation* op)` or `bool match(Operation* op, SetVector<Operation*> &matchedOps)` and then implement the desired matching logic. Next, link `MLIRQueryLib` and register the matcher.
+To register a custom matcher with `mlir-query`, define a C++ class/struct with a match method that has one of the following signatures:
+
+- `bool match(Operation* op)`
+- `bool match(Operation* op, SetVector<Operation*> &matchedOps)`
+
+For instance, the following snippet shows the implementation of a simple custom matcher that matches `func::FuncOp` operations:
+
+```cpp
+namespace matchers {
+namespace detail {
+struct IsFuncOp {
+  bool match(Operation* op) { return mlir::isa<func::FuncOp>(op); }
+};
+} // namespace detail
+inline detail::IsFuncOp m_IsFuncOp() {
+  return detail::IsFuncOp();
+}
+} // namespace matchers
+```
+
+The following snippet shows how to register the matcher:
 
 ```cpp
 #include "mlir/Tools/mlir-query/MlirQueryMain.h"
 using namespace mlir;
 
+// IsFuncOp matching logic (from previous snippet)
 int main(int argc, char **argv) {
-
   DialectRegistry dialectRegistry;
   registerAllDialects(dialectRegistry);
 
   query::matcher::Registry matcherRegistry;
-
-  // Replace <matcher_name> with your desired matcher identifier string.
-  matcherRegistry.registerMatcher("<matcher_name>", matcherInstance);
-
+  // Registration of IsFuncOp matcher
+  matcherRegistry.registerMatcher("isFuncOp", matchers::m_IsFuncOp);
   MLIRContext context(dialectRegistry);
   return failed(mlirQueryMain(argc, argv, context, matcherRegistry));
 }
 ```
+Once registered, you can open your MLIR file and use the following command to match `func::FuncOp` operations:
+
+```shell
+match isFuncOp()
+```
+
+Note: you will need to link `MLIRQueryLib` CMake target when building.
 
 ## Features
+
 ### Autocompletion
 
 To simplify usage, `mlir-query` provides autocompletion in the REPL interface, enabling users to ease query input by pressing the Tab key. When autocompletion is first triggered, a list of available commands is displayed (e.g., `match`, `help`). Triggering autocompletion for the `match` command then shows a list of available matchers.
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/3QiJgrU.gif"
-    alt="Autocompletion command list"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
-The following GIF illustrates an autocompletion use case for constructing queries.
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/bpMS9mf.gif"
-    alt="Autocompletion matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+
+![autocomplete-command-list](https://i.imgur.com/zuYpXck.gif)
+
+The following GIF illustrates an autocompletion use case for constructing queries:
+
+![autocomplete-matcher](https://i.imgur.com/GaL1hiC.gif)
 
 ### Function extraction
 
@@ -111,11 +141,10 @@ func.func @slicing_memref_store_trivial() {
 The following command extracts the results of `getDefinitionsByPredicate` query:
 
 ```shell
-./mlir-opt /home/user/llvm-project/mlir/test/mlir-query/slice-function-extraction.mlir "m getDefinitionsByPredicate(hasOpName(\"memref.store\"),hasOpName(\"memref.alloc\"),true,false,false).extract(\"backward_slice\")"
+./mlir-query slice-function-extraction.mlir 'match getDefinitionsByPredicate(hasOpName("memref.store"),hasOpName("memref.alloc"),true,false,false).extract("backward_slice")'
 ```
 
 The resulting function from the previous query is:
-
 
 ```mlir
 func.func @backward_slice(%arg0: memref<10xf32>) -> (f32, index, index, f32, index, index, f32) {
@@ -132,6 +161,7 @@ func.func @backward_slice(%arg0: memref<10xf32>) -> (f32, index, index, f32, ind
   return %cst, %c0, %0, %cst_0, %1, %c0_1, %2 : f32, index, index, f32, index, index, f32
 }
 ```
+
 ## Matcher overview
 
 This section details the current matchers and their capabilities. It does not include examples of every matcher but rather aims to showcase and explain the types of matchers, along with useful examples that should be sufficient for comprehension. For a detailed explanation of each matcher's functionality and its parameters, please refer to the matchers reference section.
@@ -140,11 +170,15 @@ This section details the current matchers and their capabilities. It does not in
 
 The tool supports a variety of simple matchers, including `isConstantOp`, which finds all constant operations, `hasOpName`, which finds all operations with a given name and `hasOpAttrName`, which finds all operations with a certain attribute.
 
-#### Example
-The following IR is used to demonstrate a simple matcher.
+#### Examples
+
+The following IR is used to demonstrate simple matchers:
+
 ```mlir
 func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
-  %sum0 = arith.addf %a, %b : f32
+  %cst0 = arith.constant 1.0 : f32
+  %cst1 = arith.constant 2.0 : f32
+  %sum0 = arith.addf %cst0, %cst1 : f32
   %sub0 = arith.subf %sum0, %c : f32
   %mul0 = arith.mulf %a, %sub0 : f32
   %sum1 = arith.addf %b, %c : f32
@@ -157,31 +191,29 @@ func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
 ```
 
 ##### hasOpName
+
 Matches all `arith.addf` operations.
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/dbpn3Xo.gif"
-    alt="hasOpName matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+
+![hasOpName](https://i.imgur.com/clDAk19.gif)
+
+##### isConstant
+
+Matches all constant operations.
+
+![isConstant](https://i.imgur.com/TsQhrYL.gif)
 
 ### Slice matchers
 
-`mlir-query` includes slicing matchers that compute forward and backward slices. These are abstractions over the methods from the `SliceAnalysis` library, enabling their use in a query context. In contrast to simple matchers, slicing matchers introduce the concept of `inner matchers`, which allow users to specify the `root operation` and the termination condition via other `matchers`. 
+`mlir-query` includes slicing matchers that compute forward and backward slices. These are abstractions over the methods from the `SliceAnalysis` library, enabling their use in a query context. In contrast to simple matchers, slicing matchers introduce the concept of `inner matchers`, which allow users to specify the `root operation` and the termination condition via other `matchers`.
 
-Two useful backward-slicing matchers are `getDefinitionsByPredicate` and `getDefinitions`. The former matches all definitions by specifying both the starting point of the slice computation and the termination condition using an inner matcher. The latter is similar, except that the termination condition is specified as a numerical literal which represents the desired depth level. Both matchers accept three boolean arguments: `omitBlockArguments`, `omitUsesFromAbove`, and `inclusive`. The first two specify traversal configuration, while the last controls inclusion of the root operation in the slice. 
+Two useful backward-slicing matchers are `getDefinitionsByPredicate` and `getDefinitions`. The former matches all definitions by specifying both the starting point of the slice computation and the termination condition using an inner matcher. The latter is similar, except that the termination condition is specified as a numerical literal which represents the desired depth level. Both matchers accept three boolean arguments: `omitBlockArguments`, `omitUsesFromAbove`, and `inclusive`. The first two specify traversal configuration, while the last controls inclusion of the root operation in the slice.
 
 Forward-slicing matchers are similar, but their termination condition is currently limited to using an inner matcher.
 
 #### Examples
+
 The following IR is used to demonstrate the slicing matchers.
+
 ```mlir
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) {
@@ -201,40 +233,18 @@ func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) 
   return
 }
 ```
+
 ##### getDefinitionsByPredicate
+
 Matches all defining operations using the `hasOpName("arith.addf")` for the root operation and the `hasOpName("linalg.generic")` as the termination condition.
 
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/e7ObI7P.gif"
-    alt="getDefinitionsByPredicate matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+![getDefinitionsByPredicate](https://i.imgur.com/KyUBaND.gif)
 
 ##### getDefinitions
 
 Matches all defining operations using `hasOpName("arith.addf")` for the root operation, with the termination condition set to a depth of two levels.
 
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/V4uegw2.gif"
-    alt="getDefinitions matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+![getDefinitions](https://i.imgur.com/3fowI7L.gif)
 
 ### Variadic matchers
 
@@ -242,10 +252,12 @@ At this moment, the tool supports two variadic matchers: `anyOf` and `allOf`, wh
 
 Operator `anyOf` matches if any of the matchers in a given set succeed (e.g `anyOf(m1, m2 ...)`). Using it brings several benefits, for example, one could construct a matcher that computes the union of two or more slices, initiating slice computation from one or multiple points of interest, or limiting slice computation by a set of inner matchers.
 
-Operator `allOf`  matches only if all the matchers in a set succeed (e.g `allOf(m1, m2 ...)`). For example, it enables finding all operations with a certain attribute, or initiating/limiting slice computation when an operation with a certain attribute is encountered.
+Operator `allOf` matches only if all the matchers in a set succeed (e.g `allOf(m1, m2 ...)`). For example, it enables finding all operations with a certain attribute, or initiating/limiting slice computation when an operation with a certain attribute is encountered.
 
 #### Examples
-The following IR is used to demonstrate `anyOf` matchers.
+
+The following IR is used to demonstrate `anyOf` matchers:
+
 ```mlir
 func.func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
@@ -263,38 +275,17 @@ func.func @slice_depth1_loop_nest_with_offsets() {
 ```
 
 ##### anyOf
+
 - Matches the union of two backward slices.
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/qQhfyX4.gif"
-    alt="backward-slice-union-anyof matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+
+![anyOf-union](https://i.imgur.com/QIRk7wo.gif)
 
 - Matches users with `anyOf(hasOpName("memref.alloc"),isConstant())` as the root operation and `anyOf(hasOpName("affine.load"),hasOpName("memref.dealloc"))` as the termination condition.
 
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/b1EMdIv.gif"
-    alt="anyOf matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
+![anyOf](https://i.imgur.com/foXD2DM.gif)
 
-The following IR is used to demonstrate a use case of `allOf` matcher.
+The following IR is used to demonstrate a use case of `allOf` matcher:
+
 ```mlir
 func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1xi32>, %vec: vector<4xi32>) {
   %c0_i32 = arith.constant 0 : i32
@@ -312,44 +303,32 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   return
 }
 ```
+
 ##### allOf
+
 Matches users with `allOf(hasOpName("memref.alloca"),hasOpAttrName("alignment"))` as the root operation and `hasOpName("vector.transfer_read")` as the termination condition.
 
-<div style="overflow-x:auto; margin:1em 0;">
-  <img
-    src="https://i.imgur.com/MJnhvfD.gif"
-    alt="allOf matcher"
-    style="
-      display: block;
-      margin: 0 auto;
-      width: 1250px !important;
-      max-width: none !important;
-      height: auto !important;
-    "
-  />
-</div>
-
+![allOf](https://i.imgur.com/E3gcf79.gif)
 
 ## Matcher Reference
 
-
-| Matcher                                                                                                                       | Type                                                                                                                                 |
+| Matcher | Type |
 | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `allOf`                                                                                                                       | `allOfVariadicOperator`                                                                                                              |
-| `anyOf`                                                                                                                       | `anyOfVariadicOperator`                                                                                                              |
-| [`getAllDefinitions`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a9a0dba8d855564b67517c778c915389f)         | [`BackwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1BackwardSliceMatcher.html)                   |
-| [`getDefinitions`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a9a0dba8d855564b67517c778c915389f)            | [`BackwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1BackwardSliceMatcher.html)                   |
+| `allOf` | `allOfVariadicOperator` |
+| `anyOf` | `anyOfVariadicOperator` |
+| [`getAllDefinitions`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a9a0dba8d855564b67517c778c915389f) | [`BackwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1BackwardSliceMatcher.html) |
+| [`getDefinitions`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a9a0dba8d855564b67517c778c915389f) | [`BackwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1BackwardSliceMatcher.html) |
 | [`getDefinitionsByPredicate`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a57916f218941284d7a5c8c912cd7d9f8) | [`PredicateBackwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1PredicateBackwardSliceMatcher.html) |
-| [`getUsersByPredicate`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a4cfbf14535ac0078e22cf89cafee1fd8)       | [`PredicateForwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1PredicateForwardSliceMatcher.html)   |
-| [`hasOpAttrName`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1AttrOpMatcher.html)                                   | [`AttrOpMatcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1AttrOpMatcher.html)                                          |
-| [`hasOpName`](https://mlir.llvm.org/doxygen/namespacemlir.html#a69b52f968271c9a4da1bc766ee083a9c)                            | [`NameOpMatcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1NameOpMatcher.html)                                          |
-| [`isConstantOp`](https://mlir.llvm.org/doxygen/namespacemlir.html#ad402a86ee4c9000c6fa1fceaddab560b)                         | [`constant_op_matcher`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/Matchers.h#L182)                         |
-| [`isNegInfFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a9e89b015211525b010832d2d2c37650b)                        | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
-| [`isNegZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#aa9eba8d1292854c0da6c062988ecac9b)                       | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
-| [`isNonZero`](https://mlir.llvm.org/doxygen/namespacemlir.html#a94bb42600b9be680591776fdc14a53cd)                            | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html)     |
-| [`isOne`](https://mlir.llvm.org/doxygen/namespacemlir.html#a907f415a4c803b15ef57db37cc732f39)                                | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html)     |
-| [`isOneFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#af0495d84f34cf3238a7741fa6974a485)                           | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
-| [`isPosInfFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#adc93dfeaa35bda23b16591c462c335f6)                        | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
-| [`isPosZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a774a1ae971f4ef00eb57389293dfe617)                       | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
-| [`isZero`](https://mlir.llvm.org/doxygen/namespacemlir.html#a7f5d8af15bd8994b1a7abeaaacfe1b06)                               | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html)     |
-| [`isZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a8ea33aa665368d4f2108eb2d41c85111)                          | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`getUsersByPredicate`](https://mlir.llvm.org/doxygen/namespacemlir_1_1query_1_1matcher.html#a4cfbf14535ac0078e22cf89cafee1fd8) | [`PredicateForwardSliceMatcher`](https://mlir.llvm.org/doxygen/classmlir_1_1query_1_1matcher_1_1PredicateForwardSliceMatcher.html) |
+| [`hasOpAttrName`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1AttrOpMatcher.html) | [`AttrOpMatcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1AttrOpMatcher.html) |
+| [`hasOpName`](https://mlir.llvm.org/doxygen/namespacemlir.html#a69b52f968271c9a4da1bc766ee083a9c) | [`NameOpMatcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1NameOpMatcher.html) |
+| [`isConstantOp`](https://mlir.llvm.org/doxygen/namespacemlir.html#ad402a86ee4c9000c6fa1fceaddab560b) | [`constant_op_matcher`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/Matchers.h#L182) |
+| [`isNegInfFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a9e89b015211525b010832d2d2c37650b) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`isNegZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#aa9eba8d1292854c0da6c062988ecac9b) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`isNonZero`](https://mlir.llvm.org/doxygen/namespacemlir.html#a94bb42600b9be680591776fdc14a53cd) | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html) |
+| [`isOne`](https://mlir.llvm.org/doxygen/namespacemlir.html#a907f415a4c803b15ef57db37cc732f39) | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html) |
+| [`isOneFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#af0495d84f34cf3238a7741fa6974a485) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`isPosInfFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#adc93dfeaa35bda23b16591c462c335f6) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`isPosZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a774a1ae971f4ef00eb57389293dfe617) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
+| [`isZero`](https://mlir.llvm.org/doxygen/namespacemlir.html#a7f5d8af15bd8994b1a7abeaaacfe1b06) | [`constant_int_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__int__predicate__matcher.html) |
+| [`isZeroFloat`](https://mlir.llvm.org/doxygen/namespacemlir.html#a8ea33aa665368d4f2108eb2d41c85111) | [`constant_float_predicate_matcher`](https://mlir.llvm.org/doxygen/structmlir_1_1detail_1_1constant__float__predicate__matcher.html) |
