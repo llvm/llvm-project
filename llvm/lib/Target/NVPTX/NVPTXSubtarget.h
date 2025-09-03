@@ -106,6 +106,7 @@ public:
   // Tcgen05 instructions in Blackwell family
   bool hasTcgen05Instructions() const {
     bool HasTcgen05 = false;
+    unsigned MinPTXVersion = 86;
     switch (FullSmVersion) {
     default:
       break;
@@ -113,9 +114,13 @@ public:
     case 1013: // sm_101a
       HasTcgen05 = true;
       break;
+    case 1033: // sm_103a
+      HasTcgen05 = true;
+      MinPTXVersion = 88;
+      break;
     }
 
-    return HasTcgen05 && PTXVersion >= 86;
+    return HasTcgen05 && PTXVersion >= MinPTXVersion;
   }
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
