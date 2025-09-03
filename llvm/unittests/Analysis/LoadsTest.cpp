@@ -120,7 +120,7 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
 }
 
-TEST(LoadsTest, IsLoadOnlyFaultingLoop) {
+TEST(LoadsTest, IsReadOnlyLoop) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
@@ -183,7 +183,7 @@ loop.end:
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
-  auto IsLoadOnlyFaultingLoop =
+  auto IsReadOnlyLoop =
       [&TLI](Function *F, SmallVector<LoadInst *, 4> &NonDerefLoads) -> bool {
     AssumptionCache AC(*F);
     DominatorTree DT(*F);
@@ -200,8 +200,8 @@ loop.end:
   };
 
   SmallVector<LoadInst *, 4> NonDerefLoads;
-  ASSERT_TRUE(IsLoadOnlyFaultingLoop(F1, NonDerefLoads));
+  ASSERT_TRUE(IsReadOnlyLoop(F1, NonDerefLoads));
   ASSERT_TRUE(NonDerefLoads.empty());
-  ASSERT_TRUE(IsLoadOnlyFaultingLoop(F2, NonDerefLoads));
+  ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
   ASSERT_TRUE(NonDerefLoads[0]->getName() == "ld1");
 }
