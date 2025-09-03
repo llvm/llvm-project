@@ -279,6 +279,26 @@ TEST(BitTest, CountlZero) {
   }
 }
 
+TEST(BitTest, CountrZeroConstexpr) {
+  constexpr uint8_t Z8 = 0;
+  constexpr uint16_t Z16 = 0;
+  constexpr uint32_t Z32 = 0;
+  constexpr uint64_t Z64 = 0;
+  static_assert(llvm::countr_zero_constexpr(Z8) == 8, "");
+  static_assert(llvm::countr_zero_constexpr(Z16) == 16, "");
+  static_assert(llvm::countr_zero_constexpr(Z32) == 32, "");
+  static_assert(llvm::countr_zero_constexpr(Z64) == 64, "");
+
+  constexpr uint8_t NZ8 = 42;
+  constexpr uint16_t NZ16 = 42;
+  constexpr uint32_t NZ32 = 42;
+  constexpr uint64_t NZ64 = 42;
+  static_assert(llvm::countr_zero_constexpr(NZ8) == 1, "");
+  static_assert(llvm::countr_zero_constexpr(NZ16) == 1, "");
+  static_assert(llvm::countr_zero_constexpr(NZ32) == 1, "");
+  static_assert(llvm::countr_zero_constexpr(NZ64) == 1, "");
+}
+
 TEST(BitTest, CountrZero) {
   uint8_t Z8 = 0;
   uint16_t Z16 = 0;
