@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_INLINE_STRLEN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_INLINE_STRLEN_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/common.h"
 
