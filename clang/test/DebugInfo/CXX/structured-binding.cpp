@@ -117,6 +117,9 @@ int f() {
   auto &[c1, c2] = cmplx;
   int vctr __attribute__ ((vector_size (sizeof(int)*2)))= {1, 2};
   auto &[v1, v2] = vctr;
+  auto [k, v, w] = std::triple{3, 4, 5};
+  auto [m, n] = C{2, 3};
+  auto [s, p] = D{2, 3};
   return //
      x1 //
      +  //
@@ -148,8 +151,4 @@ int f() {
 // CHECK: ![[V2_DEBUG_LOC]] = !DILocation(line: [[@LINE+1]]
      v2 //
      ;
-  auto [k, v, w] = std::triple{3, 4, 5};
-  auto [m, n] = C{2, 3};
-  auto [s, p] = D{2, 3};
-  return x1 + y1 + x2 + y2 + z1 + z2 + k + v + w + m + n + s + p;
 }
