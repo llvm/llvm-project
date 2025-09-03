@@ -49,7 +49,6 @@
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
 using namespace Fortran::utils::openmp;
-using namespace Fortran::semantics;
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions

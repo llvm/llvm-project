@@ -31,13 +31,14 @@
 
 #include <iterator>
 
-using namespace Fortran::semantics;
-
 template <typename T>
-MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
-  if (MaybeExpr maybeExpr{
+Fortran::semantics::MaybeIntExpr
+EvaluateIntExpr(Fortran::semantics::SemanticsContext &context, const T &expr) {
+  if (Fortran::semantics::MaybeExpr maybeExpr{
           Fold(context.foldingContext(), AnalyzeExpr(context, expr))}) {
-    if (auto *intExpr{Fortran::evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
+    if (auto *intExpr{
+            Fortran::evaluate::UnwrapExpr<Fortran::semantics::SomeIntExpr>(
+                *maybeExpr)}) {
       return std::move(*intExpr);
     }
   }
@@ -45,8 +46,8 @@ MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
 }
 
 template <typename T>
-std::optional<std::int64_t> EvaluateInt64(SemanticsContext &context,
-                                          const T &expr) {
+std::optional<std::int64_t>
+EvaluateInt64(Fortran::semantics::SemanticsContext &context, const T &expr) {
   return Fortran::evaluate::ToInt64(EvaluateIntExpr(context, expr));
 }
 
@@ -602,7 +603,8 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 /// contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
-    llvm::SmallVectorImpl<int64_t> &tileSizes, SemanticsContext &semaCtx) {
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx) {
   if (!ompCons)
     return;
 
@@ -625,7 +627,7 @@ void collectTileSizesFromOpenMPConstruct(
         // Get the size values from parse tree and convert to a vector
         const auto &innerClauseList{
             std::get<parser::OmpClauseList>(innerBegin.t)};
-        for (const auto &clause : innerClauseList.v)
+        for (const auto &clause : innerClauseList.v) {
           if (const auto tclause{
                   std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
             for (auto &tval : tclause->v) {
@@ -634,6 +636,7 @@ void collectTileSizesFromOpenMPConstruct(
             }
             break;
           }
+        }
       }
     }
   }
