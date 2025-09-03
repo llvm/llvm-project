@@ -173,9 +173,11 @@ static Error timeDataTransferInNsAsync(void *Data) {
          "ProfilerSpecificData was null when profiler enabled");
 
   auto OmptEventInfo =
-      *reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
+      reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
   llvm::omp::target::ompt::RegionInterface.stopTargetDataMovementTraceAsync(
-      OmptEventInfo.TraceRecord, Start, End);
+      OmptEventInfo->TraceRecord, Start, End);
+
+  delete OmptEventInfo;
 
   return Plugin::success();
 }
@@ -2198,11 +2200,13 @@ private:
        StartTime, EndTime);
 
     auto OmptEventInfo =
-        *reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
+        reinterpret_cast<ompt::OmptEventInfoTy *>(Args->ProfilerSpecificData);
 
-    assert(OmptEventInfo.TraceRecord && "Invalid TraceRecord");
+    assert(OmptEventInfo->TraceRecord && "Invalid TraceRecord");
     llvm::omp::target::ompt::RegionInterface.stopTargetSubmitTraceAsync(
-        OmptEventInfo.TraceRecord, OmptEventInfo.NumTeams, StartTime, EndTime);
+        OmptEventInfo->TraceRecord, OmptEventInfo->NumTeams, StartTime, EndTime);
+
+    delete OmptEventInfo;
 
     return Plugin::success();
   }
