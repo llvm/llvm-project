@@ -120,7 +120,7 @@ LogicalResult GatherOp::verify() {
       cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
-                      getAlignment(), dataLayout, emitDiag))
+                      getAlignment(), &dataLayout, emitDiag))
     return failure();
 
   // Verify the alignment.
@@ -212,7 +212,7 @@ LogicalResult MaskedLoadOp::verify() {
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidLoad(getResult().getType(), AtomicOrdering::not_atomic,
-                      getAlignment(), dataLayout, emitDiag))
+                      getAlignment(), &dataLayout, emitDiag))
     return failure();
 
   // Verify the alignment.
@@ -243,7 +243,7 @@ LogicalResult MaskedStoreOp::verify() {
   MemorySpaceAttrInterface ms = getPtr().getType().getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
-                       getAlignment(), dataLayout, emitDiag))
+                       getAlignment(), &dataLayout, emitDiag))
     return failure();
 
   // Verify the alignment.
@@ -276,7 +276,7 @@ LogicalResult ScatterOp::verify() {
       cast<PtrType>(getPtrs().getType().getElementType()).getMemorySpace();
   DataLayout dataLayout = DataLayout::closest(*this);
   if (!ms.isValidStore(getValue().getType(), AtomicOrdering::not_atomic,
-                       getAlignment(), dataLayout, emitDiag))
+                       getAlignment(), &dataLayout, emitDiag))
     return failure();
 
   // Verify the alignment.

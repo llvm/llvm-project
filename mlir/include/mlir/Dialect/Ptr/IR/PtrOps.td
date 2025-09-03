@@ -49,14 +49,6 @@ def Ptr_Mask1DType :
 def Ptr_Ptr1DType :
   Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
 
-// Gets the type ID of a type.  
-class TypeIDType<string name> :
-    StrFunc<"$" # name # ".getType().getTypeID()">;
-
-// Checks that all type IDs match.
-class AllTypeIDsMatch<list<string> names> :
-    AllMatchSameOperatorTrait<names, TypeIDType<"_self">.result, "type IDs">;
-
 //===----------------------------------------------------------------------===//
 // FromPtrOp
 //===----------------------------------------------------------------------===//
@@ -139,7 +131,7 @@ def Ptr_GatherOp : Pointer_Op<"gather", [
   let results = (outs Ptr_Any1DType:$result);
   let assemblyFormat = [{
     $ptrs `,` $mask `,` $passthrough (`alignment` `=` $alignment^)?
-    attr-dict `:` qualified(type($ptrs)) `->` type($result)
+    attr-dict `:` type($ptrs) `->` type($result)
   }];
   let builders = [
   OpBuilder<(ins "Type":$resultType, "Value":$ptrs, "Value":$mask,
@@ -409,7 +401,7 @@ def Ptr_ScatterOp : Pointer_Op<"scatter", [
                        AlignmentProp:$alignment);
   let assemblyFormat = [{
     $value `,` $ptrs `,` $mask  (`alignment` `=` $alignment^)?
-    attr-dict `:` type($value) `,` qualified(type($ptrs))
+    attr-dict `:` type($value) `,` type($ptrs)
   }];
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$ptrs, "Value":$mask,
