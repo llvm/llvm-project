@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides utilities for parsing range specifications like "1-10,20-30,45"
-// which are commonly used in debugging and bisection tools.
+// This file provides utilities for parsing range specifications like
+// "1-10,20-30,45" which are commonly used in debugging and bisection tools.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +34,9 @@ struct Range {
   Range(const int64_t Single) : Begin(Single), End(Single) {}
 
   /// Check if the given value is within this range (inclusive)
-  bool contains(const int64_t Value) const { return Value >= Begin && Value <= End; }
+  bool contains(const int64_t Value) const {
+    return Value >= Begin && Value <= End;
+  }
 
   /// Check if this range overlaps with another range
   bool overlaps(const Range &Other) const {
@@ -54,19 +56,21 @@ class RangeUtils {
 public:
   using RangeList = SmallVector<Range, 8>;
 
-  /// Parse a range specification string like "1-10,20-30,45" or "1-10:20-30:45".
-  /// Ranges must be in increasing order and non-overlapping.
+  /// Parse a range specification string like "1-10,20-30,45" or
+  /// "1-10:20-30:45". Ranges must be in increasing order and non-overlapping.
   /// Returns false on error, true on success
   /// \param RangeStr The string to parse
   /// \param Ranges Output list of parsed ranges
   /// \param Separator The separator character to use (',' or ':')
-  static bool parseRanges(const StringRef RangeStr, RangeList &Ranges, const char Separator = ',');
+  static bool parseRanges(const StringRef RangeStr, RangeList &Ranges,
+                          const char Separator = ',');
 
   /// Check if a value is contained in any of the ranges
   static bool contains(const ArrayRef<Range> Ranges, const int64_t Value);
 
   /// Convert ranges back to string representation for debugging
-  static std::string rangesToString(const ArrayRef<Range> Ranges, const char Separator = ',');
+  static std::string rangesToString(const ArrayRef<Range> Ranges,
+                                    const char Separator = ',');
 
   /// Print ranges to output stream
   static void printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges);

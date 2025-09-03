@@ -77,7 +77,7 @@ public:
   bool parseRanges(StringRef RangeStr);
 
   /// Clear all ranges, effectively disabling bisection.
-  void clearRanges() { 
+  void clearRanges() {
     BisectRanges.clear();
     LastBisectNum = 0;
   }
