@@ -1356,6 +1356,8 @@ void CodeGenAction::executeAction() {
 
   std::unique_ptr<llvm::ToolOutputFile> optRecordFile =
       std::move(*optRecordFileOrErr);
+  auto FinalizeRemarks =
+      make_scope_exit([&]() { llvm::finalizeLLVMOptimizationRemarks(Ctx); });
 
   if (optRecordFile) {
     optRecordFile->keep();

@@ -119,8 +119,7 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     return make_error<LLVMRemarkSetupFileError>(errorCodeToError(EC));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
-      remarks::createRemarkSerializer(
-          *Format, remarks::SerializerMode::Separate, RemarksFile->os());
+      remarks::createRemarkSerializer(*Format, RemarksFile->os());
   if (Error E = RemarkSerializer.takeError())
     return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
@@ -153,8 +152,7 @@ Error llvm::setupLLVMOptimizationRemarks(
     return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
-      remarks::createRemarkSerializer(*Format,
-                                      remarks::SerializerMode::Separate, OS);
+      remarks::createRemarkSerializer(*Format, OS);
   if (Error E = RemarkSerializer.takeError())
     return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
@@ -171,4 +169,12 @@ Error llvm::setupLLVMOptimizationRemarks(
       return make_error<LLVMRemarkSetupPatternError>(std::move(E));
 
   return Error::success();
+}
+
+void llvm::finalizeLLVMOptimizationRemarks(LLVMContext &Context) {
+  Context.setLLVMRemarkStreamer(nullptr);
+  if (auto *RS = Context.getMainRemarkStreamer()) {
+    RS->releaseSerializer();
+    Context.setMainRemarkStreamer(nullptr);
+  }
 }

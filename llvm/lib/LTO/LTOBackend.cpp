@@ -539,9 +539,10 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
 }
 
 Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+    LLVMContext &Context, std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
+  finalizeLLVMOptimizationRemarks(Context);
   if (!DiagOutputFile)
     return Error::success();
   DiagOutputFile->keep();
@@ -627,11 +628,13 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(Mod.getContext(),
+                                       std::move(DiagnosticOutputFile));
   }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(Mod.getContext(),
+                                       std::move(DiagnosticOutputFile));
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
@@ -640,7 +643,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
-          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+          return finalizeOptimizationRemarks(Mod.getContext(),
+                                             std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.
         // Note that the second codegen round runs only `codegen()` without
@@ -650,7 +654,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
           cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
-        return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+        return finalizeOptimizationRemarks(Mod.getContext(),
+                                           std::move(DiagnosticOutputFile));
       };
 
   if (ThinLTOAssumeMerged)
@@ -669,14 +674,16 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   thinLTOFinalizeInModule(Mod, DefinedGlobals, /*PropagateAttrs=*/true);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(Mod.getContext(),
+                                       std::move(DiagnosticOutputFile));
 
   if (!DefinedGlobals.empty())
     thinLTOInternalizeModule(Mod, DefinedGlobals);
 
   if (Conf.PostInternalizeModuleHook &&
       !Conf.PostInternalizeModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(Mod.getContext(),
+                                       std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
@@ -722,7 +729,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(Mod.getContext(),
+                                       std::move(DiagnosticOutputFile));
 
   return OptimizeAndCodegen(Mod, TM.get(), std::move(DiagnosticOutputFile));
 }

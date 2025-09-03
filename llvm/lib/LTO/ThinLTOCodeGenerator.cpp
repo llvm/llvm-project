@@ -1161,6 +1161,8 @@ void ThinLTOCodeGenerator::run() {
           report_fatal_error("ThinLTO: Can't get an output file for the "
                              "remarks");
         }
+        auto FinalizeRemarks = make_scope_exit(
+            [&]() { llvm::finalizeLLVMOptimizationRemarks(Context); });
 
         // Parse module now
         auto TheModule = loadModuleFromInput(Mod.get(), Context, false,

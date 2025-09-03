@@ -546,6 +546,7 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
 }
 
 void LTOCodeGenerator::finishOptimizationRemarks() {
+  finalizeLLVMOptimizationRemarks(Context);
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
     // FIXME: LTOCodeGenerator dtor is not invoked on Darwin

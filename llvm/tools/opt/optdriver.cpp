@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NewPMDriver.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -519,6 +520,8 @@ extern "C" int optMain(
     return 1;
   }
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  auto FinalizeRemarks =
+      make_scope_exit([&]() { finalizeLLVMOptimizationRemarks(Context); });
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,

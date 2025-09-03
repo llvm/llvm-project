@@ -29,6 +29,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Demangle/Demangle.h"
@@ -272,6 +273,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
     std::move(*OptRecordFileOrErr);
+  auto FinalizeRemarks =
+      make_scope_exit([&]() { llvm::finalizeLLVMOptimizationRemarks(Ctx); });
 
   if (OptRecordFile && CodeGenOpts.getProfileUse() !=
                            llvm::driver::ProfileInstrKind::ProfileNone)
@@ -1185,6 +1188,8 @@ void CodeGenAction::ExecuteAction() {
   }
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
       std::move(*OptRecordFileOrErr);
+  auto FinalizeRemarks =
+      make_scope_exit([&]() { llvm::finalizeLLVMOptimizationRemarks(Ctx); });
 
   emitBackendOutput(CI, CI.getCodeGenOpts(),
                     CI.getTarget().getDataLayoutString(), TheModule.get(), BA,

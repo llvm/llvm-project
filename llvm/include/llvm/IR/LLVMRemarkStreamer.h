@@ -82,19 +82,25 @@ struct LLVMRemarkSetupFormatError
       LLVMRemarkSetupFormatError>::LLVMRemarkSetupErrorInfo;
 };
 
-/// Setup optimization remarks that output to a file.
+/// Setup optimization remarks that output to a file. The returned
+/// ToolOutputFile must be kept open for writing until
+/// \ref finalizeLLVMOptimizationRemarks() is called.
 LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0);
 
 /// Setup optimization remarks that output directly to a raw_ostream.
-/// \p OS is managed by the caller and should be open for writing as long as \p
-/// Context is streaming remarks to it.
+/// \p OS is managed by the caller and must be open for writing until
+/// \ref finalizeLLVMOptimizationRemarks() is called.
 LLVM_ABI Error setupLLVMOptimizationRemarks(
     LLVMContext &Context, raw_ostream &OS, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0);
+
+/// Finalize optimization remarks. This must be called before closing the
+/// (file) stream that was used to setup the remarks.
+LLVM_ABI void finalizeLLVMOptimizationRemarks(LLVMContext &Context);
 
 } // end namespace llvm
 

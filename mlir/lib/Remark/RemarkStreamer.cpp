@@ -20,8 +20,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
   if (ec)
     return failure();
 
-  auto serOr = llvm::remarks::createRemarkSerializer(
-      fmt, llvm::remarks::SerializerMode::Separate, f->os());
+  auto serOr = llvm::remarks::createRemarkSerializer(fmt, f->os());
   if (!serOr) {
     llvm::consumeError(serOr.takeError());
     return failure();

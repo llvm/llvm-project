@@ -394,6 +394,8 @@ int main(int argc, char **argv) {
   if (Error E = RemarksFileOrErr.takeError())
     reportError(std::move(E), RemarksFilename);
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
+  auto FinalizeRemarks = make_scope_exit(
+      [&]() { llvm::finalizeLLVMOptimizationRemarks(Context); });
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
     reportError("input language must be '', 'IR' or 'MIR'");

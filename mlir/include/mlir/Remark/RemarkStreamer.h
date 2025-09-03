@@ -32,8 +32,9 @@ public:
 private:
   LLVMRemarkStreamer() = default;
 
-  std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
   std::unique_ptr<class llvm::ToolOutputFile> file;
+  // RemarkStreamer must be destructed before file is destroyed!
+  std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
 };
 } // namespace mlir::remark::detail
 

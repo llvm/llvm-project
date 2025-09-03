@@ -196,6 +196,8 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     return std::move(E);
   if (*RemarksFileOrErr)
     (*RemarksFileOrErr)->keep();
+  auto FinalizeRemarks = make_scope_exit(
+      [&]() { llvm::finalizeLLVMOptimizationRemarks(M.getContext()); });
 
   auto TMOrErr = createTargetMachine(M, ComputeUnitKind, OptLevel);
   if (!TMOrErr)
