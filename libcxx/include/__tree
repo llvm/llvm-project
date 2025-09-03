@@ -1025,6 +1025,58 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(const_iterator __p, __node_pointer __nd);
 
+  template <class _InIter, class _Sent>
+  _LIBCPP_HIDE_FROM_ABI void __insert_range_unique(_InIter __first, _Sent __last) {
+    if (__first == __last)
+      return;
+
+    if (__root() == nullptr) {
+      __insert_node_at(
+          __end_node(), __end_node()->__left_, static_cast<__node_base_pointer>(__construct_node(*__first).release()));
+      ++__first;
+    }
+
+    auto __max_node = static_cast<__node_pointer>(std::__tree_max(static_cast<__node_base_pointer>(__root())));
+
+    using __reference = decltype(*__first);
+
+    for (; __first != __last; ++__first) {
+      std::__try_key_extraction<key_type>(
+          [this, &__max_node](const key_type& __key, __reference&& __val) {
+            if (value_comp()(__max_node->__get_value(), __key)) { // __key > __max_node
+              __node_holder __nd = __construct_node(std::forward<__reference>(__val));
+              __insert_node_at(static_cast<__end_node_pointer>(__max_node),
+                               __max_node->__right_,
+                               static_cast<__node_base_pointer>(__nd.get()));
+              __max_node = __nd.release();
+            } else {
+              __end_node_pointer __parent;
+              __node_base_pointer& __child = __find_equal(__parent, __key);
+              if (__child == nullptr) {
+                __node_holder __nd = __construct_node(std::forward<__reference>(__val));
+                __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd.release()));
+              }
+            }
+          },
+          [this, &__max_node](__reference&& __val) {
+            __node_holder __nd = __construct_node(std::forward<__reference>(__val));
+            if (value_comp()(__max_node->__get_value(), __nd->__get_value())) { // __node > __max_node
+              __insert_node_at(static_cast<__end_node_pointer>(__max_node),
+                               __max_node->__right_,
+                               static_cast<__node_base_pointer>(__nd.get()));
+              __max_node = __nd.release();
+            } else {
+              __end_node_pointer __parent;
+              __node_base_pointer& __child = __find_equal(__parent, __nd->__get_value());
+              if (__child == nullptr) {
+                __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd.release()));
+              }
+            }
+          },
+          *__first);
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI iterator __remove_node_pointer(__node_pointer) _NOEXCEPT;
 
 #if _LIBCPP_STD_VER >= 17
