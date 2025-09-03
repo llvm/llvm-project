@@ -453,51 +453,6 @@ private:
     return finalResults;
   }
 
-  // Direct lowering to emitc.while when condition arguments match region
-  // inputs.
-  LogicalResult lowerWhile(WhileOp whileOp, ArrayRef<Value> vars,
-                           MLIRContext *context,
-                           ConversionPatternRewriter &rewriter,
-                           Location loc) const {
-    auto loweredWhile = rewriter.create<emitc::WhileOp>(loc);
-
-    // Lower before region to condition region.
-    Region &condRegion = loweredWhile.getConditionRegion();
-    Block *condBlock = rewriter.createBlock(&condRegion);
-    rewriter.setInsertionPointToStart(condBlock);
-
-    Type i1Type = IntegerType::get(context, 1);
-    auto exprOp = rewriter.create<emitc::ExpressionOp>(loc, TypeRange{i1Type});
-    Region &exprRegion = exprOp.getBodyRegion();
-
-    rewriter.inlineRegionBefore(whileOp.getBefore(), exprRegion,
-                                exprRegion.begin());
-
-    Block *exprBlock = &exprRegion.front();
-    replaceBlockArgsWithVarLoads(exprBlock, vars, rewriter, loc);
-
-    auto condOp = cast<scf::ConditionOp>(exprBlock->getTerminator());
-    Value condition = rewriter.getRemappedValue(condOp.getCondition());
-    rewriter.setInsertionPointAfter(condOp);
-    rewriter.replaceOpWithNewOp<emitc::YieldOp>(condOp, condition);
-
-    rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<emitc::YieldOp>(loc, exprOp);
-
-    // Lower after region to body region.
-    Region &bodyRegion = loweredWhile.getBodyRegion();
-    rewriter.inlineRegionBefore(whileOp.getAfter(), bodyRegion,
-                                bodyRegion.end());
-
-    Block *bodyBlock = &bodyRegion.front();
-    replaceBlockArgsWithVarLoads(bodyBlock, vars, rewriter, loc);
-
-    // Convert scf.yield to variable assignments for state updates.
-    processYieldTerminator(bodyBlock->getTerminator(), vars, rewriter, loc);
-
-    return success();
-  }
-
   // Lower to emitc.do when condition arguments differ from region inputs.
   LogicalResult lowerDoWhile(WhileOp whileOp, ArrayRef<Value> vars,
                              MLIRContext *context,
@@ -555,11 +510,15 @@ private:
     Block *condBlock = rewriter.createBlock(&condRegion);
     rewriter.setInsertionPointToStart(condBlock);
 
-    auto exprOp = rewriter.create<emitc::ExpressionOp>(loc, TypeRange{i1Type});
+    auto exprOp = rewriter.create<emitc::ExpressionOp>(
+        loc, i1Type, conditionVal, /*do_not_inline=*/false);
     Block *exprBlock = rewriter.createBlock(&exprOp.getBodyRegion());
+
+    exprBlock->addArgument(conditionVal.getType(), loc);
     rewriter.setInsertionPointToStart(exprBlock);
 
-    Value cond = rewriter.create<emitc::LoadOp>(loc, i1Type, conditionVal);
+    Value cond =
+        rewriter.create<emitc::LoadOp>(loc, i1Type, exprBlock->getArgument(0));
     rewriter.create<emitc::YieldOp>(loc, cond);
 
     rewriter.setInsertionPointToEnd(condBlock);

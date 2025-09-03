@@ -23,7 +23,7 @@ emitc.func @emitc_do(%arg0 : !emitc.ptr<i32>) {
     %tmp_add = add %var_load, %1 : (i32, i32) -> i32
     "emitc.assign"(%var, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
   } while {
-    %r = expression : i1 {
+    %r = expression %var, %0 : (!emitc.lvalue<i32>, i32) -> i1 {
       %var_load = load %var : <i32>
       %cmp = cmp le, %var_load, %0 : (i32, i32) -> i1
       yield %cmp : i1
@@ -53,7 +53,7 @@ emitc.func @emitc_do_with_expression(%arg0 : !emitc.ptr<i32>) {
   %0 = literal "10" : i32
   %1 = literal "1" : i32
 
-  %add = expression : i32 {
+  %add = expression %0, %1 : (i32, i32) -> i32 {
     %add = add %0, %1 : (i32, i32) -> i32
     yield %add : i32
   }
@@ -64,7 +64,7 @@ emitc.func @emitc_do_with_expression(%arg0 : !emitc.ptr<i32>) {
     %tmp_add = add %var_load, %1 : (i32, i32) -> i32
     "emitc.assign"(%var, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
   } while {
-    %r = expression : i1 {
+    %r = expression %var, %add : (!emitc.lvalue<i32>, i32) -> i1 {
       %var_load = load %var : <i32>
       %cmp = cmp le, %var_load, %add : (i32, i32) -> i1
       yield %cmp : i1
@@ -111,7 +111,7 @@ emitc.func @emitc_double_do() {
       %tmp_add = add %var_2_load, %step : (i32, i32) -> i32
       "emitc.assign"(%var_2, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
     } while {
-      %r = expression : i1 {
+      %r = expression %var_2, %end_2 : (!emitc.lvalue<i32>, i32) -> i1 {
         %var_2_load = load %var_2 : <i32>
         %cmp = cmp le, %var_2_load, %end_2 : (i32, i32) -> i1
         yield %cmp : i1
@@ -123,7 +123,7 @@ emitc.func @emitc_double_do() {
     %tmp_add = add %var_1_load, %step : (i32, i32) -> i32
     "emitc.assign"(%var_1, %tmp_add) : (!emitc.lvalue<i32>, i32) -> ()
   } while {
-    %r = expression : i1 {
+    %r = expression %var_1, %end_1 : (!emitc.lvalue<i32>, i32) -> i1 {
       %var_1_load = load %var_1 : <i32>
       %cmp = cmp le, %var_1_load, %end_1 : (i32, i32) -> i1
       yield %cmp : i1
