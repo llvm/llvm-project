@@ -464,25 +464,25 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements,
     OptionalParameter<"DIExpressionAttr">:$dataLocation,
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
-    OptionalParameter<"DIExpressionAttr">:$associated
+    OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
     AttrBuilder<(ins
       "unsigned":$tag, "StringAttr":$name, "DIFileAttr":$file,
       "uint32_t":$line, "DIScopeAttr":$scope, "DITypeAttr":$baseType,
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
-      "ArrayRef<DINodeAttr>":$elements, "DIExpressionAttr":$dataLocation,
-      "DIExpressionAttr":$rank, "DIExpressionAttr":$allocated,
-      "DIExpressionAttr":$associated
+      "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
+      "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "ArrayRef<DINodeAttr>":$elements
     ), [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
-                   alignInBits, elements, dataLocation, rank, allocated,
-                   associated);
+                   alignInBits, dataLocation, rank, allocated,
+                   associated, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -590,7 +590,7 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -616,7 +616,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -674,7 +674,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
-                                      "DIScopeAttr"> {
+                                      "DILocalScopeAttr"> {
   let parameters = (ins
     // DIRecursiveTypeAttrInterface specific parameters.
     OptionalParameter<"DistinctAttr">:$recId,

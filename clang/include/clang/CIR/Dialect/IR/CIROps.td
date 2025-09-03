@@ -404,7 +404,11 @@ def CIR_LoadOp : CIR_Op<"load", [
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
     backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
     mark the resulting value as used by another operation to dereference
-    a pointer.
+    a pointer. A unit attribute `volatile` can be used to indicate a volatile
+    loading. Load can be marked atomic by using `atomic(<mem_order>)`.
+
+    `alignment` can be used to specify an alignment that's different from the
+    default, which is computed from `result`'s type ABI data layout.
 
     Example:
 
@@ -416,18 +420,26 @@ def CIR_LoadOp : CIR_Op<"load", [
     // Load address from memory at address %0. %3 is used by at least one
     // operation that dereferences a pointer.
     %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
+
+    // Perform a volatile load from address in %0.
+    %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
+
+    // Others
+    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<i32>, i32
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
+                       UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
@@ -452,7 +464,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     a volatile store. Store's can be marked atomic by using
     `atomic(<mem_order>)`.
 
-    `align` can be used to specify an alignment that's different from the
+    `alignment` can be used to specify an alignment that's different from the
     default, which is computed from `result`'s type ABI data layout.
 
     Example:
@@ -460,16 +472,24 @@ def CIR_StoreOp : CIR_Op<"store", [
     ```mlir
     // Store a function argument to local storage, address in %0.
     cir.store %arg0, %0 : i32, !cir.ptr<i32>
+
+    // Perform a volatile store into memory location at the address in %0.
+    cir.store volatile %arg0, %0 : i32, !cir.ptr<i32>
+
+    // Others
+    cir.store align(16) atomic(seq_cst) %x, %addr : i32, !cir.ptr<i32>
     ```
   }];
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
+                       UnitAttr:$is_volatile,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
+    (`volatile` $is_volatile^)?
     (`align` `(` $alignment^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
