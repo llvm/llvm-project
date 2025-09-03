@@ -304,6 +304,10 @@ Bug Fixes in This Version
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
