@@ -1,5 +1,5 @@
 // REQUIRES: webassembly-registered-target
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -emit-llvm -O0 -fwasm-fix-function-bitcasts -o - %s | FileCheck %s
 
 // Test of function pointer bitcast in a struct field with different argument number in wasm32
 

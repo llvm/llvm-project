@@ -10083,6 +10083,7 @@ def fexperimental_emit_sgep
                "(experimental).">,
       MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
 
+// WebAssembly-only Options
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,
@@ -10091,3 +10092,8 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+def fwasm_fix_function_bitcasts : Flag<["-"], "fwasm-fix-function-bitcasts">,
+  Group<f_Group>,
+  HelpText<"Enable auto-generation of thunks for mismatched function pointer casts in WebAssembly">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoFlag<LangOpts<"WasmFixFunctionBitcasts">>;
