@@ -122,7 +122,7 @@ void DebugCounter::push_back(const std::string &Val) {
     handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
       errs() << "DebugCounter Error: " << E.getMessage() << "\n";
     });
-    return;
+    exit(1);
   }
   RangeUtils::RangeList Chunks = std::move(*ExpectedChunks);
 
