@@ -3640,7 +3640,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   printFields(OS, "Machine:", Str);
   Str = "0x" + utohexstr(e.e_version);
   printFields(OS, "Version:", Str);
-  Str = "0x" + utohexstr(e.e_entry);
+  Str = "0x" + utohexstr(e.e_entry, /*LowerCase=*/true);
   printFields(OS, "Entry point address:", Str);
   Str = to_string(e.e_phoff) + " (bytes into file)";
   printFields(OS, "Start of program headers:", Str);
