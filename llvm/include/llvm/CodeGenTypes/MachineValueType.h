@@ -178,6 +178,12 @@ namespace llvm {
       return (isFixedLengthVector() && getFixedSizeInBits() == 2048);
     }
 
+    /// Return true if this is a capability type.
+    bool isCapability() const {
+      return (SimpleTy >= MVT::FIRST_CAPABILITY_VALUETYPE) &&
+             (SimpleTy <= MVT::LAST_CAPABILITY_VALUETYPE);
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
