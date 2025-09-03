@@ -17,7 +17,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -1021,75 +1020,44 @@ struct WarpOpBroadcast : public WarpDistributionPattern {
 /// Pattern to move shape cast out of the warp op. shape cast is basically a
 /// no-op for warp distribution; we need to handle the shape though.
 struct WarpOpShapeCast : public WarpDistributionPattern {
-
-  WarpOpShapeCast(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
-      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
         getWarpResult(warpOp, llvm::IsaPred<vector::ShapeCastOp>);
     if (!operand)
       return failure();
+
     auto oldCastOp = operand->get().getDefiningOp<vector::ShapeCastOp>();
 
-    unsigned operandNumber = operand->getOperandNumber();
-    VectorType sourceType = oldCastOp.getSourceVectorType();
-    VectorType distributedResultType =
+    unsigned int operandNumber = operand->getOperandNumber();
+    auto castDistributedType =
         cast<VectorType>(warpOp->getResultTypes()[operandNumber]);
-    VectorType distributedSourceType = sourceType;
-    bool isResultDistributed = distributedResultType.getNumElements() <
-                               oldCastOp.getResultVectorType().getNumElements();
+    VectorType castOriginalType = oldCastOp.getSourceVectorType();
+    VectorType castResultType = castDistributedType;
 
-    // If the result is not distributed, source distributed type is the same
-    // as the source type. If the result is distributed, we need to compute the
-    // distributed source type according to following rules:
-    // 1. If the source type is yielded from the warp op, we can use the
-    //    matching warp result type as the distributed source type.
-    // 2. If the source type is not yielded from the warp op, we need
-    //    to compute the distributed source type based on the distribution map
-    //    and the warp size.
-    if (isResultDistributed) {
-      // Check if the source is yielded from the warp op.
-      gpu::YieldOp yieldOp = cast<gpu::YieldOp>(
-          warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-      OpOperand *it =
-          llvm::find_if(yieldOp->getOpOperands(), [&](OpOperand &operand) {
-            return operand.get() == oldCastOp.getSource();
-          });
-
-      if (it != yieldOp->getOpOperands().end()) {
-        // If the source is yielded from the warp op, we can use the matching
-        // warp result type as the distributed source type.
-        distributedSourceType =
-            cast<VectorType>(warpOp->getResultTypes()[it->getOperandNumber()]);
-      } else {
-        // If the source is not yielded from the warp op, we need to compute
-        // the distributed source type based on the distribution map and the
-        // warp size.
-        AffineMap map = distributionMapFn(oldCastOp.getSource());
-        distributedSourceType =
-            getDistributedType(sourceType, map, warpOp.getWarpSize());
-        if (!distributedSourceType)
-          return rewriter.notifyMatchFailure(
-              oldCastOp,
-              "cannot compute distributed source type for shape cast");
-      }
+    // We expect the distributed type to have a smaller rank than the original
+    // type. Prepend with size-one dimensions to make them the same.
+    unsigned castDistributedRank = castDistributedType.getRank();
+    unsigned castOriginalRank = castOriginalType.getRank();
+    if (castDistributedRank < castOriginalRank) {
+      SmallVector<int64_t> shape(castOriginalRank - castDistributedRank, 1);
+      llvm::append_range(shape, castDistributedType.getShape());
+      castDistributedType =
+          VectorType::get(shape, castDistributedType.getElementType());
     }
 
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {oldCastOp.getSource()}, {distributedSourceType},
+        rewriter, warpOp, {oldCastOp.getSource()}, {castDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value newCast = vector::ShapeCastOp::create(
-        rewriter, oldCastOp.getLoc(), distributedResultType,
+        rewriter, oldCastOp.getLoc(), castResultType,
         newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newCast);
     return success();
   }
-
-private:
-  DistributionMapFn distributionMapFn;
 };
 
 /// Sink out vector.create_mask op feeding into a warp op yield.
@@ -2091,15 +2059,15 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
   patterns
-      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast, WarpOpExtract,
-           WarpOpForwardOperand, WarpOpConstant, WarpOpInsertScalar,
-           WarpOpInsert, WarpOpCreateMask, WarpOpExtractStridedSlice,
-           WarpOpInsertStridedSlice, WarpOpMultiReduction, WarpOpStep>(
+      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
+           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
+           WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
           patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
-  patterns.add<WarpOpScfForOp, WarpOpShapeCast>(patterns.getContext(),
-                                                distributionMapFn, benefit);
+  patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
+                               benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
