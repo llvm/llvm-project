@@ -13,47 +13,6 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define void @basic_loop(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
-; CHECK-LABEL: @basic_loop(
-; CHECK-NEXT:  header:
-; CHECK-NEXT:    [[PTR0:%.*]] = load ptr, ptr [[POS:%.*]], align 4
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SIZE:%.*]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
-; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SIZE]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[SIZE]], [[HEADER:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[PTR]], [[HEADER]] ]
-; CHECK-NEXT:    br label [[BODY:%.*]]
-; CHECK:       body:
-; CHECK-NEXT:    [[DEC66:%.*]] = phi i32 [ [[DEC:%.*]], [[BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BUFF:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[BODY]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[BUFF]], i32 1
-; CHECK-NEXT:    [[DEC]] = add nsw i32 [[DEC66]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
-; CHECK-NEXT:    store i8 [[TMP5]], ptr [[BUFF]], align 1
-; CHECK-NEXT:    [[TOBOOL11:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       end:
-; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR]], [[BODY]] ], [ [[IND_END1]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    store ptr [[INCDEC_PTR_LCSSA]], ptr [[POS]], align 4
-; CHECK-NEXT:    ret void
-;
 header:
   %ptr0 = load ptr, ptr %pos, align 4
   br label %body
@@ -74,47 +33,6 @@ end:
 }
 
 define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
-; CHECK-LABEL: @metadata(
-; CHECK-NEXT:  header:
-; CHECK-NEXT:    [[PTR0:%.*]] = load ptr, ptr [[POS:%.*]], align 4
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SIZE:%.*]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
-; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i32 1
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SIZE]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[END:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[SIZE]], [[HEADER:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[PTR]], [[HEADER]] ]
-; CHECK-NEXT:    br label [[BODY:%.*]]
-; CHECK:       body:
-; CHECK-NEXT:    [[DEC66:%.*]] = phi i32 [ [[DEC:%.*]], [[BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BUFF:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[BODY]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[BUFF]], i32 1
-; CHECK-NEXT:    [[DEC]] = add nsw i32 [[DEC66]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
-; CHECK-NEXT:    store i8 [[TMP5]], ptr [[BUFF]], align 1
-; CHECK-NEXT:    [[TOBOOL11:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       end:
-; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR]], [[BODY]] ], [ [[IND_END1]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    store ptr [[INCDEC_PTR_LCSSA]], ptr [[POS]], align 4
-; CHECK-NEXT:    ret void
-;
 header:
   %ptr0 = load ptr, ptr %pos, align 4
   br label %body
@@ -137,3 +55,5 @@ end:
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

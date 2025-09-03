@@ -279,34 +279,39 @@ for.end:
 define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %n) {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, [[ENTRY]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <vscale x 2 x i32> [[TMP1]], [[BROADCAST_SPLAT1]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[V]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[IV]]
-; CHECK-NEXT:    store <vscale x 2 x i64> [[BROADCAST_SPLAT]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[BROADCAST_SPLAT]], ptr align 8 [[ARRAYIDX]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[TMP5]], [[IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> [[TMP2]], i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i64> [[BROADCAST_SPLAT]], i64 [[TMP8]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY1:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], [[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[B]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV1]]
 ; CHECK-NEXT:    store i64 [[V1]], ptr [[ARRAYIDX1]], align 8
@@ -314,7 +319,7 @@ define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT1]], 1025
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY1]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V1]], [[FOR_BODY1]] ], [ [[V]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V1]], [[FOR_BODY1]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[V_LCSSA]]
 ;
 entry:
