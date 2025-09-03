@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     logo = ":window:" if platform.system() == "Windows" else ":penguin:"
     # On Linux the machine value is x86_64 on Windows it is AMD64.
-    if platform.machine() == 'x86_64' or platform.machine() == "AMD64":
+    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
         arch = "x64"
     else:
         arch = platform.machine()
