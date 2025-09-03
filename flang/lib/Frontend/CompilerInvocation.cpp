@@ -22,6 +22,7 @@
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
@@ -1258,7 +1259,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+        diags.Report(clang::diag::err_omp_host_ir_file_not_found)
             << res.getLangOpts().OMPHostIRFile;
     }
 

@@ -1119,6 +1119,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
+  // tail folding it is likely that x is a header mask and can be simplified
+  // further.
+  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_VPValue(Z))) &&
+      X->hasMoreThanOneUniqueUser())
+    return Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 

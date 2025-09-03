@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_EXPANDFP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
@@ -18,11 +19,15 @@ class TargetMachine;
 class ExpandFpPass : public PassInfoMixin<ExpandFpPass> {
 private:
   const TargetMachine *TM;
+  CodeGenOptLevel OptLevel;
 
 public:
-  explicit ExpandFpPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm
