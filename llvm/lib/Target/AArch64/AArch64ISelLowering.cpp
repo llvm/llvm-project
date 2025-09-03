@@ -7923,7 +7923,7 @@ SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
   // See:
   // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
   //
-  // Therefore, if the function that this exception handler is a
+  // Therefore, if the function that contains this exception handler is a
   // streaming[-compatible] function, we must re-enable streaming mode.
   //
   // These mode changes are usually optimized away in catch blocks (as they)
