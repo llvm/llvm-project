@@ -68,9 +68,9 @@ end program
 ! CHECK:           %[[VAL_37:.*]] = hlfir.as_expr %[[VAL_36]]#0 move %[[VAL_0]] : (!fir.heap<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           hlfir.assign %[[VAL_37]] to %[[VAL_14]]#0 : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>, volatile>
 ! CHECK:           hlfir.destroy %[[VAL_37]] : !hlfir.expr<!fir.char<1,3>>
-! CHECK:           %[[VAL_38:.*]] = hlfir.char_trim %[[VAL_14]]#0 : (!fir.ref<!fir.char<1,3>, volatile>) -> !hlfir.expr<!fir.char<1,3>>
-! CHECK:           hlfir.assign %[[VAL_38]] to %[[VAL_11]]#0 : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>
-! CHECK:           hlfir.destroy %[[VAL_38]] : !hlfir.expr<!fir.char<1,3>>
+! CHECK:           %[[VAL_38:.*]] = hlfir.char_trim %[[VAL_14]]#0 : (!fir.ref<!fir.char<1,3>, volatile>) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:           hlfir.assign %[[VAL_38]] to %[[VAL_11]]#0 : !hlfir.expr<!fir.char<1,?>>, !fir.ref<!fir.char<1,3>>
+! CHECK:           hlfir.destroy %[[VAL_38]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_11]]#0 : !fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>>
 ! CHECK:           return
 ! CHECK:         }

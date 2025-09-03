@@ -860,15 +860,11 @@ void hlfir::CmpCharOp::getEffects(
 
 void hlfir::CharTrimOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result, mlir::Value chr) {
-  fir::CharacterType::LenType len;
-  if (auto cstLen = getCharacterLengthIfStatic(chr.getType()))
-    len = *cstLen;
-  else
-    len = fir::CharacterType::unknownLen();
   unsigned kind = getCharacterKind(chr.getType());
   auto resultType = hlfir::ExprType::get(
       builder.getContext(), hlfir::ExprType::Shape{},
-      fir::CharacterType::get(builder.getContext(), kind, len),
+      fir::CharacterType::get(builder.getContext(), kind,
+                              fir::CharacterType::unknownLen()),
       /*polymorphic=*/false);
   build(builder, result, resultType, chr);
 }

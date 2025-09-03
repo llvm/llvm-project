@@ -20,3 +20,13 @@ subroutine trim_test(c)
   tc = trim(c)
 end subroutine
 
+! Test trim with fixed length character.
+! The length of the returned character type must be unknown.
+! CHECK-LABEL:  func.func @_QPtrim_test2(
+! CHECK:          hlfir.char_trim %{{.*}}#0 : (!fir.ref<!fir.char<1,8>>) -> !hlfir.expr<!fir.char<1,?>>
+subroutine trim_test2(c)
+  character(8) :: c
+  character(8) :: tc
+
+  tc = trim(c)
+end subroutine
