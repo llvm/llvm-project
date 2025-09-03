@@ -758,7 +758,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
     if (OtherIdx == -1)
       return false;
     unsigned OpIdx1 = OtherIdx;
-    unsigned OpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;
+    unsigned OpIdx2 = True.getNumExplicitDefs();
     if (!TII->findCommutedOpIndices(True, OpIdx1, OpIdx2))
       return false;
     NeedsCommute = {OpIdx1, OpIdx2};
