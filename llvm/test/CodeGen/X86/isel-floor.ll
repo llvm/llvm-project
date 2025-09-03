@@ -139,4 +139,3 @@ define x86_fp80 @floor_f80(x86_fp80 %a) nounwind readnone {
   %c = call x86_fp80 @llvm.floor.f80(x86_fp80 %a)
   ret x86_fp80 %c
 }
-
