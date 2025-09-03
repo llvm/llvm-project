@@ -275,6 +275,9 @@ Improvements to Clang's diagnostics
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
