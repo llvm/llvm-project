@@ -1940,8 +1940,10 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
         // Direct copy from SGPR to AGPR is not possible on gfx908. To avoid
         // creation of exploded copies SGPR->VGPR->AGPR in the copyPhysReg()
         // later, create a copy here and track if we already have such a copy.
-        if (TRI->getSubRegisterClass(MRI->getRegClass(Src.Reg), Src.SubReg) !=
-            VGPRUseSubRC) {
+        const TargetRegisterClass *SubRC =
+            TRI->getSubRegisterClass(MRI->getRegClass(Src.Reg), Src.SubReg);
+        if (!VGPRUseSubRC->hasSubClassEq(SubRC)) {
+          // TODO: Try to reconstrain class
           VGPRCopy = MRI->createVirtualRegister(VGPRUseSubRC);
           BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::COPY), VGPRCopy).add(*Def);
           B.addReg(VGPRCopy);
