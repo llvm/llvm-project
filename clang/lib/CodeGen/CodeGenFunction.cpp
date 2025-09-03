@@ -405,6 +405,10 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
+  
+  // Process deferred function cleanups before checking for regular cleanups
+  processDeferredFunctionCleanups();
+  
   bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
   bool HasOnlyNoopCleanups =
       HasCleanups && EHStack.containsOnlyNoopCleanups(PrologueCleanupDepth);
@@ -422,7 +426,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
         // fall back to an artificial location if needed.
         OAL = ApplyDebugLocation::CreateDefaultArtificial(*this, EndLoc);
     }
-
+    
     PopCleanupBlocks(PrologueCleanupDepth);
   }
 

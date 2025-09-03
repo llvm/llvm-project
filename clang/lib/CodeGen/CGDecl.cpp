@@ -2230,9 +2230,16 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
     llvm::Constant *F = CGM.GetAddrOfFunction(FD);
     assert(F && "Could not find function!");
 
-    const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
-    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
-                                             CA);
+    // Check if we're in C89 mode and should defer cleanup to function scope
+    bool isC89Mode = !getLangOpts().C99 && !getLangOpts().CPlusPlus;
+    if (isC89Mode) {
+      const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
+      addDeferredFunctionCleanup(F, &Info, &D, CA);
+    } else {
+      const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
+      EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
+                                               CA);
+    }
   }
 
   // If this is a block variable, call _Block_object_destroy
@@ -2962,4 +2969,23 @@ CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
     }
   }
   return std::nullopt;
+}
+
+void CodeGenFunction::addDeferredFunctionCleanup(llvm::Constant *F,
+                                                 const CGFunctionInfo *Info,
+                                                 const VarDecl *Var,
+                                                 const CleanupAttr *Attribute) {
+  DeferredFunctionCleanups.emplace_back(F, Info, Var, Attribute);
+}
+
+void CodeGenFunction::processDeferredFunctionCleanups() {
+  // Process all deferred cleanups at function exit
+  for (const auto &cleanup : DeferredFunctionCleanups) {
+    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, 
+                                             cleanup.CleanupFn, 
+                                             cleanup.FnInfo, 
+                                             cleanup.Var, 
+                                             cleanup.Attribute);
+  }
+  DeferredFunctionCleanups.clear();
 }
