@@ -206,8 +206,6 @@ const Operand &Instruction::getPrimaryOperand(const Variable &Var) const {
 }
 
 bool Instruction::hasMemoryOperands() const {
-  if (Description.mayLoad() || Description.mayStore())
-    return true;
   return any_of(Operands, [](const Operand &Op) {
     return Op.isReg() && Op.isExplicit() && Op.isMemory();
   });
