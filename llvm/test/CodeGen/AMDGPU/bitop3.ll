@@ -183,9 +183,8 @@ define amdgpu_ps float @test_63(i32 %a, i32 %b) {
 ;
 ; GFX950-GISEL-LABEL: test_63:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v0, v0
 ; GFX950-GISEL-NEXT:    v_not_b32_e32 v1, v1
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, -1
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-LABEL: test_63:
@@ -195,10 +194,9 @@ define amdgpu_ps float @test_63(i32 %a, i32 %b) {
 ;
 ; GFX1250-GISEL-LABEL: test_63:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_not_b32_e32 v0, v0
 ; GFX1250-GISEL-NEXT:    v_not_b32_e32 v1, v1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, -1
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notb = xor i32 %b, -1
