@@ -410,10 +410,8 @@ public:
     // out-of-date dominator tree and makes it significantly more complex to run
     // this code outside of a pass manager.
     // FIXME: It's really gross that we have to cast away constness here.
-    if (!F.empty()) {
-      llvm::TimeTraceScope domScope("Dominator Tree Builder");
+    if (!F.empty())
       DT.recalculate(const_cast<Function &>(F));
-    }
 
     for (const BasicBlock &BB : F) {
       if (!BB.empty() && BB.back().isTerminator())
@@ -435,10 +433,7 @@ public:
 
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
-    {
-      llvm::TimeTraceScope domScope("Verifier visit");
-      visit(const_cast<Function &>(F));
-    }
+    visit(const_cast<Function &>(F));
     verifySiblingFuncletUnwinds();
 
     if (ConvergenceVerifyHelper.sawTokens())
@@ -2839,7 +2834,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
-  llvm::TimeTraceScope domScope("Verifier verify sibling funclet unwinds");
+  llvm::TimeTraceScope timeTraceScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {
