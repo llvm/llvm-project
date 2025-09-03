@@ -76,12 +76,6 @@ public:
   /// Returns false on parsing error.
   bool parseRanges(StringRef RangeStr);
 
-  /// Set ranges programmatically (for testing or other uses).
-  void setRanges(ArrayRef<Range> Ranges) { 
-    BisectRanges.assign(Ranges.begin(), Ranges.end());
-    LastBisectNum = 0;
-  }
-
   /// Clear all ranges, effectively disabling bisection.
   void clearRanges() { 
     BisectRanges.clear();
