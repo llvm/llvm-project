@@ -392,19 +392,21 @@ public:
   /// cleanups associated with the parameters.
   EHScopeStack::stable_iterator PrologueCleanupDepth;
 
-  /// Structure for deferred function-level cleanups (e.g., C89 for-init cleanup variables)
+  /// Structure for deferred function-level cleanups
+  /// (e.g., C89 for-init cleanup variables)
   struct DeferredCleanupInfo {
     llvm::Constant *CleanupFn;
     const CGFunctionInfo *FnInfo;
     const VarDecl *Var;
     const CleanupAttr *Attribute;
-    
-    DeferredCleanupInfo(llvm::Constant *F, const CGFunctionInfo *Info, 
+
+    DeferredCleanupInfo(llvm::Constant *F, const CGFunctionInfo *Info,
                         const VarDecl *V, const CleanupAttr *A)
-      : CleanupFn(F), FnInfo(Info), Var(V), Attribute(A) {}
+        : CleanupFn(F), FnInfo(Info), Var(V), Attribute(A) {}
   };
-  
-  /// List of cleanups that should be registered at function exit instead of current scope
+
+  /// List of cleanups that should be registered at function exit instead of
+  /// current scope
   SmallVector<DeferredCleanupInfo, 4> DeferredFunctionCleanups;
 
   /// ReturnBlock - Unified return block.
@@ -3485,11 +3487,14 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
-  
-  /// Add a cleanup to be deferred until function exit (for C89 for-init variables)
-  void addDeferredFunctionCleanup(llvm::Constant *CleanupFn, const CGFunctionInfo *FnInfo,
-                                  const VarDecl *Var, const CleanupAttr *Attribute);
-  
+
+  /// Add a cleanup to be deferred until function exit
+  /// (for C89 for-init variables)
+  void addDeferredFunctionCleanup(llvm::Constant *CleanupFn,
+                                  const CGFunctionInfo *FnInfo,
+                                  const VarDecl *Var,
+                                  const CleanupAttr *Attribute);
+
   /// Process all deferred function-level cleanups
   void processDeferredFunctionCleanups();
 

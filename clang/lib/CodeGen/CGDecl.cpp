@@ -2233,10 +2233,12 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
     // Check if we're in C89 mode and should defer cleanup to function scope
     bool isC89Mode = !getLangOpts().C99 && !getLangOpts().CPlusPlus;
     if (isC89Mode) {
-      const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
+      const CGFunctionInfo &Info =
+          CGM.getTypes().arrangeFunctionDeclaration(FD);
       addDeferredFunctionCleanup(F, &Info, &D, CA);
     } else {
-      const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
+      const CGFunctionInfo &Info =
+          CGM.getTypes().arrangeFunctionDeclaration(FD);
       EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
                                                CA);
     }
@@ -2981,11 +2983,9 @@ void CodeGenFunction::addDeferredFunctionCleanup(llvm::Constant *F,
 void CodeGenFunction::processDeferredFunctionCleanups() {
   // Process all deferred cleanups at function exit
   for (const auto &cleanup : DeferredFunctionCleanups) {
-    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, 
-                                             cleanup.CleanupFn, 
-                                             cleanup.FnInfo, 
-                                             cleanup.Var, 
-                                             cleanup.Attribute);
+    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup,
+                                             cleanup.CleanupFn, cleanup.FnInfo,
+                                             cleanup.Var, cleanup.Attribute);
   }
   DeferredFunctionCleanups.clear();
 }
