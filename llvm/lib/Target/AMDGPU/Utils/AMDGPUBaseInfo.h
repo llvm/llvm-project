@@ -1595,7 +1595,7 @@ constexpr bool isSISrcOperand(const MCOperandInfo &OpInfo) {
          OpInfo.OperandType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
-constexpr bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
 }
 
