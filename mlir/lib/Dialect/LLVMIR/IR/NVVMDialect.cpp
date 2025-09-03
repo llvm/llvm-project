@@ -2146,8 +2146,6 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
     return {llvm::Intrinsic::
                 nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z,
             args};
-  default:
-    llvm_unreachable("Invalid query type");
   }
 }
 
