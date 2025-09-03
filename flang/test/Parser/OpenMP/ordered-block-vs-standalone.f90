@@ -25,7 +25,7 @@ subroutine strict_block
   integer :: tmp
   do i = 1, 10
     do j = 1,10
-      ! CHECK:      OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK:      OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->
@@ -46,7 +46,7 @@ subroutine loose_block
   integer :: tmp
   do i = 1, 10
     do j = 1,10
-      ! CHECK:      OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK:      OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->

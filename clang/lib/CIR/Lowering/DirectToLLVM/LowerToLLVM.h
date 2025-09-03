@@ -170,6 +170,15 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCopyOpLowering : public mlir::OpConversionPattern<cir::CopyOp> {
+public:
+  using mlir::OpConversionPattern<cir::CopyOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CopyOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMExpectOpLowering
     : public mlir::OpConversionPattern<cir::ExpectOp> {
 public:
@@ -718,6 +727,15 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMACosOpLowering : public mlir::OpConversionPattern<cir::ACosOp> {
+public:
+  using mlir::OpConversionPattern<cir::ACosOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ACosOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMInlineAsmOpLowering
     : public mlir::OpConversionPattern<cir::InlineAsmOp> {
   mlir::DataLayout const &dataLayout;
@@ -732,6 +750,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::InlineAsmOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMThrowOpLowering
+    : public mlir::OpConversionPattern<cir::ThrowOp> {
+public:
+  using mlir::OpConversionPattern<cir::ThrowOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ThrowOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

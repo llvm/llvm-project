@@ -2182,9 +2182,8 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 /// \param __a
 ///    A 128-bit integer vector of [4 x i32].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_pd(__m128i __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_pd(__m128i __a) {
   return (__m256d)__builtin_convertvector((__v4si)__a, __v4df);
 }
 
@@ -2197,9 +2196,8 @@ _mm256_cvtepi32_pd(__m128i __a)
 /// \param __a
 ///    A 256-bit integer vector.
 /// \returns A 256-bit vector of [8 x float] containing the converted values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_cvtepi32_ps(__m256i __a)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtepi32_ps(__m256i __a) {
   return (__m256)__builtin_convertvector((__v8si)__a, __v8sf);
 }
 
@@ -2248,9 +2246,8 @@ _mm256_cvtps_epi32(__m256 __a)
 /// \param __a
 ///    A 128-bit vector of [4 x float].
 /// \returns A 256-bit vector of [4 x double] containing the converted values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_cvtps_pd(__m128 __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtps_pd(__m128 __a) {
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
@@ -4586,9 +4583,8 @@ _mm256_castsi128_si256(__m128i __a)
 ///    A 128-bit vector of [2 x double].
 /// \returns A 256-bit floating-point vector of [4 x double]. The lower 128 bits
 ///    contain the value of the parameter. The upper 128 bits are set to zero.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_zextpd128_pd256(__m128d __a)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextpd128_pd256(__m128d __a) {
   return __builtin_shufflevector((__v2df)__a, (__v2df)_mm_setzero_pd(), 0, 1, 2, 3);
 }
 
@@ -4604,9 +4600,8 @@ _mm256_zextpd128_pd256(__m128d __a)
 ///    A 128-bit vector of [4 x float].
 /// \returns A 256-bit floating-point vector of [8 x float]. The lower 128 bits
 ///    contain the value of the parameter. The upper 128 bits are set to zero.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_zextps128_ps256(__m128 __a)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextps128_ps256(__m128 __a) {
   return __builtin_shufflevector((__v4sf)__a, (__v4sf)_mm_setzero_ps(), 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
@@ -4622,9 +4617,8 @@ _mm256_zextps128_ps256(__m128 __a)
 ///    A 128-bit integer vector.
 /// \returns A 256-bit integer vector. The lower 128 bits contain the value of
 ///    the parameter. The upper 128 bits are set to zero.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_zextsi128_si256(__m128i __a)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_zextsi128_si256(__m128i __a) {
   return __builtin_shufflevector((__v2di)__a, (__v2di)_mm_setzero_si128(), 0, 1, 2, 3);
 }
 
