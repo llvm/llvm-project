@@ -456,49 +456,7 @@ namespace {
     void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
                                    const APSInt &N);
     /// Add N to the address of this subobject.
-    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N) {
-      if (Invalid || !N) return;
-      uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
-      if (isMostDerivedAnUnsizedArray()) {
-        diagnoseUnsizedArrayPointerArithmetic(Info, E);
-        // Can't verify -- trust that the user is doing the right thing (or if
-        // not, trust that the caller will catch the bad behavior).
-        // FIXME: Should we reject if this overflows, at least?
-        Entries.back() = PathEntry::ArrayIndex(
-            Entries.back().getAsArrayIndex() + TruncatedN);
-        return;
-      }
-
-      // [expr.add]p4: For the purposes of these operators, a pointer to a
-      // nonarray object behaves the same as a pointer to the first element of
-      // an array of length one with the type of the object as its element type.
-      bool IsArray = MostDerivedPathLength == Entries.size() &&
-                     MostDerivedIsArrayElement;
-      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
-                                    : (uint64_t)IsOnePastTheEnd;
-      uint64_t ArraySize =
-          IsArray ? getMostDerivedArraySize() : (uint64_t)1;
-
-      if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
-        // Calculate the actual index in a wide enough type, so we can include
-        // it in the note.
-        N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
-        (llvm::APInt&)N += ArrayIndex;
-        assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
-        diagnosePointerArithmetic(Info, E, N);
-        setInvalid();
-        return;
-      }
-
-      ArrayIndex += TruncatedN;
-      assert(ArrayIndex <= ArraySize &&
-             "bounds check succeeded for out-of-bounds index");
-
-      if (IsArray)
-        Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
-      else
-        IsOnePastTheEnd = (ArrayIndex != 0);
-    }
+    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N, const LValue &LV);
   };
 
   /// A scope at the end of which an object can need to be destroyed.
@@ -1795,7 +1753,7 @@ namespace {
       Offset = CharUnits::fromQuantity(Offset64 + ElemSize64 * Index64);
 
       if (checkNullPointer(Info, E, CSK_ArrayIndex))
-        Designator.adjustIndex(Info, E, Index);
+        Designator.adjustIndex(Info, E, Index, *this);
       clearIsNullPointer();
     }
     void adjustOffset(CharUnits N) {
@@ -1901,6 +1859,54 @@ namespace {
       return false;
     return LHS.Path == RHS.Path;
   }
+}
+
+void SubobjectDesignator::adjustIndex(EvalInfo &Info, const Expr *E, APSInt N,
+                                      const LValue &LV) {
+  if (Invalid || !N)
+    return;
+  uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
+  if (isMostDerivedAnUnsizedArray()) {
+    diagnoseUnsizedArrayPointerArithmetic(Info, E);
+    // Can't verify -- trust that the user is doing the right thing (or if
+    // not, trust that the caller will catch the bad behavior).
+    // FIXME: Should we reject if this overflows, at least?
+    Entries.back() =
+        PathEntry::ArrayIndex(Entries.back().getAsArrayIndex() + TruncatedN);
+    return;
+  }
+
+  // [expr.add]p4: For the purposes of these operators, a pointer to a
+  // nonarray object behaves the same as a pointer to the first element of
+  // an array of length one with the type of the object as its element type.
+  bool IsArray =
+      MostDerivedPathLength == Entries.size() && MostDerivedIsArrayElement;
+  uint64_t ArrayIndex =
+      IsArray ? Entries.back().getAsArrayIndex() : (uint64_t)IsOnePastTheEnd;
+  uint64_t ArraySize = IsArray ? getMostDerivedArraySize() : (uint64_t)1;
+
+  if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
+    if (!Info.checkingPotentialConstantExpression() ||
+        !LV.AllowConstexprUnknown) {
+      // Calculate the actual index in a wide enough type, so we can include
+      // it in the note.
+      N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
+      (llvm::APInt &)N += ArrayIndex;
+      assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
+      diagnosePointerArithmetic(Info, E, N);
+    }
+    setInvalid();
+    return;
+  }
+
+  ArrayIndex += TruncatedN;
+  assert(ArrayIndex <= ArraySize &&
+         "bounds check succeeded for out-of-bounds index");
+
+  if (IsArray)
+    Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
+  else
+    IsOnePastTheEnd = (ArrayIndex != 0);
 }
 
 static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E);
@@ -5144,12 +5150,18 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
   if (const PointerType *PT = TargetQT->getAs<PointerType>())
     TargetQT = PT->getPointeeType();
 
-  // Check this cast lands within the final derived-to-base subobject path.
-  if (D.MostDerivedPathLength + E->path_size() > D.Entries.size()) {
-    Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << D.MostDerivedType << TargetQT;
+  auto InvalidCast = [&]() {
+    if (!Info.checkingPotentialConstantExpression() ||
+        !Result.AllowConstexprUnknown) {
+      Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
+          << D.MostDerivedType << TargetQT;
+    }
     return false;
-  }
+  };
+
+  // Check this cast lands within the final derived-to-base subobject path.
+  if (D.MostDerivedPathLength + E->path_size() > D.Entries.size())
+    return InvalidCast();
 
   // Check the type of the final cast. We don't need to check the path,
   // since a cast can only be formed if the path is unique.
@@ -5160,11 +5172,8 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
     FinalType = D.MostDerivedType->getAsCXXRecordDecl();
   else
     FinalType = getAsBaseClass(D.Entries[NewEntriesSize - 1]);
-  if (FinalType->getCanonicalDecl() != TargetType->getCanonicalDecl()) {
-    Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << D.MostDerivedType << TargetQT;
-    return false;
-  }
+  if (FinalType->getCanonicalDecl() != TargetType->getCanonicalDecl())
+    return InvalidCast();
 
   // Truncate the lvalue to the appropriate derived class.
   return CastToDerivedClass(Info, E, Result, TargetType, NewEntriesSize);
@@ -6165,12 +6174,15 @@ static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
     } else if (Polymorphic) {
       // Conservatively refuse to perform a polymorphic operation if we would
       // not be able to read a notional 'vptr' value.
-      APValue Val;
-      This.moveInto(Val);
-      QualType StarThisType =
-          Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
-      Info.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-          << AK << Val.getAsString(Info.Ctx, StarThisType);
+      if (!Info.checkingPotentialConstantExpression() ||
+          !This.AllowConstexprUnknown) {
+        APValue Val;
+        This.moveInto(Val);
+        QualType StarThisType =
+            Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
+        Info.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+            << AK << Val.getAsString(Info.Ctx, StarThisType);
+      }
       return false;
     }
     return true;
@@ -15075,6 +15087,11 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
+      // Bail out early if we're checking potential constant expression.
+      // Otherwise, prefer to diagnose other issues.
+      if (Info.checkingPotentialConstantExpression() &&
+          (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+        return false;
       auto DiagComparison = [&] (unsigned DiagID, bool Reversed = false) {
         std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
         std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
@@ -15395,6 +15412,10 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
+      if (Info.checkingPotentialConstantExpression() &&
+          (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+        return false;
+
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
 
