@@ -1536,9 +1536,6 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
   // symbol.
   return symbol && GetMainEntry(symbol) != symbol;
 }
-inline bool IsAlternateEntry(const Symbol &symbol) {
-  return IsAlternateEntry(&symbol);
-}
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
