@@ -1,7 +1,7 @@
 void __attribute__((naked)) cas(int *a, int *b) {
   // This atomic sequence implements a copy-and-swap function. This test should
-  // at the first instruction, and after step instruction, we should stop at the
-  // end of the sequence (on the ret instruction).
+  // stop at the first instruction, and after step instruction, we should stop
+  // at the end of the sequence (on the ret instruction).
   asm volatile("1:\n\t"
                "lr.w a2, (a0)\n\t"
                "and a5, a2, a4\n\t"
