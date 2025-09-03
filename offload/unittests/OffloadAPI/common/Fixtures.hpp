@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <gtest/gtest.h>
+#include <thread>
 
 #include "Environment.hpp"
 
@@ -19,6 +20,20 @@
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
     if (Res && Res->Code != OL_ERRC_SUCCESS) {                                 \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
+#endif
+
+#ifndef ASSERT_SUCCESS_OR_UNSUPPORTED
+#define ASSERT_SUCCESS_OR_UNSUPPORTED(ACTUAL)                                  \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code == OL_ERRC_UNSUPPORTED) {                             \
+      GTEST_SKIP() << #ACTUAL " returned unsupported; skipping test";          \
+      return;                                                                  \
+    } else if (Res && Res->Code != OL_ERRC_SUCCESS) {                          \
       GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
                    << Res->Details;                                            \
     }                                                                          \
@@ -56,6 +71,57 @@ inline std::string SanitizeString(const std::string &Str) {
       '_');
   return NewStr;
 }
+
+template <typename Fn> inline void threadify(Fn body) {
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I < 20; I++) {
+    Threads.emplace_back(
+        [&body](size_t I) {
+          std::string ScopeMsg{"Thread #"};
+          ScopeMsg.append(std::to_string(I));
+          SCOPED_TRACE(ScopeMsg);
+          body(I);
+        },
+        I);
+  }
+  for (auto &T : Threads) {
+    T.join();
+  }
+}
+
+/// Enqueues a task to the queue that can be manually resolved.
+// It will block until `trigger` is called.
+struct ManuallyTriggeredTask {
+  std::mutex M;
+  std::condition_variable CV;
+  bool Flag = false;
+  ol_event_handle_t CompleteEvent;
+
+  ol_result_t enqueue(ol_queue_handle_t Queue) {
+    if (auto Err = olLaunchHostFunction(
+            Queue,
+            [](void *That) {
+              static_cast<ManuallyTriggeredTask *>(That)->wait();
+            },
+            this))
+      return Err;
+
+    return olCreateEvent(Queue, &CompleteEvent);
+  }
+
+  void wait() {
+    std::unique_lock<std::mutex> lk(M);
+    CV.wait_for(lk, std::chrono::milliseconds(1000), [&] { return Flag; });
+    EXPECT_TRUE(Flag);
+  }
+
+  ol_result_t trigger() {
+    Flag = true;
+    CV.notify_one();
+
+    return olSyncEvent(CompleteEvent);
+  }
+};
 
 struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();

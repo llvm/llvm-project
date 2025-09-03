@@ -169,26 +169,6 @@ struct SanitizerCoverageOptions {
   SanitizerCoverageOptions() = default;
 };
 
-/// Calculate what to divide by to scale counts.
-///
-/// Given the maximum count, calculate a divisor that will scale all the
-/// weights to strictly less than std::numeric_limits<uint32_t>::max().
-static inline uint64_t calculateCountScale(uint64_t MaxCount) {
-  return MaxCount < std::numeric_limits<uint32_t>::max()
-             ? 1
-             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
-}
-
-/// Scale an individual branch count.
-///
-/// Scale a 64-bit weight down to 32-bits using \c Scale.
-///
-static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
-  uint64_t Scaled = Count / Scale;
-  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
-  return Scaled;
-}
-
 // Use to ensure the inserted instrumentation has a DebugLocation; if none is
 // attached to the source instruction, try to use a DILocation with offset 0
 // scoped to surrounding function (if it has a DebugLocation).

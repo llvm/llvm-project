@@ -11,16 +11,16 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
 ; CHECK-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
 ; CHECK-NEXT:    addi.w $fp, $a0, 0
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    xvst $xr0, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -29,8 +29,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr0, $xr1, 1
 ; CHECK-NEXT:    xvst $xr0, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 2
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -39,8 +39,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 2
 ; CHECK-NEXT:    xvst $xr1, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -49,8 +49,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 3
 ; CHECK-NEXT:    xvst $xr1, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 4
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -59,8 +59,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 4
 ; CHECK-NEXT:    xvst $xr1, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 5
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -69,8 +69,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 5
 ; CHECK-NEXT:    xvst $xr1, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 6
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -79,8 +79,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 6
 ; CHECK-NEXT:    xvst $xr1, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
+; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 7
+; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -107,16 +107,16 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
 ; CHECK-NEXT:    xvst $xr0, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    addi.w $fp, $a0, 0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; CHECK-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 48 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -125,8 +125,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.d $xr0, $xr1, 1
 ; CHECK-NEXT:    xvst $xr0, $sp, 16 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 48 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 2
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -135,8 +135,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvinsve0.d $xr1, $xr0, 2
 ; CHECK-NEXT:    xvst $xr1, $sp, 16 # 32-byte Folded Spill
 ; CHECK-NEXT:    xvld $xr0, $sp, 48 # 32-byte Folded Reload
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 3
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0

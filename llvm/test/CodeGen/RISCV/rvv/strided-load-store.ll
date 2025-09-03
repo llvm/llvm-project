@@ -443,8 +443,8 @@ define <vscale x 1 x i64> @straightline_offset_add(ptr %p, i64 %offset) {
   ret <vscale x 1 x i64> %x
 }
 
-define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i64 %offset) {
-; CHECK-LABEL: @straightline_offset_disjoint_or(
+define <vscale x 1 x i64> @straightline_offset_disjoint_or_1(ptr %p) {
+; CHECK-LABEL: @straightline_offset_disjoint_or_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
@@ -454,6 +454,33 @@ define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i64 %offset) 
   %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
   %step.shl = shl <vscale x 1 x i64> %step, splat (i64 1)
   %offsetv = or disjoint <vscale x 1 x i64> %step.shl, splat (i64 1)
+  %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offsetv
+  %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
+  <vscale x 1 x ptr> %ptrs,
+  i32 8,
+  <vscale x 1 x i1> splat (i1 true),
+  <vscale x 1 x i64> poison
+  )
+  ret <vscale x 1 x i64> %x
+}
+
+define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i1 %offset) {
+; CHECK-LABEL: @straightline_offset_disjoint_or(
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[OFFSET:%.*]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 4, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP3]], <vscale x 1 x i64> poison, i32 [[TMP2]])
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+;
+  %step = call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  %step.shl = shl <vscale x 1 x i64> %step, splat (i64 1)
+  %add = add <vscale x 1 x i64> %step.shl, splat (i64 4)
+  %zext = zext i1 %offset to i64
+  %splat.insert = insertelement <vscale x 1 x i64> poison, i64 %zext, i64 0
+  %splat = shufflevector <vscale x 1 x i64> %splat.insert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %offsetv = or disjoint <vscale x 1 x i64> %add, %splat
   %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offsetv
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
