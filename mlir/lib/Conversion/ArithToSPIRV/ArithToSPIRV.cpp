@@ -622,10 +622,14 @@ struct IndexCastIndexI1Pattern final
     if (!isBoolScalarOrVector(op.getType()))
       return failure();
 
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
     Location loc = op.getLoc();
     Value zeroIdx =
-        spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
-    rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, op.getType(), zeroIdx,
+       spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
+    rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, dstType, zeroIdx,
                                                     adaptor.getIn());
     return success();
   }
