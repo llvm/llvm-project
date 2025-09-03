@@ -10,7 +10,19 @@ class InvalidArgsExpressionTestCase(TestBase):
             "expression -l foo --",
             error=True,
             substrs=[
-                "error: unknown language type: 'foo' for expression",
+                "error: invalid language 'foo' for expression.",
+                "List of supported languages:",
+                "c++",
+                "c++11",
+                "c++14",
+            ],
+        )
+
+        self.expect(
+            "expression -l c --",
+            error=True,
+            substrs=[
+                "error: invalid language 'c' for expression.",
                 "List of supported languages:",
                 "c++",
                 "c++11",
