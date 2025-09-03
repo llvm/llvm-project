@@ -13,10 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/OptBisect.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Range.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstdlib>
 
 using namespace llvm;
 
@@ -31,19 +34,34 @@ static OptDisable &getOptDisabler() {
 }
 
 static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
-                                   cl::init(OptBisect::Disabled), cl::Optional,
+                                   cl::init(-1), cl::Optional,
                                    cl::cb<void, int>([](int Limit) {
-                                     getOptBisector().setLimit(Limit);
+                                     if (Limit == -1) {
+                                       // -1 means run all passes, which is equivalent to no ranges
+                                       getOptBisector().clearRanges();
+                                     } else if (Limit > 0) {
+                                       // Convert limit to range 1-Limit
+                                       std::string RangeStr = "1-" + llvm::utostr(Limit);
+                                       if (getOptBisector().parseRanges(RangeStr)) {
+                                         errs() << "Error: Invalid limit for -opt-bisect-limit: " 
+                                                << Limit << "\n";
+                                         exit(1);
+                                       }
+                                     }
                                    }),
-                                   cl::desc("Maximum optimization to perform"));
+                                   cl::desc("Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));
 
-static cl::list<int>
-    OptDisableIndices("opt-disable-indices", cl::Hidden, cl::CommaSeparated,
-                      cl::Optional, cl::cb<void, int>([](int Index) {
-                        getOptBisector().disablePassAtIndex(Index);
-                      }),
-                      cl::desc("Disable passes at the given indices in the "
-                               "optimization pipeline (comma-separated list)"));
+static cl::opt<std::string> OptBisectRanges(
+    "opt-bisect", cl::Hidden, cl::Optional,
+    cl::cb<void, const std::string &>([](const std::string &RangeStr) {
+      if (getOptBisector().parseRanges(RangeStr)) {
+        errs() << "Error: Invalid range specification for -opt-bisect: " 
+               << RangeStr << "\n";
+        exit(1);
+      }
+    }),
+    cl::desc("Run optimization passes only for the specified ranges. "
+             "Format: '1-10,20-30,45' (runs passes 1-10, 20-30, and 45)"));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
@@ -69,14 +87,20 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
+bool OptBisect::parseRanges(StringRef RangeStr) {
+  LastBisectNum = 0;
+  return RangeUtils::parseRanges(RangeStr, BisectRanges);
+}
+
 bool OptBisect::shouldRunPass(StringRef PassName,
                               StringRef IRDescription) const {
   assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
-  bool ShouldRun = (BisectLimit == -1 || BisectLimit == Disabled ||
-                    CurBisectNum <= BisectLimit) &&
-                   !BisectSkipNumbers.contains(CurBisectNum);
+  
+  // Check if current pass number falls within any of the specified ranges
+  bool ShouldRun = RangeUtils::contains(BisectRanges, CurBisectNum);
+  
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
