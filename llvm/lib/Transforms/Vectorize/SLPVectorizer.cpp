@@ -6323,17 +6323,11 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
 }
 
 /// Checks if the provided list of pointers \p Pointers represents the strided
-/// pointers for type ElemTy. If they are not, std::nullopt is returned.
-/// Otherwise, if \p Inst is not specified, just initialized optional value is
-/// returned to show that the pointers represent strided pointers. If \p Inst
-/// specified, the runtime stride is materialized before the given \p Inst.
-/// \returns std::nullopt if the pointers are not pointers with the runtime
-/// stride, nullptr or actual stride value, otherwise.
-static std::optional<Value *>
-calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
-                  const DataLayout &DL, ScalarEvolution &SE,
-                  SmallVectorImpl<unsigned> &SortedIndices,
-                  Instruction *Inst = nullptr) {
+/// pointers for type ElemTy. If they are not, nullptr is returned.
+/// Otherwise, SCEV* of the stride value is returned.
+static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
+                                     const DataLayout &DL, ScalarEvolution &SE,
+                                     SmallVectorImpl<unsigned> &SortedIndices) {
   SmallVector<const SCEV *> SCEVs;
   const SCEV *PtrSCEVLowest = nullptr;
   const SCEV *PtrSCEVHighest = nullptr;
@@ -6342,7 +6336,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   for (Value *Ptr : PointerOps) {
     const SCEV *PtrSCEV = SE.getSCEV(Ptr);
     if (!PtrSCEV)
-      return std::nullopt;
+      return nullptr;
     SCEVs.push_back(PtrSCEV);
     if (!PtrSCEVLowest && !PtrSCEVHighest) {
       PtrSCEVLowest = PtrSCEVHighest = PtrSCEV;
@@ -6350,14 +6344,14 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     }
     const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
     if (isa<SCEVCouldNotCompute>(Diff))
-      return std::nullopt;
+      return nullptr;
     if (Diff->isNonConstantNegative()) {
       PtrSCEVLowest = PtrSCEV;
       continue;
     }
     const SCEV *Diff1 = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEV);
     if (isa<SCEVCouldNotCompute>(Diff1))
-      return std::nullopt;
+      return nullptr;
     if (Diff1->isNonConstantNegative()) {
       PtrSCEVHighest = PtrSCEV;
       continue;
@@ -6366,7 +6360,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   // Dist = PtrSCEVHighest - PtrSCEVLowest;
   const SCEV *Dist = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEVLowest);
   if (isa<SCEVCouldNotCompute>(Dist))
-    return std::nullopt;
+    return nullptr;
   int Size = DL.getTypeStoreSize(ElemTy);
   auto TryGetStride = [&](const SCEV *Dist,
                           const SCEV *Multiplier) -> const SCEV * {
@@ -6387,10 +6381,10 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     const SCEV *Sz = SE.getConstant(Dist->getType(), Size * (SCEVs.size() - 1));
     Stride = TryGetStride(Dist, Sz);
     if (!Stride)
-      return std::nullopt;
+      return nullptr;
   }
   if (!Stride || isa<SCEVConstant>(Stride))
-    return std::nullopt;
+    return nullptr;
   // Iterate through all pointers and check if all distances are
   // unique multiple of Stride.
   using DistOrdPair = std::pair<int64_t, int>;
@@ -6404,28 +6398,28 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
       const SCEV *Coeff = TryGetStride(Diff, Stride);
       if (!Coeff)
-        return std::nullopt;
+        return nullptr;
       const auto *SC = dyn_cast<SCEVConstant>(Coeff);
       if (!SC || isa<SCEVCouldNotCompute>(SC))
-        return std::nullopt;
+        return nullptr;
       if (!SE.getMinusSCEV(PtrSCEV, SE.getAddExpr(PtrSCEVLowest,
                                                   SE.getMulExpr(Stride, SC)))
                ->isZero())
-        return std::nullopt;
+        return nullptr;
       Dist = SC->getAPInt().getZExtValue();
     }
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
-      return std::nullopt;
+      return nullptr;
     auto Res = Offsets.emplace(Dist, Cnt);
     if (!Res.second)
-      return std::nullopt;
+      return nullptr;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
     ++Cnt;
   }
   if (Offsets.size() != SCEVs.size())
-    return std::nullopt;
+    return nullptr;
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
@@ -6436,10 +6430,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       ++Cnt;
     }
   }
-  if (!Inst)
-    return nullptr;
-  SCEVExpander Expander(SE, DL, "strided-load-vec");
-  return Expander.expandCodeFor(Stride, Stride->getType(), Inst);
+  return Stride;
 }
 
 static std::pair<InstructionCost, InstructionCost>
@@ -19520,11 +19511,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             return cast<LoadInst>(V)->getPointerOperand();
           });
           OrdersType Order;
-          std::optional<Value *> Stride =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order,
-                                &*Builder.GetInsertPoint());
+          const SCEV *StrideSCEV =
+              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order);
+          assert(StrideSCEV && "At this point stride should be known");
+          SCEVExpander Expander(*SE, *DL, "strided-load-vec");
+          Value *Stride = Expander.expandCodeFor(
+              StrideSCEV, StrideSCEV->getType(), &*Builder.GetInsertPoint());
           Value *NewStride =
-              Builder.CreateIntCast(*Stride, StrideTy, /*isSigned=*/true);
+              Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
           StrideVal = Builder.CreateMul(
               NewStride,
               ConstantInt::get(
@@ -23842,7 +23836,8 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC,
+                     DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -24241,7 +24236,7 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost =
-            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V);
+            getReductionCost(TTI, VL, IsCmpSelMinMax, RdxFMF, V, DT, DL, TLI);
         InstructionCost Cost = V.getTreeCost(VL, ReductionCost);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
@@ -24546,7 +24541,9 @@ private:
   InstructionCost getReductionCost(TargetTransformInfo *TTI,
                                    ArrayRef<Value *> ReducedVals,
                                    bool IsCmpSelMinMax, FastMathFlags FMF,
-                                   const BoUpSLP &R) {
+                                   const BoUpSLP &R, DominatorTree &DT,
+                                   const DataLayout &DL,
+                                   const TargetLibraryInfo &TLI) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -24571,6 +24568,22 @@ private:
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
+            if (RdxKind == RecurKind::FAdd) {
+              InstructionCost FMACost = canConvertToFMA(
+                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+              if (FMACost.isValid()) {
+                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
+                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
+                  // Also, exclude scalar fmul cost.
+                  InstructionCost FMulCost =
+                      TTI->getInstructionCost(I, CostKind);
+                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
+                  FMACost -= FMulCost;
+                }
+                ScalarCost += FMACost;
+                continue;
+              }
+            }
             ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
             continue;
           }
@@ -24635,8 +24648,45 @@ private:
           auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
               std::make_pair(RedTy, true));
           VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
-          VectorCost +=
-              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          InstructionCost FMACost = InstructionCost::getInvalid();
+          if (RdxKind == RecurKind::FAdd) {
+            // Check if the reduction operands can be converted to FMA.
+            SmallVector<Value *> Ops;
+            FastMathFlags FMF;
+            FMF.set();
+            for (Value *RdxVal : ReducedVals) {
+              if (!RdxVal->hasOneUse()) {
+                Ops.clear();
+                break;
+              }
+              if (auto *FPCI = dyn_cast<FPMathOperator>(RdxVal))
+                FMF &= FPCI->getFastMathFlags();
+              Ops.push_back(RdxVal->user_back());
+            }
+            if (!Ops.empty()) {
+              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
+                                        *TTI, TLI);
+              if (FMACost.isValid()) {
+                // Calculate actual FMAD cost.
+                IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
+                                            {RVecTy, RVecTy, RVecTy}, FMF);
+                FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+
+                LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
+                // Also, exclude vector fmul cost.
+                InstructionCost FMulCost = TTI->getArithmeticInstrCost(
+                    Instruction::FMul, RVecTy, CostKind);
+                LLVM_DEBUG(dbgs()
+                           << "Minus vector FMul cost: " << FMulCost << "\n");
+                FMACost -= FMulCost;
+              }
+            }
+          }
+          if (FMACost.isValid())
+            VectorCost += FMACost;
+          else
+            VectorCost +=
+                TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
           if (RType != RedTy) {
             unsigned Opcode = Instruction::Trunc;
             if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
@@ -25304,7 +25354,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -25449,7 +25499,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
