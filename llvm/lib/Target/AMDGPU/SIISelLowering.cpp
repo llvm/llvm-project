@@ -1263,15 +1263,19 @@ MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
 static unsigned getIntrMemWidth(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
     return 8;
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
     return 128;
   default:
@@ -1506,6 +1510,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b128:
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1553,7 +1560,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b128: {
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(1);
@@ -1636,6 +1647,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_cluster_load_b128:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1678,6 +1692,10 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
     Ptr = II->getArgOperand(1);
     break;
   default:
@@ -17773,11 +17791,19 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
          !AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS);
 }
 
+static TargetLowering::AtomicExpansionKind
+getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
+  // For GAS, lower to flat atomic.
+  return STI.hasGloballyAddressableScratch()
+             ? TargetLowering::AtomicExpansionKind::CustomExpand
+             : TargetLowering::AtomicExpansionKind::NotAtomic;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   // 64-bit flat atomics that dynamically reside in private memory will silently
   // be dropped.
@@ -18048,14 +18074,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
@@ -18063,7 +18089,7 @@ TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
     return AtomicExpansionKind::None;
@@ -18433,8 +18459,23 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Builder.CreateBr(ExitBB);
 }
 
+static void convertScratchAtomicToFlatAtomic(Instruction *I,
+                                             unsigned PtrOpIdx) {
+  Value *PtrOp = I->getOperand(PtrOpIdx);
+  assert(PtrOp->getType()->getPointerAddressSpace() ==
+         AMDGPUAS::PRIVATE_ADDRESS);
+
+  Type *FlatPtr = PointerType::get(I->getContext(), AMDGPUAS::FLAT_ADDRESS);
+  Value *ASCast = CastInst::CreatePointerCast(PtrOp, FlatPtr, "scratch.ascast",
+                                              I->getIterator());
+  I->setOperand(PtrOpIdx, ASCast);
+}
+
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (AI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(AI, AI->getPointerOperandIndex());
 
   if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
       Op == AtomicRMWInst::Xor) {
@@ -18458,7 +18499,26 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 }
 
 void SITargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  if (CI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(CI, CI->getPointerOperandIndex());
+
   emitExpandAtomicAddrSpacePredicate(CI);
+}
+
+void SITargetLowering::emitExpandAtomicLoad(LoadInst *LI) const {
+  if (LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(LI, LI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Load only handles SCRATCH -> FLAT conversion");
+}
+
+void SITargetLowering::emitExpandAtomicStore(StoreInst *SI) const {
+  if (SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(SI, SI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Store only handles SCRATCH -> FLAT conversion");
 }
 
 LoadInst *

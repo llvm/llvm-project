@@ -12,10 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/Regex.h"
 
 #define DEBUG_TYPE "ptx-builder"
@@ -31,35 +38,88 @@ using namespace NVVM;
 
 static constexpr int64_t kSharedMemorySpace = 3;
 
-static char getRegisterType(Type type) {
-  if (type.isInteger(1))
-    return 'b';
-  if (type.isInteger(16))
-    return 'h';
-  if (type.isInteger(32))
-    return 'r';
-  if (type.isInteger(64))
-    return 'l';
-  if (type.isF32())
-    return 'f';
-  if (type.isF64())
-    return 'd';
-  if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(type)) {
-    // Shared address spaces is addressed with 32-bit pointers.
-    if (ptr.getAddressSpace() == kSharedMemorySpace) {
+static FailureOr<char> getRegisterType(Type type, Location loc) {
+  MLIRContext *ctx = type.getContext();
+  auto i16 = IntegerType::get(ctx, 16);
+  auto i32 = IntegerType::get(ctx, 32);
+  auto f32 = Float32Type::get(ctx);
+
+  auto getRegisterTypeForScalar = [&](Type type) -> FailureOr<char> {
+    if (type.isInteger(1))
+      return 'b';
+    if (type.isInteger(16))
+      return 'h';
+    if (type.isInteger(32))
       return 'r';
+    if (type.isInteger(64))
+      return 'l';
+    if (type.isF32())
+      return 'f';
+    if (type.isF64())
+      return 'd';
+    if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(type)) {
+      // Shared address spaces is addressed with 32-bit pointers.
+      if (ptr.getAddressSpace() == kSharedMemorySpace) {
+        return 'r';
+      }
+      return 'l';
     }
-    return 'l';
+    // register type for struct is not supported.
+    mlir::emitError(
+        loc, "The register type could not be deduced from MLIR type. The ")
+        << type
+        << " is not supported. Supported types are:"
+           "i1, i16, i32, i64, f32, f64,"
+           "pointers.\nPlease use llvm.bitcast if you have different type. "
+           "\nSee the constraints from here: "
+           "https://docs.nvidia.com/cuda/inline-ptx-assembly/"
+           "index.html#constraints";
+    return failure();
+  };
+
+  // Packed registers
+  if (auto v = dyn_cast<VectorType>(type)) {
+    assert(v.getNumDynamicDims() == 0 && "Dynamic vectors are not supported");
+
+    int64_t lanes = v.getNumElements();
+    Type elem = v.getElementType();
+
+    // Case 1. Single vector
+    if (lanes <= 1)
+      return getRegisterTypeForScalar(elem);
+
+    // Case 2. Packed registers
+    Type widened = elem;
+    switch (lanes) {
+
+    case 2:
+      if (elem.isF16() || elem.isBF16()) // vector<2xf16>
+        widened = f32;
+      else if (elem.isFloat(8)) // vector<2xf8>
+        widened = i16;
+      break;
+    case 4:
+      if (elem.isInteger(8)) // vector<i8x4>
+        widened = i32;
+      else if (elem.isFloat(8)) // vector<f8x4>
+        widened = f32;
+      else if (elem.isFloat(4)) // vector<f4x4>
+        widened = i16;
+      break;
+      // Other packing is not supported
+    default:
+      break;
+    }
+    return getRegisterTypeForScalar(widened);
   }
-  // register type for struct is not supported.
-  llvm_unreachable("The register type could not deduced from MLIR type");
-  return '?';
+
+  return getRegisterTypeForScalar(type);
 }
 
-static char getRegisterType(Value v) {
+static FailureOr<char> getRegisterType(Value v, Location loc) {
   if (v.getDefiningOp<LLVM::ConstantOp>())
     return 'n';
-  return getRegisterType(v.getType());
+  return getRegisterType(v.getType(), loc);
 }
 
 /// Extract every element of a struct value.
@@ -75,10 +135,11 @@ static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
   return elems;
 }
 
-void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
+LogicalResult PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   LDBG() << v << "\t Modifier : " << itype << "\n";
   registerModifiers.push_back(itype);
 
+  Location loc = interfaceOp->getLoc();
   auto getModifier = [&]() -> const char * {
     switch (itype) {
     case PTXRegisterMod::Read:
@@ -111,21 +172,29 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
     }
     for (auto [idx, t] : llvm::enumerate(stype.getBody())) {
       if (itype != PTXRegisterMod::Write) {
-        Value extractValue = LLVM::ExtractValueOp::create(
-            rewriter, interfaceOp->getLoc(), v, idx);
+        Value extractValue =
+            LLVM::ExtractValueOp::create(rewriter, loc, v, idx);
         addValue(extractValue);
       }
       if (itype == PTXRegisterMod::ReadWrite) {
         ss << idx << ",";
       } else {
-        ss << getModifier() << getRegisterType(t) << ",";
+        FailureOr<char> regType = getRegisterType(t, loc);
+        if (failed(regType))
+          return rewriter.notifyMatchFailure(loc,
+                                             "failed to get register type");
+        ss << getModifier() << regType.value() << ",";
       }
     }
-    return;
+    return success();
   }
   // Handle Scalars
   addValue(v);
-  ss << getModifier() << getRegisterType(v) << ",";
+  FailureOr<char> regType = getRegisterType(v, loc);
+  if (failed(regType))
+    return rewriter.notifyMatchFailure(loc, "failed to get register type");
+  ss << getModifier() << regType.value() << ",";
+  return success();
 }
 
 /// Check if the operation needs to pack and unpack results.

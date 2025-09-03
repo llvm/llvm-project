@@ -990,3 +990,18 @@ namespace TestInjectedClassName {
   // CHECK-NEXT:    `-RecordType [[TestInjectedClassName_RT]] 'A' injected
   // CHECK-NEXT:      `-CXXRecord [[TestInjectedClassName_RD]] 'A'
 } // namespace InjectedClassName
+
+namespace TestGH155936 {
+  struct Foo {
+    struct A {
+      struct Foo {};
+    };
+  };
+  // CHECK-LABEL: Dumping TestGH155936:
+  // CHECK: CXXRecordDecl 0x{{.+}} <{{.+}}> line:[[@LINE-6]]:10 struct Foo definition
+  // CHECK: CXXRecordDecl 0x{{.+}} <col:3, col:10> col:10 implicit struct Foo
+  // CHECK: CXXRecordDecl 0x{{.+}} <{{.+}}> line:[[@LINE-7]]:12 struct A definition
+  // CHECK: CXXRecordDecl 0x{{.+}} <col:5, col:12> col:12 implicit struct A
+  // CHECK: CXXRecordDecl 0x{{.+}} <line:[[@LINE-8]]:7, col:19> col:14 struct Foo definition
+  // CHECH: CXXRecordDecl 0x{{.+}} <col:9, col:16> col:16 implicit struct Foo
+} // namspace GH155936
