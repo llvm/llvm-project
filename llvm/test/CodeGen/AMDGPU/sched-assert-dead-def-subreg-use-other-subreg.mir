@@ -23,9 +23,9 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr6_sgpr7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub3:vreg_512 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_512 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_512 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
