@@ -205,7 +205,8 @@ void test_variadic_constructor_bounds() {
   process_variadic_smart_ptr(unique_ptr<int>(raw_ptr, 1, 2, 3, 4, 5));
   
   (void)malloc_ptr;
-} // expected-warning {{Potential leak of memory pointed to by 'malloc_ptr'}} expected-note {{Potential leak of memory pointed to by 'malloc_ptr'}}
+} // expected-warning {{Potential leak of memory pointed to by 'malloc_ptr'}}
+  // expected-note@-1 {{Potential leak of memory pointed to by 'malloc_ptr'}}
 
 } // namespace variadic_constructor_tests
 
