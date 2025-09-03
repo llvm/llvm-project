@@ -20,12 +20,14 @@ fir::TBAATree::SubtreeState::getTag(llvm::StringRef uniqueName) const {
 
 fir::TBAATree::SubtreeState &
 fir::TBAATree::SubtreeState::getOrCreateNamedSubtree(mlir::StringAttr name) {
-  if (!namedSubtrees.contains(name))
-    namedSubtrees.insert(
-        {name, SubtreeState(context, parentId + '/' + name.str(), parent)});
   auto it = namedSubtrees.find(name);
-  assert(it != namedSubtrees.end());
-  return it->second;
+  if (it != namedSubtrees.end())
+    return it->second;
+
+  return namedSubtrees
+      .insert(
+          {name, SubtreeState(context, parentId + '/' + name.str(), parent)})
+      .first->second;
 }
 
 mlir::LLVM::TBAATagAttr fir::TBAATree::SubtreeState::getTag() const {

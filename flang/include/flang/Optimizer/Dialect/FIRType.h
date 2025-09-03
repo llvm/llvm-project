@@ -22,7 +22,6 @@
 namespace fir {
 class FIROpsDialect;
 class KindMapping;
-class LLVMTypeConverter;
 using KindTy = unsigned;
 
 namespace detail {

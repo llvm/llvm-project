@@ -263,12 +263,29 @@ public:
     IntervalTy interval;
   };
 
-  const StorageDesc *getStorageDesc(mlir::Operation *op) {
+  // Fills in declToStorageMap on the first invocation.
+  // Returns a storage descriptor for the given op (if registered
+  // in declToStorageMap).
+  const StorageDesc *computeStorageDesc(mlir::Operation *op) {
+    if (!op)
+      return nullptr;
+
+    // TODO: it should be safe to run collectPhysicalStorageAliasSets()
+    // on the parent func.func instead of the module, since the TBAA
+    // tags use different roots per function. This may provide better
+    // results for storages that have members with descriptors
+    // in one function but not the others.
+    if (!declToStorageMapComputed)
+      collectPhysicalStorageAliasSets(op->getParentOfType<mlir::ModuleOp>());
+    return getStorageDesc(op);
+  }
+
+private:
+  const StorageDesc *getStorageDesc(mlir::Operation *op) const {
     auto it = declToStorageMap.find(op);
     return it == declToStorageMap.end() ? nullptr : &it->second;
   }
 
-private:
   StorageDesc &getMutableStorageDesc(mlir::Operation *op) {
     auto it = declToStorageMap.find(op);
     assert(it != declToStorageMap.end());
@@ -303,6 +320,9 @@ private:
   // A map between fir::FortranVariableStorageOpInterface operations
   // and their storage descriptors.
   llvm::DenseMap<mlir::Operation *, StorageDesc> declToStorageMap;
+  // declToStorageMapComputed is set to true after declToStorageMap
+  // is initialized by collectPhysicalStorageAliasSets().
+  bool declToStorageMapComputed = false;
 };
 
 // Process fir.dummy_scope operations in the given func:
@@ -467,6 +487,9 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     set.insert(IntervalTy(storageOffset, declSize));
     return mlir::WalkResult::advance();
   });
+
+  // Mark the map as computed before any early exits below.
+  declToStorageMapComputed = true;
 
   if (seenUnknownStorage && seenDeclWithDescriptor) {
     declToStorageMap.clear();
@@ -703,7 +726,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
           mlir::dyn_cast_or_null<fir::FortranVariableStorageOpInterface>(
               instantiationPoint);
       const PassState::StorageDesc *storageDesc =
-          state.getStorageDesc(instantiationPoint);
+          state.computeStorageDesc(instantiationPoint);
 
       if (storageDesc) {
         // This is a variable that is part of a known physical storage
@@ -833,8 +856,6 @@ void AddAliasTagsPass::runOnOperation() {
                   localAllocsThreshold.getPosition()
                       ? std::optional<unsigned>(localAllocsThreshold)
                       : std::nullopt);
-
-  state.collectPhysicalStorageAliasSets(module);
 
   module.walk(
       [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
