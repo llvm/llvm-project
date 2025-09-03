@@ -244,7 +244,14 @@ public:
   //  'temporary' created for the init (in the case of a copy), such as with
   //  firstprivate.
   std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
-                                                   const Expr *VarExpr);
+                                                   const Expr *VarExpr) {
+    assert(CK != OpenACCClauseKind::Reduction);
+    return CreateInitRecipe(CK, OpenACCReductionOperator::Invalid, VarExpr);
+  }
+  std::pair<VarDecl *, VarDecl *>
+  CreateInitRecipe(OpenACCClauseKind CK,
+                   OpenACCReductionOperator ReductionOperator,
+                   const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -947,12 +954,12 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *
-  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
-                       OpenACCDirectiveKind DirectiveKind,
-                       SourceLocation BeginLoc, SourceLocation LParenLoc,
-                       OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+  OpenACCClause *CheckReductionClause(
+      ArrayRef<const OpenACCClause *> ExistingClauses,
+      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
+      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
+      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
+      SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

@@ -1,4 +1,5 @@
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=vector" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=vector allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 // RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
 
 //===========================================================================//
@@ -182,8 +183,7 @@ func.func @shuffle_0D_direct(%arg0: vector<f32>) -> vector<3xf32> {
 }
 // CHECK-LABEL: @shuffle_0D_direct(
 //  CHECK-SAME:     %[[A:.*]]: vector<f32>
-//       CHECK:   %[[c:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
-//       CHECK:   %[[s:.*]] = llvm.shufflevector %[[c]], %[[c]] [0, 1, 0] : vector<1xf32>
+//       CHECK:   %[[s:.*]] = llvm.shufflevector %{{.*}}, %{{.*}} [0, 1, 0] : vector<1xf32>
 //       CHECK:   return %[[s]] : vector<3xf32>
 
 // -----

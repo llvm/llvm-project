@@ -240,7 +240,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
 ; RV64I-CCMOV-NEXT:    slti a5, a2, 1
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a0, a2
-; RV64I-CCMOV-NEXT:    slti a5, a2, 0
+; RV64I-CCMOV-NEXT:    srli a5, a2, 63
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a5, a3, a0
 ; RV64I-CCMOV-NEXT:    lw a1, 0(a1)
 ; RV64I-CCMOV-NEXT:    slti a3, a4, 1025
@@ -449,11 +449,11 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ; RV32I-NEXT:    li a6, -1
 ; RV32I-NEXT:    bne a1, a6, .LBB3_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    j .LBB3_3
 ; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    slti a0, a1, 0
-; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    srli a1, a1, 31
+; RV32I-NEXT:    xori a0, a1, 1
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    bnez a0, .LBB3_5
 ; RV32I-NEXT:  # %bb.4:
@@ -466,8 +466,8 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ;
 ; RV32IXQCI-LABEL: select_sge_int32min:
 ; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    slti a6, a0, 0
-; RV32IXQCI-NEXT:    slti a0, a1, 0
+; RV32IXQCI-NEXT:    srli a6, a0, 31
+; RV32IXQCI-NEXT:    srli a0, a1, 31
 ; RV32IXQCI-NEXT:    xori a0, a0, 1
 ; RV32IXQCI-NEXT:    qc.selecteqi a1, -1, a6, a0
 ; RV32IXQCI-NEXT:    mv a0, a1

@@ -978,7 +978,7 @@ static bool IsValueFullyAvailableInBlock(
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
-  SmallSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
+  SmallPtrSet<BasicBlock *, 32> NewSpeculativelyAvailableBBs;
   SmallVector<BasicBlock *, 32> AvailableBBs;
 #endif
 
@@ -1222,7 +1222,7 @@ static bool liesBetween(const Instruction *From, Instruction *Between,
                         const Instruction *To, const DominatorTree *DT) {
   if (From->getParent() == Between->getParent())
     return DT->dominates(From, Between);
-  SmallSet<BasicBlock *, 1> Exclusion;
+  SmallPtrSet<BasicBlock *, 1> Exclusion;
   Exclusion.insert(Between->getParent());
   return !isPotentiallyReachable(From, To, &Exclusion, DT);
 }
@@ -2982,7 +2982,8 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
 bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (isa<AllocaInst>(CurInst) || CurInst->isTerminator() ||
       isa<PHINode>(CurInst) || CurInst->getType()->isVoidTy() ||
-      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects())
+      CurInst->mayReadFromMemory() || CurInst->mayHaveSideEffects() ||
+      CurInst->getType()->isTokenLikeTy())
     return false;
 
   // Don't do PRE on compares. The PHI would prevent CodeGenPrepare from

@@ -618,6 +618,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[20], tok::r_brace, TT_StructRBrace);
 
+  Tokens = annotate("class Outer {\n"
+                    "  struct Inner final : Base {};\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_Unknown); // Not TT_StartOfName
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InheritanceColon);
+
   constexpr StringRef Code("struct EXPORT StructName {};");
 
   Tokens = annotate(Code);
@@ -1341,6 +1348,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[21], tok::r_brace, TT_Unknown);
   EXPECT_EQ(Tokens[21]->MatchingParen, Tokens[15]);
   EXPECT_TRUE(Tokens[21]->ClosesRequiresClause);
+
+  Tokens = annotate("template <typename Foo>\n"
+                    "void Fun(const Foo &F)\n"
+                    "  requires requires(Foo F) {\n"
+                    "    { F.Bar() } -> std::same_as<int>;\n"
+                    "  };");
+  ASSERT_EQ(Tokens.size(), 38u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens =
       annotate("template <class A, class B> concept C ="

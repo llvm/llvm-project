@@ -258,10 +258,10 @@ public:
     unsigned Idx = ValIndexOf(Val);
     iterator I = findIndex(Idx);
     if (I != end())
-      return std::make_pair(I, false);
+      return {I, false};
     Sparse[Idx] = size();
     Dense.push_back(Val);
-    return std::make_pair(end() - 1, true);
+    return {end() - 1, true};
   }
 
   /// array subscript - If an element already exists with this key, return it.

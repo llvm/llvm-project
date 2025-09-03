@@ -210,19 +210,33 @@ public:
           mapper.map(region.getArguments(), regionArgs);
           for (mlir::Operation &op : region.front().without_terminator())
             (void)rewriter.clone(op, mapper);
+
+          auto yield = mlir::cast<fir::YieldOp>(region.front().getTerminator());
+          assert(yield.getResults().size() < 2);
+
+          return yield.getResults().empty()
+                     ? mlir::Value{}
+                     : mapper.lookup(yield.getResults()[0]);
         };
 
-        if (!localizer.getInitRegion().empty())
-          cloneLocalizerRegion(localizer.getInitRegion(), {localVar, localArg},
-                               rewriter.getInsertionPoint());
+        if (!localizer.getInitRegion().empty()) {
+          // Prefer the value yielded from the init region to the allocated
+          // private variable in case the region is operating on arguments
+          // by-value (e.g. Fortran character boxes).
+          localAlloc = cloneLocalizerRegion(localizer.getInitRegion(),
+                                            {localVar, localAlloc},
+                                            rewriter.getInsertionPoint());
+          assert(localAlloc);
+        }
 
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit)
-          cloneLocalizerRegion(localizer.getCopyRegion(), {localVar, localArg},
+          cloneLocalizerRegion(localizer.getCopyRegion(),
+                               {localVar, localAlloc},
                                rewriter.getInsertionPoint());
 
         if (!localizer.getDeallocRegion().empty())
-          cloneLocalizerRegion(localizer.getDeallocRegion(), {localArg},
+          cloneLocalizerRegion(localizer.getDeallocRegion(), {localAlloc},
                                rewriter.getInsertionBlock()->end());
 
         rewriter.replaceAllUsesWith(localArg, localAlloc);

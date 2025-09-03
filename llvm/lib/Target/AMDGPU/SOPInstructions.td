@@ -583,7 +583,6 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let isConvergent         = ps.isConvergent;
@@ -934,7 +933,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     >;
   } // End isReMaterializable = 1
 
-  let Constraints = "$sdst = $src2", DisableEncoding="$src2",
+  let Constraints = "$sdst = $src2",
       isCommutable = 1, AddedComplexity = 20 in {
     def S_FMAC_F32 : SOP2_Pseudo<
       "s_fmac_f32", (outs SReg_32:$sdst),
@@ -949,7 +948,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       "$sdst, $src0, $src1",
       [(set f16:$sdst, (UniformTernaryFrag<any_fma> SSrc_f16:$src0, SSrc_f16:$src1, SReg_32:$src2))]
     >;
-  } // End Constraints = "$sdst = $src2", DisableEncoding="$src2",
+  } // End Constraints = "$sdst = $src2",
     // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
@@ -994,7 +993,6 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
-  let DisableEncoding    = ps.DisableEncoding;
   let Constraints        = ps.Constraints;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -1116,8 +1114,7 @@ def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32", 0>;
 def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
 } // End isCompare = 1
 
-let isCommutable = 1, DisableEncoding = "$src0",
-    Constraints = "$sdst = $src0" in {
+let isCommutable = 1, Constraints = "$sdst = $src0" in {
   let Defs = [SCC] in
     def S_ADDK_I32 : SOPK_32TIE <"s_addk_i32">;
   def S_MULK_I32 : SOPK_32TIE <"s_mulk_i32">;
@@ -1665,7 +1662,9 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
-def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
+def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {
+  let SubtargetPredicate = isNotGFX1250Plus;
+}
 
 // On SI the documentation says sleep for approximately 64 * low 2
 // bits, consistent with the reported maximum of 448. On VI the
@@ -1844,6 +1843,13 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
+
+let SubtargetPredicate = Has1024AddressableVGPRs in {
+  def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
+    let hasSideEffects = 1;
+    let Defs = [MODE];
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
@@ -2692,6 +2698,7 @@ defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 //===----------------------------------------------------------------------===//
 // SOPP - GFX1250 only.
 //===----------------------------------------------------------------------===//
+defm S_SET_VGPR_MSB   : SOPP_Real_32_gfx12<0x006>;
 defm S_SETPRIO_INC_WG : SOPP_Real_32_gfx12<0x03e>;
 defm S_WAIT_XCNT      : SOPP_Real_32_gfx12<0x045>;
 defm S_WAIT_ASYNCCNT  : SOPP_Real_32_gfx12<0x04a>;
