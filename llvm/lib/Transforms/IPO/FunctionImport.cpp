@@ -1551,7 +1551,7 @@ void llvm::computeDeadSymbolsWithConstProp(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled) {
-  llvm::TimeTraceScope timeScope("Dead symbols");
+  llvm::TimeTraceScope timeScope("Drop dead symbols and propagate attributes");
   computeDeadSymbolsAndUpdateIndirectCalls(Index, GUIDPreservedSymbols,
                                            isPrevailing);
   if (ImportEnabled)
@@ -1906,7 +1906,7 @@ Expected<bool> FunctionImporter::importFunctions(
     // Find the globals to import
     SetVector<GlobalValue *> GlobalsToImport;
     {
-      llvm::TimeTraceScope findGlobalsScope("Find globals");
+      llvm::TimeTraceScope functionsScope("Functions");
       for (Function &F : *SrcModule) {
         if (!F.hasName())
           continue;

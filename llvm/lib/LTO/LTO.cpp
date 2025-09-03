@@ -1930,6 +1930,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   llvm::TimeTraceScope timeScope("Run ThinLTO");
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
+  timeTraceProfilerBegin("ThinLink", StringRef(""));
+  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+    if (llvm::timeTraceProfilerEnabled())
+      llvm::timeTraceProfilerEnd();
+  });
   if (ThinLTO.ModuleMap.empty())
     return Error::success();
 
@@ -2076,6 +2081,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
 
   generateParamAccessSummary(ThinLTO.CombinedIndex);
+
+  if (llvm::timeTraceProfilerEnabled())
+    llvm::timeTraceProfilerEnd();
+
+  TimeTraceScopeExit.release();
 
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
