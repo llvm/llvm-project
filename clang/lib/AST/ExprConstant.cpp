@@ -11267,6 +11267,10 @@ static llvm::APInt ConvertBoolVectorToInt(const APValue &Val) {
   return Result;
 }
 
+// i should emplement SLLDQ, SRLDQ shift (intrinsics) in constant expression
+// handling inside this function
+// avx2intrin.h -> _mm256_slli_si256
+// emmintrin.h -> _mm_slli_si128
 bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
   const VectorType *VTy = E->getType()->castAs<VectorType>();
   unsigned NElts = VTy->getNumElements();
