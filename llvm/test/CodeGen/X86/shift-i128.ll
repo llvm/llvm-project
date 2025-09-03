@@ -951,46 +951,38 @@ define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) {
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
+; i686-NEXT:    subl $16, %esp
 ; i686-NEXT:    .cfi_offset %esi, -20
 ; i686-NEXT:    .cfi_offset %edi, -16
 ; i686-NEXT:    .cfi_offset %ebx, -12
-; i686-NEXT:    movzbl 40(%ebp), %eax
-; i686-NEXT:    movl 24(%ebp), %ecx
-; i686-NEXT:    movl 28(%ebp), %edx
-; i686-NEXT:    movl 32(%ebp), %esi
-; i686-NEXT:    movl 36(%ebp), %edi
-; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; i686-NEXT:    movb $6, %cl
-; i686-NEXT:    subb %al, %cl
-; i686-NEXT:    movl %ecx, %eax
-; i686-NEXT:    shrb $3, %al
-; i686-NEXT:    andb $12, %al
-; i686-NEXT:    negb %al
-; i686-NEXT:    movsbl %al, %eax
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, (%esp)
-; i686-NEXT:    movl 20(%esp,%eax), %edx
-; i686-NEXT:    movl 24(%esp,%eax), %ebx
-; i686-NEXT:    movl %ebx, %edi
-; i686-NEXT:    shldl %cl, %edx, %edi
-; i686-NEXT:    movl 16(%esp,%eax), %esi
-; i686-NEXT:    movl 28(%esp,%eax), %eax
-; i686-NEXT:    shldl %cl, %ebx, %eax
-; i686-NEXT:    movl 8(%ebp), %ebx
-; i686-NEXT:    movl %eax, 12(%ebx)
-; i686-NEXT:    movl %edi, 8(%ebx)
-; i686-NEXT:    movl %esi, %eax
+; i686-NEXT:    movl 28(%ebp), %esi
+; i686-NEXT:    movl 32(%ebp), %eax
+; i686-NEXT:    movb $6, %dl
+; i686-NEXT:    subb 40(%ebp), %dl
+; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    shll %cl, %eax
-; i686-NEXT:    shldl %cl, %esi, %edx
-; i686-NEXT:    movl %edx, 4(%ebx)
-; i686-NEXT:    movl %eax, (%ebx)
-; i686-NEXT:    movl %ebx, %eax
+; i686-NEXT:    movl %esi, %ebx
+; i686-NEXT:    movl %esi, %edi
+; i686-NEXT:    shrl %ebx
+; i686-NEXT:    notb %cl
+; i686-NEXT:    shrl %cl, %ebx
+; i686-NEXT:    orl %eax, %ebx
+; i686-NEXT:    movl 24(%ebp), %esi
+; i686-NEXT:    movl %esi, %eax
+; i686-NEXT:    movl %edx, %ecx
+; i686-NEXT:    shll %cl, %eax
+; i686-NEXT:    shldl %cl, %esi, %edi
+; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; i686-NEXT:    movl 8(%ebp), %edi
+; i686-NEXT:    movl 36(%ebp), %esi
+; i686-NEXT:    movl 32(%ebp), %edx
+; i686-NEXT:    shldl %cl, %edx, %esi
+; i686-NEXT:    movl %esi, 12(%edi)
+; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; i686-NEXT:    movl %ecx, 4(%edi)
+; i686-NEXT:    movl %eax, (%edi)
+; i686-NEXT:    movl %ebx, 8(%edi)
+; i686-NEXT:    movl %edi, %eax
 ; i686-NEXT:    leal -12(%ebp), %esp
 ; i686-NEXT:    popl %esi
 ; i686-NEXT:    popl %edi
@@ -1001,14 +993,11 @@ define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) {
 ;
 ; x86_64-LABEL: shift_i128_limited_shamt:
 ; x86_64:       # %bb.0: # %start
+; x86_64-NEXT:    movq %rdi, %rax
 ; x86_64-NEXT:    movb $6, %cl
 ; x86_64-NEXT:    subb %dl, %cl
 ; x86_64-NEXT:    shldq %cl, %rdi, %rsi
-; x86_64-NEXT:    shlq %cl, %rdi
-; x86_64-NEXT:    xorl %eax, %eax
-; x86_64-NEXT:    testb $64, %cl
-; x86_64-NEXT:    cmovneq %rdi, %rsi
-; x86_64-NEXT:    cmoveq %rdi, %rax
+; x86_64-NEXT:    shlq %cl, %rax
 ; x86_64-NEXT:    movq %rsi, %rdx
 ; x86_64-NEXT:    retq
 start:
