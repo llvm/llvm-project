@@ -8,7 +8,7 @@
 //
 // TableGen is a tool which can be used to build up a description of something,
 // then invoke one or more "tablegen backends" to emit information about the
-// description in some predefined format.  In practice, this is used by the LLVM
+// description in some predefined format. In practice, this is used by the LLVM
 // code generators to automate generation of a code generator through a
 // high-level description of the target.
 //
@@ -63,6 +63,15 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+
+namespace llvm {
+cl::opt<bool> EmitLongStrLiterals(
+    "long-string-literals",
+    cl::desc("when emitting large string tables, prefer string literals over "
+             "comma-separated char literals. This can be a readability and "
+             "compile-time performance win, but upsets some compilers"),
+    cl::Hidden, cl::init(true));
+} // end namespace llvm
 
 static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
@@ -128,6 +137,11 @@ int llvm::TableGenMain(const char *argv0,
     return 1;
   Timer.stopTimer();
 
+  // Return early if any other errors were generated during parsing
+  // (e.g., assert failures).
+  if (ErrorsPrinted > 0)
+    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
+
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
   std::string OutString;
@@ -142,7 +156,7 @@ int llvm::TableGenMain(const char *argv0,
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
+  // If it's missing, Ninja considers the output dirty. If this was below
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {

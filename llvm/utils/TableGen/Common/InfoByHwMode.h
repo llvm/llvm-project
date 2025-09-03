@@ -118,7 +118,7 @@ template <typename InfoT> struct InfoByHwMode {
 
     // Copy and insert the default mode which should be first.
     assert(hasDefault());
-    auto P = Map.insert({Mode, Map.begin()->second});
+    auto P = Map.try_emplace(Mode, Map.begin()->second);
     return P.first->second;
   }
   const InfoT &get(unsigned Mode) const {
@@ -144,7 +144,7 @@ template <typename InfoT> struct InfoByHwMode {
     assert(hasMode(Mode) || hasDefault());
     InfoT I = get(Mode);
     Map.clear();
-    Map.insert(std::pair(DefaultMode, I));
+    Map.try_emplace(DefaultMode, I);
   }
 
 protected:
@@ -154,7 +154,7 @@ protected:
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH);
   ValueTypeByHwMode(const Record *R, MVT T);
-  ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode, T}); }
+  ValueTypeByHwMode(MVT T) { Map.try_emplace(DefaultMode, T); }
   ValueTypeByHwMode() = default;
 
   bool operator==(const ValueTypeByHwMode &T) const;
@@ -212,7 +212,7 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   void writeToStream(raw_ostream &OS) const;
 
   void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 
@@ -229,11 +229,13 @@ struct SubRegRange {
 
 struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
   SubRegRangeByHwMode(const Record *R, const CodeGenHwModes &CGH);
-  SubRegRangeByHwMode(SubRegRange Range) { Map.insert({DefaultMode, Range}); }
+  SubRegRangeByHwMode(SubRegRange Range) {
+    Map.try_emplace(DefaultMode, Range);
+  }
   SubRegRangeByHwMode() = default;
 
   void insertSubRegRangeForMode(unsigned Mode, SubRegRange Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 

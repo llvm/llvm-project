@@ -32,7 +32,7 @@ ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
                                      const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, MVT(llvm::getValueType(P.second))});
+    auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
@@ -71,9 +71,9 @@ MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
   // make a copy of it for Mode and return it.
   auto D = Map.begin();
   if (D != Map.end() && D->first == DefaultMode)
-    return Map.insert(std::pair(Mode, D->second)).first->second;
+    return Map.try_emplace(Mode, D->second).first->second;
   // If default mode is not present either, use provided Type.
-  return Map.insert(std::pair(Mode, Type)).first->second;
+  return Map.try_emplace(Mode, Type).first->second;
 }
 
 StringRef ValueTypeByHwMode::getMVTName(MVT T) {
@@ -142,7 +142,7 @@ RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
                                          const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, RegSizeInfo(P.second)});
+    auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
@@ -195,7 +195,7 @@ SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
                                          const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.insert({P.first, SubRegRange(P.second)});
+    auto I = Map.try_emplace(P.first, SubRegRange(P.second));
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
@@ -207,7 +207,7 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
   for (const HwModeSelect::PairType &P : MS.Items) {
     assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
            "Encoding must subclass InstructionEncoding");
-    auto I = Map.insert({P.first, P.second});
+    auto I = Map.try_emplace(P.first, P.second);
     assert(I.second && "Duplicate entry?");
     (void)I;
   }

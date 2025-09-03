@@ -12,15 +12,11 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -309,6 +305,35 @@ DICommonBlockAttr DebugImporter::translateImpl(llvm::DICommonBlock *node) {
                                 translate(node->getFile()), node->getLineNo());
 }
 
+DIGenericSubrangeAttr
+DebugImporter::translateImpl(llvm::DIGenericSubrange *node) {
+  auto getAttrOrNull =
+      [&](llvm::DIGenericSubrange::BoundType data) -> Attribute {
+    if (data.isNull())
+      return nullptr;
+    if (auto *expr = dyn_cast<llvm::DIExpression *>(data))
+      return translateExpression(expr);
+    if (auto *var = dyn_cast<llvm::DIVariable *>(data)) {
+      if (auto *local = dyn_cast<llvm::DILocalVariable>(var))
+        return translate(local);
+      if (auto *global = dyn_cast<llvm::DIGlobalVariable>(var))
+        return translate(global);
+      return nullptr;
+    }
+    return nullptr;
+  };
+  Attribute count = getAttrOrNull(node->getCount());
+  Attribute upperBound = getAttrOrNull(node->getUpperBound());
+  Attribute lowerBound = getAttrOrNull(node->getLowerBound());
+  Attribute stride = getAttrOrNull(node->getStride());
+  // Either count or the upper bound needs to be present. Otherwise, the
+  // metadata is invalid.
+  if (!count && !upperBound)
+    return {};
+  return DIGenericSubrangeAttr::get(context, count, lowerBound, upperBound,
+                                    stride);
+}
+
 DISubroutineTypeAttr
 DebugImporter::translateImpl(llvm::DISubroutineType *node) {
   SmallVector<DITypeAttr> types;
@@ -377,6 +402,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DISubprogram>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubrange>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIGenericSubrange>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DISubroutineType>(node))
       return translateImpl(casted);

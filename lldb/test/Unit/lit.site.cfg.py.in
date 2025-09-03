@@ -9,7 +9,9 @@ config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.python_executable = "@Python3_EXECUTABLE@"
+config.python_root_dir = "@Python3_ROOT_DIR@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

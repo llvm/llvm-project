@@ -17,9 +17,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 
-#include <algorithm>
-#include <optional>
-
 #define DEBUG_TYPE "format-qualifier-alignment-fixer"
 
 namespace clang {
@@ -132,8 +129,10 @@ static void rotateTokens(const SourceManager &SourceMgr,
   // Then move through the other tokens.
   auto *Tok = Begin;
   while (Tok != End) {
-    if (!NewText.empty() && !endsWithSpace(NewText))
+    if (!NewText.empty() && !endsWithSpace(NewText) &&
+        Tok->isNot(tok::coloncolon)) {
       NewText += " ";
+    }
 
     NewText += Tok->TokenText;
     Tok = Tok->Next;
@@ -348,7 +347,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
-    if (Next->is(tok::kw_auto))
+    if (Next && Next->is(tok::kw_auto))
       TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.
@@ -386,7 +385,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
@@ -411,6 +411,14 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
+    for (const auto *Prev = TypeToken->Previous;
+         Prev && Prev->is(tok::coloncolon); Prev = Prev->Previous) {
+      TypeToken = Prev;
+      Prev = Prev->Previous;
+      if (!(Prev && Prev->is(tok::identifier)))
+        break;
+      TypeToken = Prev;
+    }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
@@ -627,15 +635,26 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
 bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
+  assert(Tok);
   if (Tok->isNot(tok::identifier))
     return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
+
+  const auto Text = Tok->TokenText;
+  assert(!Text.empty());
+
+  // T,K,U,V likely could be template arguments
+  if (Text.size() == 1)
+    return false;
+
+  // It's unlikely that qualified names are object-like macros.
+  const auto *Prev = Tok->getPreviousNonComment();
+  if (Prev && Prev->is(tok::coloncolon))
+    return false;
+  const auto *Next = Tok->getNextNonComment();
+  if (Next && Next->is(tok::coloncolon))
+    return false;
+
+  return Text == Text.upper();
 }
 
 } // namespace format

@@ -9,18 +9,13 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 #define LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
-
-namespace plugin {
-namespace dwarf {
-class DWARFUnit;
-} // namespace dwarf
-} // namespace plugin
 
 /// \class DWARFExpressionList DWARFExpressionList.h
 /// "lldb/Expression/DWARFExpressionList.h" Encapsulates a range map from file
@@ -30,13 +25,13 @@ public:
   DWARFExpressionList() = default;
 
   DWARFExpressionList(lldb::ModuleSP module_sp,
-                      const plugin::dwarf::DWARFUnit *dwarf_cu,
+                      const DWARFExpression::Delegate *dwarf_cu,
                       lldb::addr_t func_file_addr)
       : m_module_wp(module_sp), m_dwarf_cu(dwarf_cu),
         m_func_file_addr(func_file_addr) {}
 
   DWARFExpressionList(lldb::ModuleSP module_sp, DWARFExpression expr,
-                      const plugin::dwarf::DWARFUnit *dwarf_cu)
+                      const DWARFExpression::Delegate *dwarf_cu)
       : m_module_wp(module_sp), m_dwarf_cu(dwarf_cu) {
     AddExpression(0, LLDB_INVALID_ADDRESS, expr);
   }
@@ -64,6 +59,21 @@ public:
   }
 
   lldb::addr_t GetFuncFileAddress() { return m_func_file_addr; }
+
+  /// Represents an entry in the DWARFExpressionList with all needed metadata.
+  struct DWARFExpressionEntry {
+    /// Represents a DWARF location range in the DWARF unit’s file‐address space
+    std::optional<AddressRange> file_range; ///< None = always-valid single expr
+    const DWARFExpression *expr;
+  };
+
+  /// Returns a DWARFExpressionEntry whose file_range contains the given
+  /// load‐address.  `func_load_addr` is the load‐address of the function
+  /// start; `load_addr` is the full runtime PC.  On success, `expr` is
+  /// non-null.
+  std::optional<DWARFExpressionEntry>
+  GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                              lldb::addr_t load_addr) const;
 
   const DWARFExpression *GetExpressionAtAddress(lldb::addr_t func_load_addr,
                                                 lldb::addr_t load_addr) const;
@@ -106,10 +116,6 @@ public:
   /// \return
   ///     True if IsLocationList() is true and the address was found;
   ///     false otherwise.
-  //    bool
-  //    LocationListContainsLoadAddress (Process* process, const Address &addr)
-  //    const;
-  //
   bool ContainsAddress(lldb::addr_t func_load_addr, lldb::addr_t addr) const;
 
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
@@ -143,7 +149,7 @@ private:
   /// The DWARF compile unit this expression belongs to. It is used to evaluate
   /// values indexing into the .debug_addr section (e.g. DW_OP_GNU_addr_index,
   /// DW_OP_GNU_const_index)
-  const plugin::dwarf::DWARFUnit *m_dwarf_cu = nullptr;
+  const DWARFExpression::Delegate *m_dwarf_cu = nullptr;
 
   // Function base file address.
   lldb::addr_t m_func_file_addr = LLDB_INVALID_ADDRESS;

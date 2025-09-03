@@ -170,11 +170,6 @@ define i64 @sub_both_ce() {
 	ret i64 sub nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @mul_both_ce() {
-; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
-	ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
-}
-
 define ptr @gep_nw_ce() {
 ; CHECK: ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
         ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
@@ -188,11 +183,6 @@ define i64 @add_plain_ce() {
 define i64 @sub_plain_ce() {
 ; CHECK: ret i64 sub (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 sub (i64 ptrtoint (ptr @addr to i64), i64 91)
-}
-
-define i64 @mul_plain_ce() {
-; CHECK: ret i64 mul (i64 ptrtoint (ptr @addr to i64), i64 91)
-	ret i64 mul (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define ptr @gep_plain_ce() {
@@ -210,11 +200,6 @@ define i64 @sub_both_reversed_ce() {
 	ret i64 sub nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @mul_both_reversed_ce() {
-; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
-	ret i64 mul nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
-}
-
 define i64 @add_signed_ce() {
 ; CHECK: ret i64 add nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 add nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
@@ -225,11 +210,6 @@ define i64 @sub_signed_ce() {
 	ret i64 sub nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64 @mul_signed_ce() {
-; CHECK: ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
-	ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
-}
-
 define i64 @add_unsigned_ce() {
 ; CHECK: ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
@@ -238,11 +218,6 @@ define i64 @add_unsigned_ce() {
 define i64 @sub_unsigned_ce() {
 ; CHECK: ret i64 sub nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 	ret i64 sub nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
-}
-
-define i64 @mul_unsigned_ce() {
-; CHECK: ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
-	ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @test_zext(i32 %a) {

@@ -157,7 +157,6 @@ to make this check uniform across all passes.  These helper functions are:
 .. code-block:: c++
 
   bool ModulePass::skipModule(Module &M);
-  bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC);
   bool FunctionPass::skipFunction(const Function &F);
   bool LoopPass::skipLoop(const Loop *L);
 

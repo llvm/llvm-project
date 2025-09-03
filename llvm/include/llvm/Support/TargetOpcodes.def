@@ -289,6 +289,12 @@ HANDLE_TARGET_OPCODE(G_OR)
 /// Generic bitwise exclusive-or instruction.
 HANDLE_TARGET_OPCODE(G_XOR)
 
+/// Generic absolute difference signed instruction.
+HANDLE_TARGET_OPCODE(G_ABDS)
+
+/// Generic absolute difference unsigned instruction.
+HANDLE_TARGET_OPCODE(G_ABDU)
+
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 
@@ -420,6 +426,8 @@ HANDLE_TARGET_OPCODE(G_ATOMICRMW_FADD)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FSUB)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMAX)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMIN)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMAXIMUM)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_UINC_WRAP)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_UDEC_WRAP)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_USUB_COND)
@@ -466,6 +474,15 @@ HANDLE_TARGET_OPCODE(G_ANYEXT)
 /// each element individually, G_EXTRACT will typically discard the high
 /// elements of the vector.
 HANDLE_TARGET_OPCODE(G_TRUNC)
+
+/// Generic instruction to truncate a signed operand to a signed result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_S)
+
+/// Generic instruction to truncate a signed operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_U)
+
+/// Generic instruction to truncate a unsigned operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_USAT_U)
 
 /// Generic integer constant.
 HANDLE_TARGET_OPCODE(G_CONSTANT)
@@ -716,6 +733,8 @@ HANDLE_TARGET_OPCODE(G_FMAXNUM_IEEE)
 /// FP min/max matching IEEE-754 2018 draft semantics.
 HANDLE_TARGET_OPCODE(G_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_FMAXIMUM)
+HANDLE_TARGET_OPCODE(G_FMINIMUMNUM)
+HANDLE_TARGET_OPCODE(G_FMAXIMUMNUM)
 
 /// Access to FP environment.
 HANDLE_TARGET_OPCODE(G_GET_FPENV)
@@ -724,6 +743,8 @@ HANDLE_TARGET_OPCODE(G_RESET_FPENV)
 HANDLE_TARGET_OPCODE(G_GET_FPMODE)
 HANDLE_TARGET_OPCODE(G_SET_FPMODE)
 HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
+
+HANDLE_TARGET_OPCODE(G_GET_ROUNDING)
 
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)
@@ -776,6 +797,9 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 /// Generic splatvector.
 HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
+/// Generic stepvector.
+HANDLE_TARGET_OPCODE(G_STEP_VECTOR)
+
 /// Generic masked compress.
 HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
 
@@ -808,6 +832,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
+
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
 
 /// Floating point tangent.
 HANDLE_TARGET_OPCODE(G_FTAN)

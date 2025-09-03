@@ -1,0 +1,18 @@
+; RUN: llvm-pdbutil yaml2pdb %p/Inputs/register-records.yaml --pdb=%t.pdb
+; RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=CHECK_YAML2PDB %s
+
+; RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+; RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK_PDB2YAML %s
+
+CHECK_YAML2PDB:                           Symbols                           
+CHECK_YAML2PDB: ============================================================
+CHECK_YAML2PDB:   Mod 0000 | `/tmp/test.obj`:
+CHECK_YAML2PDB:        4 | S_REGREL32 [size = 20] `this`
+CHECK_YAML2PDB:            type = 0x118E (<unknown UDT>), register = RSP, offset = 56
+
+CHECK_PDB2YAML: - Kind:            S_REGREL32
+CHECK_PDB2YAML:   RegRelativeSym:
+CHECK_PDB2YAML:    Offset:          56
+CHECK_PDB2YAML:    Type:            4494
+CHECK_PDB2YAML:    Register:        RSP
+CHECK_PDB2YAML:    VarName:         this

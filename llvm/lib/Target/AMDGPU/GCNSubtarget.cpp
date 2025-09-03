@@ -16,8 +16,8 @@
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
-#include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
@@ -25,10 +25,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -40,11 +37,6 @@ using namespace llvm;
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef AMDGPUSubtarget
-
-static cl::opt<bool>
-    EnablePowerSched("amdgpu-enable-power-sched",
-                     cl::desc("Enable scheduling to minimize mAI power bursts"),
-                     cl::init(false));
 
 static cl::opt<bool> EnableVGPRIndexMode(
     "amdgpu-vgpr-index-mode",
@@ -58,7 +50,7 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
-                 cl::init(3), cl::Hidden);
+                 cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
 
@@ -104,14 +96,16 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (Gen == AMDGPUSubtarget::INVALID) {
     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
-  }
-
-  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
-      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // Assume wave64 for the unknown target, if not explicitly set.
+    if (getWavefrontSizeLog2() == 0)
+      WavefrontSizeLog2 = 6;
+  } else if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+             !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    WavefrontSizeLog2 = getGeneration() >= AMDGPUSubtarget::GFX10 ? 5 : 6;
   }
 
   // We don't support FP64 for EG/NI atm.
@@ -143,17 +137,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
+  if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
-  LocalMemorySize = AddressableLocalMemorySize;
-  if (AMDGPU::isGFX10Plus(*this) &&
-      !getFeatureBits().test(AMDGPU::FeatureCuMode))
-    LocalMemorySize *= 2;
-
-  // Don't crash on invalid devices.
-  if (WavefrontSizeLog2 == 0)
-    WavefrontSizeLog2 = 5;
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -170,7 +157,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   LLVMContext &Ctx = F.getContext();
-  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
@@ -191,6 +178,9 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+
+  TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
+
   CallLoweringInfo = std::make_unique<AMDGPUCallLowering>(*getTargetLowering());
   InlineAsmLoweringInfo =
       std::make_unique<InlineAsmLowering>(getTargetLowering());
@@ -198,6 +188,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
       std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+}
+
+const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
@@ -327,7 +321,7 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
 }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
@@ -341,6 +335,43 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
   if (!enableSIScheduler())
     Policy.ShouldTrackLaneMasks = true;
+}
+
+void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                             const SchedRegion &Region) const {
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  Attribute PostRADirectionAttr = F.getFnAttribute("amdgpu-post-ra-direction");
+  if (!PostRADirectionAttr.isValid())
+    return;
+
+  StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+  if (PostRADirectionStr == "topdown") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+  } else if (PostRADirectionStr == "bottomup") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = true;
+  } else if (PostRADirectionStr == "bidirectional") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+  } else {
+    DiagnosticInfoOptimizationFailure Diag(
+        F, F.getSubprogram(), "invalid value for postRA direction attribute");
+    F.getContext().diagnose(Diag);
+  }
+
+  LLVM_DEBUG({
+    const char *DirStr = "default";
+    if (Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "topdown";
+    else if (!Policy.OnlyTopDown && Policy.OnlyBottomUp)
+      DirStr = "bottomup";
+    else if (!Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "bidirectional";
+
+    dbgs() << "Post-MI-sched direction (" << F.getName() << "): " << DirStr
+           << '\n';
+  });
 }
 
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
@@ -369,8 +400,11 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
                                                    getGeneration());
 }
 
-unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
-  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs);
+unsigned
+GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
+                                       unsigned DynamicVGPRBlockSize) const {
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs,
+                                                       DynamicVGPRBlockSize);
 }
 
 unsigned
@@ -403,16 +437,22 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
   return getBaseReservedNumSGPRs(KernelUsesFlatScratch);
 }
 
-unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
-                                        unsigned NumSGPRs,
-                                        unsigned NumVGPRs) const {
-  unsigned Occupancy =
-      std::min(getMaxWavesPerEU(), getOccupancyWithLocalMemSize(LDSSize, F));
-  if (NumSGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumSGPRs(NumSGPRs));
-  if (NumVGPRs)
-    Occupancy = std::min(Occupancy, getOccupancyWithNumVGPRs(NumVGPRs));
-  return Occupancy;
+std::pair<unsigned, unsigned>
+GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
+                               unsigned NumSGPRs, unsigned NumVGPRs) const {
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  // Temporarily check both the attribute and the subtarget feature until the
+  // latter is removed.
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
+
+  auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
+  unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
+  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
+
+  // Maximum occupancy may be further limited by high SGPR/VGPR usage.
+  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
 unsigned GCNSubtarget::getBaseMaxNumSGPRs(
@@ -425,10 +465,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  unsigned Requested =
+      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
+  if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
       Requested = 0;
@@ -469,7 +509,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static unsigned getMaxNumPreloadedSGPRs() {
+unsigned GCNSubtarget::getMaxNumPreloadedSGPRs() const {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =
@@ -500,43 +540,92 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 }
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-  // Compute maximum number of VGPRs function can use using default/requested
-  // minimum number of waves per execution unit.
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+    const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
+  const auto &[Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
 
-    if (hasGFX90AInsts())
-      Requested *= 2;
+  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  if (Requested != Max && hasGFX90AInsts())
+    Requested *= 2;
 
-    // Make sure requested value is compatible with values implied by
-    // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
-      Requested = 0;
-    if (WavesPerEU.second && Requested &&
-        Requested < getMinNumVGPRs(WavesPerEU.second))
-      Requested = 0;
-
-    if (Requested)
-      MaxNumVGPRs = Requested;
-  }
-
-  return MaxNumVGPRs;
+  // Make sure requested value is inside the range of possible VGPR usage.
+  return std::clamp(Requested, Min, Max);
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  return getBaseMaxNumVGPRs(F, getWavesPerEU(F));
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is removed.
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
+
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(
+      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
+          getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  return getMaxNumVGPRs(MF.getFunction());
+}
+
+std::pair<unsigned, unsigned>
+GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
+  const unsigned MaxVectorRegs = getMaxNumVGPRs(F);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
+
+  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
+  // a wave may have up to 512 total vector registers combining together both
+  // VGPRs and AGPRs. Hence, in an entry function without calls and without
+  // AGPRs used within it, it is possible to use the whole vector register
+  // budget for VGPRs.
+  //
+  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (hasGFX90AInsts()) {
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
+                                        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+    } else {
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+    }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           "invalid register counts");
+  } else if (hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
+  }
+
+  return std::pair(MaxNumVGPRs, MaxNumAGPRs);
 }
 
 void GCNSubtarget::adjustSchedDependency(
@@ -584,117 +673,6 @@ void GCNSubtarget::adjustSchedDependency(
   }
 }
 
-namespace {
-struct FillMFMAShadowMutation : ScheduleDAGMutation {
-  const SIInstrInfo *TII;
-
-  ScheduleDAGMI *DAG;
-
-  FillMFMAShadowMutation(const SIInstrInfo *tii) : TII(tii) {}
-
-  bool isSALU(const SUnit *SU) const {
-    const MachineInstr *MI = SU->getInstr();
-    return MI && TII->isSALU(*MI) && !MI->isTerminator();
-  }
-
-  bool isVALU(const SUnit *SU) const {
-    const MachineInstr *MI = SU->getInstr();
-    return MI && TII->isVALU(*MI);
-  }
-
-  // Link as many SALU instructions in chain as possible. Return the size
-  // of the chain. Links up to MaxChain instructions.
-  unsigned linkSALUChain(SUnit *From, SUnit *To, unsigned MaxChain,
-                         SmallPtrSetImpl<SUnit *> &Visited) const {
-    SmallVector<SUnit *, 8> Worklist({To});
-    unsigned Linked = 0;
-
-    while (!Worklist.empty() && MaxChain-- > 0) {
-      SUnit *SU = Worklist.pop_back_val();
-      if (!Visited.insert(SU).second)
-        continue;
-
-      LLVM_DEBUG(dbgs() << "Inserting edge from\n"; DAG->dumpNode(*From);
-                 dbgs() << "to\n"; DAG->dumpNode(*SU); dbgs() << '\n');
-
-      if (SU != From && From != &DAG->ExitSU && DAG->canAddEdge(SU, From))
-        if (DAG->addEdge(SU, SDep(From, SDep::Artificial)))
-          ++Linked;
-
-      for (SDep &SI : From->Succs) {
-        SUnit *SUv = SI.getSUnit();
-        if (SUv != From && SU != &DAG->ExitSU && isVALU(SUv) &&
-            DAG->canAddEdge(SUv, SU))
-          DAG->addEdge(SUv, SDep(SU, SDep::Artificial));
-      }
-
-      for (SDep &SI : SU->Succs) {
-        SUnit *Succ = SI.getSUnit();
-        if (Succ != SU && isSALU(Succ))
-          Worklist.push_back(Succ);
-      }
-    }
-
-    return Linked;
-  }
-
-  void apply(ScheduleDAGInstrs *DAGInstrs) override {
-    const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasMAIInsts())
-      return;
-    DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
-    const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
-    if (!TSchedModel || DAG->SUnits.empty())
-      return;
-
-    // Scan for MFMA long latency instructions and try to add a dependency
-    // of available SALU instructions to give them a chance to fill MFMA
-    // shadow. That is desirable to fill MFMA shadow with SALU instructions
-    // rather than VALU to prevent power consumption bursts and throttle.
-    auto LastSALU = DAG->SUnits.begin();
-    auto E = DAG->SUnits.end();
-    SmallPtrSet<SUnit *, 32> Visited;
-    for (SUnit &SU : DAG->SUnits) {
-      MachineInstr &MAI = *SU.getInstr();
-      if (!TII->isMAI(MAI) ||
-          MAI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
-          MAI.getOpcode() == AMDGPU::V_ACCVGPR_READ_B32_e64)
-        continue;
-
-      unsigned Lat = TSchedModel->computeInstrLatency(&MAI) - 1;
-
-      LLVM_DEBUG(dbgs() << "Found MFMA: "; DAG->dumpNode(SU);
-                 dbgs() << "Need " << Lat
-                        << " instructions to cover latency.\n");
-
-      // Find up to Lat independent scalar instructions as early as
-      // possible such that they can be scheduled after this MFMA.
-      for (; Lat && LastSALU != E; ++LastSALU) {
-        if (Visited.count(&*LastSALU))
-          continue;
-
-        if (&SU == &DAG->ExitSU || &SU == &*LastSALU || !isSALU(&*LastSALU) ||
-            !DAG->canAddEdge(&*LastSALU, &SU))
-          continue;
-
-        Lat -= linkSALUChain(&SU, &*LastSALU, Lat, Visited);
-      }
-    }
-  }
-};
-} // namespace
-
-void GCNSubtarget::getPostRAMutations(
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
-}
-
-std::unique_ptr<ScheduleDAGMutation>
-GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
-  return EnablePowerSched ? std::make_unique<FillMFMAShadowMutation>(&InstrInfo)
-                          : nullptr;
-}
-
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX12)
     return 0; // Not MIMG encoding.
@@ -716,12 +694,6 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   const CallingConv::ID CC = F.getCallingConv();
   const bool IsKernel =
       CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
-  // FIXME: Should have analysis or something rather than attribute to detect
-  // calls.
-  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
-  // FIXME: This attribute is a hack, we just need an analysis on the function
-  // to look for allocas.
-  const bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
 
   if (IsKernel && (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0))
     KernargSegmentPtr = true;
@@ -744,12 +716,13 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
       DispatchID = true;
   }
 
-  // TODO: This could be refined a lot. The attribute is a poor way of
-  // detecting calls or stack objects that may require it before argument
-  // lowering.
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
       (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
+      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch()
+      // is false.
+      (ST.enableFlatScratch() ||
+       (!AMDGPU::isGraphics(CC) &&
+        !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
   }

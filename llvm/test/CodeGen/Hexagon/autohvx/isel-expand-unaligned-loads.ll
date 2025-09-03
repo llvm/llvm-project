@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-packetizer -hexagon-align-loads < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-packetizer -hexagon-align-loads < %s | FileCheck %s
 
 ; CHECK-LABEL: test_00:
 ; CHECK-DAG: v[[V00:[0-9]+]] = vmem(r[[B00:[0-9]+]]+#0)

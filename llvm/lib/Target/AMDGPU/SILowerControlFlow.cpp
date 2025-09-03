@@ -48,6 +48,7 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
+#include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -56,6 +57,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -68,17 +70,18 @@ RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
 
 namespace {
 
-class SILowerControlFlow : public MachineFunctionPass {
+class SILowerControlFlow {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   LiveVariables *LV = nullptr;
   MachineDominatorTree *MDT = nullptr;
+  MachinePostDominatorTree *PDT = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   SetVector<MachineInstr*> LoweredEndCf;
   DenseSet<Register> LoweredIf;
-  SmallSet<MachineBasicBlock *, 4> KillBlocks;
+  SmallPtrSet<MachineBasicBlock *, 4> KillBlocks;
   SmallSet<Register, 8> RecomputeRegs;
 
   const TargetRegisterClass *BoolRC = nullptr;
@@ -136,9 +139,17 @@ private:
   void optimizeEndCf();
 
 public:
+  SILowerControlFlow(LiveIntervals *LIS, LiveVariables *LV,
+                     MachineDominatorTree *MDT, MachinePostDominatorTree *PDT)
+      : LIS(LIS), LV(LV), MDT(MDT), PDT(PDT) {}
+  bool run(MachineFunction &MF);
+};
+
+class SILowerControlFlowLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  SILowerControlFlow() : MachineFunctionPass(ID) {}
+  SILowerControlFlowLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -150,19 +161,20 @@ public:
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     // Should preserve the same set that TwoAddressInstructions does.
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(LiveVariablesID);
+    AU.addPreserved<LiveVariablesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
 } // end anonymous namespace
 
-char SILowerControlFlow::ID = 0;
+char SILowerControlFlowLegacy::ID = 0;
 
-INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
-               "SI lower control flow", false, false)
+INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
+                false, false)
 
 static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
   MachineOperand &ImpDefSCC = MI.getOperand(3);
@@ -171,7 +183,7 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
   ImpDefSCC.setIsDead(IsDead);
 }
 
-char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
+char &llvm::SILowerControlFlowLegacyID = SILowerControlFlowLegacy::ID;
 
 bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
                                  const MachineBasicBlock *End) {
@@ -448,7 +460,7 @@ MachineBasicBlock::iterator
 SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
   MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
 
-  SmallSet<const MachineBasicBlock *, 4> Visited;
+  SmallPtrSet<const MachineBasicBlock *, 4> Visited;
   MachineBasicBlock *B = &MBB;
   do {
     if (!Visited.insert(B).second)
@@ -497,13 +509,18 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock *SplitBB = &MBB;
   if (NeedBlockSplit) {
     SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/true, LIS);
-    if (MDT && SplitBB != &MBB) {
-      MachineDomTreeNode *MBBNode = (*MDT)[&MBB];
-      SmallVector<MachineDomTreeNode *> Children(MBBNode->begin(),
-                                                 MBBNode->end());
-      MachineDomTreeNode *SplitBBNode = MDT->addNewBlock(SplitBB, &MBB);
-      for (MachineDomTreeNode *Child : Children)
-        MDT->changeImmediateDominator(Child, SplitBBNode);
+    if (SplitBB != &MBB && (MDT || PDT)) {
+      using DomTreeT = DomTreeBase<MachineBasicBlock>;
+      SmallVector<DomTreeT::UpdateType, 16> DTUpdates;
+      for (MachineBasicBlock *Succ : SplitBB->successors()) {
+        DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+        DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
+      }
+      DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
+      if (MDT)
+        MDT->applyUpdates(DTUpdates);
+      if (PDT)
+        PDT->applyUpdates(DTUpdates);
     }
     Opcode = OrTermrOpc;
     InsPt = MI;
@@ -718,26 +735,27 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   MachineBasicBlock *Succ = *MBB.succ_begin();
   MachineBasicBlock *FallThrough = nullptr;
 
+  using DomTreeT = DomTreeBase<MachineBasicBlock>;
+  SmallVector<DomTreeT::UpdateType, 8> DTUpdates;
+
   while (!MBB.predecessors().empty()) {
     MachineBasicBlock *P = *MBB.pred_begin();
     if (P->getFallThrough(false) == &MBB)
       FallThrough = P;
     P->ReplaceUsesOfBlockWith(&MBB, Succ);
+    DTUpdates.push_back({DomTreeT::Insert, P, Succ});
+    DTUpdates.push_back({DomTreeT::Delete, P, &MBB});
   }
   MBB.removeSuccessor(Succ);
   if (LIS) {
     for (auto &I : MBB.instrs())
       LIS->RemoveMachineInstrFromMaps(I);
   }
-  if (MDT) {
-    // If Succ, the single successor of MBB, is dominated by MBB, MDT needs
-    // updating by changing Succ's idom to the one of MBB; otherwise, MBB must
-    // be a leaf node in MDT and could be erased directly.
-    if (MDT->dominates(&MBB, Succ))
-      MDT->changeImmediateDominator(MDT->getNode(Succ),
-                                    MDT->getNode(&MBB)->getIDom());
-    MDT->eraseNode(&MBB);
-  }
+  if (MDT)
+    MDT->applyUpdates(DTUpdates);
+  if (PDT)
+    PDT->applyUpdates(DTUpdates);
+
   MBB.clear();
   MBB.eraseFromParent();
   if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
@@ -753,21 +771,13 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   return true;
 }
 
-bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
+bool SILowerControlFlow::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   EnableOptimizeEndCf = RemoveRedundantEndcf &&
                         MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
-  // This doesn't actually need LiveIntervals, but we can preserve them.
-  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  // This doesn't actually need LiveVariables, but we can preserve them.
-  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
 
@@ -863,4 +873,43 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   KillBlocks.clear();
 
   return Changed;
+}
+
+bool SILowerControlFlowLegacy::runOnMachineFunction(MachineFunction &MF) {
+  // This doesn't actually need LiveIntervals, but we can preserve them.
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  // This doesn't actually need LiveVariables, but we can preserve them.
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *PDTWrapper =
+      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  MachinePostDominatorTree *PDT =
+      PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
+  return SILowerControlFlow(LIS, LV, MDT, PDT).run(MF);
+}
+
+PreservedAnalyses
+SILowerControlFlowPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  LiveVariables *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+  MachineDominatorTree *MDT =
+      MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  MachinePostDominatorTree *PDT =
+      MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+
+  bool Changed = SILowerControlFlow(LIS, LV, MDT, PDT).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachinePostDominatorTreeAnalysis>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<LiveVariablesAnalysis>();
+  return PA;
 }

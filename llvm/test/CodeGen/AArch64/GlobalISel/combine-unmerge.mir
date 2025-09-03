@@ -10,9 +10,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -115,9 +114,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_bitcast_merge
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $w0 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[DEF1]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[DEF]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -135,14 +133,11 @@ name:            test_combine_unmerge_merge_incompatible_types
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]](s32), [[DEF1]](s32)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[MV]](s64)
-    ; CHECK-NEXT: $h0 = COPY [[UV]](s16)
-    ; CHECK-NEXT: $h1 = COPY [[UV1]](s16)
-    ; CHECK-NEXT: $h2 = COPY [[UV2]](s16)
-    ; CHECK-NEXT: $h3 = COPY [[UV3]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $h0 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h1 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h2 = COPY [[DEF]](s16)
+    ; CHECK-NEXT: $h3 = COPY [[DEF]](s16)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_IMPLICIT_DEF
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1(s32)
@@ -538,4 +533,83 @@ body:             |
     %un1:_(s128), %un2:_(s128) = G_UNMERGE_VALUES %any(<4 x s64>)
     $q0 = COPY %un1(s128)
     $q1 = COPY %un2(s128)
+...
+
+# Check that we anyext the merge
+---
+name:            test_merge_undef
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_undef
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %me:_(s128) = G_ANYEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_IMPLICIT_DEF
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...
+
+# Check that we don't anyext the merge, multi-use
+---
+name:            test_merge_undef_multi_use
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_undef_multi_use
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %me:_(s128) = G_ANYEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    ; CHECK-NEXT: $x0 = COPY %def(s64)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_IMPLICIT_DEF
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+    $x0 = COPY %def(s64)
+...
+# Check that we zext the merge
+---
+name:            test_merge_zero
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+...
+# Check that we still zext the merge, multi-use
+---
+name:            test_merge_zero_multi_use
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_zero_multi_use
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %me:_(s128) = G_ZEXT %opaque(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    ; CHECK-NEXT: $x0 = COPY %def(s64)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 0
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
+    $x0 = COPY %def(s64)
+...
+# Check that we don't zext the merge with one
+---
+name:            test_merge_one
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_merge_one
+    ; CHECK: %opaque:_(s64) = COPY $x0
+    ; CHECK-NEXT: %def:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def(s64)
+    ; CHECK-NEXT: $q0 = COPY %me(s128)
+    %opaque:_(s64) = COPY $x0
+    %def:_(s64) = G_CONSTANT i64 1
+    %me:_(s128) = G_MERGE_VALUES %opaque(s64), %def
+    $q0 = COPY %me(s128)
 ...

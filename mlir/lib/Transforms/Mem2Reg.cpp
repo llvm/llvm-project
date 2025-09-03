@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
 namespace mlir {
@@ -408,7 +409,7 @@ void MemorySlotPromotionAnalyzer::computeMergePoints(
   SmallVector<Block *> mergePointsVec;
   idfCalculator.calculate(mergePointsVec);
 
-  mergePoints.insert(mergePointsVec.begin(), mergePointsVec.end());
+  mergePoints.insert_range(mergePointsVec);
 }
 
 bool MemorySlotPromotionAnalyzer::areMergePointsUsable(
@@ -632,8 +633,7 @@ MemorySlotPromoter::promoteSlot() {
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "[mem2reg] Promoted memory slot: " << slot.ptr
-                          << "\n");
+  LDBG() << "Promoted memory slot: " << slot.ptr;
 
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;

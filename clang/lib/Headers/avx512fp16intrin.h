@@ -33,15 +33,26 @@ typedef _Float16 __m512h_u __attribute__((__vector_size__(64), __aligned__(1)));
                  __target__("avx512fp16,no-evex512"),                          \
                  __min_vector_width__(128)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
 static __inline__ _Float16 __DEFAULT_FN_ATTRS512 _mm512_cvtsh_h(__m512h __a) {
   return __a[0];
 }
 
-static __inline __m128h __DEFAULT_FN_ATTRS128 _mm_setzero_ph(void) {
+static __inline __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_setzero_ph(void) {
   return (__m128h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
 
-static __inline __m256h __DEFAULT_FN_ATTRS256 _mm256_setzero_ph(void) {
+static __inline __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_setzero_ph(void) {
   return (__m256h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
@@ -50,7 +61,8 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_undefined_ph(void) {
   return (__m256h)__builtin_ia32_undef256();
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512 _mm512_setzero_ph(void) {
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_setzero_ph(void) {
   return (__m512h){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -64,14 +76,15 @@ static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_undefined_ph(void) {
   return (__m512h)__builtin_ia32_undef512();
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512 _mm512_set1_ph(_Float16 __h) {
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_set1_ph(_Float16 __h) {
   return (__m512h)(__v32hf){__h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h,
                             __h, __h, __h, __h, __h, __h, __h, __h};
 }
 
-static __inline __m512h __DEFAULT_FN_ATTRS512
+static __inline __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
               _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
               _Float16 __h9, _Float16 __h10, _Float16 __h11, _Float16 __h12,
@@ -229,7 +242,7 @@ _mm512_castph256_ph512(__m256h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [16 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_zextph128_ph256(__m128h __a) {
   return __builtin_shufflevector(__a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4,
                                  5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
@@ -248,7 +261,7 @@ _mm256_zextph128_ph256(__m128h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph128_ph512(__m128h __a) {
   return __builtin_shufflevector(
       __a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -268,7 +281,7 @@ _mm512_zextph128_ph512(__m128h __a) {
 ///    A 256-bit vector of [16 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 256 bits
 ///    contain the value of the parameter. The upper 256 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph256_ph512(__m256h __a) {
   return __builtin_shufflevector(__a, (__v16hf)_mm256_setzero_ph(), 0, 1, 2, 3,
                                  4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -548,12 +561,14 @@ _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_abs_ph(__m512h __A) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_abs_ph(__m512h __A) {
   return (__m512h)_mm512_and_epi32(_mm512_set1_epi32(0x7FFF7FFF), (__m512i)__A);
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_conj_pch(__m512h __A) {
-  return (__m512h)_mm512_xor_ps((__m512)__A, _mm512_set1_ps(-0.0f));
+  return (__m512h)_mm512_xor_epi32((__m512i)__A,
+                                   _mm512_set1_epi32(-2147483648));
 }
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
@@ -3347,6 +3362,9 @@ _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS512
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS512_CONSTEXPR
 
 #endif
 #endif

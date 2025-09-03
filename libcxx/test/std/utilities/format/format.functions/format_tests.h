@@ -3038,7 +3038,7 @@ void format_test_buffer_optimizations(TestFunction check) {
   // Used to validate our test sets are the proper size.
   // To test the chunked operations it needs to be larger than the internal
   // buffer. Picked a nice looking number.
-  constexpr int minimum = 3 * std::__format::__internal_storage<CharT>::__buffer_size;
+  constexpr int minimum = 3 * 256;
 #else
   constexpr int minimum = 1;
 #endif
@@ -3188,6 +3188,15 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     CharT buffer[] = {CharT('0'), CharT('9'), CharT('a'), CharT('z'), CharT('A'), CharT('Z'), CharT('!'), 0};
     const CharT* data = buffer;
     check(SV("hello 09azAZ!"), SV("hello {}"), data);
+  }
+  {
+    // https://github.com/llvm/llvm-project/issues/115935
+    // Contents after the embedded null character are discarded.
+    CharT buffer[] = {CharT('a'), CharT('b'), CharT('c'), 0, CharT('d'), CharT('e'), CharT('f'), 0};
+    check(SV("hello abc"), SV("hello {}"), buffer);
+    // Even when the last element of the array is not null character.
+    CharT buffer2[] = {CharT('a'), CharT('b'), CharT('c'), 0, CharT('d'), CharT('e'), CharT('f')};
+    check(SV("hello abc"), SV("hello {}"), buffer2);
   }
   {
     std::basic_string<CharT> data = STR("world");

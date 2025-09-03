@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -348,7 +347,7 @@ void *ArgvArray::reset(LLVMContext &C, ExecutionEngine *EE,
     LLVM_DEBUG(dbgs() << "JIT: ARGV[" << i << "] = " << (void *)Dest.get()
                       << "\n");
 
-    std::copy(InputArgv[i].begin(), InputArgv[i].end(), Dest.get());
+    llvm::copy(InputArgv[i], Dest.get());
     Dest[Size-1] = 0;
 
     // Endian safe: Array[i] = (PointerTy)Dest;
@@ -953,8 +952,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue floatZero;
         floatZero.FloatVal = 0.f;
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  floatZero);
+        llvm::fill(Result.AggregateVal, floatZero);
         break;
       }
       if(CV) {
@@ -975,8 +973,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue doubleZero;
         doubleZero.DoubleVal = 0.0;
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  doubleZero);
+        llvm::fill(Result.AggregateVal, doubleZero);
         break;
       }
       if(CV) {
@@ -997,8 +994,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue intZero;
         intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  intZero);
+        llvm::fill(Result.AggregateVal, intZero);
         break;
       }
       if(CV) {
@@ -1056,7 +1052,7 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
     *((double*)Ptr) = Val.DoubleVal;
     break;
   case Type::X86_FP80TyID:
-    memcpy(Ptr, Val.IntVal.getRawData(), 10);
+    memcpy(static_cast<void *>(Ptr), Val.IntVal.getRawData(), 10);
     break;
   case Type::PointerTyID:
     // Ensure 64 bit target pointers are fully initialized on 32 bit hosts.

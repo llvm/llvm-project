@@ -13,6 +13,7 @@
 
 #include "DesignatedInitializers.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -57,7 +58,7 @@ public:
     }
   }
   // Returns false if the type was not an aggregate.
-  operator bool() { return Valid; }
+  operator bool() const { return Valid; }
   // Advance to the next element in the aggregate.
   void next() {
     if (IsArray)

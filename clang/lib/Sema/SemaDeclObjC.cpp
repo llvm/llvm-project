@@ -15,9 +15,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -26,7 +26,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -566,7 +565,7 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
     ObjCInterfaceValidatorCCC CCC(IDecl);
     if (TypoCorrection Corrected = SemaRef.CorrectTypo(
             DeclarationNameInfo(SuperName, SuperLoc), Sema::LookupOrdinaryName,
-            SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
+            SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(Corrected, PDiag(diag::err_undef_superclass_suggest)
                                           << SuperName << ClassName);
       PrevDecl = Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>();
@@ -592,12 +591,13 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
       // The previous declaration was not a class decl. Check if we have a
       // typedef. If we do, get the underlying class type.
       if (const TypedefNameDecl *TDecl =
-          dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
+              dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
         QualType T = TDecl->getUnderlyingType();
         if (T->isObjCObjectType()) {
           if (NamedDecl *IDecl = T->castAs<ObjCObjectType>()->getInterface()) {
             SuperClassDecl = dyn_cast<ObjCInterfaceDecl>(IDecl);
-            SuperClassType = Context.getTypeDeclType(TDecl);
+            SuperClassType = Context.getTypeDeclType(
+                ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, TDecl);
 
             // This handles the following case:
             // @interface NewI @end
@@ -660,6 +660,7 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
 
     IDecl->setSuperClass(SuperClassTInfo);
     IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getEndLoc());
+    getASTContext().addObjCSubClass(IDecl->getSuperClass(), IDecl);
   }
 }
 
@@ -1310,24 +1311,26 @@ static bool NestedProtocolHasNoDefinition(ObjCProtocolDecl *PDecl,
 /// protocol declarations in its 'Protocols' argument.
 void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
                                        bool ForObjCContainer,
-                                       ArrayRef<IdentifierLocPair> ProtocolId,
+                                       ArrayRef<IdentifierLoc> ProtocolId,
                                        SmallVectorImpl<Decl *> &Protocols) {
-  for (const IdentifierLocPair &Pair : ProtocolId) {
-    ObjCProtocolDecl *PDecl = LookupProtocol(Pair.first, Pair.second);
+  for (const IdentifierLoc &Pair : ProtocolId) {
+    ObjCProtocolDecl *PDecl =
+        LookupProtocol(Pair.getIdentifierInfo(), Pair.getLoc());
     if (!PDecl) {
       DeclFilterCCC<ObjCProtocolDecl> CCC{};
-      TypoCorrection Corrected =
-          SemaRef.CorrectTypo(DeclarationNameInfo(Pair.first, Pair.second),
-                              Sema::LookupObjCProtocolName, SemaRef.TUScope,
-                              nullptr, CCC, Sema::CTK_ErrorRecovery);
+      TypoCorrection Corrected = SemaRef.CorrectTypo(
+          DeclarationNameInfo(Pair.getIdentifierInfo(), Pair.getLoc()),
+          Sema::LookupObjCProtocolName, SemaRef.TUScope, nullptr, CCC,
+          CorrectTypoKind::ErrorRecovery);
       if ((PDecl = Corrected.getCorrectionDeclAs<ObjCProtocolDecl>()))
         SemaRef.diagnoseTypo(Corrected,
                              PDiag(diag::err_undeclared_protocol_suggest)
-                                 << Pair.first);
+                                 << Pair.getIdentifierInfo());
     }
 
     if (!PDecl) {
-      Diag(Pair.second, diag::err_undeclared_protocol) << Pair.first;
+      Diag(Pair.getLoc(), diag::err_undeclared_protocol)
+          << Pair.getIdentifierInfo();
       continue;
     }
     // If this is a forward protocol declaration, get its definition.
@@ -1337,7 +1340,7 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
     // For an objc container, delay protocol reference checking until after we
     // can set the objc decl as the availability context, otherwise check now.
     if (!ForObjCContainer) {
-      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.second);
+      (void)SemaRef.DiagnoseUseOfDecl(PDecl, Pair.getLoc());
     }
 
     // If this is a forward declaration and we are supposed to warn in this
@@ -1347,7 +1350,8 @@ void SemaObjC::FindProtocolDeclaration(bool WarnOnDeclarations,
 
     if (WarnOnDeclarations &&
         NestedProtocolHasNoDefinition(PDecl, UndefinedProtocol)) {
-      Diag(Pair.second, diag::warn_undef_protocolref) << Pair.first;
+      Diag(Pair.getLoc(), diag::warn_undef_protocolref)
+          << Pair.getIdentifierInfo();
       Diag(UndefinedProtocol->getLocation(), diag::note_protocol_decl_undefined)
         << UndefinedProtocol;
     }
@@ -1386,11 +1390,9 @@ class ObjCTypeArgOrProtocolValidatorCCC final
 
         // Make sure the type is something we would accept as a type
         // argument.
-        auto type = Context.getTypeDeclType(typeDecl);
-        if (type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() ||
+        if (CanQualType type = Context.getCanonicalTypeDeclType(typeDecl);
             type->isDependentType() ||
-            type->isObjCObjectType())
+            isa<ObjCObjectPointerType, BlockPointerType, ObjCObjectType>(type))
           return true;
 
         return false;
@@ -1585,10 +1587,12 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     const char* prevSpec; // unused
     unsigned diagID; // unused
     QualType type;
-    if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
-      type = Context.getTypeDeclType(actualTypeDecl);
+    if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
+      type =
+          Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, actualTypeDecl);
     else
-      type = Context.getObjCInterfaceType(typeDecl.get<ObjCInterfaceDecl *>());
+      type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
     TypeSourceInfo *parsedTSInfo = Context.getTrivialTypeSourceInfo(type, loc);
     ParsedType parsedType = SemaRef.CreateParsedType(type, parsedTSInfo);
     DS.SetTypeSpecType(DeclSpec::TST_typename, loc, prevSpec, diagID,
@@ -1698,7 +1702,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     ObjCTypeArgOrProtocolValidatorCCC CCC(Context, lookupKind);
     TypoCorrection corrected = SemaRef.CorrectTypo(
         DeclarationNameInfo(identifiers[i], identifierLocs[i]), lookupKind, S,
-        nullptr, CCC, Sema::CTK_ErrorRecovery);
+        nullptr, CCC, CorrectTypoKind::ErrorRecovery);
     if (corrected) {
       // Did we find a protocol?
       if (auto proto = corrected.getCorrectionDeclAs<ObjCProtocolDecl>()) {
@@ -1784,17 +1788,17 @@ void SemaObjC::DiagnoseClassExtensionDupMethods(ObjCCategoryDecl *CAT,
 
 /// ActOnForwardProtocolDeclaration - Handle \@protocol foo;
 SemaObjC::DeclGroupPtrTy SemaObjC::ActOnForwardProtocolDeclaration(
-    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLocPair> IdentList,
+    SourceLocation AtProtocolLoc, ArrayRef<IdentifierLoc> IdentList,
     const ParsedAttributesView &attrList) {
   ASTContext &Context = getASTContext();
   SmallVector<Decl *, 8> DeclsInGroup;
-  for (const IdentifierLocPair &IdentPair : IdentList) {
-    IdentifierInfo *Ident = IdentPair.first;
+  for (const IdentifierLoc &IdentPair : IdentList) {
+    IdentifierInfo *Ident = IdentPair.getIdentifierInfo();
     ObjCProtocolDecl *PrevDecl = LookupProtocol(
-        Ident, IdentPair.second, SemaRef.forRedeclarationInCurContext());
+        Ident, IdentPair.getLoc(), SemaRef.forRedeclarationInCurContext());
     ObjCProtocolDecl *PDecl =
         ObjCProtocolDecl::Create(Context, SemaRef.CurContext, Ident,
-                                 IdentPair.second, AtProtocolLoc, PrevDecl);
+                                 IdentPair.getLoc(), AtProtocolLoc, PrevDecl);
 
     SemaRef.PushOnScopeChains(PDecl, SemaRef.TUScope);
     CheckObjCDeclScope(PDecl);
@@ -2002,7 +2006,7 @@ ObjCImplementationDecl *SemaObjC::ActOnStartClassImplementation(
     ObjCInterfaceValidatorCCC CCC{};
     TypoCorrection Corrected = SemaRef.CorrectTypo(
         DeclarationNameInfo(ClassName, ClassLoc), Sema::LookupOrdinaryName,
-        SemaRef.TUScope, nullptr, CCC, Sema::CTK_NonError);
+        SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::NonError);
     if (Corrected.getCorrectionDeclAs<ObjCInterfaceDecl>()) {
       // Suggest the (potentially) correct interface name. Don't provide a
       // code-modification hint or use the typo name for recovery, because
@@ -2130,6 +2134,12 @@ SemaObjC::ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
 
   DeclsInGroup.push_back(ObjCImpDecl);
 
+  // Reset the cached layout if there are any ivars added to
+  // the implementation.
+  if (auto *ImplD = dyn_cast<ObjCImplementationDecl>(ObjCImpDecl))
+    if (!ImplD->ivar_empty())
+      getASTContext().ResetObjCLayout(ImplD->getClassInterface());
+
   return SemaRef.BuildDeclaratorGroup(DeclsInGroup);
 }
 
@@ -2211,8 +2221,7 @@ void SemaObjC::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
         << ImplIvar->getType() << ClsIvar->getType();
       Diag(ClsIvar->getLocation(), diag::note_previous_definition);
     } else if (ImplIvar->isBitField() && ClsIvar->isBitField() &&
-               ImplIvar->getBitWidthValue(Context) !=
-               ClsIvar->getBitWidthValue(Context)) {
+               ImplIvar->getBitWidthValue() != ClsIvar->getBitWidthValue()) {
       Diag(ImplIvar->getBitWidth()->getBeginLoc(),
            diag::err_conflicting_ivar_bitwidth)
           << ImplIvar->getIdentifier();
@@ -3223,8 +3232,10 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left = cast<RecordType>(lt)->getDecl();
-  RecordDecl *right = cast<RecordType>(rt)->getDecl();
+  RecordDecl *left =
+      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *right =
+      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;
@@ -3581,7 +3592,6 @@ ObjCMethodDecl *SemaObjC::LookupMethodInGlobalPool(Selector Sel, SourceRange R,
 
   // Gather the non-hidden methods.
   ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
-  SmallVector<ObjCMethodDecl *, 4> Methods;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext()) {
     if (M->getMethod() && M->getMethod()->isUnconditionallyVisible())
       return M->getMethod();
@@ -3838,8 +3848,8 @@ SemaObjC::ObjCContainerKind SemaObjC::getObjCContainerKind() const {
 static bool IsVariableSizedType(QualType T) {
   if (T->isIncompleteArrayType())
     return true;
-  const auto *RecordTy = T->getAs<RecordType>();
-  return (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember());
+  const auto *RD = T->getAsRecordDecl();
+  return RD && RD->hasFlexibleArrayMember();
 }
 
 static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
@@ -3882,15 +3892,13 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
     if (IvarTy->isIncompleteArrayType()) {
       S.Diag(ivar->getLocation(), diag::err_flexible_array_not_at_end)
           << ivar->getDeclName() << IvarTy
-          << llvm::to_underlying(TagTypeKind::Class); // Use "class" for Obj-C.
+          << TagTypeKind::Class; // Use "class" for Obj-C.
       IsInvalidIvar = true;
-    } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
-      if (RecordTy->getDecl()->hasFlexibleArrayMember()) {
-        S.Diag(ivar->getLocation(),
-               diag::err_objc_variable_sized_type_not_at_end)
-            << ivar->getDeclName() << IvarTy;
-        IsInvalidIvar = true;
-      }
+    } else if (const auto *RD = IvarTy->getAsRecordDecl();
+               RD && RD->hasFlexibleArrayMember()) {
+      S.Diag(ivar->getLocation(), diag::err_objc_variable_sized_type_not_at_end)
+          << ivar->getDeclName() << IvarTy;
+      IsInvalidIvar = true;
     }
     if (IsInvalidIvar) {
       S.Diag(ivar->getNextIvar()->getLocation(),
@@ -4572,9 +4580,7 @@ static QualType mergeTypeNullabilityForRedecl(Sema &S, SourceLocation loc,
     return type;
 
   // Otherwise, provide the result with the same nullability.
-  return S.Context.getAttributedType(
-           AttributedType::getNullabilityAttrKind(*prevNullability),
-           type, type);
+  return S.Context.getAttributedType(*prevNullability, type, type);
 }
 
 /// Merge information from the declaration of a method in the \@interface
@@ -4720,13 +4726,67 @@ static void checkObjCDirectMethodClashes(Sema &S, ObjCInterfaceDecl *IDecl,
           diagClash(IMD);
 }
 
+ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
+                                                  ObjCArgInfo &ArgInfo,
+                                                  int ParamIndex,
+                                                  bool MethodDefinition) {
+  ASTContext &Context = getASTContext();
+  QualType ArgType;
+  TypeSourceInfo *DI;
+
+  if (!ArgInfo.Type) {
+    ArgType = Context.getObjCIdType();
+    DI = nullptr;
+  } else {
+    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &DI);
+  }
+  LookupResult R(SemaRef, ArgInfo.Name, ArgInfo.NameLoc,
+                 Sema::LookupOrdinaryName,
+                 SemaRef.forRedeclarationInCurContext());
+  SemaRef.LookupName(R, S);
+  if (R.isSingleResult()) {
+    NamedDecl *PrevDecl = R.getFoundDecl();
+    if (S->isDeclScope(PrevDecl)) {
+      Diag(ArgInfo.NameLoc,
+           (MethodDefinition ? diag::warn_method_param_redefinition
+                             : diag::warn_method_param_declaration))
+          << ArgInfo.Name;
+      Diag(PrevDecl->getLocation(), diag::note_previous_declaration);
+    }
+  }
+  SourceLocation StartLoc =
+      DI ? DI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
+
+  // Temporarily put parameter variables in the translation unit. This is what
+  // ActOnParamDeclarator does in the case of C arguments to the Objective-C
+  // method too.
+  ParmVarDecl *Param = SemaRef.CheckParameter(
+      Context.getTranslationUnitDecl(), StartLoc, ArgInfo.NameLoc, ArgInfo.Name,
+      ArgType, DI, SC_None);
+  Param->setObjCMethodScopeInfo(ParamIndex);
+  Param->setObjCDeclQualifier(
+      CvtQTToAstBitMask(ArgInfo.DeclSpec.getObjCDeclQualifier()));
+
+  // Apply the attributes to the parameter.
+  SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param, ArgInfo.ArgAttrs);
+  SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
+  if (Param->hasAttr<BlocksAttr>()) {
+    Diag(Param->getLocation(), diag::err_block_on_nonlocal);
+    Param->setInvalidDecl();
+  }
+
+  S->AddDecl(Param);
+  SemaRef.IdResolver.AddDecl(Param);
+  return Param;
+}
+
 Decl *SemaObjC::ActOnMethodDeclaration(
     Scope *S, SourceLocation MethodLoc, SourceLocation EndLoc,
     tok::TokenKind MethodType, ObjCDeclSpec &ReturnQT, ParsedType ReturnType,
     ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
     // optional arguments. The number of types/arguments is obtained
     // from the Sel.getNumArgs().
-    ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+    ParmVarDecl **ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
     unsigned CNumArgs, // c-style args
     const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodDeclKind,
     bool isVariadic, bool MethodDefinition) {
@@ -4768,60 +4828,10 @@ Decl *SemaObjC::ActOnMethodDeclaration(
       HasRelatedResultType);
 
   SmallVector<ParmVarDecl*, 16> Params;
-
-  for (unsigned i = 0, e = Sel.getNumArgs(); i != e; ++i) {
-    QualType ArgType;
-    TypeSourceInfo *DI;
-
-    if (!ArgInfo[i].Type) {
-      ArgType = Context.getObjCIdType();
-      DI = nullptr;
-    } else {
-      ArgType = SemaRef.GetTypeFromParser(ArgInfo[i].Type, &DI);
-    }
-
-    LookupResult R(SemaRef, ArgInfo[i].Name, ArgInfo[i].NameLoc,
-                   Sema::LookupOrdinaryName,
-                   SemaRef.forRedeclarationInCurContext());
-    SemaRef.LookupName(R, S);
-    if (R.isSingleResult()) {
-      NamedDecl *PrevDecl = R.getFoundDecl();
-      if (S->isDeclScope(PrevDecl)) {
-        Diag(ArgInfo[i].NameLoc,
-             (MethodDefinition ? diag::warn_method_param_redefinition
-                               : diag::warn_method_param_declaration))
-          << ArgInfo[i].Name;
-        Diag(PrevDecl->getLocation(),
-             diag::note_previous_declaration);
-      }
-    }
-
-    SourceLocation StartLoc = DI
-      ? DI->getTypeLoc().getBeginLoc()
-      : ArgInfo[i].NameLoc;
-
-    ParmVarDecl *Param =
-        SemaRef.CheckParameter(ObjCMethod, StartLoc, ArgInfo[i].NameLoc,
-                               ArgInfo[i].Name, ArgType, DI, SC_None);
-
-    Param->setObjCMethodScopeInfo(i);
-
-    Param->setObjCDeclQualifier(
-      CvtQTToAstBitMask(ArgInfo[i].DeclSpec.getObjCDeclQualifier()));
-
-    // Apply the attributes to the parameter.
-    SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param,
-                                     ArgInfo[i].ArgAttrs);
-    SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
+  for (unsigned I = 0; I < Sel.getNumArgs(); ++I) {
+    ParmVarDecl *Param = ArgInfo[I];
+    Param->setDeclContext(ObjCMethod);
     SemaRef.ProcessAPINotes(Param);
-
-    if (Param->hasAttr<BlocksAttr>()) {
-      Diag(Param->getLocation(), diag::err_block_on_nonlocal);
-      Param->setInvalidDecl();
-    }
-    S->AddDecl(Param);
-    SemaRef.IdResolver.AddDecl(Param);
-
     Params.push_back(Param);
   }
 
@@ -5315,8 +5325,7 @@ SemaObjC::GetIvarBackingPropertyAccessor(const ObjCMethodDecl *Method,
 namespace {
 /// Used by SemaObjC::DiagnoseUnusedBackingIvarInAccessor to check if a property
 /// accessor references the backing ivar.
-class UnusedBackingIvarChecker
-    : public RecursiveASTVisitor<UnusedBackingIvarChecker> {
+class UnusedBackingIvarChecker : public DynamicRecursiveASTVisitor {
 public:
   Sema &S;
   const ObjCMethodDecl *Method;
@@ -5331,7 +5340,7 @@ public:
     assert(IvarD);
   }
 
-  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) override {
     if (E->getDecl() == IvarD) {
       AccessedIvar = true;
       return false;
@@ -5339,7 +5348,7 @@ public:
     return true;
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) override {
     if (E->getReceiverKind() == ObjCMessageExpr::Instance &&
         S.ObjC().isSelfExpr(E->getInstanceReceiver(), Method)) {
       InvokedSelfMethod = true;
@@ -5430,7 +5439,7 @@ ObjCInterfaceDecl *SemaObjC::getObjCInterfaceDecl(const IdentifierInfo *&Id,
     DeclFilterCCC<ObjCInterfaceDecl> CCC{};
     if (TypoCorrection C = SemaRef.CorrectTypo(
             DeclarationNameInfo(Id, IdLoc), Sema::LookupOrdinaryName,
-            SemaRef.TUScope, nullptr, CCC, Sema::CTK_ErrorRecovery)) {
+            SemaRef.TUScope, nullptr, CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(C, PDiag(diag::err_undef_interface_suggest) << Id);
       IDecl = C.getCorrectionDeclAs<ObjCInterfaceDecl>();
       Id = IDecl->getIdentifier();
@@ -5511,10 +5520,9 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       InitializationKind InitKind =
           InitializationKind::CreateDefault(ObjCImplementation->getLocation());
 
-      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind,
-                                     std::nullopt);
+      InitializationSequence InitSeq(SemaRef, InitEntity, InitKind, {});
       ExprResult MemberInit =
-          InitSeq.Perform(SemaRef, InitEntity, InitKind, std::nullopt);
+          InitSeq.Perform(SemaRef, InitEntity, InitKind, {});
       MemberInit = SemaRef.MaybeCreateExprWithCleanups(MemberInit);
       // Note, MemberInit could actually come back empty if no initialization
       // is required (e.g., because it would call a trivial default constructor)
@@ -5527,10 +5535,8 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       AllToInit.push_back(Member);
 
       // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy =
-              Context.getBaseElementType(Field->getType())
-                  ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
+      if (auto *RD = Context.getBaseElementType(Field->getType())
+                         ->getAsCXXRecordDecl()) {
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(RD)) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
           SemaRef.CheckDestructorAccess(
@@ -5578,6 +5584,14 @@ Decl *SemaObjC::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
 
   TypeSourceInfo *TInfo = SemaRef.GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
+  ASTContext &Context = getASTContext();
+  if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+      !T.getPointerAuth()) {
+    if (Context.isObjCSelType(T.getUnqualifiedType())) {
+      if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+        T = Context.getPointerAuthType(T, PAQ);
+    }
+  }
 
   if (BitWidth) {
     // 6.7.2.1p3, 6.7.2.1p4

@@ -22,6 +22,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,14 +31,9 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <charconv>
 #include <regex>
 
 using namespace llvm;
-
-namespace llvm {
-void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
-}
 
 namespace {
 
@@ -48,9 +44,8 @@ class SPIRVPrepareFunctions : public ModulePass {
 
 public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
-    initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+      : ModulePass(ID), TM(TM) {}
 
   bool runOnModule(Module &M) override;
 
@@ -68,11 +63,11 @@ char SPIRVPrepareFunctions::ID = 0;
 INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
                 "SPIRV prepare functions", false, false)
 
-std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
+static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
   assert(IntrinsicFunc && "Missing function");
   std::string FuncName = IntrinsicFunc->getName().str();
-  std::replace(FuncName.begin(), FuncName.end(), '.', '_');
+  llvm::replace(FuncName, '.', '_');
   FuncName = "spirv." + FuncName;
   return FuncName;
 }
@@ -228,9 +223,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         } else {
           MDsItem.push_back(MDString::get(Ctx, Item));
         }
-      } else if (int32_t Num;
-                 std::from_chars(Item.data(), Item.data() + Item.size(), Num)
-                     .ec == std::errc{}) {
+      } else if (int32_t Num; llvm::to_integer(StringRef(Item), Num, 10)) {
         MDsItem.push_back(
             ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Num)));
       } else {
@@ -241,7 +234,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
       return SmallVector<Metadata *>{};
     MDs.push_back(MDNode::get(Ctx, MDsItem));
   }
-  return Pos == static_cast<int>(Anno.length()) ? MDs
+  return Pos == static_cast<int>(Anno.length()) ? std::move(MDs)
                                                 : SmallVector<Metadata *>{};
 }
 
@@ -364,22 +357,17 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
-static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
-                                     ArrayRef<unsigned> OpNos) {
-  Function *F = nullptr;
-  if (OpNos.empty()) {
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID);
-  } else {
-    SmallVector<Type *, 4> Tys;
-    for (unsigned OpNo : OpNos)
-      Tys.push_back(II->getOperand(OpNo)->getType());
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID, Tys);
-  }
-  II->setCalledFunction(F);
+static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  IRBuilder<> Builder(II);
+  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  std::optional<TypeSize> Size =
+      Alloca->getAllocationSize(Alloca->getDataLayout());
+  Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
+  Builder.CreateIntrinsic(NewID, Alloca->getType(),
+                          {SizeVal, II->getArgOperand(0)});
+  II->eraseFromParent();
   return true;
 }
 
@@ -387,8 +375,9 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
+  const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
       if (!Call)
         continue;
@@ -407,19 +396,28 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::assume:
-      case Intrinsic::expect: {
-        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+      case Intrinsic::expect:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
-      } break;
+        break;
       case Intrinsic::lifetime_start:
-        Changed |= toSpvOverloadedIntrinsic(
-            II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_start);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
+        }
         break;
       case Intrinsic::lifetime_end:
-        Changed |= toSpvOverloadedIntrinsic(
-            II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        if (!STI.isShader()) {
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_end);
+        } else {
+          II->eraseFromParent();
+          Changed = true;
+        }
         break;
       case Intrinsic::ptr_annotation:
         lowerPtrAnnotation(II);
@@ -443,10 +441,9 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;

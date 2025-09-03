@@ -63,6 +63,10 @@ void genPack(fir::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value arrayBox, mlir::Value maskBox,
              mlir::Value vectorBox);
 
+void genShallowCopy(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value resultBox, mlir::Value arrayBox,
+                    bool resultIsAllocated);
+
 void genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value resultBox, mlir::Value sourceBox,
                 mlir::Value shapeBox, mlir::Value padBox, mlir::Value orderBox);

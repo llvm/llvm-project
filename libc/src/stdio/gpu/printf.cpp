@@ -10,12 +10,13 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/arg_list.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -26,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

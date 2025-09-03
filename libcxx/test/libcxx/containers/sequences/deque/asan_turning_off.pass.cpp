@@ -17,6 +17,7 @@
 // This test confirms that those allocators work after turning off annotations.
 
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <new>
 

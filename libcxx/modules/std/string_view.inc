@@ -30,7 +30,7 @@ export namespace std {
 #if _LIBCPP_HAS_CHAR8_T
   using std::u8string_view;
 #endif
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wstring_view;
 #endif
 

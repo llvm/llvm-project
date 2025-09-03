@@ -14,9 +14,9 @@
 #include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
+#include "mlir/Dialect/ArmNeon/Transforms.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -61,34 +61,63 @@ struct ConvertVectorToLLVMPass
 } // namespace
 
 void ConvertVectorToLLVMPass::runOnOperation() {
-  // Perform progressive lowering of operations on slices and
-  // all contraction operations. Also applies folding and DCE.
+  // Perform progressive lowering of operations on slices and all contraction
+  // operations. Also materializes masks, lowers vector.step, rank-reduces FMA,
+  // applies folding and DCE.
   {
     RewritePatternSet patterns(&getContext());
     populateVectorToVectorCanonicalizationPatterns(patterns);
     populateVectorBitCastLoweringPatterns(patterns);
     populateVectorBroadcastLoweringPatterns(patterns);
-    populateVectorContractLoweringPatterns(patterns, VectorTransformsOptions());
+    populateVectorContractLoweringPatterns(patterns, vectorContractLowering);
+    if (vectorContractLowering == vector::VectorContractLowering::Matmul) {
+      // This pattern creates a dependency on the LLVM dialect, hence we don't
+      // include it in `populateVectorContractLoweringPatterns` that is part of
+      // the Vector dialect (and should not depend on LLVM).
+      populateVectorContractToMatrixMultiply(patterns);
+    }
     populateVectorMaskOpLoweringPatterns(patterns);
     populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorInterleaveLoweringPatterns(patterns);
-    populateVectorTransposeLoweringPatterns(patterns,
-                                            VectorTransformsOptions());
+    populateVectorTransposeLoweringPatterns(patterns, vectorTransposeLowering);
+    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat) {
+      // This pattern creates a dependency on the LLVM dialect, hence we don't
+      // include it in `populateVectorTransposeLoweringPatterns` that is part of
+      // the Vector dialect (and should not depend on LLVM).
+      populateVectorTransposeToFlatTranspose(patterns);
+    }
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    populateVectorMaskMaterializationPatterns(patterns,
+                                              force32BitVectorIndices);
+    populateVectorInsertExtractStridedSliceTransforms(patterns);
+    populateVectorStepLoweringPatterns(patterns);
+    populateVectorRankReducingFMAPattern(patterns);
+    populateVectorGatherLoweringPatterns(patterns);
+    populateVectorFromElementsLoweringPatterns(patterns);
+    if (armI8MM) {
+      if (armNeon)
+        arm_neon::populateLowerContractionToNeonI8MMPatterns(patterns);
+      if (armSVE)
+        populateLowerContractionToSVEI8MMPatterns(patterns);
+    }
+    if (armBF16) {
+      if (armNeon)
+        arm_neon::populateLowerContractionToNeonBFMMLAPatterns(patterns);
+      if (armSVE)
+        populateLowerContractionToSVEBFMMLAPatterns(patterns);
+    }
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 
   // Convert to the LLVM IR dialect.
   LowerToLLVMOptions options(&getContext());
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
-  populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(
-      converter, patterns, reassociateFPReductions, force32BitVectorIndices);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
+      converter, patterns, reassociateFPReductions, force32BitVectorIndices,
+      useVectorAlignment);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());

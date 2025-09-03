@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=60 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=60 -DOMP52 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 
@@ -72,7 +74,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int ind2 = 0;
-  // expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+  // expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
   #pragma omp for linear(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIOptimizeExecMasking.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -23,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-class SIOptimizeExecMasking : public MachineFunctionPass {
+class SIOptimizeExecMasking {
   MachineFunction *MF = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIRegisterInfo *TRI = nullptr;
@@ -62,10 +63,15 @@ class SIOptimizeExecMasking : public MachineFunctionPass {
   bool optimizeOrSaveexecXorSequences();
 
 public:
+  bool run(MachineFunction &MF);
+};
+
+class SIOptimizeExecMaskingLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  SIOptimizeExecMasking() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingPass(*PassRegistry::getPassRegistry());
+  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {
+    initializeSIOptimizeExecMaskingLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -82,15 +88,28 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SIOptimizeExecMasking, DEBUG_TYPE,
+PreservedAnalyses
+SIOptimizeExecMaskingPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &) {
+  SIOptimizeExecMasking Impl;
+
+  if (!Impl.run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingLegacy, DEBUG_TYPE,
                       "SI optimize exec mask operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(SIOptimizeExecMasking, DEBUG_TYPE,
+INITIALIZE_PASS_END(SIOptimizeExecMaskingLegacy, DEBUG_TYPE,
                     "SI optimize exec mask operations", false, false)
 
-char SIOptimizeExecMasking::ID = 0;
+char SIOptimizeExecMaskingLegacy::ID = 0;
 
-char &llvm::SIOptimizeExecMaskingID = SIOptimizeExecMasking::ID;
+char &llvm::SIOptimizeExecMaskingLegacyID = SIOptimizeExecMaskingLegacy::ID;
 
 /// If \p MI is a copy from exec, return the register copied to.
 Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {
@@ -600,7 +619,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
   auto TryAddImmediateValueFromNamedOperand =
-      [&](unsigned OperandName) -> void {
+      [&](AMDGPU::OpName OperandName) -> void {
     if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
       Builder.addImm(Mod->getImm());
   };
@@ -612,6 +631,8 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   Builder.add(*Src1);
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
+
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
 
   // The kill flags may no longer be correct.
   if (Src0->isReg())
@@ -786,10 +807,14 @@ bool SIOptimizeExecMasking::optimizeOrSaveexecXorSequences() {
   return Changed;
 }
 
-bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
+bool SIOptimizeExecMaskingLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  return SIOptimizeExecMasking().run(MF);
+}
+
+bool SIOptimizeExecMasking::run(MachineFunction &MF) {
   this->MF = &MF;
   ST = &MF.getSubtarget<GCNSubtarget>();
   TRI = ST->getRegisterInfo();

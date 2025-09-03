@@ -5,7 +5,7 @@
 @g = external global i32
 declare void @modifyG()
 
-define i32 @foo() {
+define i32 @foo(i1 %arg) {
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %1 = load i32
   %1 = load i32, ptr @g
@@ -29,11 +29,11 @@ declare void @readEverything() readonly
 declare void @clobberEverything()
 
 ; CHECK-LABEL: define void @bar
-define void @bar() {
+define void @bar(i1 %arg) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobberEverything()
   call void @clobberEverything()
-  br i1 undef, label %if.end, label %if.then
+  br i1 %arg, label %if.end, label %if.then
 
 if.then:
 ; CHECK: MemoryUse(1)

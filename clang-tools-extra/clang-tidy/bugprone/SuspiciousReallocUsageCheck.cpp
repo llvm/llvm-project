@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuspiciousReallocUsageCheck.h"
-#include "../utils/Aliasing.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"

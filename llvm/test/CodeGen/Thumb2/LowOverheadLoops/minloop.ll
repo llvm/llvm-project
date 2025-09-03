@@ -10,8 +10,8 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    subs.w r9, r1, #1
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
-; CHECK-NEXT:    subs r7, r1, #2
 ; CHECK-NEXT:    and r8, r9, #3
+; CHECK-NEXT:    subs r7, r1, #2
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:

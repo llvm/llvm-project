@@ -22,27 +22,17 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef int V;
-    V ar[] =
-    {
-        1,
-        1,
-        1,
-        2,
-        2,
-        2,
-        3,
-        3,
-        3
-    };
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
     typedef test_less<V> C;
     typedef test_allocator<V> A;
-    std::multiset<V, C, A> m(cpp17_input_iterator<const V*>(ar),
-                        cpp17_input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])),
-                        C(5), A(7));
+    std::multiset<V, C, A> m(
+        cpp17_input_iterator<const V*>(ar),
+        cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])),
+        C(5),
+        A(7));
     assert(m.value_comp() == C(5));
     assert(m.get_allocator() == A(7));
     assert(m.size() == 9);
@@ -56,26 +46,15 @@ int main(int, char**)
     assert(*std::next(m.begin(), 6) == 3);
     assert(*std::next(m.begin(), 7) == 3);
     assert(*std::next(m.begin(), 8) == 3);
-    }
+  }
 #if TEST_STD_VER > 11
-    {
+  {
     typedef int V;
-    V ar[] =
-    {
-        1,
-        1,
-        1,
-        2,
-        2,
-        2,
-        3,
-        3,
-        3
-    };
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
     typedef test_allocator<V> A;
     typedef test_less<int> C;
     A a;
-    std::multiset<V, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a);
+    std::multiset<V, C, A> m(ar, ar + sizeof(ar) / sizeof(ar[0]), a);
 
     assert(m.size() == 9);
     assert(std::distance(m.begin(), m.end()) == 9);
@@ -89,7 +68,7 @@ int main(int, char**)
     assert(*std::next(m.begin(), 7) == 3);
     assert(*std::next(m.begin(), 8) == 3);
     assert(m.get_allocator() == a);
-    }
+  }
 #endif
 
   return 0;

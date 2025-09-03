@@ -24,9 +24,11 @@
 
 namespace mlir {
 
-/// Return true if `v` is an IntegerAttr with value `0` of a ConstantIndexOp
-/// with attribute with value `0`.
-bool isZeroIndex(OpFoldResult v);
+/// Return true if `v` is an IntegerAttr with value `0`.
+bool isZeroInteger(OpFoldResult v);
+
+/// Return true if `v` is an IntegerAttr with value `1`.
+bool isOneInteger(OpFoldResult v);
 
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.
@@ -59,6 +61,25 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
+
+/// Given OpFoldResult representing dim size value (*), generates a pair of
+/// sizes:
+///   * 1st result, static value, contains an int64_t dim size that can be used
+///   to build ShapedType (ShapedType::kDynamic is used for truly dynamic dims),
+///   * 2nd result, dynamic value, contains OpFoldResult encapsulating the
+///   actual dim size (either original or updated input value).
+/// For input sizes for which it is possible to extract a constant Attribute,
+/// replaces the original size value with an integer attribute (unless it's
+/// already a constant Attribute). The 1st return value also becomes the actual
+/// integer size (as opposed ShapedType::kDynamic).
+///
+/// (*) This hook is usually used when, given input sizes as OpFoldResult,
+/// it's required to generate two vectors:
+///   * sizes as int64_t to generate a shape,
+///   * sizes as OpFoldResult for sizes-like attribute.
+/// Please update this comment if you identify other use cases.
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
 
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
@@ -126,13 +147,16 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
 /// all elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues,
+                                         MLIRContext *context);
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues, Builder &b);
 
 /// Decompose a vector of mixed static or dynamic values into the
 /// corresponding pair of arrays. This is the inverse function of
 /// `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues);
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues);
 
 /// Helper to sort `values` according to matching `keys`.
 SmallVector<Value>

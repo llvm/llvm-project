@@ -1,7 +1,7 @@
 # REQUIRES: riscv
 # RUN: llvm-mc -filetype=obj -triple=riscv64 /dev/null -o %t2.o
 # RUN: ld.lld -shared -soname=t2 %t2.o -o %t2.so
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -riscv-asm-relax-branches=0 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELOC %s
 
 # RUN: ld.lld -e absolute %t.o -o %t
@@ -11,6 +11,8 @@
 # RUN: ld.lld -e absolute %t.o -o %t %t2.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PLT %s
 # RUN: llvm-readelf -x .data %t | FileCheck --check-prefixes=HEX,HEX-WITH-PLT %s
+
+.option exact
 
 .weak target
 .global absolute, relative, branch
@@ -97,4 +99,4 @@ branch:
 # PC-NOT:      .plt:
 # PLT:         .plt:
 
-.word target@plt - .
+.word %pltpcrel(target)

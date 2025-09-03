@@ -13,6 +13,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -36,8 +37,8 @@ public:
   using iterator_category = std::input_iterator_tag;
 
   OperandUseIterator() = default;
-  value_type operator*() const;
-  OperandUseIterator &operator++();
+  LLVM_ABI value_type operator*() const;
+  LLVM_ABI OperandUseIterator &operator++();
   OperandUseIterator operator++(int) {
     auto Copy = *this;
     this->operator++();
@@ -49,13 +50,13 @@ public:
   bool operator!=(const OperandUseIterator &Other) const {
     return !(*this == Other);
   }
-  OperandUseIterator operator+(unsigned Num) const;
-  OperandUseIterator operator-(unsigned Num) const;
-  int operator-(const OperandUseIterator &Other) const;
+  LLVM_ABI OperandUseIterator operator+(unsigned Num) const;
+  LLVM_ABI OperandUseIterator operator-(unsigned Num) const;
+  LLVM_ABI int operator-(const OperandUseIterator &Other) const;
 };
 
 /// A sandboxir::User has operands.
-class User : public Value {
+class LLVM_ABI User : public Value {
 protected:
   User(ClassID ID, llvm::Value *V, Context &Ctx) : Value(ID, V, Ctx) {}
 

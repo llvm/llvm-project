@@ -305,13 +305,14 @@ void SymbolFileOnDemand::Dump(lldb_private::Stream &s) {
   return m_sym_file_impl->Dump(s);
 }
 
-void SymbolFileOnDemand::DumpClangAST(lldb_private::Stream &s) {
+void SymbolFileOnDemand::DumpClangAST(lldb_private::Stream &s,
+                                      llvm::StringRef filter) {
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
              __FUNCTION__);
     return;
   }
-  return m_sym_file_impl->DumpClangAST(s);
+  return m_sym_file_impl->DumpClangAST(s, filter);
 }
 
 void SymbolFileOnDemand::FindGlobalVariables(const RegularExpression &regex,
@@ -553,6 +554,12 @@ StatsDuration::Duration SymbolFileOnDemand::GetDebugInfoIndexTime() {
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
            __FUNCTION__);
   return m_sym_file_impl->GetDebugInfoIndexTime();
+}
+
+void SymbolFileOnDemand::ResetStatistics() {
+  LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),
+           __FUNCTION__);
+  return m_sym_file_impl->ResetStatistics();
 }
 
 void SymbolFileOnDemand::SetLoadDebugInfoEnabled() {

@@ -10,7 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -18,6 +18,7 @@
 #include "hdr/fenv_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \
   EXPECT_FP_EQ(expected, f(x, y));                                             \
   EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
   EXPECT_FP_EXCEPTION(expected_exception);                                     \

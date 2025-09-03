@@ -32,7 +32,8 @@ namespace memref {
 bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 
 /// For a `memref` with `offset`, `sizes` and `strides`, returns the
-/// offset and size to use for the linearized `memref`.
+/// offset, size, and potentially the size padded at the front to use for the
+/// linearized `memref`.
 /// - If the linearization is done for emulating load/stores of
 ///   element type with bitwidth `srcBits` using element type with
 ///   bitwidth `dstBits`, the linearized offset and size are
@@ -42,9 +43,14 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   index to use in the linearized `memref`. The linearized index
 ///   is also scaled down by `dstBits`/`srcBits`. If `indices` is not provided
 ///   0, is returned for the linearized index.
+/// - If the size of the load/store is smaller than the linearized memref
+///   load/store, the memory region emulated is larger than the actual memory
+///   region needed. `intraDataOffset` returns the element offset of the data
+///   relevant at the beginning.
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
+  OpFoldResult intraDataOffset;
 };
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
@@ -63,8 +69,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes);
 
-// Track temporary allocations that are never read from. If this is the case
-// it means both the allocations and associated stores can be removed.
+/// Track temporary allocations that are never read from. If this is the case
+/// it means both the allocations and associated stores can be removed.
 void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp);
 
 /// Given a set of sizes, return the suffix product.
@@ -100,7 +106,7 @@ computeStridesIRBlock(Location loc, OpBuilder &builder,
 /// memory is found (i.e. skip operations that alias the entire view).
 MemrefValue skipFullyAliasingOperations(MemrefValue source);
 
-/// Checks if two (memref) values are the same or are statically known to alias
+/// Checks if two (memref) values are the same or statically known to alias
 /// the same region of memory.
 inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
   return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
@@ -109,6 +115,43 @@ inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
 /// Walk up the source chain until we find an operation that is not a view of
 /// the source memref (i.e. implements ViewLikeOpInterface).
 MemrefValue skipViewLikeOps(MemrefValue source);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a expand_shape op, returns the indices w.r.t to the source memref of the
+/// expand_shape op. For example
+///
+/// %0 = ... : memref<12x42xf32>
+/// %1 = memref.expand_shape %0 [[0, 1], [2]]
+///    : memref<12x42xf32> into memref<2x6x42xf32>
+/// %2 = load %1[%i1, %i2, %i3] : memref<2x6x42xf32
+///
+/// could be folded into
+///
+/// %2 = load %0[6 * i1 + i2, %i3] :
+///          memref<12x42xf32>
+LogicalResult resolveSourceIndicesExpandShape(
+    Location loc, PatternRewriter &rewriter,
+    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a collapse_shape op, returns the indices w.r.t to the source memref of
+/// the collapse_shape op. For example
+///
+/// %0 = ... : memref<2x6x42xf32>
+/// %1 = memref.collapse_shape %0 [[0, 1], [2]]
+///    : memref<2x6x42xf32> into memref<12x42xf32>
+/// %2 = load %1[%i1, %i2] : memref<12x42xf32>
+///
+/// could be folded into
+///
+/// %2 = load %0[%i1 / 6, %i1 % 6, %i2] :
+///          memref<2x6x42xf32>
+LogicalResult
+resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                  memref::CollapseShapeOp collapseShapeOp,
+                                  ValueRange indices,
+                                  SmallVectorImpl<Value> &sourceIndices);
 
 } // namespace memref
 } // namespace mlir

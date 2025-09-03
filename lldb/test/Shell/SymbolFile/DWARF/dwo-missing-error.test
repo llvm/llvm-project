@@ -9,7 +9,6 @@
 # Creating and compiling to %t.compdir makes it easy to remove the dwo files.
 # DW_AT_comp_dir should be "./a/b/", and DW_AT_dwo_name should be
 # "a.out-dwo-missing-error.dwo".
-# since %T is deprecated.
 # RUN: rm -rf %t.compdir/
 # RUN: mkdir -p %t.compdir/a/b/
 # RUN: cd %t.compdir/a/b/
