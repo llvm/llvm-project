@@ -649,7 +649,7 @@ FailureOr<TilingInterface>
 rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
                   const PadTilingInterfaceOptions &constOptions,
                   SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+                  const PadSizeComputationFunction &computePaddingSizeFun =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
@@ -1690,7 +1690,7 @@ struct DecomposeOuterUnitDimsPackOpPattern
 /// Rewrites a linalg::UnPackOp into a sequence of rank-reduced
 ///   * tensor::ExtractSliceOp + linalg::TransposeOp + tensor::InsertSliceOp
 ///
-/// Requires that all the outer dims of the input linalg::PackOp are 1.
+/// Requires that all the tiled outer dims of the input linalg::PackOp are 1.
 ///
 /// Before:
 /// ```
@@ -1831,6 +1831,10 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
 
+/// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
+/// to equivalent `linalg.elementwise`.
+void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
@@ -1914,6 +1918,11 @@ void populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation);
 
+/// Patterns to sink extract slice across other operations.
+void populateExtractSliceSinkingPatterns(
+    RewritePatternSet &patterns,
+    const ControlPropagationFn &controlPackUnPackPropagation);
+
 /// Pattern to remove dead operands and results of `linalg.generic` operations.
 /// This is a pattern wrapper for `deduplicateOperandsAndRemoveDeadResults`.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
@@ -1958,9 +1967,8 @@ void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
     RewritePatternSet &patterns);
 
-/// Patterns to convert from one named op to another. These can be seen as
-/// canonicalizations of named ops into another named op.
-void populateLinalgNamedOpConversionPatterns(RewritePatternSet &patterns);
+/// Patterns to simplify depthwise convolutions.
+void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors via reassociative reshape ops.
