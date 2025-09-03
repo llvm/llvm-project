@@ -2870,7 +2870,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
   bool HasTrampolineUses =
       InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
-  MCSection *S = MAI->getStackSection(OutContext, /* Exec */ HasTrampolineUses);
+  MCSection *S = MAI->getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
   if (S)
     OutStreamer->switchSection(S);
 
