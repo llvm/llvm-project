@@ -17,7 +17,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logo = ":window:" if platform.system() == "Windows" else ":penguin:"
-    platform_title = f"{logo} {platform.system()} {platform.architecture()} Test Results"
+    platform_title = f"{logo} {platform.system()} {platform.machine()} Test Results"
     report = generate_test_report_lib.generate_report_from_files(
         platform_title, args.return_code, args.build_test_logs
     )
