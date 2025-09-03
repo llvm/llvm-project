@@ -111,7 +111,6 @@ def BPF_FETCH : BPFAtomicFlag<0x1>;
 class InstBPF<dag outs, dag ins, string asmstr, list<dag> pattern>
   : Instruction {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   let Size = 8;
 
   let Namespace = "BPF";

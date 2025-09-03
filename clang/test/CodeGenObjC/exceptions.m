@@ -79,7 +79,7 @@ void f3(void) {
   extern void f3_helper(int, int*);
 
   // CHECK:      [[X:%.*]] = alloca i32
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
   // CHECK:      store i32 0, ptr [[X]]
   int x = 0;
 
@@ -120,7 +120,7 @@ void f3(void) {
   }
 
   // CHECK:      call void @f3_helper(i32 noundef 4, ptr noundef nonnull [[X]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
   // CHECK-NEXT: ret void
   f3_helper(4, &x);
 }

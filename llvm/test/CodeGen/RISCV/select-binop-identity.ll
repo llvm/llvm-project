@@ -260,14 +260,14 @@ define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    beqz a5, .LBB5_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slti a4, a5, 0
+; RV32I-NEXT:    srli a5, a5, 31
 ; RV32I-NEXT:    j .LBB5_3
 ; RV32I-NEXT:  .LBB5_2:
-; RV32I-NEXT:    sltiu a4, a4, 4
+; RV32I-NEXT:    sltiu a5, a4, 4
 ; RV32I-NEXT:  .LBB5_3:
-; RV32I-NEXT:    addi a4, a4, -1
-; RV32I-NEXT:    or a1, a4, a1
-; RV32I-NEXT:    or a0, a4, a0
+; RV32I-NEXT:    addi a5, a5, -1
+; RV32I-NEXT:    or a1, a5, a1
+; RV32I-NEXT:    or a0, a5, a0
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    ret
@@ -300,7 +300,7 @@ define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
 ;
 ; ZICOND32-LABEL: and_select_all_ones_i64_cmp2:
 ; ZICOND32:       # %bb.0:
-; ZICOND32-NEXT:    slti a6, a5, 0
+; ZICOND32-NEXT:    srli a6, a5, 31
 ; ZICOND32-NEXT:    sltiu a4, a4, 4
 ; ZICOND32-NEXT:    czero.eqz a6, a6, a5
 ; ZICOND32-NEXT:    czero.nez a4, a4, a5

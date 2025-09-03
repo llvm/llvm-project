@@ -94,6 +94,22 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
   return DebugLoc();
 }
 
+/// Check if target reg is contained in given lists, which are:
+/// LocalDefsV as given list for virtual regs
+/// LocalDefsP as given list for physical regs, in BitVector[RegUnit] form
+static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
+                        const BitVector &LocalDefsP, Register Reg,
+                        const TargetRegisterInfo *TRI) {
+  if (Reg.isPhysical()) {
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+      if (!LocalDefsP[Unit])
+        return false;
+
+    return true;
+  }
+  return LocalDefsV.contains(Reg);
+}
+
 /// finalizeBundle - Finalize a machine instruction bundle which includes
 /// a sequence of instructions starting from FirstMI to LastMI (exclusive).
 /// This routine adds a BUNDLE instruction to represent the bundle, it adds
@@ -115,6 +131,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   Bundle.prepend(MIB);
 
   SmallSetVector<Register, 32> LocalDefs;
+  BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
   SmallSetVector<Register, 8> ExternUses;
@@ -130,7 +147,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefs.contains(Reg)) {
+      if (containsReg(LocalDefs, LocalDefsP, Reg, TRI)) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
@@ -156,6 +173,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (LocalDefs.insert(Reg)) {
         if (MO.isDead())
           DeadDefSet.insert(Reg);
+        else if (Reg.isPhysical())
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            LocalDefsP.set(Unit);
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
@@ -164,9 +184,6 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           DeadDefSet.erase(Reg);
         }
       }
-
-      if (!MO.isDead() && Reg.isPhysical())
-        LocalDefs.insert_range(TRI->subregs(Reg));
     }
 
     // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions

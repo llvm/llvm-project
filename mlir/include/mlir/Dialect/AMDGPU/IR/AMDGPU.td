@@ -656,6 +656,48 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
   }];
 }
 
+def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU permlane swap op";
+  let description = [{
+    High-level wrapper on `rocdl.permlane{16,32}.swap` variants for permutations
+    on rows of lanes in a subgroup.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32 and
+    one or more `rocdl.permlane_swap` ops during lowering.
+    Supported lane permutations:
+    - Swap the data between odd and even rows of 16 lanes
+    - Swap the data between the first 32 lanes and the last 32 lanes
+
+    Example:
+    ```mlir
+    %0 = amdgpu.permlane_swap %src 16 : f16
+    %1 = amdgpu.permlane_swap %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
+    ```
+
+    Operands:
+    * `$src`: Vector register to permute across lanes of the subgroup.
+    * `$row_length`: The length of a row to permute in number of lanes (valid values are 16 and 32).
+    * `$fetch_inactive`: Optional. Used to dertermine behavior of a fetch from a disabled lane.
+      `fetch_inactive = false`: If the source lane is disabled, use `bound_ctrl` to determine the source value.
+      `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway (ignoring `bound_ctrl`).
+    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from 
+      a disabled lane: use the value zero, or disable the write. 
+      `bound_ctrl = false`: Do not write when source is from a disabled lane
+      `bound_ctrl = true`: Use zero as input if source is from a disabled lane
+
+    Note: Lowering is only supported on gfx950 and up.
+  }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       I32Attr:$row_length,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src $row_length attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
@@ -907,7 +949,8 @@ def AMDGPU_GatherToLDSOp :
       The elements gathered by the subgroup will be written contiguously in order of lane ID
       starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
       types will be zero-padded/extended to 32 bits before being written. 96-bit types
-      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written.
+      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written. Only the
+      offsets held by lane 0 are used.
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
