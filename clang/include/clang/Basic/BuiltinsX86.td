@@ -1993,6 +1993,10 @@ let Features = "avx512dq,evex512", Attributes = [NoThrow, Const, RequiredVectorW
 }
 
 let Features = "avx512f,evex512", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
+  def psllv16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def psrav16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def psrlv16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+
   def prold512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
   def prord512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Constant int)">;
   def prolq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Constant int)">;
@@ -2422,15 +2426,12 @@ let Features = "avx512vl",
 let Features = "avx512f,evex512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def pslld512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<4, int>)">;
   def psllq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<2, long long int>)">;
-  def psllv16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
   def psllv8di : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>)">;
   def psrad512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<4, int>)">;
   def psraq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<2, long long int>)">;
-  def psrav16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
   def psrav8di : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>)">;
   def psrld512 : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<4, int>)">;
   def psrlq512 : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<2, long long int>)">;
-  def psrlv16si : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
   def psrlv8di : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>)">;
   def pternlogd512_mask : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Vector<16, int>, _Constant int, unsigned short)">;
   def pternlogd512_maskz : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Vector<16, int>, _Constant int, unsigned short)">;

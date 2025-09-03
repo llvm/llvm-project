@@ -3268,6 +3268,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psllv4di:
   case clang::X86::BI__builtin_ia32_psllv4si:
   case clang::X86::BI__builtin_ia32_psllv8si:
+  case clang::X86::BI__builtin_ia32_psllv16si:
   case clang::X86::BI__builtin_ia32_psllwi128:
   case clang::X86::BI__builtin_ia32_psllwi256:
   case clang::X86::BI__builtin_ia32_psllwi512:
@@ -3287,6 +3288,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_psrav4si:
   case clang::X86::BI__builtin_ia32_psrav8si:
+  case clang::X86::BI__builtin_ia32_psrav16si:
   case clang::X86::BI__builtin_ia32_psrawi128:
   case clang::X86::BI__builtin_ia32_psrawi256:
   case clang::X86::BI__builtin_ia32_psrawi512:
@@ -3308,6 +3310,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
   case clang::X86::BI__builtin_ia32_psrlv8si:
+  case clang::X86::BI__builtin_ia32_psrlv16si:
   case clang::X86::BI__builtin_ia32_psrlwi128:
   case clang::X86::BI__builtin_ia32_psrlwi256:
   case clang::X86::BI__builtin_ia32_psrlwi512:
