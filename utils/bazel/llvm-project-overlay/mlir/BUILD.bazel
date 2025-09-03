@@ -8871,6 +8871,8 @@ cc_library(
         ":IR",
         ":PtrDialect",
         ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 
