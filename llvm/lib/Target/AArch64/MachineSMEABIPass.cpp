@@ -219,6 +219,9 @@ struct MachineSMEABI : public MachineFunctionPass {
   void emitSetupFullZASave(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
                            LiveRegs PhysLiveRegs);
+  // Emit a "full" ZA save or restore. It is "full" in the sense that this
+  // function will emit a call to __arm_sme_save or __arm_sme_restore, which
+  // handles saving and restoring both ZA and ZT0.
   void emitFullZASaveRestore(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
                              LiveRegs PhysLiveRegs, bool IsSave);
