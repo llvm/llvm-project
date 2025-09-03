@@ -6522,11 +6522,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     if (!PtrSCEV)
       return false;
 
-    const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
+    const auto *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
     int64_t Offset = 0;
     if (Add) {
       for (int I : seq<int>(Add->getNumOperands())) {
-        const SCEVConstant *SC = dyn_cast<SCEVConstant>(Add->getOperand(I));
+        const auto *SC = dyn_cast<SCEVConstant>(Add->getOperand(I));
         if (!SC)
           continue;
         Offset = SC->getAPInt().getSExtValue();
