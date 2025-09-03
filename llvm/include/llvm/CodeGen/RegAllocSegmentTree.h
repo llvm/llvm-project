@@ -99,7 +99,7 @@ public:
   void allocatePhysRegs();
 
   // 你自己的 finalize（宣告）
-  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
+  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM) const;
 
   // 你堅持要的同名接口（注意：**不要**寫 override）
   void postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS);
@@ -122,7 +122,13 @@ private:
   LiveRegMatrix       *LRM = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
+  RegisterClassInfo RCI;
+
   std::unique_ptr<Spiller> VRegSpiller;  // Add this line
+
+  // 工作佇列與去重集合
+  llvm::SmallVector<const LiveInterval*, 64> WorkQ;
+  llvm::SmallDenseSet<unsigned, 64> InQ;  // 記 vreg id，避免重複排入
 
   // Legacy demo per-physreg trees (kept for compatibility paths).
   SmallVector<std::vector<SegmentTreeNode>> PhysRegSegmentTrees;

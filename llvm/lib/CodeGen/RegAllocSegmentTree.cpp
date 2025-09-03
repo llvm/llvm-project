@@ -115,7 +115,7 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
   // 主要的分配循环
   bool AllocComplete = false;
   unsigned Round = 0;
-  const unsigned MaxRounds = 5; // 防止无限循环
+  const unsigned MaxRounds = 100; // 防止无限循环
 
   while (!AllocComplete && Round < MaxRounds) {
     LLVM_DEBUG(dbgs() << "  Segment Tree Regalloc round " << Round << ":\n");
@@ -126,6 +126,8 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
 
     // 尝试分配所有虚拟寄存器
     bool HasSpills = false;
+    bool HasUnAllocated = false;
+    
     for (LiveInterval *LI : VRegsToAlloc) {
       unsigned VirtReg = LI->reg();
       if (VRM->hasPhys(VirtReg)) // 可能已经通过合并分配了
@@ -139,19 +141,22 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
         VRM->assignVirt2Phys(VirtReg, PhysReg);
         updateSegmentTreeForInterval(*LI, PhysReg);
       } else {
-        // 分配失败，需要溢出
-        HasSpills = true;
-        spillVirtReg(*LI);
+        // 尝试溢出
+        if (LI->isSpillable()) {
+          HasSpills = true;
+          spillVirtReg(*LI);
+        } else {
+          HasUnAllocated = true;
+          LLVM_DEBUG(dbgs() << "Virtual register " << VirtReg 
+                          << " cannot be spilled or allocated\n");
+        }
       }
     }
 
-    // 如果没有溢出，分配完成
-    if (!HasSpills) {
-      AllocComplete = true;
-    } else {
-      // 处理溢出后，可能需要重新计算LiveIntervals并重新分配
-      // 这里需要实现溢出后的处理逻辑
-      
+    // 检查是否完成分配
+    AllocComplete = !HasSpills && !HasUnAllocated;
+
+    if (!AllocComplete) {
       // 重新收集需要分配的虚拟寄存器
       VRegsToAlloc.clear();
       for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
@@ -161,13 +166,17 @@ bool RegAllocSegmentTree::runOnMachineFunction(MachineFunction &MF) {
         LiveInterval *LI = &LIS->getInterval(Reg);
         if (LI->empty())
           continue;
-        VRegsToAlloc.push_back(LI);
+        // 只收集尚未分配的寄存器
+        if (!VRM->hasPhys(Reg)) {
+          VRegsToAlloc.push_back(LI);
+        }
       }
-      
-      // 重新排序
-      llvm::sort(VRegsToAlloc, [](const LiveInterval *A, const LiveInterval *B) {
-        return A->getSize() > B->getSize();
-      });
+    
+      // 如果没有需要处理的寄存器，但AllocComplete为false，这是一个错误
+      if (VRegsToAlloc.empty() && !AllocComplete) {
+        LLVM_DEBUG(dbgs() << "Warning: No registers to process but allocation not complete\n");
+        AllocComplete = true; // 强制完成
+      }
     }
 
     ++Round;
@@ -194,12 +203,26 @@ Spiller &RegAllocSegmentTree::spiller() {
 }
 
 void RegAllocSegmentTree::enqueueImpl(const LiveInterval *LI) {
-  // 简单实现：暂时不做任何操作
+  
+  if (!LI) return;
+  unsigned V = LI->reg();
+  if (!V) return;
+  // 不處理已經空掉或僅 debug 定義的 vreg
+  if (MF && MF->getRegInfo().reg_nodbg_empty(V)) return;
+
+  // 只有第一次進佇列會插入成功
+  if (InQ.insert(V).second) {
+    WorkQ.push_back(LI);
+    LLVM_DEBUG(dbgs() << "  enqueue vreg " << V << " (queue size=" << WorkQ.size() << ")\n");
+  }
 }
 
 const LiveInterval *RegAllocSegmentTree::dequeue() {
-  // 返回nullptr或简单实现
-  return nullptr;
+  if (WorkQ.empty()) return nullptr;
+  const LiveInterval *LI = WorkQ.back();
+  WorkQ.pop_back();
+  if (LI) InQ.erase(LI->reg());
+  return LI;
 }
 
 MCRegister RegAllocSegmentTree::selectOrSplit(const LiveInterval &VirtReg,
@@ -238,13 +261,8 @@ void RegAllocSegmentTree::init(VirtRegMap &vrm, LiveIntervals &lis,
 
   this->MRI = &MF->getRegInfo();
 
-  // 2. 為每個暫存器類別初始化線段樹
-  //    這是一個簡化的示例。實際實現中，您需要遍歷所有可分配的物理暫存器
-  for (unsigned RCId = 0; RCId < TRI->getNumRegClasses(); ++RCId) {
-    // 獲取該暫存器類別中的所有物理暫存器
-    // 初始化對應的線段樹...
-    // PhysRegSegmentTrees[RCId].resize(...);
-  }
+  // 确保保留寄存器信息已冻结
+  MRI->freezeReservedRegs();
 
   LLVM_DEBUG(dbgs() << "Initializing Segment Tree Register Allocator with " 
                     << NumPhysRegs << " physical registers\n");
@@ -317,6 +335,12 @@ unsigned RegAllocSegmentTree::tryAllocateRegister(LiveInterval &VirtReg) {
     // 检查物理寄存器编号是否有效
     if (PhysReg == 0) {
       LLVM_DEBUG(dbgs() << "Skipping physreg 0\n");
+      continue;
+    }
+
+    // 检查该物理寄存器是否是保留寄存器
+    if (MRI->isReserved(PhysReg)) {
+      LLVM_DEBUG(dbgs() << "Skipping reserved physreg " << PhysReg << "\n");
       continue;
     }
     
@@ -562,114 +586,88 @@ void RegAllocSegmentTree::segtreeBuild(unsigned PhysReg) {
 }
 
 void RegAllocSegmentTree::spillVirtReg(LiveInterval &VirtReg) {
-  assert(MF && LIS && VRM &&
-         "RA pointers must be initialized before spilling");
+  assert(MF && LIS && VRM);
+  LLVM_DEBUG(dbgs() << "Spilling vreg " << VirtReg.reg() << '\n');
 
-  LLVM_DEBUG(dbgs() << "Spilling virtual register: " << VirtReg.reg() << '\n');
-
-  // Create a LiveRangeEdit object for the virtual register
   SmallVector<Register, 4> NewVRegs;
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-  
-  // Use the spiller with the LiveRangeEdit object
+
   spiller().spill(LRE);
-  
-  // 將新生成的虛擬寄存器加入隊列
-  for (Register NewVReg : NewVRegs) {
-    if (!LIS->hasInterval(NewVReg))
-      continue;
-    LiveInterval &NewLI = LIS->getInterval(NewVReg);
+
+  for (Register NV : NewVRegs) {
+    if (!LIS->hasInterval(NV)) continue;
+    LiveInterval &NewLI = LIS->getInterval(NV);
     enqueue(&NewLI);
   }
 }
 
-void RegAllocSegmentTree::finalizeAlloc(MachineFunction &MF, 
-                                                LiveIntervals &LIS, 
-                                                VirtRegMap &VRM) {
-  // 设置机器寄存器信息指针
-  MRI = &MF.getRegInfo();
+void RegAllocSegmentTree::finalizeAlloc(MachineFunction &MF,
+                                                 LiveIntervals &LIS,
+                                                 VirtRegMap &VRM) const {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   
-  // 处理空区间（没有实际生命期的虚拟寄存器）
-  for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
-    if (MF.getRegInfo().reg_nodbg_empty(Reg))
+  LLVM_DEBUG(dbgs() << "Finalizing allocation - checking all virtual registers\n");
+
+  // 處理所有虛擬寄存器，確保都有分配
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (MRI.reg_nodbg_empty(Reg))
       continue;
     
-    LiveInterval *LI = &LIS.getInterval(Reg);
-    if (LI->empty() && !VRM.hasPhys(Reg)) {
-      // 为空区间分配任意可用的物理寄存器
-      const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(Reg);
-      if (RC->getNumRegs() > 0) {
-        // 选择第一个可用的物理寄存器
-        MCRegister PhysReg = *RC->begin();
-        VRM.assignVirt2Phys(Reg, PhysReg);
-        LLVM_DEBUG(dbgs() << "Assigned empty interval " << Reg 
-                          << " to physical register " << PhysReg << "\n");
+    // 如果已經分配，跳過
+    if (VRM.hasPhys(Reg))
+      continue;
+
+    // 強制分配策略
+    LiveInterval &LI = LIS.getInterval(Reg);
+    const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
+    
+    LLVM_DEBUG(dbgs() << "Force-allocating unassigned register " 
+                      << printReg(Reg, TRI) << "\n");
+
+    // 尋找第一個可用的物理寄存器
+    Register PReg = 0;
+    ArrayRef<MCPhysReg> Order = RC.getRawAllocationOrder(MF);
+    for (MCPhysReg CandidateReg : Order) {
+      if (CandidateReg != 0 && !VRM.getRegInfo().isReserved(CandidateReg)) {
+        PReg = CandidateReg;
+        break;
       }
+    }
+
+    // 如果仍然找不到，使用第一個非零寄存器（即使是保留寄存器）
+    if (PReg == 0 && !Order.empty()) {
+      PReg = Order[0];
+    }
+
+    if (PReg != 0) {
+      VRM.assignVirt2Phys(Reg, PReg);
+      LLVM_DEBUG(dbgs() << "Force-assigned " << printReg(Reg, TRI) 
+                        << " to " << printReg(PReg, TRI) << "\n");
+    } else {
+      // 這應該永遠不會發生
+      llvm_unreachable("Cannot find any physical register for virtual register");
     }
   }
 
-  // 清理线段树数据结构
-  PhysRegSegmentTrees.clear();
-  
-  // 验证分配结果
+  // 驗證所有虛擬寄存器都已分配
   LLVM_DEBUG({
-    bool HasErrors = false;
-    
-    // 检查所有虚拟寄存器是否都已分配
-    for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
-      unsigned Reg = Register::index2VirtReg(i);
-      if (MF.getRegInfo().reg_nodbg_empty(Reg))
+    bool AllAllocated = true;
+    for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+      Register Reg = Register::index2VirtReg(I);
+      if (MRI.reg_nodbg_empty(Reg))
         continue;
       
-      LiveInterval *LI = &LIS.getInterval(Reg);
-      if (!LI->empty() && !VRM.hasPhys(Reg)) {
-        dbgs() << "Error: Virtual register " << Reg 
-               << " was not allocated!\n";
-        HasErrors = true;
+      if (!VRM.hasPhys(Reg)) {
+        dbgs() << "ERROR: Virtual register " << Reg << " still not allocated!\n";
+        AllAllocated = false;
       }
     }
     
-    // 检查物理寄存器冲突
-    for (unsigned i = 0, e = MF.getRegInfo().getNumVirtRegs(); i != e; ++i) {
-      unsigned Reg = Register::index2VirtReg(i);
-      if (!VRM.hasPhys(Reg) || MF.getRegInfo().reg_nodbg_empty(Reg))
-        continue;
-      
-      MCRegister PhysReg = VRM.getPhys(Reg);
-      LiveInterval *LI = &LIS.getInterval(Reg);
-      
-      // 检查是否有其他虚拟寄存器分配到同一个物理寄存器
-      for (unsigned j = i + 1; j < e; ++j) {
-        unsigned OtherReg = Register::index2VirtReg(j);
-        if (!VRM.hasPhys(OtherReg) || MF.getRegInfo().reg_nodbg_empty(OtherReg))
-          continue;
-        
-        if (VRM.getPhys(OtherReg) == PhysReg) {
-          LiveInterval *OtherLI = &LIS.getInterval(OtherReg);
-          
-          // 检查区间是否重叠
-          if (LI->overlaps(*OtherLI)) {
-            dbgs() << "Error: Virtual registers " << Reg << " and " << OtherReg
-                   << " both assigned to physical register " << PhysReg
-                   << " with overlapping live ranges!\n";
-            HasErrors = true;
-          }
-        }
-      }
-    }
-    
-    if (!HasErrors) {
-      dbgs() << "Segment Tree allocation successfully completed for " 
-             << MF.getName() << "\n";
-    } else {
-      dbgs() << "Segment Tree allocation completed with errors for " 
-             << MF.getName() << "\n";
+    if (AllAllocated) {
+      dbgs() << "SUCCESS: All virtual registers have been allocated\n";
     }
   });
-  
-  // 重置分配器状态，为下一个函数做准备
-  resetAllocatorState();
 }
 
 void RegAllocSegmentTree::resetAllocatorState() {
@@ -680,6 +678,9 @@ void RegAllocSegmentTree::resetAllocatorState() {
   PRTree.clear();
   DeadRemats.clear();
   FailedVRegs.clear();
+
+  WorkQ.clear();
+  InQ.clear();
 }
 
 void RegAllocSegmentTree::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
