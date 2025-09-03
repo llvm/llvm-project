@@ -38,8 +38,9 @@ jobs:
     container:
       image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
       # --privileged is needed to run the lldb tests that disable aslr.
-      # --env-host is needed to copy over the environment variables for
-      # configuring sccache.
+      # The SCCACHE environment variables are need to be copied from the host
+      # to the container to make sure it is configured correctly to use the
+      # depot cache.
       options: >-
          --privileged
          --env SCCACHE_WEBDAV_ENDPOINT
@@ -55,7 +56,6 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 2
-
       - name: Build and Test
         run: |
           git config --global --add safe.directory '*'
