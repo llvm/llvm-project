@@ -124,13 +124,6 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
   StringRef CounterName = CounterPair.first;
-  RangeUtils::RangeList TempRanges;
-  SmallVector<Range> Chunks;
-
-  if (!RangeUtils::parseRanges(CounterPair.second, TempRanges, ':')) {
-    return;
-  }
-  Chunks.assign(TempRanges.begin(), TempRanges.end());
 
   CounterInfo *Counter = getCounterInfo(CounterName);
   if (!Counter) {
@@ -139,8 +132,9 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
 
+  if (!RangeUtils::parseRanges(CounterPair.second, Counter->Chunks, ':'))
+    return;
   Counter->Active = Counter->IsSet = true;
-  Counter->Chunks = std::move(Chunks);
 }
 
 void DebugCounter::print(raw_ostream &OS) const {

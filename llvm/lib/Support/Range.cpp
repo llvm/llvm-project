@@ -13,7 +13,7 @@
 
 using namespace llvm;
 
-bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
+bool RangeUtils::parseRanges(const StringRef Str, RangeList &Ranges, const char Separator) {
   Ranges.clear();
   
   if (Str.empty())
@@ -24,7 +24,7 @@ bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
   Str.split(Parts, Separator, -1, false);
   
   // Regex to match either single number or range "num1-num2"
-  Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
+  const Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
   
   for (StringRef Part : Parts) {
     Part = Part.trim();
@@ -71,7 +71,7 @@ bool RangeUtils::parseRanges(StringRef Str, RangeList &Ranges, char Separator) {
   return true;
 }
 
-bool RangeUtils::contains(const RangeList &Ranges, int64_t Value) {
+bool RangeUtils::contains(const ArrayRef<Range> Ranges, const int64_t Value) {
   for (const Range &R : Ranges) {
     if (R.contains(Value))
       return true;
@@ -81,7 +81,7 @@ bool RangeUtils::contains(const RangeList &Ranges, int64_t Value) {
 
 
 
-std::string RangeUtils::rangesToString(const RangeList &Ranges, char Separator) {
+std::string RangeUtils::rangesToString(const ArrayRef<Range> Ranges, const char Separator) {
   std::ostringstream OS;
   for (size_t I = 0; I < Ranges.size(); ++I) {
     if (I > 0)
@@ -96,7 +96,7 @@ std::string RangeUtils::rangesToString(const RangeList &Ranges, char Separator) 
   return OS.str();
 }
 
-void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges) {
+void RangeUtils::printRanges(raw_ostream &OS, const ArrayRef<Range> Ranges) {
   if (Ranges.empty()) {
     OS << "empty";
   } else {
@@ -115,7 +115,7 @@ void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges) {
   }
 }
 
-RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
+RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(const ArrayRef<Range> Ranges) {
   if (Ranges.empty())
     return {};
     

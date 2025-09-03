@@ -57,9 +57,6 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  // For backward compatibility, alias Range as Chunk
-  using Chunk = Range;
-
   /// Struct to store counter info.
   class CounterInfo {
     friend class DebugCounter;
@@ -75,7 +72,7 @@ public:
     uint64_t CurrChunkIdx = 0;
     StringRef Name;
     StringRef Desc;
-    SmallVector<Chunk> Chunks;
+    RangeUtils::RangeList Chunks;
 
   public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
@@ -87,7 +84,7 @@ public:
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
+  LLVM_ABI static bool parseChunks(StringRef Str, RangeUtils::RangeList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
@@ -167,26 +164,8 @@ public:
   }
 
 protected:
-<<<<<<< HEAD
   void addCounter(CounterInfo *Info) { Counters[Info->Name] = Info; }
   bool handleCounterIncrement(CounterInfo &Info);
-=======
-  unsigned addCounter(const std::string &Name, const std::string &Desc) {
-    unsigned Result = RegisteredCounters.insert(Name);
-    auto &C = Counters[Result];
-    C = {};
-    C.Desc = Desc;
-    return Result;
-  }
-  // Struct to store counter info.
-  struct CounterInfo {
-    int64_t Count = 0;
-    uint64_t CurrChunkIdx = 0;
-    bool IsSet = false;
-    std::string Desc;
-    SmallVector<Range> Chunks;
-  };
->>>>>>> 0242e6f869bd (range support)
 
   MapVector<StringRef, CounterInfo *> Counters;
 
