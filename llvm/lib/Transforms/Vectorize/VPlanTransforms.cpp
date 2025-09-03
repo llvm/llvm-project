@@ -2403,10 +2403,46 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
-    VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
-      return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
+    bool FoundHeaderMask = false;
+    SmallVector<VPValue *, 2> Operands, Worklist;
+    Worklist.push_back(OrigMask);
+    while (!Worklist.empty()) {
+      VPValue *Cur = Worklist.pop_back_val();
+      // Replace header mask with all-true mask.
+      if (Cur == HeaderMask) {
+        Operands.push_back(&AllOneMask);
+        FoundHeaderMask = true;
+        continue;
+      }
+
+      VPValue *Op1, *Op2;
+      if (match(Cur, m_LogicalAnd(m_VPValue(Op1), m_VPValue(Op2)))) {
+        Worklist.append({Op1, Op2});
+        continue;
+      }
+      // Stop to query if the value is not in the and-tree.
+      Operands.push_back(Cur);
+    }
+
+    // Return original mask if there is no header mask in the and-tree.
+    // FIXME: Should be assertion here?
+    if (!FoundHeaderMask)
+      return OrigMask;
+    // The new mask is all-true if the header mask is in the and-tree and there
+    // is only one operand we need to do logical-and.
+    if (Operands.size() == 1)
+      return nullptr;
+    // Otherwise, create the and-tree for new mask.
+    VPBuilder Builder(cast<VPInstruction>(OrigMask));
+    VPValue *NewMask = Operands.pop_back_val();
+    while (!Operands.empty()) {
+      VPValue *Op = Operands.pop_back_val();
+      // Skip the operand if it is all-true.
+      if (match(Op, m_True()))
+        continue;
+      NewMask = Builder.createLogicalAnd(NewMask, Op);
+    }
+    return NewMask;
   };
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
