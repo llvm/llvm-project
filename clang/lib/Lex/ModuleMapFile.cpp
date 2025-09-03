@@ -407,8 +407,6 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
       break;
 
     case MMToken::LinkKeyword:
-      // Link decls are only allowed in top level modules or explicit
-      // submodules.
       SubDecl = parseLinkDecl(SeenLinkDecl);
       break;
 
