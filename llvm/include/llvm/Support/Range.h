@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
@@ -58,10 +59,15 @@ public:
 
   /// Parse a range specification string like "1-10,20-30,45" or
   /// "1-10:20-30:45". Ranges must be in increasing order and non-overlapping.
-  /// Returns false on error, true on success
   /// \param RangeStr The string to parse
-  /// \param Ranges Output list of parsed ranges
   /// \param Separator The separator character to use (',' or ':')
+  /// \returns Expected<RangeList> containing the parsed ranges on success,
+  ///          or an Error on failure
+  static Expected<RangeList> parseRanges(const StringRef RangeStr,
+                                         const char Separator = ',');
+
+  /// Legacy interface for backward compatibility. 
+  /// \deprecated Use the Expected<RangeList> version instead
   static bool parseRanges(const StringRef RangeStr, RangeList &Ranges,
                           const char Separator = ',');
 

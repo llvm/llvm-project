@@ -84,9 +84,14 @@ bool increaseGranularity(RangeUtils::RangeList &Chunks) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  RangeUtils::RangeList CurrChunks;
-  if (!RangeUtils::parseRanges(StartChunks, CurrChunks, ','))
+  auto ExpectedChunks = RangeUtils::parseRanges(StartChunks, ',');
+  if (!ExpectedChunks) {
+    handleAllErrors(ExpectedChunks.takeError(), [](const StringError &E) {
+      errs() << "Error parsing chunks: " << E.getMessage() << "\n";
+    });
     return 1;
+  }
+  RangeUtils::RangeList CurrChunks = std::move(*ExpectedChunks);
 
   auto Program = sys::findProgramByName(ReproductionCmd);
   if (!Program) {

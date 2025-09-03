@@ -117,6 +117,15 @@ void DebugCounter::push_back(const std::string &Val) {
   }
   StringRef CounterName = CounterPair.first;
 
+  auto ExpectedChunks = RangeUtils::parseRanges(CounterPair.second, ':');
+  if (!ExpectedChunks) {
+    handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
+      errs() << "DebugCounter Error: " << E.getMessage() << "\n";
+    });
+    return;
+  }
+  RangeUtils::RangeList Chunks = std::move(*ExpectedChunks);
+
   unsigned CounterID = getCounterId(std::string(CounterName));
   if (!CounterID) {
     errs() << "DebugCounter Error: " << CounterName
@@ -127,8 +136,7 @@ void DebugCounter::push_back(const std::string &Val) {
 
   CounterInfo &Counter = Counters[CounterID];
   Counter.IsSet = true;
-  if (!RangeUtils::parseRanges(CounterPair.second, Counter.Chunks, ':'))
-    return;
+  Counter.Chunks = std::move(Chunks);
 }
 
 void DebugCounter::print(raw_ostream &OS) const {
