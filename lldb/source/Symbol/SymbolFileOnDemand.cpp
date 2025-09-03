@@ -535,6 +535,15 @@ void SymbolFileOnDemand::PreloadSymbols() {
   return m_sym_file_impl->PreloadSymbols();
 }
 
+std::vector<lldb::DataBufferSP> SymbolFileOnDemand::GetASTData(lldb::LanguageType language) {
+  if (!m_debug_info_enabled) {
+    LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
+             __FUNCTION__);
+    return {};
+  }
+  return m_sym_file_impl->GetASTData(language);
+}
+
 uint64_t SymbolFileOnDemand::GetDebugInfoSize(bool load_all_debug_info) {
   // Always return the real debug info size.
   LLDB_LOG(GetLog(), "[{0}] {1} is not skipped", GetSymbolFileName(),

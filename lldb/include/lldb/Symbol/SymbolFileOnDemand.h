@@ -178,6 +178,8 @@ public:
 
   void PreloadSymbols() override;
 
+  std::vector<lldb::DataBufferSP> GetASTData(lldb::LanguageType language) override;
+
   uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
   lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override;
   lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
