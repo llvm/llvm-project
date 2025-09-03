@@ -4238,6 +4238,13 @@ static Constant *ConstantFoldScalableVectorCall(
 
     return ConstantInt::getFalse(SVTy);
   }
+  case Intrinsic::get_active_lane_mask: {
+    auto Op0 = cast<ConstantInt>(Operands[0])->getValue();
+    auto Op1 = cast<ConstantInt>(Operands[1])->getValue();
+    if ((Op0.uge(Op1) && (!Op1.isZero())))
+      return ConstantVector::getNullValue(SVTy);
+    break;
+  }
   default:
     break;
   }
