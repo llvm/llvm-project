@@ -47102,7 +47102,8 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 /// scalars back, while for x64 we should use 64-bit extracts and shifts.
 static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
-                                       const X86Subtarget &Subtarget) {
+                                       const X86Subtarget &Subtarget, 
+                                       bool& TransformedBinOpReduction) {
   if (SDValue NewOp = combineExtractWithShuffle(N, DAG, DCI, Subtarget))
     return NewOp;
 
@@ -47190,23 +47191,33 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // Check whether this extract is the root of a sum of absolute differences
   // pattern. This has to be done here because we really want it to happen
   // pre-legalization,
-  if (SDValue SAD = combineBasicSADPattern(N, DAG, Subtarget))
+  if (SDValue SAD = combineBasicSADPattern(N, DAG, Subtarget)) {
+    TransformedBinOpReduction = true;
     return SAD;
+  }
 
-  if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
+  if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget)) {
+    TransformedBinOpReduction = true;
     return VPDPBUSD;
+  }
 
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
+  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget)) {
+    TransformedBinOpReduction = true;
     return Cmp;
+  }
 
   // Attempt to replace min/max v8i16/v16i8 reductions with PHMINPOSUW.
-  if (SDValue MinMax = combineMinMaxReduction(N, DAG, Subtarget))
+  if (SDValue MinMax = combineMinMaxReduction(N, DAG, Subtarget)) {
+    TransformedBinOpReduction = true;
     return MinMax;
+  }
 
   // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
-  if (SDValue V = combineArithReduction(N, DAG, Subtarget))
+  if (SDValue V = combineArithReduction(N, DAG, Subtarget)) {
+    TransformedBinOpReduction = true;
     return V;
+  }
 
   if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget, DCI))
     return V;
@@ -47274,6 +47285,36 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   }
 
   return SDValue();
+}
+
+static SDValue combineExtractVectorEltAndOperand(SDNode* N, SelectionDAG& DAG,
+    TargetLowering::DAGCombinerInfo& DCI,
+    const X86Subtarget& Subtarget)
+{
+  bool TransformedBinOpReduction = false;
+  auto Op = combineExtractVectorElt(N, DAG, DCI, Subtarget, TransformedBinOpReduction);
+
+  if (TransformedBinOpReduction)
+  {
+    // In case we simplified N = extract_vector_element(V, 0) with Op and V
+    // resulted from a reduction, then we need to replace all uses of V with
+    // scalar_to_vector(Op) to make sure that we eliminated the binop + shuffle
+    // pyramid. This is safe to do, because the elements of V are undefined except 
+    // for the zeroth element and Op does not depend on V.
+
+    auto OldV = N->getOperand(0);
+    assert(!Op.getNode()->hasPredecessor(OldV.getNode()) && 
+        "Op must not depend on the converted reduction");
+
+    auto NewV = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), OldV->getValueType(0), Op);
+
+    auto NV = DCI.CombineTo(N, Op);
+    DCI.CombineTo(OldV.getNode(), NewV);
+
+    Op = NV; // Return N so it doesn't get rechecked!
+  }
+
+  return Op;
 }
 
 // Convert (vXiY *ext(vXi1 bitcast(iX))) to extend_in_reg(broadcast(iX)).
@@ -60611,7 +60652,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::EXTRACT_VECTOR_ELT:
   case X86ISD::PEXTRW:
   case X86ISD::PEXTRB:
-    return combineExtractVectorElt(N, DAG, DCI, Subtarget);
+    return combineExtractVectorEltAndOperand(N, DAG, DCI, Subtarget);
   case ISD::CONCAT_VECTORS:
     return combineCONCAT_VECTORS(N, DAG, DCI, Subtarget);
   case ISD::INSERT_SUBVECTOR:
