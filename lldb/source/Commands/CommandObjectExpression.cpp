@@ -46,18 +46,23 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   switch (short_option) {
   case 'l': {
     language = Language::GetLanguageTypeFromString(option_arg);
-
     if (const LanguageSet supported_languages =
             Language::GetLanguagesSupportingTypeSystemsForExpressions();
-        !supported_languages[language]) {
-      StreamString sstr;
-      sstr.Printf("invalid language '%s' for expression. "
-                  "List of supported languages:\n",
+        supported_languages[language])
+      break;
+
+    StreamString sstr;
+    if (language == eLanguageTypeUnknown)
+      sstr.Printf("unknown language '%s' for expression. ",
+                  option_arg.str().c_str());
+    else
+      sstr.Printf("language '%s' is currently not supported for expression "
+                  "evaluation. ",
                   option_arg.str().c_str());
 
-      Language::PrintSupportedLanguagesForExpressions(sstr, "  ", "\n");
-      error = Status(sstr.GetString().str());
-    }
+    sstr.PutCString("List of supported languages for expressions:\n");
+    Language::PrintSupportedLanguagesForExpressions(sstr, "  ", "\n");
+    error = Status(sstr.GetString().str());
   } break;
 
   case 'a': {

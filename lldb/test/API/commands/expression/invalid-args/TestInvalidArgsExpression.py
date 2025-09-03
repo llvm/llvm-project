@@ -10,8 +10,8 @@ class InvalidArgsExpressionTestCase(TestBase):
             "expression -l foo --",
             error=True,
             substrs=[
-                "error: invalid language 'foo' for expression.",
-                "List of supported languages:",
+                "error: unknown language 'foo' for expression.",
+                "List of supported languages for expressions:",
                 "c++",
                 "c++11",
                 "c++14",
@@ -22,8 +22,8 @@ class InvalidArgsExpressionTestCase(TestBase):
             "expression -l c --",
             error=True,
             substrs=[
-                "error: invalid language 'c' for expression.",
-                "List of supported languages:",
+                "error: language 'c' is currently not supported for expression evaluation.",
+                "List of supported languages for expressions:",
                 "c++",
                 "c++11",
                 "c++14",
