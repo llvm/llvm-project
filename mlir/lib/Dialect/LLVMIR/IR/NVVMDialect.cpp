@@ -1797,7 +1797,7 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
   bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
-  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id;
   if (isShared) {
@@ -1819,7 +1819,7 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt,
     llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == Tcgen05GroupKind::CTA_1)
+  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
                 ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
                 : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
@@ -1847,7 +1847,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                     .getAddressSpace();
   bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
-  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id =
       is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
@@ -1879,7 +1879,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
 
 llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
   auto curOp = cast<NVVM::Tcgen05CpOp>(op);
-  bool is2CTA = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  bool is2CTA = curOp.getGroup() == CTAGroupKind::CTA_2;
   auto srcFmt = curOp.getSrcFormat();
   auto mc = curOp.getMulticast();
 
