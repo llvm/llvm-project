@@ -505,6 +505,66 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_USUBO_CARRY) {
   EXPECT_EQ(Known.One, APInt(8, 0x31));
 }
 
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VASHR) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x80, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x07));
+  EXPECT_EQ(Known.One, APInt(8, 0xF8));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VASHR, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x00));
+  EXPECT_EQ(Known.One, APInt(8, 0xFF));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VLSHR) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x80, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VLSHR, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xF7));
+  EXPECT_EQ(Known.One, APInt(8, 0x08));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VLSHR, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xFE));
+  EXPECT_EQ(Known.One, APInt(8, 0x1));
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_VSHL) {
+  SDLoc Loc;
+  KnownBits Known;
+  auto VecVT = MVT::v8i8;
+  auto Shift0 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Vec0 = DAG->getConstant(0x02, Loc, VecVT);
+  auto Op0 = DAG->getNode(AArch64ISD::VSHL, Loc, VecVT, Vec0, Shift0);
+  Known = DAG->computeKnownBits(Op0);
+  EXPECT_EQ(Known.Zero, APInt(8, 0xDF));
+  EXPECT_EQ(Known.One, APInt(8, 0x20));
+
+  auto Shift1 = DAG->getConstant(7, Loc, MVT::i32);
+  auto Vec1 = DAG->getConstant(0xF7, Loc, VecVT);
+  auto Op1 = DAG->getNode(AArch64ISD::VSHL, Loc, VecVT, Vec1, Shift1);
+  Known = DAG->computeKnownBits(Op1);
+  EXPECT_EQ(Known.Zero, APInt(8, 0x7F));
+  EXPECT_EQ(Known.One, APInt(8, 0x80));
+}
+
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
   TargetLowering TL(*TM);
 
