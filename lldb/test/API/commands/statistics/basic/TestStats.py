@@ -181,7 +181,7 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoLoadErrorCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -294,7 +294,7 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoLoadErrorCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -335,7 +335,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoLoadErrorCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -390,7 +390,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoLoadErrorCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -413,7 +413,7 @@ class TestCase(TestBase):
             "symbolTableSavedToCache",
             "dwoFileCount",
             "loadedDwoFileCount",
-            "dwoLoadErrorCount",
+            "dwoErrorCount",
             "triple",
             "uuid",
         ]
@@ -504,7 +504,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
-            "totalDwoLoadErrorCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
