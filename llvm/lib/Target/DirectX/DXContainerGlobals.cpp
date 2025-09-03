@@ -162,8 +162,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const std::optional<mcdxbc::RootSignatureDesc> &RS =
-      RSA.getDescForFunction(EntryFunction);
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
 
   if (!RS)
     return;

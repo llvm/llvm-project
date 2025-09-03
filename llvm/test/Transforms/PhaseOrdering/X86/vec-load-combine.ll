@@ -11,13 +11,13 @@ $getAt = comdat any
 
 define dso_local noundef <4 x float> @ConvertVectors_ByRef(ptr noundef nonnull align 16 dereferenceable(16) %0) #0 {
 ; SSE-LABEL: @ConvertVectors_ByRef(
-; SSE-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[TMP0:%.*]], align 16
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+; SSE-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[TMP0:%.*]], align 16
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; SSE-NEXT:    ret <4 x float> [[TMP3]]
 ;
 ; AVX-LABEL: @ConvertVectors_ByRef(
-; AVX-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[TMP0:%.*]], align 16
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+; AVX-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[TMP0:%.*]], align 16
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; AVX-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %2 = alloca ptr, align 8

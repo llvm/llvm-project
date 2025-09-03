@@ -38,6 +38,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
 #include "flang/Support/OpenMP-utils.h"
+#include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Support/StateStack.h"
@@ -47,6 +48,7 @@
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
+using namespace Fortran::utils::openmp;
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -407,7 +409,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
         common::visitors{
-            [&](const parser::OpenMPBlockConstruct &ompConstruct) {
+            [&](const parser::OmpBlockConstruct &ompConstruct) {
               beginClauseList = &ompConstruct.BeginDir().Clauses();
               if (auto &endSpec = ompConstruct.EndDir())
                 endClauseList = &endSpec->Clauses();
@@ -532,6 +534,13 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_loop:
       cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      break;
+
+    case OMPD_teams_workdistribute:
+      cp.processThreadLimit(stmtCtx, hostInfo->ops);
+      [[fallthrough]];
+    case OMPD_target_teams_workdistribute:
+      cp.processNumTeams(stmtCtx, hostInfo->ops);
       break;
 
     // Standalone 'target' case.
@@ -2262,7 +2271,8 @@ genOrderedOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
              mlir::Location loc, const ConstructQueue &queue,
              ConstructQueue::const_iterator item) {
-  TODO(loc, "OMPD_ordered");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(loc, "OMPD_ordered");
   return nullptr;
 }
 
@@ -2449,7 +2459,8 @@ genScopeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
            semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
            mlir::Location loc, const ConstructQueue &queue,
            ConstructQueue::const_iterator item) {
-  TODO(loc, "Scope construct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(loc, "Scope construct");
   return nullptr;
 }
 
@@ -2816,6 +2827,17 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           .setClauses(&item->clauses)
           .setEntryBlockArgs(&args),
       queue, item, clauseOps);
+}
+
+static mlir::omp::WorkdistributeOp genWorkdistributeOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item) {
+  return genOpWithBody<mlir::omp::WorkdistributeOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_workdistribute),
+      queue, item);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3235,7 +3257,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
                                    /*useDelayedPrivatization=*/true, symTable);
-  simdItemDSP.processStep1(&simdClauseOps);
+  simdItemDSP.processStep1(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3276,7 +3298,8 @@ static mlir::omp::TaskloopOp genCompositeTaskloopSimd(
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
-  TODO(loc, "Composite TASKLOOP SIMD");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(loc, "Composite TASKLOOP SIMD");
   return nullptr;
 }
 
@@ -3448,13 +3471,18 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_tile: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
-    TODO(loc, "Unhandled loop directive (" +
-                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+    if (!semaCtx.langOptions().OpenMPSimd)
+      TODO(loc, "Unhandled loop directive (" +
+                    llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+    break;
   }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
-  // case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+    newOp = genWorkdistributeOp(converter, symTable, semaCtx, eval, loc, queue,
+                                item);
+    break;
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
                            queue, item);
@@ -3484,35 +3512,40 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclarativeAllocate &declarativeAllocate) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeAssumes &assumesConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
 }
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
 static void genOMP(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     const parser::OpenMPDeclareReductionConstruct &declareReductionConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclareReductionConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPDeclareReductionConstruct");
 }
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
 }
 
 static void
@@ -3581,6 +3614,13 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
                       symClause.automap);
   }
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPGroupprivate &directive) {
+  TODO(converter.getCurrentLocation(), "GROUPPRIVATE");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3706,14 +3746,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   (void)objects;
   (void)clauses;
 
-  TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPInteropConstruct &interopConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
 }
 
 static void
@@ -3729,7 +3771,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAllocatorsConstruct &allocsConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
 }
 
 //===----------------------------------------------------------------------===//
@@ -3746,7 +3789,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPBlockConstruct &blockConstruct) {
+                   const parser::OmpBlockConstruct &blockConstruct) {
   const parser::OmpDirectiveSpecification &beginSpec =
       blockConstruct.BeginDir();
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
@@ -3795,7 +3838,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Detach>(clause.u)) {
       std::string name =
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
-      TODO(clauseLocation, name + " clause is not implemented yet");
+      if (!semaCtx.langOptions().OpenMPSimd)
+        TODO(clauseLocation, name + " clause is not implemented yet");
     }
   }
 
@@ -3811,7 +3855,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAssumeConstruct &assumeConstruct) {
   mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
-  TODO(clauseLocation, "OpenMP ASSUME construct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(clauseLocation, "OpenMP ASSUME construct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3847,21 +3892,24 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPUtilityConstruct &) {
-  TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDispatchConstruct &) {
-  TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPExecutableAllocate &execAllocConstruct) {
-  TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
+  if (!semaCtx.langOptions().OpenMPSimd)
+    TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3933,9 +3981,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
   const auto &endSectionsDirective =
-      std::get<parser::OmpEndSectionsDirective>(sectionsConstruct.t);
+      std::get<std::optional<parser::OmpEndSectionsDirective>>(
+          sectionsConstruct.t);
+  assert(endSectionsDirective &&
+         "Missing end section directive should have been handled in semantics");
   clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endSectionsDirective.t), semaCtx));
+      std::get<parser::OmpClauseList>(endSectionsDirective->t), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
 
   llvm::omp::Directive directive =
@@ -4099,7 +4150,7 @@ void Fortran::lower::genDeclareTargetIntGlobal(
 bool Fortran::lower::isOpenMPTargetConstruct(
     const parser::OpenMPConstruct &omp) {
   llvm::omp::Directive dir = llvm::omp::Directive::OMPD_unknown;
-  if (const auto *block = std::get_if<parser::OpenMPBlockConstruct>(&omp.u)) {
+  if (const auto *block = std::get_if<parser::OmpBlockConstruct>(&omp.u)) {
     dir = block->BeginDir().DirId();
   } else if (const auto *loop =
                  std::get_if<parser::OpenMPLoopConstruct>(&omp.u)) {

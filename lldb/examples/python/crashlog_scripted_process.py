@@ -10,8 +10,7 @@ from lldb.macosx.crashlog import CrashLog, CrashLogParser
 
 
 class CrashLogScriptedProcess(ScriptedProcess):
-    def set_crashlog(self, crashlog):
-        self.crashlog = crashlog
+    def parse_crashlog(self):
         if self.crashlog.process_id:
             if type(self.crashlog.process_id) is int:
                 self.pid = self.crashlog.process_id
@@ -28,8 +27,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
             self.metadata["asi"] = self.crashlog.asi
         if hasattr(self.crashlog, "asb"):
             self.extended_thread_info = self.crashlog.asb
-
-        crashlog.load_images(self.options, self.loaded_images)
 
         for thread in self.crashlog.threads:
             if (
@@ -92,10 +89,21 @@ class CrashLogScriptedProcess(ScriptedProcess):
                     no_parallel_image_loading.GetBooleanValue()
                 )
 
+        self.crashlog = None
+        crashlog = args.GetValueForKey("crashlog")
+        if crashlog and crashlog.IsValid():
+            if crashlog.GetType() == lldb.eStructuredDataTypeGeneric:
+                self.crashlog = crashlog.GetGenericValue()
+
+        if not self.crashlog:
+            # Return error
+            return
+
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
         self.exception = None
         self.extended_thread_info = None
+        self.parse_crashlog()
 
     def read_memory_at_address(
         self, addr: int, size: int, error: lldb.SBError
@@ -104,8 +112,8 @@ class CrashLogScriptedProcess(ScriptedProcess):
         return lldb.SBData()
 
     def get_loaded_images(self):
-        # TODO: Iterate over corefile_target modules and build a data structure
-        # from it.
+        if len(self.loaded_images) == 0:
+            self.crashlog.load_images(self.options, self.loaded_images)
         return self.loaded_images
 
     def should_stop(self) -> bool:

@@ -744,45 +744,48 @@ namespace {
 
 void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                           ScalarEvolution *SE) {
-  O << "Delinearization on function " << F->getName() << ":\n";
+  O << "Printing analysis 'Delinearization' for function '" << F->getName()
+    << "':";
   for (Instruction &Inst : instructions(F)) {
     // Only analyze loads and stores.
-    if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst) &&
-        !isa<GetElementPtrInst>(&Inst))
+    if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst))
       continue;
 
     const BasicBlock *BB = Inst.getParent();
-    // Delinearize the memory access as analyzed in all the surrounding loops.
+    Loop *L = LI->getLoopFor(BB);
+    // Only delinearize the memory access in the innermost loop.
     // Do not analyze memory accesses outside loops.
-    for (Loop *L = LI->getLoopFor(BB); L != nullptr; L = L->getParentLoop()) {
-      const SCEV *AccessFn = SE->getSCEVAtScope(getPointerOperand(&Inst), L);
+    if (!L)
+      continue;
 
-      const SCEVUnknown *BasePointer =
-          dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-      // Do not delinearize if we cannot find the base pointer.
-      if (!BasePointer)
-        break;
-      AccessFn = SE->getMinusSCEV(AccessFn, BasePointer);
+    const SCEV *AccessFn = SE->getSCEVAtScope(getPointerOperand(&Inst), L);
 
-      O << "\n";
-      O << "Inst:" << Inst << "\n";
-      O << "In Loop with Header: " << L->getHeader()->getName() << "\n";
-      O << "AccessFunction: " << *AccessFn << "\n";
+    const SCEVUnknown *BasePointer =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
+    // Do not delinearize if we cannot find the base pointer.
+    if (!BasePointer)
+      break;
+    AccessFn = SE->getMinusSCEV(AccessFn, BasePointer);
 
-      SmallVector<const SCEV *, 3> Subscripts, Sizes;
+    O << "\n";
+    O << "Inst:" << Inst << "\n";
+    O << "In Loop with Header: " << L->getHeader()->getName() << "\n";
+    O << "AccessFunction: " << *AccessFn << "\n";
 
-      auto IsDelinearizationFailed = [&]() {
-        return Subscripts.size() == 0 || Sizes.size() == 0 ||
-               Subscripts.size() != Sizes.size();
-      };
+    SmallVector<const SCEV *, 3> Subscripts, Sizes;
 
-      delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
-      if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
-        Subscripts.clear();
-        Sizes.clear();
-        delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
-                                  SE->getElementSize(&Inst));
-      }
+    auto IsDelinearizationFailed = [&]() {
+      return Subscripts.size() == 0 || Sizes.size() == 0 ||
+             Subscripts.size() != Sizes.size();
+    };
+
+    delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
+    if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
+      Subscripts.clear();
+      Sizes.clear();
+      delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
+                                SE->getElementSize(&Inst));
+    }
 
       if (IsDelinearizationFailed()) {
         O << "failed to delinearize\n";
@@ -800,7 +803,6 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
       for (int i = 0; i < Size; i++)
         O << "[" << *Subscripts[i] << "]";
       O << "\n";
-    }
   }
 }
 

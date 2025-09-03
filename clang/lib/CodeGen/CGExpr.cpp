@@ -16,6 +16,7 @@
 #include "CGCall.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
@@ -107,13 +108,10 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
 
-RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
-                                             CharUnits Align, const Twine &Name,
-                                             llvm::Value *ArraySize,
-                                             RawAddress *AllocaAddr) {
-  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
-  if (AllocaAddr)
-    *AllocaAddr = Alloca;
+RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
+                                                       LangAS DestLangAS,
+                                                       llvm::Value *ArraySize) {
+
   llvm::Value *V = Alloca.getPointer();
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
@@ -133,7 +131,18 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
         /*IsNonNull=*/true);
   }
 
-  return RawAddress(V, Ty, Align, KnownNonNull);
+  return RawAddress(V, Alloca.getElementType(), Alloca.getAlignment(),
+                    KnownNonNull);
+}
+
+RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
+                                             CharUnits Align, const Twine &Name,
+                                             llvm::Value *ArraySize,
+                                             RawAddress *AllocaAddr) {
+  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
+  if (AllocaAddr)
+    *AllocaAddr = Alloca;
+  return MaybeCastStackAddressSpace(Alloca, DestLangAS, ArraySize);
 }
 
 /// CreateTempAlloca - This creates an alloca and inserts it into the entry
@@ -405,14 +414,11 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
     case SD_Static:
     case SD_Thread: {
       CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
-      if (const RecordType *RT =
-              E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+      if (const auto *ClassDecl =
+              E->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+          ClassDecl && !ClassDecl->hasTrivialDestructor())
         // Get the destructor for the reference temporary.
-        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
-            ClassDecl && !ClassDecl->hasTrivialDestructor())
-          ReferenceTemporaryDtor =
-              ClassDecl->getDefinitionOrSelf()->getDestructor();
-      }
+        ReferenceTemporaryDtor = ClassDecl->getDestructor();
 
       if (!ReferenceTemporaryDtor)
         return;
@@ -1316,6 +1322,57 @@ void CodeGenModule::EmitExplicitCastExprType(const ExplicitCastExpr *E,
 //                         LValue Expression Emission
 //===----------------------------------------------------------------------===//
 
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, llvm::Value *idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  if (auto *constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
+    CharUnits offset = constantIdx->getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+  }
+
+  // Otherwise, use the worst-case alignment for any element.
+  return arrayAlign.alignmentOfArrayElement(eltSize);
+}
+
+/// Emit pointer + index arithmetic.
+static Address emitPointerArithmetic(CodeGenFunction &CGF,
+                                     const BinaryOperator *BO,
+                                     LValueBaseInfo *BaseInfo,
+                                     TBAAAccessInfo *TBAAInfo,
+                                     KnownNonNull_t IsKnownNonNull) {
+  assert(BO->isAdditiveOp() && "Expect an addition or subtraction.");
+  Expr *pointerOperand = BO->getLHS();
+  Expr *indexOperand = BO->getRHS();
+  bool isSubtraction = BO->getOpcode() == BO_Sub;
+
+  Address BaseAddr = Address::invalid();
+  llvm::Value *index = nullptr;
+  // In a subtraction, the LHS is always the pointer.
+  // Note: do not change the evaluation order.
+  if (!isSubtraction && !pointerOperand->getType()->isAnyPointerType()) {
+    std::swap(pointerOperand, indexOperand);
+    index = CGF.EmitScalarExpr(indexOperand);
+    BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            NotKnownNonNull);
+  } else {
+    BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
+                                            NotKnownNonNull);
+    index = CGF.EmitScalarExpr(indexOperand);
+  }
+
+  llvm::Value *pointer = BaseAddr.getBasePointer();
+  llvm::Value *Res = CGF.EmitPointerArithmetic(
+      BO, pointerOperand, pointer, indexOperand, index, isSubtraction);
+  QualType PointeeTy = BO->getType()->getPointeeType();
+  CharUnits Align =
+      getArrayElementAlign(BaseAddr.getAlignment(), index,
+                           CGF.getContext().getTypeSizeInChars(PointeeTy));
+  return Address(Res, CGF.ConvertTypeForMem(PointeeTy), Align,
+                 CGF.CGM.getPointerAuthInfoForPointeeType(PointeeTy),
+                 /*Offset=*/nullptr, IsKnownNonNull);
+}
+
 static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
                                         TBAAAccessInfo *TBAAInfo,
                                         KnownNonNull_t IsKnownNonNull,
@@ -1378,6 +1435,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
+
         return CGF.authPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
                                             CE->getType());
       }
@@ -1436,6 +1494,12 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
       return LV.getAddress();
     }
     }
+  }
+
+  // Pointer arithmetic: pointer +/- index.
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->isAdditiveOp())
+      return emitPointerArithmetic(CGF, BO, BaseInfo, TBAAInfo, IsKnownNonNull);
   }
 
   // TODO: conditional operators, comma.
@@ -1920,11 +1984,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
 static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
                             llvm::APInt &Min, llvm::APInt &End,
                             bool StrictEnums, bool IsBool) {
-  const EnumType *ET = Ty->getAs<EnumType>();
-  const EnumDecl *ED =
-      ET ? ET->getOriginalDecl()->getDefinitionOrSelf() : nullptr;
+  const auto *ED = Ty->getAsEnumDecl();
   bool IsRegularCPlusPlusEnum =
-      CGF.getLangOpts().CPlusPlus && StrictEnums && ET && !ED->isFixed();
+      CGF.getLangOpts().CPlusPlus && StrictEnums && ED && !ED->isFixed();
   if (!IsBool && !IsRegularCPlusPlusEnum)
     return false;
 
@@ -1971,7 +2033,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   bool IsBool = (Ty->hasBooleanRepresentation() && !Ty->isVectorType()) ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
-  bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
+  bool NeedsEnumCheck = HasEnumCheck && Ty->isEnumeralType();
   if (!NeedsBoolCheck && !NeedsEnumCheck)
     return false;
 
@@ -3325,7 +3387,14 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
-    return EmitLValue(BD->getBinding());
+    // Suppress debug location updates when visiting the binding, since the
+    // binding may emit instructions that would otherwise be associated with the
+    // binding itself, rather than the expression referencing the binding. (this
+    // leads to jumpy debug stepping behavior where the location/debugger jump
+    // back to the binding declaration, then back to the expression referencing
+    // the binding)
+    DisableDebugLocationUpdates D(*this);
+    return EmitLValue(BD->getBinding(), NotKnownNonNull);
   }
 
   // We can form DeclRefExprs naming GUID declarations when reconstituting
@@ -3720,7 +3789,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
-    ArrayRef<llvm::Value *> DynamicArgs) {
+    ArrayRef<llvm::Value *> DynamicArgs, const TrapReason *TR) {
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
@@ -3759,7 +3828,7 @@ void CodeGenFunction::EmitCheck(
   }
 
   if (TrapCond)
-    EmitTrapCheck(TrapCond, CheckHandler, NoMerge);
+    EmitTrapCheck(TrapCond, CheckHandler, NoMerge, TR);
   if (!FatalCond && !RecoverableCond)
     return;
 
@@ -4071,7 +4140,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
-                                    bool NoMerge) {
+                                    bool NoMerge, const TrapReason *TR) {
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4082,12 +4151,25 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
-  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+  llvm::StringRef TrapMessage;
+  llvm::StringRef TrapCategory;
+  auto DebugTrapReasonKind = CGM.getCodeGenOpts().getSanitizeDebugTrapReasons();
+  if (TR && !TR->isEmpty() &&
+      DebugTrapReasonKind ==
+          CodeGenOptions::SanitizeDebugTrapReasonKind::Detailed) {
+    TrapMessage = TR->getMessage();
+    TrapCategory = TR->getCategory();
+  } else {
+    TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+    TrapCategory = "Undefined Behavior Sanitizer";
+  }
 
   if (getDebugInfo() && !TrapMessage.empty() &&
-      CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+      DebugTrapReasonKind !=
+          CodeGenOptions::SanitizeDebugTrapReasonKind::None &&
+      TrapLocation) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+        TrapLocation, TrapCategory, TrapMessage);
   }
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
@@ -4224,21 +4306,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                       align, name);
   } else {
     return CGF.Builder.CreateGEP(addr, indices, elementType, align, name);
-  }
-}
-
-static CharUnits getArrayElementAlign(CharUnits arrayAlign,
-                                      llvm::Value *idx,
-                                      CharUnits eltSize) {
-  // If we have a constant index, we can use the exact offset of the
-  // element we're accessing.
-  if (auto constantIdx = dyn_cast<llvm::ConstantInt>(idx)) {
-    CharUnits offset = constantIdx->getZExtValue() * eltSize;
-    return arrayAlign.alignmentAtOffset(offset);
-
-  // Otherwise, use the worst-case alignment for any element.
-  } else {
-    return arrayAlign.alignmentOfArrayElement(eltSize);
   }
 }
 
@@ -4532,6 +4599,15 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
                                  LHS.getBaseInfo(), TBAAAccessInfo());
+  }
+
+  // The HLSL runtime handle the subscript expression on global resource arrays.
+  if (getLangOpts().HLSL && (E->getType()->isHLSLResourceRecord() ||
+                             E->getType()->isHLSLResourceRecordArray())) {
+    std::optional<LValue> LV =
+        CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+    if (LV.has_value())
+      return *LV;
   }
 
   // All the other cases basically behave like simple offsetting.
@@ -5665,12 +5741,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    const auto *DerivedClassTy =
-        E->getSubExpr()->getType()->castAs<RecordType>();
-    auto *DerivedClassDecl =
-        cast<CXXRecordDecl>(DerivedClassTy->getOriginalDecl())
-            ->getDefinitionOrSelf();
-
+    auto *DerivedClassDecl = E->getSubExpr()->getType()->castAsCXXRecordDecl();
     LValue LV = EmitLValue(E->getSubExpr());
     Address This = LV.getAddress();
 
@@ -5688,11 +5759,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_ToUnion:
     return EmitAggExprToLValue(E);
   case CK_BaseToDerived: {
-    const auto *DerivedClassTy = E->getType()->castAs<RecordType>();
-    auto *DerivedClassDecl =
-        cast<CXXRecordDecl>(DerivedClassTy->getOriginalDecl())
-            ->getDefinitionOrSelf();
-
+    auto *DerivedClassDecl = E->getType()->castAsCXXRecordDecl();
     LValue LV = EmitLValue(E->getSubExpr());
 
     // Perform the base-to-derived conversion

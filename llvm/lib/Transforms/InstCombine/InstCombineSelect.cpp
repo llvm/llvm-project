@@ -1993,6 +1993,63 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   return BinOp;
 }
 
+/// Folds:
+///   %a_sub = call @llvm.usub.sat(x, IntConst1)
+///   %b_sub = call @llvm.usub.sat(y, IntConst2)
+///   %or = or %a_sub, %b_sub
+///   %cmp = icmp eq %or, 0
+///   %sel = select %cmp, 0, MostSignificantBit
+/// into:
+///   %a_sub' = usub.sat(x, IntConst1 - MostSignificantBit)
+///   %b_sub' = usub.sat(y, IntConst2 - MostSignificantBit)
+///   %or = or %a_sub', %b_sub'
+///   %and = and %or, MostSignificantBit
+/// Likewise, for vector arguments as well.
+static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
+    SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
+  if (!SI.hasOneUse() || !ICI->hasOneUse())
+    return nullptr;
+  CmpPredicate Pred;
+  Value *A, *B;
+  const APInt *Constant1, *Constant2;
+  if (!match(SI.getCondition(),
+             m_ICmp(Pred,
+                    m_OneUse(m_Or(m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
+                                      m_Value(A), m_APInt(Constant1))),
+                                  m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
+                                      m_Value(B), m_APInt(Constant2))))),
+                    m_Zero())))
+    return nullptr;
+
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+  if (!(Pred == ICmpInst::ICMP_EQ &&
+        (match(TrueVal, m_Zero()) && match(FalseVal, m_SignMask()))) ||
+      (Pred == ICmpInst::ICMP_NE &&
+       (match(TrueVal, m_SignMask()) && match(FalseVal, m_Zero()))))
+    return nullptr;
+
+  auto *Ty = A->getType();
+  unsigned BW = Constant1->getBitWidth();
+  APInt MostSignificantBit = APInt::getSignMask(BW);
+
+  // Anything over MSB is negative
+  if (Constant1->isNonNegative() || Constant2->isNonNegative())
+    return nullptr;
+
+  APInt AdjAP1 = *Constant1 - MostSignificantBit + 1;
+  APInt AdjAP2 = *Constant2 - MostSignificantBit + 1;
+
+  auto *Adj1 = ConstantInt::get(Ty, AdjAP1);
+  auto *Adj2 = ConstantInt::get(Ty, AdjAP2);
+
+  Value *NewA = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, Adj1);
+  Value *NewB = Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, B, Adj2);
+  Value *Or = Builder.CreateOr(NewA, NewB);
+  Constant *MSBConst = ConstantInt::get(Ty, MostSignificantBit);
+  return BinaryOperator::CreateAnd(Or, MSBConst);
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -2009,6 +2066,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel =
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
     return NewSel;
+  if (Instruction *Folded =
+          foldICmpUSubSatWithAndForMostSignificantBitCmp(SI, ICI, Builder))
+    return Folded;
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
   bool Changed = false;

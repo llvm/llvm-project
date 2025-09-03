@@ -782,7 +782,7 @@ defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
-  let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     let OtherPredicates = [HasFP8ConversionInsts, NotHasFP8E5M3Insts] in
       defm V_CVT_PK_FP8_F32 : VOP3Inst_t16_with_profiles<"v_cvt_pk_fp8_f32", VOP3_CVT_PK_F8_F32_Profile<>,
                                                           VOP3_CVT_PK_F8_F32_Profile_t16<>,
@@ -807,7 +807,7 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources. Therefore dummy
   // src2 is used to hold the op_sel value.
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2", SubtargetPredicate = isGFX940Plus in {
+  let Constraints = "$vdst = $src2", SubtargetPredicate = isGFX940Plus in {
     defm V_CVT_SR_FP8_F32 : VOP3Inst<"v_cvt_sr_fp8_f32", VOP3_CVT_SR_F8_F32_Profile>;
     defm V_CVT_SR_BF8_F32 : VOP3Inst<"v_cvt_sr_bf8_f32", VOP3_CVT_SR_F8_F32_Profile>;
   }
@@ -1309,7 +1309,7 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
 }
 
 let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in {
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     defm V_CVT_SCALEF32_SR_FP8_BF16 : VOP3Inst<"v_cvt_scalef32_sr_fp8_bf16", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_BF16_I32_F32>>;
     defm V_CVT_SCALEF32_SR_FP8_F16 : VOP3Inst<"v_cvt_scalef32_sr_fp8_f16", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_F16_I32_F32>>;
     defm V_CVT_SCALEF32_SR_FP8_F32 : VOP3Inst<"v_cvt_scalef32_sr_fp8_f32", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_F32_I32_F32>>;
@@ -1325,7 +1325,7 @@ let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in 
 }
 
 let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in {
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     defm V_CVT_SCALEF32_SR_BF8_BF16 : VOP3Inst<"v_cvt_scalef32_sr_bf8_bf16", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_BF16_I32_F32>>;
     defm V_CVT_SCALEF32_SR_BF8_F16 : VOP3Inst<"v_cvt_scalef32_sr_bf8_f16", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_F16_I32_F32>>;
     defm V_CVT_SCALEF32_SR_BF8_F32 : VOP3Inst<"v_cvt_scalef32_sr_bf8_f32", VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOP_I32_F32_I32_F32>>;
@@ -1342,7 +1342,7 @@ let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in 
 
 let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in {
   defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f32_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     defm V_CVT_SCALEF32_PK_FP4_F32 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f32", VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOP_I32_F32_F32_F32>>;
     let Constraints = "@earlyclobber $vdst" in {
       defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2f16>>;
@@ -1358,7 +1358,7 @@ let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in 
 
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources.
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2" in {
+  let Constraints = "$vdst = $src2" in {
     defm V_CVT_SCALEF32_PK_FP4_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_f16", VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOP_I32_V2F16_F32_F32>>;
     defm V_CVT_SCALEF32_PK_FP4_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp4_bf16", VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOP_I32_V2BF16_F32_F32>>;
   }
@@ -1486,10 +1486,10 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", isConvergent = 1 in {
+  let Constraints = "$vdst = $vdst_in", isConvergent = 1 in {
     defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, isConvergent = 1
+  } // End $vdst = $vdst_in, isConvergent = 1
 
   foreach vt = Reg32Types.types in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
@@ -1532,10 +1532,10 @@ let True16Predicate = UseFakeTrue16Insts in {
 } // End True16Predicate = UseFakeTrue16Insts
 
 let SubtargetPredicate = isGFX12Plus in {
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     defm V_PERMLANE16_VAR_B32  : VOP3Inst<"v_permlane16_var_b32",  VOP3_PERMLANE_VAR_Profile>;
     defm V_PERMLANEX16_VAR_B32 : VOP3Inst<"v_permlanex16_var_b32", VOP3_PERMLANE_VAR_Profile>;
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+  } // End $vdst = $vdst_in
 
   def : PermlaneVarPat<int_amdgcn_permlane16_var,  V_PERMLANE16_VAR_B32_e64>;
   def : PermlaneVarPat<int_amdgcn_permlanex16_var, V_PERMLANEX16_VAR_B32_e64>;
@@ -1763,7 +1763,7 @@ let SubtargetPredicate = isGFX1250Plus in {
 
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
     // to select a byte in the vdst. Bits 0 and 1 are unused.
-    let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
+    let Constraints = "$vdst = $vdst_in" in {
       defm V_CVT_SR_FP8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_F16_Profile,
                                                           VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;
       defm V_CVT_SR_BF8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_bf8_f16", VOP3_CVT_SR_F8_F16_Profile,
@@ -1850,7 +1850,7 @@ class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, Va
 >;
 
 let SubtargetPredicate = HasF32ToF16BF16ConversionSRInsts in {
-  let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in" in {
     defm V_CVT_SR_F16_F32   : VOP3Inst<"v_cvt_sr_f16_f32", VOP3_CVT_SR_FP16_TiedInput_Profile<VOP_F16_F32_I32>>;
     defm V_CVT_SR_BF16_F32  : VOP3Inst<"v_cvt_sr_bf16_f32", VOP3_CVT_SR_FP16_TiedInput_Profile<VOP_BF16_F32_I32>>;
   }
@@ -2084,6 +2084,9 @@ multiclass VOP3_Realtriple_gfx11_gfx12<bits<10> op> :
 multiclass VOP3_Real_Base_gfx11_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Gen, op>;
 
+multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1250<bits<10> op> :
+  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_50Gen, op>;
+
 multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                  string asmName> :
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
@@ -2211,9 +2214,9 @@ defm V_MUL_F64             : VOP3_Real_Base_gfx11<0x328>;
 defm V_MIN_F64             : VOP3_Real_Base_gfx11<0x329>;
 defm V_MAX_F64             : VOP3_Real_Base_gfx11<0x32a>;
 defm V_LDEXP_F64           : VOP3_Real_Base_gfx11_gfx12<0x32b>;
-defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11_gfx12<0x32c>;
-defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11_gfx12<0x32d>;
-defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11_gfx12<0x32e>;
+defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32c>;
+defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32d>;
+defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1250<0x32e>;
 defm V_TRIG_PREOP_F64      : VOP3_Real_Base_gfx11_gfx12<0x32f>;
 defm V_LSHLREV_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x338, "v_lshlrev_b16">;
 defm V_LSHRREV_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x339, "v_lshrrev_b16">;
@@ -2242,6 +2245,10 @@ let AssemblerPredicate = isGFX11Plus in {
 }
 
 // These instructions differ from GFX12 variant by supporting DPP:
+defm V_MUL_LO_U32                    : VOP3Only_Realtriple_gfx1250<0x32c>;
+defm V_MUL_HI_U32                    : VOP3Only_Realtriple_gfx1250<0x32d>;
+defm V_MUL_HI_I32                    : VOP3Only_Realtriple_gfx1250<0x32e>;
+
 defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1250<0x23f>;
 defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1250<0x242>;
 defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1250<0x243>;

@@ -210,11 +210,11 @@ static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object.
-static bool
-evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
-                                     const SCEV *MaxBTC, const SCEV *EltSize,
-                                     ScalarEvolution &SE, const DataLayout &DL,
-                                     DominatorTree *DT, AssumptionCache *AC) {
+static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
+    const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
+    ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
+    AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -261,8 +261,19 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
 
   const SCEV *OffsetAtLastIter =
       mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-  if (!OffsetAtLastIter)
-    return false;
+  if (!OffsetAtLastIter) {
+    // Re-try with constant max backedge-taken count if using the symbolic one
+    // failed.
+    MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
+    if (isa<SCEVCouldNotCompute>(MaxBTC))
+      return false;
+    MaxBTC = SE.getNoopOrZeroExtend(
+        MaxBTC, WiderTy);
+    OffsetAtLastIter =
+        mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+    if (!OffsetAtLastIter)
+      return false;
+  }
 
   const SCEV *OffsetEndBytes = addSCEVNoOverflow(
       OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
@@ -276,6 +287,12 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
     if (!EndBytes)
       return false;
+
+    if (!LoopGuards)
+      LoopGuards.emplace(
+          ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
+
+    EndBytes = SE.applyLoopGuards(EndBytes, *LoopGuards);
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
   }
 
@@ -292,7 +309,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    DominatorTree *DT, AssumptionCache *AC) {
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -328,7 +346,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // separately checks that accesses cannot not wrap, so unsigned max
       // represents an upper bound.
       if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
-                                               DT, AC)) {
+                                               DT, AC, LoopGuards)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       } else {
         ScEnd = SE->getAddExpr(
@@ -377,7 +395,7 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
       Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-      &DC.getPointerBounds(), DC.getDT(), DC.getAC());
+      &DC.getPointerBounds(), DC.getDT(), DC.getAC(), LoopGuards);
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -936,6 +954,12 @@ private:
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
                     Value *Ptr, PredicatedScalarEvolution &PSE) {
+  if (isa<ScalableVectorType>(AccessTy)) {
+    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
+                      << "\n");
+    return std::nullopt;
+  }
+
   // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     LLVM_DEBUG({
@@ -1590,11 +1614,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
     return 0;
 
   assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
-  if (isa<ScalableVectorType>(AccessTy)) {
-    LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
-                      << "\n");
-    return std::nullopt;
-  }
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
   if (Assume && !AR)
@@ -1982,13 +2001,13 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
   ScalarEvolution &SE = *PSE.getSE();
   const auto &[SrcStart_, SrcEnd_] =
       getStartAndEndForAccess(InnermostLoop, Src, SrcTy, BTC, SymbolicMaxBTC,
-                              &SE, &PointerBounds, DT, AC);
+                              &SE, &PointerBounds, DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(SrcStart_) || isa<SCEVCouldNotCompute>(SrcEnd_))
     return false;
 
   const auto &[SinkStart_, SinkEnd_] =
       getStartAndEndForAccess(InnermostLoop, Sink, SinkTy, BTC, SymbolicMaxBTC,
-                              &SE, &PointerBounds, DT, AC);
+                              &SE, &PointerBounds, DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(SinkStart_) ||
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
@@ -2404,12 +2423,13 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
 SmallVector<Instruction *, 4>
 MemoryDepChecker::getInstructionsForAccess(Value *Ptr, bool IsWrite) const {
   MemAccessInfo Access(Ptr, IsWrite);
-  auto &IndexVector = Accesses.find(Access)->second;
-
+  auto I = Accesses.find(Access);
   SmallVector<Instruction *, 4> Insts;
-  transform(IndexVector,
-                 std::back_inserter(Insts),
-                 [&](unsigned Idx) { return this->InstMap[Idx]; });
+  if (I != Accesses.end()) {
+    transform(I->second, std::back_inserter(Insts),
+              [&](unsigned Idx) { return this->InstMap[Idx]; });
+  }
+
   return Insts;
 }
 
@@ -3034,8 +3054,9 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector) * 2;
 
   DepChecker = std::make_unique<MemoryDepChecker>(
-      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits);
-  PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
+      *PSE, AC, DT, L, SymbolicStrides, MaxTargetVectorWidthInBits, LoopGuards);
+  PtrRtChecking =
+      std::make_unique<RuntimePointerChecking>(*DepChecker, SE, LoopGuards);
   if (canAnalyzeLoop())
     CanVecMem = analyzeLoop(AA, LI, TLI, DT);
 }

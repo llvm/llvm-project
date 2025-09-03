@@ -117,7 +117,6 @@ def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin> : Instruction {
   field bits<64> Inst;
-  field bits<64> SoftFail = 0;
   bit PCRel = 0; // Default value, set by isPCRel.
   let Size = 8;
 
@@ -383,14 +382,14 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 class VXForm_VTB5_RA5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, vrrc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [PO VRT RA RB XO].
 // Destructive (insert) forms are suffixed with _ins.
 class VXForm_VRT5_RAB5_ins<bits<11> xo, string opc, list<dag> pattern>
   : VXForm_1<xo, (outs vrrc:$VD), (ins vrrc:$VDi, gprc:$VA, gprc:$VB),
              !strconcat(opc, " $VD, $VA, $VB"), IIC_VecGeneral, pattern>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
 
 // VX-Form: [ PO BF // VRA VRB XO ]
 class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
@@ -1396,7 +1395,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
                              [(set v2i64:$XT,
                                    (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
                                                    i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
+                             RegConstraint<"$XTi = $XT">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -1467,13 +1466,13 @@ let Predicates = [IsISA3_1] in {
              "vinsw $VD, $VB, $VA", IIC_VecGeneral,
              [(set v4i32:$VD,
                    (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSD :
     VXForm_1<463, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, g8rc:$VB),
              "vinsd $VD, $VB, $VA", IIC_VecGeneral,
              [(set v2i64:$VD,
                    (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, timm:$VA))]>,
-             RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+             RegConstraint<"$VDi = $VD">;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
                         [(set v16i8:$VD,
@@ -1539,13 +1538,13 @@ let Predicates = [IsISA3_1] in {
              "vinsdlx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdlx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VINSDRX :
     VXForm_1<975, (outs vrrc:$VD), (ins vrrc:$VDi, g8rc:$VA, g8rc:$VB),
              "vinsdrx $VD, $VA, $VB", IIC_VecGeneral,
               [(set v2i64:$VD,
                     (int_ppc_altivec_vinsdrx v2i64:$VDi, i64:$VA, i64:$VB))]>,
-              RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+              RegConstraint<"$VDi = $VD">;
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$VD), (ins vrrc:$VB),
                                       "vextractbm $VD, $VB", IIC_VecGeneral,
                                       [(set i32:$VD,
@@ -1916,10 +1915,11 @@ let Predicates = [IsISA3_1] in {
                         [(set v1i128:$VD,
                           (int_ppc_altivec_vrlqmi v1i128:$VA, v1i128:$VB,
                                                   v1i128:$VDi))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
   def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
   def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
-  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", []>;
+  def VSRQ : VX1_VT5_VA5_VB5<517, "vsrq", 
+                            [(set v4i32:$VD, (PPCvsrq v4i32:$VA, v4i32:$VB))]>;
   def VRLQ : VX1_VT5_VA5_VB5<5, "vrlq", []>;
   def XSCVQPUQZ : X_VT5_XO5_VB5<63, 0, 836, "xscvqpuqz", []>;
   def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
@@ -2054,6 +2054,9 @@ let Predicates = [IsISA3_1, HasFPU] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit vsrq instruction to optimize VSR(VSRO (input, vsro_byte_shift), vsr_bit_shift)
+  // to VSRQ(input, vsrq_bit_shift)
+  def : Pat<(VSRVSRO v4i32:$vA, v4i32:$vB), (VSRQ $vA, $vB)>;
   // Exploit the vector multiply high instructions using intrinsics.
   def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
             (v4i32 (VMULHSW $vA, $vB))>;
@@ -2231,6 +2234,13 @@ def VEqv
                                             (v4i32(bitconvert node:$a)),
                                             (v4i32(bitconvert node:$b)))))]>;
 
+// Vector NAND operation (not(and))
+def VNand
+    : PatFrags<(ops node:$a, node:$b), [(vnot(and node:$a, node:$b)),
+                                        (bitconvert(vnot(and
+                                            (v4i32(bitconvert node:$a)),
+                                            (v4i32(bitconvert node:$b)))))]>;
+
 // =============================================================================
 // XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectAnd
 // This class matches the equivalent Ternary Operation: A ? f(B,C) : AND(B,C)
@@ -2264,6 +2274,56 @@ multiclass XXEvalTernarySelectAnd<ValueType Vt> {
   // Pattern: A ? NOT(B) : AND(B,C) XXEVAL immediate value: 28
   def : XXEvalPattern<
             Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VAnd Vt:$vB, Vt:$vC)), 28>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectB
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : B
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
+// - B is the "false" case operand (vector B)
+//
+// Note: Patterns (A? C : B) and (A? not(C) : B) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
+// =============================================================================
+multiclass XXEvalTernarySelectB<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : B) XXEVAL immediate value: 49
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), Vt:$vB), 49>;
+  // Pattern: (A ? NOR(B,C) : B) XXEVAL immediate value: 56
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), Vt:$vB), 56>;
+  // Pattern: (A ? EQV(B,C) : B) XXEVAL immediate value: 57
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), Vt:$vB), 57>;
+  // Pattern: (A ? NAND(B,C) : B) XXEVAL immediate value: 62
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vB), 62>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectC
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : C
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op on vectors B and C (AND, NOR, EQV, NAND)
+// - C is the "false" case operand (vector C)
+//
+// Note: Patterns (A? B : C) and (A? not(B) : C) are not considered
+// for XXEVAL instruction (4 Cycle) as XXSEL (3 cycle) instruction performs 
+// better.
+// =============================================================================
+multiclass XXEvalTernarySelectC<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : C) XXEVAL immediate value: 81
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), Vt:$vC), 81>;
+  // Pattern: (A ? NOR(B,C) : C) XXEVAL immediate value: 88
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), Vt:$vC), 88>;
+  // Pattern: (A ? EQV(B,C) : C) XXEVAL immediate value: 89
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), Vt:$vC), 89>;
+  // Pattern: (A ? NAND(B,C) : C) XXEVAL immediate value: 94
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), Vt:$vC), 94>;
 }
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
@@ -2377,6 +2437,8 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     // XXEval Patterns for ternary Operations.
     foreach Ty = [v4i32, v2i64, v8i16, v16i8] in {
         defm : XXEvalTernarySelectAnd<Ty>;
+        defm : XXEvalTernarySelectB<Ty>;
+        defm : XXEvalTernarySelectC<Ty>; 
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.

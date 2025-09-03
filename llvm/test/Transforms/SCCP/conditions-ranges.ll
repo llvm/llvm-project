@@ -1436,6 +1436,47 @@ if.end:
   ret i32 0
 }
 
+define void @trunc_nuw_i1_dominating_icmp_ne_0(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_i1_dominating_icmp_ne_0(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
+  %icmp = icmp ne i8 %x, 0
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %c1 = trunc nuw i8 %x to i1
+  call void @use(i1 %c1)
+  ret void
+bb2:
+  ret void
+}
+
+define void @neg_trunc_i1_dominating_icmp_ne_0(i8 %x) {
+; CHECK-LABEL: @neg_trunc_i1_dominating_icmp_ne_0(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C1:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    ret void
+;
+  %icmp = icmp ne i8 %x, 0
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %c1 = trunc i8 %x to i1
+  call void @use(i1 %c1)
+  ret void
+bb2:
+  ret void
+}
+
 define i1 @ptr_icmp_data_layout() {
 ; CHECK-LABEL: @ptr_icmp_data_layout(
 ; CHECK-NEXT:    ret i1 false

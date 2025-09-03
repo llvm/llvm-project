@@ -979,7 +979,7 @@ def AnalyzerNoReturn : InheritableAttr {
 }
 
 def InferredNoReturn : InheritableAttr {
-  let Spellings = []; 
+  let Spellings = [];
   let SemaHandler = 0;
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [InternalOnly];
@@ -1630,6 +1630,13 @@ def DeviceKernel : DeclOrTypeAttr {
       return isOpenCLSpelling(*A);
     }
 }];
+}
+
+def SYCLExternal : InheritableAttr {
+  let Spellings = [CXX11<"clang", "sycl_external">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLExternalDocs];
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
@@ -3920,6 +3927,14 @@ def CFICanonicalJumpTable : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CFICanonicalJumpTableDocs];
   let SimpleHandler = 1;
+}
+
+def CFISalt : TypeAttr {
+  let Spellings = [Clang<"cfi_salt">];
+  let Args = [StringArgument<"Salt">];
+  let Subjects = SubjectList<[FunctionLike], ErrorDiag>;
+  let Documentation = [CFISaltDocs];
+  let LangOpts = [COnly];
 }
 
 // C/C++ Thread safety attributes (e.g. for deadlock, data race checking)

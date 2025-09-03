@@ -1068,6 +1068,13 @@ def SplitBarrier : ImmOperand<i32> {
   let PrintMethod = "printOperand";
 }
 
+// Pseudo-operand type. This is a pair of 32-bit inline constants
+// packed into a single 64-bit value.
+def AV_64_PSEUDO_IMM : Operand<i64> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_C_AV64_PSEUDO";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -1799,15 +1806,15 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                                    VOPDstOperand_t16Lo128),
                     VOPDstOperand<VGPR_32>);
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-                              !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
-                              !eq(VT.Size, 16)  : op16,
-                              1                 : VOPDstS64orS32); // else VT == i1
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
+                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 16)   : op16,
+                              1                  : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
@@ -1954,6 +1961,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+        !eq(VT, f64)    : VCSrc_f64,
         !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
@@ -2707,7 +2715,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMatrixReuse = 0;
   field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
   field bit HasMatrixReuse = 0;

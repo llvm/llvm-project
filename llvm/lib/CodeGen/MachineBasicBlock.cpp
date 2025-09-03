@@ -1781,9 +1781,6 @@ MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
 
 MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   const MachineFunction &MF = *getParent();
-  assert(MF.getProperties().hasTracksLiveness() &&
-         "Liveness information is accurate");
-
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {

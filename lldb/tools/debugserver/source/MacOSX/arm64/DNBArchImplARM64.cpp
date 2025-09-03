@@ -199,6 +199,24 @@ uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   return failValue;
 }
 
+static void log_signed_registers(arm_thread_state64_t *gpr, const char *desc) {
+  if (DNBLogEnabledForAny(LOG_THREAD)) {
+    const char *log_str = "%s signed regs "
+                          "\n   fp=%16.16llx"
+                          "\n   lr=%16.16llx"
+                          "\n   sp=%16.16llx"
+                          "\n   pc=%16.16llx";
+#if defined(DEBUGSERVER_IS_ARM64E)
+    DNBLogThreaded(log_str, desc, reinterpret_cast<uint64_t>(gpr->__opaque_fp),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_lr),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_sp),
+                   reinterpret_cast<uint64_t>(gpr->__opaque_pc));
+#else
+    DNBLogThreaded(log_str, desc, gpr->__fp, gpr->__lr, gpr->__sp, gpr->__pc);
+#endif
+  }
+}
+
 kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
   int set = e_regSetGPR;
   // Check if we have valid cached registers
@@ -210,25 +228,29 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
   kern_return_t kret =
       ::thread_get_state(m_thread->MachPortNumber(), ARM_THREAD_STATE64,
                          (thread_state_t)&m_state.context.gpr, &count);
+  log_signed_registers(&m_state.context.gpr, "Values from thread_get_state");
+
+#if defined(THREAD_CONVERT_THREAD_STATE_TO_SELF) && defined(__LP64__)
+  if (kret == KERN_SUCCESS) {
+    mach_msg_type_number_t newcount = ARM_THREAD_STATE64_COUNT;
+    arm_thread_state64_t new_gpr;
+    kern_return_t convert_kret = thread_convert_thread_state(
+        m_thread->MachPortNumber(), THREAD_CONVERT_THREAD_STATE_TO_SELF,
+        ARM_THREAD_STATE64, (thread_state_t)&m_state.context.gpr, count,
+        (thread_state_t)&new_gpr, &newcount);
+    DNBLogThreadedIf(
+        LOG_THREAD,
+        "converted register values "
+        "to debugserver's keys, return value %d, old count %d new count %d",
+        convert_kret, count, newcount);
+    if (convert_kret == KERN_SUCCESS)
+      memcpy(&m_state.context.gpr, &new_gpr, count * 4);
+    log_signed_registers(&m_state.context.gpr,
+                         "Values after thread_convert_thread_state");
+  }
+#endif // THREAD_CONVERT_THREAD_STATE_TO_SELF
+
   if (DNBLogEnabledForAny(LOG_THREAD)) {
-    uint64_t *x = &m_state.context.gpr.__x[0];
-
-    const char *log_str = "thread_get_state signed regs "
-                          "\n   fp=%16.16llx"
-                          "\n   lr=%16.16llx"
-                          "\n   sp=%16.16llx"
-                          "\n   pc=%16.16llx";
-#if defined(DEBUGSERVER_IS_ARM64E)
-    DNBLogThreaded(log_str,
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
-#else
-    DNBLogThreaded(log_str, m_state.context.gpr.__fp, m_state.context.gpr.__lr,
-                   m_state.context.gpr.__sp, m_state.context.gpr.__pc);
-#endif
-
 #if defined(DEBUGSERVER_IS_ARM64E)
     uint64_t log_fp = clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
@@ -244,6 +266,7 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
     uint64_t log_sp = m_state.context.gpr.__sp;
     uint64_t log_pc = m_state.context.gpr.__pc;
 #endif
+    uint64_t *x = &m_state.context.gpr.__x[0];
     DNBLogThreaded(
         "thread_get_state(0x%4.4x, %u, &gpr, %u) => 0x%8.8x (count = %u) regs"
         "\n   x0=%16.16llx"
@@ -567,10 +590,28 @@ kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
 }
 
 kern_return_t DNBArchMachARM64::SetGPRState() {
+  arm_thread_state64_t *state_to_set = &m_state.context.gpr;
+#if defined(THREAD_CONVERT_THREAD_STATE_FROM_SELF) && defined(__LP64__)
+  mach_msg_type_number_t count = ARM_THREAD_STATE64_COUNT;
+  mach_msg_type_number_t new_count = ARM_THREAD_STATE64_COUNT;
+  arm_thread_state64_t new_gpr;
+  memcpy(&new_gpr, &m_state.context.gpr, count * 4);
+  kern_return_t convert_kret = thread_convert_thread_state(
+      m_thread->MachPortNumber(), THREAD_CONVERT_THREAD_STATE_FROM_SELF,
+      ARM_THREAD_STATE64, (thread_state_t)&m_state.context.gpr, count,
+      (thread_state_t)&new_gpr, &new_count);
+  if (convert_kret == KERN_SUCCESS)
+    state_to_set = &new_gpr;
+  DNBLogThreadedIf(LOG_THREAD,
+                   "converted register values "
+                   "to inferior's keys, return value %d, count %d",
+                   convert_kret, new_count);
+#endif // THREAD_CONVERT_THREAD_STATE_TO_SELF
+
   int set = e_regSetGPR;
-  kern_return_t kret = ::thread_set_state(
-      m_thread->MachPortNumber(), ARM_THREAD_STATE64,
-      (thread_state_t)&m_state.context.gpr, e_regSetGPRCount);
+  kern_return_t kret =
+      ::thread_set_state(m_thread->MachPortNumber(), ARM_THREAD_STATE64,
+                         (thread_state_t)state_to_set, e_regSetGPRCount);
   m_state.SetError(set, Write,
                    kret); // Set the current write error for this register set
   m_state.InvalidateRegisterSetState(set); // Invalidate the current register

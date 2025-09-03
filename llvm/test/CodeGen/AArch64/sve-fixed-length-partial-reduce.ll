@@ -100,7 +100,7 @@ define <16 x i16> @two_way_i8_i16_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    uunpkhi z1.h, z1.b
 ; SVE-NEXT:    mad z2.h, p0/m, z3.h, z4.h
 ; SVE-NEXT:    mad z0.h, p0/m, z1.h, z2.h
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -113,7 +113,7 @@ define <16 x i16> @two_way_i8_i16_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    umlalb z0.h, z2.b, z1.b
 ; SME-NEXT:    umlalt z0.h, z2.b, z1.b
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -223,7 +223,7 @@ define <8 x i32> @two_way_i16_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    uunpkhi z1.s, z1.h
 ; SVE-NEXT:    mad z2.s, p0/m, z3.s, z4.s
 ; SVE-NEXT:    mad z0.s, p0/m, z1.s, z2.s
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -236,7 +236,7 @@ define <8 x i32> @two_way_i16_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    umlalb z0.s, z2.h, z1.h
 ; SME-NEXT:    umlalt z0.s, z2.h, z1.h
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -346,7 +346,7 @@ define <4 x i64> @two_way_i32_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    uunpkhi z1.d, z1.s
 ; SVE-NEXT:    mad z2.d, p0/m, z3.d, z4.d
 ; SVE-NEXT:    mad z0.d, p0/m, z1.d, z2.d
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -359,7 +359,7 @@ define <4 x i64> @two_way_i32_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    umlalb z0.d, z2.s, z1.s
 ; SME-NEXT:    umlalt z0.d, z2.s, z1.s
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -635,7 +635,7 @@ define <8 x i32> @four_way_i8_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    ldr z1, [x1]
 ; SVE-NEXT:    ldr z2, [x2]
 ; SVE-NEXT:    udot z0.s, z2.b, z1.b
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -647,7 +647,7 @@ define <8 x i32> @four_way_i8_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z1, [x1]
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    udot z0.s, z2.b, z1.b
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -680,7 +680,7 @@ define <8 x i32> @four_way_i8_i32_vl256_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
 ; SVE-NEXT:    ldr z1, [x1]
 ; SVE-NEXT:    ldr z2, [x2]
 ; SVE-NEXT:    usdot z0.s, z1.b, z2.b
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -692,7 +692,7 @@ define <8 x i32> @four_way_i8_i32_vl256_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
 ; SME-NEXT:    ldr z1, [x1]
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    usdot z0.s, z1.b, z2.b
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -813,7 +813,7 @@ define <4 x i64> @four_way_i16_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
 ; SVE-NEXT:    ldr z1, [x1]
 ; SVE-NEXT:    ldr z2, [x2]
 ; SVE-NEXT:    udot z0.d, z2.h, z1.h
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -825,7 +825,7 @@ define <4 x i64> @four_way_i16_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
 ; SME-NEXT:    ldr z1, [x1]
 ; SME-NEXT:    ldr z2, [x2]
 ; SME-NEXT:    udot z0.d, z2.h, z1.h
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -984,7 +984,7 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    uunpkhi z0.d, z0.s
 ; SVE-NEXT:    add z1.d, z2.d, z1.d
 ; SVE-NEXT:    add z0.d, z1.d, z0.d
-; SVE-NEXT:    mov z1.d, z0.d
+; SVE-NEXT:    movprfx z1, z0
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
@@ -999,7 +999,7 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z0, [x0]
 ; SME-NEXT:    uaddwb z0.d, z0.d, z2.s
 ; SME-NEXT:    uaddwt z0.d, z0.d, z2.s
-; SME-NEXT:    mov z1.d, z0.d
+; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    // kill: def $q1 killed $q1 killed $z1
