@@ -68,3 +68,31 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
   }
   return mlir::success();
 }
+
+mlir::LogicalResult
+fir::detail::verifyFortranVariableStorageOpInterface(mlir::Operation *op) {
+  auto storageIface = mlir::cast<fir::FortranVariableStorageOpInterface>(op);
+  mlir::Value storage = storageIface.getStorage();
+  std::uint64_t storageOffset = storageIface.getStorageOffset();
+  if (!storage) {
+    if (storageOffset != 0)
+      return op->emitOpError(
+          "storage offset specified without the storage reference");
+    return mlir::success();
+  }
+
+  auto storageType =
+      mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(storage.getType()));
+  if (!storageType || storageType.getDimension() != 1)
+    return op->emitOpError("storage must be a vector");
+  if (storageType.hasDynamicExtents())
+    return op->emitOpError("storage must have known extent");
+  if (storageType.getEleTy() != mlir::IntegerType::get(op->getContext(), 8))
+    return op->emitOpError("storage must be an array of i8 elements");
+  if (storageOffset > storageType.getConstantArraySize())
+    return op->emitOpError("storage offset exceeds the storage size");
+  // TODO: we should probably verify that the (offset + sizeof(var))
+  // is within the storage object, but this requires mlir::DataLayout.
+  // Can we make it available during the verification?
+  return mlir::success();
+}

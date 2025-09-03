@@ -23,7 +23,6 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
-#include <__type_traits/can_extract_key.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -38,6 +37,7 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <__utility/try_key_extraction.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -551,7 +551,7 @@ private:
 template <class _Pointer>
 class __tree_end_node {
 public:
-  typedef _Pointer pointer;
+  using pointer = _Pointer;
   pointer __left_;
 
   _LIBCPP_HIDE_FROM_ABI __tree_end_node() _NOEXCEPT : __left_() {}
@@ -595,11 +595,11 @@ public:
 
 template <class _Allocator>
 class __tree_node_destructor {
-  typedef _Allocator allocator_type;
-  typedef allocator_traits<allocator_type> __alloc_traits;
+  using allocator_type                 = _Allocator;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
 
 public:
-  typedef typename __alloc_traits::pointer pointer;
+  using pointer = typename __alloc_traits::pointer;
 
 private:
   allocator_type& __na_;
@@ -636,10 +636,11 @@ struct __generic_container_node_destructor<__tree_node<_Tp, _VoidPtr>, _Alloc> :
 
 template <class _Tp, class _NodePtr, class _DiffType>
 class __tree_iterator {
-  typedef __tree_node_types<_NodePtr> _NodeTypes;
-  typedef _NodePtr __node_pointer;
-  typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
-  typedef typename _NodeTypes::__end_node_pointer __end_node_pointer;
+  using _NodeTypes _LIBCPP_NODEBUG = __tree_node_types<_NodePtr>;
+  // NOLINTNEXTLINE(libcpp-nodebug-on-aliases) lldb relies on this alias for pretty printing
+  using __node_pointer                      = _NodePtr;
+  using __node_base_pointer _LIBCPP_NODEBUG = typename _NodeTypes::__node_base_pointer;
+  using __end_node_pointer _LIBCPP_NODEBUG  = typename _NodeTypes::__end_node_pointer;
 
   __end_node_pointer __ptr_;
 
@@ -696,11 +697,11 @@ private:
 
 template <class _Tp, class _NodePtr, class _DiffType>
 class __tree_const_iterator {
-  typedef __tree_node_types<_NodePtr> _NodeTypes;
+  using _NodeTypes _LIBCPP_NODEBUG = __tree_node_types<_NodePtr>;
   // NOLINTNEXTLINE(libcpp-nodebug-on-aliases) lldb relies on this alias for pretty printing
-  using __node_pointer = _NodePtr;
-  typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
-  typedef typename _NodeTypes::__end_node_pointer __end_node_pointer;
+  using __node_pointer                      = _NodePtr;
+  using __node_base_pointer _LIBCPP_NODEBUG = typename _NodeTypes::__node_base_pointer;
+  using __end_node_pointer _LIBCPP_NODEBUG  = typename _NodeTypes::__end_node_pointer;
 
   __end_node_pointer __ptr_;
 
@@ -769,21 +770,20 @@ int __diagnose_non_const_comparator();
 template <class _Tp, class _Compare, class _Allocator>
 class __tree {
 public:
-  using value_type = __get_node_value_type_t<_Tp>;
-  typedef _Compare value_compare;
-  typedef _Allocator allocator_type;
+  using value_type     = __get_node_value_type_t<_Tp>;
+  using value_compare  = _Compare;
+  using allocator_type = _Allocator;
 
 private:
-  typedef allocator_traits<allocator_type> __alloc_traits;
-  using key_type = __get_tree_key_type_t<_Tp>;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
+  using key_type                       = __get_tree_key_type_t<_Tp>;
 
 public:
-  typedef typename __alloc_traits::pointer pointer;
-  typedef typename __alloc_traits::const_pointer const_pointer;
-  typedef typename __alloc_traits::size_type size_type;
-  typedef typename __alloc_traits::difference_type difference_type;
+  using pointer         = typename __alloc_traits::pointer;
+  using const_pointer   = typename __alloc_traits::const_pointer;
+  using size_type       = typename __alloc_traits::size_type;
+  using difference_type = typename __alloc_traits::difference_type;
 
-public:
   using __void_pointer _LIBCPP_NODEBUG = typename __alloc_traits::void_pointer;
 
   using __node _LIBCPP_NODEBUG = __tree_node<_Tp, __void_pointer>;
@@ -798,8 +798,8 @@ public:
 
   using __parent_pointer _LIBCPP_NODEBUG = __end_node_pointer; // TODO: Remove this once the uses in <map> are removed
 
-  typedef __rebind_alloc<__alloc_traits, __node> __node_allocator;
-  typedef allocator_traits<__node_allocator> __node_traits;
+  using __node_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, __node>;
+  using __node_traits _LIBCPP_NODEBUG    = allocator_traits<__node_allocator>;
 
 // TODO(LLVM 22): Remove this check
 #ifndef _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
@@ -819,8 +819,8 @@ private:
   // the pointer using 'pointer_traits'.
   static_assert(is_same<__node_pointer, typename __node_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
-  typedef __rebind_alloc<__node_traits, __node_base> __node_base_allocator;
-  typedef allocator_traits<__node_base_allocator> __node_base_traits;
+  using __node_base_allocator _LIBCPP_NODEBUG = __rebind_alloc<__node_traits, __node_base>;
+  using __node_base_traits _LIBCPP_NODEBUG    = allocator_traits<__node_base_allocator>;
   static_assert(is_same<__node_base_pointer, typename __node_base_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
 
@@ -857,8 +857,8 @@ public:
     return std::addressof(__end_node()->__left_);
   }
 
-  typedef __tree_iterator<_Tp, __node_pointer, difference_type> iterator;
-  typedef __tree_const_iterator<_Tp, __node_pointer, difference_type> const_iterator;
+  using iterator       = __tree_iterator<_Tp, __node_pointer, difference_type>;
+  using const_iterator = __tree_const_iterator<_Tp, __node_pointer, difference_type>;
 
   _LIBCPP_HIDE_FROM_ABI explicit __tree(const value_compare& __comp) _NOEXCEPT_(
       is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_copy_constructible<value_compare>::value);
@@ -900,88 +900,74 @@ public:
       _NOEXCEPT_(__is_nothrow_swappable_v<value_compare>);
 #endif
 
-  template <class _Key, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_key_args(_Key const&, _Args&&... __args);
-  template <class _Key, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_hint_unique_key_args(const_iterator, _Key const&, _Args&&...);
-
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_impl(_Args&&... __args);
-
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique_impl(const_iterator __p, _Args&&... __args);
-
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_multi(_Args&&... __args);
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
 
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Pp&& __x) {
-    return __emplace_unique_extract_key(std::forward<_Pp>(__x), __can_extract_key<_Pp, key_type>());
-  }
-
-  template <class _First,
-            class _Second,
-            __enable_if_t<__can_extract_map_key<_First, key_type, value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_First&& __f, _Second&& __s) {
-    return __emplace_unique_key_args(__f, std::forward<_First>(__f), std::forward<_Second>(__s));
-  }
-
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-    return __emplace_unique_impl(std::forward<_Args>(__args)...);
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
-    return __emplace_unique_impl(std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
-    return __emplace_unique_key_args(__x, std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
-    return __emplace_unique_key_args(__x.first, std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _Pp&& __x) {
-    return __emplace_hint_unique_extract_key(__p, std::forward<_Pp>(__x), __can_extract_key<_Pp, key_type>());
-  }
-
-  template <class _First,
-            class _Second,
-            __enable_if_t<__can_extract_map_key<_First, key_type, value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
-    return __emplace_hint_unique_key_args(__p, __f, std::forward<_First>(__f), std::forward<_Second>(__s)).first;
+    return std::__try_key_extraction<key_type>(
+        [this](const key_type& __key, _Args&&... __args2) {
+          __end_node_pointer __parent;
+          __node_base_pointer& __child = __find_equal(__parent, __key);
+          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          bool __inserted              = false;
+          if (__child == nullptr) {
+            __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
+            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __r        = __h.release();
+            __inserted = true;
+          }
+          return pair<iterator, bool>(iterator(__r), __inserted);
+        },
+        [this](_Args&&... __args2) {
+          __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
+          __end_node_pointer __parent;
+          __node_base_pointer& __child = __find_equal(__parent, __h->__get_value());
+          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          bool __inserted              = false;
+          if (__child == nullptr) {
+            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __r        = __h.release();
+            __inserted = true;
+          }
+          return pair<iterator, bool>(iterator(__r), __inserted);
+        },
+        std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
-    return __emplace_hint_unique_impl(__p, std::forward<_Args>(__args)...);
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_fail_tag) {
-    return __emplace_hint_unique_impl(__p, std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_self_tag) {
-    return __emplace_hint_unique_key_args(__p, __x, std::forward<_Pp>(__x)).first;
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_first_tag) {
-    return __emplace_hint_unique_key_args(__p, __x.first, std::forward<_Pp>(__x)).first;
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
+    return std::__try_key_extraction<key_type>(
+        [this, __p](const key_type& __key, _Args&&... __args2) {
+          __end_node_pointer __parent;
+          __node_base_pointer __dummy;
+          __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __key);
+          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          bool __inserted              = false;
+          if (__child == nullptr) {
+            __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
+            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __r        = __h.release();
+            __inserted = true;
+          }
+          return pair<iterator, bool>(iterator(__r), __inserted);
+        },
+        [this, __p](_Args&&... __args2) {
+          __node_holder __h = __construct_node(std::forward<_Args>(__args2)...);
+          __end_node_pointer __parent;
+          __node_base_pointer __dummy;
+          __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__get_value());
+          __node_pointer __r           = static_cast<__node_pointer>(__child);
+          if (__child == nullptr) {
+            __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+            __r = __h.release();
+          }
+          return pair<iterator, bool>(iterator(__r), __child == nullptr);
+        },
+        std::forward<_Args>(__args)...);
   }
 
   template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
@@ -1131,8 +1117,8 @@ public:
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> __equal_range_multi(const _Key& __k) const;
 
-  typedef __tree_node_destructor<__node_allocator> _Dp;
-  typedef unique_ptr<__node, _Dp> __node_holder;
+  using _Dp _LIBCPP_NODEBUG           = __tree_node_destructor<__node_allocator>;
+  using __node_holder _LIBCPP_NODEBUG = unique_ptr<__node, _Dp>;
 
   _LIBCPP_HIDE_FROM_ABI __node_holder remove(const_iterator __p) _NOEXCEPT;
 
@@ -1425,8 +1411,8 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
 template <class _Tp, class _Compare, class _Allocator>
 template <class _ForwardIterator>
 void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
-  typedef iterator_traits<_ForwardIterator> _ITraits;
-  typedef typename _ITraits::value_type _ItValueType;
+  using _ITraits     = iterator_traits<_ForwardIterator>;
+  using _ItValueType = typename _ITraits::value_type;
   static_assert(
       is_same<_ItValueType, value_type>::value, "__assign_unique may only be called with the containers value type");
   static_assert(
@@ -1445,8 +1431,8 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first
 template <class _Tp, class _Compare, class _Allocator>
 template <class _InputIterator>
 void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _InputIterator __last) {
-  typedef iterator_traits<_InputIterator> _ITraits;
-  typedef typename _ITraits::value_type _ItValueType;
+  using _ITraits     = iterator_traits<_InputIterator>;
+  using _ItValueType = typename _ITraits::value_type;
   static_assert(
       is_same<_ItValueType, value_type>::value, "__assign_multi may only be called with the containers value_type");
   if (__size_ != 0) {
@@ -1802,42 +1788,6 @@ void __tree<_Tp, _Compare, _Allocator>::__insert_node_at(
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _Key, class... _Args>
-pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-__tree<_Tp, _Compare, _Allocator>::__emplace_unique_key_args(_Key const& __k, _Args&&... __args) {
-  __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_equal(__parent, __k);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
-  bool __inserted              = false;
-  if (__child == nullptr) {
-    __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-    __r        = __h.release();
-    __inserted = true;
-  }
-  return pair<iterator, bool>(iterator(__r), __inserted);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class _Key, class... _Args>
-pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-__tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_key_args(
-    const_iterator __p, _Key const& __k, _Args&&... __args) {
-  __end_node_pointer __parent;
-  __node_base_pointer __dummy;
-  __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __k);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
-  bool __inserted              = false;
-  if (__child == nullptr) {
-    __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-    __r        = __h.release();
-    __inserted = true;
-  }
-  return pair<iterator, bool>(iterator(__r), __inserted);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
 template <class... _Args>
 typename __tree<_Tp, _Compare, _Allocator>::__node_holder
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
@@ -1846,39 +1796,6 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_traits::construct(__na, std::addressof(__h->__get_value()), std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class... _Args>
-pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-__tree<_Tp, _Compare, _Allocator>::__emplace_unique_impl(_Args&&... __args) {
-  __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
-  __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_equal(__parent, __h->__get_value());
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
-  bool __inserted              = false;
-  if (__child == nullptr) {
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-    __r        = __h.release();
-    __inserted = true;
-  }
-  return pair<iterator, bool>(iterator(__r), __inserted);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class... _Args>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
-__tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_impl(const_iterator __p, _Args&&... __args) {
-  __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
-  __end_node_pointer __parent;
-  __node_base_pointer __dummy;
-  __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __h->__get_value());
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
-  if (__child == nullptr) {
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-    __r = __h.release();
-  }
-  return iterator(__r);
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -2204,7 +2121,7 @@ template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, typename __tree<_Tp, _Compare, _Allocator>::iterator>
 __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) {
-  typedef pair<iterator, iterator> _Pp;
+  using _Pp                   = pair<iterator, iterator>;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
@@ -2226,7 +2143,7 @@ template <class _Key>
 pair<typename __tree<_Tp, _Compare, _Allocator>::const_iterator,
      typename __tree<_Tp, _Compare, _Allocator>::const_iterator>
 __tree<_Tp, _Compare, _Allocator>::__equal_range_unique(const _Key& __k) const {
-  typedef pair<const_iterator, const_iterator> _Pp;
+  using _Pp                   = pair<const_iterator, const_iterator>;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt         = __root();
   while (__rt != nullptr) {
@@ -2248,7 +2165,7 @@ template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, typename __tree<_Tp, _Compare, _Allocator>::iterator>
 __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) {
-  typedef pair<iterator, iterator> _Pp;
+  using _Pp                   = pair<iterator, iterator>;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
   while (__rt != nullptr) {
@@ -2269,7 +2186,7 @@ template <class _Key>
 pair<typename __tree<_Tp, _Compare, _Allocator>::const_iterator,
      typename __tree<_Tp, _Compare, _Allocator>::const_iterator>
 __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) const {
-  typedef pair<const_iterator, const_iterator> _Pp;
+  using _Pp                   = pair<const_iterator, const_iterator>;
   __end_node_pointer __result = __end_node();
   __node_pointer __rt     = __root();
   while (__rt != nullptr) {

@@ -242,7 +242,7 @@ _mm512_castph256_ph512(__m256h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [16 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_zextph128_ph256(__m128h __a) {
   return __builtin_shufflevector(__a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4,
                                  5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
@@ -261,7 +261,7 @@ _mm256_zextph128_ph256(__m128h __a) {
 ///    A 128-bit vector of [8 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 128 bits
 ///    contain the value of the parameter. The upper 384 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph128_ph512(__m128h __a) {
   return __builtin_shufflevector(
       __a, (__v8hf)_mm_setzero_ph(), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -281,7 +281,7 @@ _mm512_zextph128_ph512(__m128h __a) {
 ///    A 256-bit vector of [16 x half].
 /// \returns A 512-bit floating-point vector of [32 x half]. The lower 256 bits
 ///    contain the value of the parameter. The upper 256 bits are set to zero.
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_zextph256_ph512(__m256h __a) {
   return __builtin_shufflevector(__a, (__v16hf)_mm256_setzero_ph(), 0, 1, 2, 3,
                                  4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -561,7 +561,8 @@ _mm512_maskz_max_ph(__mmask32 __U, __m512h __A, __m512h __B) {
       (__mmask32)(U), (__v32hf)_mm512_max_round_ph((A), (B), (R)),             \
       (__v32hf)_mm512_setzero_ph()))
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_abs_ph(__m512h __A) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_abs_ph(__m512h __A) {
   return (__m512h)_mm512_and_epi32(_mm512_set1_epi32(0x7FFF7FFF), (__m512i)__A);
 }
 

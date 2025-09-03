@@ -92,56 +92,6 @@ static DecodeStatus DecodeLD8RegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFIORdA(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFIOBIT(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-
-static DecodeStatus decodeCallTarget(MCInst &Inst, unsigned Insn,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFRd(MCInst &Inst, unsigned Insn, uint64_t Address,
-                              const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFLPMX(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFFMULRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFMOVWRdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFWRdK(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-
-static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
-                                const MCDisassembler *Decoder);
-
-static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
-                               const MCDisassembler *Decoder);
-
-static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder);
-
-static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-
-#include "AVRGenDisassemblerTables.inc"
-
-static DecodeStatus decodeFIOARr(MCInst &Inst, unsigned Insn, uint64_t Address,
                                  const MCDisassembler *Decoder) {
   unsigned addr = 0;
   addr |= fieldFromInstruction(Insn, 0, 4);
@@ -434,6 +384,8 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
 
   return MCDisassembler::Success;
 }
+
+#include "AVRGenDisassemblerTables.inc"
 
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn) {

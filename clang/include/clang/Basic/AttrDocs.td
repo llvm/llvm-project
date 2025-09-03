@@ -973,6 +973,21 @@ An example of how to use ``alloc_size``
     assert(__builtin_object_size(a, 0) == 100);
   }
 
+When ``-Walloc-size`` is enabled, this attribute allows the compiler to
+diagnose cases when the allocated memory is insufficient for the size of the
+type the returned pointer is cast to.
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void consumer_func(int *);
+
+  int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
+    int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+    consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
+  }
+
 .. Note:: This attribute works differently in clang than it does in GCC.
   Specifically, clang will only trace ``const`` pointers (as above); we give up
   on pointers that are not marked as ``const``. In the vast majority of cases,
