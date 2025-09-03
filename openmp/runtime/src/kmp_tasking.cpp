@@ -1817,13 +1817,11 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
         __kmp_free(old_record);
 
         for (kmp_int i = old_size; i < new_size; i++) {
-          kmp_int32 *successorsList = (kmp_int32 *)__kmp_allocate(
-              __kmp_successors_size * sizeof(kmp_int32));
           new_record[i].task = nullptr;
-          new_record[i].successors = successorsList;
+          new_record[i].successors = nullptr;
           new_record[i].nsuccessors = 0;
           new_record[i].npredecessors = 0;
-          new_record[i].successors_size = __kmp_successors_size;
+          new_record[i].successors_size = 0;
           KMP_ATOMIC_ST_REL(&new_record[i].npredecessors_counter, 0);
         }
         // update the size at the end, so that we avoid other
@@ -5368,13 +5366,12 @@ static inline void __kmp_start_record(kmp_int32 gtid,
   kmp_node_info_t *this_record_map =
       (kmp_node_info_t *)__kmp_allocate(INIT_MAPSIZE * sizeof(kmp_node_info_t));
   for (kmp_int32 i = 0; i < INIT_MAPSIZE; i++) {
-    kmp_int32 *successorsList =
-        (kmp_int32 *)__kmp_allocate(__kmp_successors_size * sizeof(kmp_int32));
     this_record_map[i].task = nullptr;
-    this_record_map[i].successors = successorsList;
+    this_record_map[i].parent_task = nullptr;
+    this_record_map[i].successors = nullptr;
     this_record_map[i].nsuccessors = 0;
     this_record_map[i].npredecessors = 0;
-    this_record_map[i].successors_size = __kmp_successors_size;
+    this_record_map[i].successors_size = 0;
     KMP_ATOMIC_ST_RLX(&this_record_map[i].npredecessors_counter, 0);
   }
 
