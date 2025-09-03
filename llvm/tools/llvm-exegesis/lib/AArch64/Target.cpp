@@ -165,11 +165,11 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   // Requires OperandType to be defined for such opcode's operands in AArch64
   // tablegen files. And omit introduced OperandType(s).
 
-  // Hacky temporary fix works by defaulting all OPERAND_UNKNOWN to
-  // immediate value 0, but this introduce illegal instruction error for below
-  // system instructions will need to be omitted with OperandType or opcode
-  // specific values to avoid generating invalid encodings or unreliable
-  // benchmark results for these system-level instructions.
+  // Hacky Fix: Defaulting all OPERAND_UNKNOWN to immediate value 0 works with a
+  // limitation that it introduces illegal instruction error for system
+  // instructions. System instructions will need to be omitted with OperandType
+  // or opcode specific values to avoid generating invalid encodings or
+  // unreliable benchmark results for these system-level instructions.
   //  Implement opcode-specific immediate value handling for system instrs:
   //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
   //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
