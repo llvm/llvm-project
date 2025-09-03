@@ -16,15 +16,19 @@ def FalsePredicate : Predicate<"false">;
 class True16PredicateClass<string cond> : Predicate<cond>;
 def NoTrue16Predicate : True16PredicateClass<"">;
 
+class TrueD16PredicateClass<string cond> : Predicate<cond>;
+def NoTrueD16Predicate : TrueD16PredicateClass<"">;
+
 class PredicateControl {
   Predicate SubtargetPredicate = TruePredicate;
   Predicate AssemblerPredicate = TruePredicate;
   Predicate WaveSizePredicate = TruePredicate;
   True16PredicateClass True16Predicate = NoTrue16Predicate;
+  TrueD16PredicateClass TrueD16Predicate = NoTrueD16Predicate;
   list<Predicate> OtherPredicates = [];
   list<Predicate> Predicates =
       !foldl(OtherPredicates, [SubtargetPredicate, AssemblerPredicate,
-                               WaveSizePredicate, True16Predicate],
+                               WaveSizePredicate, True16Predicate, TrueD16Predicate],
              preds, p,
-             preds # !listremove([p], [TruePredicate, NoTrue16Predicate] # preds));
+             preds # !listremove([p], [TruePredicate, NoTrue16Predicate, NoTrueD16Predicate] # preds));
 }

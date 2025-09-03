@@ -13,7 +13,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16(
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
 ; SDAG-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
+; SDAG-GFX11-TRUE16-NEXT:    global_load_u16 v0, v1, s[6:7]
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -51,14 +51,14 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16_dpp(
 ; SDAG-GFX11-TRUE16:       ; %bb.0: ; %entry
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v1, off, s1
-; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v2, off, s2
-; SDAG-GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s3
+; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v0, off, s1
+; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v1, off, s2
+; SDAG-GFX11-TRUE16-NEXT:    scratch_load_u16 v2, off, s3
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; SDAG-GFX11-TRUE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_dot2_bf16_bf16 v0.l, v1, v2, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_dot2_bf16_bf16 v0.l, v0, v1, v2.l
 ; SDAG-GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, s0
 ; SDAG-GFX11-TRUE16-NEXT:    s_endpgm
 ;
