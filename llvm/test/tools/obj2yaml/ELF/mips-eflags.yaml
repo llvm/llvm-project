@@ -274,7 +274,7 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_MIPS
-  Flags:   [ ]
+  Flags: [ ]
 
 # RUN: yaml2obj --docnum=26 %s -o %t-arch-2
 # RUN: obj2yaml %t-arch-2 | FileCheck %s -DARCH=EF_MIPS_ARCH_2 --check-prefix=ARCH
