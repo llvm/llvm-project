@@ -101,7 +101,6 @@ public:
 
   static void *getTag() { static int tag; return &tag; }
 
-
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef state, SymbolReaper &SR) const;
@@ -2336,8 +2335,8 @@ void CStringChecker::evalStrxfrm(CheckerContext &C,
   } else {
     // Fallback: invalidate the buffer.
     StateSizeNonZero = invalidateDestinationBufferBySize(
-          C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), destVal,
-          sizeVal, Size.Expression->getType());
+        C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), destVal,
+        sizeVal, Size.Expression->getType());
 
     C.addTransition(StateSizeNonZero);
   }
