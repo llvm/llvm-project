@@ -42,11 +42,15 @@ static cl::opt<int> OptBisectLimit(
       } else if (Limit > 0) {
         // Convert limit to range 1-Limit
         std::string RangeStr = "1-" + llvm::utostr(Limit);
-        if (!getOptBisector().parseRanges(RangeStr)) {
-          errs() << "Error: Invalid limit for -opt-bisect-limit: " << Limit
-                 << "\n";
+        auto Ranges = RangeUtils::parseRanges(RangeStr);
+        if (!Ranges) {
+          handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
+            errs() << "Error: Invalid limit for -opt-bisect-limit: " << Limit
+                   << " (" << E.getMessage() << ")\n";
+          });
           exit(1);
         }
+        getOptBisector().setRanges(std::move(*Ranges));
       }
     }),
     cl::desc(
@@ -55,11 +59,15 @@ static cl::opt<int> OptBisectLimit(
 static cl::opt<std::string> OptBisectRanges(
     "opt-bisect", cl::Hidden, cl::Optional,
     cl::cb<void, const std::string &>([](const std::string &RangeStr) {
-      if (!getOptBisector().parseRanges(RangeStr)) {
-        errs() << "Error: Invalid range specification for -opt-bisect: "
-               << RangeStr << "\n";
+      auto Ranges = RangeUtils::parseRanges(RangeStr);
+      if (!Ranges) {
+        handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
+          errs() << "Error: Invalid range specification for -opt-bisect: "
+                 << RangeStr << " (" << E.getMessage() << ")\n";
+        });
         exit(1);
       }
+      getOptBisector().setRanges(std::move(*Ranges));
     }),
     cl::desc("Run optimization passes only for the specified ranges. "
              "Format: '1-10,20-30,45' (runs passes 1-10, 20-30, and 45)"));
@@ -88,9 +96,6 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
-bool OptBisect::parseRanges(StringRef RangeStr) {
-  return RangeUtils::parseRanges(RangeStr, BisectRanges);
-}
 
 bool OptBisect::shouldRunPass(StringRef PassName,
                               StringRef IRDescription) const {

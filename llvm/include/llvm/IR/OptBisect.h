@@ -71,10 +71,10 @@ public:
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override { return !BisectRanges.empty(); }
 
-  /// Parse range specification and set the ranges for bisection.
-  /// Range format: "1-10,20-30,45" (runs passes 1-10, 20-30, and 45)
-  /// Returns false on parsing error.
-  bool parseRanges(StringRef RangeStr);
+  /// Set ranges directly from a RangeList
+  void setRanges(RangeUtils::RangeList Ranges) {
+    BisectRanges = std::move(Ranges);
+  }
 
   /// Clear all ranges, effectively disabling bisection.
   void clearRanges() {

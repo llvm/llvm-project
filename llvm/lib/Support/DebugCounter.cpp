@@ -132,8 +132,14 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
 
-  if (!RangeUtils::parseRanges(CounterPair.second, Counter->Chunks, ':'))
+  auto ExpectedChunks = RangeUtils::parseRanges(CounterPair.second, ':');
+  if (!ExpectedChunks) {
+    handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
+      errs() << "DebugCounter Error: " << E.getMessage() << "\n";
+    });
     return;
+  }
+  Counter->Chunks = std::move(*ExpectedChunks);
   Counter->Active = Counter->IsSet = true;
 }
 
