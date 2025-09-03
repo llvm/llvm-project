@@ -12,25 +12,11 @@
 #include "ThreadWriter.h"
 #include "Utility.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/CommandLine.h"
 #include <getopt.h>
 #include <stdio.h>
 #include <string>
 #include <sys/stat.h>
-
-[[noreturn]] void print_help(void) {
-  fprintf(stderr, "Create a Mach-O corefile from a YAML register and memory "
-                  "description.\n");
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   -i|--input <yaml spec>\n");
-  fprintf(stderr, "   -o|--output <corefile name>\n");
-  fprintf(stderr, "   -u|--uuids <uuid,uuid,uuid>\n");
-  fprintf(stderr, "   -L|--uuids-and-load-addrs <uuid,vaddr,uuid,vaddr>\n");
-  fprintf(stderr,
-          "   -A|--address-bits <number of bits valid for addressing>\n");
-  fprintf(stderr, "   Add LC_NOTE 'load binary' for those UUIDs, "
-                  "at slide 0.\n");
-  exit(1);
-}
 
 std::vector<std::string> get_fields_from_delimited_string(std::string str,
                                                           const char delim) {
@@ -54,101 +40,77 @@ std::vector<std::string> get_fields_from_delimited_string(std::string str,
   return result;
 }
 
+llvm::cl::opt<std::string> InputFilename("i", llvm::cl::Required,
+                                         llvm::cl::desc("input yaml filename"),
+                                         llvm::cl::value_desc("input"));
+llvm::cl::opt<std::string>
+    OutputFilename("o", llvm::cl::Required,
+                   llvm::cl::desc("output core filenames"),
+                   llvm::cl::value_desc("output"));
+llvm::cl::list<std::string>
+    UUIDs("u", llvm::cl::desc("uuid of binary loaded at slide 0"),
+          llvm::cl::value_desc("uuid"));
+llvm::cl::list<std::string>
+    UUIDAndVAs("L", llvm::cl::desc("UUID,virtual-address-loaded-at"),
+               llvm::cl::value_desc("--uuid-and-load-addr"));
+llvm::cl::opt<int>
+    AddressableBitsOverride("A",
+                            llvm::cl::desc("number of bits used in addressing"),
+                            llvm::cl::value_desc("--address-bits"));
+
 int main(int argc, char **argv) {
+  llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  const char *const short_opts = "i:o:u:L:A:h";
-  const option long_opts[] = {
-      {"input", required_argument, nullptr, 'i'},
-      {"output", required_argument, nullptr, 'o'},
-      {"uuids", required_argument, nullptr, 'u'},
-      {"uuids-and-load-addrs", required_argument, nullptr, 'L'},
-      {"address-bits", required_argument, nullptr, 'A'},
-      {"help", no_argument, nullptr, 'h'},
-      {nullptr, no_argument, nullptr, 0}};
-
-  std::optional<std::string> infile, outfile;
-  std::optional<std::vector<std::string>> uuids;
-  std::optional<std::vector<std::string>> uuids_with_load_addrs;
-  std::optional<std::string> address_bits;
-  while (true) {
-    const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-    if (opt == -1)
-      break;
-    switch (opt) {
-    case 'i':
-      infile = optarg;
-      break;
-    case 'o':
-      outfile = optarg;
-      break;
-    case 'u':
-      uuids = get_fields_from_delimited_string(optarg, ',');
-      break;
-    case 'L':
-      uuids_with_load_addrs = get_fields_from_delimited_string(optarg, ',');
-      break;
-    case 'A':
-      address_bits = optarg;
-      break;
-    case 'h':
-      print_help();
-    }
-  }
-
-  if (!infile || !outfile)
-    print_help();
-
-  if (uuids_with_load_addrs && uuids_with_load_addrs->size() % 2 != 0) {
-    fprintf(stderr, "--uids-and-load-addrs should be comma separated list of "
-                    "uuid,load addr for one or more tuples.\n");
-    print_help();
-  }
-  struct stat sb;
-
-  if (stat(infile->c_str(), &sb) == -1) {
-    fprintf(stderr, "Unable to stat %s, exiting\n", infile->c_str());
+  if (InputFilename.empty() || OutputFilename.empty()) {
+    fprintf(stderr, "Missing input or outpur file.\n");
     exit(1);
   }
 
-  FILE *input = fopen(infile->c_str(), "r");
+  struct stat sb;
+
+  if (stat(InputFilename.c_str(), &sb) == -1) {
+    fprintf(stderr, "Unable to stat %s, exiting\n", InputFilename.c_str());
+    exit(1);
+  }
+
+  FILE *input = fopen(InputFilename.c_str(), "r");
   if (!input) {
-    fprintf(stderr, "Unable to open %s, exiting\n", infile->c_str());
+    fprintf(stderr, "Unable to open %s, exiting\n", InputFilename.c_str());
     exit(1);
   }
   auto file_corespec = std::make_unique<char[]>(sb.st_size);
   if (fread(file_corespec.get(), sb.st_size, 1, input) != 1) {
-    fprintf(stderr, "Unable to read all of %s, exiting\n", infile->c_str());
+    fprintf(stderr, "Unable to read all of %s, exiting\n",
+            InputFilename.c_str());
     exit(1);
   }
   CoreSpec spec = from_yaml(file_corespec.get(), sb.st_size);
   fclose(input);
 
-  if (uuids)
-    for (const std::string &uuid : *uuids) {
-      Binary binary;
-      binary.uuid = uuid;
-      binary.value = 0;
-      binary.value_is_slide = true;
-      spec.binaries.push_back(binary);
-    }
-
-  if (uuids_with_load_addrs) {
-    int count = uuids_with_load_addrs->size() / 2;
-    for (int i = 0; i < count; i++) {
-      std::string uuid = uuids_with_load_addrs->at(i * 2);
-      std::string va_str = uuids_with_load_addrs->at((i * 2) + 1);
-      uint64_t va = std::strtoull(va_str.c_str(), nullptr, 16);
-      Binary binary;
-      binary.uuid = uuid;
-      binary.value = va;
-      binary.value_is_slide = false;
-      spec.binaries.push_back(binary);
-    }
+  for (const std::string &uuid : UUIDs) {
+    Binary binary;
+    binary.uuid = uuid;
+    binary.value = 0;
+    binary.value_is_slide = true;
+    spec.binaries.push_back(binary);
   }
 
-  if (address_bits) {
+  for (const std::string &uuid_and_va : UUIDAndVAs) {
+    std::vector<std::string> parts =
+        get_fields_from_delimited_string(uuid_and_va, ',');
+
+    std::string uuid = parts[0];
+    uint64_t va = std::strtoull(parts[1].c_str(), nullptr, 16);
+    Binary binary;
+    binary.uuid = uuid;
+    binary.value = va;
+    binary.value_is_slide = false;
+    spec.binaries.push_back(binary);
+  }
+
+  if (AddressableBitsOverride) {
     AddressableBits bits;
-    bits.lowmem_bits = bits.highmem_bits = std::stoi(*address_bits);
+    bits.lowmem_bits = bits.highmem_bits = AddressableBitsOverride;
     spec.addressable_bits = bits;
   }
 
@@ -237,9 +199,10 @@ int main(int argc, char **argv) {
   if (lc_note_payload_bytes.size() > 0)
     payload_fileoff = (payload_fileoff + 4096 - 1) & ~(4096 - 1);
 
-  FILE *f = fopen(outfile->c_str(), "w");
+  FILE *f = fopen(OutputFilename.c_str(), "w");
   if (f == nullptr) {
-    fprintf(stderr, "Unable to open file %s for writing\n", outfile->c_str());
+    fprintf(stderr, "Unable to open file %s for writing\n",
+            OutputFilename.c_str());
     exit(1);
   }
 
