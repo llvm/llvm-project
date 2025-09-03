@@ -57966,6 +57966,51 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
                      Cmov.getOperand(3));
 }
 
+static SDValue matchIntegerMultiplyAdd(SDNode *N, SelectionDAG &DAG,
+                                       SDValue Op0, SDValue Op1,
+                                       const SDLoc &DL, EVT VT,
+                                       const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  if (!VT.isVector() || VT.getScalarType() != MVT::i64 ||
+      !Subtarget.hasAVX512() ||
+      (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()) ||
+      !DAG.getTargetLoweringInfo().isOperationLegalOrCustom(X86ISD::VPMADD52L,
+                                                            VT) ||
+      Op0.getValueType() != VT || Op1.getValueType() != VT)
+    return SDValue();
+
+  SDValue X, Y, Acc;
+  if (!sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc))))
+    return SDValue();
+
+  auto CheckMulOperand = [&DAG, &VT](const SDValue &M, SDValue &Xval,
+                                     SDValue &Yval) -> bool {
+    if (M.getOpcode() != ISD::MUL)
+      return false;
+    const SDValue A = M.getOperand(0);
+    const SDValue B = M.getOperand(1);
+    const APInt Top12Set = APInt::getHighBitsSet(64, 12);
+    if (A.getValueType() != VT || B.getValueType() != VT ||
+        !DAG.MaskedValueIsZero(A, Top12Set) ||
+        !DAG.MaskedValueIsZero(B, Top12Set) ||
+        !DAG.MaskedValueIsZero(M, Top12Set))
+      return false;
+    Xval = A;
+    Yval = B;
+    return true;
+  };
+
+  if (CheckMulOperand(Op0, X, Y)) {
+    Acc = Op1;
+  } else if (CheckMulOperand(Op1, X, Y)) {
+    Acc = Op0;
+  } else {
+    return SDValue();
+  }
+
+  return DAG.getNode(X86ISD::VPMADD52L, DL, VT, Acc, X, Y);
+}
+
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -58067,6 +58112,11 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     assert(!Op0->hasAnyUseOfValue(1) && "Overflow bit in use");
     return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
                        Op0.getOperand(0), Op0.getOperand(2));
+  }
+
+  if (SDValue node =
+          matchIntegerMultiplyAdd(N, DAG, Op0, Op1, DL, VT, Subtarget)) {
+    return node;
   }
 
   return combineAddOrSubToADCOrSBB(N, DL, DAG);
