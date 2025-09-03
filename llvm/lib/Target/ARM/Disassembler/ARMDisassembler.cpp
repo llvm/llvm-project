@@ -728,40 +728,6 @@ static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
   Decoder->tryAddingPcLoadReferenceComment(Value, Address);
 }
 
-#include "ARMGenDisassemblerTables.inc"
-
-// Post-decoding checks
-static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
-                                            uint64_t Address, raw_ostream &CS,
-                                            uint32_t Insn,
-                                            DecodeStatus Result) {
-  switch (MI.getOpcode()) {
-    case ARM::HVC: {
-      // HVC is undefined if condition = 0xf otherwise upredictable
-      // if condition != 0xe
-      uint32_t Cond = (Insn >> 28) & 0xF;
-      if (Cond == 0xF)
-        return MCDisassembler::Fail;
-      if (Cond != 0xE)
-        return MCDisassembler::SoftFail;
-      return Result;
-    }
-    case ARM::t2ADDri:
-    case ARM::t2ADDri12:
-    case ARM::t2ADDrr:
-    case ARM::t2ADDrs:
-    case ARM::t2SUBri:
-    case ARM::t2SUBri12:
-    case ARM::t2SUBrr:
-    case ARM::t2SUBrs:
-      if (MI.getOperand(0).getReg() == ARM::SP &&
-          MI.getOperand(1).getReg() != ARM::SP)
-        return MCDisassembler::SoftFail;
-      return Result;
-    default: return Result;
-  }
-}
-
 static const uint16_t GPRDecoderTable[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3,
   ARM::R4, ARM::R5, ARM::R6, ARM::R7,
@@ -6558,6 +6524,40 @@ static DecodeStatus DecodeLazyLoadStoreMul(MCInst &Inst, unsigned Insn,
   Inst.addOperand(MCOperand::createImm(0)); // Arbitrary value, has no effect.
 
   return S;
+}
+
+#include "ARMGenDisassemblerTables.inc"
+
+// Post-decoding checks
+static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
+                                            uint64_t Address, raw_ostream &CS,
+                                            uint32_t Insn,
+                                            DecodeStatus Result) {
+  switch (MI.getOpcode()) {
+    case ARM::HVC: {
+      // HVC is undefined if condition = 0xf otherwise upredictable
+      // if condition != 0xe
+      uint32_t Cond = (Insn >> 28) & 0xF;
+      if (Cond == 0xF)
+        return MCDisassembler::Fail;
+      if (Cond != 0xE)
+        return MCDisassembler::SoftFail;
+      return Result;
+    }
+    case ARM::t2ADDri:
+    case ARM::t2ADDri12:
+    case ARM::t2ADDrr:
+    case ARM::t2ADDrs:
+    case ARM::t2SUBri:
+    case ARM::t2SUBri12:
+    case ARM::t2SUBrr:
+    case ARM::t2SUBrs:
+      if (MI.getOperand(0).getReg() == ARM::SP &&
+          MI.getOperand(1).getReg() != ARM::SP)
+        return MCDisassembler::SoftFail;
+      return Result;
+    default: return Result;
+  }
 }
 
 uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
