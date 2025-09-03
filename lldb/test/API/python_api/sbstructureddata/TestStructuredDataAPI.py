@@ -2,13 +2,13 @@
 Test some SBStructuredData API.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 import json
+
 
 class TestStructuredDataAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -346,7 +346,7 @@ class TestStructuredDataAPI(TestBase):
             self.fail("wrong output: " + str(output))
 
     def test_round_trip_scalars(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, True, False):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25, "", "dirk", True, False):
             constructor = type(original)
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
@@ -358,6 +358,19 @@ class TestStructuredDataAPI(TestBase):
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
             self.assertEqual(data.dynamic, original)
+
+    def test_round_trip_string(self):
+        # No 0.0, it inherently does not round trip.
+        for original in (0, 11, -1, 4.5, -0.25, "", "dirk", True, False):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertEqual(str(data), str(original))
+
+    def test_str(self):
+        for original in ([15], {"id": 23}, None):
+            data = lldb.SBStructuredData()
+            data.SetFromJSON(json.dumps(original))
+            self.assertTrue(str(data))
 
     def test_round_trip_int(self):
         for original in (0, 11, -1):

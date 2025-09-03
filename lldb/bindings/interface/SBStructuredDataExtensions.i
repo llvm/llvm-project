@@ -38,6 +38,18 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         else:
             raise TypeError(f"cannot subscript {self.type_name(data_type)} type")
 
+    def __str__(self):
+        data_type = self.GetType()
+        if data_type in (
+            eStructuredDataTypeString,
+            eStructuredDataTypeInteger,
+            eStructuredDataTypeSignedInteger,
+            eStructuredDataTypeFloat,
+        ):
+             return str(self.dynamic)
+        else:
+            return repr(self)
+
     def __bool__(self):
         data_type = self.GetType()
         if data_type == eStructuredDataTypeInvalid:
