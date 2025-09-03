@@ -611,7 +611,11 @@ public:
                       DecoderTableInfo &TableInfo)
       : Target(Target), Encodings(Encodings), TableInfo(TableInfo) {}
 
-  void buildTable(const FilterChooser &FC) const {
+  void buildTable(const FilterChooser &FC, unsigned BitWidth) const {
+    // When specializing decoders per bit width, each decoder table will begin
+    // with the bitwidth for that table.
+    if (SpecializeDecodersPerBitwidth)
+      TableInfo.Table.insertULEB128(BitWidth);
     emitTableEntries(FC);
     assert(TableInfo.FixupStack.empty() && "Fixup stack phasing error!");
   }
@@ -773,6 +777,15 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     OS << (InComment ? ", " : "// ");
     OS << "Skip to: " << Index;
   };
+
+  // The first entry when specializing decoders per bitwidth is the bitwidth.
+  // This will be used for early return in `decodeInstruction`.
+  if (SpecializeDecodersPerBitwidth) {
+    OS << "/* 0  */";
+    OS.PadToColumn(14);
+    emitULEB128(I, OS);
+    OS << " // Bitwidth " << BitWidth << '\n';
+  }
 
   unsigned OpcodeMask = 0;
 
@@ -2108,9 +2121,22 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
   OS << "  using namespace llvm::MCD;\n";
+  OS << "  const uint8_t *Ptr = DecodeTable;\n";
+
+  if (SpecializeDecodersPerBitwidth) {
+    // Return early if the decoder table's bitwidth does not match `InsnType`
+    // bitwidth.
+    OS << R"(
+  uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
+  if (InsnBitWidth<InsnType> != BitWidth) {
+    LLVM_DEBUG({
+      dbgs() << "Mismatch between table bitwidth and instruction bitwidth";
+    });
+    return MCDisassembler::Fail;
+  })";
+  }
 
   OS << R"(
-  const uint8_t *Ptr = DecodeTable;
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
   while (true) {
@@ -2554,7 +2580,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       //    across all decoder tables.
       //  - predicates are shared across all decoder tables.
       TableInfo.Table.clear();
-      TableBuilder.buildTable(FC);
+      TableBuilder.buildTable(FC, BitWidth);
 
       // Print the table to the output stream.
       OpcodeMask |= emitTable(OS, TableInfo.Table, DecoderNamespace, HwModeID,
