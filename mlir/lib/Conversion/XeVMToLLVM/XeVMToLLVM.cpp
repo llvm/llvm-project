@@ -616,6 +616,23 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     return success();
   }
 };
+template <typename OpType>
+class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op->hasAttr("cache_control"))
+      return failure();
+    constexpr bool isLoad = std::is_same_v<OpType, LLVM::LoadOp>;
+    auto loc = op.getLoc();
+    std::optional<ArrayAttr> optCacheControls =
+        getCacheControlMetadata<isLoad>(rewriter, op);
+    op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    op->removeAttr("cache_control");
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Pass Definition
@@ -676,8 +693,9 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
                LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
                LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
-               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern>(
-      patterns.getContext());
+               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
+               LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
+               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>>(patterns.getContext());
 }
 
 void ::mlir::registerConvertXeVMToLLVMInterface(DialectRegistry &registry) {
