@@ -47,10 +47,66 @@ public:
   /// constructor/destructor Decl.
   virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
 
+  virtual mlir::Value
+  getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
+                            Address thisAddr, const CXXRecordDecl *classDecl,
+                            const CXXRecordDecl *baseClassDecl) = 0;
+
 public:
+  /// Similar to AddedStructorArgs, but only notes the number of additional
+  /// arguments.
+  struct AddedStructorArgCounts {
+    unsigned prefix = 0;
+    unsigned suffix = 0;
+    AddedStructorArgCounts() = default;
+    AddedStructorArgCounts(unsigned p, unsigned s) : prefix(p), suffix(s) {}
+    static AddedStructorArgCounts withPrefix(unsigned n) { return {n, 0}; }
+    static AddedStructorArgCounts withSuffix(unsigned n) { return {0, n}; }
+  };
+
+  /// Additional implicit arguments to add to the beginning (Prefix) and end
+  /// (Suffix) of a constructor / destructor arg list.
+  ///
+  /// Note that Prefix should actually be inserted *after* the first existing
+  /// arg; `this` arguments always come first.
+  struct AddedStructorArgs {
+    struct Arg {
+      mlir::Value value;
+      QualType type;
+    };
+    llvm::SmallVector<Arg, 1> prefix;
+    llvm::SmallVector<Arg, 1> suffix;
+    AddedStructorArgs() = default;
+    AddedStructorArgs(llvm::SmallVector<Arg, 1> p, llvm::SmallVector<Arg, 1> s)
+        : prefix(std::move(p)), suffix(std::move(s)) {}
+    static AddedStructorArgs withPrefix(llvm::SmallVector<Arg, 1> args) {
+      return {std::move(args), {}};
+    }
+    static AddedStructorArgs withSuffix(llvm::SmallVector<Arg, 1> args) {
+      return {{}, std::move(args)};
+    }
+  };
+
+  /// Build the signature of the given constructor or destructor vairant by
+  /// adding any required parameters. For convenience, ArgTys has been
+  /// initialized with the type of 'this'.
+  virtual AddedStructorArgCounts
+  buildStructorSignature(GlobalDecl gd,
+                         llvm::SmallVectorImpl<CanQualType> &argTys) = 0;
+
+  AddedStructorArgCounts
+  addImplicitConstructorArgs(CIRGenFunction &cgf, const CXXConstructorDecl *d,
+                             CXXCtorType type, bool forVirtualBase,
+                             bool delegating, CallArgList &args);
+
   clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &cgf) {
     return cgf.cxxabiThisDecl;
   }
+
+  virtual AddedStructorArgs
+  getImplicitConstructorArgs(CIRGenFunction &cgf, const CXXConstructorDecl *d,
+                             CXXCtorType type, bool forVirtualBase,
+                             bool delegating) = 0;
 
   /// Emit the ABI-specific prolog for the function
   virtual void emitInstanceFunctionProlog(SourceLocation loc,
@@ -144,6 +200,17 @@ public:
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) = 0;
 
+  /// Insert any ABI-specific implicit parameters into the parameter list for a
+  /// function. This generally involves extra data for constructors and
+  /// destructors.
+  ///
+  /// ABIs may also choose to override the return type, which has been
+  /// initialized with the type of 'this' if HasThisReturn(CGF.CurGD) is true or
+  /// the formal return type of the function otherwise.
+  virtual void addImplicitStructorParams(CIRGenFunction &cgf,
+                                         clang::QualType &resTy,
+                                         FunctionArgList &params) = 0;
+
   /// Checks if ABI requires to initialize vptrs for given dynamic class.
   virtual bool
   doStructorsInitializeVPtrs(const clang::CXXRecordDecl *vtableClass) = 0;
@@ -162,6 +229,18 @@ public:
 
   /// Gets the mangle context.
   clang::MangleContext &getMangleContext() { return *mangleContext; }
+
+  clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &cgf) {
+    return cgf.cxxStructorImplicitParamDecl;
+  }
+
+  mlir::Value getStructorImplicitParamValue(CIRGenFunction &cgf) {
+    return cgf.cxxStructorImplicitParamValue;
+  }
+
+  void setStructorImplicitParamValue(CIRGenFunction &cgf, mlir::Value val) {
+    cgf.cxxStructorImplicitParamValue = val;
+  }
 };
 
 /// Creates and Itanium-family ABI
