@@ -1020,8 +1020,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   // If any part of the expression is dependent, return a dependent sub-array.
   QualType ArrayExprTy = Context.ArraySectionTy;
   if (Base->isTypeDependent() ||
-      (LowerBound && LowerBound->isInstantiationDependent()) ||
-      (Length && Length->isInstantiationDependent()))
+      (LowerBound && LowerBound->isTypeDependent()) ||
+      (Length && Length->isTypeDependent()))
     ArrayExprTy = Context.DependentTy;
 
   return new (Context)
