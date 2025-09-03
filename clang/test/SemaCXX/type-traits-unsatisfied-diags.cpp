@@ -872,3 +872,95 @@ namespace is_final_tests {
     // expected-note@-1 {{because it is not a class or union type}}
 
 }
+namespace is_aggregate {
+  struct S1 {  // #ag-S1
+    S1(int);
+  };
+
+  static_assert(__is_aggregate(S1));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S1)'}} \
+  // expected-note@-1 {{because it has a user-declared constructor}} \
+  // expected-note@-1 {{'S1' is not aggregate}} \
+  // expected-note@#ag-S1 {{'S1' defined here}}
+
+  struct B2 {
+    B2(int);
+  };
+
+  struct S2 : B2 { // #ag-S2
+    using B2::B2;
+  };
+
+  static_assert(__is_aggregate(S2));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S2)'}} \
+  // expected-note@-1 {{because it has an inherited constructor}} \
+  // expected-note@-1 {{'S2' is not aggregate}} \
+  // expected-note@#ag-S2 {{'S2' defined here}}
+
+  struct S3 { // #ag-S3
+    protected:
+      int x;
+  };
+  static_assert(__is_aggregate(S3));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S3)'}} \
+  // expected-note@-1 {{because it has a protected direct data member}} \
+  // expected-note@-1 {{'S3' is not aggregate}} \
+  // expected-note@#ag-S3 {{'S3' defined here}}
+
+  struct S4 { // #ag-S4
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S4));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S4)'}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S4' is not aggregate}} \
+  // expected-note@#ag-S4 {{'S4' defined here}}
+
+  struct B5 {};
+
+  struct S5 : private B5 { // #ag-S5
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S5));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S5)'}} \
+  // expected-note@-1 {{because it has a private direct base}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S5' is not aggregate}} \
+  // expected-note@#ag-S5 {{'S5' defined here}}
+
+  struct B6 {};
+
+  struct S6 : protected B6 { // #ag-S6
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S6));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S6)'}} \
+  // expected-note@-1 {{because it has a protected direct base}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{'S6' is not aggregate}} \
+  // expected-note@#ag-S6 {{'S6' defined here}}
+
+  static_assert(__is_aggregate(S6[]));
+
+  struct B7 {};
+
+  struct S7 : virtual B7 { // #ag-S7
+    virtual void foo();
+
+    private:
+      int x;
+  };
+  static_assert(__is_aggregate(S7));
+  // expected-error@-1 {{static assertion failed due to requirement '__is_aggregate(is_aggregate::S7)'}} \
+  // expected-note@-1 {{because it has a private direct data member}} \
+  // expected-note@-1 {{because it has a virtual function 'foo'}} \
+  // expected-note@-1 {{because it has a virtual base}} \
+  // expected-note@-1 {{'S7' is not aggregate}} \
+  // expected-note@-1 {{because it is a polymorphic type}} \
+  // expected-note@#ag-S7 {{'S7' defined here}}
+
+  static_assert(__is_aggregate(S7[10]));
+}
