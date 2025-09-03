@@ -2375,7 +2375,7 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
   Type *SelType = Sel.getType();
-  Constant *TruncC = getLosslessTrunc(C, SmallType, ExtOpcode);
+  Constant *TruncC = getLosslessInvCast(C, SmallType, ExtOpcode, DL);
   if (TruncC && ExtInst->hasOneUse()) {
     Value *TruncCVal = cast<Value>(TruncC);
     if (ExtInst == Sel.getFalseValue())

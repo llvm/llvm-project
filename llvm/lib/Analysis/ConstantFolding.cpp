@@ -4608,4 +4608,44 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
   return false;
 }
 
+LLVM_ABI Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                            unsigned CastOp,
+                                            const DataLayout &DL,
+                                            PreservedCastFlags *Flags) {
+  switch (CastOp) {
+  case Instruction::BitCast:
+    // Bitcast is always lossless.
+    return ConstantFoldCastOperand(Instruction::BitCast, C, InvCastTo, DL);
+  case Instruction::Trunc: {
+    auto *ZExtC = ConstantFoldCastOperand(Instruction::ZExt, C, InvCastTo, DL);
+    if (Flags) {
+      // Truncation back on ZExt value is always NUW.
+      Flags->NUW = true;
+      // Test positivity of C.
+      auto *SExtC =
+          ConstantFoldCastOperand(Instruction::SExt, C, InvCastTo, DL);
+      Flags->NSW = ZExtC == SExtC;
+    }
+    return ZExtC;
+  }
+  case Instruction::SExt:
+  case Instruction::ZExt: {
+    auto *InvC = ConstantExpr::getTrunc(C, InvCastTo);
+    auto *CastInvC = ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
+    // Must satisfy CastOp(InvC) == C.
+    if (!CastInvC || CastInvC != C)
+      return nullptr;
+    if (Flags && CastOp == Instruction::ZExt) {
+      auto *SExtInvC =
+          ConstantFoldCastOperand(Instruction::SExt, InvC, C->getType(), DL);
+      // Test positivity of InvC.
+      Flags->NNeg = CastInvC == SExtInvC;
+    }
+    return InvC;
+  }
+  default:
+    return nullptr;
+  }
+}
+
 void TargetFolder::anchor() {}

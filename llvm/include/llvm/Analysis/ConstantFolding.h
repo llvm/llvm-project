@@ -226,6 +226,18 @@ LLVM_ABI bool isMathLibCallNoop(const CallBase *Call,
 
 LLVM_ABI Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV,
                                            uint64_t Offset);
+
+struct PreservedCastFlags {
+  bool NNeg = false;
+  bool NUW = false;
+  bool NSW = false;
+};
+
+/// Try to cast C to InvC losslessly, satisfying CastOp(InvC) == C.
+/// Will try best to preserve the flags.
+LLVM_ABI Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                      unsigned CastOp, const DataLayout &DL,
+                                      PreservedCastFlags *Flags = nullptr);
 }
 
 #endif
