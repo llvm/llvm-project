@@ -71,6 +71,12 @@ TEST(BindTest, MinimalCopies) {
   EXPECT_EQ(OpCounter::destructions(), 2U);
 }
 
+TEST(BindTest, ForwardUnboundArgs) {
+  auto B = bind_front([](int &) {});
+  int N = 7;
+  B(N);
+}
+
 static int increment(int N) { return N + 1; }
 
 TEST(BindTest, BindFunction) {

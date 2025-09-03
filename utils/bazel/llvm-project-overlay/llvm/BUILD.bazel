@@ -2261,7 +2261,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AMDGPU/AMDGPUGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/AMDGPU/AMDGPUGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/AMDGPU/AMDGPUGenSubtargetInfo.inc": ["-gen-subtarget"],
-            "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "--specialize-decoders-per-bitwidth",
+            ],
             "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc": ["-gen-searchable-tables"],
         },
         "tbl_deps": [
@@ -2428,7 +2431,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/RISCV/RISCVGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc": ["-gen-compress-inst-emitter"],
             "lib/Target/RISCV/RISCVGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "--specialize-decoders-per-bitwidth",
+            ],
             "lib/Target/RISCV/RISCVGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/RISCV/RISCVGenMacroFusion.inc": ["-gen-macro-fusion-pred"],
             "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc": ["-gen-emitter"],

@@ -40,5 +40,5 @@ subroutine host()
 end subroutine
 
 ! CHECK-LABEL: Subprogram scope: host
-! CHECK: atomicadd, EXTERNAL: HostAssoc{{$}}
-! CHECK: syncthreads, EXTERNAL: HostAssoc{{$}}
+! CHECK: atomicadd, EXTERNAL: HostAssoc => atomicadd, EXTERNAL (Function, Implicit): ProcEntity REAL(4){{$}}
+! CHECK: syncthreads, EXTERNAL: HostAssoc => syncthreads, EXTERNAL (Subroutine): ProcEntity{{$}}
