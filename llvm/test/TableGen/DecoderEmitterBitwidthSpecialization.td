@@ -132,7 +132,7 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-NO-TABLE-LABEL:   template <typename InsnType>
 // CHECK-SPECIALIZE-NO-TABLE-NEXT:    decodeInstruction
 // CHECK-SPECIALIZE-NO-TABLE:         uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
-// CHECK-SPECIALIZE-NO-TABLE-NEXT:    if (InsnBitWidth<InsnType> != BitWidth)
+// CHECK-SPECIALIZE-NO-TABLE-NEXT:    assert(InsnBitWidth<InsnType> == BitWidth &&
 
 // -----------------------------------------------------------------------------
 // Per bitwidth specialization with function table.
@@ -186,4 +186,4 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-TABLE-LABEL:    template <typename InsnType>
 // CHECK-SPECIALIZE-TABLE-NEXT:     decodeInstruction
 // CHECK-SPECIALIZE-TABLE:          uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
-// CHECK-SPECIALIZE-TABLE-NEXT:     if (InsnBitWidth<InsnType> != BitWidth)
+// CHECK-SPECIALIZE-TABLE-NEXT:     assert(InsnBitWidth<InsnType> == BitWidth &&
