@@ -1078,6 +1078,12 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setExportSpec(SourceLocation Loc) {
+  ExportSpecified = true;
+  ExportLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
   if (isFriendSpecified()) {
