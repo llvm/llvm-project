@@ -57,9 +57,6 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  // For backward compatibility, alias Range as Chunk
-  using Chunk = Range;
-
   LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Range> Ranges);
 
   /// Returns a reference to the singleton instance.
@@ -169,7 +166,7 @@ protected:
     uint64_t CurrChunkIdx = 0;
     bool IsSet = false;
     std::string Desc;
-    SmallVector<Range> Chunks;
+    RangeUtils::RangeList Chunks;
   };
 
   DenseMap<unsigned, CounterInfo> Counters;
