@@ -55,6 +55,8 @@ struct I {
   I& operator++();
   void operator++(int);
 };
+static_assert(!std::is_invocable_v<decltype(std::views::as_rvalue),
+                                   decltype(std::ranges::subrange{I{}, std::unreachable_sentinel})>);
 static_assert(
     !HasPipe<decltype(std::ranges::subrange{I{}, std::unreachable_sentinel}), decltype(std::views::as_rvalue)>);
 
