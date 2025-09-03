@@ -354,7 +354,6 @@ LogicalResult PtrAddOp::inferReturnTypes(
   Type baseType = operands[0].getType();
   Type offsetType = operands[1].getType();
 
-  // If neither are shaped types, result is same as base type.
   auto offTy = dyn_cast<ShapedType>(offsetType);
   if (!offTy) {
     // If the offset isn't shaped, the result is always the base type.
@@ -363,9 +362,10 @@ LogicalResult PtrAddOp::inferReturnTypes(
   }
   auto baseTy = dyn_cast<ShapedType>(baseType);
   if (!baseTy) {
-    // Base isn't shaped, but offset is, use the ShapedType from offset with the base pointer as element type.
-    inferredReturnTypes.push_back(offsetShapedType.clone(baseType));
-    return success();  
+    // Base isn't shaped, but offset is, use the ShapedType from offset with the
+    // base pointer as element type.
+    inferredReturnTypes.push_back(offTy.clone(baseType));
+    return success();
   }
 
   // Both are shaped, their shape must match.
@@ -374,6 +374,7 @@ LogicalResult PtrAddOp::inferReturnTypes(
       mlir::emitError(*location) << "shapes of base and offset must match";
     return failure();
   }
+
   // Make sure they are the same kind of shaped type.
   if (baseType.getTypeID() != offsetType.getTypeID()) {
     if (location)
