@@ -1,0 +1,80 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "FloatTypesCheck.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
+
+namespace clang {
+
+using namespace ast_matchers;
+
+namespace {
+
+AST_MATCHER(TypeLoc, isTypeLocValidAndNotInMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isValid() && !Loc.isMacroID();
+}
+
+AST_MATCHER(FloatingLiteral, isFLValidAndNotInMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isValid() && !Loc.isMacroID();
+}
+
+AST_MATCHER(TypeLoc, isLongDoubleType) {
+  TypeLoc TL = Node;
+  if (auto QualLoc = Node.getAs<QualifiedTypeLoc>())
+    TL = QualLoc.getUnqualifiedLoc();
+
+  const auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
+  if (!BuiltinLoc)
+    return false;
+
+  return BuiltinLoc.getTypePtr()->getKind() == BuiltinType::LongDouble;
+}
+
+AST_MATCHER(FloatingLiteral, isLongDoubleLiteral) {
+  if (auto *BT = dyn_cast<BuiltinType>(Node.getType().getTypePtr()))
+    return BT->getKind() == BuiltinType::LongDouble;
+  return false;
+}
+
+} // namespace
+
+namespace tidy::google::runtime {
+
+void RuntimeFloatCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(typeLoc(loc(realFloatingPointType()),
+                             isTypeLocValidAndNotInMacro(), isLongDoubleType())
+                         .bind("longDoubleTypeLoc"),
+                     this);
+  Finder->addMatcher(
+      floatLiteral(isFLValidAndNotInMacro(), isLongDoubleLiteral())
+          .bind("longDoubleFloatLiteral"),
+      this);
+  IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
+}
+
+void RuntimeFloatCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("longDoubleTypeLoc")) {
+    diag(TL->getBeginLoc(),
+         "consider replacing %0 with a 64-bit or 128-bit float type")
+        << TL->getType();
+  }
+
+  if (const auto *FL =
+          Result.Nodes.getNodeAs<FloatingLiteral>("longDoubleFloatLiteral")) {
+    diag(FL->getBeginLoc(),
+         "%0 type from literal suffix 'L' should not be used")
+        << FL->getType();
+  }
+}
+
+} // namespace tidy::google::runtime
+
+} // namespace clang
