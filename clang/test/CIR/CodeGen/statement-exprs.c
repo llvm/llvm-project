@@ -5,9 +5,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// This fails because of a non-ignored copy of an aggregate in test3.
-// XFAIL: *
-
 int f19(void) {
   return ({ 3;;4;; });
 }
@@ -229,6 +226,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:       %[[GEP_X_S:.+]] = cir.get_member %[[S]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:       %[[C1:.+]] = cir.const #cir.int<1> : !s32i
 // CIR:       cir.store {{.*}} %[[C1]], %[[GEP_X_S]] : !s32i, !cir.ptr<!s32i>
+// CIR:       cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>
 // CIR:     }
 // CIR:     %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:     %[[XVAL:.+]] = cir.load {{.*}} %[[GEP_X_TMP]] : !cir.ptr<!s32i>, !s32i
@@ -249,6 +247,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM: [[LBL6]]:
 // LLVM:     %[[GEP_S:.+]] = getelementptr %struct.S, ptr %[[VAR3]], i32 0, i32 0
 // LLVM:     store i32 1, ptr %[[GEP_S]]
+// LLVM:     call void @llvm.memcpy.p0.p0.i32(ptr %[[VAR1]], ptr %[[VAR3]], i32 4, i1 false)
 // LLVM:     br label %[[LBL8:.+]]
 // LLVM: [[LBL8]]:
 // LLVM:     %[[GEP_VAR1:.+]] = getelementptr %struct.S, ptr %[[VAR1]], i32 0, i32 0

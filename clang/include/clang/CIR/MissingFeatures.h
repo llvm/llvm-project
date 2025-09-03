@@ -168,6 +168,7 @@ struct MissingFeatures {
   // Misc
   static bool abiArgInfo() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool aggEmitFinalDestCopyRValue() { return false; }
   static bool aggValueSlot() { return false; }
   static bool aggValueSlotAlias() { return false; }
   static bool aggValueSlotDestructedFlag() { return false; }
