@@ -1722,7 +1722,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const _Key& __v) {
 // First check prior to __hint.
 // Next check after __hint.
 // Next do O(log N) search.
-// If __v exists, return the parent of the node of __v a reference to the pointer to the node of __v.
+// If __v exists, return the parent of the node of __v and a reference to the pointer to the node of __v.
 // If __v doesn't exist, return the parent of the null leaf and a reference to the pointer to the null leaf.
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
