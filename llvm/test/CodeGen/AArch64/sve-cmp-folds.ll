@@ -224,9 +224,7 @@ define i1 @whilege_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilege_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilege.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -238,9 +236,7 @@ define i1 @whilegt_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilegt_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilegt.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -252,9 +248,7 @@ define i1 @whilehi_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilehi_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilehi.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -266,9 +260,7 @@ define i1 @whilehs_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilehs_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilehs.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -280,9 +272,7 @@ define i1 @whilele_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilele_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilele.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -294,9 +284,7 @@ define i1 @whilelo_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilelo_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilelo.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -308,9 +296,7 @@ define i1 @whilels_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilels_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilels.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
@@ -322,9 +308,7 @@ define i1 @whilelt_x2_first(i64 %next, i64 %end) {
 ; CHECK-LABEL: whilelt_x2_first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %predpair = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilelt.x2.nxv4i1.i64(i64 %next, i64 %end)
   %predicate = extractvalue { <vscale x 4 x i1>, <vscale x 4 x i1> } %predpair, 0
