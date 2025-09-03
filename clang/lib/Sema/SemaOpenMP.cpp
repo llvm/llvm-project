@@ -2780,7 +2780,7 @@ void SemaOpenMP::EndOpenMPClause() {
 static std::pair<ValueDecl *, bool>
 getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
                SourceRange &ERange, bool AllowArraySection = false,
-               StringRef DiagType = "");
+               bool AllowAssumedSizeArray = false, StringRef DiagType = "");
 
 /// Check consistency of the reduction clauses.
 static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
@@ -5148,11 +5148,10 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   return ErrorFound;
 }
 
-static std::pair<ValueDecl *, bool> getPrivateItem(Sema &S, Expr *&RefExpr,
-                                                   SourceLocation &ELoc,
-                                                   SourceRange &ERange,
-                                                   bool AllowArraySection,
-                                                   StringRef DiagType) {
+static std::pair<ValueDecl *, bool>
+getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
+               SourceRange &ERange, bool AllowArraySection,
+               bool AllowAssumedSizeArray, StringRef DiagType) {
   if (RefExpr->isTypeDependent() || RefExpr->isValueDependent() ||
       RefExpr->containsUnexpandedParameterPack())
     return std::make_pair(nullptr, true);
@@ -5162,6 +5161,20 @@ static std::pair<ValueDecl *, bool> getPrivateItem(Sema &S, Expr *&RefExpr,
   // OpenMP  [2.9.3.3, Restrictions, p.1]
   //  A variable that is part of another variable (as an array or
   //  structure element) cannot appear in a private clause.
+  //
+  // OpenMP [6.0]
+  //  5.2.5 Array Sections, p. 166, L28-29
+  //  When the length is absent and the size of the dimension is not known,
+  //  the array section is an assumed-size array.
+  //  2 Glossary, p. 23, L4-6
+  //  assumed-size array
+  //    For C/C++, an array section for which the length is absent and the
+  //    size of the dimensions is not known.
+  //  5.2.5 Array Sections, p. 168, L11
+  //  An assumed-size array can appear only in clauses for which it is
+  //  explicitly allowed.
+  //  7.4 List Item Privatization, Restrictions, p. 222, L15
+  //  Assumed-size arrays must not be privatized.
   RefExpr = RefExpr->IgnoreParens();
   enum {
     NoArrayExpr = -1,
@@ -5177,6 +5190,17 @@ static std::pair<ValueDecl *, bool> getPrivateItem(Sema &S, Expr *&RefExpr,
       IsArrayExpr = ArraySubscript;
     } else if (auto *OASE = dyn_cast_or_null<ArraySectionExpr>(RefExpr)) {
       Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
+      if (S.getLangOpts().OpenMP >= 60 && !AllowAssumedSizeArray &&
+          OASE->getColonLocFirst().isValid() && !OASE->getLength()) {
+        QualType BaseType = ArraySectionExpr::getBaseOriginalType(Base);
+        if (BaseType.isNull() || (!BaseType->isConstantArrayType() &&
+                                  !BaseType->isVariableArrayType())) {
+          S.Diag(OASE->getColonLocFirst(),
+                 diag::err_omp_section_length_undefined)
+              << (!BaseType.isNull() && BaseType->isArrayType());
+          return std::make_pair(nullptr, false);
+        }
+      }
       while (auto *TempOASE = dyn_cast<ArraySectionExpr>(Base))
         Base = TempOASE->getBase()->IgnoreParenImpCasts();
       while (auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
@@ -17324,9 +17348,10 @@ static bool isValidInteropVariable(Sema &SemaRef, Expr *InteropVarExpr,
   SourceLocation ELoc;
   SourceRange ERange;
   Expr *RefExpr = InteropVarExpr;
-  auto Res =
-      getPrivateItem(SemaRef, RefExpr, ELoc, ERange,
-                     /*AllowArraySection=*/false, /*DiagType=*/"omp_interop_t");
+  auto Res = getPrivateItem(SemaRef, RefExpr, ELoc, ERange,
+                            /*AllowArraySection=*/false,
+                            /*AllowAssumedSizeArray=*/false,
+                            /*DiagType=*/"omp_interop_t");
 
   if (Res.second) {
     // It will be analyzed later.
@@ -23510,7 +23535,8 @@ SemaOpenMP::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
     SourceRange ERange;
     Expr *SimpleRefExpr = RefExpr;
     auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange,
-                              /*AllowArraySection=*/true);
+                              /*AllowArraySection=*/true,
+                              /*AllowAssumedSizeArray=*/true);
     if (Res.second) {
       // It will be analyzed later.
       MVLI.ProcessedVarList.push_back(RefExpr);
