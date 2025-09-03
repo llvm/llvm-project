@@ -177,7 +177,7 @@ define i32 @call_used_in_initializer(double %arg) {
   ret i32 %ret
 }
 
-; CHECK-FINAL-LABEL: define internal void @1() {
+; CHECK-FINAL-LABEL: define internal void @1() #[[#CONSTRUCTOR_ATTR:]] {
 ; CHECK-FINAL-NEXT: %1 = call ptr @resolver1()
 ; CHECK-FINAL-NEXT: store ptr %1, ptr @0, align 8
 ; CHECK-FINAL-NEXT: %2 = call ptr @resolver2()
@@ -196,3 +196,4 @@ define i32 @call_used_in_initializer(double %arg) {
 ; CHECK-FINAL-NEXT: store ptr %8, ptr getelementptr inbounds ([8 x ptr], ptr @0, i32 0, i32 7), align 8
 ; CHECK-FINAL-NEXT: ret void
 ; CHECK-FINAL-NEXT: }
+; CHECK-FINAL-DAG: attributes #[[#CONSTRUCTOR_ATTR]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
