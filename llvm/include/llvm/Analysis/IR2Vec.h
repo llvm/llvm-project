@@ -36,6 +36,7 @@
 #define LLVM_ANALYSIS_IR2VEC_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
@@ -162,15 +163,34 @@ using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 /// embeddings.
 class Vocabulary {
   friend class llvm::IR2VecVocabAnalysis;
+
+  // Vocabulary Slot Layout:
+  // +----------------+------------------------------------------------------+
+  // | Entity Type    | Index Range                                          |
+  // +----------------+------------------------------------------------------+
+  // | Opcodes        | [0 .. (MaxOpcodes-1)]                                |
+  // | Canonical Types| [MaxOpcodes .. (MaxOpcodes+MaxCanonicalTypeIDs-1)]   |
+  // | Operands       | [(MaxOpcodes+MaxCanonicalTypeIDs) .. NumCanEntries]  |
+  // +----------------+------------------------------------------------------+
+  // Note: MaxOpcodes is the number of unique opcodes supported by LLVM IR.
+  //       MaxCanonicalTypeIDs is the number of canonicalized type IDs.
+  //       "Similar" LLVM Types are grouped/canonicalized together. E.g., all
+  //       float variants (FloatTy, DoubleTy, HalfTy, etc.) map to
+  //       CanonicalTypeID::FloatTy. This helps reduce the vocabulary size
+  //       and improves learning. Operands include Comparison predicates
+  //       (ICmp/FCmp) along with other operand types. This can be extended to
+  //       include other specializations in future.
   using VocabVector = std::vector<ir2vec::Embedding>;
   VocabVector Vocab;
 
-public:
-  // Slot layout:
-  // [0 .. MaxOpcodes-1]               => Instruction opcodes
-  // [MaxOpcodes .. MaxOpcodes+MaxCanonicalTypeIDs-1] => Canonicalized types
-  // [MaxOpcodes+MaxCanonicalTypeIDs .. NumCanonicalEntries-1] => Operand kinds
+  static constexpr unsigned NumICmpPredicates =
+      static_cast<unsigned>(CmpInst::LAST_ICMP_PREDICATE) -
+      static_cast<unsigned>(CmpInst::FIRST_ICMP_PREDICATE) + 1;
+  static constexpr unsigned NumFCmpPredicates =
+      static_cast<unsigned>(CmpInst::LAST_FCMP_PREDICATE) -
+      static_cast<unsigned>(CmpInst::FIRST_FCMP_PREDICATE) + 1;
 
+public:
   /// Canonical type IDs supported by IR2Vec Vocabulary
   enum class CanonicalTypeID : unsigned {
     FloatTy,
@@ -207,13 +227,18 @@ public:
       static_cast<unsigned>(CanonicalTypeID::MaxCanonicalType);
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
+  // CmpInst::Predicate has gaps. We want the vocabulary to be dense without
+  // empty slots.
+  static constexpr unsigned MaxPredicateKinds =
+      NumICmpPredicates + NumFCmpPredicates;
 
   Vocabulary() = default;
   LLVM_ABI Vocabulary(VocabVector &&Vocab) : Vocab(std::move(Vocab)) {}
 
   LLVM_ABI bool isValid() const { return Vocab.size() == NumCanonicalEntries; };
   LLVM_ABI unsigned getDimension() const;
-  /// Total number of entries (opcodes + canonicalized types + operand kinds)
+  /// Total number of entries (opcodes + canonicalized types + operand kinds +
+  /// predicates)
   static constexpr size_t getCanonicalSize() { return NumCanonicalEntries; }
 
   /// Function to get vocabulary key for a given Opcode
@@ -228,16 +253,21 @@ public:
   /// Function to classify an operand into OperandKind
   LLVM_ABI static OperandKind getOperandKind(const Value *Op);
 
+  /// Function to get vocabulary key for a given predicate
+  LLVM_ABI static StringRef getVocabKeyForPredicate(CmpInst::Predicate P);
+
   /// Functions to return the slot index or position of a given Opcode, TypeID,
   /// or OperandKind in the vocabulary.
   LLVM_ABI static unsigned getSlotIndex(unsigned Opcode);
   LLVM_ABI static unsigned getSlotIndex(Type::TypeID TypeID);
   LLVM_ABI static unsigned getSlotIndex(const Value &Op);
+  LLVM_ABI static unsigned getSlotIndex(CmpInst::Predicate P);
 
   /// Accessors to get the embedding for a given entity.
   LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const;
   LLVM_ABI const ir2vec::Embedding &operator[](Type::TypeID TypeId) const;
   LLVM_ABI const ir2vec::Embedding &operator[](const Value &Arg) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](CmpInst::Predicate P) const;
 
   /// Const Iterator type aliases
   using const_iterator = VocabVector::const_iterator;
@@ -274,7 +304,13 @@ public:
 
 private:
   constexpr static unsigned NumCanonicalEntries =
-      MaxOpcodes + MaxCanonicalTypeIDs + MaxOperandKinds;
+      MaxOpcodes + MaxCanonicalTypeIDs + MaxOperandKinds + MaxPredicateKinds;
+
+  // Base offsets for slot layout to simplify index computation
+  constexpr static unsigned OperandBaseOffset =
+      MaxOpcodes + MaxCanonicalTypeIDs;
+  constexpr static unsigned PredicateBaseOffset =
+      OperandBaseOffset + MaxOperandKinds;
 
   /// String mappings for CanonicalTypeID values
   static constexpr StringLiteral CanonicalTypeNames[] = {
@@ -326,6 +362,11 @@ private:
 
   /// Function to convert TypeID to CanonicalTypeID
   LLVM_ABI static CanonicalTypeID getCanonicalTypeID(Type::TypeID TypeID);
+
+  /// Function to get the predicate enum value for a given index. Index is
+  /// relative to the predicates section of the vocabulary. E.g., Index 0
+  /// corresponds to the first predicate.
+  LLVM_ABI static CmpInst::Predicate getPredicate(unsigned Index);
 };
 
 /// Embedder provides the interface to generate embeddings (vector
