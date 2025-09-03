@@ -46,19 +46,12 @@ static cl::opt<bool> KeepLog("keep-log",
                              cl::desc("keep log and do not rotate the log"));
 
 // CAS stress test parameters.
-static cl::opt<unsigned>
-    OptNumShards("num-shards", cl::desc("number of shards"), cl::init(0));
-static cl::opt<unsigned> OptTreeDepth("tree-depth", cl::desc("tree depth"),
-                                      cl::init(0));
-static cl::opt<unsigned> OptNumChildren("num-children",
-                                        cl::desc("number of child nodes"),
-                                        cl::init(0));
-static cl::opt<unsigned> OptDataLength("data-length", cl::desc("data length"),
-                                       cl::init(0));
-static cl::opt<unsigned> OptPrecentFile(
-    "precent-file",
-    cl::desc("percentage of nodes that is long enough to be file based"),
-    cl::init(0));
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  static cl::opt<unsigned> Opt##NAME(#OPT_NAME, cl::desc(OPT_DESC),            \
+                                     cl::init(0));
+#include "Config.def"
+#undef CONFIG
+
 // Default size to be 100MB.
 static cl::opt<uint64_t>
     SizeLimit("size-limit", cl::desc("CAS size limit (in MB)"), cl::init(100));
@@ -77,24 +70,19 @@ enum CASFuzzingSettings : uint8_t {
 
 struct Config {
   CASFuzzingSettings Settings = Default;
-  uint8_t NumShards;
-  uint8_t NumChildren;
-  uint8_t TreeDepth;
-  uint16_t DataLength;
-  uint16_t PrecentFile;
-
-  static constexpr unsigned MaxShards = 20;
-  static constexpr unsigned MaxChildren = 32;
-  static constexpr unsigned MaxDepth = 8;
-  static constexpr unsigned MaxDataLength = 1024 * 4;
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  TYPE NAME;
+#include "Config.def"
+#undef CONFIG
 
   void constrainParameters() {
-    // reduce the size of parameter if they are too big.
-    NumShards = OptNumShards ? OptNumShards : NumShards % MaxShards;
-    NumChildren = OptNumChildren ? OptNumChildren : NumChildren % MaxChildren;
-    TreeDepth = OptTreeDepth ? OptTreeDepth : TreeDepth % MaxDepth;
-    DataLength = OptDataLength ? OptDataLength : DataLength % MaxDataLength;
-    PrecentFile = OptPrecentFile ? OptPrecentFile : PrecentFile % 100;
+    // Reduce the size of parameter if they are too big. If the value is not
+    // passed in as parameter, constrain the value between MIN_VAL and MAX_VAL.
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  NAME = Opt##NAME >= MIN_VAL ? Opt##NAME                                      \
+                              : (NAME % (MAX_VAL - MIN_VAL) + MIN_VAL);
+#include "Config.def"
+#undef CONFIG
 
     if (ForceKill) {
       Settings |= Fork;
@@ -107,30 +95,28 @@ struct Config {
   }
 
   void init() {
-    NumShards = OptNumShards ? OptNumShards : MaxShards;
-    NumChildren = OptNumChildren ? OptNumChildren : MaxChildren;
-    TreeDepth = OptTreeDepth ? OptTreeDepth : MaxDepth;
-    DataLength = OptDataLength ? OptDataLength : MaxDataLength;
-    PrecentFile = OptPrecentFile;
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  NAME = Opt##NAME >= MIN_VAL ? Opt##NAME : DEFAULT_VAL;
+#include "Config.def"
+#undef CONFIG
   }
 
   void appendCommandLineOpts(std::vector<std::string> &Cmd) {
-    Cmd.push_back("--num-shards=" + utostr(NumShards));
-    Cmd.push_back("--num-children=" + utostr(NumChildren));
-    Cmd.push_back("--tree-depth=" + utostr(TreeDepth));
-    Cmd.push_back("--data-length=" + utostr(DataLength));
-    Cmd.push_back("--precent-file=" + utostr(PrecentFile));
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  Cmd.push_back(std::string("--") + #OPT_NAME + "=" + utostr(NAME));
+#include "Config.def"
+#undef CONFIG
   }
 
   void dump() {
     llvm::errs() << "## Configuration:"
                  << " Fork: " << (bool)(Settings & Fork)
                  << " Kill: " << (bool)(Settings & CheckTermination)
-                 << " NumShards: " << (unsigned)NumShards
-                 << " TreeDepth: " << (unsigned)TreeDepth
-                 << " NumChildren: " << (unsigned)NumChildren
-                 << " DataLength: " << (unsigned)DataLength
-                 << " PrecentFile: " << (unsigned)PrecentFile << "\n";
+#define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)  \
+  << " " << #NAME << ": " << (unsigned)NAME
+#include "Config.def"
+#undef CONFIG
+                 << "\n";
   }
 };
 
@@ -150,6 +136,7 @@ static void fillData(ObjectStore &CAS, ActionCache &AC, const Config &Conf) {
           Created.reserve(NumNodes);
           ArrayRef<ObjectRef> PreviouslyCreated(Refs);
           for (unsigned I = 0; I < NumNodes; ++I) {
+            assert(Conf.DataLength > 0);
             std::vector<char> Data(Conf.DataLength);
             getRandomBytes(Data.data(), Data.size());
             // Use the first byte that generated to decide if we should make it

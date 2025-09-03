@@ -1,0 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// Define CONFIG before including.
+//
+// #define CONFIG(NAME, TYPE, DEFAULT_VAL, MIN_VAL, MAX_VAL, OPT_NAME, OPT_DESC)
+
+CONFIG(NumShards, uint8_t, 10, 1, 20, num-shards, "number of shards")
+CONFIG(NumChildren, uint8_t, 8, 1, 32, num-children, "number of child nodes")
+CONFIG(TreeDepth, uint8_t, 4, 1, 8, tree-depth, "tree depth")
+CONFIG(DataLength, uint16_t, 1024, 1, 4096, data-length, "data length")
+CONFIG(PrecentFile, uint8_t, 10, 0, 100, precent-file,
+       "percentage of nodes that is long enough to be file based")
