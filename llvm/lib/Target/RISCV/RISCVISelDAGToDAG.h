@@ -75,7 +75,6 @@ public:
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
   bool trySignedBitfieldInsertInMask(SDNode *Node);
-  bool tryBitfieldInsertOpFromXor(SDNode *Node);
   bool tryBitfieldInsertOpFromOrAndImm(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
