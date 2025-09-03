@@ -54,7 +54,7 @@ add_custom_target(RippleLib ALL)
 # Keep in sync w/ llvm/lib/Target/Hexagon/Hexagon.td
 set(HEXAGON_ARCH_VERSIONS 68 69 71 73 75 79)
 
-set(RIPPLE_RT_SRC HVX_Scatter_Gather HVX_Rotate HVX_Bfloat HVX_Vdeal)
+set(RIPPLE_RT_SRC HVX_Scatter_Gather HVX_Rotate HVX_Bfloat HVX_Vdeal HVX_Narrow_Shift)
 set(RIPPLE_RT_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(RIPPLE_RT_HEADER_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/header)
 
