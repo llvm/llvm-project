@@ -117,7 +117,7 @@ class ShLexer:
                 return str
             # LLDB uses "$" at the start of global variable names; it should
             # not be escaped nor dropped.
-            elif c == "\\" and self.look() == "$":
+            elif c == "\\" and self.look() == "$" and delim == '"':
                 c = self.eat()
                 str += c
             elif c == "\\" and delim == '"':
