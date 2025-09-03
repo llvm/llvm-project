@@ -1420,13 +1420,9 @@ void Writer::layoutSections() {
   if (ctx.config.sectionOrder.empty())
     return;
 
-  std::unordered_map<const OutputSection *, size_t> originalOrder;
-  for (size_t i = 0; i < ctx.outputSections.size(); ++i)
-    originalOrder[ctx.outputSections[i]] = i;
-
   llvm::stable_sort(
       ctx.outputSections,
-      [this, &originalOrder](const OutputSection *a, const OutputSection *b) {
+      [this](const OutputSection *a, const OutputSection *b) {
         auto itA = ctx.config.sectionOrder.find(a->name.str());
         auto itB = ctx.config.sectionOrder.find(b->name.str());
         bool aInOrder = itA != ctx.config.sectionOrder.end();
@@ -1437,10 +1433,8 @@ void Writer::layoutSections() {
           return itA->second < itB->second;
         } else if (aInOrder && !bInOrder) {
           return true;
-        } else if (!aInOrder && bInOrder) {
-          return false;
         } else {
-          return originalOrder[a] < originalOrder[b];
+          return false;
         }
       });
 }
