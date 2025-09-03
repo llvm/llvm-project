@@ -1017,7 +1017,7 @@ declare void @unknown() #5
 declare void @unknowni32p(ptr) #5
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #6
+declare void @llvm.lifetime.start.p0(ptr captures(none)) #6
 
 define weak i32 @__kmpc_target_init(ptr %0, ptr %1) {
 ; AMDGPU-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -1037,7 +1037,7 @@ declare void @__kmpc_get_shared_variables(ptr)
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) #7
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #6
+declare void @llvm.lifetime.end.p0(ptr captures(none)) #6
 
 ; Function Attrs: convergent
 declare void @spmd_amenable() #4

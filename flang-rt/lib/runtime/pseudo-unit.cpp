@@ -160,7 +160,7 @@ void PseudoOpenFile::WaitAll(IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-Position PseudoOpenFile::InquirePosition() const {
+Position PseudoOpenFile::InquirePosition(FileOffset) const {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 

@@ -97,6 +97,9 @@ toCompletionItemKind(index::SymbolKind Kind,
                      const llvm::StringRef *Signature = nullptr) {
   using SK = index::SymbolKind;
   switch (Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SK::IncludeDirective:
   case SK::Unknown:
     return CompletionItemKind::Missing;
   case SK::Module:
@@ -1466,19 +1469,15 @@ bool allowIndex(CodeCompletionContext &CC) {
   auto Scope = CC.getCXXScopeSpecifier();
   if (!Scope)
     return true;
-  NestedNameSpecifier *NameSpec = (*Scope)->getScopeRep();
-  if (!NameSpec)
-    return true;
   // We only query the index when qualifier is a namespace.
   // If it's a class, we rely solely on sema completions.
-  switch (NameSpec->getKind()) {
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Namespace:
+  switch ((*Scope)->getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::Namespace:
     return true;
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::TypeSpec:
-  // Unresolved inside a template.
-  case NestedNameSpecifier::Identifier:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+  case NestedNameSpecifier::Kind::Type:
     return false;
   }
   llvm_unreachable("invalid NestedNameSpecifier kind");
@@ -2434,6 +2433,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
+  OS << "Signature: " << "\"" << C.Signature << "\", "
+     << "SnippetSuffix: " << "\"" << C.SnippetSuffix << "\""
+     << ", Rendered:";
   // For now just lean on CompletionItem.
   return OS << C.render(CodeCompleteOptions());
 }

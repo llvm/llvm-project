@@ -2123,7 +2123,7 @@ foreach vti = AllIntegerVectors in {
 foreach vti = I64IntegerVectors in {
   let Predicates = [HasVInstructionsI64] in {
     def : Pat<(riscv_add_vl (vti.Vector vti.RegClass:$rs1),
-                            (vti.Vector (SplatPat_imm64_neg i64:$rs2)),
+                            (vti.Vector (SplatPat_imm64_neg (i64 GPR:$rs2))),
                             vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
               (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1,

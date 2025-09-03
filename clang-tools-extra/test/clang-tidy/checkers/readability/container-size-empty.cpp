@@ -895,3 +895,16 @@ namespace PR94454 {
   int operator""_ci() { return 0; }
   auto eq = 0_ci == 0;
 }
+
+namespace GH152387 {
+
+class foo : public std::string{
+  void doit() {
+    if (!size()) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size'
+      // CHECK-FIXES: if (empty()) {
+    }
+  }
+};
+
+}
